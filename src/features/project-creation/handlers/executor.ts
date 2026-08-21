@@ -50,9 +50,6 @@ import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import { AdobeConfig } from '@/types/base';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
 import {
@@ -65,6 +62,7 @@ import {
 } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 // EDS config.json sync to remote (Phase 5)
 
@@ -148,131 +146,11 @@ export async function ensureMeshPreflightAuth(
     return true;
 }
 
-/**
- * Frontend source from template (same shape as TemplateSource)
- */
-interface FrontendSource {
-    type: string;
-    url: string;
-    branch: string;
-    gitOptions?: {
-        shallow?: boolean;
-    };
-}
+// ProjectCreationConfig and FrontendSource live in @/types/webviewRequests —
+// ONE declaration shared with the wizard's buildProjectConfig and the MCP
+// create_project tool (this file used to carry the only copy, and the wire
+// crossing was an `as unknown as` cast).
 
-/**
- * ProjectCreationConfig - Configuration passed to project creation
- */
-interface ProjectCreationConfig {
-    /** The SLUG — folder name and dedupe key. */
-    projectName: string;
-    /** What the user typed. Absent for a project with no title set. */
-    projectTitle?: string;
-    adobe?: AdobeConfig;
-    components?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    componentConfigs?: Record<string, Record<string, unknown>>;
-    /** The discovered Commerce store hierarchy (names for the chosen codes). */
-    commerceStoreStructure?: CommerceStoreStructure;
-    apiMesh?: {
-        meshId?: string;
-        endpoint?: string;
-        meshStatus?: string;
-        workspace?: string;
-    };
-    // For detecting same-workspace imports to skip mesh deployment
-    importedWorkspaceId?: string;
-    importedMeshEndpoint?: string;
-    // Package/Stack selections
-    selectedPackage?: string;
-    datapack?: { name: string; version: string };
-    selectedStack?: string;
-    // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
-    selectedAppBuilderComponents?: string[];
-    appBuilderComponentSources?: Record<
-        string,
-        { owner: string; repo: string; branch?: string; name?: string }
-    >;
-    // Free Console API picks (union across integrations) — persisted on the Project
-    // so Phase 3b's subscribe union covers them. LEGACY: derived from the keyed
-    // record below, which is the durable, attributed form.
-    additionalConsoleApis?: string[];
-    // The same picks keyed by integration id — what resolveDesiredApis unions.
-    componentApiPicks?: Record<string, string[]>;
-    // Selected optional addons (e.g., ['adobe-commerce-aco'])
-    selectedAddons?: string[];
-    // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
-    selectedBlockLibraries?: string[];
-    // Custom block libraries added by URL
-    customBlockLibraries?: CustomBlockLibrary[];
-    // Frontend source from template (templates are source of truth for repos)
-    frontendSource?: FrontendSource;
-    // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
-    editProjectPath?: string;
-    // EDS-specific configuration (for Edge Delivery Services stacks)
-    edsConfig?: {
-        repoName: string;
-        repoMode: 'new' | 'existing';
-        existingRepo?: string;
-        resetToTemplate?: boolean;
-        daLiveOrg: string;
-        daLiveSite: string;
-        accsEndpoint?: string;
-        githubOwner?: string;
-        isPrivate?: boolean;
-        skipContent?: boolean;
-        skipTools?: boolean;
-        // Template source repo (from frontendSource) for GitHub reset operations
-        templateOwner?: string;
-        templateRepo?: string;
-        // DA.live content source (explicit config, not derived from GitHub)
-        contentSource?: {
-            org: string;
-            site: string;
-            indexPath?: string;
-        };
-        // Second content source for the account chrome (hybrid packages).
-        accountContentSource?: {
-            org: string;
-            site: string;
-        };
-        // Preflight completion fields (set by StorefrontSetupStep)
-        preflightComplete?: boolean;
-        repoUrl?: string;
-        // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
-        // Patch IDs to apply during reset (from demo-packages.json)
-        patches?: string[];
-        // Content patch IDs to apply during DA.live content copy
-        contentPatches?: string[];
-        // External source for content patches (from demo-packages.json)
-        contentPatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-        };
-        // Code patch IDs to apply (canonical + block) — Step 5 populates these.
-        codePatches?: string[];
-        // External source for code patches (e.g., skukla/eds-demo-patches/citisignal).
-        // When set, the storefront is "thin-layer": `lastSyncedCommit` records the
-        // verified canonical LKG SHA (per ADR-006 D2) rather than the template
-        // repo's `main` HEAD, so "is there an update?" means "did the LKG pointer
-        // advance?" not "is canonical main ahead of where we created?".
-        codePatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-            /** Per-ledger LKG file when the ledger tracks a non-default canonical
-             *  (e.g., b2b's B2B template). Omitted for ledgers sharing the
-             *  default root `last-known-good`. */
-            lkgFile?: string;
-        };
-    };
-}
 
 /**
  * Actual project creation logic (extracted for testability)
@@ -374,9 +252,9 @@ export function buildInitialProject(
 
 export async function executeProjectCreation(
     context: HandlerContext,
-    config: Record<string, unknown>,
+    config: ProjectCreationConfig,
 ): Promise<void> {
-    const typedConfig = config as unknown as ProjectCreationConfig;
+    const typedConfig = config;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
     context.logger.debug(
@@ -732,6 +610,8 @@ async function ensureWorkspaceRuntimeReady(
     if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {
         return;
     }
+    // Local consts hold the narrowed strings into the closure below.
+    const { organization, projectId, workspace } = adobe;
     const { ServiceLocator } = await import('@/core/di');
     const { ensureWorkspaceRuntime } = await import(
         '@/features/app-builder/services/runtimeCredentials'
@@ -744,11 +624,7 @@ async function ensureWorkspaceRuntimeReady(
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
         ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
-            authService.ensureWorkspaceRuntimeNamespace(
-                adobe.organization as string,
-                adobe.projectId as string,
-                adobe.workspace as string,
-            ),
+            authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
         ),
     );
 }

@@ -117,7 +117,7 @@ describe('meshSetupService', () => {
             mockHandlerContext,
             mockRegistry,
             mockProject,
-            {}
+            { projectName: 'test-project' }
         );
 
         mockProgressTracker = jest.fn();
@@ -227,7 +227,7 @@ describe('meshSetupService', () => {
                 mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutMeshPath,
-                {}
+                { projectName: 'test-project' }
             );
 
             const context: MeshSetupContext = {
@@ -391,7 +391,7 @@ describe('meshSetupService', () => {
                 mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutMeshPath,
-                {}
+                { projectName: 'test-project' }
             );
 
             const context: MeshSetupContext = {

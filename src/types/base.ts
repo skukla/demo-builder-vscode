@@ -353,20 +353,26 @@ export type ProjectStatus =
     | 'error';
 
 export interface AdobeConfig {
-    projectId: string;
-    projectName: string;
+    // Every field here is optional because that is the DATA's truth: real
+    // manifests hold as little as {organization, organizationName}, and the
+    // wizard's create-project payload sends whatever subset the user reached.
+    // The old required fields were fiction — every live consumer already
+    // optional-chains (verified 2026-08-22: making them honest surfaced zero
+    // compile errors).
+    projectId?: string;
+    projectName?: string;
     /** Human-readable project title (preferred for display) */
     projectTitle?: string;
-    organization: string;
+    organization?: string;
     /** Human-readable org name (for display; the token can't resolve it when wrong) */
     organizationName?: string;
-    workspace: string;
+    workspace?: string;
     /** Human-readable workspace name — written by the wizard and read back by
      *  `useWizardState`; the type simply never declared it. */
     workspaceName?: string;
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;
-    authenticated: boolean;
+    authenticated?: boolean;
 }
 
 export interface CommerceConfig {

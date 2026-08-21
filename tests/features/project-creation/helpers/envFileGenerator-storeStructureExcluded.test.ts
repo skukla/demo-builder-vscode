@@ -56,7 +56,7 @@ it('writes the store CODE and never the name it was picked by', async () => {
     const context = createMockSetupContext({
         registry: { envVars: ENV_VARS } as never,
         project: project as never,
-        config: { componentConfigs, components: { backend: BACKEND_ID } },
+        config: { projectName: 'test-project', componentConfigs, components: { backend: BACKEND_ID } },
     });
 
     await generateComponentEnvFile(TEST_COMPONENT_PATH, 'eds-accs-mesh', meshComponent, context);

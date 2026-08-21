@@ -122,8 +122,7 @@ async function handleMeshDeploySuccess(params: {
     const finalElapsed = Math.floor((Date.now() - startTime) / 1000);
 
     if (onMeshCreated) {
-        const adobeConfig = setupContext.config as { adobe?: { workspace?: string } };
-        onMeshCreated(adobeConfig.adobe?.workspace);
+        onMeshCreated(setupContext.config.adobe?.workspace);
     }
 
     // Get mesh info - prefer from deployment result, fall back to wizard config

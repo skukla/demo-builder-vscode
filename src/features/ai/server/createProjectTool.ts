@@ -49,7 +49,10 @@ import {
     getStorefrontForStack,
     getSelectablePackages,
 } from '@/features/project-creation/services/demoPackageLoader';
-import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import {
+    buildProjectConfig,
+    type ProjectConfigSource,
+} from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { WizardState } from '@/types/webview';
@@ -167,7 +170,7 @@ async function createHeadless(
         adobe = resolved;
     }
 
-    const wizardState = {
+    const wizardState: ProjectConfigSource = {
         projectName: args.projectName,
         selectedPackage: args.pkgId,
         selectedStack: args.stackId,
@@ -179,9 +182,9 @@ async function createHeadless(
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
-    } as unknown as WizardState;
+    };
 
-    const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
+    const config = buildProjectConfig(wizardState, null, packages);
     try {
         // Run creation under the stored session org context so any `aio` work
         // targets the selected org/workspace via env (no global mutation).
@@ -273,7 +276,7 @@ async function createEds(
     const repoUrl = lastCompleteData(events)?.repoUrl as string | undefined;
 
     // Phase 2: create the project, with preflight results threaded in.
-    const wizardState = {
+    const wizardState: ProjectConfigSource = {
         projectName: args.projectName,
         selectedPackage: args.pkgId,
         selectedStack: args.stackId,
@@ -292,9 +295,9 @@ async function createEds(
             repoUrl,
             preflightComplete: true,
         },
-    } as unknown as WizardState;
+    };
 
-    const config = buildProjectConfig(wizardState, null, packages) as unknown as Record<string, unknown>;
+    const config = buildProjectConfig(wizardState, null, packages);
     try {
         await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
     } catch (err) {

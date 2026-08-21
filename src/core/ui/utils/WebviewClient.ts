@@ -15,6 +15,7 @@
  */
 
 import { FRONTEND_TIMEOUTS } from './frontendTimeouts';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 declare global {
     interface Window {
@@ -303,7 +304,7 @@ class WebviewClient {
         this.postMessage('re-detect-context');
     }
 
-    public createProject(config: unknown): void {
+    public createProject(config: ProjectCreationConfig): void {
         this.postMessage('create-project', config);
     }
 

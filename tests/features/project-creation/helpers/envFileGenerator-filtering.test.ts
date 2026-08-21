@@ -45,7 +45,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -75,7 +75,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -103,7 +103,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(

@@ -18,6 +18,7 @@
  */
 
 import { promises as fsPromises } from 'fs';
+import type { ComponentConfigs } from '@/types/components';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { TransformedComponentDefinition } from '@/types/components';
 import { createMockSetupContext, TEST_COMPONENT_PATH } from './envFileGenerator.testUtils';
@@ -54,7 +55,7 @@ const CONFIGS_MESH_FIRST = {
     },
 };
 
-async function envFor(componentConfigs: Record<string, unknown>, backendId?: string) {
+async function envFor(componentConfigs: ComponentConfigs, backendId?: string) {
     const project = {
         name: 'p',
         path: '/p',
@@ -65,7 +66,7 @@ async function envFor(componentConfigs: Record<string, unknown>, backendId?: str
         registry: { envVars: ENV_VARS } as never,
         project: project as never,
         // getBackendId() reads config.components.backend — not componentSelections.
-        config: { componentConfigs, components: { backend: backendId } },
+        config: { projectName: 'test-project', componentConfigs, components: { backend: backendId } },
     });
 
     await generateComponentEnvFile(

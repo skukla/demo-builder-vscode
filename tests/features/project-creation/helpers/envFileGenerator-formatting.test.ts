@@ -45,7 +45,7 @@ describe('envFileGenerator - Formatting', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -75,7 +75,7 @@ describe('envFileGenerator - Formatting', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(

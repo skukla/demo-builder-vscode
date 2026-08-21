@@ -8,6 +8,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 /**
@@ -480,7 +481,7 @@ function extractImportedMeshEndpoint(
 
 /** Validate stack/package configuration consistency and log warnings */
 function validateStackPackageConfig(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     packages: DemoPackage[] | undefined,
 ): void {
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
@@ -503,7 +504,7 @@ function validateStackPackageConfig(
 
 /** Resolve frontend source from selected package/storefront combination */
 function resolveFrontendSourceFromPackage(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     packages: DemoPackage[] | undefined,
 ): GitSource | undefined {
     if (!packages || !wizardState.selectedStack || !wizardState.selectedPackage) {
@@ -515,7 +516,7 @@ function resolveFrontendSourceFromPackage(
 
 /** Validate that stack lookup succeeded and log warnings if not */
 function validateStackLookup(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     stack: ReturnType<typeof getStackById> | undefined,
 ): void {
     if (wizardState.selectedStack && !stack) {
@@ -533,7 +534,7 @@ function validateStackLookup(
 }
 
 /** Build EDS config object for project creation from wizard EDS state */
-function buildProjectEdsConfig(wizardState: WizardState) {
+function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
     const eds = wizardState.edsConfig;
     if (!eds) return undefined;
 
@@ -619,11 +620,41 @@ function unionConsoleApiPicks(
  * @param importedSettings - Optional imported settings for mesh reuse detection
  * @param packages - Optional packages array to resolve frontend source from storefronts
  */
+/**
+ * The slice of wizard state {@link buildProjectConfig} actually reads. A full
+ * WizardState is assignable; the MCP create_project tool builds exactly this
+ * slice headlessly (it used to cast a partial object
+ * `as unknown as WizardState`, which hid every missing field).
+ */
+export type ProjectConfigSource = Pick<
+    WizardState,
+    | 'projectName'
+    | 'projectTitle'
+    | 'adobeOrg'
+    | 'adobeProject'
+    | 'adobeWorkspace'
+    | 'componentConfigs'
+    | 'selectedStack'
+    | 'selectedOptionalDependencies'
+    | 'apiMesh'
+    | 'storeDiscoveryData'
+    | 'selectedPackage'
+    | 'datapack'
+    | 'selectedAppBuilderComponents'
+    | 'appBuilderComponentSources'
+    | 'selectedConsoleApis'
+    | 'selectedAddons'
+    | 'selectedBlockLibraries'
+    | 'customBlockLibraries'
+    | 'editProjectPath'
+    | 'edsConfig'
+>;
+
 export function buildProjectConfig(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     importedSettings?: ImportedSettings | null,
     packages?: DemoPackage[],
-) {
+): ProjectCreationConfig {
     const importedMeshEndpoint = extractImportedMeshEndpoint(wizardState.componentConfigs);
     validateStackPackageConfig(wizardState, packages);
     const frontendSource = resolveFrontendSourceFromPackage(wizardState, packages);

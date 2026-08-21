@@ -92,7 +92,7 @@ describe('projectFinalizationService', () => {
             mockHandlerContext,
             mockRegistry,
             mockProject,
-            {}
+            { projectName: 'test-project' }
         );
 
         mockComponentDefinitions = new Map<string, ComponentDefinitionEntry>();
@@ -192,7 +192,7 @@ describe('projectFinalizationService', () => {
                 mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithMissingPath,
-                {}
+                { projectName: 'test-project' }
             );
 
             const context: FinalizationContext = {
@@ -281,7 +281,7 @@ describe('projectFinalizationService', () => {
                 mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithMultipleComponents,
-                {}
+                { projectName: 'test-project' }
             );
 
             const multipleComponentDefs = new Map<string, ComponentDefinitionEntry>(
@@ -388,7 +388,7 @@ describe('projectFinalizationService', () => {
                 mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutVersion,
-                {}
+                { projectName: 'test-project' }
             );
 
             const context: FinalizationContext = {

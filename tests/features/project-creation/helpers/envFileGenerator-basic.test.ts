@@ -46,7 +46,7 @@ describe('envFileGenerator - Basic Generation', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -79,7 +79,7 @@ describe('envFileGenerator - Basic Generation', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -103,7 +103,7 @@ describe('envFileGenerator - Basic Generation', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -133,7 +133,7 @@ describe('envFileGenerator - Basic Generation', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(

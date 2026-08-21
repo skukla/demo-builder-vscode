@@ -6,6 +6,7 @@
  */
 
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
 import type { ComponentRegistry } from '@/types/components';
 import type { Project } from '@/types';
@@ -16,7 +17,7 @@ describe('ProjectSetupContext', () => {
     let mockLogger: Logger;
     let mockRegistry: ComponentRegistry;
     let mockProject: Project;
-    let mockConfig: Record<string, unknown>;
+    let mockConfig: ProjectCreationConfig;
 
     beforeEach(() => {
         mockLogger = {
@@ -82,6 +83,7 @@ describe('ProjectSetupContext', () => {
         };
 
         mockConfig = {
+            projectName: 'test-project',
             components: {
                 backend: 'adobe-commerce-paas',
             },
@@ -186,7 +188,7 @@ describe('ProjectSetupContext', () => {
         });
 
         it('should return undefined when config.components is missing', () => {
-            const configWithoutComponents = {};
+            const configWithoutComponents: ProjectCreationConfig = { projectName: 'test-project' };
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 mockRegistry,
@@ -199,7 +201,7 @@ describe('ProjectSetupContext', () => {
         });
 
         it('should return undefined when backend is not specified', () => {
-            const configWithoutBackend = { components: {} };
+            const configWithoutBackend = { projectName: 'test-project', components: {} };
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 mockRegistry,

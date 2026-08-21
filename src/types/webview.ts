@@ -2,6 +2,7 @@
 
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
+import type { ComponentConfigs } from './components';
 import { ErrorCode } from './errorCodes';
 import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
@@ -353,13 +354,9 @@ export interface ComponentSelection {
     preset?: string;
 }
 
-export interface ComponentConfigs {
-    [componentId: string]: ComponentConfig;
-}
-
-export interface ComponentConfig {
-    [key: string]: string | boolean | number | undefined;
-}
+// ONE declaration with @/types/components (this file used to carry a
+// structurally identical second copy of both).
+export type { ComponentConfig, ComponentConfigs } from './components';
 
 /**
  * A single step in field help instructions

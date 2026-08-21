@@ -6,6 +6,7 @@
  */
 
 import { webviewClient } from './WebviewClient';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 // Re-export for consumers that need direct WebviewClient access
 export { webviewClient };
@@ -55,7 +56,7 @@ export const vscode = {
      * Shorthand for creating a project
      * @param config - Project configuration
      */
-    createProject: (config: unknown) => {
+    createProject: (config: ProjectCreationConfig) => {
         webviewClient.createProject(config);
     },
 };

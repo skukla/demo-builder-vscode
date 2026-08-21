@@ -23,6 +23,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
 import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
  * Count selected components (SOP §10 compliance)
@@ -74,9 +75,11 @@ async function sendValidationFailure(
  */
 async function validateProjectConfig(
     context: HandlerContext,
-    config: Record<string, unknown>,
+    config: ProjectCreationConfig,
 ): Promise<{ success: boolean } | undefined> {
-    // SECURITY: Validate project name to prevent path traversal
+    // SECURITY: Validate project name to prevent path traversal. The runtime
+    // check stays even though the type declares it — the wire can always be
+    // handed a malformed payload.
     if (typeof config.projectName !== 'string') {
         throw new Error('projectName must be a string');
     }
@@ -290,7 +293,9 @@ export async function handleCreateProject(
 ): Promise<{
     success: boolean;
 }> {
-    const config = payload;
+    // The dispatch layer is untyped; this is the receiving cast against the
+    // shared wire declaration (validated above/below at runtime).
+    const config = payload as unknown as ProjectCreationConfig;
 
     const validationResult = await validateProjectConfig(context, config);
     if (validationResult) {
@@ -298,7 +303,7 @@ export async function handleCreateProject(
     }
 
     const startTime = Date.now();
-    const projectName = config.projectName as string; // validated by validateProjectConfig above
+    const projectName = config.projectName; // validated by validateProjectConfig above
     const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', projectName);
 
     // FIRST: Check workspace trust and offer one-time tip
