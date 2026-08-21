@@ -132,6 +132,10 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
+#### Spine sweep — work the call-path-audit worklist (next row: mesh delete)
+
+**The worklist lives in the skill, not here** — `.claude/skills/call-path-audit/SKILL.md` carries the full candidate table with 2026-08-22 measured counts; this entry is only the pointer, so the record stays in one place. State at filing: 2 of 15 rows PINNED (mesh deploy, app-builder deploy — both mutation-proven in `tests/templates/spine-chokepoints.test.ts`), 1 pin-ready (app undeploy), 10 to audit, 2 excluded by design. Kickoff: invoke `call-path-audit`, take the topmost non-PINNED row — **mesh delete** (3 code sites: deleteHandler, createHandler cancel-cleanup, integration-runner remove; the question is whether all three are legitimate doors of different actions or one is a second path). Picked as next work by the user 2026-08-22.
+
 #### Post-reset mesh redeploy is implemented twice ([`2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md`](2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md))
 
 **Verified duplication, deferred with intent to do it.** The EDS reset (`edsResetMeshHelper`) and the non-EDS reset (`projectResetService.runTargetedMeshDeploy`) each carry their own fetch-remote-mesh-id → deploy-via-spine → persist-endpoint choreography; `deployMeshHeadless` is a near-third. Both sit ON the deploy spine, and `tests/templates/spine-chokepoints.test.ts` pins the primitive to one file — so neither copy can become a second deploy path; what duplicates is the choreography around it, and only the touched copy gets future fixes. Extract one shared redeploy-and-persist helper beside the spine; callers keep auth preflight, org targeting, progress surface, and their own partial-success shapes. Proof of behaviour preservation: both reset suites + headless suite unchanged. Found by the first spine call-path audit. Filed 2026-08-22.
