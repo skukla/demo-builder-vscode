@@ -148,6 +148,45 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     }
 
     /**
+     * Read and validate wizard-steps.json — THE one load ritual, shared by
+     * the step-logger init and getInitialData. It was pasted in both and the
+     * copies had already drifted in their logging; the outcomes are
+     * discriminated because the two callers legitimately react differently
+     * (getInitialData shouts on a shape failure, the step logger quietly
+     * falls back to default step names).
+     */
+    private readWizardStepsFile():
+        | { outcome: 'ok'; steps: WizardStepDefinition[] }
+        | { outcome: 'absent' }
+        | { outcome: 'unparseable' }
+        | { outcome: 'invalid-shape' }
+        | { outcome: 'unreadable'; error: Error } {
+        try {
+            const stepsPath = path.join(
+                this.context.extensionPath,
+                'src',
+                'features',
+                'project-creation',
+                'config',
+                'wizard-steps.json',
+            );
+            if (!fs.existsSync(stepsPath)) {
+                return { outcome: 'absent' };
+            }
+            const stepsConfig = parseJSON<{ steps: unknown[] }>(fs.readFileSync(stepsPath, 'utf8'));
+            if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {
+                return { outcome: 'unparseable' };
+            }
+            if (!stepsConfig.steps.every(isWizardStepDefinition)) {
+                return { outcome: 'invalid-shape' };
+            }
+            return { outcome: 'ok', steps: stepsConfig.steps };
+        } catch (error) {
+            return { outcome: 'unreadable', error: error as Error };
+        }
+    }
+
+    /**
      * Lazy initialization of StepLogger with ConfigurationLoader
      * Uses promise caching to ensure only one initialization happens
      */
@@ -163,28 +202,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
         // Start initialization
         this.stepLoggerInitPromise = (async () => {
-            // Try to load wizard steps for better step names
+            // Try to load wizard steps for better step names. Tolerant on
+            // purpose: any failure just means default step names.
             let wizardSteps: WizardStepDefinition[] | undefined;
-            try {
-                const stepsPath = path.join(
-                    this.context.extensionPath,
-                    'src',
-                    'features',
-                    'project-creation',
-                    'config',
-                    'wizard-steps.json',
-                );
-                if (fs.existsSync(stepsPath)) {
-                    const stepsContent = fs.readFileSync(stepsPath, 'utf8');
-                    const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
-                    if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                        // Validate all steps have required properties using type guard
-                        if (stepsConfig.steps.every(isWizardStepDefinition)) {
-                            wizardSteps = stepsConfig.steps;
-                        }
-                    }
-                }
-            } catch {
+            const read = this.readWizardStepsFile();
+            if (read.outcome === 'ok') {
+                wizardSteps = read.steps;
+            } else if (read.outcome === 'unreadable') {
                 this.logger.debug('Could not load wizard steps for logging, using defaults');
             }
 
@@ -268,45 +292,30 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
             this.logger.debug('Could not load component defaults:', error);
         }
 
-        // Load wizard steps configuration
+        // Load wizard steps configuration. This caller SHOUTS on a shape
+        // failure — a config that lost `enabled` once silently dropped every
+        // wizard step (the finding-3 bug) — while the step-logger caller of
+        // the same read quietly falls back. The read itself is one helper.
         let wizardSteps: WizardStepDefinition[] | null = null;
-        try {
-            const stepsPath = path.join(
-                this.context.extensionPath,
-                'src',
-                'features',
-                'project-creation',
-                'config',
-                'wizard-steps.json',
+        const stepsRead = this.readWizardStepsFile();
+        if (stepsRead.outcome === 'ok') {
+            wizardSteps = stepsRead.steps;
+            // Extract step IDs for logging (show first 3 + count of remaining)
+            const stepCount = wizardSteps.length;
+            const stepPreview = wizardSteps
+                .slice(0, 3)
+                .map((s) => s.id)
+                .join(', ');
+            const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
+            this.logger.debug(`Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`);
+        } else if (stepsRead.outcome === 'invalid-shape') {
+            this.logger.error(
+                'wizard-steps.json failed validation: every step needs a string ' +
+                    'id, a string name, and a boolean enabled. Steps not sent to ' +
+                    'the wizard.',
             );
-            if (fs.existsSync(stepsPath)) {
-                const stepsContent = fs.readFileSync(stepsPath, 'utf8');
-                const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
-                if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                    if (stepsConfig.steps.every(isWizardStepDefinition)) {
-                        wizardSteps = stepsConfig.steps;
-                        // Extract step IDs for logging (show first 3 + count of remaining)
-                        const stepCount = wizardSteps.length;
-                        const stepPreview = wizardSteps
-                            .slice(0, 3)
-                            .map((s) => s.id)
-                            .join(', ');
-                        const remainingCount =
-                            stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
-                        this.logger.debug(
-                            `Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`,
-                        );
-                    } else {
-                        this.logger.error(
-                            'wizard-steps.json failed validation: every step needs a string ' +
-                                'id, a string name, and a boolean enabled. Steps not sent to ' +
-                                'the wizard.',
-                        );
-                    }
-                }
-            }
-        } catch (error) {
-            this.logger.error('Failed to load wizard steps configuration:', error as Error);
+        } else if (stepsRead.outcome === 'unreadable') {
+            this.logger.error('Failed to load wizard steps configuration:', stepsRead.error);
         }
 
         // Get existing project names for duplicate validation

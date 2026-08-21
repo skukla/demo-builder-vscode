@@ -7,14 +7,9 @@
  * Target Coverage: 90%+
  */
 
-import {
-    parseJSON,
-    isRecord,
-    isStringArray
-} from '@/types/typeGuards';
+import { parseJSON } from '@/types/typeGuards';
 
 describe('typeGuards - JSON Parsing', () => {
-
     // =================================================================
     // parseJSON Tests
     // =================================================================
@@ -50,7 +45,7 @@ describe('typeGuards - JSON Parsing', () => {
                 const result = parseJSON(json);
                 expect(result).toEqual({
                     arr: [1, 2, { nested: true }],
-                    num: 42
+                    num: 42,
                 });
             });
         });
@@ -74,50 +69,10 @@ describe('typeGuards - JSON Parsing', () => {
             });
         });
 
-        describe('with type guard', () => {
-            interface TestType {
-                name: string;
-                age: number;
-            }
-
-            const isTestType = (value: unknown): value is TestType => {
-                return (
-                    isRecord(value) &&
-                    typeof value.name === 'string' &&
-                    typeof value.age === 'number'
-                );
-            };
-
-            it('should parse and validate with type guard', () => {
-                const json = '{"name": "Alice", "age": 30}';
-                const result = parseJSON<TestType>(json, isTestType);
-                expect(result).toEqual({ name: 'Alice', age: 30 });
-            });
-
-            it('should return null when type guard fails', () => {
-                const json = '{"name": "Alice", "age": "30"}'; // age is string, not number
-                const result = parseJSON<TestType>(json, isTestType);
-                expect(result).toBe(null);
-            });
-
-            it('should return null for valid JSON that fails type guard', () => {
-                const json = '{"different": "structure"}';
-                const result = parseJSON<TestType>(json, isTestType);
-                expect(result).toBe(null);
-            });
-
-            it('should work with array type guards', () => {
-                const json = '["a", "b", "c"]';
-                const result = parseJSON<string[]>(json, isStringArray);
-                expect(result).toEqual(['a', 'b', 'c']);
-            });
-
-            it('should reject arrays with wrong types', () => {
-                const json = '[1, 2, 3]';
-                const result = parseJSON<string[]>(json, isStringArray);
-                expect(result).toBe(null);
-            });
-        });
+        // No 'with type guard' suite any more: parseJSON's optional guard
+        // parameter had ZERO production callers in its whole life (audited
+        // 2026-08-21) — these tests were its only user, testing an affordance
+        // nothing exercised. Deleted with the parameter per no-soft-deprecation.
 
         describe('edge cases', () => {
             it('should handle whitespace', () => {

@@ -36,17 +36,20 @@ export function hasProperty<K extends string>(obj: unknown, key: K): obj is Reco
 }
 
 /**
- * parseJSON - Safe JSON parsing with type guard
+ * parseJSON - Safe JSON parsing (null on invalid JSON, never throws).
+ *
+ * The generic is a CAST, not a check — callers own validation of the parsed
+ * value (all 33 call sites were audited 2026-08-21 and every one null-checks
+ * or optional-chains; see .rptc/complete/2026-08-21-parsejson-call-sites-are-
+ * unchecked-casts.md). An optional type-guard second parameter existed here
+ * for years with zero production callers and was deleted per the
+ * no-soft-deprecation rule — a site wanting parse-and-validate composes it
+ * explicitly (the readWizardStepsFile precedent), which keeps failure modes
+ * distinguishable in a way a merged parse-or-null cannot.
  */
-export function parseJSON<T = unknown>(
-    json: string,
-    guard?: (value: unknown) => value is T,
-): T | null {
+export function parseJSON<T = unknown>(json: string): T | null {
     try {
         const parsed = JSON.parse(json); // OK: parseJSON implementation uses JSON.parse internally
-        if (guard && !guard(parsed)) {
-            return null;
-        }
         return parsed as T;
     } catch {
         return null;

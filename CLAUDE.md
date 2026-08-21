@@ -154,6 +154,17 @@ let the user choose. Do not file a backlog item for a two-line fix.
 
 The judgement call is whether two things are the same job — not whether to bother.
 
+**This rule applies to ANALYSIS work too — an audit is not exempt because its
+deliverable is a report.** On 2026-08-21 an audit read all 33 `parseJSON` call
+sites, VERIFIED two improvements along the way (the same wizard-steps load ritual
+pasted twice in one file; a guard parameter with zero production callers in its
+lifetime), and filed both as "notes" — the user had to ask why. The mode you are
+in does not change what a verified finding demands: if it is in reach, fix it in
+the same turn; if it needs a decision, END THE TURN WITH THE QUESTION ("found X,
+verified — fix now or defer?") rather than a sentence that files it away. A
+"systemic note" in a report is the reporting-instead-of-fixing failure wearing
+its third hat.
+
 ## Verifying
 
 **A check whose exit code passes through `head`/`tail`/`wc`/`grep` is not a check.**
