@@ -6,6 +6,10 @@
   "additionalProperties": false,
   "required": ["mcpServers"],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Pointer to this schema (editor tooling)"
+    },
     "mcpServers": {
       "type": "array",
       "description": "MCP servers installed via npm devDependency. Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, and its package is added as a devDependency on the storefront's package.json before npm install runs.",

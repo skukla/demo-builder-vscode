@@ -695,11 +695,7 @@
     "selectionGroups": {
         "frontends": ["headless", "eds-storefront"],
         "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
-        "stacks": ["headless-paas"],
-        "brands": ["citisignal", "buildright"],
         "dependencies": [],
-        "integrations": ["experience-platform"],
-        "addons": ["adobe-commerce-aco"],
-        "tools": ["commerce-demo-ingestion"]
+        "integrations": ["experience-platform"]
     }
 }

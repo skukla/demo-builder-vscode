@@ -1,5 +1,54 @@
 # Bundled config JSON is cast to its declared type, never validated
 
+**Filed:** 2026-08-21 · **LARGELY DONE same day** — see Progress below; one
+scoped remainder.
+
+## Progress 2026-08-21
+
+The investigation found the repo already had the vocabulary this item was
+going to introduce: `*.schema.json` files exist beside NINE configs (not
+five), and `tests/templates/` already validated demo-packages against its
+schema with Ajv. So the design decision went to the house pattern —
+**JSON Schema + Ajv contract tests, not Zod** (reuse-first; a Zod layer would
+have been a third shape vocabulary).
+
+Shipped:
+
+- `tests/templates/config-contracts.test.ts` — auto-discovers every
+  `*.schema.json` under src/ and validates the sibling real JSON (count-pinned
+  at 9 so discovery can't go vacuous; also checks the data's `$schema`
+  pointer resolves). New configs join by existing.
+- `ajv` promoted to a direct devDependency (tests were importing it as a
+  TRANSITIVE dep of the MCP SDK — an SDK bump could have broken the suites).
+- First run surfaced four real rots, all fixed:
+  1. `components.schema.json` was not even parseable JSON (trailing comma) —
+     it had never validated anything. Rewritten for the v3 sectioned
+     structure it never learned (strict at root/section level, deliberately
+     shallow per-entry — the alignment tests own the per-entry field
+     vocabulary).
+  2. `prerequisites.schema.json`'s `installConfig` oneOf described three
+     retired install formats, none of them the step-based one every entry
+     uses — and its variants overlapped, so ANY object failed oneOf.
+     Replaced with a mirror of `PrerequisiteInstall`/`InstallStep`.
+  3. `ai-defaults.schema.json` forbade the `$schema` key its own data
+     carries.
+  4. `components.json` `selectionGroups` had grown four groups
+     (stacks/brands/addons/tools) that no code reads and the interface never
+     declared — the alignment test's hand-copied set had drifted along with
+     the data. Dead keys deleted; interface, code, data, schema and
+     alignment set now all agree on the four consumed groups.
+
+## Remaining (the item stays open for this)
+
+The interface↔schema link is still prose: each schema now SAYS "mirrors
+<interface>" but nothing checks it, so the two can drift the way the
+alignment sets did. Options unchanged from below (generate one from the
+other); worth doing only if a schema↔interface drift actually bites — the
+contract tests now catch the data-side drift, which is the class that had
+shipped bugs.
+
+---
+
 **Filed:** 2026-08-21
 **Origin:** The boundary-cast audit's first triage (all 55 sites opened). This
 is the largest surviving cluster: ~16 `as unknown as <DeclaredType>` casts on

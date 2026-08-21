@@ -479,6 +479,7 @@
     "@types/vscode": "^1.74.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
+    "ajv": "^8.20.0",
     "chokidar": "^3.6.0",
     "cloc": "^2.6.0-cloc",
     "concurrently": "^9.2.1",
