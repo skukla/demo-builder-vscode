@@ -146,7 +146,8 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
 }
 
 /**
- * Check if a phase is actively processing
+ * Check if a phase is actively processing — i.e. closing the wizard now should
+ * send the cancel that offers cleanup of whatever setup already created.
  */
 function isActivePhase(phase: StorefrontSetupPhase): boolean {
     return [
@@ -159,6 +160,11 @@ function isActivePhase(phase: StorefrontSetupPhase): boolean {
         'block-library',
         'publish',
         'cancelling',
+        // Setup paused for a DA.live re-auth is still running — and the re-auth
+        // prompt is exactly where users give up. This phase was missing from the
+        // list, so closing the wizard there skipped the cancel and orphaned the
+        // created repo/content silently (decided with the user 2026-08-22).
+        'auth-recovery',
     ].includes(phase);
 }
 
@@ -197,47 +203,44 @@ export function StorefrontSetupStep({
     /**
      * Handle progress updates from the extension
      */
-    const handleProgress = useCallback(
-        (data: StorefrontSetupProgressPayload) => {
-            setSetupState((prev) => {
-                // Update partial state based on phase transitions
-                const newPartialState = { ...prev.partialState, phase: data.phase };
+    const handleProgress = useCallback((data: StorefrontSetupProgressPayload) => {
+        setSetupState((prev) => {
+            // Update partial state based on phase transitions
+            const newPartialState = { ...prev.partialState, phase: data.phase };
 
-                // A push carrying repoUrl means the repo exists — record it for
-                // cancel-cleanup. This used to be gated on phase !== 'repository',
-                // which excluded exactly the pushes that carry repo info (they are
-                // all 'repository'-phase pushes), so repoCreated never got set from
-                // progress and cancelling mid-setup skipped repo cleanup. Found when
-                // the shared payload type made the comparison provably dead.
-                if (data.repoUrl) {
-                    newPartialState.repoCreated = true;
-                    newPartialState.repoUrl = data.repoUrl;
-                    newPartialState.repoOwner = data.repoOwner;
-                    newPartialState.repoName = data.repoName;
-                }
+            // A push carrying repoUrl means the repo exists — record it for
+            // cancel-cleanup. This used to be gated on phase !== 'repository',
+            // which excluded exactly the pushes that carry repo info (they are
+            // all 'repository'-phase pushes), so repoCreated never got set from
+            // progress and cancelling mid-setup skipped repo cleanup. Found when
+            // the shared payload type made the comparison provably dead.
+            if (data.repoUrl) {
+                newPartialState.repoCreated = true;
+                newPartialState.repoUrl = data.repoUrl;
+                newPartialState.repoOwner = data.repoOwner;
+                newPartialState.repoName = data.repoName;
+            }
 
-                // Mark content as copied when completing content phase. The wire's
-                // terminal value is 'complete' — this compared against the local
-                // 'completed' state and so never matched (same dead-comparison find).
-                if (
-                    data.phase === 'complete' ||
-                    (prev.partialState.phase === 'content' && data.phase !== 'content')
-                ) {
-                    newPartialState.contentCopied = true;
-                }
+            // Mark content as copied when completing content phase. The wire's
+            // terminal value is 'complete' — this compared against the local
+            // 'completed' state and so never matched (same dead-comparison find).
+            if (
+                data.phase === 'complete' ||
+                (prev.partialState.phase === 'content' && data.phase !== 'content')
+            ) {
+                newPartialState.contentCopied = true;
+            }
 
-                return {
-                    ...prev,
-                    phase: data.phase,
-                    message: data.message,
-                    subMessage: data.subMessage,
-                    progress: data.progress,
-                    partialState: newPartialState,
-                };
-            });
-        },
-        [],
-    );
+            return {
+                ...prev,
+                phase: data.phase,
+                message: data.message,
+                subMessage: data.subMessage,
+                progress: data.progress,
+                partialState: newPartialState,
+            };
+        });
+    }, []);
 
     // Ref to track latest edsConfig for callbacks (avoids stale closure)
     const edsConfigRef = useRef(state.edsConfig);
@@ -282,17 +285,14 @@ export function StorefrontSetupStep({
     /**
      * Handle error notification from the extension
      */
-    const handleError = useCallback(
-        (data: StorefrontSetupErrorPayload) => {
-            setSetupState((prev) => ({
-                ...prev,
-                phase: 'error',
-                message: data.message || 'An error occurred',
-                error: data.error,
-            }));
-        },
-        [],
-    );
+    const handleError = useCallback((data: StorefrontSetupErrorPayload) => {
+        setSetupState((prev) => ({
+            ...prev,
+            phase: 'error',
+            message: data.message || 'An error occurred',
+            error: data.error,
+        }));
+    }, []);
 
     /**
      * Handle GitHub App installation required notification
