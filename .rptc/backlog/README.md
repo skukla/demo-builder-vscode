@@ -289,6 +289,10 @@ cruft. Not blocked.
 
 ### D. Deferred by design (gated on an external condition)
 
+#### The other webview message channels are still untyped ([`2026-08-21-webview-push-channels-are-untyped.md`](2026-08-21-webview-push-channels-are-untyped.md))
+
+The 2026-08-20 payload-typing pass closed the `init` channel — one of ~30. Every other extension↔webview message (`statusUpdate` family, snapshots, auth flows, request/response pairs) still crosses as an object literal on one side and a hopeful cast on the other, and since `9144bee9` the comm manager honestly takes `unknown`, so nothing forces agreement. **Deliberately NOT a project**: the gate is "a channel causes a bug" — then type THAT channel, one per slice, using the two worked examples (webviewPayloads for init; `StatusPayload` `95bdf0b0`). The item carries the slice rules and per-channel kickoff prompt. Filed 2026-08-21.
+
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
 
 Phase 1 (matching names + auto-migration on reset) shipped (`23efd831`, `b2169699`). This entry is now the cleanup batch: retire `SiteRegistrationParams.legacyLookupKey`, the `cleanUpLegacyRegistration` branch, the 4th arg to `buildSiteConfigParams`, the `daLiveSite` manifest field. **Verified these symbols still exist.** Single-day deletion. Pick up only after telemetry confirms no `storefrontNameMigration` activations for 30+ days.
