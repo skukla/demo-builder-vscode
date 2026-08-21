@@ -400,26 +400,6 @@ export interface FieldHelp {
     steps?: FieldHelpStep[];
 }
 
-export interface ComponentEnvVar {
-    key: string;
-    label: string;
-    type: 'text' | 'password' | 'url' | 'select' | 'boolean';
-    required?: boolean;
-    default?: string | boolean;
-    placeholder?: string;
-    description?: string;
-    /** Rich help content with optional screenshot */
-    help?: FieldHelp;
-    group?: string;
-    providedBy?: string;
-    usedBy?: string[];
-    options?: Array<{ value: string; label: string }>;
-    validation?: {
-        pattern?: string;
-        message?: string;
-    };
-}
-
 /**
  * EDS (Edge Delivery Services) configuration for wizard
  * Contains ACCS credentials, GitHub auth state, and DA.live settings

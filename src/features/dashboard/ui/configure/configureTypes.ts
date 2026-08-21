@@ -5,7 +5,7 @@
  */
 
 import type { Project } from '@/types/base';
-import { ComponentEnvVar } from '@/types/webview';
+import type { EnvVarDefinition } from '@/types/components';
 
 export interface ComponentsData {
     frontends?: ComponentData[];
@@ -14,7 +14,7 @@ export interface ComponentsData {
     mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
-    envVars?: Record<string, ComponentEnvVar>;
+    envVars?: Record<string, EnvVarDefinition>;
 }
 
 export interface ConfigureScreenProps {
@@ -37,7 +37,7 @@ export interface ComponentData {
     };
 }
 
-export interface UniqueField extends ComponentEnvVar {
+export interface UniqueField extends EnvVarDefinition {
     componentIds: string[];
 }
 

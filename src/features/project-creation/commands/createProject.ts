@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import type { EditProjectConfig } from '../ui/wizard/wizardHelpers';
 import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
@@ -25,24 +26,17 @@ import { parseCustomBlockLibrarySettings } from '@/features/project-creation/ser
 import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { parseJSON } from '@/types/typeGuards';
-
-// Type definitions for createProjectWebview
-interface WizardStep {
-    id: string;
-    name: string;
-    enabled: boolean;
-    [key: string]: unknown;
-}
+import type { WizardStepConfigWithRequirements } from '@/types/wizard';
 
 /**
- * Type guard for WizardStep (SOP §10 compliance)
+ * Type guard for one wizard-steps.json entry (SOP §10 compliance)
  *
  * `enabled` is validated because the webview filters every step on it
  * (wizardHelpers.ts filterStepsByComponents / getFirstEnabledStep /
  * getEnabledWizardSteps) — a step without it is silently dropped there,
  * so it must fail loudly here instead.
  */
-function isWizardStep(value: unknown): value is WizardStep {
+function isWizardStepConfig(value: unknown): value is WizardStepConfigWithRequirements {
     if (typeof value !== 'object' || value === null) return false;
     if (!('id' in value) || typeof value.id !== 'string') return false;
     if (!('name' in value) || typeof value.name !== 'string') return false;
@@ -69,21 +63,11 @@ function formatComponentDefaults(defaults: ComponentDefaults | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
-/** Configuration for editing an existing project */
-interface EditProjectConfig {
-    /** The SLUG — still the identity `editOriginalName` compares against. */
-    projectName: string;
-    /** The TITLE, so the name field shows what the user called it. */
-    projectTitle?: string;
-    projectPath: string;
-    settings: SettingsFile;
-}
-
 interface InitialWizardData {
     theme: 'dark' | 'light';
     workspacePath: string | undefined;
     componentDefaults: ComponentDefaults | null;
-    wizardSteps: WizardStep[] | null;
+    wizardSteps: WizardStepConfigWithRequirements[] | null;
     existingProjectNames: string[];
     importedSettings: SettingsFile | null;
     editProject: EditProjectConfig | null;
@@ -198,7 +182,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Start initialization
         this.stepLoggerInitPromise = (async () => {
             // Try to load wizard steps for better step names
-            let wizardSteps: { id: string; name: string; [key: string]: unknown }[] | undefined;
+            let wizardSteps: WizardStepConfigWithRequirements[] | undefined;
             try {
                 const stepsPath = path.join(
                     this.context.extensionPath,
@@ -213,7 +197,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                     if (stepsConfig && Array.isArray(stepsConfig.steps)) {
                         // Validate all steps have required properties using type guard
-                        if (stepsConfig.steps.every(isWizardStep)) {
+                        if (stepsConfig.steps.every(isWizardStepConfig)) {
                             wizardSteps = stepsConfig.steps;
                         }
                     }
@@ -303,7 +287,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
 
         // Load wizard steps configuration
-        let wizardSteps: WizardStep[] | null = null;
+        let wizardSteps: WizardStepConfigWithRequirements[] | null = null;
         try {
             const stepsPath = path.join(
                 this.context.extensionPath,
@@ -317,7 +301,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                 const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                 if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                    if (stepsConfig.steps.every(isWizardStep)) {
+                    if (stepsConfig.steps.every(isWizardStepConfig)) {
                         wizardSteps = stepsConfig.steps;
                         // Extract step IDs for logging (show first 3 + count of remaining)
                         const stepCount = wizardSteps.length;

@@ -56,3 +56,59 @@ export interface TrackableStepProps extends BaseStepProps {
     /** List of completed steps (for navigation restrictions) */
     completedSteps?: WizardStep[];
 }
+
+/**
+ * Condition for showing a wizard step
+ */
+export interface StepCondition {
+    /**
+     * Stack property that must be truthy for this step to be shown.
+     * Maps to Stack properties like 'requiresGitHub' or 'requiresDaLive'.
+     */
+    stackRequires?: 'requiresGitHub' | 'requiresDaLive';
+
+    /**
+     * Array of stack properties where at least ONE must be truthy.
+     * Used for combined steps that should show when GitHub OR DA.live is required.
+     */
+    stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
+
+    /**
+     * If true, this step is only shown when NO predefined stack is selected.
+     * Used for steps like Component Selection that are hidden when a stack
+     * already determines the components, but should appear for a future
+     * "Custom" option where users manually select components.
+     *
+     * NOTE: This condition is deliberately kept for future extensibility.
+     * When a "Custom" brand option is added, it won't set selectedStack,
+     * allowing this step to appear for manual component configuration.
+     */
+    showWhenNoStack?: boolean;
+
+    /**
+     * If true, this step is only shown in create mode (not edit mode).
+     * Used for steps like EDS preflight that create external resources
+     * which already exist for existing projects.
+     */
+    createModeOnly?: boolean;
+}
+
+/**
+ * One entry of wizard-steps.json — THE step-definition shape, shared by the
+ * producer (createProject reads and validates the config) and every consumer
+ * (StepLogger, the wizard bundle's init data, wizardHelpers' filters). This
+ * was declared four times with subtly different fields before; producer and
+ * consumer must check against this one declaration.
+ */
+export interface WizardStepConfigWithRequirements {
+    id: string;
+    name: string;
+    description?: string;
+    enabled: boolean;
+    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
+    requiredComponents?: string[];
+    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
+    requiredAny?: string[];
+    /** Optional: Condition for stack/auth-based filtering. */
+    condition?: StepCondition;
+}

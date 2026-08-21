@@ -3,13 +3,18 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
-import type { StepCondition } from './stepFiltering';
 import { hasMeshInDependencies } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
+import type { WizardStepConfigWithRequirements } from '@/types/wizard';
+
+// Re-exported for this module's consumers: the canonical step-definition shape
+// (one entry of wizard-steps.json) now lives in @/types/wizard, shared with the
+// extension-side producer.
+export type { WizardStepConfigWithRequirements } from '@/types/wizard';
 
 /**
  * Filters committed custom block library selections to remove any that
@@ -37,28 +42,6 @@ export interface WizardStepConfig {
     id: WizardStep;
     name: string;
     description?: string;
-}
-
-/**
- * Extended step configuration with optional component requirements.
- * Used for loading wizard-steps.json which may include requiredComponents.
- */
-export interface WizardStepConfigWithRequirements {
-    id: string;
-    name: string;
-    description?: string;
-    enabled: boolean;
-    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
-    requiredComponents?: string[];
-    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
-    requiredAny?: string[];
-    /**
-     * Optional: Condition for stack/auth-based filtering.
-     * Reuses the canonical StepCondition from stepFiltering.ts (DRY) so all
-     * condition keys (stackRequires, stackRequiresAny, requiresAdobeAuth,
-     * showWhenNoStack, createModeOnly) type-check here.
-     */
-    condition?: StepCondition;
 }
 
 // ============================================================================

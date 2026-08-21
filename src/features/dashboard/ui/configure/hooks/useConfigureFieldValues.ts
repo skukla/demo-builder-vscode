@@ -128,7 +128,9 @@ export function useConfigureFieldValues({
 
             // Defaults apply to untouched fields only.
             if (field.default !== undefined && field.default !== '') {
-                return field.default;
+                // Same numeric handling as stored values above — the registry
+                // type allows numeric defaults even though none exist today.
+                return typeof field.default === 'number' ? String(field.default) : field.default;
             }
 
             return '';

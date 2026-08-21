@@ -19,20 +19,13 @@
  * @module features/project-creation/ui/steps/buildYourProjectAreas
  */
 
-import {
-    filterStepsForStack,
-    type StepCondition,
-    type WizardStepWithCondition,
-} from '../wizard/stepFiltering';
-import {
-    isCommerceConfigured,
-    isIntegrationsComplete,
-    isStorefrontConfigured,
-} from './tileStatus';
+import { filterStepsForStack, type WizardStepWithCondition } from '../wizard/stepFiltering';
+import { isCommerceConfigured, isIntegrationsComplete, isStorefrontConfigured } from './tileStatus';
 import type { TimelineStatus } from '@/core/ui/components/TimelineNav';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { BuildAreaId, WizardState } from '@/types/webview';
+import type { StepCondition } from '@/types/wizard';
 
 /** A single visible area within the "Build Your Project" step. */
 export interface BuildArea {
@@ -106,22 +99,20 @@ export function buildYourProjectAreas(
 ): BuildArea[] {
     // Resolve the selected Stack object, mirroring useWizardState's resolution.
     const selectedStack = state.selectedStack
-        ? stacks.find(s => s.id === state.selectedStack)
+        ? stacks.find((s) => s.id === state.selectedStack)
         : undefined;
 
     // Shape descriptors as filter input and reuse the wizard step filter for
     // visibility. No area uses requiresAdobe* / createModeOnly, so minimal options.
-    const asSteps: WizardStepWithCondition[] = BUILD_AREA_DESCRIPTORS.map(d => ({
+    const asSteps: WizardStepWithCondition[] = BUILD_AREA_DESCRIPTORS.map((d) => ({
         id: d.id,
         name: d.label,
         condition: d.condition,
     }));
 
-    const visibleIds = new Set(
-        filterStepsForStack(asSteps, selectedStack).map(step => step.id),
-    );
+    const visibleIds = new Set(filterStepsForStack(asSteps, selectedStack).map((step) => step.id));
 
-    return BUILD_AREA_DESCRIPTORS.filter(d => visibleIds.has(d.id)).map(d => ({
+    return BUILD_AREA_DESCRIPTORS.filter((d) => visibleIds.has(d.id)).map((d) => ({
         id: d.id,
         label: d.label,
         status: statusForArea(d.id, state, packages, stacks),

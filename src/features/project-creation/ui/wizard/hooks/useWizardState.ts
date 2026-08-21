@@ -306,7 +306,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
  * Compute initial state based on mode (edit vs create) and any imported settings
  */
 function computeInitialState(
-    wizardSteps: { id: string; name: string; enabled: boolean }[] | undefined,
+    wizardSteps: WizardStepConfigWithRequirements[] | undefined,
     editProject: EditProjectConfig | undefined,
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,

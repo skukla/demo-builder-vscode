@@ -16,7 +16,8 @@ import {
 } from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
-import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
+import type { EnvVarDefinition } from '@/types/components';
+import { ComponentConfigs } from '@/types/webview';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -53,11 +54,11 @@ interface ComponentsData {
     mesh?: ComponentData[];
     integrations?: ComponentData[];
     appBuilder?: ComponentData[];
-    envVars?: Record<string, ComponentEnvVar>;
+    envVars?: Record<string, EnvVarDefinition>;
     services?: Record<string, ServiceDefinition>;
 }
 
-export interface UniqueField extends ComponentEnvVar {
+export interface UniqueField extends EnvVarDefinition {
     componentIds: string[];
 }
 
@@ -233,9 +234,11 @@ export function useComponentConfig({
         const loadData = async () => {
             try {
                 registryInFlight ??= vscode
-                    .request<{ success: boolean; type: string; data: ComponentsData }>(
-                        'get-components-data',
-                    )
+                    .request<{
+                        success: boolean;
+                        type: string;
+                        data: ComponentsData;
+                    }>('get-components-data')
                     .then((response) => response.data);
                 const data = await registryInFlight;
                 registryCache = data;
@@ -445,7 +448,11 @@ export function useComponentConfig({
             if (touchedFields.has(field.key)) {
                 return '';
             }
-            if (field.default !== undefined && field.default !== '') return field.default;
+            if (field.default !== undefined && field.default !== '') {
+                // Same numeric handling as stored values above — the registry
+                // type allows numeric defaults even though none exist today.
+                return typeof field.default === 'number' ? String(field.default) : field.default;
+            }
             return '';
         },
         [componentConfigs, touchedFields],

@@ -138,10 +138,10 @@ export function toDependencyData(
  *
  * The registry stores env vars keyed by name with no `key` field inside the
  * record (`ComponentRegistry.envVars: Record<string, Omit<EnvVarDefinition,
- * 'key'>>`; components.json carries none), while the webview-side types
- * (`ComponentEnvVar` in @/types/webview) declare `key` required. Producers
- * call this at the send boundary so the payload actually carries what the
- * consumer types claim.
+ * 'key'>>`; components.json carries none), while the webview consumers type
+ * the payload as `Record<string, EnvVarDefinition>` with `key` required.
+ * Producers call this at the send boundary so the payload actually carries
+ * what the consumer types claim.
  */
 export function withEnvVarKeys(
     envVars: Record<string, Omit<EnvVarDefinition, 'key'>> | undefined,
