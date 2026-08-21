@@ -174,7 +174,7 @@ the three sites that matter.
 out to be attached to it (findings 3 and 8); they were invisible until producer and
 consumer shared a declaration. The reason to do this is no longer tidiness.
 
-## Kickoff prompt
+## Kickoff prompt (original — slices 1–2 are DONE, see Progress above)
 
 > Webview initial payloads are declared and then cast away — see
 > `.rptc/backlog/2026-08-20-webview-payloads-are-typed-then-cast-away.md`.
@@ -191,3 +191,29 @@ consumer shared a declaration. The reason to do this is no longer tidiness.
 > step 1. Findings 3 and 8 are bugs that need neither and can be fixed first, alone.
 > Expect more than ten divergences — ten is where the first attempt stopped, not where
 > they ran out.
+
+## Kickoff prompt for the NEXT session (steps 1–5)
+
+> Continue the webview payload typing — see the Progress section of
+> `.rptc/backlog/2026-08-20-webview-payloads-are-typed-then-cast-away.md`.
+> Bugs 3+8 are fixed (`e1221a66`) and Step 0 is done (`3f74eabe`, `91fa6c93`):
+> the wizard-step shape is `WizardStepDefinition` (@/types/wizard), the env-var
+> type is `EnvVarDefinition`, `EditProjectConfig` is declared once.
+>
+> Work **per webview command, one commit each, easiest first** — not in the
+> numbered step order:
+> 1. `showIntegrations` + `showDataInstaller` — write their missing shapes
+>    (currently `Record<string, unknown>`); greenfield, no divergences.
+> 2. `showDashboard` + `showProjectsList` — inline object types move to a
+>    shared location.
+> 3. `configure` — finding 7 (`unknown[]` vs `ComponentData[]`) lands here.
+> 4. `createProject` (wizard) — LAST; findings 4, 5, 10 land here and this is
+>    where the first attempt drowned. Per-field rule: the DATA decides
+>    (config JSON, registry, a logged payload) — cite it.
+> Then generify `BaseWebviewCommand<TInitialData>` — the cast now has FOUR
+> sites (`:213`, `:302`, `:370`, `:389`), close all of them — and finish with
+> the display-name brands (step 5), deleting the local annotated consts only
+> after the branded type reaches the consumer.
+>
+> Payload types shared with the browser bundles must not import `vscode`.
+> Each commit: full gate. Expect divergences beyond the ten recorded.
