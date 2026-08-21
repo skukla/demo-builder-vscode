@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
@@ -19,6 +18,7 @@ import { collectStackComponents } from '@/features/components/services/stackComp
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import type { EnvVarDefinition } from '@/types/components';
 import { ComponentConfigs } from '@/types/webview';
+import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 
 const log = webviewLogger('useComponentConfig');
 

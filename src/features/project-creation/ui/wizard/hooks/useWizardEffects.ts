@@ -5,8 +5,8 @@ import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 import type { WizardState, WizardStep } from '@/types/webview';
+import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 
 const log = webviewLogger('useWizardEffects');
 

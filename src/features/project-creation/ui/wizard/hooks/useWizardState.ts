@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
@@ -11,9 +10,9 @@ import {
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow';
-import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
+import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 import type { EditProjectConfig, ImportedSettings , WizardStepDefinition } from '@/types/wizard';
 
 const log = webviewLogger('useWizardState');
