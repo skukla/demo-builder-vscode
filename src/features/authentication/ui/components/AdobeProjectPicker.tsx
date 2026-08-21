@@ -39,7 +39,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { AdobeProject, WizardState } from '@/types/webview';
+import type { WizardSessionState, AdobeProject, WizardState } from '@/types/webview';
 
 /** The delete handler's response envelope (`webviewClient.request` resolves with this). */
 interface DeleteProjectResult {
@@ -57,7 +57,7 @@ const NO_DISABLED_IDS: string[] = [];
 
 export interface AdobeProjectPickerProps {
     /** Current wizard state (provides org + cached projects + current selection). */
-    state: WizardState;
+    state: WizardSessionState;
     /** Updates wizard state (writes `adobeProject`, clears dependent workspace). */
     updateState: (updates: Partial<WizardState>) => void;
     /** Optional header action (e.g. a "New" button) rendered in the list header. */

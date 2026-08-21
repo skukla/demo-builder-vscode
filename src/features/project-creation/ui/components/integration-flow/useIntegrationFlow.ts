@@ -26,7 +26,6 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
-import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import {
@@ -43,7 +42,7 @@ import {
     type IntegrationKind,
 } from './flowStages';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
+import type { AdobeAuthSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** Stable empty array for slice defaults (avoids the infinite-re-render gotcha). */
 const EMPTY_STRING_ARRAY: string[] = [];
@@ -59,7 +58,7 @@ export interface ApiEditTarget {
 }
 
 export interface UseIntegrationFlowArgs {
-    state: WizardState;
+    state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     /**
      * 'add' = full journey; 'destination' = Set up / Change on a result row;
@@ -69,7 +68,7 @@ export interface UseIntegrationFlowArgs {
     /** The integration whose API picks are being re-edited (mode 'api-edit' only). */
     editTarget?: ApiEditTarget;
     /** The stack's mesh catalog entry (tileStatus.meshComponentForStack), if any. */
-    meshComponent?: SelectableAppBuilderComponent;
+    meshComponent?: AppBuilderComponentCatalogEntry;
     /** The addable catalog entries (threaded to the source/API stages by the modal). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app the "Build custom" kind commits, if any. */
@@ -124,8 +123,8 @@ function createInitialDraft(editTarget?: ApiEditTarget): FlowDraft {
 
 /** Derive the narrow read-only slice flowStages consumes from wizard state. */
 function computeSlice(
-    state: WizardState,
-    meshComponent: SelectableAppBuilderComponent | undefined,
+    state: AdobeAuthSessionState,
+    meshComponent: AppBuilderComponentCatalogEntry | undefined,
     phaseRunning: boolean,
 ): FlowStateSlice {
     const projectCommitted = Boolean(state.adobeProject?.id);
@@ -144,8 +143,8 @@ function computeSlice(
 
 /** The first stage of the derived order at mount (mode-aware). */
 function initialStageFor(
-    state: WizardState,
-    meshComponent: SelectableAppBuilderComponent | undefined,
+    state: AdobeAuthSessionState,
+    meshComponent: AppBuilderComponentCatalogEntry | undefined,
     mode: FlowMode,
 ): FlowStageId {
     return deriveStageOrder(

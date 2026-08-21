@@ -20,7 +20,8 @@ export interface AuthPredicateState {
  */
 export interface AdobeOrg {
     id: string;
-    name: string;
+    /** Display name — absent when the host knows only the id (session hosts). */
+    name?: string;
 }
 
 /**

@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ErrorCode } from '@/types/errorCodes';
-import { WizardState } from '@/types/webview';
+import { WizardSessionState, WizardState } from '@/types/webview';
 
 /**
  * Check if a selected item needs syncing with fresh data
  * Handles hydration (ID-only imports) and refresh (external rename)
  */
 function needsSelectedItemSync<T extends { id: string }>(
-  selectedItem: T,
+  selectedItem: Pick<T, 'id'> & Partial<T>,
   matchingItem: T,
 ): boolean {
   const selectedTitle = 'title' in selectedItem ? selectedItem.title : undefined;
@@ -29,7 +29,7 @@ function needsSelectedItemSync<T extends { id: string }>(
  */
 function handleAutoSelect<T extends { id: string }>(
   data: T[],
-  selectedItem: T | undefined,
+  selectedItem: (Pick<T, 'id'> & Partial<T>) | undefined,
   autoSelectSingle: boolean,
   autoSelectCustom: ((items: T[]) => T | undefined) | undefined,
   onSelect: ((item: T) => void) | undefined,
@@ -55,7 +55,7 @@ function handleAutoSelect<T extends { id: string }>(
  */
 function syncSelectedItem<T extends { id: string }>(
   data: T[],
-  selectedItem: T | undefined,
+  selectedItem: (Pick<T, 'id'> & Partial<T>) | undefined,
   onSelect: ((item: T) => void) | undefined,
 ): void {
   if (!selectedItem?.id || !onSelect) return;
@@ -82,13 +82,17 @@ export interface UseSelectionStepOptions<T extends { id: string }> {
   errorMessageType: string;
 
   /** Current wizard state */
-  state: WizardState;
+  state: WizardSessionState;
 
   /** Function to update wizard state */
   updateState: (updates: Partial<WizardState>) => void;
 
-  /** Currently selected item (from wizard state) */
-  selectedItem?: T;
+  /**
+   * Currently selected item (from wizard state). May be an id-only stub with
+   * partial display fields — hydrating those is this hook's documented job
+   * (`needsSelectedItemSync`), and session hosts supply exactly that shape.
+   */
+  selectedItem?: Pick<T, 'id'> & Partial<T>;
 
   /** Optional: Key for storing search filter in wizard state */
   searchFilterKey?: keyof WizardState;

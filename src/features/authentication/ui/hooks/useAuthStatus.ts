@@ -3,7 +3,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { ErrorCode } from '@/types/errorCodes';
 import { canProceedFromAuth } from '@/types/typeGuards';
-import { WizardState } from '@/types/webview';
+import { AdobeAuthSessionState, WizardState } from '@/types/webview';
 
 const log = webviewLogger('useAuthStatus');
 
@@ -27,7 +27,7 @@ interface AuthStatusData {
 }
 
 interface UseAuthStatusProps {
-    state: WizardState;
+    state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
 }

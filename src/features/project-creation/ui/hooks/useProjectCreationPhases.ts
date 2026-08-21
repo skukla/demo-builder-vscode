@@ -28,7 +28,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { EnsureResult } from '../components/integration-flow';
 import { getStackById } from './useSelectedStack';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
+import type { WizardSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** The flow's state machine. */
 export type ProjectCreationPhase =
@@ -57,7 +57,7 @@ interface HandlerResult<T> {
 }
 
 export interface UseProjectCreationPhasesOptions {
-    state: WizardState;
+    state: WizardSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     /**
      * When true, the create→workspace flow STOPS at `done` after committing the

@@ -165,7 +165,7 @@ export function AddIntegrationFlowAdapter({
             // renders with hasAdobeContext. Without BOTH of these isAdobeSignedIn()
             // is false and the flow walks sign-in → project → workspace instead of
             // collapsing to the summary.
-            adobeAuth: { isAuthenticated: true },
+            adobeAuth: { isAuthenticated: true, isChecking: false },
             adobeOrg: adobeOrgId ? { id: adobeOrgId } : undefined,
             adobeProject: adobeProjectId
                 ? { id: adobeProjectId, title: adobeProjectTitle }
@@ -209,7 +209,7 @@ export function AddIntegrationFlowAdapter({
                 catalogIds: catalog.map((entry) => entry.id),
                 selectedAddons: [],
                 selectedOptionalDependencies: [],
-            } as never),
+            }),
         [integrationIds, catalog],
     );
 
@@ -256,13 +256,13 @@ export function AddIntegrationFlowAdapter({
             isOpen={isOpen}
             onClose={onClose}
             mode={mode}
-            state={state as never}
+            state={state}
             updateState={updateState}
-            meshComponent={meshComponent as never}
+            meshComponent={meshComponent}
             catalog={catalog}
             blankComponent={blankComponent}
             reservedIds={reservedIds}
-            builder={builder as never}
+            builder={builder}
             onSignIn={signIn}
         />
     );

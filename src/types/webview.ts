@@ -56,6 +56,34 @@ export type CommerceSectionId =
  */
 export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
 
+/**
+ * Wizard state as borrowed-component HOSTS supply it: the same store, every
+ * field optional. State-backed components read cache keys defensively, and a
+ * non-wizard host (the dashboard's AddIntegrationFlowAdapter) synthesizes
+ * only the slice its session needs — it has no step, no project name. A full
+ * WizardState is assignable.
+ */
+export type WizardSessionState = Omit<
+    Partial<WizardState>,
+    'adobeOrg' | 'adobeProject' | 'adobeWorkspace'
+> & {
+    /**
+     * Hosts may know only each entity's id plus whatever display fields they
+     * have. The flow reads id/name/title; nothing anywhere reads `code` off
+     * state (verified 2026-08-22). Full wizard entities are assignable.
+     */
+    adobeOrg?: Pick<Organization, 'id'> & Partial<Organization>;
+    adobeProject?: Pick<AdobeProject, 'id'> & Partial<AdobeProject>;
+    adobeWorkspace?: Pick<Workspace, 'id'> & Partial<Workspace>;
+};
+
+/**
+ * Session state for the Adobe auth/destination components (AdobeAuthStep,
+ * useAuthStatus): everything optional EXCEPT the auth slice they dispatch on
+ * non-defensively. Hosts synthesizing a session store must supply `adobeAuth`.
+ */
+export type AdobeAuthSessionState = WizardSessionState & Pick<WizardState, 'adobeAuth'>;
+
 export interface WizardState {
     currentStep: WizardStep;
     /**

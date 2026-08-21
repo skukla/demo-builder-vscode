@@ -34,7 +34,7 @@ import {
     AdobeWorkspaceField,
 } from '@/features/authentication/ui/components/AdobeEntityFields';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
+import type { AdobeProject, WizardState, Workspace , AdobeAuthSessionState } from '@/types/webview';
 
 /** The centered phase/error views share this height. */
 const PHASE_VIEW_HEIGHT = '220px';
@@ -53,7 +53,7 @@ function isPhaseRunning(phase: Phases['phase']): boolean {
 export type DestinationView = 'signin' | 'project' | 'workspace';
 
 export interface DestinationStageProps {
-    state: WizardState;
+    state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     /** Which destination view is active (derived from the flow's current stage). */
     view: DestinationView;

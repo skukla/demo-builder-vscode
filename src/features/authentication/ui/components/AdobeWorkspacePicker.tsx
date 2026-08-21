@@ -22,11 +22,11 @@ import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
-import type { Workspace, WizardState } from '@/types/webview';
+import type { WizardSessionState, Workspace, WizardState } from '@/types/webview';
 
 export interface AdobeWorkspacePickerProps {
     /** Current wizard state (provides project + cached workspaces + selection). */
-    state: WizardState;
+    state: WizardSessionState;
     /** Updates wizard state (writes `adobeWorkspace`). */
     updateState: (updates: Partial<WizardState>) => void;
     /** Optional header action (e.g. a "New" button) rendered in the list header. */
