@@ -26,6 +26,7 @@ import {
     reKeyProjectSecrets,
 } from '@/features/components/services/commerceSecretMigration';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import {
     getEwCanvasBranch,
@@ -182,7 +183,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             dependencies: registry.components.dependencies,
             mesh: registry.components.mesh,
             integrations: registry.components.integrations,
-            envVars: registry.envVars || {},
+            envVars: withEnvVarKeys(registry.envVars),
         };
 
         // Load existing env values from component .env files

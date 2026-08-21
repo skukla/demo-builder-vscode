@@ -7,6 +7,8 @@
  * to DTO format for webview communication.
  */
 
+import type { EnvVarDefinition } from '@/types/components';
+
 /**
  * Component from registry (input type)
  */
@@ -131,6 +133,24 @@ export function toDependencyData(
  * @param options - Optional transformation options
  * @returns Array of ComponentDataDTO for webview
  */
+/**
+ * Inject each record's name into the record as its `key`.
+ *
+ * The registry stores env vars keyed by name with no `key` field inside the
+ * record (`ComponentRegistry.envVars: Record<string, Omit<EnvVarDefinition,
+ * 'key'>>`; components.json carries none), while the webview-side types
+ * (`ComponentEnvVar` in @/types/webview) declare `key` required. Producers
+ * call this at the send boundary so the payload actually carries what the
+ * consumer types claim.
+ */
+export function withEnvVarKeys(
+    envVars: Record<string, Omit<EnvVarDefinition, 'key'>> | undefined,
+): Record<string, EnvVarDefinition> {
+    return Object.fromEntries(
+        Object.entries(envVars ?? {}).map(([key, def]) => [key, { ...def, key }]),
+    );
+}
+
 export function toComponentDataArray(
     components: RegistryComponent[],
     options?: {
@@ -139,5 +159,5 @@ export function toComponentDataArray(
         includeFeatures?: boolean;
     },
 ): ComponentDataDTO[] {
-    return components.map(c => toComponentData(c, options));
+    return components.map((c) => toComponentData(c, options));
 }

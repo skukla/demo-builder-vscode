@@ -30,19 +30,23 @@ import { parseJSON } from '@/types/typeGuards';
 interface WizardStep {
     id: string;
     name: string;
+    enabled: boolean;
     [key: string]: unknown;
 }
 
 /**
  * Type guard for WizardStep (SOP §10 compliance)
  *
- * Extracts inline 6-condition validation chain to explicit type guard
- * with early returns for readability.
+ * `enabled` is validated because the webview filters every step on it
+ * (wizardHelpers.ts filterStepsByComponents / getFirstEnabledStep /
+ * getEnabledWizardSteps) — a step without it is silently dropped there,
+ * so it must fail loudly here instead.
  */
 function isWizardStep(value: unknown): value is WizardStep {
     if (typeof value !== 'object' || value === null) return false;
     if (!('id' in value) || typeof value.id !== 'string') return false;
     if (!('name' in value) || typeof value.name !== 'string') return false;
+    if (!('enabled' in value) || typeof value.enabled !== 'boolean') return false;
     return true;
 }
 
@@ -311,20 +315,28 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             );
             if (fs.existsSync(stepsPath)) {
                 const stepsContent = fs.readFileSync(stepsPath, 'utf8');
-                const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
-                if (stepsConfig) {
-                    wizardSteps = stepsConfig.steps;
-                    // Extract step IDs for logging (show first 3 + count of remaining)
-                    const stepCount = wizardSteps?.length ?? 0;
-                    const stepPreview =
-                        wizardSteps
-                            ?.slice(0, 3)
+                const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
+                if (stepsConfig && Array.isArray(stepsConfig.steps)) {
+                    if (stepsConfig.steps.every(isWizardStep)) {
+                        wizardSteps = stepsConfig.steps;
+                        // Extract step IDs for logging (show first 3 + count of remaining)
+                        const stepCount = wizardSteps.length;
+                        const stepPreview = wizardSteps
+                            .slice(0, 3)
                             .map((s) => s.id)
-                            .join(', ') ?? '';
-                    const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
-                    this.logger.debug(
-                        `Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`,
-                    );
+                            .join(', ');
+                        const remainingCount =
+                            stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
+                        this.logger.debug(
+                            `Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`,
+                        );
+                    } else {
+                        this.logger.error(
+                            'wizard-steps.json failed validation: every step needs a string ' +
+                                'id, a string name, and a boolean enabled. Steps not sent to ' +
+                                'the wizard.',
+                        );
+                    }
                 }
             }
         } catch (error) {
