@@ -74,8 +74,8 @@ multi-site; skip).
 | Config Service site registration | the registration POST | regex too loose (24 name-matches) | `eds/services/siteConfigRegistrar.ts` (documented) | AUDIT (sharpen primitive first) |
 | GitHub repo create/reset/delete | repo-mutation API calls | 5 files touch `api.github.com` | `eds/services/githubRepoOperations.ts` (updates/componentInstallation are READS — different actions) | AUDIT |
 | Demo start/stop | terminal spawn / process kill | 3 | `lifecycle/commands/startDemo.ts` (baseCommand + openInClaude are different actions) | AUDIT |
-| VS Code settings writes | `getConfiguration(...).update(` | 3 | none claimed | AUDIT (small) |
-| Secret storage writes | `secrets.store/delete` | 1 direct (wrappers may hide more — sharpen regex) | credential service | AUDIT (sharpen first) |
+| VS Code settings writes | `getConfiguration(...).update(` | 4 files | four single-sited actions (zoom, save-defaults, legacy cleanup, channel switch); verdict: no spine, pin guards the NEGATIVE — MCP/AI tool code never writes settings | **PINNED** |
+| Secret storage writes | `secret*.store/delete(` | 4 | four owner modules, one key family each (helixKeyStore, githubTokenService, appBuilderComponentSecrets, commerceSecretMigration — the data-installer routes through the migration) | **PINNED** |
 | Dependency install | `npm install` | 6 | — | NOT A SPINE (different actions) |
 | Repo clone | `git clone` | ~5 real | — | NOT A SPINE (different actions) |
 

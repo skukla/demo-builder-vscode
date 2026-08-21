@@ -164,4 +164,54 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
+
+    it('VS Code SETTINGS writes: never from MCP/AI tool code, only the two command sites', () => {
+        // Audited 2026-08-22: four files, each write its own single-sited
+        // action — zoom commands (commandManager), block-library "Save as
+        // Defaults" (createProject), the legacy claudeCode.preferredLocation
+        // CLEANUP write (openInClaude), and the update-channel switch
+        // (checkUpdates). The scan found the last two after the hand census
+        // missed them — the reason this list is a test, not a comment. The
+        // load-bearing half is the NEGATIVE: settingsTools.ts documents that
+        // MCP tools must never call getConfiguration().update() — this makes
+        // that sentence mechanical.
+        const primitive = /\.update\(\s*['"`]|getConfiguration\([^)]*\)\.update\(/;
+        const settingsContext = /getConfiguration\(/;
+        const spine = [
+            'commands/commandManager.ts',
+            'commands/openInClaude.ts',
+            'features/project-creation/commands/createProject.ts',
+            'features/updates/commands/checkUpdates.ts',
+        ];
+
+        const hits = filesTouchingBoth(settingsContext, primitive).filter((f) =>
+            // Only files that actually pair getConfiguration with .update —
+            // reads alone (getConfiguration().get) are everywhere and fine.
+            /\.update\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')),
+        );
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        const strays = hits.filter((f) => !spine.includes(f));
+        expect(strays).toEqual([]);
+    });
+
+    it('SECRET storage mutations: each secret family has ONE owner module', () => {
+        // Audited 2026-08-22: four owners, four key families — helix API keys,
+        // the GitHub token, App Builder component secrets, and the Commerce
+        // secret migration (which the data-installer's provisioning routes
+        // through rather than storing directly). A credential write anywhere
+        // else means a fifth cache nobody rotates.
+        const primitive = /[sS]ecret[sS]?(torage)?\.(store|delete)\(/;
+        const spine = [
+            'features/eds/services/helixKeyStore.ts',
+            'features/eds/services/githubTokenService.ts',
+            'features/dashboard/handlers/appBuilderComponentSecrets.ts',
+            'features/components/services/commerceSecretMigration.ts',
+        ];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
 });
