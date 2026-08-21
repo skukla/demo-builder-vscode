@@ -316,11 +316,7 @@ export function WizardContainer({
                 );
             case 'prerequisites':
                 return (
-                    <PrerequisitesStep
-                        {...props}
-                        componentsData={componentsData?.data as Record<string, unknown>}
-                        currentStep={state.currentStep}
-                    />
+                    <PrerequisitesStep {...props} currentStep={state.currentStep} />
                 );
             // Collapsed builder step. The shell routes the active area to the
             // existing Commerce / Storefront / Integrations bodies and owns the

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
@@ -24,39 +25,12 @@ const log = webviewLogger('useComponentConfig');
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
 
-interface ComponentData {
-    id: string;
-    name: string;
-    description?: string;
-    dependencies?: {
-        required?: string[];
-        optional?: string[];
-    };
-    configuration?: {
-        requiredEnvVars?: string[];
-        optionalEnvVars?: string[];
-        requiredServices?: string[];
-    };
-}
-
-interface ServiceDefinition {
-    id: string;
-    name: string;
-    backendSpecific?: boolean;
-    requiredEnvVars?: string[];
-    requiredEnvVarsByBackend?: Record<string, string[]>;
-}
-
-interface ComponentsData {
-    frontends?: ComponentData[];
-    backends?: ComponentData[];
-    dependencies?: ComponentData[];
-    mesh?: ComponentData[];
-    integrations?: ComponentData[];
-    appBuilder?: ComponentData[];
-    envVars?: Record<string, EnvVarDefinition>;
-    services?: Record<string, ServiceDefinition>;
-}
+// The wire shape lives in @/types/webviewRequests — ONE declaration shared
+// with the get-components-data handler. This hook used to carry three local
+// twins: a ComponentData view, a ServiceDefinition that re-declared the
+// phantom required `id` the canonical type had already shed, and a
+// ComponentsData with an `appBuilder` section the response never includes.
+type ComponentsData = ComponentsDataPayload;
 
 export interface UniqueField extends EnvVarDefinition {
     componentIds: string[];
@@ -187,7 +161,9 @@ export function useComponentConfig({
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     // Seeded from the cache, so a remount with the registry already in hand
     // renders the form immediately instead of flashing a loader.
-    const [componentsData, setComponentsData] = useState<ComponentsData>(registryCache ?? {});
+    const [componentsData, setComponentsData] = useState<Partial<ComponentsData>>(
+        registryCache ?? {},
+    );
 
     // The backend owns the store-scope keys, so those writes land only there
     // (`resolveWriteTargets`). Every other field still writes to each component
@@ -234,11 +210,7 @@ export function useComponentConfig({
         const loadData = async () => {
             try {
                 registryInFlight ??= vscode
-                    .request<{
-                        success: boolean;
-                        type: string;
-                        data: ComponentsData;
-                    }>('get-components-data')
+                    .request<GetComponentsDataResponse>('get-components-data')
                     .then((response) => response.data);
                 const data = await registryInFlight;
                 registryCache = data;
@@ -267,7 +239,7 @@ export function useComponentConfig({
     // written out three times and unreachable by tests.
     const selectedComponents = useMemo(
         () =>
-            collectStackComponents<ComponentData>(
+            collectStackComponents<ComponentDataDTO>(
                 selectedStack ? getStackById(selectedStack) : undefined,
                 componentsData,
             ),

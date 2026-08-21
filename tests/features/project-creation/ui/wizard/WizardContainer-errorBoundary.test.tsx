@@ -68,13 +68,6 @@ jest.mock('@/features/project-creation/ui/steps/WelcomeStep', () => ({
     WelcomeStep: (props: { setCanProceed: (val: boolean) => void }) => authStepImpl(props),
 }));
 
-jest.mock('@/features/components/ui/steps/ComponentSelectionStep', () => ({
-    ComponentSelectionStep: ({ setCanProceed }: { setCanProceed: (val: boolean) => void }) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="component-step">Component Step</div>;
-    },
-}));
-
 jest.mock('@/features/prerequisites/ui/steps/PrerequisitesStep', () => ({
     PrerequisitesStep: ({ setCanProceed }: { setCanProceed: (val: boolean) => void }) => {
         React.useEffect(() => setCanProceed(true), [setCanProceed]);

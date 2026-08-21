@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
@@ -65,11 +66,9 @@ interface UseWizardStateReturn {
     /** Set confirming selection state */
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
     /** Full component data with envVars from backend */
-    componentsData: { success: boolean; type: string; data: ComponentsData } | null;
+    componentsData: GetComponentsDataResponse | null;
     /** Set components data */
-    setComponentsData: React.Dispatch<
-        React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>
-    >;
+    setComponentsData: React.Dispatch<React.SetStateAction<GetComponentsDataResponse | null>>;
 }
 
 /**
@@ -497,11 +496,7 @@ export function useWizardState({
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
 
     // Component data from backend
-    const [componentsData, setComponentsData] = useState<{
-        success: boolean;
-        type: string;
-        data: ComponentsData;
-    } | null>(null);
+    const [componentsData, setComponentsData] = useState<GetComponentsDataResponse | null>(null);
 
     // Convenience update function
     // IMPORTANT: Must be memoized to prevent infinite loops in child components

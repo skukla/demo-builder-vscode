@@ -325,14 +325,7 @@
         "authenticated": {
           "type": "boolean"
         }
-      },
-      "required": [
-        "projectId",
-        "projectName",
-        "organization",
-        "workspace",
-        "authenticated"
-      ]
+      }
     },
     "CommerceConfig": {
       "type": "object",

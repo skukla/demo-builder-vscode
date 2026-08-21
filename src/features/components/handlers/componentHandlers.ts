@@ -31,6 +31,7 @@ import {
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
+import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 
 /**
  * Create a ComponentRegistryManager for the current extension context
@@ -147,7 +148,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const mesh = await registryManager.getMesh();
         const registry = await registryManager.loadRegistry();
 
-        const componentsData = {
+        const componentsData: ComponentsDataPayload = {
             frontends: toComponentDataArray(frontends, { includeDependencies: true }),
             backends: toComponentDataArray(backends, { includeDependencies: true }),
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
@@ -166,7 +167,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             success: true,
             type: 'components-data',
             data: componentsData,
-        };
+        } satisfies GetComponentsDataResponse;
     } catch (error) {
         const appError = toAppError(error);
         context.logger.error('Failed to load component configurations:', appError);

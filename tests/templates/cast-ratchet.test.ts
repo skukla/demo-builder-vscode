@@ -25,7 +25,7 @@ import * as path from 'path';
 
 // Measured 2026-08-21 after the first full triage. 6 `as never` +
 // 34 `as unknown as`, every one verdicted (see codebase-sweep baselines).
-const BASELINE = 36;
+const BASELINE = 35;
 
 const ROOT = path.join(__dirname, '../..');
 

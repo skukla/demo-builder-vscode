@@ -24,7 +24,8 @@ import { NavigableStepProps } from '@/types/wizard';
 
 interface PrerequisitesStepProps extends NavigableStepProps {
     state: WizardState;
-    componentsData?: Record<string, unknown>;
+    // No componentsData prop: the step never read it — a dead prop the
+    // container fed through a cast (deleted by the 2026-08-22 request audit).
     currentStep?: string;
 }
 

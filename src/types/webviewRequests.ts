@@ -16,7 +16,7 @@
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
-import type { ComponentConfigs } from './components';
+import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 
 /**
  * Frontend source from template (same shape as TemplateSource)
@@ -144,4 +144,54 @@ export interface ProjectCreationConfig {
             lkgFile?: string;
         };
     };
+}
+
+/**
+ * One component entry as the `get-components-data` response carries it —
+ * the DTO `toComponentDataArray` builds from the registry. Moved here from
+ * features/components/services/componentTransforms so the request/response
+ * pair and the transformer share ONE declaration (the transformer module
+ * re-exports it).
+ */
+export interface ComponentDataDTO {
+    id: string;
+    name: string;
+    description?: string;
+    features?: string[];
+    dependencies?: {
+        required?: string[];
+        optional?: string[];
+    };
+    /** Passed through from the registry entry; the named fields are the ones consumers dispatch on. */
+    configuration?: {
+        requiredEnvVars?: string[];
+        optionalEnvVars?: string[];
+        requiredServices?: string[];
+        requiresDeployment?: boolean;
+        deploymentTarget?: string;
+        [key: string]: unknown;
+    };
+    recommended?: boolean;
+}
+
+/** The `data` half of the `get-components-data` response. */
+export interface ComponentsDataPayload {
+    frontends: ComponentDataDTO[];
+    backends: ComponentDataDTO[];
+    integrations: ComponentDataDTO[];
+    dependencies: ComponentDataDTO[];
+    mesh: ComponentDataDTO[];
+    /** Keyed defs with `key` injected (`withEnvVarKeys`) — the registry record omits it. */
+    envVars: Record<string, EnvVarDefinition>;
+    services: Record<string, ServiceDefinition>;
+}
+
+/**
+ * `get-components-data` — the wizard's registry read (success shape; failures
+ * come back as the standard `{success: false, error}` handler envelope).
+ */
+export interface GetComponentsDataResponse {
+    success: true;
+    type: 'components-data';
+    data: ComponentsDataPayload;
 }
