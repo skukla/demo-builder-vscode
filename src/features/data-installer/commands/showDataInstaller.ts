@@ -27,11 +27,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import {
-    asDisplayName,
-    getProjectDisplayName,
-    type ProjectDisplayName,
-} from '@/core/utils/projectDisplayName';
+import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
@@ -90,14 +86,10 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand<DataInstallerIn
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
-        // Annotated, because the payload field is plain `string`, which would
-        // erase the brand the moment it enters the payload. The annotation puts
-        // the check where the mistake would actually be MADE -- swap this for
-        // `project.name` and it stops compiling here, at the assignment, rather
-        // than surfacing as a slug on screen weeks later.
-        const projectName: ProjectDisplayName = project
-            ? getProjectDisplayName(project)
-            : asDisplayName('');
+        // No annotation needed any more: the payload field itself is branded
+        // `ProjectDisplayName`, so `project.name` here stops compiling at the
+        // return statement.
+        const projectName = project ? getProjectDisplayName(project) : asDisplayName('');
         return {
             theme,
             projectName,

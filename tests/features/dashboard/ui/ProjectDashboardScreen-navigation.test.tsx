@@ -22,17 +22,31 @@ jest.mock('@adobe/react-spectrum', () => ({
     TooltipTrigger: ({ children }: any) => <>{children}</>,
     Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => (
+        <div style={{ display: 'flex' }} {...props}>
+            {children}
+        </div>
+    ),
     Heading: ({ children, level, ...props }: any) => {
         const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
         return <Tag {...props}>{children}</Tag>;
     },
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
     Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
+        <button
+            onClick={onPress}
+            disabled={isDisabled}
+            data-variant={variant}
+            data-testid="back-button"
+            {...props}
+        >
+            {children}
+        </button>
     ),
     ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} {...props}>
+            {children}
+        </button>
     ),
     MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
     Menu: ({ children, onAction }: any) => {
@@ -55,7 +69,9 @@ jest.mock('@adobe/react-spectrum', () => ({
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-        <a onClick={onPress} {...props}>{children}</a>
+        <a onClick={onPress} {...props}>
+            {children}
+        </a>
     ),
     DialogContainer: ({ children }: any) => <div>{children}</div>,
 }));
@@ -63,7 +79,11 @@ jest.mock('@adobe/react-spectrum', () => ({
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/ChevronLeft', () => ({
     __esModule: true,
-    default: ({ size }: any) => <span data-testid="chevron-left-icon" data-size={size}>{'<'}</span>,
+    default: ({ size }: any) => (
+        <span data-testid="chevron-left-icon" data-size={size}>
+            {'<'}
+        </span>
+    ),
 }));
 
 jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
@@ -145,7 +165,9 @@ jest.mock('@/core/ui/components/feedback', () => ({
         </div>
     ),
     StatusCard: ({ label, status, color }: any) => (
-        <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
+        <div data-testid={`status-card-${label}`} data-color={color}>
+            {label}: {status}
+        </div>
     ),
 }));
 
@@ -181,13 +203,14 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboardScreen';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 const mockPostMessage = webviewClient.postMessage as jest.Mock;
 
 describe('ProjectDashboardScreen - Back Navigation', () => {
     const mockProject = {
-        name: 'Test Project',
+        name: asDisplayName('Test Project'),
         path: '/test/path',
     };
 

@@ -4,6 +4,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 describe('ProjectDashboardScreen - Rendering and Status', () => {
     let ctx: TestContext;
@@ -15,7 +16,9 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
 
     describe('Rendering', () => {
         it('should render project name from props', () => {
-            renderDashboard({ project: { name: 'Test Project', path: '/test/path' } });
+            renderDashboard({
+                project: { name: asDisplayName('Test Project'), path: '/test/path' },
+            });
             expect(screen.getByText('Test Project')).toBeInTheDocument();
         });
 

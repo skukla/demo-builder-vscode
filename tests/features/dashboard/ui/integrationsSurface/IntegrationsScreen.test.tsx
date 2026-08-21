@@ -133,6 +133,7 @@ import {
     formatDestination,
     IntegrationsScreen,
 } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
@@ -213,7 +214,7 @@ describe('IntegrationsScreen', () => {
                 <IntegrationsScreen
                     hasAdobeContext
                     appBuilderComponents={{}}
-                    projectName="demo-builder-test"
+                    projectName={asDisplayName('demo-builder-test')}
                     destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                 />
             );
@@ -268,13 +269,13 @@ describe('IntegrationsScreen', () => {
         });
     });
 
-describe('header', () => {
+    describe('header', () => {
         it('names the project', () => {
             const handlers = captureHandlers();
             render(
                 <IntegrationsScreen
                     hasAdobeContext
-                    projectName="demo-builder-test"
+                    projectName={asDisplayName('demo-builder-test')}
                     appBuilderComponents={{ a: DEPLOYED }}
                     destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                 />
@@ -299,7 +300,7 @@ describe('header', () => {
                 render(
                     <IntegrationsScreen
                         hasAdobeContext
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         appBuilderComponents={{ a: DEPLOYED }}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
@@ -308,9 +309,7 @@ describe('header', () => {
 
                 // The crumb is the LOCAL project only; the remote destination
                 // moved to the band's context row.
-                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                    'demo-builder-test'
-                );
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-destination')).toHaveTextContent('Kukla Mesh');
             });
 
@@ -321,7 +320,7 @@ describe('header', () => {
                 render(
                     <IntegrationsScreen
                         hasAdobeContext
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         appBuilderComponents={{ a: DEPLOYED }}
                     />
                 );
@@ -352,7 +351,7 @@ describe('header', () => {
                     <IntegrationsScreen
                         hasAdobeContext
                         appBuilderComponents={{ a: DEPLOYED }}
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
@@ -362,9 +361,7 @@ describe('header', () => {
                 expect(band).toHaveTextContent('Kukla Mesh');
                 expect(band).toHaveTextContent('Stage');
                 // The header keeps the LOCAL project name and nothing else.
-                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                    'demo-builder-test'
-                );
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
             });
 
@@ -603,9 +600,9 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
+                projectName={asDisplayName('demo-builder-test')}
                 destination={DEST}
-            />,
+            />
         );
         settleStatus(handlers);
 
@@ -619,8 +616,8 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
-            />,
+                projectName={asDisplayName('demo-builder-test')}
+            />
         );
         settleStatus(handlers);
 
@@ -633,9 +630,9 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
+                projectName={asDisplayName('demo-builder-test')}
                 destination={DEST}
-            />,
+            />
         );
         settleStatus(handlers);
 

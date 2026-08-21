@@ -21,6 +21,7 @@ import type { EnvVarDefinition, TransformedComponentDefinition } from './compone
 import type { SettingsFile } from './settingsFile';
 import type { ComponentSelection, ThemeMode } from './webview';
 import type { EditProjectConfig, WizardStepDefinition } from './wizard';
+import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 /**
  * `ShowDataInstallerCommand.getInitialData` → the dataInstaller bundle.
@@ -31,7 +32,7 @@ import type { EditProjectConfig, WizardStepDefinition } from './wizard';
 export interface DataInstallerInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
-    projectName: string;
+    projectName: ProjectDisplayName;
 }
 
 /**
@@ -40,7 +41,7 @@ export interface DataInstallerInitialData {
 export interface DashboardInitialData {
     theme: ThemeMode;
     /** Display name + path — `null` when no project is selected. */
-    project: { name: string; path: string } | null;
+    project: { name: ProjectDisplayName; path: string } | null;
     hasMesh: boolean;
     /** Resolved demo-package name (e.g., "CitiSignal") — demo-packages.json `name`. */
     packageName?: string;
@@ -169,7 +170,7 @@ export interface ConfigureInitialData {
 export interface IntegrationsInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
-    projectName: string;
+    projectName: ProjectDisplayName;
     hasAdobeContext: boolean;
     /** Keyed component map — absent when no project is selected. */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
