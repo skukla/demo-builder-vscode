@@ -74,6 +74,43 @@ describe('toolHandlers.updateProjectConfig', () => {
         ).rejects.toThrow(/not permitted/i);
     });
 
+    // The manifest is the extension's serialized state; this tool writes
+    // agent-supplied BYTES. Malformed JSON would brick every later project
+    // load, so the door refuses it (2026-08-22 spine sweep hardening).
+    it('refuses malformed JSON aimed at .demo-builder.json', async () => {
+        await expect(
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                '.demo-builder.json',
+                '{"name": "test"'
+            )
+        ).rejects.toThrow(/not valid JSON/i);
+        expect(fsProm.writeFile as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it('writes valid-JSON manifests but reports schema warnings in the result', async () => {
+        const result = await toolHandlers.updateProjectConfig(
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            '.demo-builder.json',
+            '{"name":123}'
+        );
+
+        expect(fsProm.writeFile as jest.Mock).toHaveBeenCalled();
+        expect(result).toMatch(/schema warnings/i);
+    });
+
+    it('does not JSON-gate .env files (they are not JSON)', async () => {
+        const result = await toolHandlers.updateProjectConfig(
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            'components/eds-storefront/.env',
+            'KEY=value'
+        );
+        expect(result).not.toMatch(/schema warnings/i);
+    });
+
     it('throws for a .env file inside node_modules', async () => {
         await expect(
             toolHandlers.updateProjectConfig(

@@ -26,6 +26,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
+import { validateManifestShape } from '@/core/state/manifestValidation';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
@@ -958,12 +959,33 @@ export const toolHandlers = {
         if (path.basename(realResolved) === '.env') {
             validateEnvContent(content);
         }
+        // The manifest is the OTHER writer's serialized state (ProjectConfigWriter);
+        // this tool writes agent-supplied bytes. Malformed JSON here bricks every
+        // later load, so refuse it outright; schema drift is reported but allowed
+        // (the loader's own validation is warn-mode for the same reason —
+        // user/agent data must not hard-fail on a schema the extension evolves).
+        let schemaWarnings: string[] = [];
+        if (path.basename(realResolved) === '.demo-builder.json') {
+            let parsed: unknown;
+            try {
+                parsed = JSON.parse(content);
+            } catch (parseError) {
+                throw new Error(
+                    `Refusing to write ${configRelPath}: content is not valid JSON ` +
+                        `(${parseError instanceof Error ? parseError.message : String(parseError)}). ` +
+                        'A malformed manifest would break every subsequent project load.',
+                );
+            }
+            schemaWarnings = validateManifestShape(parsed);
+        }
         await fsPromises.mkdir(path.dirname(resolved), { recursive: true });
         // Atomic write (temp + rename): the manifest may be read/written
         // concurrently by the extension's StateManager; a partial write would
         // corrupt it. rename(2) makes the swap atomic.
         await writeFileAtomic(resolved, content);
-        return `Updated ${configRelPath}`;
+        return schemaWarnings.length > 0
+            ? `Updated ${configRelPath} (schema warnings: ${schemaWarnings.join('; ')})`
+            : `Updated ${configRelPath}`;
     },
 
     async syncStorefront(

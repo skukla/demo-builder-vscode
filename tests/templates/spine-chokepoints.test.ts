@@ -33,6 +33,20 @@ function listSourceFiles(dir: string): string[] {
     return out;
 }
 
+/** Files whose CODE (not comments) matches BOTH patterns (anywhere in the file). */
+function filesTouchingBoth(a: RegExp, b: RegExp): string[] {
+    const hits: string[] = [];
+    for (const file of listSourceFiles(SRC)) {
+        const code = fs
+            .readFileSync(file, 'utf8')
+            .split('\n')
+            .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+            .join('\n');
+        if (a.test(code) && b.test(code)) hits.push(path.relative(SRC, file));
+    }
+    return hits;
+}
+
 /** Files whose CODE (not comments) matches the pattern. */
 function filesTouchingPrimitive(pattern: RegExp): string[] {
     const hits: string[] = [];
@@ -111,6 +125,41 @@ describe('spine choke-points', () => {
         const spine = ['features/mesh/services/meshDeleteCommand.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('adobe SIGN-IN/OUT: aio auth login/logout run only in authenticationService', () => {
+        // Audited 2026-08-22: one login site (forced/normal ternary) and one
+        // logout site, both in the service every auth door routes through.
+        // Excluded by the pattern: diagnostics' `aio auth login --help`
+        // capability probe (a read, not a sign-in — the lookahead skips it)
+        // and ResetAllCommand's "run: aio auth logout" instruction text in a
+        // log message (not quote-prefixed, so it never matches).
+        const primitive = /['"`]aio (auth )?(login|logout)(?! --help)/;
+        const spine = ['features/authentication/services/authenticationService.ts'];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('manifest WRITE: only the config writer and the MCP agent door write .demo-builder.json', () => {
+        // Audited 2026-08-22: TWO doors by design, doing different jobs —
+        // ProjectConfigWriter serializes the extension's Project state
+        // (atomic, migration-aware); the MCP update_project_config tool
+        // writes agent-supplied bytes (path-allowlisted, atomic, and since
+        // this audit it refuses malformed JSON and reports schema warnings).
+        // stateManager writes the GLOBAL state file and settingsTransfer
+        // writes EXPORT files — they name the manifest without writing it,
+        // which is why this check requires both patterns in one file.
+        const namesManifest = /\.demo-builder\.json/;
+        const writes = /writeFileAtomic\(|writeFile\(/;
+        const spine = ['core/state/projectConfigWriter.ts', 'mcp-server.ts'];
+
+        const hits = filesTouchingBoth(namesManifest, writes);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
