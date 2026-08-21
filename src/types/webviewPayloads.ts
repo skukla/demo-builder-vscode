@@ -14,7 +14,7 @@
  */
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
-import type { AppBuilderComponentState, AuthoringExperience, Project } from './base';
+import type { AppBuilderComponentState, AuthoringExperience, Project, ProjectStatus } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
@@ -180,11 +180,119 @@ export interface IntegrationsInitialData {
     /** Stack-filtered catalog for the add-integration picker. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
-    destination: { projectTitle?: string; workspaceTitle?: string };
+    destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */
     adobeProjectId?: string;
     /** Committed destination ID — the add flow reads presence as a boolean. */
     adobeWorkspaceId?: string;
     /** The IMS org — the add flow's signed-in test reads this, not the project id. */
     adobeOrgId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Push channels — the dashboard status family.
+//
+// Each payload below is THE declaration for one extension→webview push:
+// the sender annotates the object it posts and the receiver casts to the
+// same name, so the two sides cannot drift (the same contract the init
+// payloads above carry). Consolidated 2026-08-21 from the split
+// declarations that had already diverged: the sender's StatusPayload said
+// `status: string` and `mesh.status: string` where the receiver's copy
+// carried precise unions, and the receiver's copy was missing the
+// 'resetting'/'republishing' lifecycle states the sender can post.
+// ---------------------------------------------------------------------------
+
+/**
+ * The dashboard-family mesh status vocabulary (badge, tile, card). Moved
+ * here from dashboardStatusTypes so payloads and webview share ONE union.
+ */
+export type MeshStatus =
+    | 'checking'
+    | 'needs-auth'
+    | 'not-deployed'
+    | 'deploying'
+    | 'deployed'
+    | 'config-changed'
+    | 'config-incomplete'
+    | 'update-declined'
+    | 'error';
+
+/** Mesh slice of a status update. */
+export interface MeshStatusInfo {
+    status: MeshStatus;
+    endpoint?: string;
+    message?: string;
+}
+
+/**
+ * `statusUpdate` — the dashboard's main status push
+ * (`buildStatusPayload` → `useDashboardStatus`). One wire, one name: this
+ * WAS `StatusPayload` on the sender and `interface ProjectStatus` on the
+ * receiver — the latter also colliding with `@/types/base`'s unrelated
+ * ProjectStatus lifecycle union.
+ */
+export interface DashboardStatusUpdatePayload {
+    /**
+     * What the dashboard heading shows, and what its inline rename field
+     * seeds from. Branded so `name: project.name` — the slug — cannot be
+     * assigned here by accident. It was, and shipped.
+     */
+    name: ProjectDisplayName;
+    path: string;
+    status: ProjectStatus;
+    port?: number;
+    adobeOrg?: string;
+    adobeProject?: string;
+    frontendConfigChanged: boolean;
+    mesh?: MeshStatusInfo;
+    edsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
+}
+
+/** `meshStatusUpdate` — mesh-only status push (deploy flows). */
+export interface MeshStatusUpdatePayload {
+    status: MeshStatus;
+    message?: string;
+    endpoint?: string;
+}
+
+/**
+ * Per-integration row status vocabulary. Moved here from
+ * appBuilderComponentHandlers so the push payload and the webview share one
+ * declaration.
+ */
+export type AppBuilderComponentRowStatus =
+    | 'deploying'
+    | 'deployed'
+    | 'stale'
+    | 'error'
+    | 'not-deployed';
+
+/** `appBuilderComponentStatusUpdate` — flips ONE integration row. */
+export interface AppBuilderComponentStatusUpdatePayload {
+    id: string;
+    status: AppBuilderComponentRowStatus;
+    message?: string;
+    /** Optional label refresh — the rename handler rides it on this channel. */
+    name?: string;
+}
+
+/** `appBuilderComponentsSnapshot` — the full fresh persisted map. */
+export interface AppBuilderComponentsSnapshotPayload {
+    components: Record<string, AppBuilderComponentState>;
+}
+
+/** Adobe project/workspace TITLES — the shared deploy destination banner. */
+export interface DestinationTitles {
+    projectTitle?: string;
+    workspaceTitle?: string;
+}
+
+/** `projectDestinationUpdate` — destination retarget push. */
+export interface ProjectDestinationUpdatePayload {
+    destination: DestinationTitles;
+}
+
+/** `authoringExperienceUpdate` — live DA URL after an authoring flip. */
+export interface AuthoringExperienceUpdatePayload {
+    edsDaLiveUrl?: string;
 }

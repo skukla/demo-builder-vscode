@@ -19,9 +19,9 @@ import {
     isMeshBusy,
     isMeshDeploying,
     type AiReadyState,
-    type MeshStatus,
+    type MeshStatusUpdatePayload,
     type OrgCheckState,
-    type ProjectStatus,
+    type DashboardStatusUpdatePayload,
     type StatusDisplay,
     type UseDashboardStatusProps,
     type UseDashboardStatusReturn,
@@ -52,7 +52,7 @@ export type {
     EdsStorefrontStatus,
     MeshStatus,
     OrgCheckState,
-    ProjectStatus,
+    DashboardStatusUpdatePayload,
     StatusColor,
     StatusDisplay,
     StatusRemedy,
@@ -101,7 +101,7 @@ export function useDashboardStatus(
 ): UseDashboardStatusReturn {
     const { hasMesh, initialEdsStorefrontStatus, hasAdobeContext } = props;
 
-    const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
+    const [projectStatus, setProjectStatus] = useState<DashboardStatusUpdatePayload | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
@@ -149,7 +149,7 @@ export function useDashboardStatus(
         }
 
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
-            const projectData = data as ProjectStatus;
+            const projectData = data as DashboardStatusUpdatePayload;
             // Merge status update, preserving mesh status only during active deployment
             // AND only if the new status is a transient 'checking' state.
             // This prevents update checks from resetting mesh button state mid-deployment
@@ -174,7 +174,7 @@ export function useDashboardStatus(
         });
 
         const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
-            const meshData = data as { status: MeshStatus; message?: string; endpoint?: string };
+            const meshData = data as MeshStatusUpdatePayload;
             setProjectStatus((prev) =>
                 prev
                     ? {

@@ -38,6 +38,7 @@ import {
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
+import type { MeshStatus } from '@/types/webviewPayloads';
 
 /**
  * Handle 'requestStatus' message - Send current project status
@@ -70,7 +71,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     // The derivation itself lives in dashboardStatusService so the agent surface
     // reports the same mesh the same way; only the AUTH question differs, and it
     // stays here because only this caller may prompt.
-    let meshStatus: string = 'not-deployed';
+    let meshStatus: MeshStatus = 'not-deployed';
     // Set when a deployed mesh should be background-verified on open (auth'd +
     // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
     let shouldVerifyMesh = false;

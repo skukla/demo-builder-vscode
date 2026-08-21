@@ -10,7 +10,7 @@ export type {
     UseDashboardStatusProps,
     UseDashboardStatusReturn,
     MeshStatus,
-    ProjectStatus,
+    DashboardStatusUpdatePayload,
     StatusColor,
     StatusDisplay,
 } from './useDashboardStatus';

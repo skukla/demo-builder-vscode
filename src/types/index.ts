@@ -68,8 +68,9 @@ export {
 // Type guards - Import directly from './typeGuards' when needed to avoid circular dependency
 // export * from './typeGuards';
 
-// Status enums for type safety
-export { MeshStatus, ComponentStatusEnum } from './enums';
+// enums.ts deleted 2026-08-21: its MeshStatus enum spoke a retired dialect
+// ('not_deployed'/'stale') and, like ComponentStatusEnum, had ZERO consumers
+// beyond its own test. The live MeshStatus union lives in webviewPayloads.
 
 // Error codes for programmatic error handling
 export {

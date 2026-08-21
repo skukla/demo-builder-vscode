@@ -52,6 +52,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import type { AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { AppBuilderComponentRowStatus } from '@/types/webviewPayloads';
 
 /**
  * Run the deploy guard order (auth → org-mismatch → App Builder permission).
@@ -196,18 +197,9 @@ async function refreshProjectStatus(context: HandlerContext): Promise<void> {
     await handleRequestStatus(context);
 }
 
-/**
- * The live per-row status vocabulary pushed over the keyed
- * `appBuilderComponentStatusUpdate` channel: the persisted union plus the
- * transient 'deploying'. Shared with the channel's sender
- * (showDashboard's sendAppBuilderComponentStatusUpdate).
- */
-export type AppBuilderComponentRowStatus =
-    | 'deploying'
-    | 'deployed'
-    | 'stale'
-    | 'error'
-    | 'not-deployed';
+// The per-row status vocabulary moved to @/types/webviewPayloads
+// (AppBuilderComponentRowStatus) — one declaration shared by this module,
+// the channel's sender AND the webview receiver.
 
 /**
  * Post a per-row status update via the dashboard command. Imported LAZILY so

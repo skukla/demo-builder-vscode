@@ -19,16 +19,25 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseEnvFile } from '@/core/utils/envParser';
 import {
-    PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
-    PAAS_STORE_VIEW_CODE, PAAS_WEBSITE_CODE, PAAS_STORE_CODE,
-    CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
-    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
+    PAAS_URL,
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    CATALOG_SERVICE_ENDPOINT,
+    CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
 import { isMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
+import type { MeshStatusInfo } from '@/types/webviewPayloads';
 
 // Import from services for use in this file
 
@@ -37,8 +46,6 @@ export {
     buildStatusPayload,
     hasMeshDeploymentRecord,
     getMeshEndpoint,
-    type MeshStatusInfo,
-    type StatusPayload,
 } from '../services/dashboardStatusService';
 
 /**
@@ -67,7 +74,9 @@ export type ProjectWithAdobeProject = Project & {
  *
  * Extracts 3-level optional chain: project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace
  */
-export function hasAdobeWorkspaceContext(project: Project | null | undefined): project is ProjectWithAdobeWorkspace {
+export function hasAdobeWorkspaceContext(
+    project: Project | null | undefined,
+): project is ProjectWithAdobeWorkspace {
     if (!project?.adobe) return false;
     const { organization, projectId, workspace } = project.adobe;
     return Boolean(organization && projectId && workspace);
@@ -78,7 +87,9 @@ export function hasAdobeWorkspaceContext(project: Project | null | undefined): p
  *
  * Extracts 3-level optional chain: project?.adobe?.organization && project?.adobe?.projectId
  */
-export function hasAdobeProjectContext(project: Project | null | undefined): project is ProjectWithAdobeProject {
+export function hasAdobeProjectContext(
+    project: Project | null | undefined,
+): project is ProjectWithAdobeProject {
     if (!project?.adobe) return false;
     const { organization, projectId } = project.adobe;
     return Boolean(organization && projectId);
@@ -191,7 +202,11 @@ export async function determineMeshStatus(
     const meshEndpointFromConfigs = getMeshEndpoint(project);
 
     // Check if configuration is complete (both .env INPUT vars and mesh endpoint)
-    const configCheck = await checkMeshConfigCompleteness(meshComponent.path, meshEndpointFromConfigs, meshComponent.id);
+    const configCheck = await checkMeshConfigCompleteness(
+        meshComponent.path,
+        meshEndpointFromConfigs,
+        meshComponent.id,
+    );
     if (!configCheck.isComplete) {
         return 'config-incomplete';
     }
@@ -214,10 +229,11 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
     const project = await context.stateManager.getCurrentProject();
     if (!project) return;
 
-    const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
+    const frontendConfigChanged =
+        project.status === 'running' ? detectFrontendChanges(project) : false;
 
     const meshComponent = getMeshComponentInstance(project);
-    let meshStatus: { status: string; message?: string; endpoint?: string } | undefined = undefined;
+    let meshStatus: MeshStatusInfo | undefined = undefined;
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
@@ -229,9 +245,12 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
             // Only 'stale' needs translation — dashboard UI uses 'config-changed'
             const endpoint = getMeshEndpoint(project);
             const summary = project.meshStatusSummary;
-            const status = summary === 'stale' ? 'config-changed'
-                : (summary === 'unknown' || !summary) ? 'deployed'
-                : summary;
+            const status =
+                summary === 'stale'
+                    ? 'config-changed'
+                    : summary === 'unknown' || !summary
+                      ? 'deployed'
+                      : summary;
             meshStatus = { status, endpoint };
         } else {
             meshStatus = { status: 'not-deployed' };

@@ -13,47 +13,21 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
+import type { Project } from '@/types/base';
+import type { DashboardStatusUpdatePayload, MeshStatus } from '@/types/webviewPayloads';
 
-/**
- * Mesh deployment status values
- */
-export type MeshStatus =
-    | 'checking'
-    | 'needs-auth'
-    | 'not-deployed'
-    | 'deploying'
-    | 'deployed'
-    | 'config-changed'
-    | 'config-incomplete'
-    | 'update-declined'
-    | 'error';
-
-/**
- * Project status data from extension
- */
-export interface ProjectStatus {
-    name: string;
-    path: string;
-    status:
-        | 'created'
-        | 'configuring'
-        | 'ready'
-        | 'starting'
-        | 'running'
-        | 'stopping'
-        | 'stopped'
-        | 'error';
-    port?: number;
-    adobeOrg?: string;
-    adobeProject?: string;
-    frontendConfigChanged?: boolean;
-    mesh?: {
-        status: MeshStatus;
-        endpoint?: string;
-        message?: string;
-    };
-    edsStorefrontStatus?: EdsStorefrontStatus;
-}
+// The wire types live in @/types/webviewPayloads — ONE declaration shared
+// with the senders (this file used to carry its own copies: a MeshStatus
+// twin, and an `interface ProjectStatus` that both collided with
+// @/types/base's unrelated lifecycle union AND had drifted — it was missing
+// the 'resetting'/'republishing' states the sender can post, and typed
+// fields the sender declared as bare strings). Re-exported here because this
+// module is the hook layer's documented vocabulary home.
+export type {
+    DashboardStatusUpdatePayload,
+    MeshStatus,
+    MeshStatusUpdatePayload,
+} from '@/types/webviewPayloads';
 
 /**
  * Status display color values
@@ -121,7 +95,8 @@ export interface VerifyAiSetupResponse {
 /**
  * EDS storefront status values
  */
-export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
+// Alias of the manifest field's own union — not a third declaration.
+export type EdsStorefrontStatus = NonNullable<Project['edsStorefrontStatusSummary']>;
 
 /**
  * Props for the useDashboardStatus hook
@@ -155,7 +130,7 @@ export type OrgCheckState = 'checking' | 'mismatch' | 'unknown' | 'ok' | 'none';
  */
 export interface UseDashboardStatusReturn {
     /** Current project status data */
-    projectStatus: ProjectStatus | null;
+    projectStatus: DashboardStatusUpdatePayload | null;
     /** Whether demo is currently running */
     isRunning: boolean;
     /** Whether UI is transitioning (button pressed, waiting for response) */
@@ -169,7 +144,7 @@ export interface UseDashboardStatusReturn {
     /** Display name for project */
     displayName: string;
     /** Current project status value */
-    status: ProjectStatus['status'] | undefined;
+    status: DashboardStatusUpdatePayload['status'] | undefined;
     /** Current mesh status value */
     meshStatus: MeshStatus | undefined;
     /** Proactive org-context mismatch (drives the "Switch IMS Org" banner) */

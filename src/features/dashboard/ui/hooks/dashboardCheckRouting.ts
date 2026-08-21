@@ -10,7 +10,7 @@
  */
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ProjectStatus, VerifyAiSetupResponse } from './dashboardStatusTypes';
+import type { DashboardStatusUpdatePayload, VerifyAiSetupResponse } from './dashboardStatusTypes';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type {
     CheckOutcome,
@@ -28,7 +28,7 @@ export interface CheckRoutingActions {
     setOrgCurrentName: (name: string | undefined) => void;
     setMcpHealing: (healing: boolean) => void;
     setAiToolingMissing: (missing: boolean) => void;
-    setProjectStatus: Dispatch<SetStateAction<ProjectStatus | null>>;
+    setProjectStatus: Dispatch<SetStateAction<DashboardStatusUpdatePayload | null>>;
     setVerifyResult: (result: VerifyAiSetupResponse | null) => void;
     setVerifyFailed: (failed: boolean) => void;
     setAiBusy: (busy: boolean) => void;

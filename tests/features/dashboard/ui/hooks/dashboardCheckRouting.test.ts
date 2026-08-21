@@ -5,13 +5,14 @@
  * isolation against a plain actions stub.
  */
 
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { CheckOutcome, OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks';
 import {
     routeCheckOutcome,
     type CheckRoutingActions,
 } from '@/features/dashboard/ui/hooks/dashboardCheckRouting';
-import type { ProjectStatus } from '@/features/dashboard/ui/hooks/dashboardStatusTypes';
+import type { DashboardStatusUpdatePayload } from '@/features/dashboard/ui/hooks/dashboardStatusTypes';
 import { CHECK_IDS } from '@/types/messages';
 
 function createActions(): jest.Mocked<CheckRoutingActions> {
@@ -95,13 +96,14 @@ describe('routeCheckOutcome', () => {
 
             expect(actions.setProjectStatus).toHaveBeenCalledTimes(1);
             const updater = actions.setProjectStatus.mock.calls[0][0] as (
-                prev: ProjectStatus | null
-            ) => ProjectStatus | null;
+                prev: DashboardStatusUpdatePayload | null
+            ) => DashboardStatusUpdatePayload | null;
 
-            const prev: ProjectStatus = {
-                name: 'demo',
+            const prev: DashboardStatusUpdatePayload = {
+                name: asDisplayName('demo'),
                 path: '/p',
                 status: 'running',
+                frontendConfigChanged: false,
                 mesh: { status: 'deployed', endpoint: 'https://mesh.example' },
             };
             expect(updater(prev)).toEqual({

@@ -17,6 +17,10 @@
 import { useEffect, useState } from 'react';
 import type { RowStatusOverride } from '../components/integrations/integrationCardModel';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type {
+    AppBuilderComponentStatusUpdatePayload,
+    AppBuilderComponentsSnapshotPayload,
+} from '@/types/webviewPayloads';
 
 /**
  * Live per-id status overrides from the `appBuilderComponentStatusUpdate` push
@@ -44,7 +48,7 @@ export function useRowStatusOverrides(): Record<string, RowStatusOverride> {
             // snapshots followed SUCCESSFUL ops (the persisted status the card fell
             // back to happened to match the override), and fatal on a failure: the
             // error push was wiped and the card read "Deployed" (live 2026-08-08).
-            const payload = (data ?? {}) as { components?: Record<string, unknown> };
+            const payload = (data ?? {}) as Partial<AppBuilderComponentsSnapshotPayload>;
             if (!payload.components) {
                 return;
             }
@@ -63,12 +67,7 @@ export function useRowStatusOverrides(): Record<string, RowStatusOverride> {
 
     useEffect(() => {
         return webviewClient.onMessage('appBuilderComponentStatusUpdate', (data: unknown) => {
-            const payload = data as {
-                id?: string;
-                status?: string;
-                message?: string;
-                name?: string;
-            };
+            const payload = data as Partial<AppBuilderComponentStatusUpdatePayload>;
             if (!payload?.id || !payload?.status) {
                 return;
             }

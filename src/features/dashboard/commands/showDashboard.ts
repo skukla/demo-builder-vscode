@@ -13,7 +13,6 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
@@ -33,7 +32,16 @@ import {
     getEdsLiveUrl,
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
-import type { DashboardInitialData } from '@/types/webviewPayloads';
+import type {
+    AppBuilderComponentRowStatus,
+    AppBuilderComponentStatusUpdatePayload,
+    AppBuilderComponentsSnapshotPayload,
+    AuthoringExperienceUpdatePayload,
+    DashboardInitialData,
+    DestinationTitles,
+    MeshStatusUpdatePayload,
+    ProjectDestinationUpdatePayload,
+} from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -328,16 +336,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
      *
      * @param destination - the titles the header renders, post-write
      */
-    public static async sendProjectDestinationUpdate(destination: {
-        projectTitle?: string;
-        workspaceTitle?: string;
-    }): Promise<void> {
+    public static async sendProjectDestinationUpdate(destination: DestinationTitles): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'projectDestinationUpdate',
-                payload: { destination },
-            });
+            const payload: ProjectDestinationUpdatePayload = { destination };
+            await panel.webview.postMessage({ type: 'projectDestinationUpdate', payload });
         }
     }
 
@@ -351,14 +354,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'meshStatusUpdate',
-                payload: {
-                    status,
-                    message,
-                    endpoint,
-                },
-            });
+            const payload: MeshStatusUpdatePayload = { status, message, endpoint };
+            await panel.webview.postMessage({ type: 'meshStatusUpdate', payload });
         }
     }
 
@@ -380,15 +377,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'appBuilderComponentStatusUpdate',
-                payload: {
-                    id,
-                    status,
-                    message,
-                    name,
-                },
-            });
+            const payload: AppBuilderComponentStatusUpdatePayload = { id, status, message, name };
+            await panel.webview.postMessage({ type: 'appBuilderComponentStatusUpdate', payload });
         }
     }
 
@@ -405,12 +395,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'appBuilderComponentsSnapshot',
-                payload: {
-                    components,
-                },
-            });
+            const payload: AppBuilderComponentsSnapshotPayload = { components };
+            await panel.webview.postMessage({ type: 'appBuilderComponentsSnapshot', payload });
         }
     }
 
@@ -423,12 +409,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     public static async sendAuthoringExperienceUpdate(edsDaLiveUrl?: string): Promise<void> {
         const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'authoringExperienceUpdate',
-                payload: {
-                    edsDaLiveUrl,
-                },
-            });
+            const payload: AuthoringExperienceUpdatePayload = { edsDaLiveUrl };
+            await panel.webview.postMessage({ type: 'authoringExperienceUpdate', payload });
         }
     }
 

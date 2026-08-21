@@ -10,7 +10,7 @@
  * - Extracting mesh endpoint from configurations
  */
 
-import { getProjectDisplayName, type ProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
 import {
@@ -19,36 +19,11 @@ import {
     getMeshComponentInstance,
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
-
-/**
- * Mesh status info for UI updates
- */
-export interface MeshStatusInfo {
-    status: string;
-    endpoint?: string;
-    message?: string;
-}
-
-/**
- * Status payload for dashboard updates
- */
-export interface StatusPayload {
-    /**
-     * What the dashboard heading shows, and what its inline rename field seeds
-     * from. Branded so `name: project.name` — the slug — cannot be assigned here
-     * by accident. It was, and shipped: a renamed project showed its folder in
-     * the heading while its card showed the title.
-     */
-    name: ProjectDisplayName;
-    path: string;
-    status: string;
-    port: number | undefined;
-    adobeOrg: string | undefined;
-    adobeProject: string | undefined;
-    frontendConfigChanged: boolean;
-    mesh?: MeshStatusInfo;
-    edsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
-}
+import type {
+    DashboardStatusUpdatePayload,
+    MeshStatus,
+    MeshStatusInfo,
+} from '@/types/webviewPayloads';
 
 /**
  * Build the standard status payload for dashboard updates
@@ -66,7 +41,7 @@ export function buildStatusPayload(
     project: Project,
     frontendConfigChanged: boolean,
     mesh?: MeshStatusInfo,
-): StatusPayload {
+): DashboardStatusUpdatePayload {
     return {
         // The dashboard heading AND its inline rename field read this. Both
         // want the title: the heading is what the user reads, and renaming
@@ -115,7 +90,7 @@ export function buildStatusPayload(
 export function deriveMeshStatus(
     project: Project,
     authenticated: boolean,
-): { status: string; shouldVerify: boolean } | undefined {
+): { status: MeshStatus; shouldVerify: boolean } | undefined {
     const mesh = getMeshComponentInstance(project);
     if (!mesh) return undefined;
 

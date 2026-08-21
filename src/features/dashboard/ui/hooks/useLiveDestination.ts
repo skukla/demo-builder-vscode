@@ -17,12 +17,12 @@
 
 import { useEffect, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { DestinationTitles, ProjectDestinationUpdatePayload } from '@/types/webviewPayloads';
 
-/** The titles the header renders. */
-export interface DestinationTitles {
-    projectTitle?: string;
-    workspaceTitle?: string;
-}
+// DestinationTitles moved to @/types/webviewPayloads — one declaration shared
+// with the channel's sender and the integrations init payload. Re-exported
+// here for this hook's existing consumers.
+export type { DestinationTitles } from '@/types/webviewPayloads';
 
 /**
  * The live deploy destination: the seeded prop until a push replaces it.
@@ -42,7 +42,7 @@ export function useLiveDestination(
 
     useEffect(() => {
         return webviewClient.onMessage('projectDestinationUpdate', (data: unknown) => {
-            const payload = data as { destination?: DestinationTitles };
+            const payload = data as Partial<ProjectDestinationUpdatePayload>;
             // A malformed push must never blank the header.
             if (payload?.destination) {
                 setDestination(payload.destination);
