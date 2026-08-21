@@ -584,28 +584,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         super.dispose();
     }
 
-    // Helper method to send feedback messages
-    private async _sendFeedback(
-        step: string,
-        status: string,
-        primary: string,
-        secondary?: string,
-        details?: string[],
-        action?: string,
-        actionParams?: unknown,
-    ): Promise<void> {
-        await this.sendMessage('feedback', {
-            step,
-            status,
-            primary,
-            secondary,
-            details,
-            action,
-            actionParams,
-            timestamp: Date.now(),
-        });
-    }
-
     /**
      * Get mesh endpoint - single source of truth approach:
      * 1. Use cached endpoint if available (instant)

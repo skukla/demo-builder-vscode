@@ -43,6 +43,7 @@ import type {
 } from '@/features/dashboard/services/onOpenChecks';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 
 // Public API — everything consumers imported from this module before the
 // decomposition still resolves here.
@@ -218,11 +219,7 @@ export function useDashboardStatus(
         // modal renders this live via LoadingDisplay; no cross-talk with the
         // wizard because the wizard is a separate webview.
         const unsubscribeProgress = webviewClient.onMessage('creationProgress', (data: unknown) => {
-            const payload = data as {
-                currentOperation?: string;
-                progress?: number;
-                message?: string;
-            };
+            const payload = data as Partial<CreationProgressPayload>;
             if (!payload?.currentOperation) return;
             setAiRegenProgress({
                 currentOperation: payload.currentOperation,

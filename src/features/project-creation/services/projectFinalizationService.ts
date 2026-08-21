@@ -113,23 +113,13 @@ export async function finalizeProject(context: FinalizationContext): Promise<voi
  * Send completion message and set up auto-close timeout
  */
 export async function sendCompletionAndCleanup(context: FinalizationContext): Promise<void> {
-    const { projectPath, sendMessage, panel, setupContext } = context;
+    const { panel, setupContext } = context;
     const { logger } = setupContext;
 
-    logger.debug('[Project Creation] Sending completion message to webview...');
-    try {
-        await sendMessage('creationComplete', {
-            projectPath: projectPath,
-            success: true,
-            message: 'Your demo is ready to start',
-        });
-        logger.debug('[Project Creation] Completion message sent');
-    } catch (messageError) {
-        logger.error(
-            '[Project Creation] Failed to send completion message',
-            messageError instanceof Error ? messageError : undefined,
-        );
-    }
+    // No creationComplete push: nothing has listened for it since the wizard
+    // moved to the 'Project Created' sentinel on creationProgress (sent by the
+    // tracker above) — a dead send found by the 2026-08-21 channel inventory.
+    logger.debug('[Project Creation] Completion signalled via the progress sentinel');
 
     // Auto-close the webview panel after timeout as a fallback
     if (panel) {

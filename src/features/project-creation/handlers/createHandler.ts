@@ -22,6 +22,7 @@ import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
+import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Count selected components (SOP §10 compliance)
@@ -48,19 +49,21 @@ async function sendValidationFailure(
     errorSummary: string,
     errorDetail: string,
 ): Promise<{ success: boolean }> {
-    await context.sendMessage('creationProgress', {
+    const progress: CreationProgressPayload = {
         currentOperation: 'Failed',
         progress: 0,
         message: '',
         logs: [],
         error: errorSummary,
-    });
+    };
+    await context.sendMessage('creationProgress', progress);
 
-    await context.sendMessage('creationFailed', {
+    const failed: CreationFailedPayload = {
         error: errorDetail,
         isTimeout: false,
         elapsed: '0s',
-    });
+    };
+    await context.sendMessage('creationFailed', failed);
 
     return { success: true }; // Don't throw - handler completed
 }
@@ -223,14 +226,15 @@ async function reportCreationError(
     if (error instanceof GitHubAppNotInstalledError) {
         context.logger.info(`[Project Creation] GitHub App not installed: ${error.message}`);
         context.logger.info(`[Project Creation] Install the GitHub App: ${error.installUrl}`);
-        await context.sendMessage('creationProgress', {
+        const ghProgress: CreationProgressPayload = {
             currentOperation: 'GitHub App Required',
             progress: 0,
             message: '',
             logs: [],
             error: `The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.`,
-        });
-        await context.sendMessage('creationFailed', {
+        };
+        await context.sendMessage('creationProgress', ghProgress);
+        const failed: CreationFailedPayload = {
             error: `GitHub App Required: The AEM Code Sync app is not installed on ${error.owner}/${error.repo}.`,
             isTimeout: false,
             elapsed: elapsedStr,
@@ -240,7 +244,8 @@ async function reportCreationError(
                 repo: error.repo,
                 installUrl: error.installUrl,
             },
-        });
+        };
+        await context.sendMessage('creationFailed', failed);
         return;
     }
 
@@ -252,25 +257,25 @@ async function reportCreationError(
         (appError.cause?.message?.includes('cancelled by user') ?? false);
     const isTimeoutError = isTimeout(appError);
 
-    await context.sendMessage('creationProgress', {
+    const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',
         progress: 0,
         message: '',
         logs: [],
         error: errorMessage,
-    });
+    };
+    await context.sendMessage('creationProgress', terminal);
 
-    if (isCancelled) {
-        await context.sendMessage('creationCancelled', {
-            message: 'Project creation was cancelled',
-            elapsed: elapsedStr,
-        });
-    } else {
-        await context.sendMessage('creationFailed', {
+    // No creationCancelled push: nothing has listened for it since the wizard
+    // moved to the 'Cancelled' sentinel on creationProgress (sent above) —
+    // a dead send found by the 2026-08-21 channel inventory.
+    if (!isCancelled) {
+        const failed: CreationFailedPayload = {
             error: errorMessage,
             isTimeout: isTimeoutError,
             elapsed: elapsedStr,
-        });
+        };
+        await context.sendMessage('creationFailed', failed);
     }
 }
 

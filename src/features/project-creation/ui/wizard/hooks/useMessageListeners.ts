@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import type { WizardState, FeedbackMessage } from '@/types/webview';
+import type { WizardState } from '@/types/webview';
+import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
 
 interface UseMessageListenersProps {
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
@@ -10,8 +11,14 @@ interface UseMessageListenersProps {
  * Hook to set up all message listeners for communication with the extension
  *
  * Handles:
- * - feedback: Progress feedback messages during operations
  * - creationProgress: Project creation progress updates
+ * - creationFailed: generic failure-state update
+ *
+ * No `feedback` listener any more: the channel was dead on BOTH ends — the
+ * only sender (`_sendFeedback` on CreateProjectWebviewCommand) had zero
+ * callers, and the listener read `progress`/`log`/`error` fields the sender
+ * never included. Both halves deleted by the 2026-08-21 channel inventory,
+ * along with the FeedbackMessage type.
  *
  * No `navigateToStep` listener any more: it awaited "sidebar navigation
  * requests" from the era when the sidebar drove wizard steps — that surface
@@ -27,45 +34,10 @@ interface UseMessageListenersProps {
  * generic progress-state update, same as it always effectively did.
  */
 export function useMessageListeners({ setState }: UseMessageListenersProps): void {
-    // Listen for feedback messages from extension
-    // Registered ONCE on mount - checks conditions inside functional update to avoid stale closures
-    useEffect(() => {
-        const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
-            setState((prev) => {
-                // Only update if in create-project step with active progress
-                if (prev.currentStep !== 'create-project' || !prev.creationProgress) {
-                    return prev;
-                }
-
-                return {
-                    ...prev,
-                    creationProgress: {
-                        ...prev.creationProgress,
-                        currentOperation: message.primary,
-                        progress: message.progress || prev.creationProgress.progress,
-                        message: message.secondary || prev.creationProgress.message,
-                        logs: message.log
-                            ? [...prev.creationProgress.logs, message.log]
-                            : prev.creationProgress.logs,
-                        error: message.error,
-                    },
-                };
-            });
-        });
-
-        return unsubscribe;
-    }, [setState]);
-
     // Listen for creationProgress messages from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('creationProgress', (progressData: unknown) => {
-            const data = progressData as {
-                currentOperation?: string;
-                progress?: number;
-                message?: string;
-                logs?: string[];
-                error?: string;
-            };
+            const data = progressData as Partial<CreationProgressPayload>;
             setState((prev) => ({
                 ...prev,
                 creationProgress: {
@@ -85,15 +57,7 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
     // Handles special error types like GITHUB_APP_NOT_INSTALLED
     useEffect(() => {
         const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
-            const failedData = data as {
-                error?: string;
-                errorType?: string;
-                errorDetails?: {
-                    owner?: string;
-                    repo?: string;
-                    installUrl?: string;
-                };
-            };
+            const failedData = data as Partial<CreationFailedPayload>;
 
             // GITHUB_APP_NOT_INSTALLED gets its special UI from
             // ProjectCreationStep's OWN creationFailed listener (the

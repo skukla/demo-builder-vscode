@@ -283,17 +283,6 @@ export interface CreationProgress {
     meshPhase?: MeshPhaseState;
 }
 
-export interface FeedbackMessage {
-    step: string;
-    status: 'start' | 'progress' | 'complete' | 'error' | 'warning';
-    primary: string;
-    secondary?: string;
-    progress?: number;
-    log?: string;
-    error?: string;
-    canRetry?: boolean;
-}
-
 export interface FormValidation {
     isValid: boolean;
     message?: string;

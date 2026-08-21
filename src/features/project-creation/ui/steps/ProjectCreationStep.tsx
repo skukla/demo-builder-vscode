@@ -14,6 +14,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import { DemoPackage } from '@/types/demoPackages';
 import { WizardState } from '@/types/webview';
+import type { CreationFailedPayload } from '@/types/webviewPayloads';
 import type { ImportedSettings } from '@/types/wizard';
 
 /** Extract GitHub owner/repo from EDS config for GitHub App check */
@@ -106,10 +107,7 @@ function handleCreationFailedMessage(
     setGitHubAppInstallData: (data: GitHubAppInstallData | null) => void,
     setPhase: (phase: StepPhase) => void,
 ): void {
-    const failedData = data as {
-        errorType?: string;
-        errorDetails?: { owner?: string; repo?: string; installUrl?: string };
-    };
+    const failedData = data as Partial<CreationFailedPayload>;
 
     if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
         const { owner, repo, installUrl } = failedData.errorDetails;

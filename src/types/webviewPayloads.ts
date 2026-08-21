@@ -19,7 +19,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { SettingsFile } from './settingsFile';
-import type { ComponentSelection, ThemeMode } from './webview';
+import type { ComponentSelection, CreationProgress, ThemeMode } from './webview';
 import type { EditProjectConfig, WizardStepDefinition } from './wizard';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
@@ -295,4 +295,24 @@ export interface ProjectDestinationUpdatePayload {
 /** `authoringExperienceUpdate` — live DA URL after an authoring flip. */
 export interface AuthoringExperienceUpdatePayload {
     edsDaLiveUrl?: string;
+}
+
+/**
+ * `creationProgress` — project-creation progress. Also reused verbatim by the
+ * AI regenerate flow (aiHandlers) so both surfaces render one payload shape.
+ * Completion/cancellation/failure ride THIS channel as sentinel
+ * `currentOperation` values ('Project Created' / 'Cancelled' / 'Failed') —
+ * the separate creationComplete/creationCancelled pushes were dead sends
+ * (no listener) and were deleted 2026-08-21.
+ */
+export type CreationProgressPayload = CreationProgress;
+
+/** `creationFailed` — terminal failure detail (the progress sentinel's sibling). */
+export interface CreationFailedPayload {
+    error: string;
+    isTimeout?: boolean;
+    elapsed?: string;
+    /** The one special-cased type; ProjectCreationStep opens the install dialog on it. */
+    errorType?: 'GITHUB_APP_NOT_INSTALLED';
+    errorDetails?: { owner: string; repo: string; installUrl: string };
 }

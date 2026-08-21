@@ -44,10 +44,17 @@ describe('Project Creation - Create Handler - Cancellation', () => {
             const result = await handleCreateProject(mockContext, mockConfig);
 
             expect(result.success).toBe(true);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            // The 'Cancelled' sentinel on creationProgress is the live signal;
+            // the separate creationCancelled push was a dead send (no listener)
+            // deleted by the 2026-08-21 channel inventory.
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
                 'creationCancelled',
+                expect.anything()
+            );
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationProgress',
                 expect.objectContaining({
-                    message: 'Project creation was cancelled',
+                    currentOperation: 'Cancelled',
                 })
             );
         });

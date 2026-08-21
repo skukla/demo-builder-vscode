@@ -64,6 +64,7 @@ import {
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 
 // EDS config.json sync to remote (Phase 5)
 
@@ -391,13 +392,14 @@ export async function executeProjectCreation(
         progress: number,
         message?: string,
     ) => {
-        context.sendMessage('creationProgress', {
+        const payload: CreationProgressPayload = {
             currentOperation,
             progress,
             message: message || '',
             logs: [],
             meshPhase: currentMeshPhase,
-        });
+        };
+        context.sendMessage('creationProgress', payload);
     };
 
     // ========================================================================
@@ -1794,7 +1796,11 @@ export async function executeSampleDataPhase(
             ),
         );
 
-        progressTracker('Installing Sample Data', 96, describeSampleDataResult(chosen.name, result));
+        progressTracker(
+            'Installing Sample Data',
+            96,
+            describeSampleDataResult(chosen.name, result),
+        );
     } catch (error) {
         // Belt and braces: installSampleData already swallows its own failures,
         // so reaching here means the wiring broke rather than the import. Still
