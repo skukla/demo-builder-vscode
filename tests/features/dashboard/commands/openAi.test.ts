@@ -39,7 +39,7 @@ jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
     aiHandlers: {
         'verify-ai-setup': jest.fn(),
         'regenerate-ai-files': jest.fn(),
-        'openInClaude': jest.fn(),
+        openInClaude: jest.fn(),
     },
 }));
 
@@ -55,10 +55,13 @@ describe('ShowAiCommand', () => {
         jest.clearAllMocks();
 
         mockWebview = {
-            asWebviewUri: jest.fn((uri: vscode.Uri) => ({
-                toString: () => `vscode-webview://authority${uri.fsPath}`,
-                fsPath: uri.fsPath,
-            } as vscode.Uri)),
+            asWebviewUri: jest.fn(
+                (uri: vscode.Uri) =>
+                    ({
+                        toString: () => `vscode-webview://authority${uri.fsPath}`,
+                        fsPath: uri.fsPath,
+                    }) as vscode.Uri
+            ),
             cspSource: 'vscode-webview:',
             postMessage: jest.fn(),
             onDidReceiveMessage: jest.fn(),
@@ -98,7 +101,7 @@ describe('ShowAiCommand', () => {
         command = new ShowAiCommand(
             mockContext,
             mockStateManager as unknown as StateManager,
-            mockLogger,
+            mockLogger
         );
 
         (vscode.window.createWebviewPanel as jest.Mock) = jest.fn().mockReturnValue(mockPanel);
@@ -116,35 +119,40 @@ describe('ShowAiCommand', () => {
 
     describe('webview metadata', () => {
         it('getWebviewId returns demoBuilder.openAi', () => {
-            expect((command as unknown as { getWebviewId(): string }).getWebviewId())
-                .toBe('demoBuilder.openAi');
+            expect((command as unknown as { getWebviewId(): string }).getWebviewId()).toBe(
+                'demoBuilder.openAi'
+            );
         });
 
         it('getWebviewTitle returns "Prompt Library"', () => {
-            expect((command as unknown as { getWebviewTitle(): string }).getWebviewTitle())
-                .toBe('Prompt Library');
+            expect((command as unknown as { getWebviewTitle(): string }).getWebviewTitle()).toBe(
+                'Prompt Library'
+            );
         });
     });
 
     describe('loading state', () => {
         it('uses a "prompt library" loading message', () => {
-            expect((command as unknown as { getLoadingMessage(): string }).getLoadingMessage())
-                .toMatch(/prompt library/i);
+            expect(
+                (command as unknown as { getLoadingMessage(): string }).getLoadingMessage()
+            ).toMatch(/prompt library/i);
         });
     });
 
     describe('getInitialData', () => {
         it('includes the current project', async () => {
-            const data = await (command as unknown as { getInitialData(): Promise<{ project: Project }> })
-                .getInitialData();
+            const data = await (
+                command as unknown as { getInitialData(): Promise<{ project: Project }> }
+            ).getInitialData();
 
             expect(data.project).toBeDefined();
             expect(data.project.name).toBe('Test Project');
         });
 
         it('includes the theme', async () => {
-            const data = await (command as unknown as { getInitialData(): Promise<{ theme: string }> })
-                .getInitialData();
+            const data = await (
+                command as unknown as { getInitialData(): Promise<{ theme: string }> }
+            ).getInitialData();
 
             expect(['dark', 'light']).toContain(data.theme);
         });
@@ -172,17 +180,15 @@ describe('ShowAiCommand', () => {
                 (typeof command)['initializeMessageHandlers']
             >[0];
 
-            (command as unknown as {
-                initializeMessageHandlers(c: typeof mockComm): void;
-            }).initializeMessageHandlers(mockComm);
+            (
+                command as unknown as {
+                    initializeMessageHandlers(c: typeof mockComm): void;
+                }
+            ).initializeMessageHandlers(mockComm);
 
-            const calledTypes = onStreaming.mock.calls.map(call => call[0]);
+            const calledTypes = onStreaming.mock.calls.map((call) => call[0]);
             expect(calledTypes).toEqual(
-                expect.arrayContaining([
-                    'verify-ai-setup',
-                    'regenerate-ai-files',
-                    'openInClaude',
-                ]),
+                expect.arrayContaining(['verify-ai-setup', 'regenerate-ai-files', 'openInClaude'])
             );
             // 4 → 3: inspect-mcp removed 2026-08-05. It was registered but
             // unreachable — the AI surface has no Refresh action to send it.
@@ -197,11 +203,13 @@ describe('ShowAiCommand', () => {
             >[0];
             (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
 
-            (command as unknown as {
-                initializeMessageHandlers(c: typeof mockComm): void;
-            }).initializeMessageHandlers(mockComm);
+            (
+                command as unknown as {
+                    initializeMessageHandlers(c: typeof mockComm): void;
+                }
+            ).initializeMessageHandlers(mockComm);
 
-            const cancelReg = on.mock.calls.find(call => call[0] === 'cancel');
+            const cancelReg = on.mock.calls.find((call) => call[0] === 'cancel');
             expect(cancelReg).toBeDefined();
 
             await (cancelReg![1] as () => unknown)();
@@ -209,55 +217,29 @@ describe('ShowAiCommand', () => {
         });
     });
 
-    describe('surface-change subscription', () => {
-        it('pushes surface-changed to the webview when demoBuilder.ai.surface changes', () => {
-            let capturedCallback: ((e: vscode.ConfigurationChangeEvent) => void) | null = null;
-            const dispose = jest.fn();
-            (vscode.workspace as unknown as { onDidChangeConfiguration: jest.Mock })
-                .onDidChangeConfiguration = jest.fn((cb: (e: vscode.ConfigurationChangeEvent) => void) => {
-                    capturedCallback = cb;
-                    return { dispose };
-                });
-
-            const sendMessageSpy = jest
-                .spyOn(command as unknown as { sendMessage: (t: string) => Promise<void> }, 'sendMessage')
-                .mockResolvedValue(undefined);
-
-            (command as unknown as { subscribeToSurfaceChanges(): void })
-                .subscribeToSurfaceChanges();
-
-            expect(capturedCallback).not.toBeNull();
-
-            // Unrelated config change → no push
-            const unrelatedEvent = {
-                affectsConfiguration: (key: string) => key === 'demoBuilder.someOther',
-            } as vscode.ConfigurationChangeEvent;
-            capturedCallback!(unrelatedEvent);
-            expect(sendMessageSpy).not.toHaveBeenCalled();
-
-            // Surface change → push
-            const surfaceEvent = {
-                affectsConfiguration: (key: string) => key === 'demoBuilder.ai.surface',
-            } as vscode.ConfigurationChangeEvent;
-            capturedCallback!(surfaceEvent);
-            expect(sendMessageSpy).toHaveBeenCalledWith('surface-changed');
-        });
-    });
+    // No surface-change subscription suite: the listener watched
+    // `demoBuilder.ai.surface`, a setting retired in 7bbe1bd9 — an
+    // unregistered key can never change, so the subscription could never
+    // fire and was deleted 2026-08-21 (found by the settings-seam audit).
+    // This suite was the mock proving the mock: it hand-fired the callback
+    // a real VS Code would never invoke.
 
     describe('webview content', () => {
         it('loads the aiOverview-bundle.js feature bundle', async () => {
             (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
 
-            const html = await (command as unknown as { getWebviewContent(): Promise<string> })
-                .getWebviewContent();
+            const html = await (
+                command as unknown as { getWebviewContent(): Promise<string> }
+            ).getWebviewContent();
 
             expect(html).toContain('aiOverview-bundle.js');
         });
 
         it('sets the document title to "Prompt Library"', async () => {
             (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
-            const html = await (command as unknown as { getWebviewContent(): Promise<string> })
-                .getWebviewContent();
+            const html = await (
+                command as unknown as { getWebviewContent(): Promise<string> }
+            ).getWebviewContent();
 
             expect(html).toContain('<title>Prompt Library</title>');
         });
