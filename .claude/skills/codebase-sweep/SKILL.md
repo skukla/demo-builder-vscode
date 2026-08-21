@@ -35,7 +35,7 @@ schedules.
 
 ## Procedure
 
-Run all four, then triage. ~30s total.
+Run all six, then triage. ~30s total.
 
 ```bash
 bash .claude/skills/component-extraction-scan/scan-classnames.sh src   # UI markup
@@ -43,6 +43,10 @@ bash .claude/skills/code-duplication-scan/scan.sh src                  # logic (
 bash .claude/skills/circular-dependency-scan/scan.sh src               # cycles (madge)
 bash .claude/skills/dead-code-scan/scan.sh src                         # orphans + doc drift
 bash .claude/skills/architecture-duplication-scan/signals.sh src       # competing impls
+# Boundary-cast audit — silenced type errors (the stackBackend / payload class).
+# Quote the glob args (zsh); the second grep drops comment-only lines.
+grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.tsx' \
+  | grep -vE ':[0-9]+:\s*(//|\*|/\*)'
 ```
 
 ### Baselines measured 2026-08-11 — a number at baseline is not news
@@ -53,6 +57,7 @@ bash .claude/skills/architecture-duplication-scan/signals.sh src       # competi
 | code-duplication (jscpd) | 64 clones, 0.70% lines | a jump, or any clone crossing a feature boundary |
 | circular-dependency | 13 cycles | any new cycle; most existing ones are same-feature handler/phase pairs |
 | dead-code doc-drift | 0 | any hit is real — it is confirmed against `git log` |
+| boundary-cast audit | 55 (11 `as never`, 44 `as unknown as`, 0 `as any`) — measured 2026-08-21 | any `as any`; any NEW cast; any existing cast on an ARGUMENT to a collaborator (see triage) |
 
 Prior: 2026-08-05 — 9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
 drop from 9 to 4 is the `step-view`/`step-nav` shell finally being extracted, not the scan
@@ -87,6 +92,16 @@ reimplementing its internals instead of using it.
 - **Rule of Three**, with the standing override: if the same behaviour has already
   been FIXED separately on two surfaces, that is demonstrated drift and it extracts
   at two.
+- **Boundary casts**: what matters is POSITION, not count. A cast on an ARGUMENT
+  handed to a collaborator (`client.startImport(request as never)`,
+  `authManager: authManager as never`) is the class that produced four silent
+  production no-ops (CLAUDE.md "A cast at a call boundary is a silenced type
+  error") plus the five webview payload bugs — the collaborator dispatches on a
+  field the cast hides, and mocks cannot see it. A cast adapting a browser/DOM
+  API quirk inside one function (`timer as unknown as { unref?... }`) is noise.
+  Fix shape: build the object the callee declares, or widen the callee to
+  `unknown` where it treats the value as opaque (the 9144bee9 comm-manager
+  precedent) — never delete the cast by loosening the assertion.
 
 ## Output
 
