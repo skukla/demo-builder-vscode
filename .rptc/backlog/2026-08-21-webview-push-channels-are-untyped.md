@@ -62,6 +62,24 @@ examples** — not a big-bang pass.
   `git log -S` for a deleted producer before resurrecting or deleting
   (precedent: `initialMeshStatus`, deleted; `packageName`, resurrected).
 
+## Known cast clusters that belong to this work (from the 2026-08-21 boundary-cast triage)
+
+Five argument-position `as never` casts were fixed the day this was filed
+(data-installer request/auth/configs, updateCore saveProject). Two clusters
+remain, both deferred INTO this item because each needs the surrounding
+contract typed, not a cast deleted:
+
+- **`AddIntegrationFlowAdapter.tsx` ×4** (`state as never`,
+  `meshComponent as never`, `builder as never`, `buildReservedIds({...} as
+  never)`) — the integrations surface reusing the wizard's add-integration
+  modal by synthesizing partial wizard state. The honest fix is narrowing the
+  MODAL's prop contract to what it actually reads per mode (the borrowed-
+  component problem `webview-command-handler` describes), which is wizard-side
+  typing work.
+- **`stackComponentCollector.ts:76`** (`componentsData as never` + `as T` on
+  the result) — launders the wizard's untyped `get-components-data` response.
+  Dies naturally when that channel gets typed.
+
 ## Kickoff prompt (per-channel, when one bites)
 
 > Channel `<type>` just caused a bug. Type it end-to-end per

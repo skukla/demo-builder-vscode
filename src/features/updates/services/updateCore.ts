@@ -108,7 +108,10 @@ export async function applyBlockLibraryUpdateResolved(
 async function applyDisabledMarker(
     lib: InstalledBlockLibrary,
     upstreamSha: string,
-    project: { name: string; path: string },
+    // The FULL project, because saveProject persists whatever it is handed —
+    // an under-declared `{ name; path }` here plus the old `as never` would
+    // have let a future caller legally persist a gutted manifest.
+    project: Project,
     ctx: UpdateContext,
 ): Promise<void> {
     const previous = lib.syncDisabledMarker;
@@ -117,7 +120,7 @@ async function applyDisabledMarker(
         lastCheckedAt: new Date().toISOString(),
     };
     try {
-        await ctx.stateManager.saveProject(project as never);
+        await ctx.stateManager.saveProject(project);
     } catch (err) {
         // Restore previous state to avoid poisoning in-memory.
         if (previous) {

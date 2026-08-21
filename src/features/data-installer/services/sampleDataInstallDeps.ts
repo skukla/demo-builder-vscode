@@ -99,13 +99,13 @@ export function buildSampleDataDeps(
 
         startImport: async (request) => {
             const client = await writeClient(context);
-            return client.startImport(request as never);
+            return client.startImport(request);
         },
 
         // The Reset workflow's half. Same request, same client, different verb.
         startDelete: async (request) => {
             const client = await writeClient(context);
-            return client.startDelete(request as never);
+            return client.startDelete(request);
         },
 
         /**

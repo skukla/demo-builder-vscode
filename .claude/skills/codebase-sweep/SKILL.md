@@ -57,7 +57,7 @@ grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.t
 | code-duplication (jscpd) | 64 clones, 0.70% lines | a jump, or any clone crossing a feature boundary |
 | circular-dependency | 13 cycles | any new cycle; most existing ones are same-feature handler/phase pairs |
 | dead-code doc-drift | 0 | any hit is real — it is confirmed against `git log` |
-| boundary-cast audit | 55 (11 `as never`, 44 `as unknown as`, 0 `as any`) — measured 2026-08-21 | any `as any`; any NEW cast; any existing cast on an ARGUMENT to a collaborator (see triage) |
+| boundary-cast audit | 50 (6 `as never`, 44 `as unknown as`, 0 `as any`) — measured 2026-08-21 after the first triage removed 5 argument-position casts | any `as any`; any NEW cast; any existing cast on an ARGUMENT to a collaborator (see triage). The 6 remaining `as never` are triaged: 1 documented Spectrum shim (CardActionsMenu), 4 in AddIntegrationFlowAdapter (needs modal-prop design, see the untyped-channels backlog item), 1 in stackComponentCollector (wizard get-components-data territory, same item) |
 
 Prior: 2026-08-05 — 9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
 drop from 9 to 4 is the `step-view`/`step-nav` shell finally being extracted, not the scan
