@@ -20,7 +20,7 @@ import type { AiOverviewInitialData } from '@/types/webviewPayloads';
  * underneath is Claude-specific, but that's an implementation detail handled by
  * the `openInClaude` route.
  */
-export class ShowAiCommand extends BaseWebviewCommand {
+export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
     /**
      * Dispose any active AI panel (used during navigation / reset).
      */

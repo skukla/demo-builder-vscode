@@ -39,7 +39,7 @@ import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 const WEBVIEW_ID = 'demoBuilder.dataInstaller';
 const TITLE = 'Data Installer';
 
-export class ShowDataInstallerCommand extends BaseWebviewCommand {
+export class ShowDataInstallerCommand extends BaseWebviewCommand<DataInstallerInitialData> {
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }

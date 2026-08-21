@@ -29,7 +29,13 @@ function budgetedTypes(): Set<string> {
     const end = source.indexOf('};', start);
     expect(start).toBeGreaterThan(-1);
     const body = source.slice(start, end);
-    return new Set([...body.matchAll(/^\s*'([^']+)':\s*TIMEOUTS\./gm)].map((m) => m[1]));
+    // Keys appear quoted ('get-projects') or bare (listConsoleApis) — prettier
+    // unquotes any key that is a valid identifier, so match both forms.
+    return new Set(
+        [...body.matchAll(/^\s*(?:'([^']+)'|([A-Za-z_$][\w$]*)):\s*TIMEOUTS\./gm)].map(
+            (m) => m[1] ?? m[2]
+        )
+    );
 }
 
 describe('REQUEST_TIMEOUTS', () => {

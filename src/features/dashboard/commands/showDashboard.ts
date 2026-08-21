@@ -89,7 +89,7 @@ export function shouldAutoReopenProjectsList(
  * Refactored in Phase 3.8 to use BaseWebviewCommand pattern with HandlerRegistry.
  * Updated in Step 3 to use object literal handler maps with dispatchHandler.
  */
-export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
+export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<DashboardInitialData> {
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 

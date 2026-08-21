@@ -58,7 +58,7 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
-export class CreateProjectWebviewCommand extends BaseWebviewCommand {
+export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitialData> {
     // Debug: Instance tracking for diagnosing retry/state issues
     private static instanceCounter = 0;
     private readonly _instanceId: number;

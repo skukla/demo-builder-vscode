@@ -26,7 +26,7 @@ import type { ProjectsListInitialData } from '@/types/webviewPayloads';
  * Follows BaseWebviewCommand pattern with object literal handler maps.
  * Updated in Step 3 to use dispatchHandler instead of class-based registry.
  */
-export class ShowProjectsListCommand extends BaseWebviewCommand {
+export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInitialData> {
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,

@@ -3,12 +3,7 @@ import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import {
-    Message,
-    MessageType,
-    MessagePayload,
-    PendingRequest,
-} from '@/types/messages';
+import { Message, MessageType, MessagePayload, PendingRequest } from '@/types/messages';
 
 /**
  * Message Handler Function Type
@@ -16,9 +11,7 @@ import {
  * Handlers can return Promise or direct value.
  * Payload type is flexible to support all message types.
  */
-type MessageHandlerFunction<P = MessagePayload, R = unknown> = (
-    payload: P
-) => Promise<R> | R;
+type MessageHandlerFunction<P = MessagePayload, R = unknown> = (payload: P) => Promise<R> | R;
 
 /**
  * Communication manager configuration
@@ -37,39 +30,39 @@ interface CommunicationConfig {
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
-    'authenticate': TIMEOUTS.AUTH.BROWSER,           // 60s - browser-based auth flow
+    authenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser-based auth flow
     // Awaits the SAME browser sign-in as 'authenticate', then restores project context
     // and refreshes status — so it needs at least the same budget. Callers await it to
     // know when sign-in finished (the API picker re-fetches on success).
-    'reAuthenticate': TIMEOUTS.AUTH.BROWSER,         // 60s - browser sign-in + context restore
+    reAuthenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser sign-in + context restore
 
     // Data loading (wizard UI)
     // 30s was NOT enough and timed out on work that would have finished: each of
     // these bounds the SDK attempt at SDK_ENTITY_FETCH (10s) and then falls back to
     // the `aio` CLI, so a slow Adobe endpoint spends the SDK budget BEFORE the
     // fallback even starts. Budget for the sum, not the fast path.
-    'get-projects': TIMEOUTS.LONG,                   // 180s - SDK attempt + CLI fallback
-    'get-workspaces': TIMEOUTS.LONG,                 // 180s - SDK attempt + CLI fallback
-    'list-org-console-apis': TIMEOUTS.LONG,          // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
+    'get-projects': TIMEOUTS.LONG, // 180s - SDK attempt + CLI fallback
+    'get-workspaces': TIMEOUTS.LONG, // 180s - SDK attempt + CLI fallback
+    'list-org-console-apis': TIMEOUTS.LONG, // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
 
     // Console APIs on a LIVE project (dashboard twins of the wizard messages
     // above). They hit the SAME getServicesForOrg / subscribe calls, so they need
     // the same budgets — without them the frontend's 30s default applied, and a
     // 35.2s catalog fetch reported "Request timeout: listConsoleApis" in the UI
     // while the extension logged a successful 96-service result (2026-07-31).
-    'listConsoleApis': TIMEOUTS.LONG,                // 180s - same catalog fetch as list-org-console-apis
+    listConsoleApis: TIMEOUTS.LONG, // 180s - same catalog fetch as list-org-console-apis
 
-    'addConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + union subscribe PUT
-    'setConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + reconcile subscribe PUT
+    addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
+    setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
 
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
-    'select-project': TIMEOUTS.NORMAL,               // 30s - validate project reachable, then ack
-    'select-workspace': TIMEOUTS.NORMAL,             // 30s - validate workspace, then ack
+    'select-project': TIMEOUTS.NORMAL, // 30s - validate project reachable, then ack
+    'select-workspace': TIMEOUTS.NORMAL, // 30s - validate workspace, then ack
 
     // API Mesh operations
-    'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe
-    'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
-    'ensure-mesh-api-subscribed': TIMEOUTS.LONG,     // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
+    'check-api-mesh': TIMEOUTS.AUTH.BROWSER, // 60s - workspace download + mesh describe
+    'update-api-mesh': TIMEOUTS.LONG, // 180s - update and deploy mesh
+    'ensure-mesh-api-subscribed': TIMEOUTS.LONG, // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
 
     // AEM Code Sync check. The fast path answers in about a second, but only
     // because the caller passed `skipTrigger`. "Check Again" does NOT, and when
@@ -78,10 +71,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // TIMEOUTS.LONG over 30 attempts). Unbudgeted, the frontend hung up at 30s and
     // showed "couldn't verify" while the sync ran on for up to another 2.5 minutes
     // and often succeeded — the 2026-07-31 failure above, in a different message.
-    'check-github-app': TIMEOUTS.LONG,               // 180s - may trigger a code sync and poll it
+    'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and poll it
 
     // Project deletion (EDS cleanup involves multiple external APIs)
-    'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup
+    deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup
 
     // Adobe Console project teardown (modal think-time + registrations +
     // providers + project delete; see PROJECT_TEARDOWN's budget math)
@@ -115,9 +108,9 @@ export class WebviewCommunicationManager {
     private pendingRequests = new Map<string, PendingRequest>();
     private messageHandlers = new Map<string, MessageHandlerFunction>();
     // Tracking state for handshake protocol - values assigned but read indirectly
-     
+
     private isWebviewReady = false;
-     
+
     private isExtensionReady = false;
     private handshakeComplete = false;
     private stateVersion = 0;
@@ -143,7 +136,7 @@ export class WebviewCommunicationManager {
     async initialize(): Promise<void> {
         // Set up message listener
         this.panel.webview.onDidReceiveMessage(
-            message => this.handleWebviewMessage(message),
+            (message) => this.handleWebviewMessage(message),
             undefined,
             this.disposables,
         );
@@ -161,7 +154,7 @@ export class WebviewCommunicationManager {
             // Extension waits passively for webview ready signal (VS Code Issue #125546)
             this.once('__webview_ready__', () => {
                 this.isWebviewReady = true;
-                
+
                 // Send handshake confirmation
                 this.sendRawMessage({
                     id: uuidv4(),
@@ -183,12 +176,18 @@ export class WebviewCommunicationManager {
 
     /**
      * Send a message to the webview (fire-and-forget)
+     *
+     * `payload` is `unknown` on purpose: the wire is postMessage, which takes
+     * any structured-clonable value, and this manager never inspects payload
+     * contents. The single widening below replaces the per-call-site
+     * `as MessagePayload` casts every sender used to need (interfaces do not
+     * structurally satisfy the union's `Record<string, unknown>` arm).
      */
-    async sendMessage(type: MessageType, payload?: MessagePayload): Promise<void> {
+    async sendMessage(type: MessageType, payload?: unknown): Promise<void> {
         const message: Message = {
             id: uuidv4(),
             type,
-            payload,
+            payload: payload as MessagePayload | undefined,
             timestamp: Date.now(),
         };
 
@@ -205,12 +204,14 @@ export class WebviewCommunicationManager {
 
     /**
      * Send a request and wait for response
+     *
+     * `payload` is `unknown` for the same reason as {@link sendMessage}.
      */
-    async request<T = unknown>(type: MessageType, payload?: MessagePayload): Promise<T> {
+    async request<T = unknown>(type: MessageType, payload?: unknown): Promise<T> {
         const message: Message = {
             id: uuidv4(),
             type,
-            payload,
+            payload: payload as MessagePayload | undefined,
             timestamp: Date.now(),
         };
 
@@ -298,13 +299,13 @@ export class WebviewCommunicationManager {
         this.isDisposed = true;
 
         // Clear all timeouts
-        this.pendingRequests.forEach(request => {
+        this.pendingRequests.forEach((request) => {
             clearTimeout(request.timeout);
         });
         this.pendingRequests.clear();
 
         // Dispose of event listeners
-        this.disposables.forEach(d => d.dispose());
+        this.disposables.forEach((d) => d.dispose());
         this.disposables = [];
 
         // Clear queues
@@ -320,7 +321,7 @@ export class WebviewCommunicationManager {
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
             if (handler) {
-                await handler(message.payload ?? {} as MessagePayload);
+                await handler(message.payload ?? ({} as MessagePayload));
             }
             return;
         }
@@ -364,10 +365,12 @@ export class WebviewCommunicationManager {
                                 timeout: requestTimeout,
                             },
                             timestamp: Date.now(),
-                        }).catch(hintError => {
+                        }).catch((hintError) => {
                             // Timeout hint is non-critical, log and continue
                             if (this.config.enableLogging) {
-                                this.logger.warn(`[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`);
+                                this.logger.warn(
+                                    `[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`,
+                                );
                             }
                         });
                     }
@@ -376,7 +379,7 @@ export class WebviewCommunicationManager {
                 // CRITICAL FIX (v1.5.0): Properly await async handler results
                 // Previously, Promise objects were being sent to UI instead of resolved values
                 // This caused "Error Loading Projects" despite successful backend operations
-                const result = await handler(message.payload ?? {} as MessagePayload);
+                const result = await handler(message.payload ?? ({} as MessagePayload));
 
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
@@ -450,9 +453,11 @@ export class WebviewCommunicationManager {
         } catch (error) {
             if (retryCount < this.config.maxRetries) {
                 if (this.config.enableLogging) {
-                    this.logger.debug(`[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`);
+                    this.logger.debug(
+                        `[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`,
+                    );
                 }
-                
+
                 await sleep(this.config.retryDelay);
                 await this.sendWithRetry(message, retryCount + 1);
             } else {
@@ -491,7 +496,7 @@ export class WebviewCommunicationManager {
         const messages = [...this.messageQueue];
         this.messageQueue = [];
 
-        messages.forEach(message => {
+        messages.forEach((message) => {
             this.sendWithRetry(message);
         });
     }
@@ -515,7 +520,9 @@ export async function createWebviewCommunication(
         return manager;
     } catch (error) {
         // Clean up to prevent orphaned listeners that would cause duplicate handler invocations
-        logger.warn('[WebviewComm] Initialization failed, disposing manager to prevent orphaned listeners');
+        logger.warn(
+            '[WebviewComm] Initialization failed, disposing manager to prevent orphaned listeners',
+        );
         manager.dispose();
         throw error;
     }

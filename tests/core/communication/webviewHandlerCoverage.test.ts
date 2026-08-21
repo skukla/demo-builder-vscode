@@ -32,7 +32,10 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
     },
     {
         name: 'dashboard',
-        entry: 'features/dashboard/ui/index.tsx',
+        // main.tsx, not index.tsx: an index.ts barrel sits beside it and tsc
+        // keeps only one file per basename, so an index.tsx entry there was
+        // never typechecked.
+        entry: 'features/dashboard/ui/main.tsx',
         command: 'features/dashboard/commands/showDashboard.ts',
     },
     {

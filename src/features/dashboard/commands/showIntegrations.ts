@@ -47,7 +47,7 @@ import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
-export class ShowIntegrationsCommand extends BaseWebviewCommand {
+export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }

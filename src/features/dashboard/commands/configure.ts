@@ -53,7 +53,7 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
 
-export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
+export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<ConfigureInitialData> {
     /**
      * Static method to dispose any active Configure panel
      * Useful for cleanup during navigation
