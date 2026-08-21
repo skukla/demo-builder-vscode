@@ -102,6 +102,20 @@ reimplementing its internals instead of using it.
   Fix shape: build the object the callee declares, or widen the callee to
   `unknown` where it treats the value as opaque (the 9144bee9 comm-manager
   precedent) — never delete the cast by loosening the assertion.
+- **Relay chains** (guided, no scanner — judgment decides): a value passed
+  through ≥3 hops that never READ it, only forward it, flags a missing
+  boundary (a shared declaration, a context, a deps object). Raw threading
+  depth is NOT the signal — a long compiler-checked chain is verbose but
+  safe; a rename lights up every hop. What matters is (a) RELAY-ONLY hops,
+  because each one re-states the name/shape and re-statements drift (the old
+  dashboard entry was a pure relay with its own hand-typed payload copy —
+  where `brandName`/`initialMeshStatus` rotted), and (b) any UNCHECKED hop
+  (`unknown`/cast/`Record`) — everything downstream of it is convention-only
+  regardless of depth. Fix shape: one shared declaration spread through
+  (webviewPayloads precedent), or a deps object whose consumers declare
+  `Pick<>` of what they read (the 3df264c6 HandlerContext precedent) — a bag
+  WITHOUT per-consumer Picks just trades threading for partial-construction
+  casts, which is how seven of them accumulated.
 
 ## Output
 

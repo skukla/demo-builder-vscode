@@ -34,18 +34,18 @@ recorded under non-seams).
 
 ## Open seams, ranked by blast radius × drift likelihood
 
-### 1. `.demo-builder.json` manifest ↔ `Project` type — **ENFORCE** (top of the list)
+### 1. `.demo-builder.json` manifest ↔ `Project` type — **ENFORCED 2026-08-21** (same day)
 
-`projectFileLoader.ts:103` does `parseJSON<ProjectManifest>(...)` — a
-parse-and-cast, no validation. Unlike bundled config (ships with the build),
-the manifest is USER-machine data written by any historical extension
-version, hand-editable, and the single source of truth for everything.
-Migrations handle KNOWN legacy shapes; nothing checks the result actually
-satisfies `Project`. Same class as the config work, bigger blast radius,
-harder fix: validation must be tolerant (warn + best-effort load — refusing
-would brick projects), so it needs a design pass, not a mechanical one.
-Generated-schema-at-load is the obvious shape (`ts-json-schema-generator` is
-now a devDependency).
+Was: `projectFileLoader.ts` parse-CAST the manifest with no validation —
+user-machine data from any historical version, trusted by everything. Now:
+`manifestValidation.ts` validates every load against a schema GENERATED from
+`ProjectManifest` (`scripts/generate-manifest-schema.js`; committed copy
+pinned by `manifest-schema-freshness.test.ts` so neither the interface nor
+the schema can silently drift). WARN mode by design — unknown fields pass
+(manifests cross versions in both directions), a wrong-shaped manifest still
+loads best-effort, and the drift lands in Debug Logs (`[Project Load]
+manifest shape: …`) instead of surfacing weeks later as a mystery symptom.
+`ajv` promoted to a runtime dependency for this.
 
 ### 2. Webview message channels (~30) — **SCHEDULE** (already filed)
 

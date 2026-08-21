@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
+import { validateManifestShape } from './manifestValidation';
 import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
@@ -103,6 +104,15 @@ export class ProjectFileLoader {
             const manifest = parseJSON<ProjectManifest>(manifestData);
             if (!manifest) {
                 throw new Error('Failed to parse project manifest');
+            }
+
+            // WARN-mode shape check against the schema generated from
+            // ProjectManifest — names drift in the Debug Logs instead of
+            // letting a wrong-shaped field surface weeks later as a mystery
+            // symptom. NEVER blocks the load: a manifest from any extension
+            // version loads best-effort exactly as it always has.
+            for (const issue of validateManifestShape(manifest)) {
+                this.logger.warn(`[Project Load] manifest shape: ${issue} (${manifestPath})`);
             }
 
             // Discover components from disk and merge with manifest

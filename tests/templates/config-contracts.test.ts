@@ -34,7 +34,17 @@ function findSchemaFiles(dir: string, out: string[] = []): string[] {
     return out;
 }
 
-const schemaFiles = findSchemaFiles(SRC_ROOT);
+/**
+ * Schemas whose DATA is not in the repo — validated elsewhere. The manifest
+ * schema is generated from ProjectManifest and validates user-machine
+ * .demo-builder.json files at load time (manifestValidation.ts); its
+ * freshness is pinned by manifest-schema-freshness.test.ts.
+ */
+const NO_SIBLING_DATA = new Set(['core/state/config/manifest.schema.json']);
+
+const schemaFiles = findSchemaFiles(SRC_ROOT).filter(
+    (f) => !NO_SIBLING_DATA.has(path.relative(SRC_ROOT, f))
+);
 
 describe('config contracts — bundled JSON vs sibling schema', () => {
     // A vacuous pass is not a pass: if discovery breaks, zero pairs would
