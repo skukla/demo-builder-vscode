@@ -33,6 +33,7 @@
  */
 
 import { readOrgAdmins } from './configServiceAccess';
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -40,7 +41,7 @@ import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
 
 const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
-const DA_LIVE_ADMIN_BASE_URL = 'https://admin.da.live';
+// Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
 
 /** What each leg found. An absent leg means it never ran. */
 export interface ConfigServiceProbeResult {
@@ -290,7 +291,7 @@ export async function probeConfigService(
     // accepted ANYWHERE, which is what turns a bare 403 into a diagnosis.
     try {
         const response = await get(
-            `${DA_LIVE_ADMIN_BASE_URL}/source/${encodeURIComponent(org)}/${encodeURIComponent(site)}/index.html`,
+            `${DA_LIVE_BASE_URL}/source/${encodeURIComponent(org)}/${encodeURIComponent(site)}/index.html`,
             token,
         );
         result.daLive = { httpStatus: response.status };

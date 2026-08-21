@@ -17,6 +17,7 @@
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLiveConstants';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
@@ -90,7 +91,7 @@ export async function ensureEdsContent(
     // Quick check: does content already exist in DA.live?
     // Check DA.live source API directly — it's the source of truth and avoids CDN caching issues.
     const token = await daLiveAuthService.getAccessToken();
-    const checkUrl = `https://admin.da.live/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
+    const checkUrl = `${DA_LIVE_BASE_URL}/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
     logger.debug(`[EDS Content] Checking DA.live: ${checkUrl}`);
 
     try {

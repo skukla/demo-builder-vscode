@@ -235,4 +235,20 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
+
+    it('da.live HOST: the admin.da.live literal is defined once, in daLiveConstants', () => {
+        // Audited 2026-08-22: the operations layer is one intended leaf client
+        // (daLiveApiClient) + N services — but several services still run raw
+        // fetch with hand-rolled retries (consolidation filed:
+        // 2026-08-22-dalive-services-bypass-their-own-client.md). What IS
+        // single-sourced now is the host: four local copies of the base URL
+        // were folded into the one exported constant in this audit.
+        const primitive = /['"`]https:\/\/admin\.da\.live/;
+        const spine = ['features/eds/services/daLiveConstants.ts'];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
 });

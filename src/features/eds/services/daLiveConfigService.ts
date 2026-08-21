@@ -19,6 +19,7 @@
  * @module features/eds/services/daLiveConfigService
  */
 
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import type { TokenProvider } from './daLiveContentOperations';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -28,7 +29,7 @@ import type { Logger } from '@/types/logger';
 // ==========================================================
 
 /** DA.live Admin API base URL */
-const DA_ADMIN_URL = 'https://admin.da.live';
+// Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
 
 // ==========================================================
 // Types
@@ -139,7 +140,7 @@ export class DaLiveConfigService {
      */
     async getOrgConfig(org: string): Promise<MultiSheetConfig | null> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_ADMIN_URL}/config/${org}/`;
+        const url = `${DA_LIVE_BASE_URL}/config/${org}/`;
 
         this.logger.debug(`[DaLiveConfig] Getting org config for ${org}`);
 
@@ -183,7 +184,7 @@ export class DaLiveConfigService {
      */
     async updateOrgConfig(org: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_ADMIN_URL}/config/${org}/`;
+        const url = `${DA_LIVE_BASE_URL}/config/${org}/`;
 
         this.logger.debug(`[DaLiveConfig] Updating org config for ${org}`);
 
@@ -225,7 +226,7 @@ export class DaLiveConfigService {
      */
     async getConfig(org: string, site: string): Promise<MultiSheetConfig | null> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_ADMIN_URL}/config/${org}/${site}/`;
+        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}/`;
 
         this.logger.debug(`[DaLiveConfig] Getting config for ${org}/${site}`);
 
@@ -270,7 +271,7 @@ export class DaLiveConfigService {
      */
     async updateConfig(org: string, site: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_ADMIN_URL}/config/${org}/${site}/`;
+        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}/`;
 
         this.logger.debug(`[DaLiveConfig] Updating config for ${org}/${site}`);
 
@@ -528,7 +529,7 @@ export class DaLiveConfigService {
     ): Promise<GrantAccessResult> {
         try {
             const token = await this.getDaLiveToken();
-            const url = `${DA_ADMIN_URL}/config/${org}/${site}/`;
+            const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}/`;
 
             this.logger.debug(`[DaLiveConfig] Deleting site config for ${org}/${site}`);
 

@@ -325,7 +325,7 @@ export class DaLiveOrgOperations {
  */
 export async function hasWriteAccess(orgName: string, token: string): Promise<boolean> {
     try {
-        const res = await fetch(`https://admin.da.live/list/${orgName}/`, {
+        const res = await fetch(`${DA_LIVE_BASE_URL}/list/${orgName}/`, {
             method: 'HEAD',
             headers: { 'Authorization': `Bearer ${token}` },
         });
