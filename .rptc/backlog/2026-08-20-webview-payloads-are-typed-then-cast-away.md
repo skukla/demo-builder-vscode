@@ -16,10 +16,11 @@ newer `payload` casts at `baseWebviewCommand.ts:370`/`:389` for step 4 to close)
   a boolean `enabled` and gates `getInitialData`; both envVars producers inject
   the record key via `withEnvVarKeys` (componentTransforms.ts).
 - **Step 0 DONE** — `3f74eabe`. One declaration each: wizard-step shape
-  (`WizardStepConfigWithRequirements` in `@/types/wizard`, `StepCondition`
-  moved with it), `EditProjectConfig` (wizardHelpers), env-var type
-  (`EnvVarDefinition`; `ComponentEnvVar` deleted). Zero test edits; full gate
-  green both commits.
+  (in `@/types/wizard`, `StepCondition` moved with it), `EditProjectConfig`
+  (wizardHelpers), env-var type (`EnvVarDefinition`; `ComponentEnvVar`
+  deleted). Zero test edits; full gate green both commits.
+- **Canonical step type renamed** to `WizardStepDefinition` — `91fa6c93`
+  (pure rename, wizardHelpers re-export removed).
 
 Remaining: steps 1–5 of the execution plan below (findings 4, 5, 7, 10 land
 inside them as per-field decisions).
