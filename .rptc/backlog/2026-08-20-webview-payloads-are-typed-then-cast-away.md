@@ -5,6 +5,25 @@
 missed four times; the display-name brand added in `95bdf0b0` could not cross this
 boundary, which is what made the misses invisible to `tsc`.
 
+## Progress 2026-08-20 (second session)
+
+Premise re-measured and confirmed (the two `initialData` casts, the
+`Promise<unknown>` abstract, the single-file `ConfigureInitialData` — plus two
+newer `payload` casts at `baseWebviewCommand.ts:370`/`:389` for step 4 to close).
+
+- **Findings 3 and 8 FIXED** — `e1221a66`. Regression tests written first, both
+  confirmed failing against the unfixed code. `isWizardStepConfig` now requires
+  a boolean `enabled` and gates `getInitialData`; both envVars producers inject
+  the record key via `withEnvVarKeys` (componentTransforms.ts).
+- **Step 0 DONE** — `3f74eabe`. One declaration each: wizard-step shape
+  (`WizardStepConfigWithRequirements` in `@/types/wizard`, `StepCondition`
+  moved with it), `EditProjectConfig` (wizardHelpers), env-var type
+  (`EnvVarDefinition`; `ComponentEnvVar` deleted). Zero test edits; full gate
+  green both commits.
+
+Remaining: steps 1–5 of the execution plan below (findings 4, 5, 7, 10 land
+inside them as per-field decisions).
+
 ## The claim
 
 Producer and consumer of every webview's initial data agree by **convention only**.
