@@ -15,7 +15,11 @@
  */
 
 import * as vscode from 'vscode';
-import { dataInstallerHandlers, handleOpenDataInstallerSettings, importHandlers } from '../handlers';
+import {
+    dataInstallerHandlers,
+    handleOpenDataInstallerSettings,
+    importHandlers,
+} from '../handlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
@@ -30,6 +34,7 @@ import {
 } from '@/core/utils/projectDisplayName';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
 const WEBVIEW_ID = 'demoBuilder.dataInstaller';
 const TITLE = 'Data Installer';
@@ -80,13 +85,13 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand {
      * project name rides along only so the import flow (Stage 2) can name a default
      * target without a second round trip.
      */
-    protected async getInitialData(): Promise<Record<string, unknown>> {
+    protected async getInitialData(): Promise<DataInstallerInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
-                // Annotated, because `getInitialData` returns `Record<string, unknown>`
-        // and erases this the moment it enters the payload. The annotation puts
+        // Annotated, because the payload field is plain `string`, which would
+        // erase the brand the moment it enters the payload. The annotation puts
         // the check where the mistake would actually be MADE -- swap this for
         // `project.name` and it stops compiling here, at the assignment, rather
         // than surfacing as a slug on screen weeks later.

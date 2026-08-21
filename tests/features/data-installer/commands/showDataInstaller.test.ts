@@ -12,6 +12,7 @@ import { ShowDataInstallerCommand } from '@/features/data-installer/commands/sho
 import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { importHandlers } from '@/features/data-installer/handlers';
+import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
@@ -31,14 +32,20 @@ function makeStateManager(): { getCurrentProject: jest.Mock } {
     return { getCurrentProject: jest.fn().mockResolvedValue(null) };
 }
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const logger = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    trace: jest.fn(),
+};
 
 /** Reach the protected members the way a subclass test must. */
 type Internals = {
     getWebviewId(): string;
     getWebviewTitle(): string;
     getLoadingMessage(): string;
-    getInitialData(): Promise<Record<string, unknown>>;
+    getInitialData(): Promise<DataInstallerInitialData>;
     initializeMessageHandlers(comm: { onStreaming: jest.Mock }): void;
 };
 
@@ -46,7 +53,7 @@ function makeCommand(): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
         makeStateManager() as never,
-        logger as never,
+        logger as never
     ) as ShowDataInstallerCommand & Internals;
 }
 
@@ -88,7 +95,7 @@ describe('ShowDataInstallerCommand', () => {
                     ...getRegisteredTypes(dataInstallerHandlers),
                     ...getRegisteredTypes(importHandlers),
                     'open-data-installer-settings',
-                ].sort(),
+                ].sort()
             );
         });
 

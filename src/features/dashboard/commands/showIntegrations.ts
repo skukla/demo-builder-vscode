@@ -45,6 +45,7 @@ import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 export class ShowIntegrationsCommand extends BaseWebviewCommand {
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
@@ -87,13 +88,13 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
      * which the manifest carries — the banner names where every integration in
      * this project deploys).
      */
-    protected async getInitialData(): Promise<Record<string, unknown>> {
+    protected async getInitialData(): Promise<IntegrationsInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
-                // Annotated, because `getInitialData` returns `Record<string, unknown>`
-        // and erases this the moment it enters the payload. The annotation puts
+        // Annotated, because the payload field is plain `string`, which would
+        // erase the brand the moment it enters the payload. The annotation puts
         // the check where the mistake would actually be MADE -- swap this for
         // `project.name` and it stops compiling here, at the assignment, rather
         // than surfacing as a slug on screen weeks later.
