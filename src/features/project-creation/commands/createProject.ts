@@ -19,7 +19,6 @@ import { projectCreationHandlers } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
     getEndpoint as getEndpointHelper,
-    deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
@@ -614,20 +613,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         return formatGroupNameHelper(group);
     }
 
-    /**
-     * Deploy mesh component from cloned repository
-     * Reads mesh.json from component path and deploys it to Adobe I/O
-     */
-    private async _deployMeshComponent(
-        componentPath: string,
-        onProgress?: (message: string, subMessage?: string) => void,
-    ): Promise<{
-        success: boolean;
-        meshId?: string;
-        endpoint?: string;
-        error?: string;
-    }> {
-        const commandManager = ServiceLocator.getCommandExecutor();
-        return deployMeshHelper(componentPath, commandManager, this.logger, onProgress);
-    }
+    // No _deployMeshComponent wrapper any more: zero callers — the creation
+    // flow deploys through meshSetupService onto the shared
+    // deployMeshComponent spine. Found by the 2026-08-22 mesh call-path audit.
 }
