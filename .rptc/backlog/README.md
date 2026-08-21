@@ -132,9 +132,9 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
-#### Spine sweep — FULL CAMPAIGN: every call-path-audit worklist row (user-directed 2026-08-22)
+#### Spine sweep — CAMPAIGN COMPLETE 2026-08-22 (every auditable row pinned)
 
-**The worklist lives in the skill, not here** — `.claude/skills/call-path-audit/SKILL.md` carries the full candidate table with 2026-08-22 measured counts; this entry is only the pointer. Scope changed from one-row-per-release-cut to ALL rows as one campaign ("I want to do every candidate as part of a large effort"). State at filing: 2 of 15 rows PINNED (mesh deploy, app-builder deploy — both mutation-proven in `tests/templates/spine-chokepoints.test.ts`), 1 pin-ready (app undeploy), 10 to audit, 2 excluded by design. Discipline per row: primitive census with every hit READ, door trace, verdict, fix dead/second paths in the same slice, pin block + mutation check, commit. Update the skill's Status column as rows land.
+**Done same day it was directed.** All 13 auditable rows audited and pinned in `tests/templates/spine-chokepoints.test.ts` (2 excluded by design: npm install / git clone serve unrelated actions). Worklist + verdicts live in `.claude/skills/call-path-audit/SKILL.md`. Fixes landed during the sweep: one spelling for the destructive mesh-delete command (was spelled two ways across three sites); the MCP manifest door now refuses malformed JSON and reports schema warnings; the DA.live host constant single-sourced (was five copies); two false cross-module claims corrected. Two consolidations FILED and remain the open remainder: **Helix publish has two engines** (`2026-08-22-helix-publish-has-two-engines.md` — the campaign's biggest find) and **DA.live services bypass their own client** (`2026-08-22-dalive-services-bypass-their-own-client.md`); both contained by pins until done.
 
 #### Post-reset mesh redeploy is implemented twice ([`2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md`](2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md))
 

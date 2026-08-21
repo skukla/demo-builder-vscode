@@ -251,4 +251,65 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
+
+    it('config-service PATHS: /config/{org}/… builders live in the three role owners', () => {
+        // Audited 2026-08-22: three files, three distinct roles on one API —
+        // configurationService owns the site-config object (register/read/
+        // delete; siteConfigRegistrar wraps its 409/401/403 retry protocol on
+        // top), configServiceAccess owns the admin-role GRANTS object
+        // (read-merge-write), configServiceProbe is the read-only diagnostics
+        // oracle. Verified: the probe and access-checker GET the site config,
+        // never write it.
+        const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
+        const spine = [
+            'features/eds/services/configServiceAccess.ts',
+            'features/eds/services/configServiceProbe.ts',
+            'features/eds/services/configurationService.ts',
+        ];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('github MUTATIONS: repo/content writes go through the two eds owners only', () => {
+        // Audited 2026-08-22: a clean split — githubRepoOperations owns
+        // repo-level mutations (create-from-template, delete, settings PATCH),
+        // githubFileOperations owns content mutations (file put/delete and the
+        // tree/commit/ref bulk-reset machinery). The four other files touching
+        // api.github.com (component install, patch fetcher, updates, auto-
+        // updater) are read-only — verified: no mutating method anywhere in
+        // them. Mutations ride octokit.request with a verb-prefixed route,
+        // which is what the pattern anchors on.
+        const primitive = /octokit\.request\(\s*['"`](POST|DELETE|PATCH|PUT) /;
+        const spine = [
+            'features/eds/services/githubFileOperations.ts',
+            'features/eds/services/githubRepoOperations.ts',
+        ];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('demo LIFECYCLE: one terminal factory, two process-kill owners', () => {
+        // Audited 2026-08-22: every terminal (demo start, open-in-Claude) is
+        // created through baseCommand.createTerminal — vscode.window
+        // .createTerminal has exactly one call site. Kills split by role:
+        // processCleanup owns demo-process teardown (tree-kill + signals,
+        // used by start/stop), commandExecutor kills only its OWN child on
+        // timeout. No direct child_process.spawn exists anywhere.
+        const terminalPrimitive = /window\.createTerminal\(/;
+        const killPrimitive = /process\.kill\(|treeKill\(|subprocess\.kill\(/;
+
+        const terminalHits = filesTouchingPrimitive(terminalPrimitive);
+        expect(terminalHits).toEqual(['core/base/baseCommand.ts']);
+
+        const killSpine = ['core/shell/commandExecutor.ts', 'core/shell/processCleanup.ts'];
+        const killHits = filesTouchingPrimitive(killPrimitive);
+        expect(killHits).toEqual(expect.arrayContaining(killSpine));
+        expect(killHits.filter((f) => !killSpine.includes(f))).toEqual([]);
+    });
 });

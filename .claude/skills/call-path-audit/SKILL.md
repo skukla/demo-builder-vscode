@@ -71,9 +71,9 @@ multi-site; skip).
 | Manifest write | names `.demo-builder.json` AND writes | 2 | `core/state/projectConfigWriter.ts` + `mcp-server.ts` (verdict: TWO doors by design — state serializer vs agent byte-writer; the agent door now refuses malformed JSON + reports schema warnings) | **PINNED** |
 | Helix preview/publish/unpublish | verb-path builders (`/preview/`,`/live/`,`/code/`) | 2 engines | **TWO parallel engines found** — helixService + helixApiClient, service never imports client, its claim that it did was false. Consolidation filed (`2026-08-22-helix-publish-has-two-engines.md`); pin holds the pair at two until then | **PINNED (pair)** |
 | DA.live host + transport | `admin.da.live` literal | 1 (was 5) | `daLiveConstants` — host now single-sourced + pinned. Transport verdict: one intended leaf client (`daLiveApiClient`) that services use for TOKENS ONLY while running raw fetch + hand-rolled retries; consolidation filed (`2026-08-22-dalive-services-bypass-their-own-client.md`) | **PINNED (host)** |
-| Config Service site registration | the registration POST | regex too loose (24 name-matches) | `eds/services/siteConfigRegistrar.ts` (documented) | AUDIT (sharpen primitive first) |
-| GitHub repo create/reset/delete | repo-mutation API calls | 5 files touch `api.github.com` | `eds/services/githubRepoOperations.ts` (updates/componentInstallation are READS — different actions) | AUDIT |
-| Demo start/stop | terminal spawn / process kill | 3 | `lifecycle/commands/startDemo.ts` (baseCommand + openInClaude are different actions) | AUDIT |
+| Config Service paths | `/config/${org}/…` builders | 3 | three role owners — configurationService (site object CRUD; registrar wraps its retry protocol), configServiceAccess (grants), configServiceProbe (read-only diagnostics). Probe/access verified GET-only on the site object | **PINNED** |
+| GitHub mutations | `octokit.request('POST/DELETE/PATCH/PUT …')` | 2 | clean split — githubRepoOperations (repo-level), githubFileOperations (content + bulk-reset tree/commit/ref). The four raw-fetch api.github.com users verified read-only | **PINNED** |
+| Demo lifecycle | `window.createTerminal` / kill primitives | 1 / 2 | ONE terminal factory (baseCommand.createTerminal); kills split by role — processCleanup (demo teardown) + commandExecutor (own child on timeout). No direct child_process.spawn anywhere | **PINNED** |
 | VS Code settings writes | `getConfiguration(...).update(` | 4 files | four single-sited actions (zoom, save-defaults, legacy cleanup, channel switch); verdict: no spine, pin guards the NEGATIVE — MCP/AI tool code never writes settings | **PINNED** |
 | Secret storage writes | `secret*.store/delete(` | 4 | four owner modules, one key family each (helixKeyStore, githubTokenService, appBuilderComponentSecrets, commerceSecretMigration — the data-installer routes through the migration) | **PINNED** |
 | Dependency install | `npm install` | 6 | — | NOT A SPINE (different actions) |
@@ -94,6 +94,9 @@ the audit found a second path or a dead wrapper, fix it in the same slice
 
 ## Release-cut anchor
 
-Runs with the other sweeps at release cuts: pick the topmost non-PINNED row,
-run the method, pin or file. One row per cut is enough — the pinned rows are
-guarded by CI forever, so the sweep only ever shrinks.
+**The 2026-08-22 full campaign pinned every auditable row** — 13 pin blocks in
+`spine-chokepoints.test.ts`, two consolidations filed (Helix two-engines,
+DA.live client bypass), two rows excluded by design. From here the skill's job
+is incremental: when a NEW action gains a ground-truth primitive, audit and
+pin it in the same slice; at release cuts, re-read the two filed
+consolidations and check the NOT-A-SPINE exclusions still hold.
