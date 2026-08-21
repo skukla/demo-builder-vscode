@@ -116,6 +116,32 @@ reimplementing its internals instead of using it.
   `Pick<>` of what they read (the 3df264c6 HandlerContext precedent) — a bag
   WITHOUT per-consumer Picks just trades threading for partial-construction
   casts, which is how seven of them accumulated.
+- **Call-site signals** (measured 2026-08-21 — raw fan-in is NOT one of them;
+  a popular function with a small stable contract is architecture working):
+  - *Fan-in × weak contract*: rank callees by caller count, flag those whose
+    return type is unchecked. `parseJSON<T>` is the standing example — 33
+    call sites, each one a parse-and-cast (the manifest bug × 33). Baseline
+    33; audit item: `.rptc/backlog/2026-08-21-parsejson-call-sites-are-unchecked-casts.md`.
+  - *Policy-function bypasses*: for a function that encodes a policy
+    (getProjectDisplayName, withOrgContext, credential resolution), the
+    dangerous count is sites doing its job BY HAND — grep the raw access the
+    policy wraps and diff against its callers. Four missed display-name
+    sites were this class; a brand type is the durable fix.
+  - *Caller-halo duplication*: N sites wrapping the same callee in the same
+    surrounding ritual = missing helper. Recipe: normalized ±4-line windows
+    around each call site, cluster identical shapes (a ~30-line script; see
+    the sweep that added this). MEASURED characteristics: high precision,
+    LOW recall — 3 probes found 1 real lead (an ensureAdobeIOAuth
+    guard/cancelled-message pair, 2 sites, Rule-of-Three says wait), while
+    the healthy post-extraction case (withOrgContext, 26 sites) and the
+    known-duplicated case (parseJSON) both showed fully diverse halos. So:
+    use it to FIND leads, never to conclude absence. The high-precision
+    detectors for consolidation remain the incident triggers the house
+    already runs on: the same FIX applied at ≥2 sites (extract-at-two
+    override), the same BUG recurring at ≥2 sites, and a two-surface
+    disagreement (architecture-duplication-scan). After consolidating,
+    blessed residual duplication gets a coverage test
+    (webviewHandlerCoverage / getRegisteredTypes-loop precedent).
 
 ## Output
 
