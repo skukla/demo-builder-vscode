@@ -1,5 +1,42 @@
 # parseJSON's 33 call sites are each an unchecked cast
 
+**Filed:** 2026-08-21 · **AUDIT COMPLETE same day — verdict: NOT a smell.**
+All 33 sites read; see the triage below. Kept in `complete/` as the record.
+
+## Triage 2026-08-21 — every site read, none trusts a required field blindly
+
+- **Own files (~12)**: stateManager ×2, recentProjectsManager, stepLogger,
+  createProject config reads ×4, the mcp.json readers ×4 — every one
+  null-checks and falls back with a log. The riskiest (project manifest) is
+  schema-validated as of `3cef91f6`.
+- **npm package.json reads (2)**: buildComponent, componentUpdater — one
+  optional-chained field each.
+- **`aio` CLI output (~19)**: the predicted-dangerous bucket is the MOST
+  defensive code in the repo — all-optional declared fields, null checks,
+  multi-stage fallback parsing (adobeEntityFetcher strips CLI noise and
+  retries stderr), regex fallbacks in the mesh cluster, raw-output logging
+  on failure. Diagnostics sites are display-only.
+
+**Why the dangerous bucket was safe:** aio output fails ROUTINELY (noise in
+stdout, shape changes, JSON on stderr), so routine failure forced
+defensiveness long ago. The bundled configs never failed, so nobody defended
+them — and that is where this week's rot actually lived. General lesson,
+recorded in the sweep: **drift hides where nothing ever visibly fails.**
+
+**One systemic note:** `parseJSON` has carried an optional type-guard second
+parameter the whole time (`parseJSON(json, guard)`) and ZERO callers pass it
+— the wizard-steps site even reimplements guarding manually beside it. Not a
+defect; but any future site needing strictness should use it rather than
+inventing a third mechanism.
+
+**Signal calibration:** fan-in × weak contract correctly NOMINATED this
+function; per-site reading acquitted it. Counts find candidates; reading
+decides. That division of labor is now in the sweep's call-site signals.
+
+---
+
+Original filing below.
+
 **Filed:** 2026-08-21
 **Origin:** The call-site-signal discussion after the seam work: raw fan-in is
 healthy, but fan-in × weak contract is the multiplier — and `parseJSON<T>`

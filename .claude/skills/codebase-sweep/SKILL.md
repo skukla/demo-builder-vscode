@@ -119,9 +119,14 @@ reimplementing its internals instead of using it.
 - **Call-site signals** (measured 2026-08-21 — raw fan-in is NOT one of them;
   a popular function with a small stable contract is architecture working):
   - *Fan-in × weak contract*: rank callees by caller count, flag those whose
-    return type is unchecked. `parseJSON<T>` is the standing example — 33
-    call sites, each one a parse-and-cast (the manifest bug × 33). Baseline
-    33; audit item: `.rptc/backlog/2026-08-21-parsejson-call-sites-are-unchecked-casts.md`.
+    return type is unchecked. `parseJSON<T>` is the worked example BOTH ways:
+    33 casting call sites nominated it, and the per-site audit ACQUITTED it —
+    every site null-checks and optional-chains, because its inputs (aio CLI
+    output, user files) fail routinely and routine failure forces defense.
+    Counts nominate; reading decides. Corollary recorded from the same audit:
+    drift hides where nothing ever visibly fails (bundled configs rotted;
+    battle-hardened CLI parsers did not). Audit record:
+    `.rptc/complete/2026-08-21-parsejson-call-sites-are-unchecked-casts.md`.
   - *Policy-function bypasses*: for a function that encodes a policy
     (getProjectDisplayName, withOrgContext, credential resolution), the
     dangerous count is sites doing its job BY HAND — grep the raw access the
