@@ -19,6 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
@@ -189,7 +190,7 @@ async function cleanupOrphanedMesh(
                 context.authManager?.getCachedOrganization(),
             );
             const deleteResult = await withOrgContext(target, () =>
-                commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
+                commandManager.execute(MESH_DELETE_COMMAND, {
                     timeout: TIMEOUTS.LONG,
                     configureTelemetry: false,
                     enhancePath: true,

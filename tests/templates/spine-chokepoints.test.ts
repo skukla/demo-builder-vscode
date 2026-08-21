@@ -84,4 +84,35 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
+
+    it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the runner', () => {
+        // Audited 2026-08-22: one invocation site — the remove flow's
+        // kind-dispatched command (integration → app undeploy, mesh →
+        // api-mesh:delete). Doors: dashboard remove + MCP remove_component,
+        // both through removeAppBuilderComponent. actionDescriptors mentions
+        // the command inside a tool DESCRIPTION string (starts with a paren,
+        // so the exact-quoted-literal pattern below does not match it).
+        const primitive = /'aio app undeploy'|`aio app undeploy`|"aio app undeploy"/;
+        const spine = ['features/app-builder/services/appBuilderComponentRunner.ts'];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('mesh DELETE: the destructive command has ONE spelling, in meshDeleteCommand', () => {
+        // Audited 2026-08-22: three legitimate doors (dashboard delete,
+        // creation cancel-rollback, component removal) — three ACTIONS, one
+        // primitive. Each keeps its own org targeting and execution options;
+        // the command string itself lives once (it used to be spelled two
+        // ways with independently chosen flags across the three sites).
+        const primitive = /['"`]aio api-mesh[:\s]+delete/;
+        const spine = ['features/mesh/services/meshDeleteCommand.ts'];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
 });

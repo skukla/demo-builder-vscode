@@ -65,8 +65,8 @@ multi-site; skip).
 |---|---|---|---|---|
 | Mesh deploy | `aio api-mesh:create/update` | 1 | `mesh/services/meshDeployment.ts` | **PINNED** (6 doors verified) |
 | App Builder deploy | `aio app deploy` | 1 | `app-builder/services/appDeployment.ts` | **PINNED** |
-| App Builder undeploy | `aio app undeploy` | 1 real (+1 description string) | `app-builder/services/appBuilderComponentRunner.ts` | READY |
-| Mesh delete | `aio api-mesh:delete` | 3 | unclear — deleteHandler vs createHandler cancel-cleanup vs runner remove | AUDIT (next candidate) |
+| App Builder undeploy | `aio app undeploy` | 1 real (+1 description string) | `app-builder/services/appBuilderComponentRunner.ts` | **PINNED** |
+| Mesh delete | `aio api-mesh:delete` | 3 | `mesh/services/meshDeleteCommand.ts` (verdict: three legitimate doors — dashboard delete, cancel-rollback, removal — sharing ONE command constant; the two spellings unified) | **PINNED** |
 | Adobe sign-in | `aio auth login`/`aio login` | 2 | `authentication/services/authenticationService.ts` (diagnostics also invokes) | AUDIT |
 | Manifest write | `ProjectConfigWriter`/`writeManifest` | 4 | `core/state/projectConfigWriter.ts` (documented single writer; aiBundleActivationRefresh constructs its own instance — DI note, not a second path) | AUDIT (confirm + pin) |
 | Helix preview/publish/unpublish | `admin.hlx.page` per-verb | 9 files touch the host | `eds/services/helixApiClient.ts`/`helixService.ts` (others are probes/reads — split by verb) | AUDIT |

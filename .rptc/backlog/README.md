@@ -132,9 +132,9 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
-#### Spine sweep — work the call-path-audit worklist (next row: mesh delete)
+#### Spine sweep — FULL CAMPAIGN: every call-path-audit worklist row (user-directed 2026-08-22)
 
-**The worklist lives in the skill, not here** — `.claude/skills/call-path-audit/SKILL.md` carries the full candidate table with 2026-08-22 measured counts; this entry is only the pointer, so the record stays in one place. State at filing: 2 of 15 rows PINNED (mesh deploy, app-builder deploy — both mutation-proven in `tests/templates/spine-chokepoints.test.ts`), 1 pin-ready (app undeploy), 10 to audit, 2 excluded by design. Kickoff: invoke `call-path-audit`, take the topmost non-PINNED row — **mesh delete** (3 code sites: deleteHandler, createHandler cancel-cleanup, integration-runner remove; the question is whether all three are legitimate doors of different actions or one is a second path). Picked as next work by the user 2026-08-22.
+**The worklist lives in the skill, not here** — `.claude/skills/call-path-audit/SKILL.md` carries the full candidate table with 2026-08-22 measured counts; this entry is only the pointer. Scope changed from one-row-per-release-cut to ALL rows as one campaign ("I want to do every candidate as part of a large effort"). State at filing: 2 of 15 rows PINNED (mesh deploy, app-builder deploy — both mutation-proven in `tests/templates/spine-chokepoints.test.ts`), 1 pin-ready (app undeploy), 10 to audit, 2 excluded by design. Discipline per row: primitive census with every hit READ, door trace, verdict, fix dead/second paths in the same slice, pin block + mutation check, commit. Update the skill's Status column as rows land.
 
 #### Post-reset mesh redeploy is implemented twice ([`2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md`](2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md))
 
