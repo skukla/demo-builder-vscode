@@ -64,8 +64,6 @@ export interface DashboardInitialData {
     dataInstallerAvailable: boolean;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    /** Stack-filtered catalog — currently unread by the dashboard screen. */
-    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
 }
 
 /**

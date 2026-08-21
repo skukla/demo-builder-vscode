@@ -20,11 +20,9 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext } from '@/types/handlers';
@@ -166,17 +164,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
-        // Integrations grid seed: the keyed appBuilderComponents map + the
-        // stack-filtered catalog for the add-integration picker (the mesh
-        // renders as the grid's first peer card, derived from the live mesh
-        // status channels, so no separate seed is needed here).
         // Whether to OFFER the Sample Data tile at all. Read here rather than in
         // the webview because these are host settings; the tile used to render
         // unconditionally, so a user without an API URL got a tile that opened a
         // surface refusing them.
         const dataInstallerAvailable = isDataInstallerConfigured();
-
-        const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
 
         return {
             theme,
@@ -197,19 +189,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
             initialEdsStorefrontStatus,
             hasAdobeContext,
             dataInstallerAvailable,
+            // The keyed map drives the integrations SUMMARY tile (count + dot).
+            // No catalog seed: the add-integration picker lives on the dedicated
+            // integrations surface, whose own payload carries the catalog.
             appBuilderComponents: project?.appBuilderComponents,
-            appBuilderComponentCatalog,
         };
-    }
-
-    /** Stack-filtered appBuilderComponent catalog for the integrations add-a-appBuilderComponent picker. */
-    private resolveAppBuilderComponentCatalog(
-        project: Project | null,
-    ): AppBuilderComponentCatalogEntry[] {
-        return getAvailableAppBuilderComponents(
-            project?.componentSelections?.backend ?? '',
-            project?.componentSelections?.frontend ?? '',
-        );
     }
 
     /**

@@ -2,7 +2,6 @@ import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelection } from '@/types/webview';
-import type { EditProjectConfig } from '@/types/wizard';
 
 /**
  * Shared test utilities for WizardContainer tests
@@ -39,40 +38,6 @@ export const createMockWizardSteps = () => [
     { id: 'review', name: 'Review', enabled: true },
     { id: 'create-project', name: 'Create Project', enabled: true },
 ];
-
-/**
- * Create mock editProject prop for edit mode tests
- */
-export const createMockEditProject = (
-    overrides: Partial<EditProjectConfig> = {}
-): EditProjectConfig => ({
-    projectPath: '/Users/test/.demo-builder/projects/test-project',
-    projectName: 'test-project',
-    settings: {
-        version: 1,
-        selections: {
-            frontend: 'headless',
-            backend: 'commerce-paas',
-            dependencies: ['commerce-mesh'],
-            integrations: [],
-            appBuilder: [],
-        },
-        configs: {
-            headless: { port: 3000 },
-        },
-        adobe: {
-            orgId: 'org123',
-            orgName: 'Test Organization',
-            projectId: 'proj456',
-            projectName: 'TestProject',
-            projectTitle: 'Test Project Title',
-            workspaceId: 'ws789',
-            workspaceName: 'Development',
-            workspaceTitle: 'Development',
-        },
-    },
-    ...overrides,
-});
 
 // Helper to create mock imported settings for import flow tests.
 // Shape pinned by ImportedSettings (= Partial<SettingsFile>): `version` is a

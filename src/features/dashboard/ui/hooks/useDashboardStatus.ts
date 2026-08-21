@@ -99,7 +99,7 @@ export function useDashboardStatus(
     props: UseDashboardStatusProps = {},
     isEds = false,
 ): UseDashboardStatusReturn {
-    const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext } = props;
+    const { hasMesh, initialEdsStorefrontStatus, hasAdobeContext } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
@@ -394,13 +394,11 @@ export function useDashboardStatus(
     ]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
-        // Use initialMeshStatus from init payload to avoid loading flash
-        // Translate persisted values: 'stale' → 'config-changed' (dashboard terminology)
-        const effectiveMeshStatus =
-            meshStatus ||
-            (initialMeshStatus === 'stale'
-                ? 'config-changed'
-                : (initialMeshStatus as MeshStatus | undefined));
+        // No init-payload seed: the first statusUpdate (which is also what
+        // unblocks the surfaces that render this) already carries the DERIVED
+        // mesh status — auth/deploying/error aware, unlike the persisted
+        // summary the retired `initialMeshStatus` seed replayed.
+        const effectiveMeshStatus = meshStatus;
 
         if (!effectiveMeshStatus) {
             // If we know hasMesh, use it
@@ -431,7 +429,7 @@ export function useDashboardStatus(
         }
 
         return { color: 'gray', text: 'Unknown' };
-    }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
+    }, [meshStatus, meshMessage, hasMesh, projectStatus]);
 
     // AI Ready badge — pure derivation, see deriveAiReadyState for the color
     // semantics and precedence order.

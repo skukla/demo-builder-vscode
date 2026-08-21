@@ -129,8 +129,6 @@ export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'n
 export interface UseDashboardStatusProps {
     /** Whether project has mesh configuration */
     hasMesh?: boolean;
-    /** Initial mesh status from card grid (avoids loading flash) */
-    initialMeshStatus?: string;
     /** Initial EDS storefront status from initial data */
     initialEdsStorefrontStatus?: EdsStorefrontStatus;
     /**
