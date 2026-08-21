@@ -7,6 +7,11 @@ import type {
     PrerequisiteStatusPayload,
     PrerequisitesLoadedPayload,
 } from '@/types/webviewPayloads';
+import type {
+    CheckPrerequisitesRequestPayload,
+    ContinuePrerequisitesRequestPayload,
+    InstallPrerequisiteRequestPayload,
+} from '@/types/webviewRequests';
 
 // The wire shapes live in @/types/webviewPayloads — ONE declaration shared
 // with the sender handlers. This file used to carry its own copies, and they
@@ -111,7 +116,7 @@ export function usePrerequisiteState(
             isRecheck: isRecheck ?? false,
             selectedStack,
             selectedOptionalDependencies: selectedOptionalDependencies ?? [],
-        });
+        } satisfies CheckPrerequisitesRequestPayload);
         scrollToTop();
     }, [scrollToTop, selectedStack, selectedOptionalDependencies]);
 
@@ -122,7 +127,7 @@ export function usePrerequisiteState(
         // The handler resolves the target from `prereqId` alone; the `id`/`name`
         // fields this used to echo were never read (and `id` was the numeric row
         // index wearing a string type).
-        webviewClient.postMessage('install-prerequisite', { prereqId: index });
+        webviewClient.postMessage('install-prerequisite', { prereqId: index } satisfies InstallPrerequisiteRequestPayload);
 
         setChecks(prev => {
             const newChecks = [...prev];
@@ -159,7 +164,7 @@ export function usePrerequisiteState(
 
             if (continueChecking) {
                 setTimeout(() => {
-                    webviewClient.postMessage('continue-prerequisites', { fromIndex: index + 1 });
+                    webviewClient.postMessage('continue-prerequisites', { fromIndex: index + 1 } satisfies ContinuePrerequisitesRequestPayload);
                 }, FRONTEND_TIMEOUTS.CONTINUE_CHECK_DELAY);
             }
         });

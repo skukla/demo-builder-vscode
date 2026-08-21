@@ -77,8 +77,11 @@ export async function registerConfigurationService(
 
     // Same precedence the DA.live permission step uses: the IMS identity is the
     // one the Configuration Service authorizes, so it wins over the GitHub one.
+    // `?? undefined` converts the GitHub user's null email to the absence the
+    // downstream params expect.
     const setupUserEmail =
-        (await services.daLiveAuthService.getUserEmail()) || edsConfig.githubAuth?.user?.email;
+        (await services.daLiveAuthService.getUserEmail()) ||
+        (edsConfig.githubAuth?.user?.email ?? undefined);
 
     try {
         const siteParams = buildSiteConfigParams(

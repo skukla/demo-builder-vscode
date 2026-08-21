@@ -19,6 +19,7 @@ import { SimpleResult } from '@/types/results';
 import type { Stack } from '@/types/stacks';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteCheckSummary, PrerequisiteStatusPayload, PrerequisitesCompletePayload, PrerequisitesLoadedPayload } from '@/types/webviewPayloads';
+import type { CheckPrerequisitesRequestPayload } from '@/types/webviewRequests';
 
 // Import stack config for direct lookup
 
@@ -253,7 +254,7 @@ function computeOverallStatus(
  */
 async function initializePrerequisiteCheck(
     context: HandlerContext,
-    payload?: { selectedStack?: string; isRecheck?: boolean; selectedOptionalDependencies?: string[] },
+    payload?: CheckPrerequisitesRequestPayload,
 ): Promise<void> {
     context.stepLogger?.log('prerequisites', 'Starting prerequisites check', 'info');
 
@@ -333,7 +334,7 @@ async function sendPrerequisitesListToUI(
  */
 export async function handleCheckPrerequisites(
     context: HandlerContext,
-    payload?: { selectedStack?: string; isRecheck?: boolean; selectedOptionalDependencies?: string[] },
+    payload?: CheckPrerequisitesRequestPayload,
 ): Promise<SimpleResult> {
     try {
         await initializePrerequisiteCheck(context, payload);

@@ -131,7 +131,7 @@ describe('RepoSelectionInline', () => {
         it('should show the "New" action to switch to create mode (existing)', async () => {
             const state = createDefaultState({ repoMode: 'existing' });
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             ];
             await renderInline(state, 'repository');
             expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
@@ -156,11 +156,11 @@ describe('RepoSelectionInline', () => {
         it('should report repo VALID when an existing repo is selected', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
             // Pre-populate cache so isLoading starts false.
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             ];
 
             await renderInline(state, 'repository');
@@ -188,7 +188,7 @@ describe('RepoSelectionInline', () => {
         it('should report code-sync VALID for an existing repo (gate deferred)', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
 
             await renderInline(state, 'code-sync');
@@ -304,7 +304,7 @@ describe('RepoSelectionInline', () => {
             const selected = () =>
                 createDefaultState({
                     repoMode: 'existing',
-                    selectedRepo: { id: 'r1', name: 'kukla-bodea', fullName: 'skukla/kukla-bodea' },
+                    selectedRepo: { id: 'r1', name: 'kukla-bodea', fullName: 'skukla/kukla-bodea', htmlUrl: 'https://github.com/skukla/kukla-bodea' },
                 });
 
             it('never asks Adobe a question Adobe cannot answer', async () => {
@@ -359,7 +359,7 @@ describe('RepoSelectionInline', () => {
             mockRequest.mockResolvedValue({ success: true, isInstalled: false, codeStatus: 404 });
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
 
             await renderInline(state, 'code-sync');

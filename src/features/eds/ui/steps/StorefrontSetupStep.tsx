@@ -41,6 +41,10 @@ import type {
     StorefrontSetupProgressPayload,
     StorefrontSetupProgressPhase,
 } from '@/types/webviewPayloads';
+import type {
+    StorefrontSetupCancelPayload,
+    StorefrontSetupStartPayload,
+} from '@/types/webviewRequests';
 
 /**
  * Progress ranges for each setup phase
@@ -77,14 +81,10 @@ type GitHubAppData = StorefrontGitHubAppRequiredPayload;
 /**
  * Partial state tracking for cleanup on cancel
  */
-interface StorefrontSetupPartialState {
-    repoCreated: boolean;
-    repoUrl?: string;
-    repoOwner?: string;
-    repoName?: string;
-    contentCopied: boolean;
-    phase: string;
-}
+// StorefrontSetupPartialState lives in @/types/webviewRequests — ONE
+// declaration with the cancel request's handler (this file used to carry a
+// byte-identical twin).
+type StorefrontSetupPartialState = import('@/types/webviewRequests').StorefrontSetupPartialState;
 
 /**
  * Internal state for setup progress tracking
@@ -143,6 +143,24 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
         default:
             return undefined;
     }
+}
+
+/**
+ * Convert the wizard's optional-fields EDSConfig into the start request's
+ * REQUIRED config, or undefined when the wizard state is incomplete. The
+ * wizard's Continue gate makes incompleteness unreachable in practice; this
+ * states that contract at the boundary instead of casting past it.
+ */
+function toStartEdsConfig(
+    eds: WizardState['edsConfig'],
+): StorefrontSetupStartPayload['edsConfig'] | undefined {
+    if (!eds?.repoName || !eds.daLiveOrg || !eds.daLiveSite) return undefined;
+    return {
+        ...eds,
+        repoName: eds.repoName,
+        daLiveOrg: eds.daLiveOrg,
+        daLiveSite: eds.daLiveSite,
+    };
 }
 
 /**
@@ -320,9 +338,18 @@ export function StorefrontSetupStep({
                 phase: 'idle',
             },
         });
+        const edsConfig = toStartEdsConfig(state.edsConfig);
+        if (!edsConfig) {
+            setSetupState((prev) => ({
+                ...prev,
+                phase: 'error',
+                error: 'Storefront configuration is incomplete — go back and finish the Storefront step.',
+            }));
+            return;
+        }
         vscode.postMessage('storefront-setup-start', {
             projectName: state.projectName,
-            edsConfig: state.edsConfig,
+            edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
             dependencies: [
@@ -336,7 +363,7 @@ export function StorefrontSetupStep({
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
             selectedStack: state.selectedStack,
-        });
+        } satisfies StorefrontSetupStartPayload);
     }, [
         state.projectName,
         state.edsConfig,
@@ -412,7 +439,7 @@ export function StorefrontSetupStep({
                         daLiveOrg: edsConfigRef.current?.daLiveOrg,
                         daLiveSite: edsConfigRef.current?.daLiveSite,
                     },
-                });
+                } satisfies StorefrontSetupCancelPayload);
             }
         };
     }, []); // Empty deps - cleanup only runs on unmount, reads from refs
@@ -461,9 +488,18 @@ export function StorefrontSetupStep({
         setupStartedRef.current = true;
 
         // Start setup operations with initial config
+        const edsConfig = toStartEdsConfig(initialConfigRef.current.edsConfig);
+        if (!edsConfig) {
+            setSetupState((prev) => ({
+                ...prev,
+                phase: 'error',
+                error: 'Storefront configuration is incomplete — go back and finish the Storefront step.',
+            }));
+            return;
+        }
         vscode.postMessage('storefront-setup-start', {
             projectName: initialConfigRef.current.projectName,
-            edsConfig: initialConfigRef.current.edsConfig,
+            edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
             dependencies: initialConfigRef.current.dependencies,
@@ -472,7 +508,7 @@ export function StorefrontSetupStep({
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
             selectedStack: initialConfigRef.current.selectedStack,
-        });
+        } satisfies StorefrontSetupStartPayload);
     }, []);
 
     const isActive = isActivePhase(setupState.phase);

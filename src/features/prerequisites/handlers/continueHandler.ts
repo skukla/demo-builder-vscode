@@ -15,6 +15,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
 import type { PrerequisiteStatusPayload, PrerequisitesCompletePayload } from '@/types/webviewPayloads';
+import type { ContinuePrerequisitesRequestPayload } from '@/types/webviewRequests';
 
 /**
  * Get the set of Node major versions installed via fnm.
@@ -146,7 +147,7 @@ function computeContinueOverallStatus(
  */
 export async function handleContinuePrerequisites(
     context: HandlerContext,
-    payload?: { fromIndex?: number },
+    payload?: ContinuePrerequisitesRequestPayload,
 ): Promise<SimpleResult> {
     try {
         if (!context.sharedState.currentPrerequisites || !context.sharedState.currentPrerequisiteStates) {

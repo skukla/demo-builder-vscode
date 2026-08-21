@@ -253,7 +253,8 @@ export interface GitHubRepoItem {
     /** Whether repository is private */
     isPrivate?: boolean;
     /** GitHub web URL */
-    htmlUrl?: string;
+    /** GitHub web URL — every producer sets it from the API's html_url. */
+    htmlUrl: string;
     /**
      * The repo's default branch.
      *

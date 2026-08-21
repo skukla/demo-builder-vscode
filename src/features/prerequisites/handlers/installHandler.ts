@@ -25,6 +25,7 @@ import { isTimeout, toAppError } from '@/types/errors';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteInstallCompletePayload, PrerequisiteStatusPayload } from '@/types/webviewPayloads';
+import type { InstallPrerequisiteRequestPayload } from '@/types/webviewRequests';
 
 /**
  * Get target Node versions for installation (SOP §3 compliance)
@@ -549,7 +550,7 @@ function isHeadless(context: HandlerContext): boolean {
  */
 export async function handleInstallPrerequisite(
     context: HandlerContext,
-    payload: { prereqId?: number; prerequisiteId?: string; version?: string },
+    payload: InstallPrerequisiteRequestPayload,
 ): Promise<SimpleResult> {
     try {
         const { version } = payload;
