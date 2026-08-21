@@ -1,9 +1,53 @@
 # Webview initial payloads are typed, then cast away
 
-**Filed:** 2026-08-20
+**Filed:** 2026-08-20 · **DONE 2026-08-20 (third session)** — see the final Progress entry.
 **Origin:** The project-title feature. `getProjectDisplayName` existed and was still
 missed four times; the display-name brand added in `95bdf0b0` could not cross this
 boundary, which is what made the misses invisible to `tsc`.
+
+## Progress 2026-08-20 (third session) — DONE
+
+All seven producers and their consumers now check against one declaration in
+`src/types/webviewPayloads.ts`, per-command commits, full gate green each:
+
+- `58763ed2` integrations + data-installer payloads (module created)
+- `20f45f8f` **fix(dashboard)**: the dashboard entry (`ui/index.tsx`) was the ONE
+  tsx file tsc never checked — its `index.ts` barrel sibling shadows it (tsc
+  include globs keep one file per basename). Renamed to `main.tsx`. That gap hid
+  a brandName-class bug: producer sends `packageName`, entry read
+  `data?.brandName`, so the dashboard subtitle's brand half never rendered.
+  Regression test written first (RED confirmed). The entry's phantom
+  `initialMeshStatus` pass-through (never produced) dropped with it.
+- `2d4e67dc` dashboard + projects-list payloads; screen props derive via Partial
+- `6e2396df` **fix(configure)**: producer has always sent `componentSecretFlags`;
+  the entry's hand-rolled shape never listed it, so the screen always saw
+  EMPTY_SECRET_FLAGS (keychain-migrated credentials rendered as unset)
+- `a23630f2` configure payload — finding 7 resolved: buckets are
+  `TransformedComponentDefinition[]` (registry passes entries through), the
+  consumer-only `ComponentData` subset and dead `ConfigureScreenProps` deleted;
+  orphaned `componentsData.appBuilder` reads removed (producer side deleted in
+  `c98e5125`; App Builder fields flow via the catalog path)
+- `dfed0e4c` ai-overview payload
+- `912edb5d` wizard payload — finding 4: `componentDefaults` is
+  `ComponentSelection` (defaults.json carries services too; stale
+  `externalSystems` key with zero readers dropped); finding 5:
+  `importedSettings` is `SettingsFile | null` on the wire (all three fill sites
+  produce a full file), consumer `ImportedSettings` is now
+  `Partial<SettingsFile>` in `@/types/wizard` (settingsFile.ts moved to
+  `@/types/`), a FIFTH `EditProjectConfig` duplicate in
+  WizardContainer.testUtils died, and the canonical type caught an invented
+  fixture (`version: '1.0.0'` string + nonexistent `exportedFrom`); finding 10:
+  wire nulls stay `null` in the payload type, entries convert to `undefined`
+- `9144bee9` `BaseWebviewCommand<TInitialData>` — all four MessagePayload casts
+  gone; comm-manager `sendMessage`/`request` take `unknown` (one documented
+  widening inside each)
+- `84397e2f` step 5 — `ProjectDisplayName` brand on the integrations,
+  data-installer and dashboard display fields; local annotated consts trimmed
+
+Divergences found beyond the recorded ten: the untypechecked dashboard entry,
+`packageName`/`brandName`, the never-delivered `componentSecretFlags`, the
+never-produced `initialMeshStatus`, the orphaned `appBuilder` bucket reads, the
+fifth `EditProjectConfig`, and the invented settings fixture.
 
 ## Progress 2026-08-20 (second session)
 
