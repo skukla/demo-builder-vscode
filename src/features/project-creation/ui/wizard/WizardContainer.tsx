@@ -225,22 +225,11 @@ export function WizardContainer({
     // Ref for step content area (to focus first element when step changes)
     const stepContentRef = useRef<HTMLDivElement>(null);
 
-    // Message listeners - handles feedback, creationProgress, and sidebar navigation
-    useMessageListeners({
-        setState,
-        getCurrentStepIndex,
-        navigateToStep: (step, targetIndex, currentIndex) => {
-            // Navigation for sidebar requests - simplified version without state clearing
-            // Full backward navigation with state clearing is handled by useWizardNavigation
-            setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
-            setIsTransitioning(true);
-            setTimeout(() => {
-                setState((prev) => ({ ...prev, currentStep: step }));
-                setIsTransitioning(false);
-            }, TIMEOUTS.STEP_TRANSITION);
-        },
-        WIZARD_STEPS,
-    });
+    // Message listeners — feedback, creationProgress, creationFailed's generic
+    // state update. (The sidebar-navigation callback that used to ride along
+    // here served the retired 'navigateToStep' push — nothing sends it — and
+    // the never-wired onGitHubAppRequired duplicate is gone too; see the hook.)
+    useMessageListeners({ setState });
 
     // Side effects (auto-focus, sidebar notifications, data loading)
     useWizardEffects({

@@ -92,6 +92,43 @@ nothing on that webview ever sent the message. Deleted 2026-08-21 — the
 wizard's `componentHandlers.handleGetComponentsData` is the one handler,
 which is also what makes typing this channel a single-declaration job.
 
+## Phase 0 inventory — 2026-08-21 (the audit is now OPEN, user-initiated)
+
+The wait-for-a-bug gate was lifted by the user; the campaign proceeds
+inventory-first, one channel per slice. First measured pass (literal-string
+scan of `sendMessage('X'` vs `onMessage('X'`), with its blind spots named:
+`postMessage({type: 'X'})`-style sends and ~15 dynamic send sites are NOT
+captured, so "never sent" from the scan is a LEAD requiring a bare-string
+grep before belief — 6 of the first 7 such leads had senders the scan missed.
+
+**Verified findings, both fixed same-day:**
+- `navigateToStep`: wizard listener for "sidebar navigation requests" — the
+  sidebar's wizard navigation was retired, NOTHING sends it. Listener + its
+  dead callback threading deleted.
+- `onGitHubAppRequired`: a SECOND implementation of the
+  GITHUB_APP_NOT_INSTALLED reaction that no caller ever wired — the live one
+  is ProjectCreationStep's own creationFailed listener
+  (GitHubAppInstallDialog). Duplicate deleted.
+
+**Live push channels = the slicing worklist** (sent AND heard; type these,
+highest traffic first): `statusUpdate` + `meshStatusUpdate` +
+`appBuilderComponentsSnapshot` + `projectDestinationUpdate` +
+`appBuilderComponentStatusUpdate` (the dashboard status family — one slice,
+they share consumers), `creationProgress`/`creationFailed`/`feedback` (the
+creation-progress family), `deployment-status`, the prerequisites family
+(`prerequisite-status`/`-install-complete`/`prerequisites-complete`/
+`-loaded`), the dalive/github auth families, `configChanged`/
+`projectsUpdated`/`demoStateChanged`/`projectDeleted` (projects-list
+family), block-library updates, `storefront-setup-*` (wizard EDS family).
+
+**Remaining unverified leads** (run the bare-string grep per type before
+acting): `dalive-auth-error`, `prerequisite-check-stopped`,
+`authoringExperienceUpdate` on the subscribe side; the sent-side list mixes
+in webview→extension REQUESTS (sidebar rows) that belong to
+webviewHandlerCoverage's jurisdiction, plus wizard-flow pushes whose
+listeners use a different subscription mechanism — the scanner needs the
+direction split before its sent-side output is trustworthy.
+
 ## Kickoff prompt (per-channel, when one bites)
 
 > Channel `<type>` just caused a bug. Type it end-to-end per
