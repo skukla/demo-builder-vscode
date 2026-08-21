@@ -56,7 +56,18 @@ custom message types"), which makes the entire union DECORATIVE — a typo'd
 message type compiles and then hangs silently. Closing that belongs to the
 same item (each typed channel shrinks the custom tail).
 
-### 3. VS Code settings keys ↔ `package.json` declarations — **ENFORCE**
+### 3. VS Code settings keys ↔ `package.json` declarations — **ENFORCED 2026-08-21**
+
+`tests/templates/manifest-mirrors.test.ts`: both directions, with positive
+pins guarding the extraction against vacuous passes. Its FIRST run earned its
+keep — it flagged the openInClaude legacy-reset writes to the retired
+`ai.surface`/`ai.dockToRight` keys, which turned out to be a live defect: VS
+Code rejects `update()` on unregistered keys, so those two lines could only
+throw, aborting the reset before the `claudeCode.preferredLocation` cleanup
+ever ran (callers swallowed it with a warn). Lines deleted; stale user values
+are inert anyway. Original analysis below for the record.
+
+Original: **ENFORCE**
 
 Proven bug class, twice: `demoBuilder.daLive.aemAuthorUrl` (a Feb 2026 rename
 orphaned user overrides for six months — memory) and `demoBuilder.ai.surface`
@@ -69,7 +80,9 @@ cheap but needs the real read-pattern table: section handles
 tool reads keys from a table). The naive join produced 3 false positives out
 of 5 hits — build the test from the patterns, not the heuristic.
 
-### 4. Cross-config references — **ENFORCE (extend existing suites)**
+### 4. Cross-config references — **ENFORCED 2026-08-21** (in manifest-mirrors.test.ts: block-library package refs, demo-package addon refs; the previously-existing stacks/demo-packages directions stay in their own suites)
+
+Original: **ENFORCE (extend existing suites)**
 
 Partially covered: stacks→components dependency ids (`stacks.test.ts:167`),
 demo-packages→stacks (`demo-packages-data.test.ts:337`). Unverified
@@ -86,7 +99,9 @@ detection for the same files with zero maintenance. Retire the overlapping
 assertions; keep only what the generated schemas can't express. Needs care to
 keep test counts honest, not urgent.
 
-### 6. Manifest mirrors: commands + bundle names — **ENFORCE (same suite as #3)**
+### 6. Manifest mirrors: commands + bundle names — **ENFORCED 2026-08-21** (same suite: declared commands ⊆ registered; every bundle-name literal ∈ WEBVIEW_ENTRIES, sidebar's hand-rolled filename included)
+
+Original: **ENFORCE (same suite as #3)**
 
 `contributes.commands` ↔ `registerCommand`: clean today in the dangerous
 direction (declared-but-unregistered = palette error; currently zero).
