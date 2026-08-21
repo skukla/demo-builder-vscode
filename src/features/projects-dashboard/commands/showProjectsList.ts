@@ -17,6 +17,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { HandlerContext } from '@/types/handlers';
+import type { ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
  * Command to show the "Projects List" as the home screen
@@ -66,9 +67,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<{
-        theme: string;
-    }> {
+    protected async getInitialData(): Promise<ProjectsListInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
@@ -185,11 +184,9 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             const projectList = await this.stateManager.getAllProjects();
             const projects = [];
             for (const item of projectList) {
-                const project = await this.stateManager.loadProjectFromPath(
-                    item.path,
-                    undefined,
-                    { persistAfterLoad: false },
-                );
+                const project = await this.stateManager.loadProjectFromPath(item.path, undefined, {
+                    persistAfterLoad: false,
+                });
                 if (project) {
                     projects.push(project);
                 }

@@ -35,6 +35,7 @@ import {
     getEdsLiveUrl,
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
+import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -132,21 +133,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<{
-        theme: string;
-        project: { name: string; path: string } | null;
-        hasMesh: boolean;
-        packageName?: string;
-        stackName?: string;
-        isEds: boolean;
-        edsLiveUrl?: string;
-        edsDaLiveUrl?: string;
-        initialEdsStorefrontStatus?: string;
-        hasAdobeContext: boolean;
-        dataInstallerAvailable: boolean;
-        appBuilderComponents?: Record<string, AppBuilderComponentState>;
-        appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    }> {
+    protected async getInitialData(): Promise<DashboardInitialData> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';

@@ -14,7 +14,7 @@
  */
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
-import type { AppBuilderComponentState } from './base';
+import type { AppBuilderComponentState, Project } from './base';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ThemeMode } from './webview';
 
@@ -28,6 +28,49 @@ export interface DataInstallerInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
     projectName: string;
+}
+
+/**
+ * `ProjectDashboardWebviewCommand.getInitialData` → the dashboard bundle.
+ */
+export interface DashboardInitialData {
+    theme: ThemeMode;
+    /** Display name + path — `null` when no project is selected. */
+    project: { name: string; path: string } | null;
+    hasMesh: boolean;
+    /** Resolved demo-package name (e.g., "CitiSignal") — demo-packages.json `name`. */
+    packageName?: string;
+    /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
+    stackName?: string;
+    /** Whether this is an EDS project (always published, no start/stop) */
+    isEds: boolean;
+    /** Live URL for EDS projects */
+    edsLiveUrl?: string;
+    /** DA.live authoring URL for EDS projects */
+    edsDaLiveUrl?: string;
+    /** Initial EDS storefront status (for dynamic status display) */
+    initialEdsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
+    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
+    hasAdobeContext: boolean;
+    /**
+     * Whether the Data Installer is switched on AND pointed at an API. Decided
+     * host-side (`isDataInstallerConfigured`) because both halves are settings.
+     */
+    dataInstallerAvailable: boolean;
+    /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
+    appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    /** Stack-filtered catalog — currently unread by the dashboard screen. */
+    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+}
+
+/**
+ * `ShowProjectsListCommand.getInitialData` → the projectsList bundle.
+ *
+ * The entry fetches everything else itself via `getProjects` (view mode rides
+ * that response to avoid racing the init message).
+ */
+export interface ProjectsListInitialData {
+    theme: ThemeMode;
 }
 
 /**

@@ -25,41 +25,16 @@ import { InlineRenameField } from '@/core/ui/components/forms';
 import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
  * Props for the ProjectDashboardScreen component
  */
-export interface ProjectDashboardScreenProps {
-    project?: {
-        name: string;
-        path: string;
-    };
-    hasMesh?: boolean;
-    /** Resolved demo-package name (e.g., "CitiSignal") — demo-packages.json `name`. */
-    packageName?: string;
-    /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
-    stackName?: string;
-    /** Whether this is an EDS project (always published, no start/stop) */
-    isEds?: boolean;
-    /** Live URL for EDS projects */
-    edsLiveUrl?: string;
-    /** DA.live authoring URL for EDS projects */
-    edsDaLiveUrl?: string;
-    /** Initial mesh status from card grid computation (avoids loading flash) */
-    initialMeshStatus?: string;
-    /** Initial EDS storefront status (for dynamic status display) */
-    initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
-    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
-    hasAdobeContext?: boolean;
-    /**
-     * Whether the Data Installer is switched on AND pointed at an API. Decided
-     * host-side (`isDataInstallerConfigured`) because both halves are settings.
-     */
-    dataInstallerAvailable?: boolean;
-    /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
-    appBuilderComponents?: Record<string, AppBuilderComponentState>;
-}
+/**
+ * Init payload (`DashboardInitialData`), relaxed to Partial: the wire always
+ * carries the required fields, but tests render the screen without them.
+ */
+export type ProjectDashboardScreenProps = Partial<DashboardInitialData>;
 
 /**
  * Project dashboard screen component
@@ -81,7 +56,6 @@ export function ProjectDashboardScreen({
     isEds = false,
     edsLiveUrl,
     edsDaLiveUrl,
-    initialMeshStatus,
     initialEdsStorefrontStatus,
     hasAdobeContext,
     dataInstallerAvailable,
@@ -139,10 +113,7 @@ export function ProjectDashboardScreen({
         aiRegenProgress,
         aiRegenError,
         regenerateAiFiles,
-    } = useDashboardStatus(
-        { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext },
-        isEdsStable,
-    );
+    } = useDashboardStatus({ hasMesh, initialEdsStorefrontStatus, hasAdobeContext }, isEdsStable);
 
     // Action handlers via extracted hook
     const {
