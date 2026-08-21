@@ -79,6 +79,18 @@ contract typed, not a cast deleted:
 - **`stackComponentCollector.ts:76`** (`componentsData as never` + `as T` on
   the result) — launders the wizard's untyped `get-components-data` response.
   Dies naturally when that channel gets typed.
+- **`executor.ts:378`** (`config as unknown as ProjectCreationConfig`) — the
+  `create-project` REQUEST channel's landing point; and
+  **`createProjectTool.ts:182/295`** (`{...} as unknown as WizardState` into
+  `buildProjectConfig`) — the MCP tool synthesizing wizard state headlessly.
+  Both die when the create-project request payload gets one declaration.
+
+Related kill from the same triage: the Configure surface's own
+`get-components-data` handler was a dead SECOND implementation with a
+different response shape (raw components.json, no `{success,data}` wrapper);
+nothing on that webview ever sent the message. Deleted 2026-08-21 — the
+wizard's `componentHandlers.handleGetComponentsData` is the one handler,
+which is also what makes typing this channel a single-declaration job.
 
 ## Kickoff prompt (per-channel, when one bites)
 

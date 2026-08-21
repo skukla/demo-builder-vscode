@@ -16,14 +16,11 @@
  * @module features/dashboard/handlers/configureHandlers
  */
 
-import * as fsPromises from 'fs/promises';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
 import { handleCheckCredentialService, handleDiscoverStoreStructure } from '@/features/eds';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-import { parseJSON } from '@/types/typeGuards';
 
 // ==========================================================
 // Handlers
@@ -35,26 +32,6 @@ import { parseJSON } from '@/types/typeGuards';
 export async function handleCancelConfigure(context: HandlerContext): Promise<HandlerResponse> {
     context.panel?.dispose();
     return { success: true };
-}
-
-/**
- * Handle get-components-data — read and return components.json
- */
-export async function handleGetComponentsData(context: HandlerContext): Promise<HandlerResponse> {
-    const componentsPath = path.join(
-        context.context.extensionPath,
-        'src',
-        'features',
-        'components',
-        'config',
-        'components.json',
-    );
-    const componentsContent = await fsPromises.readFile(componentsPath, 'utf-8');
-    const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
-    if (!componentsData) {
-        throw new Error('Failed to parse components.json');
-    }
-    return componentsData as unknown as HandlerResponse;
 }
 
 /**
@@ -148,9 +125,14 @@ export async function handleDiscoverStoreStructureAndPersist(
  * Does NOT include save-configuration (stays inline in command class
  * due to notification/deployment method dependencies).
  */
+// No 'get-components-data' here: nothing on the Configure webview sends it
+// (the screen gets componentsData in its init payload). The wizard's handler
+// (componentHandlers.handleGetComponentsData) serves the one real caller —
+// this map briefly carried a SECOND implementation with a DIFFERENT response
+// shape (raw components.json, no {success,data} wrapper), which could never
+// have answered the shared hook correctly had anything ever asked.
 export const configureHandlers = defineHandlers({
     cancel: handleCancelConfigure,
-    'get-components-data': handleGetComponentsData,
     openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,

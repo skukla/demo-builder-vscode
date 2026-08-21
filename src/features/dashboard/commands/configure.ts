@@ -207,7 +207,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Register standard handlers from handler map (cancel, get-components-data,
+        // Register standard handlers from handler map (cancel,
         // openExternal, open-eds-settings, discover-store-structure)
         const messageTypes = getRegisteredTypes(configureHandlers);
         for (const messageType of messageTypes) {
