@@ -81,8 +81,14 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
         const value = getFieldValue(field);
         return (
             <div id={`field-${field.key}`}>
-                <label>{field.label}{field.required ? '*' : ''}</label>
-                <input value={value !== undefined && value !== null ? String(value) : ''} readOnly />
+                <label>
+                    {field.label}
+                    {field.required ? '*' : ''}
+                </label>
+                <input
+                    value={value !== undefined && value !== null ? String(value) : ''}
+                    readOnly
+                />
             </div>
         );
     },
@@ -90,53 +96,37 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
 
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 describe('ConfigureScreen - Rendering', () => {
     describe('Basic Rendering', () => {
         it('should render project name', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Test Project')).toBeInTheDocument();
         });
 
         it('should render "Configure Project" heading', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Configure Project')).toBeInTheDocument();
         });
 
         it('should render Save button', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Save Changes')).toBeInTheDocument();
         });
     });
 
     describe('Configuration Fields', () => {
-        it('should render the active section\'s fields for selected components', () => {
+        it("should render the active section's fields for selected components", () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -155,14 +145,13 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should display existing values from project config', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
-            const urlField = document.getElementById('field-ADOBE_COMMERCE_URL')?.querySelector('input');
+            const urlField = document
+                .getElementById('field-ADOBE_COMMERCE_URL')
+                ?.querySelector('input');
             expect(urlField).toHaveValue('https://example.com');
         });
     });
@@ -170,10 +159,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Section rail', () => {
         it('renders one tab per configurable section, Project first', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             expect(railTabLabels()).toEqual(['Project', 'Adobe Commerce', 'Catalog Service']);
@@ -181,10 +167,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('starts on Project and marks the clicked tab selected', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             expect(railTab('Project')).toHaveAttribute('aria-selected', 'true');
@@ -196,10 +179,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('leaves every tab reachable — Configure is not a linear wizard', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             for (const tab of screen.getAllByRole('tab')) {
@@ -209,10 +189,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('no longer renders the Sections sidebar it replaced', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('navigation-panel')).not.toBeInTheDocument();
@@ -222,10 +199,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageHeader Integration', () => {
         it('should render PageHeader with "Configure Project" title', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -235,10 +209,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageHeader with project name as subtitle', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -250,10 +221,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageFooter Integration', () => {
         it('should render PageFooter with Close button on left', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -265,10 +233,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageFooter with Save Changes button on right', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -287,10 +252,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('does not render an AI tab or AI sidebar inside Configure', () => {
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
@@ -304,11 +266,13 @@ describe('ConfigureScreen - Rendering', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
-                    componentsData={{ envVars: {} }}
+                    componentsData={{ frontends: [], backends: [], dependencies: [], envVars: {} }}
                 />
             );
 
-            expect(screen.getByText('No components requiring configuration were found.')).toBeInTheDocument();
+            expect(
+                screen.getByText('No components requiring configuration were found.')
+            ).toBeInTheDocument();
         });
 
         it('should handle missing existing env values', () => {
@@ -341,7 +305,9 @@ describe('ConfigureScreen - Rendering', () => {
             );
 
             selectSection('Adobe Commerce');
-            const urlField = document.getElementById('field-ADOBE_COMMERCE_URL')?.querySelector('input');
+            const urlField = document
+                .getElementById('field-ADOBE_COMMERCE_URL')
+                ?.querySelector('input');
             expect(urlField).toHaveValue(longValue);
         });
     });

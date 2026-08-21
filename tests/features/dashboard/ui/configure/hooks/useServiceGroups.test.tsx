@@ -15,6 +15,9 @@ import type { SelectedComponent } from '@/features/dashboard/ui/configure/hooks/
 // Minimal componentsData with envVars relevant to the mesh-filtering tests.
 // Only defines env vars actually referenced by the components below.
 const componentsData: ComponentsData = {
+    frontends: [],
+    backends: [],
+    dependencies: [],
     mesh: [
         {
             id: 'eds-accs-mesh',
@@ -110,69 +113,69 @@ describe('useServiceGroups', () => {
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend],
                 componentsData,
-            }),
+            })
         );
 
-        const meshSection = result.current.find(group => group.id === 'mesh');
+        const meshSection = result.current.find((group) => group.id === 'mesh');
         expect(meshSection).toBeUndefined();
     });
 
-/**
- * A DERIVED env var is computed by the generator, not typed by a user.
- *
- * `ADOBE_CATALOG_SERVICE_ENDPOINT` declares
- * `derivedFrom: [PAAS_…, ACCS_…]`, and `envFileGenerator` honours that when it
- * writes the `.env`. Configure rendered it anyway — blank, editable, optional,
- * and sorted ABOVE the required field it derives from — so the field a user
- * reaches for first was the one the generator intends to compute.
- *
- * The house already treats derived vars this way: the App Builder field model
- * drops its `derivedFrom` bucket entirely rather than rendering it
- * (`appBuilderComponentFieldModel.ts:40`). The wizard does not show this field
- * either. Configure was the outlier.
- */
-describe('useServiceGroups — derived fields', () => {
-    const catalogBackend: SelectedComponent = {
-        id: 'adobe-commerce-paas',
-        type: 'Backend',
-        data: {
+    /**
+     * A DERIVED env var is computed by the generator, not typed by a user.
+     *
+     * `ADOBE_CATALOG_SERVICE_ENDPOINT` declares
+     * `derivedFrom: [PAAS_…, ACCS_…]`, and `envFileGenerator` honours that when it
+     * writes the `.env`. Configure rendered it anyway — blank, editable, optional,
+     * and sorted ABOVE the required field it derives from — so the field a user
+     * reaches for first was the one the generator intends to compute.
+     *
+     * The house already treats derived vars this way: the App Builder field model
+     * drops its `derivedFrom` bucket entirely rather than rendering it
+     * (`appBuilderComponentFieldModel.ts:40`). The wizard does not show this field
+     * either. Configure was the outlier.
+     */
+    describe('useServiceGroups — derived fields', () => {
+        const catalogBackend: SelectedComponent = {
             id: 'adobe-commerce-paas',
-            name: 'Adobe Commerce PaaS',
-            configuration: {
-                requiredEnvVars: ['PAAS_CATALOG_SERVICE_ENDPOINT'],
-                optionalEnvVars: ['ADOBE_CATALOG_SERVICE_ENDPOINT'],
+            type: 'Backend',
+            data: {
+                id: 'adobe-commerce-paas',
+                name: 'Adobe Commerce PaaS',
+                configuration: {
+                    requiredEnvVars: ['PAAS_CATALOG_SERVICE_ENDPOINT'],
+                    optionalEnvVars: ['ADOBE_CATALOG_SERVICE_ENDPOINT'],
+                },
             },
-        },
-    } as SelectedComponent;
+        } as SelectedComponent;
 
-    it('does not render a field the generator computes', () => {
-        const { result } = renderHook(() =>
-            useServiceGroups({ selectedComponents: [catalogBackend], componentsData }),
-        );
+        it('does not render a field the generator computes', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({ selectedComponents: [catalogBackend], componentsData })
+            );
 
-        const keys = result.current.flatMap(g => g.fields.map(f => f.key));
-        expect(keys).not.toContain('ADOBE_CATALOG_SERVICE_ENDPOINT');
+            const keys = result.current.flatMap((g) => g.fields.map((f) => f.key));
+            expect(keys).not.toContain('ADOBE_CATALOG_SERVICE_ENDPOINT');
+        });
+
+        it('still renders the field it derives FROM — the control', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({ selectedComponents: [catalogBackend], componentsData })
+            );
+
+            const keys = result.current.flatMap((g) => g.fields.map((f) => f.key));
+            expect(keys).toContain('PAAS_CATALOG_SERVICE_ENDPOINT');
+        });
     });
-
-    it('still renders the field it derives FROM — the control', () => {
-        const { result } = renderHook(() =>
-            useServiceGroups({ selectedComponents: [catalogBackend], componentsData }),
-        );
-
-        const keys = result.current.flatMap(g => g.fields.map(f => f.key));
-        expect(keys).toContain('PAAS_CATALOG_SERVICE_ENDPOINT');
-    });
-});
 
     it('does not include MESH_ENDPOINT in any section when mesh is absent', () => {
         const { result } = renderHook(() =>
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend],
                 componentsData,
-            }),
+            })
         );
 
-        const allFieldKeys = result.current.flatMap(group => group.fields.map(f => f.key));
+        const allFieldKeys = result.current.flatMap((group) => group.fields.map((f) => f.key));
         expect(allFieldKeys).not.toContain('MESH_ENDPOINT');
     });
 
@@ -181,10 +184,10 @@ describe('useServiceGroups — derived fields', () => {
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend],
                 componentsData,
-            }),
+            })
         );
 
-        const groupIds = result.current.map(g => g.id);
+        const groupIds = result.current.map((g) => g.id);
         expect(groupIds).toContain('accs');
         expect(groupIds).toContain('adobe-assets');
     });
@@ -199,10 +202,10 @@ describe('useServiceGroups — derived fields', () => {
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend, accsMesh],
                 componentsData,
-            }),
+            })
         );
 
-        expect(result.current.find(group => group.id === 'mesh')).toBeUndefined();
+        expect(result.current.find((group) => group.id === 'mesh')).toBeUndefined();
     });
 
     it('never surfaces MESH_ENDPOINT in any section, mesh or no mesh', () => {
@@ -210,10 +213,10 @@ describe('useServiceGroups — derived fields', () => {
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend, accsMesh],
                 componentsData,
-            }),
+            })
         );
 
-        const everyKey = result.current.flatMap(group => group.fields.map(f => f.key));
+        const everyKey = result.current.flatMap((group) => group.fields.map((f) => f.key));
         expect(everyKey).not.toContain('MESH_ENDPOINT');
         // Control: the other frontend-declared optional var still comes through,
         // so this is MESH_ENDPOINT being filtered and not the fixture collapsing.

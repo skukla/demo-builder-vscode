@@ -23,12 +23,7 @@ import { buildAppBuilderComponentFieldGroups } from './appBuilderComponentFieldM
 import { validateServiceGroups } from './configureFieldValidation';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import { buildConfigureSections, toStepRailTabs } from './configureSections';
-import type {
-    ComponentsData,
-    SaveConfigurationResponse,
-    ServiceGroup,
-    UniqueField,
-} from './configureTypes';
+import type { SaveConfigurationResponse, ServiceGroup, UniqueField } from './configureTypes';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -50,38 +45,22 @@ import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreD
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AuthoringExperience, Project } from '@/types/base';
+import type { AuthoringExperience } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
+import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
 /** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 const EMPTY_PROVIDED: Record<string, string> = {};
 const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
 
-interface ConfigureScreenProps {
-    project: Project;
-    componentsData: ComponentsData;
-    existingEnvValues?: Record<string, Record<string, string>>;
-    existingProjectNames?: string[];
-    /** Whether this is an EDS project — gates the Authoring Experience radio. */
-    isEds?: boolean;
-    /** Resolved authoring experience seeding the radio (EDS only). */
-    authoringExperience?: AuthoringExperience;
-    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
-    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars?: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
-    appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
-    /**
-     * Component-declared secrets this project holds, booleans only.
-     *
-     * A migrated credential is in the OS keychain, which this webview cannot read.
-     * Without the flag a required password field renders empty and a save writes a
-     * blank over a working credential.
-     */
-    componentSecretFlags?: Record<string, Record<string, boolean>>;
-}
+/**
+ * Init payload (`ConfigureInitialData`): `project` and `componentsData` stay
+ * required (the entry guards on them before mounting); the rest is relaxed to
+ * Partial because tests render the screen without the full wire.
+ */
+export type ConfigureScreenProps = Pick<ConfigureInitialData, 'project' | 'componentsData'> &
+    Partial<Omit<ConfigureInitialData, 'project' | 'componentsData'>>;
 
 /** Derive save button label from saving/deploying state */
 function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {

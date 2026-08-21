@@ -4,11 +4,8 @@
  * Helper functions extracted from ConfigureScreen.tsx to reduce file size.
  */
 
-import type {
-    ComponentsData,
-    ComponentData,
-    ComponentInstance,
-} from './configureTypes';
+import type { ComponentsData, ComponentInstance } from './configureTypes';
+import type { TransformedComponentDefinition } from '@/types/components';
 
 /**
  * Get all component definitions from componentsData
@@ -18,16 +15,15 @@ import type {
  * @param data - Components data containing all category arrays
  * @returns Flattened array of all component definitions
  */
-export function getAllComponentDefinitions(data: ComponentsData): ComponentData[] {
-    const categories: (ComponentData[] | undefined)[] = [
+export function getAllComponentDefinitions(data: ComponentsData): TransformedComponentDefinition[] {
+    const categories: (TransformedComponentDefinition[] | undefined)[] = [
         data.frontends,
         data.backends,
         data.dependencies,
         data.mesh,
         data.integrations,
-        data.appBuilder,
     ];
-    return categories.flatMap(arr => arr ?? []);
+    return categories.flatMap((arr) => arr ?? []);
 }
 
 /**
@@ -39,7 +35,9 @@ export function getAllComponentDefinitions(data: ComponentsData): ComponentData[
  * @param componentDef - The component definition to check (may be undefined)
  * @returns True if the component has required or optional env vars configured
  */
-export function hasComponentEnvVars(componentDef: ComponentData | undefined): boolean {
+export function hasComponentEnvVars(
+    componentDef: TransformedComponentDefinition | undefined,
+): boolean {
     if (!componentDef?.configuration) {
         return false;
     }
@@ -70,12 +68,13 @@ function getComponentTypeDisplay(instance: ComponentInstance): string {
  */
 export function discoverComponentsFromInstances(
     componentInstances: Record<string, ComponentInstance>,
-    allComponentDefs: ComponentData[],
-): Array<{ id: string; data: ComponentData; type: string }> {
-    const discovered: Array<{ id: string; data: ComponentData; type: string }> = [];
+    allComponentDefs: TransformedComponentDefinition[],
+): Array<{ id: string; data: TransformedComponentDefinition; type: string }> {
+    const discovered: Array<{ id: string; data: TransformedComponentDefinition; type: string }> =
+        [];
 
     for (const [id, instance] of Object.entries(componentInstances)) {
-        const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
+        const componentDef = allComponentDefs.find((c) => c.id === id);
         if (componentDef && hasComponentEnvVars(componentDef)) {
             discovered.push({
                 id: componentDef.id,

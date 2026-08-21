@@ -39,11 +39,11 @@ import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
+import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
@@ -52,35 +52,6 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
-
-// Initial data structure sent to webview
-interface ConfigureInitialData {
-    theme: 'dark' | 'light';
-    project: Project;
-    componentsData: {
-        frontends?: unknown[];
-        backends?: unknown[];
-        dependencies?: unknown[];
-        mesh?: unknown[];
-        integrations?: unknown[];
-        appBuilder?: unknown[];
-        envVars: Record<string, unknown>;
-    };
-    existingEnvValues: Record<string, Record<string, string>>;
-    existingProjectNames: string[];
-    /** Whether this is an EDS project — gates the Authoring Experience radio. */
-    isEds: boolean;
-    /** Resolved authoring experience seeding the radio (EDS only). */
-    authoringExperience: AuthoringExperience;
-    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
-    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
-    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
-    /** Component-declared secrets this project holds, as booleans only. */
-    componentSecretFlags: Record<string, Record<string, boolean>>;
-}
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     /**

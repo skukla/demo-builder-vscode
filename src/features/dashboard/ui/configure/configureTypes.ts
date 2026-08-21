@@ -4,38 +4,16 @@
  * Type definitions for the Configure Screen component.
  */
 
-import type { Project } from '@/types/base';
 import type { EnvVarDefinition } from '@/types/components';
+import type { ConfigureComponentsData } from '@/types/webviewPayloads';
 
-export interface ComponentsData {
-    frontends?: ComponentData[];
-    backends?: ComponentData[];
-    dependencies?: ComponentData[];
-    mesh?: ComponentData[];
-    integrations?: ComponentData[];
-    appBuilder?: ComponentData[];
-    envVars?: Record<string, EnvVarDefinition>;
-}
-
-export interface ConfigureScreenProps {
-    project: Project;
-    componentsData: ComponentsData;
-    existingEnvValues?: Record<string, Record<string, string>>;
-}
-
-export interface ComponentData {
-    id: string;
-    name: string;
-    description?: string;
-    dependencies?: {
-        required?: string[];
-        optional?: string[];
-    };
-    configuration?: {
-        requiredEnvVars?: string[];
-        optionalEnvVars?: string[];
-    };
-}
+/**
+ * Feature-local alias for the wire shape. The one declaration lives in
+ * `@/types/webviewPayloads` (`ConfigureInitialData.componentsData`); component
+ * entries are full `TransformedComponentDefinition`s — the registry passes
+ * them through untransformed, so there is no narrower "ComponentData" view.
+ */
+export type ComponentsData = ConfigureComponentsData;
 
 export interface UniqueField extends EnvVarDefinition {
     componentIds: string[];

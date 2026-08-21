@@ -14,8 +14,9 @@
  */
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
-import type { AppBuilderComponentState, Project } from './base';
+import type { AppBuilderComponentState, AuthoringExperience, Project } from './base';
 import type { CommerceStoreStructure } from './commerceStore';
+import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { ThemeMode } from './webview';
 
 /**
@@ -71,6 +72,52 @@ export interface DashboardInitialData {
  */
 export interface ProjectsListInitialData {
     theme: ThemeMode;
+}
+
+/**
+ * The Configure screen's registry slice: the categorized component buckets
+ * (registry entries pass through untransformed) plus the keyed env-var
+ * definitions. No `appBuilder` bucket — that mechanism was removed
+ * (`c98e5125`); App Builder fields flow via `appBuilderComponentCatalog`.
+ */
+export interface ConfigureComponentsData {
+    frontends: TransformedComponentDefinition[];
+    backends: TransformedComponentDefinition[];
+    dependencies: TransformedComponentDefinition[];
+    mesh?: TransformedComponentDefinition[];
+    integrations?: TransformedComponentDefinition[];
+    envVars: Record<string, EnvVarDefinition>;
+}
+
+/**
+ * `ConfigureProjectWebviewCommand.getInitialData` → the configure bundle.
+ */
+export interface ConfigureInitialData {
+    theme: ThemeMode;
+    project: Project;
+    componentsData: ConfigureComponentsData;
+    /** Existing env values from component .env files. */
+    existingEnvValues: Record<string, Record<string, string>>;
+    /** All project names — rename validation. */
+    existingProjectNames: string[];
+    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    isEds: boolean;
+    /** Resolved authoring experience seeding the radio (EDS only). */
+    authoringExperience: AuthoringExperience;
+    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
+    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /** Resolved provided env values (bucket-2 "connected" sources). */
+    providedEnvVars: Record<string, string>;
+    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
+    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
+    /**
+     * Component-declared secrets this project holds, booleans only.
+     *
+     * A migrated credential is in the OS keychain, which the webview cannot
+     * read. Without the flag a required password field renders empty and a
+     * save writes a blank over a working credential.
+     */
+    componentSecretFlags: Record<string, Record<string, boolean>>;
 }
 
 /**
