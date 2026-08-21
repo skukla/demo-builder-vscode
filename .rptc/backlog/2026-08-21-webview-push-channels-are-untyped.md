@@ -156,14 +156,50 @@ scanner homework if the inventory script is ever re-run: it must learn the
 `postMessage({type: 'X'})` send style and split webview→extension REQUESTS
 out of the sent-side list before its output is trustworthy.
 
-## Remaining scope (the request/response direction)
+## Request direction — substantive contracts DONE 2026-08-22
 
-The webview→extension REQUEST payloads (`create-project`,
-`get-components-data`, `install-prerequisite`, `storefront-setup-start`, …)
-still cross untyped; the cast clusters above are their symptoms. Same
-discipline when opened: one request channel per slice, declaration in
-webviewPayloads (or a request-side sibling), handler payload param typed from
-it, sender annotated.
+Home: `src/types/webviewRequests.ts` (sibling of webviewPayloads; same rules).
+Commits `579cd40b`…HEAD. Done, one family per commit:
+
+- **create-project** (`ProjectCreationConfig` moved from the executor;
+  `buildProjectConfig` return-annotated; `ProjectConfigSource` Pick so the MCP
+  tool's synthesized states typecheck). Killed the executor/tool/setup-context
+  `as unknown as` cluster. **Bug-class find:** `AdobeConfig`'s four required
+  fields were fiction — real manifests hold as little as
+  `{organization, organizationName}`; made honest with ZERO new compile
+  errors (every consumer already optional-chained).
+- **get-components-data** (`ComponentsDataPayload`/`GetComponentsDataResponse`;
+  DTO configuration typed; collector's `as never`/`as T` dead). Dead code
+  deleted: `ComponentSelectionStep` + `useComponentSelection` +
+  `useConfigValidation` (no renderer since the build-your-project
+  consolidation) and PrerequisitesStep's never-read `componentsData` prop.
+  Also deduped the two byte-identical `ComponentConfigs`/`ComponentConfig`
+  declarations.
+- **AddIntegrationFlowAdapter cluster** (`WizardSessionState` /
+  `AdobeAuthSessionState` — the borrowed-modal contract stated instead of
+  cast past; `useSelectionStep.selectedItem` declares the id-only stub shape
+  its own hydration doc always promised). All four `as never` dead.
+- **storefront-setup-start/cancel** (+`StorefrontSetupPartialState` — the
+  step's byte-identical twin deleted). Sender edge added: `toStartEdsConfig`
+  converts the wizard's optional-fields EDSConfig to the request's required
+  shape or refuses with an error state. Twins killed along the way:
+  `selectedRepo` inline four-field copy → `GitHubRepoItem` (whose `htmlUrl?`
+  was fiction — every producer sets it); `githubAuth.user` optional-strings
+  copy → the nullable `GitHubUser`.
+- **prerequisites requests** (check/continue/install) + **dashboard
+  addAppBuilderComponent / setProjectDestination** (adapter's `postAdd` was
+  `Record<string, unknown>`).
+
+Cast ratchet over the campaign: 40 → 31.
+
+### Remaining tail (LOW priority — declare on next touch)
+
+~45 small action requests (`openExternal {url}`, `selectProject {path}`,
+start/stop/restart demo, open* commands, AI prompt CRUD, dalive token store
+requests, mesh/api checks, projects-list actions). All payload-less or
+one/two-field; handlers type them inline and nothing casts responses. Not
+worth a speculative pass — give a channel its declaration in webviewRequests
+the next time a slice touches it.
 
 ## Kickoff prompt (per-channel, when one bites)
 

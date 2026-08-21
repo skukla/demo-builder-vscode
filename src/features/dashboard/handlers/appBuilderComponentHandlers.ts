@@ -25,6 +25,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
 import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
@@ -293,24 +294,7 @@ export async function postComponentsSnapshot(context: HandlerContext): Promise<v
  * Handle 'addAppBuilderComponent' — guards → (bucket-3 → Configure) → assemble deps →
  * D1 addAppBuilderComponent. The FIRST live UI-driven full add.
  */
-export const handleAddAppBuilderComponent: MessageHandler<{
-    id?: string;
-    source?: { owner: string; repo: string };
-    /** Display name for a named blank instance (the flow's naming step). */
-    name?: string;
-    /** Collision-checked instance id for a named blank instance. */
-    instanceId?: string;
-    /**
-     * The free Adobe APIs the user picked in the flow's API stage.
-     *
-     * These MUST land on the project before the runner runs: the subscribe union
-     * is `resolveDesiredApis(project)`, so a pick that is not persisted is never
-     * subscribed. The dashboard flow used to write them into WIZARD state, which
-     * the dashboard never persists — the picks were silently dropped, the API was
-     * not subscribed, and Manage APIs opened with nothing checked (2026-08-04).
-     */
-    apis?: string[];
-}> = async (context, payload) => {
+export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponentRequestPayload> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };

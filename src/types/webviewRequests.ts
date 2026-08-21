@@ -360,3 +360,39 @@ export interface InstallPrerequisiteRequestPayload {
     prerequisiteId?: string;
     version?: string;
 }
+
+/** A destination entity reference (id + display fields) for setProjectDestination. */
+export interface DestinationRef {
+    id: string;
+    name?: string;
+    title?: string;
+}
+
+/** `setProjectDestination` — persist the Adobe project/workspace integrations deploy to. */
+export interface SetProjectDestinationRequestPayload {
+    project?: DestinationRef;
+    workspace?: DestinationRef;
+}
+
+/**
+ * `addAppBuilderComponent` — add (and deploy) an App Builder integration on a
+ * live project: a catalog entry by `id`, or a custom source by owner/repo.
+ */
+export interface AddAppBuilderComponentRequestPayload {
+    id?: string;
+    source?: { owner: string; repo: string };
+    /** Display name for a named blank instance (the flow's naming step). */
+    name?: string;
+    /** Collision-checked instance id for a named blank instance. */
+    instanceId?: string;
+    /**
+     * The free Adobe APIs the user picked in the flow's API stage.
+     *
+     * These MUST land on the project before the runner runs: the subscribe union
+     * is `resolveDesiredApis(project)`, so a pick that is not persisted is never
+     * subscribed. The dashboard flow used to write them into WIZARD state, which
+     * the dashboard never persists — the picks were silently dropped, the API was
+     * not subscribed, and Manage APIs opened with nothing checked (2026-08-04).
+     */
+    apis?: string[];
+}
