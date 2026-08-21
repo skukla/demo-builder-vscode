@@ -15,6 +15,13 @@
 import * as vscode from 'vscode';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
+import {
+    HELIX_ADMIN_URL,
+    buildDeleteHeaders,
+    buildPartitionUrl,
+    buildPublishHeaders,
+    normalizeWebPath as normalizeHelixPath,
+} from './helixApiClient';
 import * as keyStore from './helixKeyStore';
 import { DaLiveAuthError } from './types';
 import {
@@ -33,7 +40,6 @@ import type { Logger } from '@/types/logger';
 // ==========================================================
 
 /** Helix Admin API base URL */
-const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 
 /**
  * What a 401 from the Helix Admin API actually means.
@@ -274,10 +280,8 @@ export class HelixService {
     // ==========================================================
 
     /** Normalize web path: ensure leading slash, remove trailing slash (except for root). */
-    private normalizeWebPath(path: string): string {
-        const p = path.startsWith('/') ? path : `/${path}`;
-        return p.endsWith('/') && p !== '/' ? p.slice(0, -1) : p;
-    }
+    // normalizeWebPath lives in helixApiClient — ONE path-spelling rule
+    // (this class used to carry its own copy).
 
     /**
      * Build auth headers for DELETE operations (unpublish/delete preview).
@@ -293,7 +297,10 @@ export class HelixService {
      * - DELETE /live + DA.live Bearer (Authorization: Bearer) → 204 SUCCESS
      */
     private async getDeleteAuthHeaders(): Promise<Record<string, string>> {
-        return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
+        // Token discovery here; the credential SPELLING is the client's
+        // buildDeleteHeaders — one definition instead of the old hand-kept
+        // "matches exactly" mirror.
+        return buildDeleteHeaders({ daLiveToken: await this.getDaLiveToken() });
     }
 
     /**
@@ -647,8 +654,8 @@ export class HelixService {
         liveStatus?: number;
         error?: string;
     }> {
-        const cleanPath = this.normalizeWebPath(path);
-        const url = `${HELIX_ADMIN_URL}/status/${org}/${site}/${branch}${cleanPath}`;
+        const cleanPath = normalizeHelixPath(path);
+        const url = buildPartitionUrl('status', org, site, branch, cleanPath);
 
         try {
             const response = await fetch(url, {
@@ -688,21 +695,16 @@ export class HelixService {
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        const cleanPath = this.normalizeWebPath(path);
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}${cleanPath}`;
+        const cleanPath = normalizeHelixPath(path);
+        const url = buildPartitionUrl('preview', org, site, branch, cleanPath);
 
         this.logger.debug(`[Helix] Previewing page: ${url}`);
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                // Authorization FIRST: once the site has any `access.admin` role the
-                // admin API closes to callers without an accepted admin identity,
-                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
-                Authorization: `Bearer ${imsToken}`,
-                'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-            },
+            // ONE credential definition with the vscode-free client (the
+            // Authorization-first rationale lives on buildPublishHeaders).
+            headers: buildPublishHeaders({ githubToken, daLiveToken: imsToken }),
             signal: AbortSignal.timeout(TIMEOUTS.LONG),
         });
 
@@ -741,21 +743,16 @@ export class HelixService {
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
         const imsToken = await this.getDaLiveToken();
-        const cleanPath = this.normalizeWebPath(path);
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}${cleanPath}`;
+        const cleanPath = normalizeHelixPath(path);
+        const url = buildPartitionUrl('live', org, site, branch, cleanPath);
 
         this.logger.debug(`[Helix] Publishing page: ${url}`);
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                // Authorization FIRST: once the site has any `access.admin` role the
-                // admin API closes to callers without an accepted admin identity,
-                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
-                Authorization: `Bearer ${imsToken}`,
-                'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-            },
+            // ONE credential definition with the vscode-free client (the
+            // Authorization-first rationale lives on buildPublishHeaders).
+            headers: buildPublishHeaders({ githubToken, daLiveToken: imsToken }),
             signal: AbortSignal.timeout(TIMEOUTS.LONG),
         });
 
@@ -978,8 +975,8 @@ export class HelixService {
         branch: string,
         retryCount: number = 0,
     ): Promise<{ success: boolean }> {
-        const cleanPath = this.normalizeWebPath(path);
-        const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${cleanPath}`;
+        const cleanPath = normalizeHelixPath(path);
+        const url = buildPartitionUrl(partition, org, site, branch, cleanPath);
         const action = partition === 'live' ? 'Unpublishing' : 'Deleting preview';
         const successLog = partition === 'live' ? 'Unpublished' : 'Preview deleted';
         const errorPrefix = partition === 'live' ? 'unpublish' : 'delete preview';
@@ -1185,7 +1182,7 @@ export class HelixService {
         // Bulk API: POST to /preview/{org}/{site}/{ref}/*
         // The /* in the URL triggers bulk/async processing (returns 202)
         // The paths array in the body specifies what to process
-        const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}/*`;
+        const url = buildPartitionUrl('preview', org, site, branch, '/*');
 
         // Use explicit paths if provided, otherwise default to root
         const pathsToProcess = getPathsOrDefault(paths);
@@ -1291,7 +1288,7 @@ export class HelixService {
         // Bulk API: POST to /live/{org}/{site}/{ref}/*
         // The /* in the URL triggers bulk/async processing (returns 202)
         // The paths array in the body specifies what to process
-        const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}/*`;
+        const url = buildPartitionUrl('live', org, site, branch, '/*');
 
         // Use explicit paths if provided, otherwise default to root
         const pathsToProcess = getPathsOrDefault(paths);
@@ -1710,7 +1707,7 @@ export class HelixService {
      */
     async purgeCacheAll(org: string, site: string, branch: string = DEFAULT_BRANCH): Promise<void> {
         const token = await this.getGitHubToken();
-        const url = `${HELIX_ADMIN_URL}/cache/${org}/${site}/${branch}/*`;
+        const url = buildPartitionUrl('cache', org, site, branch, '/*');
 
         this.logger.debug(`[Helix] Purging all cached content: ${url}`);
 
@@ -1781,8 +1778,8 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
         const githubToken = await this.getGitHubToken();
-        const cleanPath = this.normalizeWebPath(path);
-        const url = `${HELIX_ADMIN_URL}/code/${org}/${site}/${branch}${cleanPath}`;
+        const cleanPath = normalizeHelixPath(path);
+        const url = buildPartitionUrl('code', org, site, branch, cleanPath);
 
         this.logger.debug(`[Helix] Previewing code: ${url}`);
 

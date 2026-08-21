@@ -215,25 +215,29 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
 
-    it('helix PUBLISH verbs: URL builders exist in exactly the two known engines', () => {
-        // Audited 2026-08-22: the sweep's biggest find — helixService and the
-        // vscode-free helixApiClient each implement preview/live/code URL
-        // building; the service never imports the client (its old comment
-        // claiming otherwise was false). Consolidation is filed
-        // (2026-08-22-helix-publish-has-two-engines.md); this pin's job until
-        // then is narrower: no THIRD engine. Config-Service and status-check
-        // modules share the admin.hlx.page HOST but never build these verb
-        // paths, which is why the pattern anchors on the path segment.
-        const primitive = /admin\.hlx\.page.*\/(preview|live|code)\/|\/(preview|live|code)\/\$\{/;
-        const spine = [
-            'features/eds/services/helixApiClient.ts',
-            'features/eds/services/helixService.ts',
-        ];
+    it('helix URLS + HOST: one engine — every partition URL and the host live in helixApiClient', () => {
+        // The sweep's biggest find, CONSOLIDATED 2026-08-22 (was: two parallel
+        // engines — helixService built its own verb URLs and credentials and
+        // never imported the client). Now the client owns buildPartitionUrl /
+        // buildPublishHeaders / buildDeleteHeaders / normalizeWebPath and the
+        // service delegates; the fix also added the missing publish
+        // `Authorization` the client's engine lacked (MCP publishes failed on
+        // admin-protected sites). Host literal: seven per-file copies → one.
+        // Two invariants: (1) the ONE generic partition template lives in the
+        // client's buildPartitionUrl; (2) verb-literal URL spelling is extinct
+        // — anyone re-introducing `.../preview/${...}` writes a second engine
+        // and fails here. The two /status/ READ probes (githubAppService,
+        // githubCredentialProbe) build their own query-shaped URLs and are
+        // out of scope: a second reader is drift-tolerant, a second WRITER is
+        // not.
+        const genericTemplate = /\$\{HELIX_ADMIN_URL\}\/\$\{partition\}/;
+        const verbLiteral = /\$\{HELIX_ADMIN_URL\}\/(preview|live|code|cache)\/|admin\.hlx\.page\/(preview|live|code|cache)\/\$\{/;
+        const hostLiteral = /['"`]https:\/\/admin\.hlx\.page/;
+        const spine = ['features/eds/services/helixApiClient.ts'];
 
-        const hits = filesTouchingPrimitive(primitive);
-
-        expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(filesTouchingPrimitive(genericTemplate)).toEqual(spine);
+        expect(filesTouchingPrimitive(verbLiteral)).toEqual([]);
+        expect(filesTouchingPrimitive(hostLiteral)).toEqual(spine);
     });
 
     it('da.live HOST: the admin.da.live literal is defined once, in daLiveConstants', () => {

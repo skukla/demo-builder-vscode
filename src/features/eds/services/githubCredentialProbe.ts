@@ -26,11 +26,12 @@
 
 import { describeTokenType } from './githubAppService';
 import type { GitHubTokenService } from './githubTokenService';
+import { HELIX_ADMIN_URL } from './helixApiClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 const GITHUB_API_BASE_URL = 'https://api.github.com';
-const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
+// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 /** What each leg of the probe found. Absent legs mean "not run". */
 export interface CredentialProbeResult {
@@ -155,7 +156,7 @@ export async function probeGitHubCredential(
     const adminApi: NonNullable<CredentialProbeResult['adminApi']> = {};
     try {
         const response = await fetch(
-            `${HELIX_ADMIN_BASE_URL}/status/${repoFullName}/main?editUrl=auto`,
+            `${HELIX_ADMIN_URL}/status/${repoFullName}/main?editUrl=auto`,
             {
                 method: 'GET',
                 headers: { 'x-auth-token': token },

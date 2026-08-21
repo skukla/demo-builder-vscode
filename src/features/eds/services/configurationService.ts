@@ -21,6 +21,7 @@
  */
 
 import type { TokenProvider } from './daLiveContentOperations';
+import { HELIX_ADMIN_URL } from './helixApiClient';
 import { captureSiteGrants, restoreCapturedGrants } from './siteGrantPreservation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -30,7 +31,7 @@ import type { Logger } from '@/types/logger';
 // ==========================================================
 
 /** AEM Admin API base URL (same host as preview/publish) */
-const ADMIN_API_URL = 'https://admin.hlx.page';
+// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 // ==========================================================
 // Types
@@ -199,7 +200,7 @@ export class ConfigurationService {
             contentSourceType,
             contentOverlayUrl,
         } = params;
-        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(
@@ -354,7 +355,7 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async deleteSiteConfig(org: string, site: string): Promise<ConfigServiceResult> {
-        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Deleting site config: ${org}/${site}`);
 
@@ -378,7 +379,7 @@ export class ConfigurationService {
         org: string,
         site: string,
     ): Promise<{ readable: boolean; overlayUrl?: string }> {
-        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
         try {
             const token = await this.getImsToken();
             const response = await fetch(url, {

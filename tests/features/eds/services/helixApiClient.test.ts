@@ -62,6 +62,23 @@ describe('helixApiClient', () => {
             expect(headers['x-content-source-authorization']).toBe('Bearer dalive-ims-xyz');
         });
 
+        // The 2026-08-22 consolidation's bug fix. Once a site carries any
+        // access.admin role — which the setup pipeline itself grants — the
+        // admin API closes to callers without an accepted admin identity, and
+        // the GitHub token is not one (helixService documented this; the
+        // client silently lacked the header, so MCP-driven publishes failed
+        // on exactly the protected sites the extension had just created).
+        // Same drift class as the DELETE credential caught 2026-08-04.
+        it('sends the DA.live Bearer as Authorization — protected sites refuse without it', async () => {
+            await previewPage('myorg', 'mysite', '/', 'main', TOKENS);
+            await publishPage('myorg', 'mysite', '/', 'main', TOKENS);
+
+            for (const call of mockFetch.mock.calls) {
+                const headers = (call[1] as RequestInit).headers as Record<string, string>;
+                expect(headers.Authorization).toBe('Bearer dalive-ims-xyz');
+            }
+        });
+
         it('throws HelixApiError(401) on 401', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
 
@@ -177,7 +194,12 @@ describe('helixApiClient', () => {
 
         // Control: PUBLISH keeps its own credential. Without this, deleting the
         // publish headers outright would satisfy both assertions above.
-        it('PUBLISH still uses x-auth-token, not Authorization', async () => {
+        // Rewritten 2026-08-22: this test used to pin publish as having NO
+        // Authorization header — a belief the spine sweep overturned (without
+        // it, publishes fail on the admin-protected sites the setup pipeline
+        // creates). Publish now sends the GitHub token AND the DA.live Bearer;
+        // DELETE remains Bearer-only per the ADR-002 matrix.
+        it('PUBLISH sends x-auth-token AND the DA.live Bearer', async () => {
             await publishPage('myorg', 'mysite', '/p', 'main', TOKENS);
 
             const headers = (mockFetch.mock.calls[0][1] as RequestInit).headers as Record<
@@ -185,7 +207,7 @@ describe('helixApiClient', () => {
                 string
             >;
             expect(headers['x-auth-token']).toBe('gh-token-abc');
-            expect(headers.Authorization).toBeUndefined();
+            expect(headers.Authorization).toBe('Bearer dalive-ims-xyz');
         });
 
         it('treats 404 (already absent) as success on both partitions', async () => {

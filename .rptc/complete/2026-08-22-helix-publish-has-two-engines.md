@@ -3,6 +3,17 @@
 **Filed:** 2026-08-22
 **Origin:** The spine sweep (call-path-audit, Helix row) — the campaign's
 biggest find.
+**SHIPPED 2026-08-22, same day filed.** The client owns `buildPartitionUrl` /
+`buildPublishHeaders` / `buildDeleteHeaders` / `normalizeWebPath` +
+`HELIX_ADMIN_URL`; the service delegates every URL and credential (13 URL
+sites, both header literals, the delete-auth hand-mirror, the private
+normalize copy — all gone); seven host constants → one. BUG FIXED test-first:
+the client's publish headers lacked the `Authorization` Bearer required on
+admin-protected sites, so MCP publishes failed exactly where the extension
+succeeded — the same drift class as the 2026-08-04 DELETE credential, proven
+by a RED test before the fix and a rewritten stale invariant test after. Pin
+now asserts ONE engine + extinct verb-literals + one host literal
+(mutation-proven). All 235 consumer suites unchanged; full gate green.
 
 ## The claim (verified, both files read 2026-08-22)
 

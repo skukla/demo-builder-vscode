@@ -48,11 +48,12 @@
  */
 
 import type { TokenProvider } from './daLiveContentOperations';
+import { HELIX_ADMIN_URL } from './helixApiClient';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
-const ADMIN_API_URL = 'https://admin.hlx.page';
+// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 /**
  * Mask every email-shaped substring in free text from a third party.
@@ -156,7 +157,7 @@ async function call(
     if (!token) return { status: 0, error: 'no DA.live credential', noCredential: true };
 
     try {
-        const response = await fetch(`${ADMIN_API_URL}${path}`, {
+        const response = await fetch(`${HELIX_ADMIN_URL}${path}`, {
             method,
             headers: {
                 Authorization: `Bearer ${token}`,
