@@ -19,8 +19,6 @@
     "backends": { "$ref": "#/definitions/componentSection" },
     "mesh": { "$ref": "#/definitions/componentSection" },
     "appBuilder": { "$ref": "#/definitions/componentSection" },
-    "brands": { "$ref": "#/definitions/componentSection" },
-    "stacks": { "$ref": "#/definitions/componentSection" },
     "dependencies": { "$ref": "#/definitions/componentSection" },
     "integrations": { "$ref": "#/definitions/componentSection" },
     "addons": { "$ref": "#/definitions/componentSection" },

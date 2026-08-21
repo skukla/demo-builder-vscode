@@ -44,7 +44,9 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
             const headlessMesh = componentsJson.mesh['headless-commerce-mesh'];
 
             expect(headlessMesh).toBeDefined();
-            expect(headlessMesh.source?.url).toBe('https://github.com/skukla/headless-commerce-mesh');
+            expect(headlessMesh.source?.url).toBe(
+                'https://github.com/skukla/headless-commerce-mesh'
+            );
         });
 
         it('EDS mesh should have passthrough description mentioning EDS/dropins', () => {
@@ -60,31 +62,12 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
         });
     });
 
-    describe('stack routing', () => {
-        it('eds-paas stack should have empty requiredComponents (mesh now optional)', () => {
-            const stack = componentsJson.stacks['eds-paas'];
-
-            expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toEqual([]);
-            expect(stack.requiredComponents).not.toContain('commerce-mesh');
-        });
-
-        it('eds-accs stack should have empty requiredComponents (mesh now optional)', () => {
-            const stack = componentsJson.stacks['eds-accs'];
-
-            expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toEqual([]);
-            expect(stack.requiredComponents).not.toContain('commerce-mesh');
-        });
-
-        it('headless-paas stack should have empty requiredComponents (mesh now optional)', () => {
-            const stack = componentsJson.stacks['headless-paas'];
-
-            expect(stack).toBeDefined();
-            expect(stack.requiredComponents).toEqual([]);
-            expect(stack.requiredComponents).not.toContain('commerce-mesh');
-        });
-    });
+    // No 'stack routing' describe any more: it pinned the components.json
+    // `stacks` SECTION, which was a dead duplicate of stacks.json (zero
+    // readers) deleted 2026-08-21. The live guarantees — mesh optional per
+    // architecture, dependencies empty — are pinned against stacks.json in
+    // tests/templates/stacks.test.ts, and the no-legacy-commerce-mesh sweep
+    // lives in tests/integration/features/mesh/meshArchitectureRouting.test.ts.
 
     describe('frontend dependencies', () => {
         it('headless frontend should have empty required dependencies (mesh now optional)', () => {
@@ -105,22 +88,6 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
     });
 
     describe('no legacy references', () => {
-        it('should have no references to old "commerce-mesh" in stacks', () => {
-            const stacks = Object.values(componentsJson.stacks || {}) as Array<{
-                requiredComponents?: string[];
-                optionalComponents?: string[];
-            }>;
-
-            for (const stack of stacks) {
-                const allComponents = [
-                    ...(stack.requiredComponents || []),
-                    ...(stack.optionalComponents || []),
-                ];
-
-                expect(allComponents).not.toContain('commerce-mesh');
-            }
-        });
-
         it('should have no references to old "commerce-mesh" in frontend dependencies', () => {
             const frontends = Object.values(componentsJson.frontends || {}) as Array<{
                 dependencies?: { required?: string[]; optional?: string[] };

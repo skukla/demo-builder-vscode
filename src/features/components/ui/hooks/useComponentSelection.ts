@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { RawComponentDefinition } from '@/types/components';
+import { RawComponentDefinition, TransformedComponentDefinition } from '@/types/components';
 import { WizardState } from '@/types/webview';
 
 /**
@@ -30,14 +30,19 @@ function resolveServices(
     ]);
 
     // Determine missing services
-    const missingServices = requiredServices.filter((serviceId) => !providedServices.has(serviceId));
+    const missingServices = requiredServices.filter(
+        (serviceId) => !providedServices.has(serviceId),
+    );
 
     return { missingServices };
 }
 
 interface ComponentsData {
-    backends?: RawComponentDefinition[];
-    addons?: RawComponentDefinition[];
+    // Transformed, not Raw: these arrays arrive from the wizard's
+    // get-components-data response, where toComponentDataArray has already
+    // injected `id` from the record key (raw JSON entries carry no id).
+    backends?: TransformedComponentDefinition[];
+    addons?: TransformedComponentDefinition[];
     services?: Record<string, { id: string; name: string }>;
 }
 
@@ -84,13 +89,13 @@ export function useComponentSelection({
     const stableAddons = selectedAddons ?? EMPTY_ADDONS;
 
     // Initialize from state (includes defaults from init)
-    const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
+    const [selectedFrontend, setSelectedFrontend] = useState<string>(
+        state.components?.frontend || '',
+    );
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
 
     // Use useSetToggle for multi-select state - provides Set + toggle handler in one
-    const [selectedDependencies] = useSetToggle<string>(
-        state.components?.dependencies || [],
-    );
+    const [selectedDependencies] = useSetToggle<string>(state.components?.dependencies || []);
     const [selectedServices, handleServiceToggle, setSelectedServices] = useSetToggle<string>(
         state.components?.services || [],
     );
@@ -105,20 +110,20 @@ export function useComponentSelection({
         }
 
         // Find the selected backend definition
-        const backend = componentsData.backends?.find(b => b.id === selectedBackend);
+        const backend = componentsData.backends?.find((b) => b.id === selectedBackend);
         if (!backend) {
             return [];
         }
 
         // Find selected addon definitions (use stableAddons for stable reference)
-        const addons = componentsData.addons?.filter(a => stableAddons.includes(a.id)) || [];
+        const addons = componentsData.addons?.filter((a) => stableAddons.includes(a.id)) || [];
 
         // Resolve missing services using the service resolution algorithm
         const { missingServices } = resolveServices(backend, addons, []);
 
         // Map missing service IDs to ComponentOptions with names from the services registry
         return missingServices
-            .map(serviceId => {
+            .map((serviceId) => {
                 const service = componentsData.services?.[serviceId];
                 return service ? { id: serviceId, name: service.name } : null;
             })
@@ -129,27 +134,42 @@ export function useComponentSelection({
     const lastSentSelectionRef = useRef<string>('');
 
     // Create debounced versions (wait for debounce delay after last change)
-    const debouncedFrontend = useDebouncedValue(selectedFrontend, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-    const debouncedBackend = useDebouncedValue(selectedBackend, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-    const debouncedDependencies = useDebouncedValue(selectedDependencies, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-    const debouncedServices = useDebouncedValue(selectedServices, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
-    const debouncedIntegrations = useDebouncedValue(selectedIntegrations, FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    const debouncedFrontend = useDebouncedValue(
+        selectedFrontend,
+        FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE,
+    );
+    const debouncedBackend = useDebouncedValue(
+        selectedBackend,
+        FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE,
+    );
+    const debouncedDependencies = useDebouncedValue(
+        selectedDependencies,
+        FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE,
+    );
+    const debouncedServices = useDebouncedValue(
+        selectedServices,
+        FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE,
+    );
+    const debouncedIntegrations = useDebouncedValue(
+        selectedIntegrations,
+        FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE,
+    );
 
     // Initialize required services when backend changes or addons change
     // Services are now dynamically determined based on what's missing
     useEffect(() => {
         if (selectedBackend && servicesToShow.length > 0) {
             // Add all missing services (they're required)
-            const serviceIds = servicesToShow.map(s => s.id);
-            setSelectedServices(prev => {
+            const serviceIds = servicesToShow.map((s) => s.id);
+            setSelectedServices((prev) => {
                 // IMPORTANT: Check if services are already selected to prevent infinite loop
                 // (React compares Sets by reference, returning same ref prevents re-render)
-                const hasAllServices = serviceIds.every(service => prev.has(service));
+                const hasAllServices = serviceIds.every((service) => prev.has(service));
                 if (hasAllServices) {
                     return prev; // No change needed
                 }
                 const newSet = new Set(prev);
-                serviceIds.forEach(service => newSet.add(service));
+                serviceIds.forEach((service) => newSet.add(service));
                 return newSet;
             });
         } else if (selectedBackend && servicesToShow.length === 0) {
@@ -157,7 +177,7 @@ export function useComponentSelection({
             // Clear services since backend/addons provide everything
             // IMPORTANT: Return same reference if already empty to prevent infinite loop
             // (React compares Sets by reference, not content)
-            setSelectedServices(prev => prev.size === 0 ? prev : new Set());
+            setSelectedServices((prev) => (prev.size === 0 ? prev : new Set()));
         }
     }, [selectedBackend, servicesToShow, setSelectedServices]);
 
@@ -182,7 +202,15 @@ export function useComponentSelection({
             lastSentSelectionRef.current = selectionKey;
             webviewClient.postMessage('update-component-selection', components);
         }
-    }, [debouncedFrontend, debouncedBackend, debouncedDependencies, debouncedServices, debouncedIntegrations, setCanProceed, updateState]);
+    }, [
+        debouncedFrontend,
+        debouncedBackend,
+        debouncedDependencies,
+        debouncedServices,
+        debouncedIntegrations,
+        setCanProceed,
+        updateState,
+    ]);
 
     // Toggle handlers are now provided by useSetToggle above
 

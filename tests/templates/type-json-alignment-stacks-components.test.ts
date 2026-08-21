@@ -28,6 +28,9 @@ const STACK_FIELDS = new Set([
     'requiresDaLive',
 ]);
 
+// Mirrors RawComponentRegistry (src/types/components.ts). 'brands' and
+// 'stacks' were dead sections (zero readers — brands live in
+// demo-packages.json, stacks in stacks.json), deleted 2026-08-21.
 const COMPONENTS_ROOT_FIELDS = new Set([
     '$schema',
     'version',
@@ -36,8 +39,6 @@ const COMPONENTS_ROOT_FIELDS = new Set([
     'backends',
     'mesh',
     'appBuilder',
-    'brands',
-    'stacks',
     'dependencies',
     'integrations',
     'addons',

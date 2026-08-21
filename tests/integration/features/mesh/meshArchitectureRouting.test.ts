@@ -193,17 +193,24 @@ describe('Mesh Architecture Routing - Integration Tests', () => {
         });
 
         it('no stack should reference the old commerce-mesh component', () => {
-            // Given: All stacks in components.json stacks section
-            const stacks = componentsJson.stacks;
+            // Given: All stacks in stacks.json — THE stack registry. (This
+            // used to sweep components.json's `stacks` section, a dead
+            // duplicate with zero readers, deleted 2026-08-21.)
+            const stacks = stacksJson.stacks as Array<{
+                dependencies?: string[];
+                optionalDependencies?: string[];
+            }>;
+            expect(stacks.length).toBeGreaterThan(0);
 
             // When: Checking for legacy commerce-mesh references
-            for (const [_stackId, stack] of Object.entries(stacks)) {
-                const requiredComponents = (stack as any).requiredComponents || [];
-                const optionalComponents = (stack as any).optionalComponents || [];
+            for (const stack of stacks) {
+                const allDeps = [
+                    ...(stack.dependencies || []),
+                    ...(stack.optionalDependencies || []),
+                ];
 
                 // Then: No stack should reference the old commerce-mesh
-                expect(requiredComponents).not.toContain('commerce-mesh');
-                expect(optionalComponents).not.toContain('commerce-mesh');
+                expect(allDeps).not.toContain('commerce-mesh');
             }
         });
     });

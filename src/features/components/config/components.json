@@ -223,81 +223,6 @@
 
     "appBuilder": {},
 
-    "brands": {
-        "citisignal": {
-            "name": "CitiSignal",
-            "description": "Modern telecommunications brand",
-            "icon": "citisignal",
-            "configDefaults": {
-                "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
-                "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
-                "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us",
-                "ACCS_WEBSITE_CODE": "citisignal",
-                "ACCS_STORE_CODE": "citisignal_store",
-                "ACCS_STORE_VIEW_CODE": "citisignal_us"
-            },
-            "contentSource": {
-                "github": {
-                    "owner": "demo-system-stores",
-                    "repo": "accs-citisignal",
-                    "branch": "main"
-                },
-                "daLive": {
-                    "org": "demo-system-stores",
-                    "site": "accs-citisignal"
-                }
-            }
-        },
-        "buildright": {
-            "name": "BuildRight",
-            "description": "Hardware and home improvement brand",
-            "icon": "buildright",
-            "configDefaults": {
-                "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",
-                "ADOBE_COMMERCE_STORE_CODE": "buildright_store",
-                "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
-            },
-            "contentSource": {
-                "github": {
-                    "owner": "skukla",
-                    "repo": "buildright-eds",
-                    "branch": "main"
-                },
-                "daLive": {
-                    "org": "demo-system-stores",
-                    "site": "buildright"
-                }
-            }
-        }
-    },
-
-    "stacks": {
-        "eds-paas": {
-            "name": "EDS + Commerce PaaS",
-            "description": "Edge Delivery Services with Adobe Commerce PaaS backend",
-            "frontend": "eds-storefront",
-            "backend": "adobe-commerce-paas",
-            "requiredComponents": [],
-            "optionalComponents": []
-        },
-        "eds-accs": {
-            "name": "EDS + Commerce Cloud Service",
-            "description": "Edge Delivery Services with Adobe Commerce Cloud Service backend",
-            "frontend": "eds-storefront",
-            "backend": "adobe-commerce-accs",
-            "requiredComponents": [],
-            "optionalComponents": []
-        },
-        "headless-paas": {
-            "name": "Headless + Commerce PaaS",
-            "description": "Next.js headless storefront with Adobe Commerce PaaS backend",
-            "frontend": "headless",
-            "backend": "adobe-commerce-paas",
-            "requiredComponents": [],
-            "optionalComponents": []
-        }
-    },
-
     "dependencies": {},
 
     "integrations": {
@@ -319,7 +244,6 @@
         "adobe-commerce-aco": {
             "name": "Adobe Commerce Optimizer",
             "description": "Catalog optimization service for enhanced product discovery and merchandising",
-            "addonFor": ["adobe-commerce-paas", "adobe-commerce-accs"],
             "configuration": {
                 "providesServices": ["catalog-service", "live-search"],
                 "requiredEnvVars": [
@@ -336,8 +260,6 @@
         "commerce-demo-ingestion": {
             "name": "Commerce Demo Ingestion",
             "description": "Tool for populating ACCS instances with demo data",
-            "category": "tools",
-            "hidden": true,
             "source": {
                 "type": "git",
                 "url": "https://github.com/PMET-public/commerce-demo-ingestion",
@@ -346,11 +268,6 @@
                     "tag": "v1.0.0"
                 }
             },
-            "dataRepository": {
-                "url": "https://github.com/PMET-public/vertical-data-citisignal",
-                "tag": "v1.0.0"
-            },
-            "installPath": "~/.demo-builder/tools/commerce-demo-ingestion",
             "configuration": {
                 "nodeVersion": "18",
                 "requiredEnvVars": [
@@ -358,11 +275,7 @@
                     "ACO_API_KEY",
                     "ACO_TENANT_ID",
                     "ACO_ENVIRONMENT_ID"
-                ],
-                "scripts": {
-                    "import": "npm run import:aco",
-                    "cleanup": "npm run delete:aco"
-                }
+                ]
             }
         }
     },

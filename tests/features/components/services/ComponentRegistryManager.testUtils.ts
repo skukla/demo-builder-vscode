@@ -34,7 +34,6 @@ export const mockRawRegistry: RawComponentRegistry = {
     },
     frontends: {
         eds: {
-            id: 'eds',
             name: 'Edge Delivery Services',
             description: 'EDS storefront',
             type: 'frontend',
@@ -49,7 +48,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             },
         },
         headless: {
-            id: 'headless',
             name: 'Headless Storefront',
             description: 'Next.js headless storefront',
             type: 'frontend',
@@ -62,7 +60,6 @@ export const mockRawRegistry: RawComponentRegistry = {
     },
     backends: {
         'adobe-commerce-paas': {
-            id: 'adobe-commerce-paas',
             name: 'Adobe Commerce PaaS',
             description: 'Adobe Commerce DSN instance',
             type: 'backend',
@@ -73,7 +70,6 @@ export const mockRawRegistry: RawComponentRegistry = {
     },
     mesh: {
         'commerce-mesh': {
-            id: 'commerce-mesh',
             name: 'Adobe Commerce API Mesh',
             description: 'GraphQL gateway',
             type: 'dependency',
@@ -85,7 +81,6 @@ export const mockRawRegistry: RawComponentRegistry = {
     },
     dependencies: {
         'test-tool': {
-            id: 'test-tool',
             name: 'Test Tool',
             description: 'Generic test dependency tool',
             type: 'dependency',
@@ -96,14 +91,12 @@ export const mockRawRegistry: RawComponentRegistry = {
     },
     integrations: {
         'experience-platform': {
-            id: 'experience-platform',
             name: 'Experience Platform',
             description: 'Adobe Experience Platform integration',
         },
     },
     infrastructure: {
         'adobe-cli': {
-            id: 'adobe-cli',
             name: 'Adobe I/O CLI & SDK',
             description: 'Command-line interface',
             type: 'external-system',

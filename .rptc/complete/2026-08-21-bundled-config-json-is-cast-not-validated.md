@@ -1,7 +1,46 @@
 # Bundled config JSON is cast to its declared type, never validated
 
-**Filed:** 2026-08-21 · **LARGELY DONE same day** — see Progress below; one
-scoped remainder.
+**Filed:** 2026-08-21 · **DONE same day, both halves** — see Progress below.
+
+## Progress 2026-08-21 (second pass) — the remainder is closed
+
+The interface↔schema link is no longer prose. Rather than comparing schemas
+(schema equivalence is impractical), `tests/templates/config-interface-contracts.test.ts`
+validates each real config against a schema GENERATED from the TypeScript
+interface its load-site cast claims (`ts-json-schema-generator`, new
+devDependency). With both suites validating the SAME real data, the hand
+schema and the interface cannot diverge anywhere the shipped data exercises.
+The `as unknown as` casts themselves stay — `resolveJsonModule` still cannot
+produce literal unions — but both legs of the check they suppress now run in
+CI.
+
+Day-one catches of the second pass, all fixed:
+
+- **`RawComponentDefinition` required an `id` no raw entry has ever carried**
+  — the record key is the id; `enhanceComponent` injects it. Same shape as
+  the envVars `key` finding. Now: Raw has no `id`;
+  `TransformedComponentDefinition = Raw & { id: string }`. The registry test
+  fixtures had invented `id` on raw entries (the fixture-not-copied-from-a-
+  real-artifact trap) — 8 lines deleted.
+- **`ServiceDefinition` claimed a required `id`** that neither the file nor
+  `expandServices` ever provides; consumers derive it from the record key.
+  Phantom field removed; tsc confirmed zero readers.
+- **`components.json` carried two dead SECTIONS** — `brands` (brands live in
+  demo-packages.json) and `stacks` (stacks live in stacks.json), zero readers
+  each, verified with a positive-control grep. Deleted, along with six dead
+  per-entry fields (`addonFor`, and `category`/`hidden`/`dataRepository`/
+  `installPath`/`configuration.scripts` on the tool entry — `toolManager`
+  hardcodes its own config and never reads the registry entry).
+- **The live `addons` section was missing from `RawComponentRegistry`** (read
+  by `configGenerator` and the MCP discovery sections). Declared.
+- Four tests were pinning the DEAD `stacks` section (one of them vacuously,
+  via `|| {}`): the legacy-commerce-mesh sweep now runs against stacks.json —
+  the real stack registry — and the duplicated mesh-optional pins were
+  removed in favor of the existing stacks.test.ts coverage.
+
+---
+
+Original filing (first-pass progress and the analysis) below.
 
 ## Progress 2026-08-21
 
