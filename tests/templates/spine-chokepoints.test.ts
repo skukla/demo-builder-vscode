@@ -66,4 +66,22 @@ describe('spine choke-points', () => {
         // deploy command, webview/MCP deploy-api-mesh, integrations runner,
         // EDS reset, non-EDS reset) all converge on deployMeshComponent here.
     });
+
+    it('app-builder DEPLOY: the aio app deploy primitive lives only in appDeployment', () => {
+        // Census 2026-08-22: exactly one code site issues the deploy;
+        // the sibling of the mesh spine per the locked Option A architecture
+        // (deployAppComponent, wrapped in withOrgContext by callers).
+        // MCP tool-description STRINGS mention the command without running it —
+        // the comment/prefix filter in filesTouchingPrimitive does not catch
+        // string literals, so a description-text hit shows up as a stray and
+        // must be quoted differently, not allowlisted.
+        const primitive =
+            /commandManager\.execute\(\s*'aio app deploy|`aio app deploy|"aio app deploy/;
+        const spine = ['features/app-builder/services/appDeployment.ts'];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
 });
