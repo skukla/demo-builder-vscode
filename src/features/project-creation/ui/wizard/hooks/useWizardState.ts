@@ -96,7 +96,8 @@ function buildEditModeEdsConfig(
             ? {
                   isAuthenticated: false,
                   isChecking: true,
-                  user: { login: owner },
+                  // Seed with the login only; the auth check fills the rest.
+                  user: { login: owner, email: null, name: null, avatarUrl: null },
               }
             : undefined,
         daLiveAuth: hasDaLive
@@ -147,7 +148,8 @@ function buildImportModeEdsConfig(
         githubAuth: hasGithub
             ? {
                   isAuthenticated: true,
-                  user: { login: owner },
+                  // Seed with the login only; the auth check fills the rest.
+                  user: { login: owner, email: null, name: null, avatarUrl: null },
               }
             : undefined,
         daLiveAuth: hasDaLive

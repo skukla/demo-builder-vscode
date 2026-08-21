@@ -21,13 +21,12 @@ import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { Spinner } from '@/core/ui/components/ui';
+import type { GitHubUser } from '@/types/webviewPayloads';
 
-/** GitHub user information */
-export interface GitHubUser {
-    login: string;
-    avatarUrl?: string;
-    email?: string;
-}
+// GitHubUser lives in @/types/webviewPayloads — ONE declaration with the wire
+// pushes (this card used to carry an optional-fields twin of the nullable
+// original). Re-exported for the component barrel's existing consumers.
+export type { GitHubUser } from '@/types/webviewPayloads';
 
 /** Props for GitHubServiceCard component */
 export interface GitHubServiceCardProps {

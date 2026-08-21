@@ -1,3 +1,4 @@
+import type { GitHubUser } from '@/types/webviewPayloads';
 /**
  * GitHub Service Types
  *
@@ -27,19 +28,9 @@ export interface GitHubTokenValidation {
     user?: GitHubUser;
 }
 
-/**
- * GitHub user information
- */
-export interface GitHubUser {
-    /** GitHub username */
-    login: string;
-    /** User's email address */
-    email: string | null;
-    /** User's display name */
-    name: string | null;
-    /** URL to user's avatar image */
-    avatarUrl: string | null;
-}
+// GitHubUser moved to @/types/webviewPayloads — ONE declaration shared with
+// the github-auth-status/-complete pushes. Re-exported here for the services.
+export type { GitHubUser } from '@/types/webviewPayloads';
 
 /**
  * GitHub repository information

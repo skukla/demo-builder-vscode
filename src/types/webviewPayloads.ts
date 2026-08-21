@@ -423,3 +423,73 @@ export interface PrerequisitesCompletePayload {
     allInstalled: boolean;
     prerequisites?: PrerequisiteCheckSummary[];
 }
+
+/**
+ * GitHub user identity, exactly as the GitHub API validation returns it
+ * (nullable fields, not optional ones). Moved here from
+ * features/eds/services/types so the auth pushes and the services share ONE
+ * declaration; the services module re-exports it.
+ */
+export interface GitHubUser {
+    /** GitHub username */
+    login: string;
+    /** User's email address */
+    email: string | null;
+    /** User's display name */
+    name: string | null;
+    /** URL to user's avatar image */
+    avatarUrl: string | null;
+}
+
+/**
+ * `github-auth-status` and `github-auth-complete` — the wizard's GitHub auth
+ * state. Both channels carry the same shape; `orgs` feeds the namespace
+ * picker (absent on the change-account complete push).
+ */
+export interface GitHubAuthStatusPayload {
+    isAuthenticated: boolean;
+    user?: GitHubUser;
+    /** GitHub orgs the user is a member of — populates the wizard's namespace picker */
+    orgs?: string[];
+    error?: string;
+}
+
+/** `github-oauth-error` — OAuth flow failure/cancellation. */
+export interface GitHubOAuthErrorPayload {
+    error: string;
+}
+
+/** `dalive-auth-status` — DA.live token state for the wizard. */
+export interface DaLiveAuthStatusPayload {
+    isAuthenticated: boolean;
+    /** From the token's own claims; informational. */
+    email?: string;
+    /** Whether user has completed bookmarklet setup before */
+    setupComplete?: boolean;
+    /** Cached org name from previous successful verification */
+    orgName?: string;
+    /** Bookmarklet URL for token extraction (provided eagerly) */
+    bookmarkletUrl?: string;
+    error?: string;
+}
+
+/** `dalive-login-opened` — browser login launched; the token bookmarklet URL. */
+export interface DaLiveLoginOpenedPayload {
+    bookmarkletUrl: string;
+}
+
+/** `dalive-token-stored` — outcome of validating + storing a pasted token. */
+export interface DaLiveTokenStoredPayload {
+    success: boolean;
+    /** From the token's claims, on success. */
+    email?: string;
+    error?: string;
+}
+
+/** `dalive-token-with-org-result` — combined token store + org verification. */
+export interface DaLiveTokenWithOrgResultPayload {
+    success: boolean;
+    email?: string;
+    orgName?: string;
+    error?: string;
+}

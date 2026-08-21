@@ -17,6 +17,7 @@ import * as vscode from 'vscode';
 import { getDaLiveAuthService, validateDaLiveTokenStrict } from './edsHelpers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenStoredPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
 
 /** Bookmarklet URL is static — compute once */
 const bookmarkletUrl = getBookmarkletUrl();
@@ -76,7 +77,7 @@ export async function handleCheckDaLiveAuth(
                 setupComplete,
                 orgName: cachedOrgName,
                 bookmarkletUrl,
-            });
+            } satisfies DaLiveAuthStatusPayload);
         } else {
             context.logger.debug('[EDS] No valid DA.live auth');
             await context.sendMessage('dalive-auth-status', {
@@ -84,7 +85,7 @@ export async function handleCheckDaLiveAuth(
                 setupComplete,
                 orgName: cachedOrgName || undefined,
                 bookmarkletUrl,
-            });
+            } satisfies DaLiveAuthStatusPayload);
         }
 
         return { success: true };
@@ -93,7 +94,7 @@ export async function handleCheckDaLiveAuth(
         await context.sendMessage('dalive-auth-status', {
             isAuthenticated: false,
             error: (error as Error).message,
-        });
+        } satisfies DaLiveAuthStatusPayload);
         return { success: false, error: (error as Error).message };
     }
 }
@@ -119,15 +120,11 @@ export async function handleOpenDaLiveLogin(
         // Return the bookmarklet URL for the UI to display
         const bookmarkletUrl = getBookmarkletUrl();
 
+        // Just the bookmarklet URL — the setup instructions the push used to
+        // carry were never read (the wizard renders its own copy).
         await context.sendMessage('dalive-login-opened', {
             bookmarkletUrl,
-            instructions: [
-                'Log in to DA.live in your browser',
-                'Drag the "Get Token" button to your bookmarks bar (one-time setup)',
-                'Click the bookmark to copy your token',
-                'Paste the token below',
-            ],
-        });
+        } satisfies DaLiveLoginOpenedPayload);
 
         return { success: true };
     } catch (error) {
@@ -157,7 +154,7 @@ export async function handleStoreDaLiveToken(
         await context.sendMessage('dalive-token-stored', {
             success: false,
             error: 'Token is required',
-        });
+        } satisfies DaLiveTokenStoredPayload);
         return { success: false, error: 'Token is required' };
     }
 
@@ -175,7 +172,7 @@ export async function handleStoreDaLiveToken(
             await context.sendMessage('dalive-token-stored', {
                 success: false,
                 error: validation.error,
-            });
+            } satisfies DaLiveTokenStoredPayload);
             return { success: false, error: validation.error };
         }
 
@@ -191,14 +188,14 @@ export async function handleStoreDaLiveToken(
         await context.sendMessage('dalive-token-stored', {
             success: true,
             email: validation.email,
-        });
+        } satisfies DaLiveTokenStoredPayload);
 
         // Also send auth status update
         await context.sendMessage('dalive-auth-status', {
             isAuthenticated: true,
             email: validation.email,
             setupComplete: true,
-        });
+        } satisfies DaLiveAuthStatusPayload);
 
         return { success: true };
     } catch (error) {
@@ -207,7 +204,7 @@ export async function handleStoreDaLiveToken(
         await context.sendMessage('dalive-token-stored', {
             success: false,
             error: errorMessage,
-        });
+        } satisfies DaLiveTokenStoredPayload);
         return { success: false, error: errorMessage };
     }
 }
@@ -233,7 +230,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         await context.sendMessage('dalive-token-with-org-result', {
             success: false,
             error: 'Token is required',
-        });
+        } satisfies DaLiveTokenWithOrgResultPayload);
         return { success: false, error: 'Token is required' };
     }
 
@@ -242,7 +239,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         await context.sendMessage('dalive-token-with-org-result', {
             success: false,
             error: 'Organization name is required',
-        });
+        } satisfies DaLiveTokenWithOrgResultPayload);
         return { success: false, error: 'Organization name is required' };
     }
 
@@ -260,7 +257,7 @@ export async function handleStoreDaLiveTokenWithOrg(
             await context.sendMessage('dalive-token-with-org-result', {
                 success: false,
                 error: validation.error,
-            });
+            } satisfies DaLiveTokenWithOrgResultPayload);
             return { success: false, error: validation.error };
         }
 
@@ -288,14 +285,14 @@ export async function handleStoreDaLiveTokenWithOrg(
             success: true,
             email: validation.email,
             orgName,
-        });
+        } satisfies DaLiveTokenWithOrgResultPayload);
 
         // Also send auth status update
         await context.sendMessage('dalive-auth-status', {
             isAuthenticated: true,
             email: validation.email,
             setupComplete: true,
-        });
+        } satisfies DaLiveAuthStatusPayload);
 
         return { success: true };
     } catch (error) {
@@ -304,7 +301,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         await context.sendMessage('dalive-token-with-org-result', {
             success: false,
             error: errorMessage,
-        });
+        } satisfies DaLiveTokenWithOrgResultPayload);
         return { success: false, error: errorMessage };
     }
 }
@@ -334,7 +331,7 @@ export async function handleClearDaLiveAuth(
         await context.sendMessage('dalive-auth-status', {
             isAuthenticated: false,
             setupComplete: authService.isSetupComplete(),
-        });
+        } satisfies DaLiveAuthStatusPayload);
 
         return { success: true };
     } catch (error) {

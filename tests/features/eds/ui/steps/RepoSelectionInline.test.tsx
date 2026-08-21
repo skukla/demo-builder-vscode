@@ -68,7 +68,7 @@ const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
         repoMode: 'existing',
         githubAuth: {
             isAuthenticated: true,
-            user: { login: 'testuser' },
+            user: { login: 'testuser', email: null, name: null, avatarUrl: null },
         },
         ...overrides,
     },

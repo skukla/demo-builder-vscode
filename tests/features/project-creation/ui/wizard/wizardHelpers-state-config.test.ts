@@ -286,7 +286,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '', email: null, name: null },
                     },
                 },
             };
@@ -311,7 +311,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '', email: null, name: null },
                     },
                     // Results from StorefrontSetupStep
                     repoUrl: 'https://github.com/testuser/my-repo',

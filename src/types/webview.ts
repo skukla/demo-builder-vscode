@@ -3,7 +3,7 @@
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import { ErrorCode } from './errorCodes';
-import type { PrerequisitePluginState } from './webviewPayloads';
+import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -407,7 +407,8 @@ export interface EDSConfig {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;
         isChecking?: boolean;
-        user?: { login: string; avatarUrl?: string; email?: string };
+        // ONE declaration with the wire pushes (fields are nullable, not optional).
+        user?: GitHubUser;
         error?: string;
     };
     /** Repository mode: create new or use existing */
