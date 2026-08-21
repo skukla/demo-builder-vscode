@@ -43,7 +43,7 @@ import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
-import type { ConfigureInitialData } from '@/types/webviewPayloads';
+import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
@@ -589,13 +589,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * This keeps the Save button disabled during the operation.
      */
     private async withDeploymentStatus<T>(operation: () => Promise<T>): Promise<T> {
-        await this.communicationManager?.sendMessage('deployment-status', { isDeploying: true });
+        const deploying: DeploymentStatusPayload = { isDeploying: true };
+        await this.communicationManager?.sendMessage('deployment-status', deploying);
         try {
             return await operation();
         } finally {
-            await this.communicationManager?.sendMessage('deployment-status', {
-                isDeploying: false,
-            });
+            const done: DeploymentStatusPayload = { isDeploying: false };
+            await this.communicationManager?.sendMessage('deployment-status', done);
         }
     }
 

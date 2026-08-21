@@ -18,6 +18,7 @@ import type { PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import type { Stack } from '@/types/stacks';
 import { toError } from '@/types/typeGuards';
+import type { PrerequisiteCheckSummary, PrerequisiteStatusPayload, PrerequisitesCompletePayload, PrerequisitesLoadedPayload } from '@/types/webviewPayloads';
 
 // Import stack config for direct lookup
 
@@ -29,30 +30,8 @@ function getStackById(stackId: string): Stack | undefined {
     return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
 }
 
-/**
- * Summary of a prerequisite check result for UI display
- */
-interface PrerequisiteSummary {
-    /**
-     * Position in the resolved list. The webview's row identity — and NOT a
-     * durable name for the prerequisite: the list is rebuilt per check from the
-     * stack and the optional dependencies, so index 3 means different things
-     * across two calls with different stacks.
-     */
-    id: number;
-    /**
-     * The prerequisite's own id from `prerequisites.json` (`node`, `aio-cli`).
-     * Stable across checks, which is what makes it the thing an agent can name
-     * in a later `install_prerequisite` call. Added for that surface; the
-     * webview keys off `id` and ignores this.
-     */
-    prereqId: string;
-    name: string;
-    required: boolean;
-    installed: boolean;
-    version?: string;
-    canInstall: boolean;
-}
+// PrerequisiteSummary moved to @/types/webviewPayloads as PrerequisiteCheckSummary —
+// ONE declaration shared with the prerequisites-complete payload the MCP surface captures.
 
 /**
  * Transform prerequisite state to summary object for UI
@@ -66,7 +45,7 @@ interface PrerequisiteSummary {
 function toPrerequisiteSummary(
     id: number,
     state: PrerequisiteCheckState,
-): PrerequisiteSummary {
+): PrerequisiteCheckSummary {
     return {
         id,
         prereqId: state.prereq.id,
@@ -246,7 +225,7 @@ function computeOverallStatus(
     nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined,
     perNodeVariantMissing: boolean,
     depsInstalled: boolean,
-): { overallStatus: string; canInstall: boolean } {
+): { overallStatus: PrerequisiteStatusPayload['status']; canInstall: boolean } {
     let overallStatus = determinePrerequisiteStatus(checkResult.installed, !!prereq.optional);
     let nodeMissing = false;
 
@@ -317,21 +296,28 @@ async function initializePrerequisiteCheck(
  */
 async function sendPrerequisitesListToUI(
     context: HandlerContext,
-    prerequisites: { name: string; description: string; optional?: boolean; plugins?: unknown[] }[] | undefined,
+    prerequisites: PrerequisiteDefinition[] | undefined,
     nodeVersionMapping: Record<string, string>,
 ): Promise<void> {
     context.stepLogger?.log('prerequisites', `Found ${prerequisites?.length ?? 0} prerequisites to check`, 'info');
 
-    await context.sendMessage('prerequisites-loaded', {
-        prerequisites: prerequisites?.map((p, index) => ({
+    const loaded: PrerequisitesLoadedPayload = {
+        prerequisites: (prerequisites ?? []).map((p, index) => ({
             id: index,
             name: p.name,
             description: p.description,
             optional: p.optional || false,
-            plugins: p.plugins,
+            // Identity fields only — the raw config entries carry install
+            // commands the webview has no business receiving.
+            plugins: p.plugins?.map(pl => ({
+                id: pl.id,
+                name: pl.name,
+                description: pl.description,
+            })),
         })),
         nodeVersionMapping,
-    });
+    };
+    await context.sendMessage('prerequisites-loaded', loaded);
 
     await sleep(TIMEOUTS.UI.UPDATE_DELAY);
 }
@@ -366,13 +352,14 @@ export async function handleCheckPrerequisites(
 
             context.stepLogger?.log('prerequisites', formatProgressMessage(prereq, nodeVersionMapping), 'info');
 
-            await context.sendMessage('prerequisite-status', {
+            const checking: PrerequisiteStatusPayload = {
                 index: i,
                 name: prereq.name,
                 status: 'checking',
                 description: prereq.description,
                 required: !prereq.optional,
-            });
+            };
+            await context.sendMessage('prerequisite-status', checking);
 
             // Check prerequisite with timeout error handling
             let checkResult: PrerequisiteStatus | undefined;
@@ -423,7 +410,7 @@ export async function handleCheckPrerequisites(
                 depsInstalled,
             );
 
-            await context.sendMessage('prerequisite-status', {
+            const result: PrerequisiteStatusPayload = {
                 index: i,
                 name: prereq.name,
                 status: overallStatus,
@@ -443,7 +430,8 @@ export async function handleCheckPrerequisites(
                 canInstall,
                 plugins: (prereq.perNodeVersion && variantStatus.perNodeVariantMissing) ? undefined : checkResult.plugins,
                 nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : variantStatus.perNodeVersionStatus,
-            });
+            };
+            await context.sendMessage('prerequisite-status', result);
         }
 
         // Check if all required prerequisites are installed
@@ -451,11 +439,12 @@ export async function handleCheckPrerequisites(
             .filter(state => !state.prereq.optional)
             .every(state => state.result.installed);
 
-        await context.sendMessage('prerequisites-complete', {
+        const complete: PrerequisitesCompletePayload = {
             allInstalled: allRequiredInstalled,
             prerequisites: Array.from(prerequisiteStates.entries())
                 .map(([id, state]) => toPrerequisiteSummary(id, state)),
-        });
+        };
+        await context.sendMessage('prerequisites-complete', complete);
 
         context.stepLogger?.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
 

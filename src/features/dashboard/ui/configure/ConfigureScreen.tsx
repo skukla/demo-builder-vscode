@@ -47,7 +47,7 @@ import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscov
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
-import type { ConfigureInitialData } from '@/types/webviewPayloads';
+import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
 /** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
@@ -124,7 +124,7 @@ export function ConfigureScreen({
     // This keeps the Save button disabled during mesh/storefront deployment
     useEffect(() => {
         const unsubscribe = webviewClient.onMessage('deployment-status', (data) => {
-            const payload = data as { isDeploying: boolean };
+            const payload = data as DeploymentStatusPayload;
             setIsDeploying(payload.isDeploying);
         });
         return unsubscribe;

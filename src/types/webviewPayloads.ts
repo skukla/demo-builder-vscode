@@ -19,7 +19,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { SettingsFile } from './settingsFile';
-import type { ComponentSelection, CreationProgress, ThemeMode } from './webview';
+import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, WizardStepDefinition } from './wizard';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
@@ -315,4 +315,111 @@ export interface CreationFailedPayload {
     /** The one special-cased type; ProjectCreationStep opens the install dialog on it. */
     errorType?: 'GITHUB_APP_NOT_INSTALLED';
     errorDetails?: { owner: string; repo: string; installUrl: string };
+}
+
+/**
+ * `deployment-status` — Configure screen deploy-in-flight flag. Sent by
+ * `withDeploymentStatus` (configure.ts) around mesh/storefront deploys;
+ * keeps the Save button disabled while one runs.
+ */
+export interface DeploymentStatusPayload {
+    isDeploying: boolean;
+}
+
+/**
+ * Plugin row state carried by the prerequisites loaded/status pushes. The
+ * loaded push sends config identity only (id/name/description); the status
+ * pushes send runtime state (id/name/installed). The UI reads id, name, and
+ * installed.
+ */
+export interface PrerequisitePluginState {
+    id: string;
+    name: string;
+    description?: string;
+    /** Absent on the loaded push — install state is only known after a check. */
+    installed?: boolean;
+}
+
+/**
+ * `prerequisites-loaded` — the resolved check list, sent once per check run
+ * before the per-row status pushes. `id` is the numeric row index (the sender
+ * maps over the list with `id: index`), NOT the prerequisite's string id from
+ * prerequisites.json.
+ */
+export interface PrerequisitesLoadedPayload {
+    prerequisites: Array<{
+        id: number;
+        name: string;
+        description: string;
+        optional: boolean;
+        plugins?: PrerequisitePluginState[];
+    }>;
+    nodeVersionMapping?: Record<string, string>;
+}
+
+/**
+ * `prerequisite-status` — one row's live check/install state, keyed by
+ * `index`. Sent by the check, continue, install, and shared error paths.
+ */
+export interface PrerequisiteStatusPayload {
+    index: number;
+    name: string;
+    /** Senders never push 'pending' — a row is born pending, not set to it. */
+    status: 'checking' | 'success' | 'error' | 'warning';
+    /** Absent on the bare 'checking' pushes; the row keeps its spinner text. */
+    message?: string;
+    description?: string;
+    /** Sent by every push; the webview derives optionality from the loaded list and ignores this. */
+    required: boolean;
+    /** Sent by result pushes; the webview keys off `status` and ignores this. */
+    installed?: boolean;
+    version?: string;
+    canInstall?: boolean;
+    plugins?: PrerequisitePluginState[];
+    /** Install-step progress (installHandler only). */
+    unifiedProgress?: UnifiedProgress;
+    nodeVersionStatus?: Array<{ version: string; component: string; installed: boolean }>;
+}
+
+/**
+ * `prerequisite-install-complete` — an install finished (or was already
+ * satisfied); the webview resumes checking from the next row.
+ */
+export interface PrerequisiteInstallCompletePayload {
+    index: number;
+    continueChecking: boolean;
+}
+
+/** One prerequisite's outcome in the completion summary. */
+export interface PrerequisiteCheckSummary {
+    /**
+     * Position in the resolved list. The webview's row identity — and NOT a
+     * durable name for the prerequisite: the list is rebuilt per check from the
+     * stack and the optional dependencies, so index 3 means different things
+     * across two calls with different stacks.
+     */
+    id: number;
+    /**
+     * The prerequisite's own id from `prerequisites.json` (`node`, `aio-cli`).
+     * Stable across checks, which is what makes it the thing an agent can name
+     * in a later `install_prerequisite` call. Added for that surface; the
+     * webview keys off `id` and ignores this.
+     */
+    prereqId: string;
+    name: string;
+    required: boolean;
+    installed: boolean;
+    version?: string;
+    canInstall: boolean;
+}
+
+/**
+ * `prerequisites-complete` — the check run finished. The webview only uses
+ * the event itself (to stop the spinner); the MCP status descriptor captures
+ * the payload as the check_prerequisites tool result. Only checkHandler
+ * includes the per-prerequisite summary; continueHandler sends the flag alone.
+ */
+export interface PrerequisitesCompletePayload {
+    allInstalled: boolean;
+    prerequisites?: PrerequisiteCheckSummary[];
 }

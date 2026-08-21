@@ -3,6 +3,7 @@
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import { ErrorCode } from './errorCodes';
+import type { PrerequisitePluginState } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -324,7 +325,6 @@ export interface UnifiedProgress {
 }
 
 export interface PrerequisiteCheck {
-    id?: string;
     name: string;
     description: string;
     status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
@@ -332,13 +332,9 @@ export interface PrerequisiteCheck {
     canInstall?: boolean;
     isOptional?: boolean;
     version?: string;
-    plugins?: Array<{
-        id: string;
-        name: string;
-        description?: string;
-        installed: boolean;
-        canInstall?: boolean;
-    }>;
+    // ONE declaration with the wire pushes: the loaded push has no install
+    // state and no plugin ever carried a canInstall.
+    plugins?: PrerequisitePluginState[];
     unifiedProgress?: UnifiedProgress;
     nodeVersionStatus?: Array<{
         version: string;

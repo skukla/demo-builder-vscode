@@ -13,6 +13,7 @@ import { ComponentSelection } from '@/types/components';
 import { isTimeout, toAppError } from '@/types/errors';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { toError } from '@/types/typeGuards';
+import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 
 /**
  * Type alias for Node version mapping (major version → component name)
@@ -644,7 +645,7 @@ export async function handlePrerequisiteCheckError(
     }
 
     // Send error status to UI
-    await context.sendMessage('prerequisite-status', {
+    const failed: PrerequisiteStatusPayload = {
         index,
         name: prereq.name,
         status: 'error',
@@ -655,5 +656,6 @@ export async function handlePrerequisiteCheckError(
             ? `Check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to try again.`
             : `Failed to check: ${errorMessage}`,
         canInstall: false,
-    });
+    };
+    await context.sendMessage('prerequisite-status', failed);
 }

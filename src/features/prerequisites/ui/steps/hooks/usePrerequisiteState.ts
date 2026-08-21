@@ -1,46 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { PrerequisiteCheck } from '@/types/webview';
+import type {
+    PrerequisiteInstallCompletePayload,
+    PrerequisiteStatusPayload,
+    PrerequisitesLoadedPayload,
+} from '@/types/webviewPayloads';
 
-export interface PrerequisitesLoadedData {
-    prerequisites: Array<{
-        id: string;
-        name: string;
-        description: string;
-        optional?: boolean;
-        plugins?: Array<{
-            id: string;
-            name: string;
-            description?: string;
-            installed: boolean;
-            canInstall?: boolean;
-        }>;
-    }>;
-    nodeVersionMapping?: { [key: string]: string };
-    versionComponentMapping?: { [key: string]: string };
-}
-
-interface PrerequisiteStatusData {
-    index: number;
-    status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
-    message: string;
-    version?: string;
-    plugins?: Array<{
-        id: string;
-        name: string;
-        description?: string;
-        installed: boolean;
-        canInstall?: boolean;
-    }>;
-    unifiedProgress?: UnifiedProgress;
-    nodeVersionStatus?: Array<{
-        version: string;
-        component: string;
-        installed: boolean;
-    }>;
-    canInstall?: boolean;
-}
+// The wire shapes live in @/types/webviewPayloads — ONE declaration shared
+// with the sender handlers. This file used to carry its own copies, and they
+// had drifted: the loaded payload typed `id` as string when the sender maps
+// `id: index` (a number), declared a `versionComponentMapping` fallback no
+// sender ever included, and the status payload required `message` when the
+// bare 'checking' pushes omit it. Re-exported here for existing consumers.
+export type { PrerequisitesLoadedPayload as PrerequisitesLoadedData } from '@/types/webviewPayloads';
 
 /**
  * Check if a prerequisite check has reached a terminal state
@@ -55,9 +29,8 @@ export function isTerminalStatus(status: PrerequisiteCheck['status']): boolean {
 /**
  * Transform prerequisite data to initial check state
  */
-function toPrerequisiteCheckState(p: PrerequisitesLoadedData['prerequisites'][0]): PrerequisiteCheck {
+function toPrerequisiteCheckState(p: PrerequisitesLoadedPayload['prerequisites'][0]): PrerequisiteCheck {
     return {
-        id: p.id,
         name: p.name,
         description: p.description,
         status: 'pending' as const,
@@ -71,7 +44,6 @@ function toPrerequisiteCheckState(p: PrerequisitesLoadedData['prerequisites'][0]
 /** Initial loading placeholder shown before backend sends prerequisites */
 export const INITIAL_LOADING_STATE: PrerequisiteCheck[] = [
     {
-        id: 'loading',
         name: 'Loading prerequisites...',
         description: 'Fetching prerequisite configuration',
         status: 'checking',
@@ -147,11 +119,10 @@ export function usePrerequisiteState(
     const installPrerequisite = useCallback((index: number) => {
         setInstallingIndex(index);
 
-        webviewClient.postMessage('install-prerequisite', {
-            prereqId: index,
-            id: checks[index].id,
-            name: checks[index].name,
-        });
+        // The handler resolves the target from `prereqId` alone; the `id`/`name`
+        // fields this used to echo were never read (and `id` was the numeric row
+        // index wearing a string type).
+        webviewClient.postMessage('install-prerequisite', { prereqId: index });
 
         setChecks(prev => {
             const newChecks = [...prev];
@@ -159,19 +130,17 @@ export function usePrerequisiteState(
             newChecks[index].message = 'Installing... (this could take up to 3 minutes)';
             return newChecks;
         });
-    }, [checks]);
+    }, []);
 
     // Load prerequisites on mount
     useEffect(() => {
         const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
-            const prereqData = data as PrerequisitesLoadedData;
+            const prereqData = data as PrerequisitesLoadedPayload;
             const prerequisites = prereqData.prerequisites.map(toPrerequisiteCheckState);
             setChecks(prerequisites);
 
             if (prereqData.nodeVersionMapping) {
                 setVersionComponentMapping(prereqData.nodeVersionMapping);
-            } else if (prereqData.versionComponentMapping) {
-                setVersionComponentMapping(prereqData.versionComponentMapping);
             }
         });
 
@@ -185,7 +154,7 @@ export function usePrerequisiteState(
     // Register message listeners ONCE on mount
     useEffect(() => {
         const unsubscribeInstallComplete = webviewClient.onMessage('prerequisite-install-complete', (data) => {
-            const typedData = data as { index: number; continueChecking: boolean };
+            const typedData = data as PrerequisiteInstallCompletePayload;
             const { index, continueChecking } = typedData;
 
             if (continueChecking) {
@@ -195,12 +164,12 @@ export function usePrerequisiteState(
             }
         });
 
-        const unsubscribeCheckStopped = webviewClient.onMessage('prerequisite-check-stopped', () => {
-            setIsChecking(false);
-        });
-
+        // No `prerequisite-check-stopped` listener any more: no code anywhere
+        // sends it (there is no stop-prerequisites flow), so it could never
+        // fire — the initialMeshStatus class, found by the 2026-08-21 channel
+        // inventory.
         const unsubscribe = webviewClient.onMessage('prerequisite-status', (data) => {
-            const typedData = data as PrerequisiteStatusData;
+            const typedData = data as PrerequisiteStatusPayload;
             const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = typedData;
 
             setChecks(prev => {
@@ -242,7 +211,6 @@ export function usePrerequisiteState(
             unsubscribe();
             unsubscribeComplete();
             unsubscribeInstallComplete();
-            unsubscribeCheckStopped();
         };
     }, []);
 
