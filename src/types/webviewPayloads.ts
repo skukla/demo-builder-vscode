@@ -15,9 +15,12 @@
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
 import type { AppBuilderComponentState, AuthoringExperience, Project } from './base';
+import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
-import type { ThemeMode } from './webview';
+import type { SettingsFile } from './settingsFile';
+import type { ComponentSelection, ThemeMode } from './webview';
+import type { EditProjectConfig, WizardStepDefinition } from './wizard';
 
 /**
  * `ShowDataInstallerCommand.getInitialData` → the dataInstaller bundle.
@@ -72,6 +75,38 @@ export interface DashboardInitialData {
  */
 export interface ProjectsListInitialData {
     theme: ThemeMode;
+}
+
+/**
+ * `CreateProjectWebviewCommand.getInitialData` → the wizard bundle.
+ *
+ * `null` fields are genuinely null on the wire (postMessage serializes them);
+ * the entry converts null → undefined where a container prop wants absence.
+ */
+export interface WizardInitialData {
+    theme: ThemeMode;
+    /** First workspace folder path — absent when no folder is open. Currently unread. */
+    workspacePath?: string;
+    /**
+     * defaults.json `componentSelection` — `null` when the file is missing or
+     * unparseable. The JSON carries `frontend`/`backend`/`dependencies`/
+     * `services`, all fields of {@link ComponentSelection}.
+     */
+    componentDefaults: ComponentSelection | null;
+    /** wizard-steps.json `steps` — `null` when the file is missing or fails validation. */
+    wizardSteps: WizardStepDefinition[] | null;
+    /** All project names — duplicate-name validation. */
+    existingProjectNames: string[];
+    /** Full settings file from import/copy — `null` in plain create mode. */
+    importedSettings: SettingsFile | null;
+    /** Edit-mode configuration — `null` in create mode. */
+    editProject: EditProjectConfig | null;
+    /** Initial view mode for the template gallery (from settings). */
+    projectsViewMode: 'cards' | 'rows';
+    /** User's saved block library default preferences (from settings). */
+    blockLibraryDefaults: string[];
+    /** Custom block libraries from VS Code settings. */
+    customBlockLibraryDefaults: CustomBlockLibrary[];
 }
 
 /**

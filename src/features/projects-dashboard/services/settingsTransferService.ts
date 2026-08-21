@@ -20,10 +20,10 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation';
-import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 
 /**
  * Import settings from a JSON file

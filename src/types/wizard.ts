@@ -5,6 +5,7 @@
  * providing a single source of truth for step props patterns.
  */
 
+import type { SettingsFile } from './settingsFile';
 import { WizardState, WizardStep } from './webview';
 
 /**
@@ -91,6 +92,28 @@ export interface StepCondition {
      * which already exist for existing projects.
      */
     createModeOnly?: boolean;
+}
+
+/**
+ * The wizard's view of imported/copied settings. The wire always carries a
+ * full `SettingsFile` (every fill site — file import via `parseSettingsFile`,
+ * copy-from-project and edit mode via `extractSettingsFromProject` — produces
+ * one), but the wizard reads it defensively, so every field is optional.
+ * Derived, not re-declared: this WAS a hand-maintained near-copy of
+ * `SettingsFile` that drifted field by field.
+ */
+export type ImportedSettings = Partial<SettingsFile>;
+
+/**
+ * Configuration for editing an existing project (wizard edit mode).
+ */
+export interface EditProjectConfig {
+    /** The SLUG — still the identity `editOriginalName` compares against. */
+    projectName: string;
+    /** The TITLE, so the name field shows what the user called it. */
+    projectTitle?: string;
+    projectPath: string;
+    settings: ImportedSettings;
 }
 
 /**

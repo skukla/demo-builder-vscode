@@ -15,7 +15,7 @@ import {
     getSuggestedFilename,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
-import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 describe('settingsSerializer', () => {

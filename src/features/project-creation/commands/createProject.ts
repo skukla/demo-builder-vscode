@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { EditProjectConfig } from '../ui/wizard/wizardHelpers';
 import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
@@ -23,10 +22,12 @@ import {
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
-import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
-import type { WizardStepDefinition } from '@/types/wizard';
+import type { ComponentSelection } from '@/types/webview';
+import type { WizardInitialData } from '@/types/webviewPayloads';
+import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Type guard for one wizard-steps.json entry (SOP §10 compliance)
@@ -44,36 +45,17 @@ function isWizardStepDefinition(value: unknown): value is WizardStepDefinition {
     return true;
 }
 
-interface ComponentDefaults {
-    frontend?: string;
-    backend?: string;
-    dependencies?: string[];
-}
-
 /**
  * Format component defaults for logging (SOP §10 compliance)
  *
  * Extracts deep optional chaining into readable helper function.
  */
-function formatComponentDefaults(defaults: ComponentDefaults | null): string {
+function formatComponentDefaults(defaults: ComponentSelection | null): string {
     if (!defaults) return 'no defaults loaded';
     const frontend = defaults.frontend || 'none';
     const backend = defaults.backend || 'none';
     const depCount = defaults.dependencies?.length || 0;
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
-}
-
-interface InitialWizardData {
-    theme: 'dark' | 'light';
-    workspacePath: string | undefined;
-    componentDefaults: ComponentDefaults | null;
-    wizardSteps: WizardStepDefinition[] | null;
-    existingProjectNames: string[];
-    importedSettings: SettingsFile | null;
-    editProject: EditProjectConfig | null;
-    projectsViewMode: 'cards' | 'rows';
-    blockLibraryDefaults: string[];
-    customBlockLibraryDefaults: import('@/types/blockLibraries').CustomBlockLibrary[];
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
@@ -258,9 +240,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<InitialWizardData> {
+    protected async getInitialData(): Promise<WizardInitialData> {
         // Load component defaults from defaults.json
-        let componentDefaults: ComponentDefaults | null = null;
+        let componentDefaults: ComponentSelection | null = null;
         try {
             const defaultsPath = path.join(
                 this.context.extensionPath,
@@ -272,7 +254,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             );
             if (fs.existsSync(defaultsPath)) {
                 const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
-                const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(
+                const defaults = parseJSON<{ componentSelection: ComponentSelection }>(
                     defaultsContent,
                 );
                 if (defaults) {

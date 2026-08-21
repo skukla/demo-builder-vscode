@@ -5,11 +5,10 @@
 import { getStackById } from '../hooks/useSelectedStack';
 import { hasMeshInDependencies } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
-import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
-import type { WizardStepDefinition } from '@/types/wizard';
+import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Filters committed custom block library selections to remove any that
@@ -215,66 +214,6 @@ export function computeStateUpdatesForBackwardNav(
 // ============================================================================
 // State Initialization Helpers
 // ============================================================================
-
-/**
- * Imported settings shape for wizard pre-population
- */
-export interface ImportedSettings {
-    source?: {
-        project?: string;
-    };
-    selections?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    configs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    adobe?: {
-        orgId?: string;
-        orgName?: string;
-        projectId?: string;
-        projectName?: string;
-        projectTitle?: string;
-        workspaceId?: string;
-        workspaceName?: string;
-        workspaceTitle?: string;
-    };
-    /** Package ID from the source project (e.g., 'citisignal', 'buildright') */
-    selectedPackage?: string;
-    /** Stack ID from the source project (e.g., 'headless-paas') */
-    selectedStack?: string;
-    /** Selected optional addons (e.g., ['adobe-commerce-aco']) */
-    selectedAddons?: string[];
-    /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
-    selectedBlockLibraries?: string[];
-    /** Custom block libraries added by URL */
-    customBlockLibraries?: CustomBlockLibrary[];
-    /** EDS configuration (for Edge Delivery Services stacks) */
-    edsConfig?: SettingsEdsConfig;
-    /** Custom GitHub sources for App Builder integrations, keyed by integration id (`name` = shell-instance display name) */
-    appBuilderComponentSources?: Record<
-        string,
-        { owner: string; repo: string; branch?: string; name?: string }
-    >;
-    /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
-    additionalConsoleApis?: string[];
-    /** The same picks, ATTRIBUTED per integration id — the durable form. */
-    componentApiPicks?: Record<string, string[]>;
-}
-
-/**
- * Configuration for editing an existing project
- */
-export interface EditProjectConfig {
-    /** The SLUG — still the identity `editOriginalName` compares against. */
-    projectName: string;
-    /** The TITLE, so the name field shows what the user called it. */
-    projectTitle?: string;
-    projectPath: string;
-    settings: ImportedSettings;
-}
 
 /**
  * Build initial component selection from imported settings or defaults.

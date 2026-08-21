@@ -19,8 +19,6 @@ import {
     shouldShowWizardFooter,
     getWizardTitle,
     filterRemovedCustomLibraries,
-    ImportedSettings,
-    EditProjectConfig,
 } from './wizardHelpers';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
@@ -43,14 +41,11 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection, type WizardState } from '@/types/webview';
-import type { WizardStepDefinition } from '@/types/wizard';
+import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 // Extracted hooks
 
 const log = webviewLogger('WizardContainer');
-
-// Re-export for consumers that import from WizardContainer
-export type { ImportedSettings, EditProjectConfig };
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;

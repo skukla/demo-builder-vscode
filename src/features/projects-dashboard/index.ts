@@ -9,11 +9,7 @@
 export { ProjectsDashboard } from './ui/ProjectsDashboard';
 export type { ProjectsDashboardProps } from './ui/ProjectsDashboard';
 
-export {
-    ProjectCard,
-    ProjectsGrid,
-    DashboardEmptyState,
-} from './ui/components';
+export { ProjectCard, ProjectsGrid, DashboardEmptyState } from './ui/components';
 export type {
     ProjectCardProps,
     ProjectsGridProps,
@@ -55,8 +51,8 @@ export type {
     SettingsAdobeContext,
     SettingsSource,
     ImportResult,
-} from './types/settingsFile';
-export { SETTINGS_FILE_VERSION } from './types/settingsFile';
+} from '@/types/settingsFile';
+export { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 
 // Utils
 export {

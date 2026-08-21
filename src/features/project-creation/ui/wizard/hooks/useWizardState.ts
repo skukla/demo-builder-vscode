@@ -6,8 +6,6 @@ import {
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
-    ImportedSettings,
-    EditProjectConfig,
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
@@ -15,7 +13,7 @@ import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
-import type { WizardStepDefinition } from '@/types/wizard';
+import type { EditProjectConfig, ImportedSettings , WizardStepDefinition } from '@/types/wizard';
 
 const log = webviewLogger('useWizardState');
 

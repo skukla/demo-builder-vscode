@@ -15,10 +15,7 @@ import { renderHook } from '@testing-library/react';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
 import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
-import type {
-    EditProjectConfig,
-    ImportedSettings,
-} from '@/features/project-creation/ui/wizard/wizardHelpers';
+import type { EditProjectConfig, ImportedSettings } from '@/types/wizard';
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn() },
@@ -106,9 +103,7 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
     it('falls back to the flat field when a settings file predates the keyed form', () => {
         // An older export has only the flat field; it must still seed something,
         // under the unattributed key, rather than importing as no picks at all.
-        const state = renderWizardState(
-            makeEditProject({ additionalConsoleApis: ['CCAPI'] })
-        );
+        const state = renderWizardState(makeEditProject({ additionalConsoleApis: ['CCAPI'] }));
 
         expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
     });

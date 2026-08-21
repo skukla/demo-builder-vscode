@@ -15,8 +15,8 @@ import {
     generateUniqueProjectName,
     initializeProjectName,
     buildProjectConfig,
-    ImportedSettings,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import type { ImportedSettings } from '@/types/wizard';
 import type { WizardState, ComponentSelection } from '@/types/webview';
 
 const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isChecking: false };
