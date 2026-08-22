@@ -18,7 +18,17 @@ export interface LoadingDisplayProps {
 
 /**
  * Reusable loading display component that provides consistent loading states
- * across all webviews with support for main and sub-messages
+ * across all webviews with support for main and sub-messages.
+ *
+ * THE THREE-ROW CONTRACT (settled with the user, 2026-08-22 loading audit):
+ * - `message` (row 1): what the step is doing — and the COUNT, when there is
+ *   one ("Copying content (10/61)"). Counts live here, not below.
+ * - `subMessage` (row 2): the moving detail — the thing being counted (a file
+ *   path, a repo, a site). Fill it whenever a truthful value exists; the row
+ *   reserves its space when empty so the title never jumps.
+ * - `helperText` (row 3): a STATIC expectation — how long this usually takes,
+ *   or what it is waiting on. Never a phase description; that is row 1's job,
+ *   and a description here reads as a second, slower status.
  */
 export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     size = 'L',
