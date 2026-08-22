@@ -120,7 +120,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // real storefront, every vendored dropin knownInRegistry) for EDS storefront
 // projects, and un-freezes Playwright: ^0.0.75 was an exact pin (caret on
 // 0.0.x allows nothing newer), now ~0.0.79 so patch releases install.
-export const AI_CONTEXT_VERSION = 16;
+// v17: two skills told users first Playwright use downloads ~150 MB of
+// Chromium. Measured false (2026-08-22): the MCP drives the installed Google
+// Chrome by default — verified with the bundled-browser store empty on both
+// shipped versions. The wrong claim made agents warn customers about a
+// download that never happens; corrected to name the real case (Chrome-less
+// machines only, via install-browser).
+export const AI_CONTEXT_VERSION = 17;
 
 /**
  * Component IDs for standardized component instance access

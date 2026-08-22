@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The scraping skills warned about a Chromium download that never happens.**
+  Measured: the Playwright MCP drives the machine's installed Google Chrome by
+  default (verified on both shipped versions with the bundled-browser store
+  empty), so machines with Chrome download nothing. The skills and config now
+  say so, and name the real case — Chrome-less machines need a one-time ~150 MB
+  install via the server's `install-browser` subcommand. AI bundle version
+  16 → 17. Research context: Playwright stays bundled — Claude in Chrome
+  cannot replace it (Claude-only, no headless mode, approval prompts), and two
+  of the three agents that consume the generated `.mcp.json` (Cursor, Codex)
+  could not use it at all.
+
 ## [1.0.0-beta.136] - 2026-08-22
 
 A wide release: three campaigns land together — every extension↔webview message

@@ -56,17 +56,25 @@ Researched before scoping, because most of this is handled:
 
 ## Gap 1 — the biggest download is the invisible one
 
-`@playwright/mcp` is only the server. Playwright fetches a **~150 MB Chromium on first USE**,
-not at install, into `~/Library/Caches/ms-playwright/`.
+*(2026-08-22 correction — measured, this gap is much narrower than written.)* The premise
+was wrong: `@playwright/mcp` drives the machine's **installed Google Chrome by default**.
+Verified on both shipped versions (0.0.75 and 0.0.79) by pointing
+`PLAYWRIGHT_BROWSERS_PATH` at an empty directory — navigation and screenshots still work,
+and the launched browser's UA major matches the installed Chrome exactly, while an
+explicitly missing channel (`--browser chrome-canary`) fails loudly and immediately. So on
+a machine with Chrome (the SE default), **no download ever happens**. The skill-file
+warnings that repeated the download claim were corrected at AI_CONTEXT_VERSION v17.
 
-Nothing in `src/` knows that binary exists — the only mentions are inside two skill files, as
-guidance for the agent to warn the user. So there is no pre-check, no progress, and no
-detection. On a restricted or metered network the failure surfaces to an agent mid-scrape, as
-a runtime error the extension never sees.
+What remains of this gap: a machine with NO Chrome installed. That case needs the one-time
+~150 MB Chromium install (the server's `install-browser` subcommand), and the original
+concerns apply to it — no pre-check, no progress, failure surfaces mid-scrape. Absent-Chrome
+default behavior (clean error vs fallback) was NOT measurable on a Chrome-equipped machine
+and is unverified.
 
-It is bounded (once per machine, shared across projects) and usually fine. "Usually fine,
-fails confusingly on a locked-down network" is the shape that costs an afternoon in front of
-a customer.
+~~`@playwright/mcp` is only the server. Playwright fetches a **~150 MB Chromium on first
+USE**, not at install, into `~/Library/Caches/ms-playwright/`. … "Usually fine, fails
+confusingly on a locked-down network" is the shape that costs an afternoon in front of a
+customer.~~ *(superseded by the correction above)*
 
 ## Gap 2 — progress is a label, not progress
 
