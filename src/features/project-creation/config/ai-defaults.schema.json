@@ -12,7 +12,7 @@
     },
     "mcpServers": {
       "type": "array",
-      "description": "MCP servers installed via npm devDependency. Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, and its package is added as a devDependency on the storefront's package.json before npm install runs.",
+      "description": "MCP servers installed into the per-project isolated tools dir (<project>/.demo-builder-mcp/ — see aiDefaultsInstaller.ts). Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, with its args anchored to the isolated dir.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -24,11 +24,11 @@
           },
           "package": {
             "type": "string",
-            "description": "npm package name installed as a devDependency on the storefront."
+            "description": "npm package name installed into the isolated .demo-builder-mcp tools dir."
           },
           "version": {
             "type": "string",
-            "description": "npm semver range (caret-pin matches Demo Builder's overall posture)."
+            "description": "npm semver range. Caret for >=1.0.0 packages; tilde for 0.0.x packages, where a caret is an exact pin and freezes updates."
           },
           "command": {
             "type": "string",
@@ -37,7 +37,7 @@
           "args": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "Arguments passed to command. Paths are relative to the cwd Claude Code launches from (the storefront root)."
+            "description": "Arguments passed to command. Relative paths are anchored to the isolated tools dir by mcpConfigWriter (Claude Code's launch cwd is the project root, where node_modules/... would not resolve)."
           },
           "description": {
             "type": "string",

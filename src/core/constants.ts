@@ -115,7 +115,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // and filed a bug report about the extension force-pushing — which never
 // happened. The skill now says to run `git log` before concluding anything, and
 // gives the `gh api .../compare` check that settles a rewrite claim outright.
-export const AI_CONTEXT_VERSION = 15;
+// v16: ai-defaults gains the `dropins` MCP entry (@dropins/mcp — 21 tools for
+// the boilerplate storefront's drop-in components; verified live against a
+// real storefront, every vendored dropin knownInRegistry) for EDS storefront
+// projects, and un-freezes Playwright: ^0.0.75 was an exact pin (caret on
+// 0.0.x allows nothing newer), now ~0.0.79 so patch releases install.
+export const AI_CONTEXT_VERSION = 16;
 
 /**
  * Component IDs for standardized component instance access

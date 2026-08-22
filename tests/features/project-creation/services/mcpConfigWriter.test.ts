@@ -36,7 +36,9 @@ jest.mock('fs/promises', () => {
         realpath: jest.fn(async (p: string) => p),
         mkdir: jest.fn().mockResolvedValue(undefined),
         writeFile,
-        readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        readFile: jest
+            .fn()
+            .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
         appendFile: jest.fn().mockResolvedValue(undefined),
         // O_NOFOLLOW writes go through open(); the returned handle delegates to
         // the writeFile mock WITH the path, so path-based assertions keep working.
@@ -118,7 +120,13 @@ describe('MCP config content', () => {
 
     it('always includes the demo-builder server pointing to dist/mcp-proxy.js', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, Record<string, unknown>>;
@@ -142,7 +150,13 @@ describe('MCP config content', () => {
         // is listening on, and the demo-builder MCP shows up as "timed out" in
         // the AI Capabilities modal.
         const project = makeEdsProject(); // project.path = '/projects/test-project'
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, Record<string, unknown>>;
@@ -160,24 +174,38 @@ describe('MCP config content', () => {
 
     it('emits demo-builder plus every server declared in ai-defaults.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
         };
-        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`
-        // and Playwright MCP as `playwright` (for the EDS site-scraping skills).
+        // ai-defaults.json ships with the Adobe App Builder MCP as `commerce-extensibility`,
+        // Playwright MCP as `playwright` (for the EDS site-scraping skills), and the Adobe
+        // dropins MCP as `dropins` (EDS storefronts only — drop-in component tooling).
         // If/when more defaults are added, this test should reflect them.
         expect(Object.keys(config.mcpServers).sort()).toEqual([
             'commerce-extensibility',
             'demo-builder',
+            'dropins',
             'playwright',
         ]);
     });
 
     it('anchors the Adobe App Builder MCP args to the isolated .demo-builder-mcp dir so Claude Code (cwd=project.path) can spawn it', async () => {
         const project = makeEdsProject(); // project.path = '/projects/test-project'
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, { command: string; args: string[] }>;
@@ -196,7 +224,13 @@ describe('MCP config content', () => {
 
     it('omits ai-defaults MCP entries for bare projects (no storefront, mesh, or app-builder component)', async () => {
         const project = makeHeadlessProject();
-        await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST, makeTestWriter('/projects/headless-project'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/headless-project',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/headless-project'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
@@ -217,7 +251,13 @@ describe('MCP config content', () => {
                 },
             },
         } as Partial<Project>);
-        await writeMcpConfigs('/projects/headless-project', project, EXTENSION_DIST, makeTestWriter('/projects/headless-project'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/headless-project',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/headless-project'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
@@ -229,7 +269,13 @@ describe('MCP config content', () => {
 
     it('writes the same ai-defaults entries to both .claude/mcp.json and .mcp.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const claudeConfig = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
@@ -245,7 +291,13 @@ describe('MCP config content', () => {
 
     it('does not write external MCP entries (da-live, adobe-commerce-dev, aem-content, aem-eds)', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
@@ -267,7 +319,13 @@ describe('writeMcpConfigs', () => {
 
     it('writes .claude/mcp.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -277,7 +335,13 @@ describe('writeMcpConfigs', () => {
 
     it('writes .claude/settings.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -287,7 +351,13 @@ describe('writeMcpConfigs', () => {
 
     it('writes .mcp.json at project root', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p as string);
@@ -297,7 +367,13 @@ describe('writeMcpConfigs', () => {
 
     it('never writes .cursor/mcp.json (Cursor reads .mcp.json natively)', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -307,7 +383,13 @@ describe('writeMcpConfigs', () => {
 
     it('never writes .codex/mcp.json (Codex reads .mcp.json natively)', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
@@ -317,7 +399,13 @@ describe('writeMcpConfigs', () => {
 
     it('writes JSON with 2-space indentation', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const claudeMcpCall = writeFileMock.mock.calls.find(([p]: [string]) =>
@@ -331,7 +419,13 @@ describe('writeMcpConfigs', () => {
 
     it('.mcp.json at project root has same content as .claude/mcp.json', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const claudeConfig = captureWrittenConfig('.claude/mcp.json') as {
             mcpServers: Record<string, unknown>;
@@ -345,7 +439,13 @@ describe('writeMcpConfigs', () => {
 
     it('appends .mcp.json, .claude/mcp.json, .claude/settings.json to .gitignore', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
         expect(appendFileMock).toHaveBeenCalled();
@@ -357,7 +457,13 @@ describe('writeMcpConfigs', () => {
 
     it('never adds .cursor/mcp.json to .gitignore', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
         const appended = appendFileMock.mock.calls
@@ -368,7 +474,13 @@ describe('writeMcpConfigs', () => {
 
     it('never adds .codex/mcp.json to .gitignore', async () => {
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         const appendFileMock = fsPromises.appendFile as jest.Mock;
         const appended = appendFileMock.mock.calls
@@ -387,7 +499,13 @@ describe('writeMcpConfigs', () => {
         });
 
         const project = makeEdsProject();
-        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+        await writeMcpConfigs(
+            '/projects/test',
+            project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
     });

@@ -728,7 +728,9 @@ config when a project is created (and on "Regenerate AI files"):
   a usable Node. The ai-defaults MCPs are appended per each entry's `requires`
   gate (aiToolingGate.ts): the Commerce Extensibility Developer Agent for any
   App Builder-adjacent project (EDS storefront, mesh, or attached App Builder
-  component), Playwright for EDS storefronts only. Anchored to the per-project
+  component); Playwright and the Adobe dropins MCP (`@dropins/mcp` — drop-in
+  component discovery/scaffolding/health tooling whose project-touching tools
+  take an explicit `projectDir`) for EDS storefronts only. Anchored to the per-project
   isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.

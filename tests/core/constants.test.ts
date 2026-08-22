@@ -39,8 +39,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // lost, and filed a bug about the extension force-pushing. Without the bump,
     // existing projects keep a diagnosis table with no answer for the symptom
     // that produced a false bug report.
-    it('is 15 (check git before deciding your work is gone)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(15);
+    // v16: ai-defaults gains the `dropins` MCP entry (@dropins/mcp, EDS
+    // storefronts only) and un-freezes Playwright — ^0.0.75 was an exact pin
+    // (caret on a 0.0.x version allows nothing newer), now ~0.0.79. Without
+    // the bump, existing projects never install the dropins server and stay
+    // frozen on Playwright 0.0.75.
+    it('is 16 (dropins MCP + un-frozen Playwright range)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(16);
     });
 });
 

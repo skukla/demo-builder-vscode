@@ -13,10 +13,19 @@
     {
       "id": "playwright",
       "package": "@playwright/mcp",
-      "version": "^0.0.75",
+      "version": "~0.0.79",
       "command": "node",
       "args": ["node_modules/@playwright/mcp/cli.js"],
-      "description": "Playwright browser-automation MCP — drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). First use downloads a Chromium binary (~150 MB) cached in ~/Library/Caches/ms-playwright/, shared across all projects.",
+      "description": "Playwright browser-automation MCP — drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). First use downloads a Chromium binary (~150 MB) cached in ~/Library/Caches/ms-playwright/, shared across all projects. Tilde range, not caret: for 0.0.x versions a caret is an exact pin (^0.0.75 froze installs at 0.0.75), while ~0.0.x tracks patch releases.",
+      "requires": "eds-storefront"
+    },
+    {
+      "id": "dropins",
+      "package": "@dropins/mcp",
+      "version": "^1.1.2",
+      "command": "node",
+      "args": ["node_modules/@dropins/mcp/dist/index.js"],
+      "description": "Adobe Commerce dropins MCP — 21 tools for the boilerplate storefront's drop-in components: registry discovery (list_slots, list_events, list_containers, list_api_functions, list_design_tokens, list_graphql_queries), scaffolding (scaffold_block, scaffold_slot, scaffold_extension), health (analyze_project, check_config, check_block_health, get_upgrade_diff), and docs search. Project-touching tools take a required projectDir argument — pass the EDS storefront component path, not the project root.",
       "requires": "eds-storefront"
     }
   ]
