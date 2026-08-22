@@ -294,7 +294,7 @@ export function IntegrationsScreen({
                 {cards.length === 0 ? (
                     <CtaEmptyState
                         title="No integrations yet"
-                        description="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
+                        description="Add an API Mesh, a pre-built integration, or your own."
                         actions={[
                             { label: 'Add integration', variant: 'accent', onPress: openAdd },
                         ]}
