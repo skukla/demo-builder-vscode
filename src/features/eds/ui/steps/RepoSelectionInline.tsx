@@ -26,6 +26,7 @@ import {
     NewRepoForm,
     ResetToTemplateOption,
     computeCodeSyncValid,
+    DefaultBranchNotice,
     computeRepoValid,
     type RepoReadinessState,
     pollGitHubAppInstallation,
@@ -166,7 +167,12 @@ export function RepoSelectionInline({
         isInstalled: null,
     });
     const [isRechecking, setIsRechecking] = useState(false);
-    const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
+    // Empty, not a generic line. The view falls back to "Verifying owner/repo..."
+    // and lets CODE_SYNC_CHECK_STAGES speak once the wait outlives a glance; a
+    // non-empty default here outranks both and pinned one static line over a
+    // check that can run for three minutes. Set by the retry loop when it has
+    // something specific to say ("attempt 2 of 5"), which still wins.
+    const [recheckMessage, setRecheckMessage] = useState('');
 
     const {
         items: repos,
@@ -354,7 +360,9 @@ export function RepoSelectionInline({
         if (!target) return;
 
         setIsRechecking(true);
-        setRecheckMessage('Checking installation status...');
+        // Clear, so a stale "attempt 2 of 5" from the previous run does not
+        // outrank this run's elapsed-wait copy.
+        setRecheckMessage('');
         setGitHubAppStatus({ isChecking: true, isInstalled: null });
 
         const { status } = await pollGitHubAppInstallation(
@@ -372,6 +380,7 @@ export function RepoSelectionInline({
             vscode.postMessage('openExternal', { url: githubAppStatus.installUrl });
         }
     }, [githubAppStatus.installUrl]);
+
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
     useEffect(() => {
@@ -392,6 +401,18 @@ export function RepoSelectionInline({
         setGitHubAppStatus({ isChecking: false, isInstalled: null });
     }, [repoMode, selectedRepo]);
 
+    const [readiness, setReadiness] = useState<RepoReadinessState | undefined>(undefined);
+
+    // Helix has a SITE only for a repo with storefront content. Without one,
+    // `admin.hlx.page/status` answers `404 no such site` whatever AEM Code Sync
+    // is doing — so the App question is unanswerable here, not merely
+    // unanswered, and asking it produces an install prompt aimed at people who
+    // already have it installed. `empty` counts too: nothing to register either.
+    // `undetermined` does NOT — we failed to read the repo, which says nothing
+    // about whether it is a storefront, so the check still gets its turn.
+    const siteNotPossibleYet =
+        readiness?.kind === 'not-a-storefront' || readiness?.kind === 'empty';
+
     // Check Code Sync as soon as an EXISTING repo is picked, not mid-pipeline.
     //
     // The mid-pipeline gate sits after fstab, block collection, smart-404 and
@@ -402,10 +423,15 @@ export function RepoSelectionInline({
     // unusable behind a Continue button.
     useEffect(() => {
         if (repoMode !== 'existing' || !selectedRepo) return;
+        // Wait for readiness, then skip entirely when the repo cannot have a
+        // site yet. Probing anyway costs a round trip to be told nothing, and
+        // -- on the "Check Again" path -- fires a code-sync trigger against the
+        // user's repo that we measured accomplishes nothing in this state.
+        if (readiness === undefined || siteNotPossibleYet) return;
         const [owner, name] = (selectedRepo.fullName ?? '').split('/');
         if (!owner || !name) return;
         void probeRepoCodeSync(owner, name, setGitHubAppStatus);
-    }, [repoMode, selectedRepo]);
+    }, [repoMode, selectedRepo, readiness, siteNotPossibleYet]);
 
     // Check the App for a created repo — both on returning to the step and right
     // after creation, which leaves `isInstalled: null` precisely to arm this.
@@ -421,7 +447,6 @@ export function RepoSelectionInline({
     // Classify the selected repo so the reset control can ask only when there
     // is something to lose. Undefined while in flight — the gate treats that as
     // "do not block", so the step never flickers to invalid mid-check.
-    const [readiness, setReadiness] = useState<RepoReadinessState | undefined>(undefined);
 
     useEffect(() => {
         if (repoMode !== 'existing' || !selectedRepo) {
@@ -440,7 +465,14 @@ export function RepoSelectionInline({
             )
             .then((result) => {
                 // A stale response must not overwrite a newer selection's answer.
-                if (!cancelled) setReadiness(result?.readiness);
+                //
+                // Fall back to `undetermined` rather than leaving it undefined: a
+                // successful response with no `readiness` field would otherwise be
+                // indistinguishable from a request still in flight, and the Code
+                // Sync probe waits on exactly that distinction. Undefined has to
+                // mean "still asking" or the probe never fires at all. Matches what
+                // the catch below already does for a failed request.
+                if (!cancelled) setReadiness(result?.readiness ?? { kind: 'undetermined' });
             })
             .catch(() => {
                 if (!cancelled) setReadiness({ kind: 'undetermined' });
@@ -476,7 +508,9 @@ export function RepoSelectionInline({
     // Report the Code-Sync app-gate verdict — runs for both phases so the
     // `code-sync` sub-step gate stays live while showing `repository`.
     useEffect(() => {
-        onCodeSyncValidChange(computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo));
+        onCodeSyncValidChange(
+            computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo),
+        );
     }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
 
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
@@ -484,6 +518,12 @@ export function RepoSelectionInline({
         repoMode,
         repoCreationState.isCreated,
         !!selectedRepo,
+    );
+
+    // One predicate, read by the notice AND by the reset control it silences —
+    // so they can never disagree about whether this repo is usable.
+    const wrongDefaultBranch = Boolean(
+        selectedRepo?.defaultBranch && selectedRepo.defaultBranch !== 'main',
     );
 
     // --- `repository` phase: pick/create the repo (no app-install UI) ---------
@@ -506,6 +546,7 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
+                        <DefaultBranchNotice selectedRepo={selectedRepo} />
                         {/* Always rendered (disabled until a repo is selected) so selecting one
                             never reflows the search + list below. */}
                         <ResetToTemplateOption
@@ -513,6 +554,7 @@ export function RepoSelectionInline({
                             onResetToTemplateChange={handleResetToTemplateChange}
                             disabled={!selectedRepo}
                             readiness={readiness}
+                            unusable={wrongDefaultBranch}
                         />
                         <SelectionStepContent
                             headerAction={
@@ -574,6 +616,7 @@ export function RepoSelectionInline({
         <div className="w-full relative flex-1 flex-column">
             {showAppStatus && (
                 <CodeSyncStatusView
+                    siteNotPossibleYet={siteNotPossibleYet}
                     createdRepo={edsConfig?.createdRepo}
                     selectedRepoFullName={selectedRepo?.fullName}
                     status={githubAppStatus}

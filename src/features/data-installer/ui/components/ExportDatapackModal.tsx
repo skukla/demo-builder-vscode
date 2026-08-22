@@ -65,6 +65,8 @@ interface TypeChoices {
     selected: string[];
     allSelected: boolean;
     loading: boolean;
+    /** Something has actually come back — see the `!settled` guard below. */
+    settled: boolean;
     error?: string;
     onToggle: (dataType: string, isSelected: boolean) => void;
     onToggleAll: () => void;
@@ -179,6 +181,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                                 selected,
                                 allSelected,
                                 loading: types.loading,
+                                settled: types.settled,
                                 error: types.failure?.message,
                                 onToggle: toggle,
                                 onToggleAll: toggleAll,
@@ -264,6 +267,7 @@ function ExportForm({
 function renderTypeChoices({
     error,
     loading,
+    settled,
     available,
     selected,
     onToggle,
@@ -275,7 +279,10 @@ function renderTypeChoices({
             </p>
         );
     }
-    if (loading) {
+    // `!settled` too: `loading` starts false and the fetch runs from a useEffect,
+    // so frame 1 fell past this and drew an empty type grid before the note
+    // appeared.
+    if (loading || !settled) {
         return <p className="datapack-export-note">Loading what can be exported…</p>;
     }
     return (

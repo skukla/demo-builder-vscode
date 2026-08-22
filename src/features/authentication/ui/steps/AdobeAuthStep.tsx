@@ -18,9 +18,15 @@ import { AuthLoadingState } from './components/AuthLoadingState';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { ErrorCode } from '@/types/errorCodes';
+import type { AdobeAuthSessionState } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
 
-export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableStepProps) {
+// Session-state props: this step is ALSO hosted outside the wizard (the Add
+// Integration modal's sign-in stage), where the host synthesizes a partial
+// store. Everything it reads is optional either way.
+type AdobeAuthStepProps = Omit<NavigableStepProps, 'state'> & { state: AdobeAuthSessionState };
+
+export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
     const {
         authStatus,
         authSubMessage,
@@ -69,7 +75,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: NavigableSt
                 <StatusDisplay
                     variant="success"
                     title="Connected"
-                    message={adobeOrg.name}
+                    message={adobeOrg.name ?? adobeOrg.id}
                     actions={[
                         { label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'secondary', onPress: switchAccount },
                     ]}

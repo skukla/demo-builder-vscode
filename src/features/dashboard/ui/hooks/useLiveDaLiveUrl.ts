@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { AuthoringExperienceUpdatePayload } from '@/types/webviewPayloads';
 
 /**
  * The live DA.live authoring URL, seeded from the open-time prop and kept
@@ -29,7 +30,7 @@ export function useLiveDaLiveUrl(initial: string | undefined): string | undefine
         const unsubscribe = webviewClient.onMessage(
             'authoringExperienceUpdate',
             (data: unknown) => {
-                const payload = data as { edsDaLiveUrl?: string };
+                const payload = data as AuthoringExperienceUpdatePayload;
                 if (payload.edsDaLiveUrl) {
                     setUrl(payload.edsDaLiveUrl);
                 }

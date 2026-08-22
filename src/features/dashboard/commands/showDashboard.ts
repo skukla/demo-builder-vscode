@@ -9,21 +9,19 @@ import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext } from '@/types/handlers';
@@ -34,6 +32,16 @@ import {
     getEdsLiveUrl,
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
+import type {
+    AppBuilderComponentRowStatus,
+    AppBuilderComponentStatusUpdatePayload,
+    AppBuilderComponentsSnapshotPayload,
+    AuthoringExperienceUpdatePayload,
+    DashboardInitialData,
+    DestinationTitles,
+    MeshStatusUpdatePayload,
+    ProjectDestinationUpdatePayload,
+} from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -87,7 +95,7 @@ export function shouldAutoReopenProjectsList(
  * Refactored in Phase 3.8 to use BaseWebviewCommand pattern with HandlerRegistry.
  * Updated in Step 3 to use object literal handler maps with dispatchHandler.
  */
-export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
+export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<DashboardInitialData> {
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
@@ -131,21 +139,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<{
-        theme: string;
-        project: { name: string; path: string } | null;
-        hasMesh: boolean;
-        packageName?: string;
-        stackName?: string;
-        isEds: boolean;
-        edsLiveUrl?: string;
-        edsDaLiveUrl?: string;
-        initialEdsStorefrontStatus?: string;
-        hasAdobeContext: boolean;
-        dataInstallerAvailable: boolean;
-        appBuilderComponents?: Record<string, AppBuilderComponentState>;
-        appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    }> {
+    protected async getInitialData(): Promise<DashboardInitialData> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -178,23 +172,19 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
-        // Integrations grid seed: the keyed appBuilderComponents map + the
-        // stack-filtered catalog for the add-integration picker (the mesh
-        // renders as the grid's first peer card, derived from the live mesh
-        // status channels, so no separate seed is needed here).
         // Whether to OFFER the Sample Data tile at all. Read here rather than in
         // the webview because these are host settings; the tile used to render
         // unconditionally, so a user without an API URL got a tile that opened a
         // surface refusing them.
         const dataInstallerAvailable = isDataInstallerConfigured();
 
-        const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
-
         return {
             theme,
             project: project
                 ? {
-                      name: project.name,
+                      // Display only -- the dashboard heading. See
+                      // dashboardStatusService, which sends the same field.
+                      name: getProjectDisplayName(project),
                       path: project.path,
                   }
                 : null,
@@ -207,19 +197,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             initialEdsStorefrontStatus,
             hasAdobeContext,
             dataInstallerAvailable,
+            // The keyed map drives the integrations SUMMARY tile (count + dot).
+            // No catalog seed: the add-integration picker lives on the dedicated
+            // integrations surface, whose own payload carries the catalog.
             appBuilderComponents: project?.appBuilderComponents,
-            appBuilderComponentCatalog,
         };
-    }
-
-    /** Stack-filtered appBuilderComponent catalog for the integrations add-a-appBuilderComponent picker. */
-    private resolveAppBuilderComponentCatalog(
-        project: Project | null,
-    ): AppBuilderComponentCatalogEntry[] {
-        return getAvailableAppBuilderComponents(
-            project?.componentSelections?.backend ?? '',
-            project?.componentSelections?.frontend ?? '',
-        );
     }
 
     /**
@@ -354,16 +336,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      *
      * @param destination - the titles the header renders, post-write
      */
-    public static async sendProjectDestinationUpdate(destination: {
-        projectTitle?: string;
-        workspaceTitle?: string;
-    }): Promise<void> {
+    public static async sendProjectDestinationUpdate(destination: DestinationTitles): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'projectDestinationUpdate',
-                payload: { destination },
-            });
+            const payload: ProjectDestinationUpdatePayload = { destination };
+            await panel.webview.postMessage({ type: 'projectDestinationUpdate', payload });
         }
     }
 
@@ -377,14 +354,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'meshStatusUpdate',
-                payload: {
-                    status,
-                    message,
-                    endpoint,
-                },
-            });
+            const payload: MeshStatusUpdatePayload = { status, message, endpoint };
+            await panel.webview.postMessage({ type: 'meshStatusUpdate', payload });
         }
     }
 
@@ -406,15 +377,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'appBuilderComponentStatusUpdate',
-                payload: {
-                    id,
-                    status,
-                    message,
-                    name,
-                },
-            });
+            const payload: AppBuilderComponentStatusUpdatePayload = { id, status, message, name };
+            await panel.webview.postMessage({ type: 'appBuilderComponentStatusUpdate', payload });
         }
     }
 
@@ -431,12 +395,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     ): Promise<void> {
         const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'appBuilderComponentsSnapshot',
-                payload: {
-                    components,
-                },
-            });
+            const payload: AppBuilderComponentsSnapshotPayload = { components };
+            await panel.webview.postMessage({ type: 'appBuilderComponentsSnapshot', payload });
         }
     }
 
@@ -449,12 +409,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     public static async sendAuthoringExperienceUpdate(edsDaLiveUrl?: string): Promise<void> {
         const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
         if (panel) {
-            await panel.webview.postMessage({
-                type: 'authoringExperienceUpdate',
-                payload: {
-                    edsDaLiveUrl,
-                },
-            });
+            const payload: AuthoringExperienceUpdatePayload = { edsDaLiveUrl };
+            await panel.webview.postMessage({ type: 'authoringExperienceUpdate', payload });
         }
     }
 

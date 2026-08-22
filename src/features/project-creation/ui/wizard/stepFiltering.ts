@@ -6,42 +6,7 @@
  */
 
 import type { Stack } from '@/types/stacks';
-
-/**
- * Condition for showing a wizard step
- */
-export interface StepCondition {
-    /**
-     * Stack property that must be truthy for this step to be shown.
-     * Maps to Stack properties like 'requiresGitHub' or 'requiresDaLive'.
-     */
-    stackRequires?: 'requiresGitHub' | 'requiresDaLive';
-
-    /**
-     * Array of stack properties where at least ONE must be truthy.
-     * Used for combined steps that should show when GitHub OR DA.live is required.
-     */
-    stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
-
-    /**
-     * If true, this step is only shown when NO predefined stack is selected.
-     * Used for steps like Component Selection that are hidden when a stack
-     * already determines the components, but should appear for a future
-     * "Custom" option where users manually select components.
-     *
-     * NOTE: This condition is deliberately kept for future extensibility.
-     * When a "Custom" brand option is added, it won't set selectedStack,
-     * allowing this step to appear for manual component configuration.
-     */
-    showWhenNoStack?: boolean;
-
-    /**
-     * If true, this step is only shown in create mode (not edit mode).
-     * Used for steps like EDS preflight that create external resources
-     * which already exist for existing projects.
-     */
-    createModeOnly?: boolean;
-}
+import type { StepCondition } from '@/types/wizard';
 
 /**
  * Wizard step with optional condition for filtering
@@ -100,7 +65,7 @@ export function filterStepsForStack(
     // Hide steps that require specific stack properties (requiresGitHub, etc.)
     // Hide createModeOnly steps in edit mode
     if (!stack) {
-        return steps.filter(step => {
+        return steps.filter((step) => {
             if (isHiddenInEditMode(step)) return false;
             if (!step.condition) return true;
             if (step.condition.showWhenNoStack) return true;
@@ -108,7 +73,7 @@ export function filterStepsForStack(
         });
     }
 
-    return steps.filter(step => {
+    return steps.filter((step) => {
         // Hide createModeOnly steps in edit mode
         if (isHiddenInEditMode(step)) {
             return false;
@@ -134,7 +99,7 @@ export function filterStepsForStack(
 
         // Check if ANY of the listed stack properties is true
         if (stackRequiresAny && stackRequiresAny.length > 0) {
-            return stackRequiresAny.some(prop => Boolean(stack[prop]));
+            return stackRequiresAny.some((prop) => Boolean(stack[prop]));
         }
 
         return true;

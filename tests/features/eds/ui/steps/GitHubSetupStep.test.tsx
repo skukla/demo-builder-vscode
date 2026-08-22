@@ -129,7 +129,7 @@ describe('GitHubSetupStep', () => {
             const state = createDefaultState({
                 githubAuth: {
                     isAuthenticated: true,
-                    user: { login: 'testuser', avatarUrl: 'https://example.com/avatar.png' },
+                    user: { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', email: null, name: null },
                 },
             });
 
@@ -155,7 +155,7 @@ describe('GitHubSetupStep', () => {
             const state = createDefaultState({
                 githubAuth: {
                     isAuthenticated: true,
-                    user: { login: 'testuser' },
+                    user: { login: 'testuser', email: null, name: null, avatarUrl: null },
                 },
             });
 
@@ -265,7 +265,7 @@ describe('GitHubSetupStep', () => {
             const state = createDefaultState({
                 githubAuth: {
                     isAuthenticated: true,
-                    user: { login: 'testuser' },
+                    user: { login: 'testuser', email: null, name: null, avatarUrl: null },
                 },
             });
 

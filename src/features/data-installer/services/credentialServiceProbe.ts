@@ -60,7 +60,7 @@ export async function probeCredentialService(
             reason: selection.reason,
             verdict:
                 `No credential service is configured, so a project without its own Adobe ` +
-                `workspace cannot import sample data. Add one under ${SERVICE_SETTING}.`,
+                `workspace cannot import datapacks. Add one under ${SERVICE_SETTING}.`,
         };
     }
 
@@ -117,7 +117,7 @@ async function readToken(deps: CredentialProbeDeps['auth']): Promise<string | un
  */
 function verdictForStatus(status: number): string {
     if (status === 200) {
-        return 'Shared credential available — projects without their own Adobe workspace can import sample data.';
+        return 'Shared credential available — projects without their own Adobe workspace can import datapacks.';
     }
     if (status === 403) {
         return 'Your account is not authorized for the shared credential. Ask the service administrator to add your email domain, or add a client id and secret to this project.';

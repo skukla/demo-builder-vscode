@@ -19,6 +19,17 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /** Token provider interface for dependency injection. */
+/** A RequestInit, or a factory yielding a fresh one per retry attempt. */
+export type RetryRequestInit = RequestInit | (() => RequestInit);
+
+export interface FetchRetryOptions {
+    /**
+     * What a 429 does: 'throw' (default) raises DaLiveNetworkError with
+     * retryAfter; 'return' hands the response back for caller-side policy.
+     */
+    rateLimit?: 'throw' | 'return';
+}
+
 export interface TokenProvider {
     getAccessToken(): Promise<string | null>;
 }
@@ -45,15 +56,28 @@ export class DaLiveApiClient {
     }
 
     /** Fetch with 429/5xx retry (exponential backoff) and a per-attempt timeout. */
-    async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+    async fetchWithRetry(
+        url: string,
+        options: RetryRequestInit,
+        retryOpts: FetchRetryOptions = {},
+    ): Promise<Response> {
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
+                // Factory support: one-shot bodies (FormData streams) cannot be
+                // resent, so callers pass a factory and get a FRESH RequestInit
+                // per attempt (2026-08-22 content-copy consolidation).
+                const init = typeof options === 'function' ? options() : options;
                 const response = await fetch(url, {
-                    ...options,
+                    ...init,
                     signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
                 });
 
                 if (response.status === 429) {
+                    if (retryOpts.rateLimit === 'return') {
+                        // Page-level tolerance: the caller skips one page rather
+                        // than aborting a whole multi-page copy.
+                        return response;
+                    }
                     const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
                     throw new DaLiveNetworkError(
                         'Rate limited. Please wait before making more requests.',

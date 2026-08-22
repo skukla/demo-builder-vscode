@@ -31,6 +31,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type { AddAppBuilderComponentRequestPayload, DestinationRef, SetProjectDestinationRequestPayload } from '@/types/webviewRequests';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
@@ -66,7 +67,7 @@ export interface AddIntegrationFlowAdapterProps {
 }
 
 /** Post an add and close — the runner reports progress on the status channel. */
-function postAdd(payload: Record<string, unknown>): void {
+function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
     webviewClient.postMessage('addAppBuilderComponent', payload);
 }
 
@@ -111,7 +112,7 @@ export function AddIntegrationFlowAdapter({
     // The committed destination, mirrored synchronously. `updateState` receives the
     // project and the workspace in separate commits, and the post fires on the
     // second — a setState-backed read would still see the previous render's value.
-    const destinationRef = useRef<{ project?: unknown; workspace?: unknown }>({});
+    const destinationRef = useRef<{ project?: DestinationRef; workspace?: DestinationRef }>({});
 
     const updateState = useCallback(
         (updates: Partial<WizardState>): void => {
@@ -130,7 +131,7 @@ export function AddIntegrationFlowAdapter({
             // destination did nothing at all (found live 2026-08-07).
             const { project, workspace } = destinationRef.current;
             if (mode === 'destination' && updates.adobeWorkspace && project && workspace) {
-                webviewClient.postMessage('setProjectDestination', { project, workspace });
+                webviewClient.postMessage('setProjectDestination', { project, workspace } satisfies SetProjectDestinationRequestPayload);
             }
 
             setOverrides((current) => ({ ...current, ...updates }));
@@ -165,7 +166,7 @@ export function AddIntegrationFlowAdapter({
             // renders with hasAdobeContext. Without BOTH of these isAdobeSignedIn()
             // is false and the flow walks sign-in → project → workspace instead of
             // collapsing to the summary.
-            adobeAuth: { isAuthenticated: true },
+            adobeAuth: { isAuthenticated: true, isChecking: false },
             adobeOrg: adobeOrgId ? { id: adobeOrgId } : undefined,
             adobeProject: adobeProjectId
                 ? { id: adobeProjectId, title: adobeProjectTitle }
@@ -209,7 +210,7 @@ export function AddIntegrationFlowAdapter({
                 catalogIds: catalog.map((entry) => entry.id),
                 selectedAddons: [],
                 selectedOptionalDependencies: [],
-            } as never),
+            }),
         [integrationIds, catalog],
     );
 
@@ -256,13 +257,13 @@ export function AddIntegrationFlowAdapter({
             isOpen={isOpen}
             onClose={onClose}
             mode={mode}
-            state={state as never}
+            state={state}
             updateState={updateState}
-            meshComponent={meshComponent as never}
+            meshComponent={meshComponent}
             catalog={catalog}
             blankComponent={blankComponent}
             reservedIds={reservedIds}
-            builder={builder as never}
+            builder={builder}
             onSignIn={signIn}
         />
     );

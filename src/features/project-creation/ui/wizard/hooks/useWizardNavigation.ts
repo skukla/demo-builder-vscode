@@ -4,7 +4,6 @@ import {
     filterCompletedStepsForBackwardNav,
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
-    ImportedSettings,
 } from '../wizardHelpers';
 import { markStepCompleted } from '@/core/ui/utils/stepCompletion';
 import { vscode } from '@/core/ui/utils/vscode-api';
@@ -12,6 +11,7 @@ import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState, WizardStep } from '@/types/webview';
+import type { ImportedSettings } from '@/types/wizard';
 
 const log = webviewLogger('useWizardNavigation');
 

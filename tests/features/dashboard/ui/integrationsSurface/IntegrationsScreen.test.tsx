@@ -75,7 +75,10 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
 
 jest.mock('@/core/ui/components/feedback', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
-    StatusDisplay: ({ title, actions }: any) => (
+    // The empty state moved from StatusDisplay to the shared CtaEmptyState
+    // (2026-08-22, matching the Projects first-run look); same testid so the
+    // suite keeps asserting behaviour, not markup.
+    CtaEmptyState: ({ title, actions }: any) => (
         <div data-testid="empty-state">
             {title}
             {actions?.map((a: any) => (
@@ -133,6 +136,7 @@ import {
     formatDestination,
     IntegrationsScreen,
 } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
@@ -213,7 +217,7 @@ describe('IntegrationsScreen', () => {
                 <IntegrationsScreen
                     hasAdobeContext
                     appBuilderComponents={{}}
-                    projectName="demo-builder-test"
+                    projectName={asDisplayName('demo-builder-test')}
                     destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                 />
             );
@@ -268,13 +272,13 @@ describe('IntegrationsScreen', () => {
         });
     });
 
-describe('header', () => {
+    describe('header', () => {
         it('names the project', () => {
             const handlers = captureHandlers();
             render(
                 <IntegrationsScreen
                     hasAdobeContext
-                    projectName="demo-builder-test"
+                    projectName={asDisplayName('demo-builder-test')}
                     appBuilderComponents={{ a: DEPLOYED }}
                     destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                 />
@@ -299,7 +303,7 @@ describe('header', () => {
                 render(
                     <IntegrationsScreen
                         hasAdobeContext
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         appBuilderComponents={{ a: DEPLOYED }}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
@@ -308,9 +312,7 @@ describe('header', () => {
 
                 // The crumb is the LOCAL project only; the remote destination
                 // moved to the band's context row.
-                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                    'demo-builder-test'
-                );
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-destination')).toHaveTextContent('Kukla Mesh');
             });
 
@@ -321,7 +323,7 @@ describe('header', () => {
                 render(
                     <IntegrationsScreen
                         hasAdobeContext
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         appBuilderComponents={{ a: DEPLOYED }}
                     />
                 );
@@ -352,7 +354,7 @@ describe('header', () => {
                     <IntegrationsScreen
                         hasAdobeContext
                         appBuilderComponents={{ a: DEPLOYED }}
-                        projectName="demo-builder-test"
+                        projectName={asDisplayName('demo-builder-test')}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
@@ -362,9 +364,7 @@ describe('header', () => {
                 expect(band).toHaveTextContent('Kukla Mesh');
                 expect(band).toHaveTextContent('Stage');
                 // The header keeps the LOCAL project name and nothing else.
-                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                    'demo-builder-test'
-                );
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
             });
 
@@ -603,9 +603,9 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
+                projectName={asDisplayName('demo-builder-test')}
                 destination={DEST}
-            />,
+            />
         );
         settleStatus(handlers);
 
@@ -619,8 +619,8 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
-            />,
+                projectName={asDisplayName('demo-builder-test')}
+            />
         );
         settleStatus(handlers);
 
@@ -633,9 +633,9 @@ describe('IntegrationsScreen — destination control', () => {
             <IntegrationsScreen
                 hasAdobeContext
                 appBuilderComponents={{ a: DEPLOYED }}
-                projectName="demo-builder-test"
+                projectName={asDisplayName('demo-builder-test')}
                 destination={DEST}
-            />,
+            />
         );
         settleStatus(handlers);
 

@@ -212,7 +212,11 @@ export function ConnectStoreStepContent({
     if (isLoading) {
         return (
             <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Loading component configurations..." />
+                <LoadingDisplay
+                    size="L"
+                    message="Loading component configurations..."
+                    helperText="This should only take a moment"
+                />
             </CenteredFeedbackContainer>
         );
     }
@@ -260,7 +264,11 @@ export function ConnectStoreStepContent({
     if (section === 'business-structure' && !fetchError && (isFetching || !hasStoreData)) {
         return (
             <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Detecting store structure…" />
+                <LoadingDisplay
+                    size="L"
+                    message="Detecting store structure..."
+                    helperText="This may take up to 30 seconds"
+                />
             </CenteredFeedbackContainer>
         );
     }

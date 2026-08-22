@@ -6,11 +6,12 @@
  * jest.mock + constructor wiring is re-declared here (jest.mock is hoisted).
  */
 
-import {
-    handleGetComponentsData,
-} from '@/features/components/handlers/componentHandlers';
+import { handleGetComponentsData } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
+import {
+    ComponentRegistryManager,
+    DependencyResolver,
+} from '@/features/components/services/ComponentRegistryManager';
 import {
     createMockHandlerContext,
     createMockRegistryManager,
@@ -31,9 +32,9 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         mockDependencyResolver = createMockDependencyResolver();
 
         // Mock the ComponentRegistryManager constructor
-        (ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>).mockImplementation(
-            () => mockRegistryManager
-        );
+        (
+            ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
+        ).mockImplementation(() => mockRegistryManager);
 
         // Mock the DependencyResolver constructor
         (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
@@ -171,6 +172,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     ],
                     envVars: {
                         NEXT_PUBLIC_API_URL: {
+                            key: 'NEXT_PUBLIC_API_URL',
                             label: 'API URL',
                             type: 'url',
                             default: 'http://localhost:3000',
@@ -182,6 +184,35 @@ describe('componentHandlers - Pattern B (request-response)', () => {
 
             // Verify sendMessage was NOT called (anti-pattern)
             expect(mockContext.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('injects each record key into the envVars records it sends', async () => {
+            // Regression: the registry stores env vars keyed by name with no
+            // `key` field inside the record (components.json carries none), but
+            // the webview types (ComponentEnvVar) declare `key` required — so
+            // anything reading `envVars[x].key` off the payload read undefined.
+            mockRegistryManager.getFrontends.mockResolvedValue([]);
+            mockRegistryManager.getBackends.mockResolvedValue([]);
+            mockRegistryManager.getIntegrations.mockResolvedValue([]);
+            mockRegistryManager.getDependencies.mockResolvedValue([]);
+            mockRegistryManager.getMesh.mockResolvedValue([]);
+            mockRegistryManager.loadRegistry.mockResolvedValue({
+                version: '1.0.0',
+                components: { frontends: [], backends: [], dependencies: [] },
+                envVars: {
+                    ACCS_WEBSITE_CODE: { label: 'Website code', type: 'text' as const },
+                    ACCS_STORE_CODE: { label: 'Store code', type: 'text' as const },
+                },
+            });
+
+            const result = await handleGetComponentsData(mockContext);
+
+            const envVars = (result as any).data.envVars;
+            expect(envVars.ACCS_WEBSITE_CODE.key).toBe('ACCS_WEBSITE_CODE');
+            expect(envVars.ACCS_STORE_CODE.key).toBe('ACCS_STORE_CODE');
+            // The rest of the record survives the injection untouched.
+            expect(envVars.ACCS_WEBSITE_CODE.label).toBe('Website code');
+            expect(envVars.ACCS_WEBSITE_CODE.type).toBe('text');
         });
 
         it('should return error with success=false on registry failure', async () => {
@@ -252,19 +283,49 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         it('should include all expected fields in data structure', async () => {
             // Arrange: Mock minimal valid data
             mockRegistryManager.getFrontends.mockResolvedValue([
-                { id: 'f1', name: 'Frontend', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'f1',
+                    name: 'Frontend',
+                    description: 'desc',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.getBackends.mockResolvedValue([
-                { id: 'b1', name: 'Backend', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'b1',
+                    name: 'Backend',
+                    description: 'desc',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.getIntegrations.mockResolvedValue([
-                { id: 'e1', name: 'External', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'e1',
+                    name: 'External',
+                    description: 'desc',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.getDependencies.mockResolvedValue([
-                { id: 'd1', name: 'Dependency', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'd1',
+                    name: 'Dependency',
+                    description: 'desc',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.getMesh.mockResolvedValue([
-                { id: 'm1', name: 'Mesh', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'm1',
+                    name: 'Mesh',
+                    description: 'desc',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.loadRegistry.mockResolvedValue({
                 version: '1.0.0',
@@ -310,5 +371,4 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(data.envVars.KEY).toHaveProperty('label', 'Some Key');
         });
     });
-
 });

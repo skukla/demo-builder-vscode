@@ -57,8 +57,15 @@ export interface EnvVarDefinition {
 /**
  * ServiceDefinition - Service definition from registry
  */
+/**
+ * NO `id` field: services are a RECORD keyed by service id in components.json,
+ * and unlike components, nothing ever injects one at transform time —
+ * `expandServices` spreads the raw entry. Consumers derive the id from the
+ * record key (see useComponentSelection's ComponentOption mapping). The
+ * required `id` this type used to declare was a phantom no runtime value
+ * carried (caught by the config↔interface contract test).
+ */
 export interface ServiceDefinition {
-    id: string;
     name: string;
     required?: boolean;
     endpoint?: string;
@@ -73,11 +80,11 @@ export interface ServiceDefinition {
 
 /**
  * ConfigFileDefinition - Configuration file definition
- * 
+ *
  * All config files are peers - .env and .json are just different formats for
  * the same purpose (storing component configuration). Components can define
  * multiple config files in different formats (e.g., EDS needs both .env and site.json).
- * 
+ *
  * @example
  * // EDS needs both .env (for build) and site.json (for browser runtime)
  * "configFiles": {
@@ -103,9 +110,14 @@ export interface ConfigFileDefinition {
 
 /**
  * RawComponentDefinition - Raw component from templates/components.json
+ *
+ * NO `id` field: in the file, entries are RECORDS keyed by component id — the
+ * key IS the identity, and `ComponentRegistryManager.enhanceComponent` injects
+ * it at transform time. Declaring `id` required here made the interface claim
+ * a field the raw JSON has never carried (caught by the interface-contract
+ * test the day it landed). Same shape as the envVars `key` finding.
  */
 export interface RawComponentDefinition {
-    id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
     subType?: 'mesh' | 'app' | 'utility' | 'service';
@@ -140,13 +152,16 @@ export interface RawComponentDefinition {
         nodeVersion?: string;
         buildScript?: string;
         skipNpmInstall?: boolean;
-        required?: Record<string, {
-            type: 'string' | 'url' | 'password' | 'number' | 'boolean';
-            label: string;
-            placeholder?: string;
-            default?: string | number | boolean;
-            validation?: string;
-        }>;
+        required?: Record<
+            string,
+            {
+                type: 'string' | 'url' | 'password' | 'number' | 'boolean';
+                label: string;
+                placeholder?: string;
+                default?: string | number | boolean;
+                validation?: string;
+            }
+        >;
         requiredServices?: string[];
         providesServices?: string[]; // Service IDs this component provides to others
         services?: string[];
@@ -215,6 +230,8 @@ export interface RawComponentRegistry {
     /** v3.0.0: Integrations (e.g., experience-platform) */
     integrations?: Record<string, RawComponentDefinition>;
     infrastructure?: Record<string, RawComponentDefinition>;
+    /** Optional addons (e.g., adobe-commerce-aco) — read by configGenerator and the MCP discovery sections */
+    addons?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Tools (standalone CLI tools) */
     tools?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
@@ -240,11 +257,12 @@ export interface PresetDefinition {
 /**
  * TransformedComponentDefinition - Component after transformation
  *
- * NO transformation anymore - just passes through the flat structure from JSON:
- * - requiredEnvVars/optionalEnvVars directly in configuration (NOT nested)
- * - services remains as-is (no transformation needed)
+ * The one transformation left: `id` is injected from the record key
+ * (`ComponentRegistryManager.enhanceComponent`). Everything else passes
+ * through flat from the JSON (requiredEnvVars/optionalEnvVars directly in
+ * configuration, services as-is).
  */
-export type TransformedComponentDefinition = RawComponentDefinition;
+export type TransformedComponentDefinition = RawComponentDefinition & { id: string };
 
 /**
  * ComponentRegistry - Transformed registry for runtime use

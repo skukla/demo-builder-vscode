@@ -1,25 +1,13 @@
 import { View } from '@adobe/react-spectrum';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';
-import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import { ComponentSelection } from '@/types/webview';
+import { WizardContainer } from './WizardContainer';
+import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
-
-interface WizardInitData extends WebviewInitData {
-    componentDefaults?: ComponentSelection;
-    wizardSteps?: { id: string; name: string; enabled: boolean }[];
-    existingProjectNames?: string[];
-    importedSettings?: ImportedSettings | null;
-    editProject?: EditProjectConfig | null;
-    projectsViewMode?: 'cards' | 'rows';
-    blockLibraryDefaults?: string[];
-    customBlockLibraryDefaults?: CustomBlockLibrary[];
-}
+import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element
 const container = document.getElementById('root');
@@ -45,18 +33,22 @@ root.render(
             </View>
         }
     >
-        {(initData) => {
-            const data = initData as WizardInitData;
+        {(data) => {
+            // ONE boundary cast: the shape is owned by
+            // CreateProjectWebviewCommand.getInitialData(). Partial because
+            // `data` is null until the init message lands. Wire `null`s become
+            // `undefined` where a container prop models absence that way.
+            const init = (data ?? {}) as Partial<WizardInitialData>;
             return (
                 <WizardContainer
-                    componentDefaults={data?.componentDefaults}
-                    wizardSteps={data?.wizardSteps}
-                    existingProjectNames={data?.existingProjectNames}
-                    importedSettings={data?.importedSettings}
-                    editProject={data?.editProject ?? undefined}
-                    projectsViewMode={data?.projectsViewMode}
-                    blockLibraryDefaults={data?.blockLibraryDefaults}
-                    customBlockLibraryDefaults={data?.customBlockLibraryDefaults}
+                    componentDefaults={init.componentDefaults ?? undefined}
+                    wizardSteps={init.wizardSteps ?? undefined}
+                    existingProjectNames={init.existingProjectNames}
+                    importedSettings={init.importedSettings}
+                    editProject={init.editProject ?? undefined}
+                    projectsViewMode={init.projectsViewMode}
+                    blockLibraryDefaults={init.blockLibraryDefaults}
+                    customBlockLibraryDefaults={init.customBlockLibraryDefaults}
                 />
             );
         }}

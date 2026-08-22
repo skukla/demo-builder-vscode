@@ -30,13 +30,13 @@ describe('ActionGrid', () => {
         it('hides the tile when the Data Installer is not configured', () => {
             render(<ActionGrid {...defaultProps} dataInstallerAvailable={false} />);
 
-            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
         });
 
         it('shows the tile when the Data Installer is configured', () => {
             render(<ActionGrid {...defaultProps} dataInstallerAvailable={true} />);
 
-            expect(screen.getByText('Sample Data')).toBeInTheDocument();
+            expect(screen.getByText('Datapacks')).toBeInTheDocument();
         });
 
         it('hides the tile when the host did not say', () => {
@@ -45,13 +45,13 @@ describe('ActionGrid', () => {
             // closed rather than fall back to the old unconditional render.
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
         });
 
         it('gates it for EDS projects too', () => {
             render(<ActionGrid {...edsProps} dataInstallerAvailable={false} />);
 
-            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
         });
     });
 

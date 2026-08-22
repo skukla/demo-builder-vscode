@@ -1,71 +1,44 @@
 import { useEffect } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import type { WizardState, WizardStep, FeedbackMessage } from '@/types/webview';
+import type { WizardState } from '@/types/webview';
+import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
 
 interface UseMessageListenersProps {
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
-    getCurrentStepIndex: () => number;
-    navigateToStep: (step: WizardStep, targetIndex: number, currentIndex: number) => void;
-    WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
-    /** Callback when GitHub App installation is required during creation */
-    onGitHubAppRequired?: (data: { owner: string; repo: string; installUrl: string }) => void;
 }
 
 /**
  * Hook to set up all message listeners for communication with the extension
  *
  * Handles:
- * - feedback: Progress feedback messages during operations
  * - creationProgress: Project creation progress updates
- * - navigateToStep: Sidebar navigation requests
+ * - creationFailed: generic failure-state update
+ *
+ * No `feedback` listener any more: the channel was dead on BOTH ends — the
+ * only sender (`_sendFeedback` on CreateProjectWebviewCommand) had zero
+ * callers, and the listener read `progress`/`log`/`error` fields the sender
+ * never included. Both halves deleted by the 2026-08-21 channel inventory,
+ * along with the FeedbackMessage type.
+ *
+ * No `navigateToStep` listener any more: it awaited "sidebar navigation
+ * requests" from the era when the sidebar drove wizard steps — that surface
+ * was retired (the wizard owns its own TimelineNav), no code anywhere sends
+ * the message, and an unsent push means the listener could never fire.
+ * Found by the 2026-08-21 channel inventory (the initialMeshStatus class:
+ * producer deleted, consumer survived).
+ *
+ * No `onGitHubAppRequired` callback either: it was a SECOND implementation
+ * of the GITHUB_APP_NOT_INSTALLED reaction that no caller ever wired — the
+ * LIVE one is ProjectCreationStep's own creationFailed listener, which opens
+ * GitHubAppInstallDialog. This hook's creationFailed listener only does the
+ * generic progress-state update, same as it always effectively did.
  */
-export function useMessageListeners({
-    setState,
-    getCurrentStepIndex,
-    navigateToStep,
-    WIZARD_STEPS,
-    onGitHubAppRequired,
-}: UseMessageListenersProps): void {
-    // Listen for feedback messages from extension
-    // Registered ONCE on mount - checks conditions inside functional update to avoid stale closures
-    useEffect(() => {
-        const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
-            setState(prev => {
-                // Only update if in create-project step with active progress
-                if (prev.currentStep !== 'create-project' || !prev.creationProgress) {
-                    return prev;
-                }
-
-                return {
-                    ...prev,
-                    creationProgress: {
-                        ...prev.creationProgress,
-                        currentOperation: message.primary,
-                        progress: message.progress || prev.creationProgress.progress,
-                        message: message.secondary || prev.creationProgress.message,
-                        logs: message.log
-                            ? [...prev.creationProgress.logs, message.log]
-                            : prev.creationProgress.logs,
-                        error: message.error,
-                    },
-                };
-            });
-        });
-
-        return unsubscribe;
-    }, [setState]);
-
+export function useMessageListeners({ setState }: UseMessageListenersProps): void {
     // Listen for creationProgress messages from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('creationProgress', (progressData: unknown) => {
-            const data = progressData as {
-                currentOperation?: string;
-                progress?: number;
-                message?: string;
-                logs?: string[];
-                error?: string;
-            };
-            setState(prev => ({
+            const data = progressData as Partial<CreationProgressPayload>;
+            setState((prev) => ({
                 ...prev,
                 creationProgress: {
                     currentOperation: data.currentOperation || 'Processing',
@@ -84,54 +57,24 @@ export function useMessageListeners({
     // Handles special error types like GITHUB_APP_NOT_INSTALLED
     useEffect(() => {
         const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
-            const failedData = data as {
-                error?: string;
-                errorType?: string;
-                errorDetails?: {
-                    owner?: string;
-                    repo?: string;
-                    installUrl?: string;
-                };
-            };
+            const failedData = data as Partial<CreationFailedPayload>;
 
-            // Handle GitHub App not installed error specially
-            if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
-                const { owner, repo, installUrl } = failedData.errorDetails;
-                if (owner && repo && installUrl && onGitHubAppRequired) {
-                    onGitHubAppRequired({ owner, repo, installUrl });
-                    return; // Don't update state - callback handles the UI transition
-                }
-            }
-
-            // For other errors, update state normally (generic error display)
-            setState(prev => ({
+            // GITHUB_APP_NOT_INSTALLED gets its special UI from
+            // ProjectCreationStep's OWN creationFailed listener (the
+            // GitHubAppInstallDialog); this listener always does the generic
+            // progress-state update regardless of errorType.
+            setState((prev) => ({
                 ...prev,
-                creationProgress: prev.creationProgress ? {
-                    ...prev.creationProgress,
-                    currentOperation: 'Failed',
-                    error: failedData.error || 'Project creation failed',
-                } : undefined,
+                creationProgress: prev.creationProgress
+                    ? {
+                          ...prev.creationProgress,
+                          currentOperation: 'Failed',
+                          error: failedData.error || 'Project creation failed',
+                      }
+                    : undefined,
             }));
         });
 
         return unsubscribe;
-    }, [setState, onGitHubAppRequired]);
-
-    // Listen for navigation requests from sidebar
-    useEffect(() => {
-        const unsubscribe = vscode.onMessage('navigateToStep', (data: { stepIndex: number }) => {
-            const targetIndex = data.stepIndex;
-            const currentIndex = getCurrentStepIndex();
-
-            // Only allow backward navigation (to completed steps)
-            if (targetIndex < currentIndex && targetIndex >= 0) {
-                const targetStep = WIZARD_STEPS[targetIndex];
-                if (targetStep) {
-                    navigateToStep(targetStep.id, targetIndex, currentIndex);
-                }
-            }
-        });
-
-        return unsubscribe;
-    }, [getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
+    }, [setState]);
 }

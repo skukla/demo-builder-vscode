@@ -1,0 +1,771 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ProjectManifest",
+  "definitions": {
+    "ProjectManifest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title. Absent on every project created before it existed."
+        },
+        "created": {
+          "type": "string"
+        },
+        "lastModified": {
+          "type": "string"
+        },
+        "adobe": {
+          "$ref": "#/definitions/AdobeConfig"
+        },
+        "commerce": {
+          "$ref": "#/definitions/CommerceConfig"
+        },
+        "componentInstances": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ComponentInstance"
+          }
+        },
+        "componentSelections": {
+          "type": "object",
+          "properties": {
+            "frontend": {
+              "type": "string"
+            },
+            "backend": {
+              "type": "string"
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "integrations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "appBuilder": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "componentConfigs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "not": {}
+                }
+              ]
+            }
+          }
+        },
+        "commerceStoreStructure": {
+          "$ref": "#/definitions/CommerceStoreStructure",
+          "description": "The discovered Commerce store hierarchy — websites, store groups and store views, each with its `code` AND its human `name`.\n\nThe pickers show the user \"CitiSignal Store\"; only `citisignal_store` was ever kept, so every later surface made them translate. The structure is the one thing that holds both, and it was fetched and thrown away on every discovery. Persisting it turns a name into an offline lookup BY CODE on any surface — which is also why nothing has to pair a name with a code defensively: the code IS the lookup key, so a name can never land on the wrong one.\n\nA CATALOG, not a selection: refreshed wholesale whenever discovery runs. Absent until it has run once (every project predating this) — consumers then show the bare code, which is a correct rendering, not a degraded one."
+        },
+        "componentVersions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "lastUpdated": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "version",
+              "lastUpdated"
+            ]
+          }
+        },
+        "meshState": {
+          "type": "object",
+          "properties": {
+            "envVars": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "sourceHash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "lastDeployed": {
+              "type": "string"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "userDeclinedUpdate": {
+              "type": "boolean"
+            },
+            "declinedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "envVars",
+            "sourceHash",
+            "lastDeployed"
+          ]
+        },
+        "appState": {
+          "type": "object",
+          "properties": {
+            "appId": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "deployed",
+                "error",
+                "not-deployed"
+              ]
+            },
+            "deployedUrls": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "lastDeployed": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        "appBuilderComponents": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AppBuilderComponentState"
+          },
+          "description": "Keyed appBuilderComponent state — THE single source of truth for mesh + integration deploy state (Model B; the plan/ADR call this concept a \"deployable\" — `appBuilderComponent` is the shipped name). Persisted in the manifest (D3 Step 01) and, since D3 Step 07 retired the singular write-side, the only written model; the legacy singletons above are read-only migration inputs. See docs/architecture/adr/011-app-builder-deployables.md."
+        },
+        "additionalConsoleApis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "componentApiPicks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "edsStorefrontState": {
+          "type": "object",
+          "properties": {
+            "envVars": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "lastPublished": {
+              "type": "string"
+            },
+            "userDeclinedUpdate": {
+              "type": "boolean"
+            },
+            "declinedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "envVars",
+            "lastPublished"
+          ]
+        },
+        "edsStorefrontStatusSummary": {
+          "type": "string",
+          "enum": [
+            "published",
+            "stale",
+            "update-declined",
+            "not-published"
+          ]
+        },
+        "selectedPackage": {
+          "type": "string"
+        },
+        "datapack": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "version"
+          ]
+        },
+        "selectedStack": {
+          "type": "string"
+        },
+        "selectedAddons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selectedBlockLibraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "customBlockLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CustomBlockLibrary"
+          }
+        },
+        "aiPrompts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AiPrompt"
+          }
+        },
+        "aiContextVersion": {
+          "type": "number"
+        },
+        "aiFileHashes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "publishKeyRegisteredAt": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        }
+      }
+    },
+    "AdobeConfig": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "projectTitle": {
+          "type": "string",
+          "description": "Human-readable project title (preferred for display)"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string",
+          "description": "Human-readable org name (for display; the token can't resolve it when wrong)"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "workspaceName": {
+          "type": "string",
+          "description": "Human-readable workspace name — written by the wizard and read back by `useWizardState`; the type simply never declared it."
+        },
+        "workspaceTitle": {
+          "type": "string",
+          "description": "Human-readable workspace title (preferred for display)"
+        },
+        "authenticated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CommerceConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "platform-as-a-service",
+            "software-as-a-service"
+          ]
+        },
+        "instance": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "storeView": {
+              "type": "string"
+            },
+            "websiteCode": {
+              "type": "string"
+            },
+            "storeCode": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "url",
+            "environmentId",
+            "storeView",
+            "websiteCode",
+            "storeCode"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "instance"
+      ]
+    },
+    "ComponentInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "frontend",
+            "backend",
+            "dependency",
+            "external-system",
+            "app-builder"
+          ]
+        },
+        "subType": {
+          "type": "string",
+          "enum": [
+            "mesh",
+            "app",
+            "utility",
+            "service"
+          ]
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/CustomIconPaths"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "repoUrl": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/ComponentStatus"
+        },
+        "port": {
+          "type": "number"
+        },
+        "pid": {
+          "type": "number"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status"
+      ]
+    },
+    "CustomIconPaths": {
+      "type": "object",
+      "properties": {
+        "light": {
+          "type": "string"
+        },
+        "dark": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "light",
+        "dark"
+      ]
+    },
+    "ComponentStatus": {
+      "type": "string",
+      "enum": [
+        "not-installed",
+        "cloning",
+        "installing",
+        "ready",
+        "starting",
+        "running",
+        "stopping",
+        "stopped",
+        "deploying",
+        "deployed",
+        "updating",
+        "error"
+      ]
+    },
+    "CommerceStoreStructure": {
+      "type": "object",
+      "properties": {
+        "websites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceWebsite"
+          },
+          "description": "All websites in the Commerce instance"
+        },
+        "storeGroups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceStoreGroup"
+          },
+          "description": "All store groups across all websites"
+        },
+        "storeViews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceStoreView"
+          },
+          "description": "All store views across all store groups"
+        }
+      },
+      "required": [
+        "websites",
+        "storeGroups",
+        "storeViews"
+      ],
+      "description": "Complete Commerce store hierarchy fetched from REST API. Contains all websites, store groups, and store views."
+    },
+    "CommerceWebsite": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique website ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Website code used in storefront configuration (e.g., 'base', 'citisignal')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable website name"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name"
+      ],
+      "description": "Commerce website — top-level entity that owns payment, shipping, tax, and pricing config. Maps to REST API: GET /V1/store/websites"
+    },
+    "CommerceStoreGroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique store group ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Store group code (e.g., 'citisignal_store')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable store group name"
+        },
+        "website_id": {
+          "type": "number",
+          "description": "Parent website ID — used for cascading filters"
+        },
+        "root_category_id": {
+          "type": "number",
+          "description": "Root category ID assigned to this store group"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "website_id",
+        "root_category_id"
+      ],
+      "description": "Commerce store group — intermediate entity that owns root category. Maps to REST API: GET /V1/store/storeGroups\n\nProperty names match the Commerce REST API response format (snake_case)."
+    },
+    "CommerceStoreView": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique store view ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Store view code used in storefront configuration (e.g., 'citisignal_us')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable store view name"
+        },
+        "store_group_id": {
+          "type": "number",
+          "description": "Parent store group ID — used for cascading filters"
+        },
+        "website_id": {
+          "type": "number",
+          "description": "Grandparent website ID — denormalized for convenience"
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Whether this store view is active"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "store_group_id",
+        "website_id",
+        "is_active"
+      ],
+      "description": "Commerce store view — leaf entity representing a language/locale. Maps to REST API: GET /V1/store/storeViews\n\nProperty names match the Commerce REST API response format (snake_case)."
+    },
+    "AppBuilderComponentState": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/AppBuilderComponentKind"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "deployed",
+            "stale",
+            "error",
+            "not-deployed"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name for the integration (durable home for the user-facing name)."
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string"
+            },
+            "repo": {
+              "type": "string"
+            },
+            "branch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "owner",
+            "repo"
+          ]
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "deployedUrls": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "sourceHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastDeployed": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string",
+          "description": "Why the last deploy failed — set with `status: 'error'`, cleared by the next non-error outcome (see `recordDeployOutcome`).\n\nWithout it a failed component persisted the fact of failure and none of the reason, so the card read \"Deploy failed\" / MESH ERROR and the only way to learn more was to run the deploy again and watch the logs. Redacted and first-line-only via `sanitizeErrorForLogging` before it lands here: this is persisted to the project manifest on disk, so raw CLI output must not be."
+        },
+        "providesEnvVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT })."
+        },
+        "envVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Env vars at last deploy — the staleness baseline (mesh kind)."
+        },
+        "userDeclinedUpdate": {
+          "type": "boolean",
+          "description": "User clicked \"Later\" on the redeploy prompt (mesh kind)."
+        },
+        "declinedAt": {
+          "type": "string",
+          "description": "ISO date string when the user declined (mesh kind)."
+        }
+      },
+      "required": [
+        "kind",
+        "status",
+        "source"
+      ],
+      "description": "Keyed appBuilderComponent state (Model B). One concept replaces the singular `meshState` + `appState`. The mesh's endpoint + staleness fields and an integration's URL(s) live here."
+    },
+    "AppBuilderComponentKind": {
+      "type": "string",
+      "enum": [
+        "mesh",
+        "integration"
+      ],
+      "description": "An App Builder component's kind: a mesh artifact or a custom App Builder integration."
+    },
+    "CustomBlockLibrary": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User-provided display name (pre-filled from repo name)"
+        },
+        "source": {
+          "$ref": "#/definitions/AddonSource",
+          "description": "GitHub source (owner, repo, branch)"
+        }
+      },
+      "required": [
+        "name",
+        "source"
+      ],
+      "description": "A user-provided block library from a GitHub URL"
+    },
+    "AddonSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub owner/organization"
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch to fetch from"
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "branch"
+      ],
+      "description": "AddonSource - GitHub repository source for an addon\n\nUsed by addons that fetch content from an external repository (e.g., the Commerce Block Collection fetches blocks from isle5)."
+    },
+    "AiPrompt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean",
+          "description": "When true: the prompt lives in globalState and appears in every project; render-time sort floats it above unpinned prompts. When falsy: project-scoped, visible only in the current project."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "prompt"
+      ],
+      "description": "AiPrompt - A user-saved AI prompt\n\nStorage is scope-routed by the `pinned` field. Pinned prompts persist in VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in every project. Unpinned prompts persist in the current project's `.demo-builder.json` manifest under `Project.aiPrompts` and stay project-specific. Toggling pin moves the prompt across stores.\n\nLegacy data: prompts pinned before the global-pin feature shipped remain in their project's manifest until the user manually unpins then re-pins them — no automatic migration.\n\nArray order within either store is preserved; render-time pinned-first sort happens in the UI layer."
+    }
+  }
+}

@@ -1,203 +1,18 @@
 /**
  * Message Protocol Type Definitions
  *
- * Provides type-safe interfaces for extension ↔ webview communication.
- * Replaces `any` types in message handlers with specific payload types.
+ * The transport ENVELOPE for extension ↔ webview communication, plus the
+ * on-open check channel constants. Nothing here constrains message CONTENT —
+ * per-channel payload contracts live in `./webviewPayloads` (extension →
+ * webview pushes) and `./webviewRequests` (webview → extension requests),
+ * ONE declaration per channel imported by both sides.
+ *
+ * This file used to also declare a MessageType union ending in `| string`
+ * and nine all-optional payload grab-bags (AuthPayload, ProjectPayload, …)
+ * forming a MessagePayload union. Zero code consumed any of them — they were
+ * the ILLUSION of a typed protocol, deleted 2026-08-22 once the real
+ * per-channel declarations existed (no-soft-deprecation).
  */
-
-/**
- * MessageType - All valid message types in the extension
- */
-export type MessageType =
-    // Lifecycle messages
-    | 'ready'
-    | 'cancel'
-    | 'cancel-project-creation'
-    | 'openProject'
-    | 'log'
-
-    // Prerequisites messages
-    | 'check-prerequisites'
-    | 'continue-prerequisites'
-    | 'install-prerequisite'
-
-    // Authentication messages
-    | 'check-auth'
-    | 'authenticate'
-    | 'ensure-org-selected'
-
-    // Re-detect Adobe context after an external auth/org change
-    | 're-detect-context'
-
-    // Project messages
-    | 'get-projects'
-    | 'select-project'
-    | 'check-project-apis'
-    | 'delete-adobe-project'
-    | 'project-selected' // UI-only selection
-
-    // Workspace messages
-    | 'get-workspaces'
-    | 'select-workspace'
-    | 'workspace-selected' // UI-only selection
-
-    // Component messages
-    | 'update-component-selection'
-    | 'update-components-data'
-    | 'loadComponents'
-    | 'get-components-data'
-    | 'checkCompatibility'
-    | 'loadDependencies'
-    | 'loadPreset'
-    | 'validateSelection'
-
-    // API Mesh messages
-    | 'check-api-mesh'
-    | 'delete-api-mesh'
-    | 'ensure-mesh-api-subscribed'
-    | 'check-mesh-status-async'
-
-    // Project creation messages
-    | 'create-project'
-    | 'validate'
-
-    // Dashboard messages
-    // Stop + settle + start, for a config change that landed while running.
-    | 'restartDemo'
-    | 'toggle-logs'
-    | 'open-component-file'
-    // Rename a deployed integration's display name (shell instancing Step 10;
-    // extension-side showInputBox owns the input surface)
-    | 'renameAppBuilderComponent'
-    // Unified on-open check result channel (org-context, mesh-verify, mcp-health, ai-verify)
-    | 'checkResult'
-
-    // Generic
-    | 'continue-step'
-    | string; // Allow custom message types
-
-/**
- * MessagePayload - Union type of all possible message payloads
- */
-export type MessagePayload =
-    | PrerequisitePayload
-    | AuthPayload
-    | ProjectPayload
-    | WorkspacePayload
-    | ComponentPayload
-    | MeshPayload
-    | CreationPayload
-    | DashboardPayload
-    | GenericPayload;
-
-/**
- * MessageResponse - Standard response structure
- */
-export interface MessageResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    message?: string;
-    [key: string]: unknown;
-}
-
-// ===== Payload Type Definitions =====
-
-/**
- * PrerequisitePayload - Prerequisites-related payloads
- */
-export interface PrerequisitePayload {
-    prereqId?: string;
-    version?: string;
-    nodeVersion?: string;
-}
-
-/**
- * AuthPayload - Authentication-related payloads
- */
-export interface AuthPayload {
-    force?: boolean;
-    orgId?: string;
-    orgCode?: string;
-}
-
-/**
- * ProjectPayload - Adobe project-related payloads
- */
-export interface ProjectPayload {
-    orgId?: string;
-    projectId?: string;
-    project?: {
-        id: string;
-        name: string;
-        title?: string;
-        description?: string;
-        org_id?: number;
-    };
-}
-
-/**
- * WorkspacePayload - Adobe workspace-related payloads
- */
-export interface WorkspacePayload {
-    projectId?: string;
-    workspaceId?: string;
-    workspace?: {
-        id: string;
-        name: string;
-        title?: string;
-    };
-}
-
-/**
- * ComponentPayload - Component-related payloads
- */
-export interface ComponentPayload {
-    componentId?: string;
-    category?: 'frontend' | 'backend' | 'dependencies' | 'integrations' | 'appBuilder';
-    selection?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    presetId?: string;
-    components?: Record<string, unknown>;
-}
-
-/**
- * MeshPayload - API Mesh-related payloads
- */
-export interface MeshPayload {
-    workspaceId?: string;
-    meshId?: string;
-    config?: Record<string, unknown>;
-}
-
-/**
- * CreationPayload - Project creation-related payloads
- */
-export interface CreationPayload {
-    projectName?: string;
-    template?: string;
-    components?: Record<string, unknown>;
-    configs?: Record<string, unknown>;
-}
-
-/**
- * DashboardPayload - Dashboard-related payloads
- */
-export interface DashboardPayload {
-    action?: 'start' | 'stop' | 'deploy' | 'configure';
-    componentId?: string;
-    filePath?: string;
-}
-
-/**
- * GenericPayload - Generic payload for unknown messages
- */
-export type GenericPayload = Record<string, unknown>;
 
 /**
  * The webview message type carrying a unified on-open {@link CheckOutcome}.
@@ -220,11 +35,14 @@ export const CHECK_IDS = {
 export type CheckId = (typeof CHECK_IDS)[keyof typeof CHECK_IDS];
 
 /**
- * Message - Complete message structure with ID and metadata
+ * Message — the transport envelope both sides exchange. Shared with the
+ * webview's WebviewClient (which used to carry a byte-identical local twin).
+ * `type` is a plain string: routing is by exact channel name, and the typed
+ * contract lives on each channel's payload declaration, not on a union here.
  */
-export interface Message<T = MessagePayload> {
+export interface Message<T = unknown> {
     id: string;
-    type: MessageType;
+    type: string;
     payload?: T;
     timestamp: number;
     isResponse?: boolean;
@@ -234,17 +52,9 @@ export interface Message<T = MessagePayload> {
 }
 
 /**
- * WebviewMessageHandler - Type-safe message handler function for webview communication
- *
- * Used for handling messages in the webview context.
- * This is distinct from MessageHandler in handlers.ts which is for extension backend handlers.
- */
-export type WebviewMessageHandler<P = MessagePayload, R = MessageResponse> = (
-    payload: P
-) => Promise<R> | R;
-
-/**
- * PendingRequest - Pending request awaiting response
+ * PendingRequest — the EXTENSION side's pending-request bookkeeping (with
+ * retry state). The webview's WebviewClient keeps its own simpler variant
+ * (no retries, browser-safe timeout handle) — a variant, not a twin.
  */
 export interface PendingRequest<T = unknown> {
     resolve: (value: T | PromiseLike<T>) => void;

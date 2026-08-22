@@ -42,6 +42,40 @@ describe('DaLiveApiClient', () => {
                 makeClient('t').fetchWithRetry('https://da/x', { method: 'GET' })
             ).rejects.toBeInstanceOf(DaLiveNetworkError);
         });
+
+        // 2026-08-22 consolidation surface: content-copy call sites migrate
+        // onto this client, and they need (a) fresh one-shot bodies per
+        // attempt (a FormData stream cannot be resent) and (b) page-level
+        // rate-limit tolerance (skip one page, never abort a 300-page copy).
+        it('invokes a request factory once per attempt, so one-shot bodies are rebuilt', async () => {
+            const failing = { status: 503, ok: false } as Response;
+            const ok = { status: 200, ok: true } as Response;
+            jest.spyOn(global, 'fetch')
+                .mockResolvedValueOnce(failing)
+                .mockResolvedValueOnce(ok);
+
+            const factory = jest.fn(() => ({ method: 'POST' as const }));
+            const res = await makeClient('t').fetchWithRetry('https://da/x', factory);
+
+            expect(res).toBe(ok);
+            expect(factory).toHaveBeenCalledTimes(2);
+        });
+
+        it("returns the 429 response instead of throwing when rateLimit is 'return'", async () => {
+            const rateLimited = {
+                status: 429,
+                headers: { get: () => '30' },
+            } as unknown as Response;
+            jest.spyOn(global, 'fetch').mockResolvedValue(rateLimited);
+
+            const res = await makeClient('t').fetchWithRetry(
+                'https://da/x',
+                { method: 'POST' },
+                { rateLimit: 'return' },
+            );
+
+            expect(res.status).toBe(429);
+        });
     });
 
     describe('createErrorFromResponse', () => {

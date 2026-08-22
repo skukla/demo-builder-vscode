@@ -5,8 +5,8 @@ import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { WizardState, WizardStep } from '@/types/webview';
+import type { GetComponentsDataResponse } from '@/types/webviewRequests';
 
 const log = webviewLogger('useWizardEffects');
 
@@ -18,13 +18,7 @@ interface UseWizardEffectsProps {
     /** Steps confirmed by user in edit mode (clicked Continue) */
     confirmedSteps: WizardStep[];
     stepContentRef: React.RefObject<HTMLDivElement | null>;
-    setComponentsData: React.Dispatch<
-        React.SetStateAction<{
-            success: boolean;
-            type: string;
-            data: ComponentsData;
-        } | null>
-    >;
+    setComponentsData: React.Dispatch<React.SetStateAction<GetComponentsDataResponse | null>>;
 }
 
 /**
@@ -126,11 +120,7 @@ export function useWizardEffects({
             componentsRequestedRef.current = true;
 
             try {
-                const response = await vscode.request<{
-                    success: boolean;
-                    type: string;
-                    data: ComponentsData;
-                }>('get-components-data');
+                const response = await vscode.request<GetComponentsDataResponse>('get-components-data');
 
                 setComponentsData(response);
             } catch (error) {

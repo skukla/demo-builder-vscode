@@ -179,7 +179,7 @@ function authedEdsConfig() {
         daLiveOrg: '',
         daLiveSite: '',
         repoMode: 'existing' as const,
-        githubAuth: { isAuthenticated: true, user: { login: 'testuser' } },
+        githubAuth: { isAuthenticated: true, user: { login: 'testuser', email: null, name: null, avatarUrl: null } },
         daLiveAuth: { isAuthenticated: true },
     };
 }

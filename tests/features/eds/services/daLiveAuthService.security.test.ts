@@ -80,8 +80,14 @@ describe('DaLiveAuthService Security Tests', () => {
             // should be done via grep/code review
             // Full JWT pattern: header.payload.signature
             const tokenPattern = /eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
+            // Assembled rather than pasted — the literal here was the jwt.io
+            // sample with its real HMAC signature. The pattern only cares about
+            // the three-segment SHAPE, so a nonsense signature exercises it
+            // just as well without leaving a scanner hit in the repo.
+            const encode = (v: object): string =>
+                Buffer.from(JSON.stringify(v)).toString('base64url');
             const fullToken =
-                'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+                `${encode({ alg: 'HS256' })}.${encode({ sub: '1234567890' })}.not-a-real-signature`;
 
             // Verify token pattern recognition works
             expect(tokenPattern.test(fullToken)).toBe(true);

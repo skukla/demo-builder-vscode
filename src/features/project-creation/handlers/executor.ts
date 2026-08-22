@@ -50,9 +50,6 @@ import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import { AdobeConfig } from '@/types/base';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
 import {
@@ -64,6 +61,8 @@ import {
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 // EDS config.json sync to remote (Phase 5)
 
@@ -147,128 +146,11 @@ export async function ensureMeshPreflightAuth(
     return true;
 }
 
-/**
- * Frontend source from template (same shape as TemplateSource)
- */
-interface FrontendSource {
-    type: string;
-    url: string;
-    branch: string;
-    gitOptions?: {
-        shallow?: boolean;
-    };
-}
+// ProjectCreationConfig and FrontendSource live in @/types/webviewRequests —
+// ONE declaration shared with the wizard's buildProjectConfig and the MCP
+// create_project tool (this file used to carry the only copy, and the wire
+// crossing was an `as unknown as` cast).
 
-/**
- * ProjectCreationConfig - Configuration passed to project creation
- */
-interface ProjectCreationConfig {
-    projectName: string;
-    adobe?: AdobeConfig;
-    components?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    componentConfigs?: Record<string, Record<string, unknown>>;
-    /** The discovered Commerce store hierarchy (names for the chosen codes). */
-    commerceStoreStructure?: CommerceStoreStructure;
-    apiMesh?: {
-        meshId?: string;
-        endpoint?: string;
-        meshStatus?: string;
-        workspace?: string;
-    };
-    // For detecting same-workspace imports to skip mesh deployment
-    importedWorkspaceId?: string;
-    importedMeshEndpoint?: string;
-    // Package/Stack selections
-    selectedPackage?: string;
-    datapack?: { name: string; version: string };
-    selectedStack?: string;
-    // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
-    selectedAppBuilderComponents?: string[];
-    appBuilderComponentSources?: Record<
-        string,
-        { owner: string; repo: string; branch?: string; name?: string }
-    >;
-    // Free Console API picks (union across integrations) — persisted on the Project
-    // so Phase 3b's subscribe union covers them. LEGACY: derived from the keyed
-    // record below, which is the durable, attributed form.
-    additionalConsoleApis?: string[];
-    // The same picks keyed by integration id — what resolveDesiredApis unions.
-    componentApiPicks?: Record<string, string[]>;
-    // Selected optional addons (e.g., ['adobe-commerce-aco'])
-    selectedAddons?: string[];
-    // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
-    selectedBlockLibraries?: string[];
-    // Custom block libraries added by URL
-    customBlockLibraries?: CustomBlockLibrary[];
-    // Frontend source from template (templates are source of truth for repos)
-    frontendSource?: FrontendSource;
-    // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
-    editProjectPath?: string;
-    // EDS-specific configuration (for Edge Delivery Services stacks)
-    edsConfig?: {
-        repoName: string;
-        repoMode: 'new' | 'existing';
-        existingRepo?: string;
-        resetToTemplate?: boolean;
-        daLiveOrg: string;
-        daLiveSite: string;
-        accsEndpoint?: string;
-        githubOwner?: string;
-        isPrivate?: boolean;
-        skipContent?: boolean;
-        skipTools?: boolean;
-        // Template source repo (from frontendSource) for GitHub reset operations
-        templateOwner?: string;
-        templateRepo?: string;
-        // DA.live content source (explicit config, not derived from GitHub)
-        contentSource?: {
-            org: string;
-            site: string;
-            indexPath?: string;
-        };
-        // Second content source for the account chrome (hybrid packages).
-        accountContentSource?: {
-            org: string;
-            site: string;
-        };
-        // Preflight completion fields (set by StorefrontSetupStep)
-        preflightComplete?: boolean;
-        repoUrl?: string;
-        // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
-        // Patch IDs to apply during reset (from demo-packages.json)
-        patches?: string[];
-        // Content patch IDs to apply during DA.live content copy
-        contentPatches?: string[];
-        // External source for content patches (from demo-packages.json)
-        contentPatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-        };
-        // Code patch IDs to apply (canonical + block) — Step 5 populates these.
-        codePatches?: string[];
-        // External source for code patches (e.g., skukla/eds-demo-patches/citisignal).
-        // When set, the storefront is "thin-layer": `lastSyncedCommit` records the
-        // verified canonical LKG SHA (per ADR-006 D2) rather than the template
-        // repo's `main` HEAD, so "is there an update?" means "did the LKG pointer
-        // advance?" not "is canonical main ahead of where we created?".
-        codePatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-            /** Per-ledger LKG file when the ledger tracks a non-default canonical
-             *  (e.g., b2b's B2B template). Omitted for ledgers sharing the
-             *  default root `last-known-good`. */
-            lkgFile?: string;
-        };
-    };
-}
 
 /**
  * Actual project creation logic (extracted for testability)
@@ -318,6 +200,10 @@ export function buildInitialProject(
 ): import('@/types').Project {
     return {
         name: typedConfig.projectName,
+        // Only when the user actually set one. Seeding it from the slug would
+        // render identically and then persist the slug as a genuine title, so a
+        // later rename would move the folder and leave the old name on screen.
+        ...(typedConfig.projectTitle ? { title: typedConfig.projectTitle } : {}),
         created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
         lastModified: new Date(),
         path: projectPath,
@@ -366,9 +252,9 @@ export function buildInitialProject(
 
 export async function executeProjectCreation(
     context: HandlerContext,
-    config: Record<string, unknown>,
+    config: ProjectCreationConfig,
 ): Promise<void> {
-    const typedConfig = config as unknown as ProjectCreationConfig;
+    const typedConfig = config;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
     context.logger.debug(
@@ -384,13 +270,14 @@ export async function executeProjectCreation(
         progress: number,
         message?: string,
     ) => {
-        context.sendMessage('creationProgress', {
+        const payload: CreationProgressPayload = {
             currentOperation,
             progress,
             message: message || '',
             logs: [],
             meshPhase: currentMeshPhase,
-        });
+        };
+        context.sendMessage('creationProgress', payload);
     };
 
     // ========================================================================
@@ -723,6 +610,8 @@ async function ensureWorkspaceRuntimeReady(
     if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {
         return;
     }
+    // Local consts hold the narrowed strings into the closure below.
+    const { organization, projectId, workspace } = adobe;
     const { ServiceLocator } = await import('@/core/di');
     const { ensureWorkspaceRuntime } = await import(
         '@/features/app-builder/services/runtimeCredentials'
@@ -735,11 +624,7 @@ async function ensureWorkspaceRuntimeReady(
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
         ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
-            authService.ensureWorkspaceRuntimeNamespace(
-                adobe.organization as string,
-                adobe.projectId as string,
-                adobe.workspace as string,
-            ),
+            authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
         ),
     );
 }
@@ -788,9 +673,9 @@ export async function executeAppBuilderIntegrationsPhase(
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time
     // (the Add-Integration modal no longer subscribes anything itself).
-    progressTracker('Deploying Integrations', 69, 'Enabling API access…');
+    progressTracker('Deploying Integrations', 69, 'Enabling API access...');
     for (const entry of entries) {
-        progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}…`);
+        progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}...`);
         const result = await addAppBuilderComponent(project, entry, deps);
         if (!result.success) {
             throw new Error(result.error || 'App Builder integration deployment failed');
@@ -1770,7 +1655,7 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker('Installing Sample Data', 92, `Installing ${chosen.name}\u2026`);
+    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}\u2026`);
 
     try {
         const { installSampleData } = await import(
@@ -1782,12 +1667,23 @@ export async function executeSampleDataPhase(
 
         const result = await installSampleData(
             project,
-            buildSampleDataDeps(context, project, (message) =>
-                progressTracker('Installing Sample Data', 94, message),
+            buildSampleDataDeps(context, project, (sd) =>
+                // Three-row contract: count in the title, the types being
+                // installed right now in the detail row (pack name until the
+                // first type starts).
+                progressTracker(
+                    `Installing Datapack (${sd.done}/${sd.total})`,
+                    94,
+                    sd.processing.join(', ') || chosen.name,
+                ),
             ),
         );
 
-        progressTracker('Installing Sample Data', 96, describeSampleDataResult(chosen.name, result));
+        progressTracker(
+            'Installing Datapack',
+            96,
+            describeSampleDataResult(chosen.name, result),
+        );
     } catch (error) {
         // Belt and braces: installSampleData already swallows its own failures,
         // so reaching here means the wiring broke rather than the import. Still
@@ -1795,9 +1691,9 @@ export async function executeSampleDataPhase(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[Sample Data] Phase failed, continuing: ${reason}`);
         progressTracker(
-            'Installing Sample Data',
+            'Installing Datapack',
             96,
-            `Sample data could not be installed \u2014 ${reason}`,
+            `Datapack could not be installed \u2014 ${reason}`,
         );
     }
 }
@@ -1808,10 +1704,10 @@ function describeSampleDataResult(
     result: { ran: boolean; skipped?: boolean; outcome?: string; reason?: string },
 ): string {
     if (result.skipped) {
-        return `Skipped sample data \u2014 ${result.reason ?? 'nothing to install'}`;
+        return `Skipped datapack \u2014 ${result.reason ?? 'nothing to install'}`;
     }
     if (!result.ran) {
-        return `Sample data could not be installed \u2014 ${result.reason ?? 'the import did not start'}`;
+        return `Datapack could not be installed \u2014 ${result.reason ?? 'the import did not start'}`;
     }
     if (result.outcome === 'success') {
         return `Installed ${name}`;

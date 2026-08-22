@@ -34,7 +34,8 @@ import { DEFAULT_SHELL } from '@/types/shell';
 /** The slice of the callers' UpdateContext the core actually needs. */
 export interface AdobeMcpUpdateCoreContext {
     extensionPath: string;
-    stateManager: StateManager;
+    /** The one method this core calls; UpdateContext's pick satisfies it. */
+    stateManager: Pick<StateManager, 'saveProjectConfigOnly'>;
     logger: Logger;
 }
 

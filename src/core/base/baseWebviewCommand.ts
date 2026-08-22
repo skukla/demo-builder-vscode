@@ -51,7 +51,7 @@ import { setLoadingState, TIMEOUTS, type LoadingHeader } from '@/core/utils';
  * }
  * ```
  */
-export abstract class BaseWebviewCommand extends BaseCommand {
+export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCommand {
     // Instance references to webview panel and communication manager
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
@@ -161,9 +161,13 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected abstract initializeMessageHandlers(comm: WebviewCommunicationManager): void;
 
     /**
-     * Get initial data to send to webview after handshake
+     * Get initial data to send to webview after handshake.
+     *
+     * `TInitialData` is the subclass's declared payload shape
+     * (`@/types/webviewPayloads`) — the same declaration its webview entry
+     * casts the init message to, so the two sides cannot drift.
      */
-    protected abstract getInitialData(): Promise<unknown>;
+    protected abstract getInitialData(): Promise<TInitialData>;
 
     /**
      * Get the loading message to display while initializing
@@ -208,10 +212,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                     // Send fresh initial data when revealing existing panel
                     // This ensures the webview shows current state, not stale cached state
                     const initialData = await this.getInitialData();
-                    await this.communicationManager.sendMessage(
-                        'init',
-                        initialData as import('@/types/messages').MessagePayload | undefined,
-                    );
+                    await this.communicationManager.sendMessage('init', initialData);
                 }
                 return existingPanel;
             } catch {
@@ -297,10 +298,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Send initial data
         const initialData = await this.getInitialData();
-        await this.communicationManager.sendMessage(
-            'init',
-            initialData as import('@/types/messages').MessagePayload | undefined,
-        );
+        await this.communicationManager.sendMessage('init', initialData);
 
         return this.communicationManager;
     }
@@ -365,10 +363,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            await this.communicationManager.sendMessage(
-                type,
-                payload as import('@/types/messages').MessagePayload | undefined,
-            );
+            await this.communicationManager.sendMessage(type, payload);
         } catch (error) {
             this.logger.error(`Failed to send message '${type}':`, error as Error);
             throw error;
@@ -384,10 +379,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            return await this.communicationManager.request<T>(
-                type,
-                payload as import('@/types/messages').MessagePayload | undefined,
-            );
+            return await this.communicationManager.request<T>(type, payload);
         } catch (error) {
             this.logger.error(`Request '${type}' failed:`, error as Error);
             throw error;

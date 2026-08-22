@@ -4,6 +4,7 @@
  * Handles deleting API Mesh instances.
  */
 
+import { MESH_DELETE_COMMAND } from '../services/meshDeleteCommand';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import {
@@ -79,7 +80,7 @@ export async function handleDeleteApiMesh(
 
         const commandManager = ServiceLocator.getCommandExecutor();
         const result = await withOrgContext(target, () =>
-            commandManager.execute('aio api-mesh delete --autoConfirmAction', {
+            commandManager.execute(MESH_DELETE_COMMAND, {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),

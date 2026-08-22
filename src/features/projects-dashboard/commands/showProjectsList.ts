@@ -17,6 +17,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { HandlerContext } from '@/types/handlers';
+import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
  * Command to show the "Projects List" as the home screen
@@ -25,7 +26,7 @@ import { HandlerContext } from '@/types/handlers';
  * Follows BaseWebviewCommand pattern with object literal handler maps.
  * Updated in Step 3 to use dispatchHandler instead of class-based registry.
  */
-export class ShowProjectsListCommand extends BaseWebviewCommand {
+export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInitialData> {
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
@@ -66,9 +67,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<{
-        theme: string;
-    }> {
+    protected async getInitialData(): Promise<ProjectsListInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
@@ -100,7 +99,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             if (e.affectsConfiguration('demoBuilder.projectsViewMode')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
                 const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-                this.sendMessage('configChanged', { projectsViewMode });
+                this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
             }
         });
         this.disposables.add(configListener);
@@ -168,7 +167,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
 
         const config = vscode.workspace.getConfiguration('demoBuilder');
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-        await this.sendMessage('configChanged', { projectsViewMode });
+        await this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
     }
 
     /**
@@ -185,18 +184,16 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             const projectList = await this.stateManager.getAllProjects();
             const projects = [];
             for (const item of projectList) {
-                const project = await this.stateManager.loadProjectFromPath(
-                    item.path,
-                    undefined,
-                    { persistAfterLoad: false },
-                );
+                const project = await this.stateManager.loadProjectFromPath(item.path, undefined, {
+                    persistAfterLoad: false,
+                });
                 if (project) {
                     projects.push(project);
                 }
             }
 
             // Send to webview
-            await this.sendMessage('projectsUpdated', { projects });
+            await this.sendMessage('projectsUpdated', { projects } satisfies ProjectsUpdatedPayload);
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }

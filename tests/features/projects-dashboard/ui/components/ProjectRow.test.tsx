@@ -66,8 +66,10 @@ describe('ProjectRow — inline rename', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await screen.findByText('Old Row'); // back to display mode
-        // Row wires normalizeProjectName → spaces→hyphens, lowercased (create-flow parity).
-        expect(onRenameSubmit).toHaveBeenCalledWith(project, 'new-row');
+        // The TITLE as typed. The row used to wire `normalizeProjectName`, so a
+        // rename rewrote itself to "new-row" under the cursor. The slug is derived
+        // in `renameProjectCore` now, which also moves the folder to match.
+        expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Row');
     });
 
     it('never opens the project while interacting with the rename editor', () => {

@@ -10,15 +10,9 @@
  * Extracted from DaLiveService for better modularity and testability.
  */
 
-import { DA_LIVE_BASE_URL, MAX_RETRY_ATTEMPTS, RETRYABLE_STATUS_CODES, getRetryDelay } from './daLiveConstants';
-import {
-    DaLiveError,
-    DaLiveAuthError,
-    DaLiveNetworkError,
-    type DaLiveEntry,
-    type DaLiveOrgAccess,
-} from './types';
-import { sleep } from '@/core/utils/sleep';
+import { DaLiveApiClient } from './daLiveApiClient';
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import { DaLiveError, DaLiveAuthError, type DaLiveEntry, type DaLiveOrgAccess } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -33,10 +27,15 @@ export interface TokenProvider {
  * DA.live Organization Operations
  */
 export class DaLiveOrgOperations {
+    /** Shared DA.live transport (retry/timeout/429) — 2026-08-22 consolidation. */
+    private readonly apiClient: DaLiveApiClient;
+
     constructor(
         private tokenProvider: TokenProvider,
         private logger: Logger,
-    ) {}
+    ) {
+        this.apiClient = new DaLiveApiClient(tokenProvider, logger);
+    }
 
     /**
      * Get IMS token from TokenProvider
@@ -241,41 +240,15 @@ export class DaLiveOrgOperations {
      * Fetch with retry logic and timeout
      */
     private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
-        for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                const response = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
-
-                // Token expired — throw immediately so callers can trigger re-auth
-                if (response.status === 401) {
-                    throw new DaLiveAuthError('DA.live token expired during operation');
-                }
-
-                if (response.status === 429) {
-                    const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
-                    throw new DaLiveNetworkError('Rate limited. Please wait before making more requests.', retryAfter);
-                }
-
-                if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
-                    this.logger.debug(`[DA.live] Retrying after ${response.status}, attempt ${attempt}`);
-                    await sleep(getRetryDelay(attempt));
-                    continue;
-                }
-
-                return response;
-            } catch (error) {
-                if (error instanceof DaLiveAuthError || error instanceof DaLiveNetworkError) throw error;
-
-                const errorMessage = (error as Error).message || 'Unknown error';
-                if (attempt < MAX_RETRY_ATTEMPTS && !errorMessage.includes('abort')) {
-                    this.logger.debug(`[DA.live] Network error, retrying: ${errorMessage}`);
-                    await sleep(getRetryDelay(attempt));
-                    continue;
-                }
-
-                throw new DaLiveNetworkError(`Network error: ${errorMessage}`);
-            }
+        // Transport (retry/timeout/429) is the shared client's — this class
+        // used to carry a byte-near copy of its loop (deleted 2026-08-22).
+        // What stays HERE is this module's own policy: 401 throws immediately
+        // so callers can trigger re-auth.
+        const response = await this.apiClient.fetchWithRetry(url, options);
+        if (response.status === 401) {
+            throw new DaLiveAuthError('DA.live token expired during operation');
         }
-        throw new DaLiveNetworkError('Max retry attempts exceeded');
+        return response;
     }
 
     /**
@@ -325,9 +298,13 @@ export class DaLiveOrgOperations {
  */
 export async function hasWriteAccess(orgName: string, token: string): Promise<boolean> {
     try {
-        const res = await fetch(`https://admin.da.live/list/${orgName}/`, {
+        // Deliberately unretried raw fetch: this is a module-level permission
+        // PROBE whose every failure mode maps to `false` — retries would only
+        // delay the verdict.
+        const res = await fetch(`${DA_LIVE_BASE_URL}/list/${orgName}/`, {
             method: 'HEAD',
             headers: { 'Authorization': `Bearer ${token}` },
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
         if (!res.ok) {
             return false;

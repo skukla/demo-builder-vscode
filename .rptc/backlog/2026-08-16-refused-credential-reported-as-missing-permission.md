@@ -26,7 +26,7 @@
 >    - **A wrapper would have nothing to catch.** `syncCodeAndPermissions` cannot
 >      propagate a DA.live failure: Step 4's `previewCode` is try/caught and
 >      continues by design, and Step 5's `configureDaLivePermissions`
->      (`edsHelpers.ts:1147`) catches everything internally and returns
+>      (`daLiveSiteConfig.ts:186`) catches everything internally and returns
 >      `{success:false}` rather than throwing. `withDaLiveAuthRetry` around it would
 >      be dead code.
 >
@@ -153,7 +153,7 @@ whole pipeline stop early instead of failing 52 times.
 ## Kickoff prompt
 
 > Read `.rptc/backlog/2026-08-16-refused-credential-reported-as-missing-permission.md`,
-> then `daLiveAuthService.isAuthenticated`, `ensureDaLiveAuth` in `edsHelpers.ts`, and the
+> then `daLiveAuthService.isAuthenticated`, `ensureDaLiveAuth` in `daLiveAuthPrompt.ts`, and the
 > `dcac1475` fix in `githubAppService.ts` — that one is the pattern to follow at the
 > classification layer. Decide between the probe and the classify shapes (or both) BEFORE
 > writing code; the wording is downstream of that choice. Every test must use a resolved

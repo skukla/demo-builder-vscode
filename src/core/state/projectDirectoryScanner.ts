@@ -5,8 +5,8 @@
  */
 
 import * as fs from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import type { Logger } from '@/types/logger';
 
 export interface ProjectSummary {
@@ -26,7 +26,12 @@ export class ProjectDirectoryScanner {
      * Get all projects from the projects directory
      */
     async getAllProjects(): Promise<ProjectSummary[]> {
-        const projectsDir = path.join(os.homedir(), '.demo-builder', 'projects');
+        // resolveProjectsRoot, not a hand-copied homedir expression: this scanner
+        // feeds the activation AI-bundle sweep, which WRITES into every project it
+        // finds. Bypassing the env override meant jest runs that exercise the real
+        // activate() swept the developer's real ~/.demo-builder/projects
+        // (2026-08-22: clobbered a real project's .mcp.json with mock paths).
+        const projectsDir = resolveProjectsRoot();
         const projects: ProjectSummary[] = [];
 
         try {
@@ -62,7 +67,10 @@ export class ProjectDirectoryScanner {
             if (nodeError.code === 'ENOENT') {
                 this.logger.debug('Projects directory does not exist yet');
             } else {
-                this.logger.error('Failed to read projects directory', error instanceof Error ? error : undefined);
+                this.logger.error(
+                    'Failed to read projects directory',
+                    error instanceof Error ? error : undefined,
+                );
             }
         }
 

@@ -25,7 +25,7 @@ import {
 import { meshAppBuilderComponentToComponentIds } from '../wizard/appBuilderComponentSelectionState';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import type { WizardState } from '@/types/webview';
+import type { WizardSessionState, WizardState } from '@/types/webview';
 
 /**
  * Whether the Commerce area (architecture + connection) is fully configured.
@@ -47,7 +47,7 @@ export function isCommerceConfigured(state: WizardState): boolean {
  * @param state - Wizard state
  * @returns true when Adobe auth reports authenticated AND an org is selected
  */
-export function isAdobeSignedIn(state: WizardState): boolean {
+export function isAdobeSignedIn(state: WizardSessionState): boolean {
     return state.adobeAuth?.isAuthenticated === true && Boolean(state.adobeOrg);
 }
 
@@ -91,7 +91,7 @@ export function meshComponentForStack(
  * @param meshComponentId - The mesh catalog component id
  * @returns true when the mesh component is selected
  */
-export function isMeshSelected(state: WizardState, meshComponentId: string): boolean {
+export function isMeshSelected(state: WizardSessionState, meshComponentId: string): boolean {
     const selectedComponents = state.selectedAppBuilderComponents ?? [];
     if (selectedComponents.includes(meshComponentId)) return true;
     const legacyIds = meshAppBuilderComponentToComponentIds(meshComponentId);

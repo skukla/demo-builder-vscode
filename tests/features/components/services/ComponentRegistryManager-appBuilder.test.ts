@@ -32,7 +32,6 @@ const registryWithApp: RawComponentRegistry = {
     ...mockRawRegistry,
     appBuilder: {
         'custom-app': {
-            id: 'custom-app',
             name: 'Custom App Builder App',
             description: 'A custom App Builder app',
             type: 'app-builder',

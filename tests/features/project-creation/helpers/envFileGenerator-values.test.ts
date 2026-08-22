@@ -57,7 +57,7 @@ describe('envFileGenerator - Value Resolution', () => {
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
                 project: projectWithMeshState,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -85,6 +85,7 @@ describe('envFileGenerator - Value Resolution', () => {
             } as TransformedComponentDefinition;
 
             const config = {
+                projectName: 'test-project',
                 componentConfigs: {
                     'test-component': {
                         API_KEY: 'user-provided-key',
@@ -120,6 +121,7 @@ describe('envFileGenerator - Value Resolution', () => {
             } as TransformedComponentDefinition;
 
             const config = {
+                projectName: 'test-project',
                 componentConfigs: {
                     'other-component': {
                         SHARED_VAR: 'value-from-other-component',
@@ -158,7 +160,7 @@ describe('envFileGenerator - Value Resolution', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(
@@ -185,7 +187,7 @@ describe('envFileGenerator - Value Resolution', () => {
 
             const setupContext = createMockSetupContext({
                 registry: { envVars: sharedEnvVars } as any,
-                config: {},
+                config: { projectName: 'test-project' },
             });
 
             await generateComponentEnvFile(

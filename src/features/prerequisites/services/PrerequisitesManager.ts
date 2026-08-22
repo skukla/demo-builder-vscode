@@ -58,7 +58,14 @@ export class PrerequisitesManager {
     private cacheManager = new PrerequisitesCacheManager();
 
     constructor(extensionPath: string, logger: Logger) {
-        const configPath = path.join(extensionPath, 'src', 'features', 'prerequisites', 'config', 'prerequisites.json');
+        const configPath = path.join(
+            extensionPath,
+            'src',
+            'features',
+            'prerequisites',
+            'config',
+            'prerequisites.json',
+        );
         this.configLoader = new ConfigurationLoader<PrerequisitesConfig>(configPath);
         this.logger = logger;
     }
@@ -79,17 +86,15 @@ export class PrerequisitesManager {
 
     async getPrerequisiteById(id: string): Promise<PrerequisiteDefinition | undefined> {
         const config = await this.loadConfig();
-        return config.prerequisites.find(p => p.id === id);
+        return config.prerequisites.find((p) => p.id === id);
     }
 
-    async getRequiredPrerequisites(
-        selectedComponents?: {
-            frontend?: string;
-            backend?: string;
-            dependencies?: string[];
-            appBuilder?: string[];
-        },
-    ): Promise<PrerequisiteDefinition[]> {
+    async getRequiredPrerequisites(selectedComponents?: {
+        frontend?: string;
+        backend?: string;
+        dependencies?: string[];
+        appBuilder?: string[];
+    }): Promise<PrerequisiteDefinition[]> {
         const config = await this.loadConfig();
         const required = new Set<string>();
 
@@ -98,7 +103,7 @@ export class PrerequisitesManager {
             const checkComponent = (componentId: string) => {
                 const req = config.componentRequirements?.[componentId];
                 if (req) {
-                    req.prerequisites?.forEach(id => required.add(id));
+                    req.prerequisites?.forEach((id) => required.add(id));
                 }
             };
 
@@ -113,13 +118,16 @@ export class PrerequisitesManager {
         }
 
         // Return all non-optional prerequisites plus any required by components
-        return config.prerequisites.filter(p => {
+        return config.prerequisites.filter((p) => {
             const isRequired = required.has(p.id) || !p.optional;
             return isRequired;
         });
     }
 
-    async checkPrerequisite(prereq: PrerequisiteDefinition, nodeVersion?: string): Promise<PrerequisiteStatus> {
+    async checkPrerequisite(
+        prereq: PrerequisiteDefinition,
+        nodeVersion?: string,
+    ): Promise<PrerequisiteStatus> {
         const startTime = Date.now();
 
         // Check cache first (Step 2: Prerequisite Caching)
@@ -143,7 +151,9 @@ export class PrerequisitesManager {
                 await this.checkPerNodeVersionPrerequisite(prereq, status);
 
                 const totalDuration = Date.now() - startTime;
-                this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`);
+                this.logger.debug(
+                    `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
+                );
 
                 this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
                 return status;
@@ -153,10 +163,11 @@ export class PrerequisitesManager {
             await this.checkStandardPrerequisite(prereq, status);
 
             const totalDuration = Date.now() - startTime;
-            this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`);
+            this.logger.debug(
+                `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
+            );
 
             this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
-
         } catch (error) {
             this.handleCheckError(prereq, status, error, startTime, nodeVersion);
         }
@@ -172,7 +183,9 @@ export class PrerequisitesManager {
         prereq: PrerequisiteDefinition,
         status: PrerequisiteStatus,
     ): Promise<void> {
-        this.logger.debug(`[Prerequisites] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`);
+        this.logger.debug(
+            `[Prerequisites] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`,
+        );
 
         const installedNodeVersions = await getInstalledNodeVersions(this.logger);
 
@@ -180,12 +193,14 @@ export class PrerequisitesManager {
             this.logger.debug(`[Prerequisites] ${prereq.id}: No Node versions installed`);
             status.installed = false;
         } else {
-            const { checkPerNodeVersionStatus } = await import('@/features/prerequisites/handlers/shared');
+            const { checkPerNodeVersionStatus } = await import(
+                '@/features/prerequisites/handlers/shared'
+            );
 
             const perNodeStatus = await checkPerNodeVersionStatus(
                 prereq,
                 installedNodeVersions,
-                this.createMinimalContext() as unknown as import('@/types/handlers').HandlerContext,
+                this.createMinimalContext(),
             );
 
             // Cache per-version results
@@ -198,17 +213,24 @@ export class PrerequisitesManager {
                     optional: prereq.optional || false,
                     canInstall: true,
                 };
-                this.cacheManager.setCachedResult(prereq.id, versionSpecificStatus, undefined, versionStatus.major);
+                this.cacheManager.setCachedResult(
+                    prereq.id,
+                    versionSpecificStatus,
+                    undefined,
+                    versionStatus.major,
+                );
             }
 
-            const anyInstalled = perNodeStatus.perNodeVersionStatus.some(v => v.installed);
+            const anyInstalled = perNodeStatus.perNodeVersionStatus.some((v) => v.installed);
             status.installed = anyInstalled;
 
             if (anyInstalled) {
                 status.version = this.extractVersionFromPerNodeStatus(perNodeStatus);
             }
 
-            this.logger.debug(`[Prerequisites] ${prereq.id}: fnm-aware check complete, installed=${status.installed}`);
+            this.logger.debug(
+                `[Prerequisites] ${prereq.id}: fnm-aware check complete, installed=${status.installed}`,
+            );
         }
 
         // Check plugins if the prerequisite is installed and has plugins defined
@@ -263,12 +285,16 @@ export class PrerequisitesManager {
         status: PrerequisiteStatus,
     ): Promise<void> {
         if (!prereq.plugins) return;
-        this.logger.debug(`[Prerequisites] ${prereq.id}: Checking ${prereq.plugins.length} plugin(s)`);
+        this.logger.debug(
+            `[Prerequisites] ${prereq.id}: Checking ${prereq.plugins.length} plugin(s)`,
+        );
         status.plugins = [];
         for (const plugin of prereq.plugins) {
             const pluginStatus = await this.checkPlugin(plugin);
             status.plugins.push(pluginStatus);
-            this.logger.debug(`[Prerequisites] ${prereq.id}: Plugin ${plugin.id} installed=${pluginStatus.installed}`);
+            this.logger.debug(
+                `[Prerequisites] ${prereq.id}: Plugin ${plugin.id} installed=${pluginStatus.installed}`,
+            );
         }
     }
 
@@ -284,20 +310,28 @@ export class PrerequisitesManager {
         nodeVersion?: string,
     ): void {
         const totalDuration = Date.now() - startTime;
-        this.logger.debug(`[Prerequisites] ${prereq.id}: ✗ Failed after ${formatDuration(totalDuration)}`);
+        this.logger.debug(
+            `[Prerequisites] ${prereq.id}: ✗ Failed after ${formatDuration(totalDuration)}`,
+        );
 
         const errorMessage = toError(error).message;
         const errorObj = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
-        const isTimeoutErr = isTimeout(toAppError(error)) || (errorObj.killed && errorObj.signal === 'SIGTERM');
+        const isTimeoutErr =
+            isTimeout(toAppError(error)) || (errorObj.killed && errorObj.signal === 'SIGTERM');
 
         if (isTimeoutErr) {
-            this.logger.warn(`${prereq.name} check timed out after ${formatDuration(TIMEOUTS.PREREQUISITE_CHECK)}`);
-            throw new Error(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`);
+            this.logger.warn(
+                `${prereq.name} check timed out after ${formatDuration(TIMEOUTS.PREREQUISITE_CHECK)}`,
+            );
+            throw new Error(
+                `${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`,
+            );
         }
 
-        const isCommandNotFound = errorObj.code === 'ENOENT' ||
-                                 errorMessage.includes('ENOENT') ||
-                                 errorMessage.includes('command not found');
+        const isCommandNotFound =
+            errorObj.code === 'ENOENT' ||
+            errorMessage.includes('ENOENT') ||
+            errorMessage.includes('command not found');
 
         status.installed = false;
 
@@ -310,7 +344,9 @@ export class PrerequisitesManager {
         this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
     }
 
-    private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
+    private async checkPlugin(
+        plugin: PrerequisitePlugin,
+    ): Promise<{ id: string; name: string; installed: boolean }> {
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
             const { stdout } = await commandManager.execute(plugin.check.command, {
@@ -322,8 +358,7 @@ export class PrerequisitesManager {
                     backoffFactor: 1,
                 },
             });
-            const installed = plugin.check.contains ?
-                stdout.includes(plugin.check.contains) : true;
+            const installed = plugin.check.contains ? stdout.includes(plugin.check.contains) : true;
 
             return {
                 id: plugin.id,
@@ -356,15 +391,16 @@ export class PrerequisitesManager {
     ): Promise<{ commands: string[]; message?: string } | undefined> {
         const config = await this.loadConfig();
 
-        const prereq = config.prerequisites.find(p => p.id === prereqId);
-        const plugin = prereq?.plugins?.find(p => p.id === pluginId);
+        const prereq = config.prerequisites.find((p) => p.id === prereqId);
+        const plugin = prereq?.plugins?.find((p) => p.id === pluginId);
 
         if (!plugin) return undefined;
 
         // Plugin install uses steps array format (same as prerequisites)
         // Extract commands from first step, or use direct commands if available
         const firstStep = plugin.install.steps?.[0];
-        const commands = firstStep?.commands || (plugin.install as { commands?: string[] }).commands;
+        const commands =
+            firstStep?.commands || (plugin.install as { commands?: string[] }).commands;
 
         if (!commands || commands.length === 0) {
             this.logger.warn(`[Prerequisites] Plugin ${pluginId} has no install commands defined`);
@@ -410,7 +446,7 @@ export class PrerequisitesManager {
     private extractVersionFromPerNodeStatus(perNodeStatus: {
         perNodeVersionStatus: { version: string; component: string; installed: boolean }[];
     }): string | undefined {
-        const firstInstalled = perNodeStatus.perNodeVersionStatus.find(v => v.installed);
+        const firstInstalled = perNodeStatus.perNodeVersionStatus.find((v) => v.installed);
         return firstInstalled?.component || undefined;
     }
 
@@ -428,9 +464,7 @@ export class PrerequisitesManager {
     }
 
     // Delegate to extracted module
-    resolveDependencies(
-        prerequisites: PrerequisiteDefinition[],
-    ): PrerequisiteDefinition[] {
+    resolveDependencies(prerequisites: PrerequisiteDefinition[]): PrerequisiteDefinition[] {
         return resolveDependencies(prerequisites);
     }
 }

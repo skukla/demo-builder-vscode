@@ -126,17 +126,80 @@
       }
     },
     "installConfig": {
-      "oneOf": [
-        {
-          "$ref": "#/definitions/commandSet"
+      "type": "object",
+      "description": "Mirrors PrerequisiteInstall (src/features/prerequisites/services/types.ts). The old oneOf over commandSet/platformSpecificInstall/dynamicInstall never matched the step-based format the data has used since it landed — and its variants overlapped, so ANY object matched two of them and failed oneOf.",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" }
         },
-        {
-          "$ref": "#/definitions/platformSpecificInstall"
+        "message": { "type": "string" },
+        "requires": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Prerequisite ids that must be installed first"
         },
-        {
-          "$ref": "#/definitions/dynamicInstall"
+        "dynamic": {
+          "type": "boolean",
+          "description": "Steps are version templates ({version} placeholder)"
+        },
+        "template": { "type": "string" },
+        "versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "manual": { "type": "boolean" },
+        "url": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/installStep" }
         }
-      ]
+      }
+    },
+    "installStep": {
+      "type": "object",
+      "description": "Mirrors InstallStep (src/features/prerequisites/services/types.ts)",
+      "required": ["name", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "message": { "type": "string" },
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "commandTemplate": {
+          "type": "string",
+          "description": "Command with {version} placeholder (dynamic installs)"
+        },
+        "estimatedDuration": {
+          "type": "number",
+          "description": "Milliseconds, drives the synthetic progress strategy"
+        },
+        "progressStrategy": {
+          "type": "string",
+          "enum": ["exact", "milestones", "synthetic", "immediate"]
+        },
+        "milestones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pattern", "progress"],
+            "additionalProperties": false,
+            "properties": {
+              "pattern": { "type": "string" },
+              "progress": { "type": "number" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "progressParser": { "type": "string" },
+        "continueOnError": { "type": "boolean" }
+      }
     },
     "commandSet": {
       "type": "object",

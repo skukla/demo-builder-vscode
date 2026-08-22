@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
+import { validateManifestShape } from './manifestValidation';
 import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
@@ -43,6 +44,8 @@ export function normalizePackageId(id: string | undefined): string | undefined {
 
 export interface ProjectManifest {
     name?: string;
+    /** Display title. Absent on every project created before it existed. */
+    title?: string;
     created?: string;
     lastModified?: string;
     adobe?: Project['adobe'];
@@ -103,6 +106,15 @@ export class ProjectFileLoader {
                 throw new Error('Failed to parse project manifest');
             }
 
+            // WARN-mode shape check against the schema generated from
+            // ProjectManifest — names drift in the Debug Logs instead of
+            // letting a wrong-shaped field surface weeks later as a mystery
+            // symptom. NEVER blocks the load: a manifest from any extension
+            // version loads best-effort exactly as it always has.
+            for (const issue of validateManifestShape(manifest)) {
+                this.logger.warn(`[Project Load] manifest shape: ${issue} (${manifestPath})`);
+            }
+
             // Discover components from disk and merge with manifest
             const { componentInstances, componentVersions } = await this.discoverComponents(
                 projectPath,
@@ -112,6 +124,10 @@ export class ProjectFileLoader {
 
             const project: Project = {
                 name: manifest.name || path.basename(projectPath),
+                // Absent on older projects, and that is the supported state:
+                // `getProjectDisplayName` falls back to the slug, so they render
+                // exactly as they always have. Nothing backfills this.
+                title: manifest.title,
                 path: projectPath,
                 status: 'stopped', // Will be updated below if demo is actually running
                 created: manifest.created ? new Date(manifest.created) : new Date(),

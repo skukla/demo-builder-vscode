@@ -103,6 +103,7 @@ export function DaLiveSetupStep({
                         size="L"
                         message="Checking DA.live authentication..."
                         subMessage="Verifying your access"
+                        helperText="This should only take a moment"
                     />
                 </CenteredFeedbackContainer>
             </SingleColumnLayout>

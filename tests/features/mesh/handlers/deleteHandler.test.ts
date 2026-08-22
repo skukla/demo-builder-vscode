@@ -17,6 +17,7 @@ import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
+import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
 
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
@@ -71,7 +72,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
 
         expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
         expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-            'aio api-mesh delete --autoConfirmAction',
+            MESH_DELETE_COMMAND,
             expect.any(Object)
         );
     });

@@ -33,14 +33,16 @@
  */
 
 import { readOrgAdmins } from './configServiceAccess';
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import { HELIX_ADMIN_URL } from './helixApiClient';
 import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
 
-const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
-const DA_LIVE_ADMIN_BASE_URL = 'https://admin.da.live';
+// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
+// Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
 
 /** What each leg found. An absent leg means it never ran. */
 export interface ConfigServiceProbeResult {
@@ -274,7 +276,7 @@ export async function probeConfigService(
 
     try {
         const response = await get(
-            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`,
+            `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`,
             token,
         );
         result.configService = {
@@ -290,7 +292,7 @@ export async function probeConfigService(
     // accepted ANYWHERE, which is what turns a bare 403 into a diagnosis.
     try {
         const response = await get(
-            `${DA_LIVE_ADMIN_BASE_URL}/source/${encodeURIComponent(org)}/${encodeURIComponent(site)}/index.html`,
+            `${DA_LIVE_BASE_URL}/source/${encodeURIComponent(org)}/${encodeURIComponent(site)}/index.html`,
             token,
         );
         result.daLive = { httpStatus: response.status };
@@ -321,7 +323,7 @@ export async function probeConfigService(
     // whole feature turns on, and the one nothing else in the report asks.
     try {
         const access = await get(
-            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/access/admin.json`,
+            `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/access/admin.json`,
             token,
         );
         // 404 means no grants yet, which is "not locked" — NOT an error.
@@ -329,7 +331,7 @@ export async function probeConfigService(
 
         let keyCount: number | undefined;
         const keys = await get(
-            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/apiKeys.json`,
+            `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/apiKeys.json`,
             token,
         );
         if (keys.status === 200) {

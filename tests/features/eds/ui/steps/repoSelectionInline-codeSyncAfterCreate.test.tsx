@@ -27,6 +27,18 @@
  * "Check Again" button.
  */
 
+// 2026-08-20: `cannot-verify` is gone -- every state that reached it now lands
+// on `after-setup`. In Helix 5 a "site" is a Configuration Service record
+// created during setup, and `admin.hlx.page/status` reports on the site, so
+// before that record exists it answers `404 no such site` whatever the App is
+// doing. Measured unauthenticated (401 = site exists, 404 = it does not):
+// kukla-bodea 404 with the App installed and full template content;
+// citisignal, demo-builder-test and adobe/helix-website all 401.
+// So the old view's install steps and "Check Again" were both dead ends -- the
+// install cannot create a site and the re-check cannot succeed, which is
+// exactly what pressing it did: return to the same screen.
+
+
 const mockRequest = jest.fn();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
@@ -54,12 +66,12 @@ describe('a status nobody measured', () => {
         expect(resolveCodeSyncView(justCreated, false).kind).toBe('checking');
     });
 
-    it('a bare verdict with no evidence either way is unverifiable', () => {
+    it('a bare verdict with no evidence either way cannot be verified', () => {
         // No installUrl (the handler was not confident) and no `undetermined` flag
         // either — nothing to act on, so claim nothing.
         const bare = { isChecking: false, isInstalled: false };
 
-        expect(resolveCodeSyncView(bare, false).kind).toBe('unverifiable');
+        expect(resolveCodeSyncView(bare, false).kind).toBe('after-setup');
     });
 });
 
@@ -90,16 +102,24 @@ describe('what each state must still mean', () => {
             installUrl: 'https://github.com/apps/aem-code-sync/installations/select_target',
         };
 
-        expect(resolveCodeSyncView(helixNeverHeardOfIt, false).kind).toBe('needs-install');
+        // Collapsed 2026-08-20: this is `after-setup`, and the INTENT still
+        // holds — that view leads with the install steps and an Install action.
+        // The kind changed; "an install prompt, not a shrug" did not. What it no
+        // longer does is CLAIM the app is missing, which an outer 404 never
+        // established.
+        expect(resolveCodeSyncView(helixNeverHeardOfIt, false).kind).toBe('after-setup');
     });
 
-    it('a refused credential stays unverifiable', () => {
-        // The state that branch exists for: Adobe refused the credential, which
-        // says nothing about the app. Installing cannot fix it, so no install
-        // prompt — and the handler withholds `installUrl` to say so.
+    it('a refused credential is not reported as a missing app', () => {
+        // The distinction this file was written to protect. Adobe refusing the
+        // credential says nothing about the app, so it must never reach the
+        // DEFINITIVE `needs-install` verdict — the one that blocks and asserts
+        // absence. It lands in the same cannot-verify view as the 404 above,
+        // which offers the install without claiming it is the problem.
         const refused = { isChecking: false, isInstalled: false, undetermined: true };
 
-        expect(resolveCodeSyncView(refused, false).kind).toBe('unverifiable');
+        expect(resolveCodeSyncView(refused, false).kind).toBe('after-setup');
+        expect(resolveCodeSyncView(refused, false).kind).not.toBe('needs-install');
     });
 
     it('installed is verified', () => {
@@ -177,7 +197,12 @@ describe('re-checking after "Check Again"', () => {
 
         const { status } = await pollGitHubAppInstallation('skukla', 'demo', jest.fn());
 
-        expect(resolveCodeSyncView(status, false).kind).toBe('needs-install');
+        // Collapsed 2026-08-20: this lands in `after-setup`, whose view leads
+        // with the install steps — so the offer still reaches the user. Assert
+        // the OFFER survives the poll rather than the kind, which is the thing
+        // this test was actually protecting and the thing that has now moved.
+        expect(status.installUrl).toBe(notInstalled.installUrl);
+        expect(resolveCodeSyncView(status, false).kind).toBe('after-setup');
     });
 
     it('still retries while the check is UNDETERMINED', async () => {
@@ -203,6 +228,6 @@ describe('re-checking after "Check Again"', () => {
 
         expect(mockRequest).toHaveBeenCalledTimes(5);
         expect(status.undetermined).toBe(true);
-        expect(resolveCodeSyncView(status, false).kind).toBe('unverifiable');
+        expect(resolveCodeSyncView(status, false).kind).toBe('after-setup');
     });
 });

@@ -68,7 +68,7 @@ const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
         repoMode: 'existing',
         githubAuth: {
             isAuthenticated: true,
-            user: { login: 'testuser' },
+            user: { login: 'testuser', email: null, name: null, avatarUrl: null },
         },
         ...overrides,
     },
@@ -131,7 +131,7 @@ describe('RepoSelectionInline', () => {
         it('should show the "New" action to switch to create mode (existing)', async () => {
             const state = createDefaultState({ repoMode: 'existing' });
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             ];
             await renderInline(state, 'repository');
             expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
@@ -156,11 +156,11 @@ describe('RepoSelectionInline', () => {
         it('should report repo VALID when an existing repo is selected', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
             // Pre-populate cache so isLoading starts false.
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             ];
 
             await renderInline(state, 'repository');
@@ -188,7 +188,7 @@ describe('RepoSelectionInline', () => {
         it('should report code-sync VALID for an existing repo (gate deferred)', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
 
             await renderInline(state, 'code-sync');
@@ -259,10 +259,97 @@ describe('RepoSelectionInline', () => {
 
             await renderInline(state, 'code-sync');
 
+            // Collapsed again 2026-08-20, further: there is no install prompt
+            // here at all now. A refused check tells us nothing about the App,
+            // and neither does the outer 404 that `/status` returns before the
+            // site exists -- so no surface offers an install without the one
+            // DEFINITIVE shape behind it (inner code.status 404). The user is
+            // told when it will actually be checked instead.
             await waitFor(() => {
-                expect(screen.getByText(/Couldn't verify AEM Code Sync/i)).toBeInTheDocument();
+                expect(
+                    screen.getByText(/Code Sync is checked after setup/i)
+                ).toBeInTheDocument();
             });
             expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
+        });
+
+        describe('a repo that cannot have a site yet', () => {
+            /**
+             * `admin.hlx.page/status` reports on the SITE, not the App. A repo with
+             * no storefront content has no site, so it answers `404 no such site`
+             * however AEM Code Sync is configured.
+             *
+             * Measured on skukla/kukla-bodea 2026-08-20: GitHub listed the repo
+             * under the AEM Code Sync installation, and the endpoint 404'd anyway
+             * -- 28 minutes after a code-sync trigger Helix had accepted. So the
+             * question is not merely unanswered here, it is unanswerable, and
+             * asking it produced an install prompt aimed at someone who already
+             * had it installed.
+             *
+             * The first assertion is the load-bearing one, and it is about the
+             * CALL. `webviewClient` is mocked, so it answers the same whether or
+             * not we ask -- only the absence of the request distinguishes "we know
+             * better than to ask" from "we asked and ignored it". On the Check
+             * Again path that request also fires a code-sync trigger against the
+             * user's repository, for nothing.
+             */
+            const notAStorefront = (type: string) =>
+                type === 'check-repo-readiness'
+                    ? Promise.resolve({
+                          success: true,
+                          readiness: { kind: 'not-a-storefront', missing: ['scripts/scripts.js'] },
+                      })
+                    : Promise.resolve({ success: true, isInstalled: false, codeStatus: 404 });
+
+            const selected = () =>
+                createDefaultState({
+                    repoMode: 'existing',
+                    selectedRepo: { id: 'r1', name: 'kukla-bodea', fullName: 'skukla/kukla-bodea', htmlUrl: 'https://github.com/skukla/kukla-bodea' },
+                });
+
+            it('never asks Adobe a question Adobe cannot answer', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                await waitFor(() => {
+                    expect(screen.getByText(/checked after setup/i)).toBeInTheDocument();
+                });
+                expect(mockRequest).not.toHaveBeenCalledWith(
+                    'check-github-app',
+                    expect.anything(),
+                );
+            });
+
+            it('says why, instead of telling them to install what they have', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                // Deliberately NOT "because it isn't a storefront". A repo reset
+                // to the template, with every file on main, still answers 404 --
+                // the site is a Configuration Service record created during
+                // setup, and storefront content does not create one.
+                await waitFor(() => {
+                    expect(
+                        screen.getByText(/doesn't have a site for/i),
+                    ).toBeInTheDocument();
+                });
+                expect(
+                    screen.queryByText(/Install the AEM Code Sync App/i),
+                ).not.toBeInTheDocument();
+            });
+
+            it('does not hold Continue on a question it declined to ask', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                await waitFor(() => {
+                    expect(screen.getByText(/checked after setup/i)).toBeInTheDocument();
+                });
+                expect(mockOnCodeSyncValidChange).toHaveBeenLastCalledWith(true);
+            });
         });
 
         it('shows the install flow for an EXISTING repo too (the old dead end)', async () => {
@@ -272,7 +359,7 @@ describe('RepoSelectionInline', () => {
             mockRequest.mockResolvedValue({ success: true, isInstalled: false, codeStatus: 404 });
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo' },
+                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
             });
 
             await renderInline(state, 'code-sync');

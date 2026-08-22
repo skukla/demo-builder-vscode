@@ -31,7 +31,7 @@ import { AdobeProjectPicker } from './AdobeProjectPicker';
 import { AdobeWorkspacePicker } from './AdobeWorkspacePicker';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
+import type { WizardSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /**
  * The handler response envelope (`webviewClient.request` resolves with this).
@@ -57,7 +57,7 @@ interface HandlerResult<T> {
 type FieldMode = 'browse' | 'create';
 
 interface FieldProps {
-    state: WizardState;
+    state: WizardSessionState;
     updateState: (updates: Partial<WizardState>) => void;
 }
 

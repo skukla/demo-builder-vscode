@@ -15,8 +15,7 @@
  * @module features/mesh/services/deployMeshHeadless
  */
 
-import { deployMeshComponent } from './meshDeployment';
-import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
+import { deployMeshCreateOrUpdate } from './meshRedeploy';
 import { updateMeshState } from './stalenessDetector';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
@@ -181,18 +180,14 @@ export async function deployMeshHeadless(
             // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
             await ensureMeshApiSubscribed({ project, authService: authManager, logger });
 
-            // Create-or-update: source the existing mesh id from Adobe I/O (remote
-            // truth). Untargeted this queried the WRONG project, failed, and
-            // reported no existing mesh — sending a live mesh down the create path.
-            const meshInfo = await fetchMeshInfoFromAdobeIO(logger);
-            const existingMeshId = meshInfo?.meshId || '';
-
-            const result = await deployMeshComponent(
+            // Create-or-update from REMOTE truth — the shared rule lives in
+            // deployMeshCreateOrUpdate (one copy, was three). Untargeted this
+            // queried the WRONG project, failed, and reported no existing mesh
+            // — sending a live mesh down the create path.
+            const result = await deployMeshCreateOrUpdate(
                 meshComponent.path as string,
-                ServiceLocator.getCommandExecutor(),
                 logger,
                 (message: string, subMessage?: string) => onProgress?.(message, subMessage),
-                existingMeshId,
             );
 
             // A failed deploy result throws into the catch below (single error path:

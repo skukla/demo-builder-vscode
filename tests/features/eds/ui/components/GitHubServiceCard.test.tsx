@@ -95,7 +95,7 @@ describe('GitHubServiceCard', () => {
                         isChecking={false}
                         isAuthenticating={false}
                         isAuthenticated={true}
-                        user={{ login: 'testuser' }}
+                        user={{ login: 'testuser', email: null, name: null, avatarUrl: null }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
                     />
@@ -119,7 +119,7 @@ describe('GitHubServiceCard', () => {
                         isChecking={false}
                         isAuthenticating={false}
                         isAuthenticated={true}
-                        user={{ login: 'testuser' }}
+                        user={{ login: 'testuser', email: null, name: null, avatarUrl: null }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
                     />
@@ -143,7 +143,7 @@ describe('GitHubServiceCard', () => {
                         isChecking={false}
                         isAuthenticating={false}
                         isAuthenticated={true}
-                        user={{ login: 'testuser' }}
+                        user={{ login: 'testuser', email: null, name: null, avatarUrl: null }}
                         onConnect={mockOnConnect}
                         onChangeAccount={mockOnChangeAccount}
                     />

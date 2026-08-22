@@ -129,10 +129,11 @@ describe('AiCapabilitiesModal', () => {
 
     // ─── MCPs section ────────────────────────────────────────────────────────
 
-    it('lists each MCP server by id', () => {
+    it('lists each MCP server under its display label', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.getByText(/demo-builder/i)).toBeInTheDocument();
-        expect(screen.getByText(/playwright/i)).toBeInTheDocument();
+        // Scoped by testid: "Demo Builder" also appears as a skills group header.
+        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder');
+        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright');
     });
 
     it('shows the tool count for each healthy MCP', () => {

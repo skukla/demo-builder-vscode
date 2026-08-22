@@ -99,6 +99,15 @@ describe('SOP: Handler Facades', () => {
                 'meshStatusHelpers',
                 'edsHelpers',
                 'shared',
+                // The six modules edsHelpers was split into. They are reached
+                // through that barrel, never re-exported from index.ts —
+                // listing them keeps this guard as wide as the code it guards.
+                'edsServiceCache',
+                'daLiveAuthPrompt',
+                'byomOverlay',
+                'authoringExperience',
+                'blockLibraryPublish',
+                'daLiveSiteConfig',
             ];
 
             for (const dir of handlerDirs) {
@@ -144,20 +153,17 @@ describe('SOP: Handler Facades', () => {
             'sidebar',
         ];
 
-        it.each(REQUIRED_HANDLER_DIRS)(
-            '%s should have handlers/index.ts',
-            (featureName) => {
-                const handlersDir = path.join(featuresDir, featureName, 'handlers');
-                const indexPath = path.join(handlersDir, 'index.ts');
+        it.each(REQUIRED_HANDLER_DIRS)('%s should have handlers/index.ts', (featureName) => {
+            const handlersDir = path.join(featuresDir, featureName, 'handlers');
+            const indexPath = path.join(handlersDir, 'index.ts');
 
-                // Skip if the feature doesn't have a handlers directory at all
-                if (!fs.existsSync(handlersDir)) {
-                    // This is acceptable - not all features need handlers
-                    return;
-                }
-
-                expect(fs.existsSync(indexPath)).toBe(true);
+            // Skip if the feature doesn't have a handlers directory at all
+            if (!fs.existsSync(handlersDir)) {
+                // This is acceptable - not all features need handlers
+                return;
             }
-        );
+
+            expect(fs.existsSync(indexPath)).toBe(true);
+        });
     });
 });

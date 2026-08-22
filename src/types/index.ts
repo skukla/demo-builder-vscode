@@ -30,28 +30,11 @@ export * from './logger';
 // State management types
 export * from './state';
 
-// Message protocol types (explicit export to avoid conflicts)
-export {
-    MessageType,
-    MessagePayload,
-    MessageResponse,
-    PrerequisitePayload,
-    AuthPayload,
-    ProjectPayload,
-    WorkspacePayload,
-    ComponentPayload,
-    MeshPayload,
-    CreationPayload,
-    DashboardPayload,
-    GenericPayload,
-    Message,
-    PendingRequest,
-    WebviewMessageHandler,
-} from './messages';
-
-// Note: WebviewMessageHandler (from messages.ts) is for webview communication handlers
-// MessageHandler (from handlers.ts) is for extension backend command handlers
-// These are distinct types with different signatures
+// Message protocol: the transport envelope only. Per-channel payload
+// contracts live in ./webviewPayloads and ./webviewRequests. (The old
+// MessageType/MessagePayload fake-constraint surface was deleted 2026-08-22 —
+// nothing consumed it.)
+export { Message, PendingRequest } from './messages';
 
 // Component types (enhanced) - includes enhanced ServiceDefinition
 export * from './components';
@@ -68,8 +51,9 @@ export {
 // Type guards - Import directly from './typeGuards' when needed to avoid circular dependency
 // export * from './typeGuards';
 
-// Status enums for type safety
-export { MeshStatus, ComponentStatusEnum } from './enums';
+// enums.ts deleted 2026-08-21: its MeshStatus enum spoke a retired dialect
+// ('not_deployed'/'stale') and, like ComponentStatusEnum, had ZERO consumers
+// beyond its own test. The live MeshStatus union lives in webviewPayloads.
 
 // Error codes for programmatic error handling
 export {

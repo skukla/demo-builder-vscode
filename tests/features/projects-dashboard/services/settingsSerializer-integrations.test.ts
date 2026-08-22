@@ -13,7 +13,7 @@ import {
     extractSettingsFromProject,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
-import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 
 describe('settingsSerializer', () => {
     describe('extractSettingsFromProject - App Builder integration round-trip', () => {
@@ -189,7 +189,9 @@ describe('settingsSerializer', () => {
         });
 
         it('omits the keyed picks when there are none', () => {
-            expect(extractSettingsFromProject(createProject(), false).componentApiPicks).toBeUndefined();
+            expect(
+                extractSettingsFromProject(createProject(), false).componentApiPicks
+            ).toBeUndefined();
         });
 
         it('should keep the existing shape stable alongside the derived fields', () => {

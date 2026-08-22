@@ -14,7 +14,7 @@ import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
-import { normalizeProjectName } from '@/core/validation/normalizers';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getProjectStatusDisplay,
@@ -50,7 +50,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     const { statusText, statusVariant } = getProjectStatusDisplay(project);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
-    const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
+    const ariaLabel = `${getProjectDisplayName(project)}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
 
     return (
         <div
@@ -81,10 +81,14 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                     {/* Rename-in-place, matching the card grid: hover pencil,
                         hidden while running or when the callback isn't wired. */}
                     <InlineRenameField
-                        name={project.name}
+                        name={getProjectDisplayName(project)}
                         textClassName="project-row-name"
                         disabled={isRunning || !actions.onRenameSubmit}
-                        normalize={normalizeProjectName}
+                        // No `normalize`: the field takes the TITLE as typed.
+                        // `renameProjectCore` derives the slug from it and moves
+                        // the folder to match, so rewriting keystrokes to hyphens
+                        // here would only put the enforcement back in the one
+                        // place the user has to look at.
                         onRename={(newName) =>
                             actions.onRenameSubmit
                                 ? actions.onRenameSubmit(project, newName)

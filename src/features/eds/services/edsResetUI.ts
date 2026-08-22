@@ -536,9 +536,9 @@ async function confirmSampleDataRemoval(
         return false;
     }
 
-    const removeButton = 'Remove Sample Data';
+    const removeButton = 'Remove Datapack';
     const answer = await vscode.window.showWarningMessage(
-        `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +
+        `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
             'This deletes it from the Commerce instance and can take several minutes. ' +
             'Resetting the storefront does not require it.',
         { modal: true },
@@ -566,7 +566,7 @@ async function removeProjectSampleData(
     progress: { report: (value: { message: string }) => void },
 ): Promise<void> {
     try {
-        progress.report({ message: 'Removing sample data...' });
+        progress.report({ message: 'Removing datapack...' });
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'
@@ -579,7 +579,17 @@ async function removeProjectSampleData(
         // from the runner, which knows which half of a restore is running.
         const result = await removeSampleData(
             project,
-            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'remove'),
+            buildSampleDataDeps(
+                context,
+                project,
+                (sd) =>
+                    progress.report({
+                        message: `${sd.verb} datapack (${sd.done}/${sd.total})${
+                            sd.processing.length > 0 ? ` — ${sd.processing.join(', ')}` : ''
+                        }`,
+                    }),
+                'remove',
+            ),
         );
 
         if (result.ran && result.outcome !== 'success') {

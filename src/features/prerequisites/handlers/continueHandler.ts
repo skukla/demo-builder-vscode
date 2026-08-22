@@ -14,6 +14,8 @@ import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteChec
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
+import type { PrerequisiteStatusPayload, PrerequisitesCompletePayload } from '@/types/webviewPayloads';
+import type { ContinuePrerequisitesRequestPayload } from '@/types/webviewRequests';
 
 /**
  * Get the set of Node major versions installed via fnm.
@@ -126,7 +128,7 @@ function computeContinueOverallStatus(
     checkResult: { installed: boolean; canInstall: boolean },
     nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined,
     perNodeVariantMissing: boolean,
-): { overallStatus: string; nodeMissing: boolean } {
+): { overallStatus: PrerequisiteStatusPayload['status']; nodeMissing: boolean } {
     let overallStatus = determinePrerequisiteStatus(checkResult.installed, !!prereq.optional);
     let nodeMissing = false;
     if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
@@ -145,7 +147,7 @@ function computeContinueOverallStatus(
  */
 export async function handleContinuePrerequisites(
     context: HandlerContext,
-    payload?: { fromIndex?: number },
+    payload?: ContinuePrerequisitesRequestPayload,
 ): Promise<SimpleResult> {
     try {
         if (!context.sharedState.currentPrerequisites || !context.sharedState.currentPrerequisiteStates) {
@@ -157,13 +159,14 @@ export async function handleContinuePrerequisites(
 
         for (let i = start; i < context.sharedState.currentPrerequisites.length; i++) {
             const prereq = context.sharedState.currentPrerequisites[i];
-            await context.sendMessage('prerequisite-status', {
+            const checking: PrerequisiteStatusPayload = {
                 index: i,
                 name: prereq.name,
                 status: 'checking',
                 description: prereq.description,
                 required: !prereq.optional,
-            });
+            };
+            await context.sendMessage('prerequisite-status', checking);
 
             let checkResult;
             try {
@@ -192,7 +195,7 @@ export async function handleContinuePrerequisites(
             const versionStatusForState = prereq.id === 'node' ? nodeVersionStatus : variantStatus.perNodeVersionStatus;
             context.sharedState.currentPrerequisiteStates.set(i, { prereq, result: checkResult, nodeVersionStatus: versionStatusForState });
 
-            await context.sendMessage('prerequisite-status', {
+            const result: PrerequisiteStatusPayload = {
                 index: i,
                 name: prereq.name,
                 status: overallStatus,
@@ -214,16 +217,18 @@ export async function handleContinuePrerequisites(
                 ),
                 plugins: checkResult.plugins,
                 nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : variantStatus.perNodeVersionStatus,
-            });
+            };
+            await context.sendMessage('prerequisite-status', result);
         }
 
         const allRequiredInstalled = Array.from(context.sharedState.currentPrerequisiteStates.values())
             .filter(state => !state.prereq.optional)
             .every(state => state.result.installed);
 
-        await context.sendMessage('prerequisites-complete', {
+        const complete: PrerequisitesCompletePayload = {
             allInstalled: allRequiredInstalled,
-        });
+        };
+        await context.sendMessage('prerequisites-complete', complete);
 
         return { success: true };
     } catch (error) {

@@ -7,6 +7,9 @@
  * to DTO format for webview communication.
  */
 
+import type { EnvVarDefinition } from '@/types/components';
+import type { ComponentDataDTO } from '@/types/webviewRequests';
+
 /**
  * Component from registry (input type)
  */
@@ -40,21 +43,10 @@ interface ResolvedDependency {
     };
 }
 
-/**
- * Component data DTO (output type for webview)
- */
-export interface ComponentDataDTO {
-    id: string;
-    name: string;
-    description?: string;
-    features?: string[];
-    dependencies?: {
-        required?: string[];
-        optional?: string[];
-    };
-    configuration?: Record<string, unknown>;
-    recommended?: boolean;
-}
+// ComponentDataDTO lives in @/types/webviewRequests — ONE declaration with
+// the get-components-data response the webviews consume. Re-exported here for
+// this module's existing importers.
+export type { ComponentDataDTO } from '@/types/webviewRequests';
 
 /**
  * Dependency data DTO (output type for webview)
@@ -131,6 +123,24 @@ export function toDependencyData(
  * @param options - Optional transformation options
  * @returns Array of ComponentDataDTO for webview
  */
+/**
+ * Inject each record's name into the record as its `key`.
+ *
+ * The registry stores env vars keyed by name with no `key` field inside the
+ * record (`ComponentRegistry.envVars: Record<string, Omit<EnvVarDefinition,
+ * 'key'>>`; components.json carries none), while the webview consumers type
+ * the payload as `Record<string, EnvVarDefinition>` with `key` required.
+ * Producers call this at the send boundary so the payload actually carries
+ * what the consumer types claim.
+ */
+export function withEnvVarKeys(
+    envVars: Record<string, Omit<EnvVarDefinition, 'key'>> | undefined,
+): Record<string, EnvVarDefinition> {
+    return Object.fromEntries(
+        Object.entries(envVars ?? {}).map(([key, def]) => [key, { ...def, key }]),
+    );
+}
+
 export function toComponentDataArray(
     components: RegistryComponent[],
     options?: {
@@ -139,5 +149,5 @@ export function toComponentDataArray(
         includeFeatures?: boolean;
     },
 ): ComponentDataDTO[] {
-    return components.map(c => toComponentData(c, options));
+    return components.map((c) => toComponentData(c, options));
 }

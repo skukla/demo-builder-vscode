@@ -16,8 +16,10 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Small inline busy indicator | `ui/Spinner` | `ProgressCircle` directly |
 | Long wait needing "still moving" copy | `LoadingDisplay` + `useElapsedStage` | a static message |
 | Error / empty / success full-block state | `feedback/StatusDisplay` (`variant`, `actions[]`) | red `<Text>`, a bespoke panel |
-| "Nothing here yet" + a CTA | `feedback/EmptyState` | a hand-rolled centered div |
+| "Nothing here yet" notice inline in a list | `feedback/EmptyState` (icon-in-a-well) | a hand-rolled centered div |
+| First-run empty SCREEN with CTA buttons | `feedback/CtaEmptyState` (bold title + sentence + actions; Projects + Integrations use it) | rebuilding the Projects look per surface |
 | Ambient status badge (dot + label + value) | `feedback/StatusCard` (`action` for remediation) | an inline colored span |
+| Warning/context banner ABOVE content the user can still use | `feedback/InlineNotice` (`tone`, `hint`, `action`) | a full-pane `StatusDisplay`, which reads as a wall |
 | Just the status dot | `ui/StatusDot` | a styled `<span>` |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |

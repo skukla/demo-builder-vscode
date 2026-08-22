@@ -27,12 +27,13 @@ import { DatapackActivityView } from './views/DatapackActivityView';
 import { DatapackCatalogView } from './views/DatapackCatalogView';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
-/** Init payload, owned by `ShowDataInstallerCommand.getInitialData()`. */
-export interface DataInstallerScreenProps {
-    theme?: 'dark' | 'light';
-    projectName?: string;
-}
+/**
+ * Init payload (`DataInstallerInitialData`), relaxed to Partial: the wire
+ * always carries every field, but tests render the screen without them.
+ */
+export type DataInstallerScreenProps = Partial<DataInstallerInitialData>;
 
 /**
  * Views the panel can show.

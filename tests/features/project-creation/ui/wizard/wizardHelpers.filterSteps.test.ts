@@ -5,13 +5,13 @@
 import {
     filterStepsByComponents,
     isComponentSelected,
-    WizardStepConfigWithRequirements,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { ComponentSelection } from '@/types/webview';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 describe('filterStepsByComponents', () => {
     describe('backward compatibility - steps without requiredComponents', () => {
-        const mockSteps: WizardStepConfigWithRequirements[] = [
+        const mockSteps: WizardStepDefinition[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
             { id: 'component-selection', name: 'Components', enabled: true },
             { id: 'review', name: 'Review', enabled: true },
@@ -25,7 +25,7 @@ describe('filterStepsByComponents', () => {
         });
 
         it('should exclude disabled steps', () => {
-            const stepsWithDisabled: WizardStepConfigWithRequirements[] = [
+            const stepsWithDisabled: WizardStepDefinition[] = [
                 ...mockSteps,
                 { id: 'hidden', name: 'Hidden', enabled: false },
             ];
@@ -44,7 +44,7 @@ describe('filterStepsByComponents', () => {
     });
 
     describe('single component requirement', () => {
-        const mockSteps: WizardStepConfigWithRequirements[] = [
+        const mockSteps: WizardStepDefinition[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
             {
                 id: 'mesh-config',
@@ -66,7 +66,7 @@ describe('filterStepsByComponents', () => {
         });
 
         it('should show step when required component is frontend', () => {
-            const stepsWithFrontend: WizardStepConfigWithRequirements[] = [
+            const stepsWithFrontend: WizardStepDefinition[] = [
                 {
                     id: 'storefront-config',
                     name: 'Storefront',
@@ -85,7 +85,7 @@ describe('filterStepsByComponents', () => {
         });
 
         it('should show step when required component is backend', () => {
-            const stepsWithBackend: WizardStepConfigWithRequirements[] = [
+            const stepsWithBackend: WizardStepDefinition[] = [
                 {
                     id: 'backend-config',
                     name: 'Backend',
@@ -129,7 +129,7 @@ describe('filterStepsByComponents', () => {
     });
 
     describe('multiple component requirements (AND logic)', () => {
-        const mockSteps: WizardStepConfigWithRequirements[] = [
+        const mockSteps: WizardStepDefinition[] = [
             {
                 id: 'advanced-config',
                 name: 'Advanced Config',
@@ -172,7 +172,7 @@ describe('filterStepsByComponents', () => {
     });
 
     describe('mixed scenarios - some steps with requirements, some without', () => {
-        const mockSteps: WizardStepConfigWithRequirements[] = [
+        const mockSteps: WizardStepDefinition[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
             {
                 id: 'mesh-config',
@@ -216,7 +216,7 @@ describe('filterStepsByComponents', () => {
         });
 
         it('should handle empty requiredComponents array as always-visible', () => {
-            const stepsWithEmpty: WizardStepConfigWithRequirements[] = [
+            const stepsWithEmpty: WizardStepDefinition[] = [
                 { id: 'test', name: 'Test', enabled: true, requiredComponents: [] },
             ];
 
@@ -228,7 +228,7 @@ describe('filterStepsByComponents', () => {
 
     describe('integration scenarios', () => {
         it('should maintain step order from configuration', () => {
-            const mockSteps: WizardStepConfigWithRequirements[] = [
+            const mockSteps: WizardStepDefinition[] = [
                 { id: 'step-a', name: 'A', enabled: true },
                 { id: 'step-b', name: 'B', enabled: true, requiredComponents: ['component-x'] },
                 { id: 'step-c', name: 'C', enabled: true },
@@ -244,7 +244,7 @@ describe('filterStepsByComponents', () => {
         });
 
         it('should filter disabled steps even if component requirements met', () => {
-            const mockSteps: WizardStepConfigWithRequirements[] = [
+            const mockSteps: WizardStepDefinition[] = [
                 {
                     id: 'enabled-config',
                     name: 'Enabled',
@@ -271,7 +271,7 @@ describe('filterStepsByComponents', () => {
 });
 
 describe('requiredAny OR logic', () => {
-    const mockSteps: WizardStepConfigWithRequirements[] = [
+    const mockSteps: WizardStepDefinition[] = [
         { id: 'welcome', name: 'Welcome', enabled: true },
         {
             id: 'backend-config',
@@ -315,7 +315,7 @@ describe('requiredAny OR logic', () => {
     });
 
     it('should handle empty requiredAny array as always-visible', () => {
-        const stepsWithEmpty: WizardStepConfigWithRequirements[] = [
+        const stepsWithEmpty: WizardStepDefinition[] = [
             { id: 'test', name: 'Test', enabled: true, requiredAny: [] },
         ];
 
@@ -325,7 +325,7 @@ describe('requiredAny OR logic', () => {
     });
 
     it('should show step when requiredAny component is in dependencies', () => {
-        const stepsWithDependency: WizardStepConfigWithRequirements[] = [
+        const stepsWithDependency: WizardStepDefinition[] = [
             {
                 id: 'mesh-step',
                 name: 'Mesh Step',
@@ -344,7 +344,7 @@ describe('requiredAny OR logic', () => {
     });
 
     it('should show step when requiredAny component is in frontend', () => {
-        const stepsWithFrontend: WizardStepConfigWithRequirements[] = [
+        const stepsWithFrontend: WizardStepDefinition[] = [
             {
                 id: 'storefront-config',
                 name: 'Storefront Config',

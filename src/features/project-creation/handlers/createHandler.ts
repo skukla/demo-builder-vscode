@@ -19,9 +19,12 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
+import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
  * Count selected components (SOP §10 compliance)
@@ -48,19 +51,21 @@ async function sendValidationFailure(
     errorSummary: string,
     errorDetail: string,
 ): Promise<{ success: boolean }> {
-    await context.sendMessage('creationProgress', {
+    const progress: CreationProgressPayload = {
         currentOperation: 'Failed',
         progress: 0,
         message: '',
         logs: [],
         error: errorSummary,
-    });
+    };
+    await context.sendMessage('creationProgress', progress);
 
-    await context.sendMessage('creationFailed', {
+    const failed: CreationFailedPayload = {
         error: errorDetail,
         isTimeout: false,
         elapsed: '0s',
-    });
+    };
+    await context.sendMessage('creationFailed', failed);
 
     return { success: true }; // Don't throw - handler completed
 }
@@ -71,9 +76,11 @@ async function sendValidationFailure(
  */
 async function validateProjectConfig(
     context: HandlerContext,
-    config: Record<string, unknown>,
+    config: ProjectCreationConfig,
 ): Promise<{ success: boolean } | undefined> {
-    // SECURITY: Validate project name to prevent path traversal
+    // SECURITY: Validate project name to prevent path traversal. The runtime
+    // check stays even though the type declares it — the wire can always be
+    // handed a malformed payload.
     if (typeof config.projectName !== 'string') {
         throw new Error('projectName must be a string');
     }
@@ -183,7 +190,7 @@ async function cleanupOrphanedMesh(
                 context.authManager?.getCachedOrganization(),
             );
             const deleteResult = await withOrgContext(target, () =>
-                commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
+                commandManager.execute(MESH_DELETE_COMMAND, {
                     timeout: TIMEOUTS.LONG,
                     configureTelemetry: false,
                     enhancePath: true,
@@ -223,14 +230,15 @@ async function reportCreationError(
     if (error instanceof GitHubAppNotInstalledError) {
         context.logger.info(`[Project Creation] GitHub App not installed: ${error.message}`);
         context.logger.info(`[Project Creation] Install the GitHub App: ${error.installUrl}`);
-        await context.sendMessage('creationProgress', {
+        const ghProgress: CreationProgressPayload = {
             currentOperation: 'GitHub App Required',
             progress: 0,
             message: '',
             logs: [],
             error: `The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.`,
-        });
-        await context.sendMessage('creationFailed', {
+        };
+        await context.sendMessage('creationProgress', ghProgress);
+        const failed: CreationFailedPayload = {
             error: `GitHub App Required: The AEM Code Sync app is not installed on ${error.owner}/${error.repo}.`,
             isTimeout: false,
             elapsed: elapsedStr,
@@ -240,7 +248,8 @@ async function reportCreationError(
                 repo: error.repo,
                 installUrl: error.installUrl,
             },
-        });
+        };
+        await context.sendMessage('creationFailed', failed);
         return;
     }
 
@@ -252,25 +261,25 @@ async function reportCreationError(
         (appError.cause?.message?.includes('cancelled by user') ?? false);
     const isTimeoutError = isTimeout(appError);
 
-    await context.sendMessage('creationProgress', {
+    const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',
         progress: 0,
         message: '',
         logs: [],
         error: errorMessage,
-    });
+    };
+    await context.sendMessage('creationProgress', terminal);
 
-    if (isCancelled) {
-        await context.sendMessage('creationCancelled', {
-            message: 'Project creation was cancelled',
-            elapsed: elapsedStr,
-        });
-    } else {
-        await context.sendMessage('creationFailed', {
+    // No creationCancelled push: nothing has listened for it since the wizard
+    // moved to the 'Cancelled' sentinel on creationProgress (sent above) —
+    // a dead send found by the 2026-08-21 channel inventory.
+    if (!isCancelled) {
+        const failed: CreationFailedPayload = {
             error: errorMessage,
             isTimeout: isTimeoutError,
             elapsed: elapsedStr,
-        });
+        };
+        await context.sendMessage('creationFailed', failed);
     }
 }
 
@@ -285,7 +294,9 @@ export async function handleCreateProject(
 ): Promise<{
     success: boolean;
 }> {
-    const config = payload;
+    // The dispatch layer is untyped; this is the receiving cast against the
+    // shared wire declaration (validated above/below at runtime).
+    const config = payload as unknown as ProjectCreationConfig;
 
     const validationResult = await validateProjectConfig(context, config);
     if (validationResult) {
@@ -293,7 +304,7 @@ export async function handleCreateProject(
     }
 
     const startTime = Date.now();
-    const projectName = config.projectName as string; // validated by validateProjectConfig above
+    const projectName = config.projectName; // validated by validateProjectConfig above
     const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', projectName);
 
     // FIRST: Check workspace trust and offer one-time tip

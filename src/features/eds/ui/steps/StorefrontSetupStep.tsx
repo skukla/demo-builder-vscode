@@ -34,6 +34,17 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import type { WizardState } from '@/types/webview';
+import type {
+    StorefrontGitHubAppRequiredPayload,
+    StorefrontSetupCompletePayload,
+    StorefrontSetupErrorPayload,
+    StorefrontSetupProgressPayload,
+    StorefrontSetupProgressPhase,
+} from '@/types/webviewPayloads';
+import type {
+    StorefrontSetupCancelPayload,
+    StorefrontSetupStartPayload,
+} from '@/types/webviewRequests';
 
 /**
  * Progress ranges for each setup phase
@@ -52,41 +63,28 @@ const PROGRESS_RANGES = {
 /**
  * Setup phase states
  */
+// The wire phases live in @/types/webviewPayloads (ONE declaration with the
+// senders — this union used to be a local twin missing the 'auth-recovery'
+// and 'complete' values the pipeline actually pushes). The webview adds its
+// local-only states on top.
 type StorefrontSetupPhase =
+    | StorefrontSetupProgressPhase
     | 'idle'
-    | 'repository'
-    | 'storefront-code'
-    | 'code-sync'
-    | 'site-config'
     | 'github-app'
-    | 'content'
-    | 'block-library'
-    | 'publish'
-    | 'cancelling'
     | 'completed'
     | 'error';
 
-/**
- * GitHub App installation data for the install dialog
- */
-interface GitHubAppData {
-    owner: string;
-    repo: string;
-    installUrl: string;
-    message: string;
-}
+// GitHubAppData is the github-app-required wire shape — ONE declaration in
+// @/types/webviewPayloads, aliased here for this file's existing vocabulary.
+type GitHubAppData = StorefrontGitHubAppRequiredPayload;
 
 /**
  * Partial state tracking for cleanup on cancel
  */
-interface StorefrontSetupPartialState {
-    repoCreated: boolean;
-    repoUrl?: string;
-    repoOwner?: string;
-    repoName?: string;
-    contentCopied: boolean;
-    phase: string;
-}
+// StorefrontSetupPartialState lives in @/types/webviewRequests — ONE
+// declaration with the cancel request's handler (this file used to carry a
+// byte-identical twin).
+type StorefrontSetupPartialState = import('@/types/webviewRequests').StorefrontSetupPartialState;
 
 /**
  * Internal state for setup progress tracking
@@ -123,32 +121,58 @@ interface StorefrontSetupStepProps {
 }
 
 /**
- * Get helper text for loading display based on phase
- * These provide time estimates or additional context, not action descriptions
+ * Row 3 of the loading display: a STATIC expectation for the phase — how long
+ * it usually takes, or what it is waiting on. Never a phase description: that
+ * is the title's job, and a description here read as a second, slower status
+ * (the 2026-08-22 loading-message audit). Every phase gets a value so the
+ * block never reflows between phases.
  */
 function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
         case 'repository':
             return 'This may take up to 30 seconds';
         case 'storefront-code':
-            return 'Installing blocks and configuring storefront';
+            return 'This may take about a minute';
         case 'code-sync':
-            return 'Verifying Edge Delivery Services connection';
+            return 'This may take up to a minute';
         case 'site-config':
-            return 'Configuring site permissions and routing';
+            return 'This may take up to a minute';
         case 'content':
             return 'This may take 1-2 minutes';
         case 'block-library':
-            return 'Setting up block library in DA.live';
+            return 'This may take up to 30 seconds';
         case 'publish':
             return 'This may take 2-3 minutes';
+        case 'auth-recovery':
+            return 'Waiting for you to finish signing in';
+        case 'cancelling':
+            return 'This should only take a moment';
         default:
             return undefined;
     }
 }
 
 /**
- * Check if a phase is actively processing
+ * Convert the wizard's optional-fields EDSConfig into the start request's
+ * REQUIRED config, or undefined when the wizard state is incomplete. The
+ * wizard's Continue gate makes incompleteness unreachable in practice; this
+ * states that contract at the boundary instead of casting past it.
+ */
+function toStartEdsConfig(
+    eds: WizardState['edsConfig'],
+): StorefrontSetupStartPayload['edsConfig'] | undefined {
+    if (!eds?.repoName || !eds.daLiveOrg || !eds.daLiveSite) return undefined;
+    return {
+        ...eds,
+        repoName: eds.repoName,
+        daLiveOrg: eds.daLiveOrg,
+        daLiveSite: eds.daLiveSite,
+    };
+}
+
+/**
+ * Check if a phase is actively processing — i.e. closing the wizard now should
+ * send the cancel that offers cleanup of whatever setup already created.
  */
 function isActivePhase(phase: StorefrontSetupPhase): boolean {
     return [
@@ -161,6 +185,11 @@ function isActivePhase(phase: StorefrontSetupPhase): boolean {
         'block-library',
         'publish',
         'cancelling',
+        // Setup paused for a DA.live re-auth is still running — and the re-auth
+        // prompt is exactly where users give up. This phase was missing from the
+        // list, so closing the wizard there skipped the cancel and orphaned the
+        // created repo/content silently (decided with the user 2026-08-22).
+        'auth-recovery',
     ].includes(phase);
 }
 
@@ -199,48 +228,44 @@ export function StorefrontSetupStep({
     /**
      * Handle progress updates from the extension
      */
-    const handleProgress = useCallback(
-        (data: {
-            phase: StorefrontSetupPhase;
-            message: string;
-            subMessage?: string;
-            progress: number;
-            repoUrl?: string;
-            repoOwner?: string;
-            repoName?: string;
-        }) => {
-            setSetupState((prev) => {
-                // Update partial state based on phase transitions
-                const newPartialState = { ...prev.partialState, phase: data.phase };
+    const handleProgress = useCallback((data: StorefrontSetupProgressPayload) => {
+        setSetupState((prev) => {
+            // Update partial state based on phase transitions
+            const newPartialState = { ...prev.partialState, phase: data.phase };
 
-                // Mark repo as created when moving past repository phase
-                if (data.phase !== 'idle' && data.phase !== 'repository' && data.repoUrl) {
-                    newPartialState.repoCreated = true;
-                    newPartialState.repoUrl = data.repoUrl;
-                    newPartialState.repoOwner = data.repoOwner;
-                    newPartialState.repoName = data.repoName;
-                }
+            // A push carrying repoUrl means the repo exists — record it for
+            // cancel-cleanup. This used to be gated on phase !== 'repository',
+            // which excluded exactly the pushes that carry repo info (they are
+            // all 'repository'-phase pushes), so repoCreated never got set from
+            // progress and cancelling mid-setup skipped repo cleanup. Found when
+            // the shared payload type made the comparison provably dead.
+            if (data.repoUrl) {
+                newPartialState.repoCreated = true;
+                newPartialState.repoUrl = data.repoUrl;
+                newPartialState.repoOwner = data.repoOwner;
+                newPartialState.repoName = data.repoName;
+            }
 
-                // Mark content as copied when completing content phase
-                if (
-                    data.phase === 'completed' ||
-                    (prev.partialState.phase === 'content' && data.phase !== 'content')
-                ) {
-                    newPartialState.contentCopied = true;
-                }
+            // Mark content as copied when completing content phase. The wire's
+            // terminal value is 'complete' — this compared against the local
+            // 'completed' state and so never matched (same dead-comparison find).
+            if (
+                data.phase === 'complete' ||
+                (prev.partialState.phase === 'content' && data.phase !== 'content')
+            ) {
+                newPartialState.contentCopied = true;
+            }
 
-                return {
-                    ...prev,
-                    phase: data.phase,
-                    message: data.message,
-                    subMessage: data.subMessage,
-                    progress: data.progress,
-                    partialState: newPartialState,
-                };
-            });
-        },
-        [],
-    );
+            return {
+                ...prev,
+                phase: data.phase,
+                message: data.message,
+                subMessage: data.subMessage,
+                progress: data.progress,
+                partialState: newPartialState,
+            };
+        });
+    }, []);
 
     // Ref to track latest edsConfig for callbacks (avoids stale closure)
     const edsConfigRef = useRef(state.edsConfig);
@@ -253,7 +278,7 @@ export function StorefrontSetupStep({
      * Updates both local state and wizard state to mark setup as complete
      */
     const handleComplete = useCallback(
-        (data: { message: string; githubRepo?: string; warnings?: string[] }) => {
+        (data: StorefrontSetupCompletePayload) => {
             // Update local setup state
             setSetupState((prev) => ({
                 ...prev,
@@ -285,17 +310,14 @@ export function StorefrontSetupStep({
     /**
      * Handle error notification from the extension
      */
-    const handleError = useCallback(
-        (data: { message: string; error: string; phase?: StorefrontSetupPhase }) => {
-            setSetupState((prev) => ({
-                ...prev,
-                phase: 'error',
-                message: data.message || 'An error occurred',
-                error: data.error,
-            }));
-        },
-        [],
-    );
+    const handleError = useCallback((data: StorefrontSetupErrorPayload) => {
+        setSetupState((prev) => ({
+            ...prev,
+            phase: 'error',
+            message: data.message || 'An error occurred',
+            error: data.error,
+        }));
+    }, []);
 
     /**
      * Handle GitHub App installation required notification
@@ -323,9 +345,18 @@ export function StorefrontSetupStep({
                 phase: 'idle',
             },
         });
+        const edsConfig = toStartEdsConfig(state.edsConfig);
+        if (!edsConfig) {
+            setSetupState((prev) => ({
+                ...prev,
+                phase: 'error',
+                error: 'Storefront configuration is incomplete — go back and finish the Storefront step.',
+            }));
+            return;
+        }
         vscode.postMessage('storefront-setup-start', {
             projectName: state.projectName,
-            edsConfig: state.edsConfig,
+            edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
             dependencies: [
@@ -339,7 +370,7 @@ export function StorefrontSetupStep({
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
             selectedStack: state.selectedStack,
-        });
+        } satisfies StorefrontSetupStartPayload);
     }, [
         state.projectName,
         state.edsConfig,
@@ -415,7 +446,7 @@ export function StorefrontSetupStep({
                         daLiveOrg: edsConfigRef.current?.daLiveOrg,
                         daLiveSite: edsConfigRef.current?.daLiveSite,
                     },
-                });
+                } satisfies StorefrontSetupCancelPayload);
             }
         };
     }, []); // Empty deps - cleanup only runs on unmount, reads from refs
@@ -423,29 +454,22 @@ export function StorefrontSetupStep({
     // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {
         // Subscribe to progress updates
-        const unsubProgress = vscode.onMessage<{
-            phase: StorefrontSetupPhase;
-            message: string;
-            subMessage?: string;
-            progress: number;
-        }>('storefront-setup-progress', handleProgress);
+        const unsubProgress = vscode.onMessage<StorefrontSetupProgressPayload>(
+            'storefront-setup-progress',
+            handleProgress,
+        );
 
         // Subscribe to completion notifications
-        const unsubComplete = vscode.onMessage<{
-            message: string;
-            githubRepo?: string;
-            /** Must match what storefrontSetupHandlers actually sends: a declared
-             *  shape narrower than the wire still type-checks (bivariant params),
-             *  which is how a sent-but-never-rendered field went unnoticed. */
-            warnings?: string[];
-        }>('storefront-setup-complete', handleComplete);
+        const unsubComplete = vscode.onMessage<StorefrontSetupCompletePayload>(
+            'storefront-setup-complete',
+            handleComplete,
+        );
 
         // Subscribe to error notifications
-        const unsubError = vscode.onMessage<{
-            message: string;
-            error: string;
-            phase?: StorefrontSetupPhase;
-        }>('storefront-setup-error', handleError);
+        const unsubError = vscode.onMessage<StorefrontSetupErrorPayload>(
+            'storefront-setup-error',
+            handleError,
+        );
 
         // Subscribe to GitHub App required notifications
         const unsubGitHubApp = vscode.onMessage<GitHubAppData>(
@@ -471,9 +495,18 @@ export function StorefrontSetupStep({
         setupStartedRef.current = true;
 
         // Start setup operations with initial config
+        const edsConfig = toStartEdsConfig(initialConfigRef.current.edsConfig);
+        if (!edsConfig) {
+            setSetupState((prev) => ({
+                ...prev,
+                phase: 'error',
+                error: 'Storefront configuration is incomplete — go back and finish the Storefront step.',
+            }));
+            return;
+        }
         vscode.postMessage('storefront-setup-start', {
             projectName: initialConfigRef.current.projectName,
-            edsConfig: initialConfigRef.current.edsConfig,
+            edsConfig,
             componentConfigs: initialConfigRef.current.componentConfigs,
             backendComponentId: initialConfigRef.current.backendComponentId,
             dependencies: initialConfigRef.current.dependencies,
@@ -482,7 +515,7 @@ export function StorefrontSetupStep({
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
             selectedStack: initialConfigRef.current.selectedStack,
-        });
+        } satisfies StorefrontSetupStartPayload);
     }, []);
 
     const isActive = isActivePhase(setupState.phase);
@@ -512,6 +545,7 @@ export function StorefrontSetupStep({
                                 repo={setupState.githubAppData.repo}
                                 installUrl={setupState.githubAppData.installUrl}
                                 message={setupState.githubAppData.message}
+                                siteUnregistered={setupState.githubAppData.siteUnregistered}
                                 onInstallDetected={handleInstallDetected}
                             />
                         </CenteredFeedbackContainer>

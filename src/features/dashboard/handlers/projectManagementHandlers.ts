@@ -36,7 +36,13 @@ export const handleEditProject: MessageHandler = async (context) => {
     await vscode.commands.executeCommand('demoBuilder.createProject', {
         editProject: {
             projectPath: project.path,
+            // The SLUG, and it has to be: the wizard uses this as
+            // `editOriginalName`, which the dedupe check compares against the
+            // other projects' SLUGS so the user is allowed to keep their current
+            // name. Feeding the title here made that comparison meaningless.
             projectName: project.name,
+            // The title seeds the field, so editing shows what the user called it.
+            projectTitle: project.title,
             settings,
         },
     });

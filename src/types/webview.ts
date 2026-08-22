@@ -2,7 +2,9 @@
 
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
+import type { ComponentConfigs } from './components';
 import { ErrorCode } from './errorCodes';
+import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -54,9 +56,49 @@ export type CommerceSectionId =
  */
 export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
 
+/**
+ * Wizard state as borrowed-component HOSTS supply it: the same store, every
+ * field optional. State-backed components read cache keys defensively, and a
+ * non-wizard host (the dashboard's AddIntegrationFlowAdapter) synthesizes
+ * only the slice its session needs — it has no step, no project name. A full
+ * WizardState is assignable.
+ */
+export type WizardSessionState = Omit<
+    Partial<WizardState>,
+    'adobeOrg' | 'adobeProject' | 'adobeWorkspace'
+> & {
+    /**
+     * Hosts may know only each entity's id plus whatever display fields they
+     * have. The flow reads id/name/title; nothing anywhere reads `code` off
+     * state (verified 2026-08-22). Full wizard entities are assignable.
+     */
+    adobeOrg?: Pick<Organization, 'id'> & Partial<Organization>;
+    adobeProject?: Pick<AdobeProject, 'id'> & Partial<AdobeProject>;
+    adobeWorkspace?: Pick<Workspace, 'id'> & Partial<Workspace>;
+};
+
+/**
+ * Session state for the Adobe auth/destination components (AdobeAuthStep,
+ * useAuthStatus): everything optional EXCEPT the auth slice they dispatch on
+ * non-defensively. Hosts synthesizing a session store must supply `adobeAuth`.
+ */
+export type AdobeAuthSessionState = WizardSessionState & Pick<WizardState, 'adobeAuth'>;
+
 export interface WizardState {
     currentStep: WizardStep;
+    /**
+     * The SLUG, derived from {@link projectTitle}. Folder name, dedupe key,
+     * path component. Still the field every downstream consumer reads.
+     */
     projectName: string;
+    /**
+     * What the user typed. Free text — capitals, spaces, punctuation.
+     *
+     * The field used to run `normalizeProjectName` on every keystroke, so typing
+     * "My Bodea Demo" rewrote itself to "my-bodea-demo" under the cursor. The
+     * slug is still enforced, just derived rather than typed.
+     */
+    projectTitle?: string;
     selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
     selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
@@ -211,7 +253,18 @@ export interface GitHubRepoItem {
     /** Whether repository is private */
     isPrivate?: boolean;
     /** GitHub web URL */
-    htmlUrl?: string;
+    /** GitHub web URL — every producer sets it from the API's html_url. */
+    htmlUrl: string;
+    /**
+     * The repo's default branch.
+     *
+     * Undefined on entries from a cache written before this field existed —
+     * absence means UNKNOWN, never "wrong branch". Every EDS path targets
+     * `main` (the Helix status URL, `DEFAULT_BRANCH`, the template reset's
+     * `git clone --branch main`), so a repo defaulting to anything else fails
+     * later with an error that names none of this.
+     */
+    defaultBranch?: string;
 }
 
 /**
@@ -261,17 +314,6 @@ export interface CreationProgress {
     meshPhase?: MeshPhaseState;
 }
 
-export interface FeedbackMessage {
-    step: string;
-    status: 'start' | 'progress' | 'complete' | 'error' | 'warning';
-    primary: string;
-    secondary?: string;
-    progress?: number;
-    log?: string;
-    error?: string;
-    canRetry?: boolean;
-}
-
 export interface FormValidation {
     isValid: boolean;
     message?: string;
@@ -313,7 +355,6 @@ export interface UnifiedProgress {
 }
 
 export interface PrerequisiteCheck {
-    id?: string;
     name: string;
     description: string;
     status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
@@ -321,13 +362,9 @@ export interface PrerequisiteCheck {
     canInstall?: boolean;
     isOptional?: boolean;
     version?: string;
-    plugins?: Array<{
-        id: string;
-        name: string;
-        description?: string;
-        installed: boolean;
-        canInstall?: boolean;
-    }>;
+    // ONE declaration with the wire pushes: the loaded push has no install
+    // state and no plugin ever carried a canInstall.
+    plugins?: PrerequisitePluginState[];
     unifiedProgress?: UnifiedProgress;
     nodeVersionStatus?: Array<{
         version: string;
@@ -346,13 +383,9 @@ export interface ComponentSelection {
     preset?: string;
 }
 
-export interface ComponentConfigs {
-    [componentId: string]: ComponentConfig;
-}
-
-export interface ComponentConfig {
-    [key: string]: string | boolean | number | undefined;
-}
+// ONE declaration with @/types/components (this file used to carry a
+// structurally identical second copy of both).
+export type { ComponentConfig, ComponentConfigs } from './components';
 
 /**
  * A single step in field help instructions
@@ -378,26 +411,6 @@ export interface FieldHelp {
     steps?: FieldHelpStep[];
 }
 
-export interface ComponentEnvVar {
-    key: string;
-    label: string;
-    type: 'text' | 'password' | 'url' | 'select' | 'boolean';
-    required?: boolean;
-    default?: string | boolean;
-    placeholder?: string;
-    description?: string;
-    /** Rich help content with optional screenshot */
-    help?: FieldHelp;
-    group?: string;
-    providedBy?: string;
-    usedBy?: string[];
-    options?: Array<{ value: string; label: string }>;
-    validation?: {
-        pattern?: string;
-        message?: string;
-    };
-}
-
 /**
  * EDS (Edge Delivery Services) configuration for wizard
  * Contains ACCS credentials, GitHub auth state, and DA.live settings
@@ -420,7 +433,8 @@ export interface EDSConfig {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;
         isChecking?: boolean;
-        user?: { login: string; avatarUrl?: string; email?: string };
+        // ONE declaration with the wire pushes (fields are nullable, not optional).
+        user?: GitHubUser;
         error?: string;
     };
     /** Repository mode: create new or use existing */

@@ -8,8 +8,11 @@
 import { useMemo } from 'react';
 import type { ComponentsData, UniqueField, ServiceGroup } from '../configureTypes';
 import type { SelectedComponent } from './useSelectedComponents';
-import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
-import type { ComponentEnvVar } from '@/types/webview';
+import {
+    toServiceGroupWithSortedFields,
+    SERVICE_GROUP_DEFINITIONS,
+} from '@/features/components/services/serviceGroupTransforms';
+import type { EnvVarDefinition } from '@/types/components';
 
 interface UseServiceGroupsProps {
     selectedComponents: SelectedComponent[];
@@ -32,7 +35,7 @@ interface UseServiceGroupsProps {
 function collectFields(
     fieldMap: Map<string, UniqueField>,
     envVarKeys: string[] | undefined,
-    envVarDefs: Record<string, ComponentEnvVar>,
+    envVarDefs: Record<string, EnvVarDefinition>,
     componentId: string,
 ): void {
     for (const envVarKey of envVarKeys ?? []) {
@@ -86,7 +89,7 @@ export function useServiceGroups({
         // Same treatment the App Builder field model already gives its derivedFrom
         // bucket (appBuilderComponentFieldModel.ts) — dropped, not rendered.
         for (const [key, field] of fieldMap) {
-            if ((field as { derivedFrom?: string[] }).derivedFrom?.length) {
+            if (field.derivedFrom?.length) {
                 fieldMap.delete(key);
             }
         }
@@ -103,12 +106,13 @@ export function useServiceGroups({
             groups[groupKey].push(field);
         });
 
-        const orderedGroups = SERVICE_GROUP_DEFINITIONS
-            .map(def => toServiceGroupWithSortedFields(def, groups))
-            .filter(group => group.fields.length > 0)
+        const orderedGroups = SERVICE_GROUP_DEFINITIONS.map((def) =>
+            toServiceGroupWithSortedFields(def, groups),
+        )
+            .filter((group) => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order ?? 99;
-                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order ?? 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === a.id)?.order ?? 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === b.id)?.order ?? 99;
                 return aOrder - bOrder;
             });
 

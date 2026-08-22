@@ -19,37 +19,29 @@ import { projectCreationHandlers } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
     getEndpoint as getEndpointHelper,
-    deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
-import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
-
-// Type definitions for createProjectWebview
-interface WizardStep {
-    id: string;
-    name: string;
-    [key: string]: unknown;
-}
+import type { ComponentSelection } from '@/types/webview';
+import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
+import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
 
 /**
- * Type guard for WizardStep (SOP §10 compliance)
+ * Type guard for one wizard-steps.json entry (SOP §10 compliance)
  *
- * Extracts inline 6-condition validation chain to explicit type guard
- * with early returns for readability.
+ * `enabled` is validated because the webview filters every step on it
+ * (wizardHelpers.ts filterStepsByComponents / getFirstEnabledStep /
+ * getEnabledWizardSteps) — a step without it is silently dropped there,
+ * so it must fail loudly here instead.
  */
-function isWizardStep(value: unknown): value is WizardStep {
+function isWizardStepDefinition(value: unknown): value is WizardStepDefinition {
     if (typeof value !== 'object' || value === null) return false;
     if (!('id' in value) || typeof value.id !== 'string') return false;
     if (!('name' in value) || typeof value.name !== 'string') return false;
+    if (!('enabled' in value) || typeof value.enabled !== 'boolean') return false;
     return true;
-}
-
-interface ComponentDefaults {
-    frontend?: string;
-    backend?: string;
-    dependencies?: string[];
 }
 
 /**
@@ -57,7 +49,7 @@ interface ComponentDefaults {
  *
  * Extracts deep optional chaining into readable helper function.
  */
-function formatComponentDefaults(defaults: ComponentDefaults | null): string {
+function formatComponentDefaults(defaults: ComponentSelection | null): string {
     if (!defaults) return 'no defaults loaded';
     const frontend = defaults.frontend || 'none';
     const backend = defaults.backend || 'none';
@@ -65,27 +57,7 @@ function formatComponentDefaults(defaults: ComponentDefaults | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
-/** Configuration for editing an existing project */
-interface EditProjectConfig {
-    projectName: string;
-    projectPath: string;
-    settings: SettingsFile;
-}
-
-interface InitialWizardData {
-    theme: 'dark' | 'light';
-    workspacePath: string | undefined;
-    componentDefaults: ComponentDefaults | null;
-    wizardSteps: WizardStep[] | null;
-    existingProjectNames: string[];
-    importedSettings: SettingsFile | null;
-    editProject: EditProjectConfig | null;
-    projectsViewMode: 'cards' | 'rows';
-    blockLibraryDefaults: string[];
-    customBlockLibraryDefaults: import('@/types/blockLibraries').CustomBlockLibrary[];
-}
-
-export class CreateProjectWebviewCommand extends BaseWebviewCommand {
+export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitialData> {
     // Debug: Instance tracking for diagnosing retry/state issues
     private static instanceCounter = 0;
     private readonly _instanceId: number;
@@ -175,6 +147,45 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Read and validate wizard-steps.json — THE one load ritual, shared by
+     * the step-logger init and getInitialData. It was pasted in both and the
+     * copies had already drifted in their logging; the outcomes are
+     * discriminated because the two callers legitimately react differently
+     * (getInitialData shouts on a shape failure, the step logger quietly
+     * falls back to default step names).
+     */
+    private readWizardStepsFile():
+        | { outcome: 'ok'; steps: WizardStepDefinition[] }
+        | { outcome: 'absent' }
+        | { outcome: 'unparseable' }
+        | { outcome: 'invalid-shape' }
+        | { outcome: 'unreadable'; error: Error } {
+        try {
+            const stepsPath = path.join(
+                this.context.extensionPath,
+                'src',
+                'features',
+                'project-creation',
+                'config',
+                'wizard-steps.json',
+            );
+            if (!fs.existsSync(stepsPath)) {
+                return { outcome: 'absent' };
+            }
+            const stepsConfig = parseJSON<{ steps: unknown[] }>(fs.readFileSync(stepsPath, 'utf8'));
+            if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {
+                return { outcome: 'unparseable' };
+            }
+            if (!stepsConfig.steps.every(isWizardStepDefinition)) {
+                return { outcome: 'invalid-shape' };
+            }
+            return { outcome: 'ok', steps: stepsConfig.steps };
+        } catch (error) {
+            return { outcome: 'unreadable', error: error as Error };
+        }
+    }
+
+    /**
      * Lazy initialization of StepLogger with ConfigurationLoader
      * Uses promise caching to ensure only one initialization happens
      */
@@ -190,28 +201,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Start initialization
         this.stepLoggerInitPromise = (async () => {
-            // Try to load wizard steps for better step names
-            let wizardSteps: { id: string; name: string; [key: string]: unknown }[] | undefined;
-            try {
-                const stepsPath = path.join(
-                    this.context.extensionPath,
-                    'src',
-                    'features',
-                    'project-creation',
-                    'config',
-                    'wizard-steps.json',
-                );
-                if (fs.existsSync(stepsPath)) {
-                    const stepsContent = fs.readFileSync(stepsPath, 'utf8');
-                    const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
-                    if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                        // Validate all steps have required properties using type guard
-                        if (stepsConfig.steps.every(isWizardStep)) {
-                            wizardSteps = stepsConfig.steps;
-                        }
-                    }
-                }
-            } catch {
+            // Try to load wizard steps for better step names. Tolerant on
+            // purpose: any failure just means default step names.
+            let wizardSteps: WizardStepDefinition[] | undefined;
+            const read = this.readWizardStepsFile();
+            if (read.outcome === 'ok') {
+                wizardSteps = read.steps;
+            } else if (read.outcome === 'unreadable') {
                 this.logger.debug('Could not load wizard steps for logging, using defaults');
             }
 
@@ -267,9 +263,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<InitialWizardData> {
+    protected async getInitialData(): Promise<WizardInitialData> {
         // Load component defaults from defaults.json
-        let componentDefaults: ComponentDefaults | null = null;
+        let componentDefaults: ComponentSelection | null = null;
         try {
             const defaultsPath = path.join(
                 this.context.extensionPath,
@@ -281,7 +277,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             );
             if (fs.existsSync(defaultsPath)) {
                 const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
-                const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(
+                const defaults = parseJSON<{ componentSelection: ComponentSelection }>(
                     defaultsContent,
                 );
                 if (defaults) {
@@ -295,37 +291,30 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.debug('Could not load component defaults:', error);
         }
 
-        // Load wizard steps configuration
-        let wizardSteps: WizardStep[] | null = null;
-        try {
-            const stepsPath = path.join(
-                this.context.extensionPath,
-                'src',
-                'features',
-                'project-creation',
-                'config',
-                'wizard-steps.json',
+        // Load wizard steps configuration. This caller SHOUTS on a shape
+        // failure — a config that lost `enabled` once silently dropped every
+        // wizard step (the finding-3 bug) — while the step-logger caller of
+        // the same read quietly falls back. The read itself is one helper.
+        let wizardSteps: WizardStepDefinition[] | null = null;
+        const stepsRead = this.readWizardStepsFile();
+        if (stepsRead.outcome === 'ok') {
+            wizardSteps = stepsRead.steps;
+            // Extract step IDs for logging (show first 3 + count of remaining)
+            const stepCount = wizardSteps.length;
+            const stepPreview = wizardSteps
+                .slice(0, 3)
+                .map((s) => s.id)
+                .join(', ');
+            const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
+            this.logger.debug(`Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`);
+        } else if (stepsRead.outcome === 'invalid-shape') {
+            this.logger.error(
+                'wizard-steps.json failed validation: every step needs a string ' +
+                    'id, a string name, and a boolean enabled. Steps not sent to ' +
+                    'the wizard.',
             );
-            if (fs.existsSync(stepsPath)) {
-                const stepsContent = fs.readFileSync(stepsPath, 'utf8');
-                const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
-                if (stepsConfig) {
-                    wizardSteps = stepsConfig.steps;
-                    // Extract step IDs for logging (show first 3 + count of remaining)
-                    const stepCount = wizardSteps?.length ?? 0;
-                    const stepPreview =
-                        wizardSteps
-                            ?.slice(0, 3)
-                            .map((s) => s.id)
-                            .join(', ') ?? '';
-                    const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
-                    this.logger.debug(
-                        `Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`,
-                    );
-                }
-            }
-        } catch (error) {
-            this.logger.error('Failed to load wizard steps configuration:', error as Error);
+        } else if (stepsRead.outcome === 'unreadable') {
+            this.logger.error('Failed to load wizard steps configuration:', stepsRead.error);
         }
 
         // Get existing project names for duplicate validation
@@ -485,12 +474,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 );
                 this.sendMessage('customBlockLibraryDefaultsUpdated', {
                     customBlockLibraryDefaults: updated,
-                });
+                } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
                 const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
-                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults });
+                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults } satisfies BlockLibraryDefaultsUpdatedPayload);
             }
         });
         this.disposables.add(configListener);
@@ -594,28 +583,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         super.dispose();
     }
 
-    // Helper method to send feedback messages
-    private async _sendFeedback(
-        step: string,
-        status: string,
-        primary: string,
-        secondary?: string,
-        details?: string[],
-        action?: string,
-        actionParams?: unknown,
-    ): Promise<void> {
-        await this.sendMessage('feedback', {
-            step,
-            status,
-            primary,
-            secondary,
-            details,
-            action,
-            actionParams,
-            timestamp: Date.now(),
-        });
-    }
-
     /**
      * Get mesh endpoint - single source of truth approach:
      * 1. Use cached endpoint if available (instant)
@@ -646,20 +613,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         return formatGroupNameHelper(group);
     }
 
-    /**
-     * Deploy mesh component from cloned repository
-     * Reads mesh.json from component path and deploys it to Adobe I/O
-     */
-    private async _deployMeshComponent(
-        componentPath: string,
-        onProgress?: (message: string, subMessage?: string) => void,
-    ): Promise<{
-        success: boolean;
-        meshId?: string;
-        endpoint?: string;
-        error?: string;
-    }> {
-        const commandManager = ServiceLocator.getCommandExecutor();
-        return deployMeshHelper(componentPath, commandManager, this.logger, onProgress);
-    }
+    // No _deployMeshComponent wrapper any more: zero callers — the creation
+    // flow deploys through meshSetupService onto the shared
+    // deployMeshComponent spine. Found by the 2026-08-22 mesh call-path audit.
 }

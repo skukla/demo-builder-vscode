@@ -2243,13 +2243,19 @@ button[class*="spectrum-Button"][disabled],
    status header and integrations), below the status header. */
 /* Fade + slight rise so the notice eases in after the org check resolves,
    instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
-@keyframes org-context-fade-in {
+@keyframes inline-notice-fade-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.dashboard-org-banner {
+.inline-notice {
+    /* border-box or the 32px padding + 4px border ADD to width:100% and the
+       banner overhangs its column. Reported 2026-08-20 in the wizard, where the
+       repo panel constrains width; the dashboard's wider band had hidden it. A
+       shared component must not need its parent to fix its own box model. */
+    box-sizing: border-box;
     width: 100%;
+    max-width: 100%;
     margin: 0 0 16px;
     display: flex;
     align-items: center;
@@ -2259,10 +2265,19 @@ button[class*="spectrum-Button"][disabled],
     border: 1px solid var(--spectrum-global-color-orange-500);
     border-left-width: 3px;
     border-radius: 8px;
-    animation: org-context-fade-in 200ms ease-out;
+    animation: inline-notice-fade-in 200ms ease-out;
 }
 
-.dashboard-org-banner-icon {
+/* Info tone: same shape, blue accent. For context rather than something to act on. */
+.inline-notice--info {
+    border-color: var(--spectrum-global-color-blue-500);
+}
+
+.inline-notice--info .inline-notice-icon {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+.inline-notice-icon {
     color: var(--spectrum-global-color-orange-600);
     flex-shrink: 0;
     align-self: flex-start;
@@ -2271,7 +2286,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Text block takes the available width; min-width:0 lets it wrap instead of
    forcing the banner wider than its max. */
-.dashboard-org-banner-body {
+.inline-notice-body {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -2279,23 +2294,23 @@ button[class*="spectrum-Button"][disabled],
     gap: 2px;
 }
 
-.dashboard-org-banner-title {
+.inline-notice-title {
     font-weight: 600;
     color: var(--spectrum-global-color-gray-900);
 }
 
-.dashboard-org-banner-hint {
+.inline-notice-hint {
     font-size: 13px;
     color: var(--spectrum-global-color-gray-600);
 }
 
 /* Action stays on the right, full-size, never shrinks. */
-.dashboard-org-banner-actions {
+.inline-notice-actions {
     flex-shrink: 0;
 }
 
 /* In-flight spinner inside the "Switching…" button — small gap before the label. */
-.dashboard-org-banner-spinner {
+.inline-notice-spinner {
     margin-right: 6px;
 }
 
@@ -4484,6 +4499,18 @@ div[class*="spectrum"] input[type="search"] {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+}
+
+/* The `fill` variant of CenteredFeedbackContainer. Its inline `min-height: 100%`
+ * measures against .step-view-anim, whose own height is content-driven — so the
+ * percentage is indefinite and collapses, leaving a short state (the Code Sync
+ * spinner) near the TOP of a tall pane. Growing as a flex item is what actually
+ * reaches the bottom. This is the `flex-1` opt-in .step-view-anim's own comment
+ * describes. It cannot live on the Spectrum `flex` prop: `Flex` takes container
+ * props and drops item props silently.
+ * `auto` basis, so taller content still grows and .step-view keeps the scroll. */
+.centered-feedback--fill {
+    flex: 1 1 auto;
 }
 
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.

@@ -27,7 +27,9 @@
  */
 
 import type { DataTypeStatus } from '../types';
+import type { CommerceCredentials, ImportRequest } from './dataInstallerWriteClient';
 import { deriveImportInstance } from './importInstance';
+import type { ComponentConfigs } from '@/types/components';
 
 /** The scope an import writes into, as the wizard recorded it. */
 export interface InstallTarget {
@@ -59,7 +61,7 @@ const SCOPE_KEYS: Record<string, { website: string; store: string }> = {
 interface ProjectLike {
     datapack?: { name: string; version: string };
     componentSelections?: { backend?: string };
-    componentConfigs?: Record<string, Record<string, unknown>>;
+    componentConfigs?: ComponentConfigs;
 }
 
 /**
@@ -114,13 +116,19 @@ export function typesToInstall(declared: string[], stored: string[]): string[] {
 export interface SampleDataDeps {
     /** Resolves the pair the request carries. The pair itself never leaves here. */
     credentials: (
-        project: ProjectLike,
-    ) => Promise<{ ok: boolean; credentials?: unknown; reason?: string }>;
+        project: ProjectLike
+    ) => Promise<{ ok: true; credentials: CommerceCredentials } | { ok: false; reason: string }>;
     /** The types the service actually stores for this pack. */
     inventory: (id: { name: string; version: string }) => Promise<string[]>;
-    startImport: (request: unknown) => Promise<{ activationId: string }>;
+    /**
+     * Typed with the write client's OWN request shape, so the literal built
+     * below is checked against it. This boundary shipped a wrong-shape request
+     * once (flattened target codes) while it was `unknown` end-to-end and the
+     * test fixtures invented the same wrong shape.
+     */
+    startImport: (request: ImportRequest) => Promise<{ activationId: string }>;
     /** Removes it again, for Reset. Same request, different verb. */
-    startDelete?: (request: unknown) => Promise<{ activationId: string }>;
+    startDelete?: (request: ImportRequest) => Promise<{ activationId: string }>;
     watch: (args: {
         activationId: string;
         requestedTypes: string[];
@@ -185,7 +193,7 @@ async function runSampleDataJob(
 
     // Shared with `get-datapack-import-target`, so the build and the modal
     // cannot resolve the same project to different instances.
-    const commerceInstance = deriveImportInstance(project.componentConfigs as never);
+    const commerceInstance = deriveImportInstance(project.componentConfigs);
     if (!commerceInstance) {
         return {
             ran: false,

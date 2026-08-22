@@ -449,8 +449,11 @@ describe('useDaLiveAuth Hook', () => {
     });
 
     describe('error handling', () => {
-        it('should handle dalive-auth-error message', async () => {
-            // Given: Default state
+        it('does not register the dead dalive-auth-error listener', async () => {
+            // No code anywhere sends dalive-auth-error — failures ride
+            // dalive-auth-status / dalive-token-stored with an `error` field.
+            // The listener was deleted by the 2026-08-21 channel inventory;
+            // this pins it out of existence.
             const state = createDefaultState();
             const { useDaLiveAuth } = await import('@/features/eds/ui/hooks/useDaLiveAuth');
 
@@ -459,30 +462,7 @@ describe('useDaLiveAuth Hook', () => {
                 updateState: mockUpdateState,
             }));
 
-            // When: Receiving auth error
-            const errorHandler = messageHandlers.get('dalive-auth-error');
-            expect(errorHandler).toBeDefined();
-
-            act(() => {
-                errorHandler?.({
-                    error: 'Token expired',
-                });
-            });
-
-            // Then: Should update state with error
-            await waitFor(() => {
-                expect(mockUpdateState).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        edsConfig: expect.objectContaining({
-                            daLiveAuth: expect.objectContaining({
-                                isAuthenticated: false,
-                                isAuthenticating: false,
-                                error: 'Token expired',
-                            }),
-                        }),
-                    })
-                );
-            });
+            expect(messageHandlers.get('dalive-auth-error')).toBeUndefined();
         });
     });
 });

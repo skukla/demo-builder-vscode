@@ -16,7 +16,11 @@ import { clearAdobeTarget } from './adobeTargetStore';
 import { asRawText, asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import {
+    getDaLiveAuthService,
+    getGitHubServices,
+    showDaLiveAuthQuickPick,
+} from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 interface ProviderStatus {
@@ -73,9 +77,19 @@ async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
 /**
  * DA.live status plus the pinned namespace.
  *
- * `orgName` is reachable nowhere else on the agent surface and every DA.live
- * write targets it, so reporting `authenticated: true` without it tells an agent
- * it may proceed while withholding the one value the operation needs.
+ * `orgName` is reachable nowhere else on the agent surface, so it is reported
+ * here or not at all.
+ *
+ * It is NOT what DA.live writes target — those read the project's own
+ * `daLiveOrg` off its EDS component metadata (`storefrontRepublishService.ts`,
+ * `extractRepublishParams`). This value is the namespace the last sign-in
+ * pinned; it survives token expiry and only an explicit logout clears it, which
+ * is why the sign-in flow reuses it instead of re-asking. Its three readers are
+ * this tool, the webview auth status, and that skip check — nothing else.
+ *
+ * An earlier version of this comment claimed every DA.live write targets it.
+ * That was never true, and it is the kind of claim nothing checks: no compiler,
+ * no test, no scan.
  */
 async function daLiveStatus(ctx: HandlerContext): Promise<ProviderStatus> {
     const service = getDaLiveAuthService(ctx.context);
@@ -126,10 +140,16 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
         'sign_in',
         {
             title: 'Sign In',
-            description: 'Open an interactive sign-in to refresh an expired session (opens a browser). Requires confirm:true',
+            description:
+                'Open an interactive sign-in to refresh an expired session (opens a browser). Requires confirm:true',
             inputSchema: {
-                provider: z.enum(['adobe', 'github', 'dalive']).describe('Which service to sign in to'),
-                confirm: z.boolean().optional().describe('Must be true — this opens a browser / auth window'),
+                provider: z
+                    .enum(['adobe', 'github', 'dalive'])
+                    .describe('Which service to sign in to'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Must be true — this opens a browser / auth window'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,11 +175,12 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                 return asText({ provider, success: res.success });
             }
             // dalive — DA.live has no headless token grant, so sign-in completes
-            // through native VS Code prompts (open browser → paste token → org).
-            // Use showDaLiveAuthQuickPick directly: it collects the token via
-            // vscode.window.showInputBox (no webview). The 'open-dalive-login'
+            // through native VS Code prompts: namespace (skipped when one is
+            // already pinned) → open browser → token, taken from the clipboard
+            // when it holds a DA.live one and from an input box otherwise.
+            // Use showDaLiveAuthQuickPick directly; the 'open-dalive-login'
             // handler can't be used from here — it posts the paste UI to a webview,
-            // and the agent's headless context drops sendMessage, so the input box
+            // and the agent's headless context drops sendMessage, so the prompt
             // never appears.
             const res = await showDaLiveAuthQuickPick(ctx);
             return asText({

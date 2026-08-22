@@ -31,6 +31,20 @@ interface CollectableStack {
     dependencies?: string[];
 }
 
+/**
+ * The sectioned registry view this module searches — the same sections
+ * `findComponentById` accepts. Callers pass the get-components-data payload
+ * (or the Configure screen's equivalent); T is their component view.
+ */
+export type ComponentSections<T> = {
+    frontends?: T[];
+    backends?: T[];
+    dependencies?: T[];
+    mesh?: T[];
+    integrations?: T[];
+    appBuilder?: T[];
+};
+
 /** One collected entry, as the Configure screen consumes it. */
 export interface CollectedComponent<T> {
     id: string;
@@ -65,7 +79,7 @@ export function hasConfigurableEnvVars(component: CollectableComponent | undefin
  */
 export function collectStackComponents<T extends CollectableComponent>(
     stack: CollectableStack | undefined,
-    componentsData: unknown,
+    componentsData: ComponentSections<T> | undefined,
 ): Array<CollectedComponent<T>> {
     const collected: Array<CollectedComponent<T>> = [];
     if (!stack) return collected;
@@ -73,9 +87,9 @@ export function collectStackComponents<T extends CollectableComponent>(
     /** The ONE dependency rule, applied by all three sources. */
     const addDependency = (depId: string): void => {
         if (collected.some((entry) => entry.id === depId)) return;
-        const dep = findComponentById(componentsData as never, depId) as T | undefined;
-        if (!hasConfigurableEnvVars(dep)) return;
-        collected.push({ id: (dep as T).id, data: dep as T, type: 'Dependency' });
+        const dep = componentsData ? findComponentById(componentsData, depId) : undefined;
+        if (!hasConfigurableEnvVars(dep) || !dep) return;
+        collected.push({ id: dep.id, data: dep, type: 'Dependency' });
     };
 
     const addWithDeps = (component: T, type: string): void => {
@@ -89,14 +103,12 @@ export function collectStackComponents<T extends CollectableComponent>(
         });
     };
 
-    const sections = componentsData as { frontends?: T[]; backends?: T[] } | undefined;
-
     if (stack.frontend) {
-        const frontend = sections?.frontends?.find((entry) => entry.id === stack.frontend);
+        const frontend = componentsData?.frontends?.find((entry) => entry.id === stack.frontend);
         if (frontend) addWithDeps(frontend, 'Frontend');
     }
     if (stack.backend) {
-        const backend = sections?.backends?.find((entry) => entry.id === stack.backend);
+        const backend = componentsData?.backends?.find((entry) => entry.id === stack.backend);
         if (backend) addWithDeps(backend, 'Backend');
     }
     // Searched across ALL registry sections, not just `dependencies`, so mesh

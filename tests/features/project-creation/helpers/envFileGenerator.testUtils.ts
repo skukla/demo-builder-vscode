@@ -3,6 +3,7 @@
  */
 
 import { EnvVarDefinition, ComponentRegistry } from '@/types/components';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { Logger } from '@/types/logger';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
@@ -64,7 +65,7 @@ export function createMockSetupContext(
         handlerContext: HandlerContext;
         registry: ComponentRegistry;
         project: Project;
-        config: Record<string, unknown>;
+        config: ProjectCreationConfig;
     }>
 ): ProjectSetupContext {
     const mockHandlerContext = overrides?.handlerContext || createMockHandlerContext();
@@ -87,7 +88,7 @@ export function createMockSetupContext(
         created: new Date(),
         lastModified: new Date(),
     };
-    const mockConfig = overrides?.config || {};
+    const mockConfig: ProjectCreationConfig = overrides?.config || { projectName: 'test-project' };
 
     return new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, mockConfig);
 }

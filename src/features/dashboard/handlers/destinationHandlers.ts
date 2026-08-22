@@ -32,16 +32,13 @@ import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
 
 /** One side of the destination — the flow's `adobeProject` / `adobeWorkspace` shape. */
-interface DestinationRef {
-    id?: string;
-    name?: string;
-    title?: string;
-}
-
-export interface SetProjectDestinationPayload {
-    project?: DestinationRef;
-    workspace?: DestinationRef;
-}
+// The request wire shapes live in @/types/webviewRequests — ONE declaration
+// shared with the webview senders. Re-exported for existing importers.
+export type {
+    DestinationRef,
+    SetProjectDestinationRequestPayload as SetProjectDestinationPayload,
+} from '@/types/webviewRequests';
+import type { DestinationRef, SetProjectDestinationRequestPayload as SetProjectDestinationPayload } from '@/types/webviewRequests';
 
 /**
  * Persist the Adobe project/workspace a project's integrations deploy to.

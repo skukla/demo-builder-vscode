@@ -44,17 +44,10 @@ jest.mock('vscode', () => ({
     },
 }));
 
-// Mock fs for get-components-data
-jest.mock('fs/promises', () => ({
-    readFile: jest.fn(),
-}));
-
 import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
 import {
     configureHandlers,
     handleCancelConfigure,
-    handleGetComponentsData,
     handleOpenExternal,
     handleOpenEdsSettings,
 } from '@/features/dashboard/handlers/configureHandlers';
@@ -69,7 +62,12 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
     return {
         context: {
             extensionPath: '/mock/extension/path',
-            secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+            secrets: {
+                get: jest.fn(),
+                store: jest.fn(),
+                delete: jest.fn(),
+                onDidChange: jest.fn(),
+            },
             globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
             subscriptions: [],
         },
@@ -118,19 +116,30 @@ describe('configureHandlers', () => {
 
         it('should include all expected message types', () => {
             expect(hasHandler(configureHandlers, 'cancel')).toBe(true);
-            expect(hasHandler(configureHandlers, 'get-components-data')).toBe(true);
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
         });
 
-        it('should have exactly 6 handlers', () => {
-            const types = getRegisteredTypes(configureHandlers) as Array<keyof typeof configureHandlers>;
+        it('should NOT include get-components-data (the wizard owns that message)', () => {
+            // Removed 2026-08-21: nothing on the Configure webview ever sent it
+            // (the screen seeds componentsData from the init payload), and this
+            // map's copy returned a DIFFERENT shape (raw components.json, no
+            // {success,data} wrapper) than the wizard handler the shared hook
+            // actually talks to.
+            expect(hasHandler(configureHandlers, 'get-components-data')).toBe(false);
+        });
+
+        it('should have exactly 5 handlers', () => {
+            const types = getRegisteredTypes(configureHandlers) as Array<
+                keyof typeof configureHandlers
+            >;
             // 6 → 5: create-workspace-credential removed 2026-08-05 (nothing sent it).
             // 5 → 6: check-credential-service — Configure renders the same ACCS OAuth
             // fields as the wizard, so it must answer the same probe or the two
             // surfaces disagree about whether those fields need filling in.
-            expect(types).toHaveLength(6);
+            // 6 → 5: get-components-data removed 2026-08-21 (see the test above).
+            expect(types).toHaveLength(5);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {
@@ -141,7 +150,9 @@ describe('configureHandlers', () => {
         });
 
         it('should have all handlers as functions', () => {
-            const types = getRegisteredTypes(configureHandlers) as Array<keyof typeof configureHandlers>;
+            const types = getRegisteredTypes(configureHandlers) as Array<
+                keyof typeof configureHandlers
+            >;
             for (const type of types) {
                 expect(typeof configureHandlers[type]).toBe('function');
             }
@@ -155,22 +166,6 @@ describe('configureHandlers', () => {
 
             expect(context.panel?.dispose).toHaveBeenCalled();
             expect(result.success).toBe(true);
-        });
-    });
-
-    describe('handleGetComponentsData', () => {
-        it('should read and return components.json', async () => {
-            const mockData = { envVars: { TEST: { key: 'TEST', label: 'Test' } } };
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockData));
-
-            const context = createMockContext();
-            const result = await handleGetComponentsData(context);
-
-            expect(fs.readFile).toHaveBeenCalledWith(
-                expect.stringContaining('components.json'),
-                'utf-8',
-            );
-            expect(result).toEqual(expect.objectContaining({ envVars: mockData.envVars }));
         });
     });
 
@@ -199,7 +194,7 @@ describe('configureHandlers', () => {
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'workbench.action.openSettings',
-                'demoBuilder.daLive',
+                'demoBuilder.daLive'
             );
             expect(result.success).toBe(true);
         });

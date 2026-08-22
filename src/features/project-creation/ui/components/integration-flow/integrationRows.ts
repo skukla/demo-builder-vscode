@@ -22,7 +22,7 @@ import { isMeshSelected } from '../../steps/tileStatus';
 import { BASELINE_CODE } from './apiAccessConstants';
 import { RESERVED_EXISTING_KEY, type IntegrationKind } from './flowStages';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { WizardState } from '@/types/webview';
+import type { AdobeAuthSessionState } from '@/types/webview';
 
 /** A collapsed result row for one configured integration. */
 export interface IntegrationRow {
@@ -86,7 +86,7 @@ function isShellInstanceSource(
 }
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */
-function destinationCommitted(state: WizardState): boolean {
+function destinationCommitted(state: AdobeAuthSessionState): boolean {
     return Boolean(state.adobeProject?.id) && Boolean(state.adobeWorkspace?.id);
 }
 
@@ -101,7 +101,7 @@ function destinationCommitted(state: WizardState): boolean {
  * @param requiredApis - the integration's deterministic required APIs (mesh/catalog
  *   entry `requiredApis`; empty for custom/import apps that carry only picks)
  */
-function apiCodesFor(state: WizardState, id: string, requiredApis: string[] = []): string[] {
+function apiCodesFor(state: AdobeAuthSessionState, id: string, requiredApis: string[] = []): string[] {
     const picks = state.selectedConsoleApis?.[id] ?? [];
     return [...new Set<string>([BASELINE_CODE, ...requiredApis, ...picks])];
 }
@@ -118,7 +118,7 @@ function apiCodesFor(state: WizardState, id: string, requiredApis: string[] = []
  * @returns One row per configured integration; unknown/mesh-kind ids excluded
  */
 export function resolveIntegrationRows(
-    state: WizardState,
+    state: AdobeAuthSessionState,
     meshComponent: AppBuilderComponentCatalogEntry | undefined,
     components: AppBuilderComponentCatalogEntry[],
 ): IntegrationRow[] {

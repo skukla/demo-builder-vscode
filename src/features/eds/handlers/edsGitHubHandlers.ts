@@ -17,6 +17,7 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload } from '@/types/webviewPayloads';
 
 // ==========================================================
 // Payload Types
@@ -56,7 +57,7 @@ export async function handleCheckGitHubAuth(
                     isAuthenticated: true,
                     user: validation.user,
                     orgs,
-                });
+                } satisfies GitHubAuthStatusPayload);
                 return { success: true };
             }
 
@@ -91,7 +92,7 @@ export async function handleCheckGitHubAuth(
                 isAuthenticated: true,
                 user: validation.user,
                 orgs,
-            });
+            } satisfies GitHubAuthStatusPayload);
             return { success: true };
         }
 
@@ -99,7 +100,7 @@ export async function handleCheckGitHubAuth(
         context.logger.debug('[EDS] No GitHub auth found');
         await context.sendMessage('github-auth-status', {
             isAuthenticated: false,
-        });
+        } satisfies GitHubAuthStatusPayload);
 
         return { success: true };
     } catch (error) {
@@ -107,7 +108,7 @@ export async function handleCheckGitHubAuth(
         await context.sendMessage('github-auth-status', {
             isAuthenticated: false,
             error: (error as Error).message,
-        });
+        } satisfies GitHubAuthStatusPayload);
         return { success: false, error: (error as Error).message };
     }
 }
@@ -136,7 +137,7 @@ export async function handleGitHubOAuth(
             context.logger.debug('[EDS] GitHub auth cancelled by user');
             await context.sendMessage('github-oauth-error', {
                 error: 'Authentication cancelled',
-            });
+            } satisfies GitHubOAuthErrorPayload);
             return { success: false, error: 'Authentication cancelled' };
         }
         context.logger.debug('[EDS] GitHub session obtained for:', session.account.label);
@@ -168,7 +169,7 @@ export async function handleGitHubOAuth(
                 context.logger.debug('[EDS] GitHub re-authorization cancelled by user');
                 await context.sendMessage('github-oauth-error', {
                     error: 'Re-authorization cancelled',
-                });
+                } satisfies GitHubOAuthErrorPayload);
                 return { success: false, error: 'Re-authorization cancelled' };
             }
             context.logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
@@ -200,7 +201,7 @@ export async function handleGitHubOAuth(
             isAuthenticated: true,
             user,
             orgs,
-        });
+        } satisfies GitHubAuthStatusPayload);
 
         return { success: true };
     } catch (error) {
@@ -208,7 +209,7 @@ export async function handleGitHubOAuth(
         context.logger.error('[EDS] GitHub OAuth error:', error as Error);
         await context.sendMessage('github-oauth-error', {
             error: errorMessage,
-        });
+        } satisfies GitHubOAuthErrorPayload);
         return { success: false, error: errorMessage };
     }
 }
@@ -272,7 +273,7 @@ export async function handleGitHubChangeAccount(
             context.logger.debug('[EDS] GitHub account change cancelled');
             await context.sendMessage('github-auth-status', {
                 isAuthenticated: false,
-            });
+            } satisfies GitHubAuthStatusPayload);
             return { success: true };
         }
 
@@ -291,14 +292,14 @@ export async function handleGitHubChangeAccount(
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,
-        });
+        } satisfies GitHubAuthStatusPayload);
 
         return { success: true };
     } catch (error) {
         context.logger.error('[EDS] Error changing GitHub account:', error as Error);
         await context.sendMessage('github-oauth-error', {
             error: (error as Error).message,
-        });
+        } satisfies GitHubOAuthErrorPayload);
         return { success: false, error: (error as Error).message };
     }
 }
@@ -331,6 +332,7 @@ export async function handleGetGitHubRepos(
             updatedAt: repo.updatedAt,
             isPrivate: repo.isPrivate,
             htmlUrl: repo.htmlUrl,
+            defaultBranch: repo.defaultBranch,
         }));
         await context.sendMessage('get-github-repos', repoItems);
 

@@ -1,26 +1,12 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigureScreen } from './ConfigureScreen';
-import type { ComponentsData } from './configureTypes';
-import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import { AuthoringExperience, Project } from '@/types/base';
+import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
-
-interface ConfigureInitData extends WebviewInitData {
-    project?: Project;
-    componentsData?: ComponentsData;
-    existingEnvValues?: Record<string, Record<string, string>>;
-    existingProjectNames?: string[];
-    isEds?: boolean;
-    authoringExperience?: AuthoringExperience;
-    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
-    providedEnvVars?: Record<string, string>;
-    appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
-}
+import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
 // Get root element
 const container = document.getElementById('root');
@@ -33,19 +19,17 @@ if (!container) {
 const root = createRoot(container);
 root.render(
     <WebviewApp>
-        {(initData) => {
-            const data = initData as ConfigureInitData;
-            return data?.project && data?.componentsData ? (
+        {(data) => {
+            // ONE boundary cast: WebviewInitData is `[key: string]: unknown`, so
+            // the init payload is typed here rather than per-prop. The shape is
+            // owned by ConfigureProjectWebviewCommand.getInitialData(). Partial
+            // because `data` is null until the init message lands.
+            const init = (data ?? {}) as Partial<ConfigureInitialData>;
+            return init.project && init.componentsData ? (
                 <ConfigureScreen
-                    project={data.project}
-                    componentsData={data.componentsData}
-                    existingEnvValues={data.existingEnvValues}
-                    existingProjectNames={data.existingProjectNames}
-                    isEds={data.isEds}
-                    authoringExperience={data.authoringExperience}
-                    appBuilderComponentCatalog={data.appBuilderComponentCatalog}
-                    providedEnvVars={data.providedEnvVars}
-                    appBuilderComponentSecretFlags={data.appBuilderComponentSecretFlags}
+                    {...init}
+                    project={init.project}
+                    componentsData={init.componentsData}
                 />
             ) : null;
         }}

@@ -15,12 +15,23 @@
  * - validateSelection: Validate component selection
  */
 
-import { toComponentDataArray, toDependencyData } from '../services/componentTransforms';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
-import { ComponentSelection, type ComponentConfigs as ComponentConfigsData } from '@/types/components';
+import {
+    toComponentDataArray,
+    toDependencyData,
+    withEnvVarKeys,
+} from '../services/componentTransforms';
+import {
+    ComponentRegistryManager,
+    DependencyResolver,
+} from '@/features/components/services/ComponentRegistryManager';
+import {
+    ComponentSelection,
+    type ComponentConfigs as ComponentConfigsData,
+} from '@/types/components';
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
+import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 
 /**
  * Create a ComponentRegistryManager for the current extension context
@@ -52,7 +63,9 @@ export const handleUpdateComponentSelection: MessageHandler = async (
     }
     const selection = payload as ComponentSelection;
     context.sharedState.currentComponentSelection = selection;
-    context.logger.debug(`Updated component selection: ${selection.frontend || 'none'}/${selection.backend || 'none'} + ${selection.dependencies?.length || 0} deps + ${selection.services?.length || 0} services`);
+    context.logger.debug(
+        `Updated component selection: ${selection.frontend || 'none'}/${selection.backend || 'none'} + ${selection.dependencies?.length || 0} deps + ${selection.services?.length || 0} services`,
+    );
     return { success: true };
 };
 
@@ -91,7 +104,10 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
         const presets = await registryManager.getPresets();
 
         const componentsData = {
-            frontends: toComponentDataArray(frontends, { recommendedId: 'headless', includeFeatures: true }),
+            frontends: toComponentDataArray(frontends, {
+                recommendedId: 'headless',
+                includeFeatures: true,
+            }),
             backends: toComponentDataArray(backends),
             integrations: toComponentDataArray(integrations),
             dependencies: toComponentDataArray(dependencies),
@@ -132,24 +148,26 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const mesh = await registryManager.getMesh();
         const registry = await registryManager.loadRegistry();
 
-        const componentsData = {
+        const componentsData: ComponentsDataPayload = {
             frontends: toComponentDataArray(frontends, { includeDependencies: true }),
             backends: toComponentDataArray(backends, { includeDependencies: true }),
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             mesh: toComponentDataArray(mesh, { includeDependencies: true }),
-            envVars: registry.envVars || {},
+            envVars: withEnvVarKeys(registry.envVars),
             services: registry.services || {},
         };
 
         // Log summary at debug level (concise)
-        context.logger.debug(`[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${mesh.length} mesh, ${getEntryCount(registry.envVars)} envVars`);
+        context.logger.debug(
+            `[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${mesh.length} mesh, ${getEntryCount(registry.envVars)} envVars`,
+        );
 
         return {
             success: true,
             type: 'components-data',
             data: componentsData,
-        };
+        } satisfies GetComponentsDataResponse;
     } catch (error) {
         const appError = toAppError(error);
         context.logger.error('Failed to load component configurations:', appError);
@@ -222,8 +240,8 @@ export const handleLoadDependencies: MessageHandler = async (
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
 
         const dependencies = [
-            ...resolved.required.map(d => toDependencyData(d, true)),
-            ...resolved.optional.map(d => toDependencyData(d, false)),
+            ...resolved.required.map((d) => toDependencyData(d, true)),
+            ...resolved.optional.map((d) => toDependencyData(d, false)),
         ];
 
         return {
@@ -263,7 +281,7 @@ export const handleLoadPreset: MessageHandler = async (
         const registryManager = createRegistryManager(context);
 
         const presets = await registryManager.getPresets();
-        const preset = presets.find(p => p.id === presetId);
+        const preset = presets.find((p) => p.id === presetId);
 
         if (!preset) {
             throw new Error(`Preset ${presetId} not found`);
@@ -341,4 +359,3 @@ export const handleValidateSelection: MessageHandler = async (
         };
     }
 };
-

@@ -8,7 +8,7 @@
 
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import * as vscode from 'vscode';
-import { Message, MessageType } from '@/types/messages';
+import { Message } from '@/types/messages';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -165,7 +165,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             // Message with no registered handler
             messageListener({
                 id: 'msg-1',
-                type: 'unknown-message' as MessageType,
+                type: 'unknown-message',
                 payload: {},
                 timestamp: Date.now()
             });

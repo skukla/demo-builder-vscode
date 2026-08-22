@@ -125,6 +125,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `rptc-hygiene-scan` — the same idea aimed at the RECORD rather than the code: backlog index rot in BOTH directions, plans that shipped and never moved, and file:line citations pointing at deleted files (runs at release cuts; proposes, never applies)
 - `circular-dependency-scan` — find import cycles (madge) and how to break them
 - `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
+- `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
 ## Verified duplication gets FIXED, not reported
@@ -153,6 +154,17 @@ edits to any of them.
 let the user choose. Do not file a backlog item for a two-line fix.
 
 The judgement call is whether two things are the same job — not whether to bother.
+
+**This rule applies to ANALYSIS work too — an audit is not exempt because its
+deliverable is a report.** On 2026-08-21 an audit read all 33 `parseJSON` call
+sites, VERIFIED two improvements along the way (the same wizard-steps load ritual
+pasted twice in one file; a guard parameter with zero production callers in its
+lifetime), and filed both as "notes" — the user had to ask why. The mode you are
+in does not change what a verified finding demands: if it is in reach, fix it in
+the same turn; if it needs a decision, END THE TURN WITH THE QUESTION ("found X,
+verified — fix now or defer?") rather than a sentence that files it away. A
+"systemic note" in a report is the reporting-instead-of-fixing failure wearing
+its third hat.
 
 ## Verifying
 

@@ -34,6 +34,7 @@ import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Register site with Configuration Service.
@@ -55,8 +56,9 @@ export async function registerConfigurationService(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: 'Registering site with Configuration Service...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 46,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     // Access state, to the log and the wizard both. The detail lives in
     // `configAccessRecovery` — this handler only needs the outcome.
@@ -71,13 +73,16 @@ export async function registerConfigurationService(
                 phase: 'site-config',
                 message,
                 progress: 46,
-            }),
+            } satisfies StorefrontSetupProgressPayload),
     );
 
     // Same precedence the DA.live permission step uses: the IMS identity is the
     // one the Configuration Service authorizes, so it wins over the GitHub one.
+    // `?? undefined` converts the GitHub user's null email to the absence the
+    // downstream params expect.
     const setupUserEmail =
-        (await services.daLiveAuthService.getUserEmail()) || edsConfig.githubAuth?.user?.email;
+        (await services.daLiveAuthService.getUserEmail()) ||
+        (edsConfig.githubAuth?.user?.email ?? undefined);
 
     try {
         const siteParams = buildSiteConfigParams(
@@ -101,7 +106,7 @@ export async function registerConfigurationService(
                     phase: 'site-config',
                     message,
                     progress: 46,
-                }),
+                } satisfies StorefrontSetupProgressPayload),
         });
 
         // Losing the site's admin list is unrecoverable from inside the app, so it
@@ -127,9 +132,9 @@ export async function registerConfigurationService(
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'site-config',
                 message:
-                    '⚠️ Configuration Service registration failed — da.live preview may not work',
+                    '⚠️ Configuration Service registration failed — DA.live preview may not work',
                 progress: 47,
-            });
+            } satisfies StorefrontSetupProgressPayload);
         }
 
         // Three outcomes, not two. Configured-and-registered is the only one that
@@ -186,9 +191,9 @@ export async function registerConfigurationService(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
             message:
-                '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
+                '⚠️ Configuration Service setup incomplete — DA.live preview may need manual configuration',
             progress: 49,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         if (edsConfig.byomOverlayUrl) {
             addPdpCaveat(repoInfo, BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);

@@ -115,10 +115,13 @@ describe('installAiDefaultsMcpTools', () => {
 
         const pkg = captureToolsPackageJson();
         const deps = pkg?.dependencies as Record<string, string> | undefined;
-        // ai-defaults.json ships the Adobe App Builder MCP and Playwright MCP.
+        // ai-defaults.json ships the Adobe App Builder MCP, Playwright MCP, and
+        // (for EDS storefronts) the Adobe dropins MCP. Playwright is a TILDE
+        // range on purpose: for 0.0.x versions a caret is an exact pin.
         expect(deps).toEqual({
             '@adobe-commerce/commerce-extensibility-tools': '^3.4.0',
-            '@playwright/mcp': '^0.0.75',
+            '@playwright/mcp': '~0.0.79',
+            '@dropins/mcp': '^1.1.2',
         });
     });
 

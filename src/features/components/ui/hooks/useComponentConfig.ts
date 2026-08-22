@@ -16,48 +16,23 @@ import {
 } from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
-import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
+import type { EnvVarDefinition } from '@/types/components';
+import { ComponentConfigs } from '@/types/webview';
+import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
 
 const log = webviewLogger('useComponentConfig');
 
 // Create validators with consistent error messages
 const urlValidator = url('Please enter a valid URL');
 
-interface ComponentData {
-    id: string;
-    name: string;
-    description?: string;
-    dependencies?: {
-        required?: string[];
-        optional?: string[];
-    };
-    configuration?: {
-        requiredEnvVars?: string[];
-        optionalEnvVars?: string[];
-        requiredServices?: string[];
-    };
-}
+// The wire shape lives in @/types/webviewRequests — ONE declaration shared
+// with the get-components-data handler. This hook used to carry three local
+// twins: a ComponentData view, a ServiceDefinition that re-declared the
+// phantom required `id` the canonical type had already shed, and a
+// ComponentsData with an `appBuilder` section the response never includes.
+type ComponentsData = ComponentsDataPayload;
 
-interface ServiceDefinition {
-    id: string;
-    name: string;
-    backendSpecific?: boolean;
-    requiredEnvVars?: string[];
-    requiredEnvVarsByBackend?: Record<string, string[]>;
-}
-
-interface ComponentsData {
-    frontends?: ComponentData[];
-    backends?: ComponentData[];
-    dependencies?: ComponentData[];
-    mesh?: ComponentData[];
-    integrations?: ComponentData[];
-    appBuilder?: ComponentData[];
-    envVars?: Record<string, ComponentEnvVar>;
-    services?: Record<string, ServiceDefinition>;
-}
-
-export interface UniqueField extends ComponentEnvVar {
+export interface UniqueField extends EnvVarDefinition {
     componentIds: string[];
 }
 
@@ -91,6 +66,41 @@ interface UseComponentConfigReturn {
 // Service group definitions imported from shared source (serviceGroupTransforms.ts)
 // Note: 'mesh' group exists in shared list for Configure screen; wizard filters MESH_ENDPOINT
 // so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
+
+/**
+ * The component registry, fetched once per webview.
+ *
+ * `get-components-data` is a pure read of bundled registry JSON
+ * (`componentHandlers.handleGetComponentsData`) — the same bytes on every call,
+ * for the life of the webview. It was fetched on every MOUNT of this hook, and
+ * the Commerce area remounts its whole body on each sub-step change
+ * (`StepAreaShell viewKey`, which is how the crossfade is implemented). So
+ * stepping Business Structure → Catalog tore down the loaded config, restarted
+ * the request, and flashed "Loading component configurations..." for data that
+ * had not changed and did not need fetching. Reported 2026-08-20.
+ *
+ * The in-flight promise is cached too, so two hooks mounting in the same frame
+ * share one request instead of racing.
+ *
+ * Nothing invalidates this, because nothing can: the registry ships with the
+ * extension, so a change to it means a new extension build, which reloads the
+ * webview and takes this module with it.
+ */
+let registryCache: ComponentsData | undefined;
+let registryInFlight: Promise<ComponentsData> | undefined;
+
+/**
+ * Drop the cached registry.
+ *
+ * For TESTS. Module state outlives a single `renderHook`, so without this the
+ * first test in a file warms the cache and every later mount starts already
+ * loaded — which silently changes what those tests are asserting. Production has
+ * no caller and wants none: the cache is meant to live as long as the webview.
+ */
+export function resetComponentRegistryCache(): void {
+    registryCache = undefined;
+    registryInFlight = undefined;
+}
 
 /**
  * Apply field defaults and brand-specific package defaults to component configs.
@@ -149,7 +159,11 @@ export function useComponentConfig({
         initialConfigs || {},
     );
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
-    const [componentsData, setComponentsData] = useState<ComponentsData>({});
+    // Seeded from the cache, so a remount with the registry already in hand
+    // renders the form immediately instead of flashing a loader.
+    const [componentsData, setComponentsData] = useState<Partial<ComponentsData>>(
+        registryCache ?? {},
+    );
 
     // The backend owns the store-scope keys, so those writes land only there
     // (`resolveWriteTargets`). Every other field still writes to each component
@@ -157,7 +171,7 @@ export function useComponentConfig({
     const backendId = selectedStack ? getStackById(selectedStack)?.backend : undefined;
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(registryCache === undefined);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     // Stable refs for callbacks to avoid re-render loops in effects
@@ -189,23 +203,34 @@ export function useComponentConfig({
 
     // Load components data
     useEffect(() => {
+        if (registryCache !== undefined) {
+            return;
+        }
+        let cancelled = false;
         const loadData = async () => {
             try {
-                const response = await vscode.request<{
-                    success: boolean;
-                    type: string;
-                    data: ComponentsData;
-                }>('get-components-data');
-                const data = response.data;
+                registryInFlight ??= vscode
+                    .request<GetComponentsDataResponse>('get-components-data')
+                    .then((response) => response.data);
+                const data = await registryInFlight;
+                registryCache = data;
+                if (cancelled) return;
                 setComponentsData(data);
                 setIsLoading(false);
             } catch (error) {
+                // Clear the shared promise so a retry is not permanently poisoned
+                // by one failure.
+                registryInFlight = undefined;
                 log.error('Failed to load components:', error);
+                if (cancelled) return;
                 setLoadError('Failed to load component configuration. Please try again.');
                 setIsLoading(false);
             }
         };
         loadData();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     // Build selected components with dependencies.
@@ -214,7 +239,7 @@ export function useComponentConfig({
     // written out three times and unreachable by tests.
     const selectedComponents = useMemo(
         () =>
-            collectStackComponents<ComponentData>(
+            collectStackComponents<ComponentDataDTO>(
                 selectedStack ? getStackById(selectedStack) : undefined,
                 componentsData,
             ),
@@ -395,7 +420,11 @@ export function useComponentConfig({
             if (touchedFields.has(field.key)) {
                 return '';
             }
-            if (field.default !== undefined && field.default !== '') return field.default;
+            if (field.default !== undefined && field.default !== '') {
+                // Same numeric handling as stored values above — the registry
+                // type allows numeric defaults even though none exist today.
+                return typeof field.default === 'number' ? String(field.default) : field.default;
+            }
             return '';
         },
         [componentConfigs, touchedFields],

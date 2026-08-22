@@ -32,7 +32,7 @@ import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponent
 import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
-import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
+import { CtaEmptyState, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -46,31 +46,16 @@ import {
 } from '@/features/app-builder/services/appBuilderComponentState';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState } from '@/types/base';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
-export interface IntegrationsScreenProps {
-    projectName?: string;
-    hasAdobeContext?: boolean;
-    appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
-    /** Adobe project/workspace TITLES — the shared deploy destination. */
-    destination?: { projectTitle?: string; workspaceTitle?: string };
-    /** The committed destination IDs, which the add flow reads as booleans. */
-    adobeProjectId?: string;
-    adobeWorkspaceId?: string;
-    /** The IMS org — the add flow's signed-in test reads this, not the project id. */
-    adobeOrgId?: string;
-    /**
-     * The discovered Commerce store hierarchy, so the mesh card can NAME the
-     * scope codes it was deployed against. Absent until discovery has run once;
-     * the row then shows bare codes.
-     */
-    commerceStoreStructure?: CommerceStoreStructure;
-}
+/**
+ * Init payload (`IntegrationsInitialData`), relaxed to Partial: the wire
+ * always carries the required fields, but tests render the screen without them.
+ */
+export type IntegrationsScreenProps = Partial<IntegrationsInitialData>;
 
 /**
  * "<project> · <workspace>", or undefined when the project has no Adobe target
@@ -307,10 +292,9 @@ export function IntegrationsScreen({
                     button — so removing your last integration stranded you on a
                     screen with no project context and no way back. */}
                 {cards.length === 0 ? (
-                    <StatusDisplay
-                        variant="info"
+                    <CtaEmptyState
                         title="No integrations yet"
-                        message="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
+                        description="Add an API Mesh, a pre-built integration, or your own."
                         actions={[
                             { label: 'Add integration', variant: 'accent', onPress: openAdd },
                         ]}

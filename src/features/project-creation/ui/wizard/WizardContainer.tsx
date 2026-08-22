@@ -19,9 +19,6 @@ import {
     shouldShowWizardFooter,
     getWizardTitle,
     filterRemovedCustomLibraries,
-    ImportedSettings,
-    EditProjectConfig,
-    WizardStepConfigWithRequirements,
 } from './wizardHelpers';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
@@ -44,17 +41,16 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection, type WizardState } from '@/types/webview';
+import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload } from '@/types/webviewPayloads';
+import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 // Extracted hooks
 
 const log = webviewLogger('WizardContainer');
 
-// Re-export for consumers that import from WizardContainer
-export type { ImportedSettings, EditProjectConfig };
-
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: WizardStepConfigWithRequirements[];
+    wizardSteps?: WizardStepDefinition[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
@@ -88,13 +84,13 @@ export function WizardContainer({
     useEffect(() => {
         const unsubDefaults = vscode.onMessage(
             'blockLibraryDefaultsUpdated',
-            (data: { blockLibraryDefaults: string[] }) => {
+            (data: BlockLibraryDefaultsUpdatedPayload) => {
                 setBlockLibraryDefaults(data.blockLibraryDefaults);
             },
         );
         const unsubCustom = vscode.onMessage(
             'customBlockLibraryDefaultsUpdated',
-            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
+            (data: CustomBlockLibraryDefaultsUpdatedPayload) => {
                 setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
             },
         );
@@ -180,9 +176,7 @@ export function WizardContainer({
         let cancelled = false;
         void getPackageById(currentPackageId).then((own) => {
             if (!cancelled && own) {
-                setPackages((prev) =>
-                    prev.some((p) => p.id === own.id) ? prev : [...prev, own],
-                );
+                setPackages((prev) => (prev.some((p) => p.id === own.id) ? prev : [...prev, own]));
             }
         });
         return () => {
@@ -232,22 +226,11 @@ export function WizardContainer({
     // Ref for step content area (to focus first element when step changes)
     const stepContentRef = useRef<HTMLDivElement>(null);
 
-    // Message listeners - handles feedback, creationProgress, and sidebar navigation
-    useMessageListeners({
-        setState,
-        getCurrentStepIndex,
-        navigateToStep: (step, targetIndex, currentIndex) => {
-            // Navigation for sidebar requests - simplified version without state clearing
-            // Full backward navigation with state clearing is handled by useWizardNavigation
-            setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
-            setIsTransitioning(true);
-            setTimeout(() => {
-                setState((prev) => ({ ...prev, currentStep: step }));
-                setIsTransitioning(false);
-            }, TIMEOUTS.STEP_TRANSITION);
-        },
-        WIZARD_STEPS,
-    });
+    // Message listeners — feedback, creationProgress, creationFailed's generic
+    // state update. (The sidebar-navigation callback that used to ride along
+    // here served the retired 'navigateToStep' push — nothing sends it — and
+    // the never-wired onGitHubAppRequired duplicate is gone too; see the hook.)
+    useMessageListeners({ setState });
 
     // Side effects (auto-focus, sidebar notifications, data loading)
     useWizardEffects({
@@ -333,11 +316,7 @@ export function WizardContainer({
                 );
             case 'prerequisites':
                 return (
-                    <PrerequisitesStep
-                        {...props}
-                        componentsData={componentsData?.data as Record<string, unknown>}
-                        currentStep={state.currentStep}
-                    />
+                    <PrerequisitesStep {...props} currentStep={state.currentStep} />
                 );
             // Collapsed builder step. The shell routes the active area to the
             // existing Commerce / Storefront / Integrations bodies and owns the

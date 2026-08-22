@@ -14,6 +14,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { validateProjectNameSecurity } from '@/core/validation';
+import { normalizeProjectName } from '@/core/validation/normalizers';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -31,9 +32,22 @@ export async function renameProjectCore(
     rawName: string,
 ): Promise<HandlerResponse> {
     try {
-        const newName = rawName.trim();
-        if (!newName) {
+        // What arrives is a TITLE, as typed. The slug is derived from it, exactly
+        // as project creation does -- so a rename to "Bodea B2B Demo" moves the
+        // folder to `bodea-b2b-demo` and the two never drift. The user browses
+        // this folder, so a title that stopped matching its directory would be
+        // worse than not offering titles at all.
+        const newTitle = rawName.trim();
+        if (!newTitle) {
             return { success: false, error: 'Project name cannot be empty' };
+        }
+
+        const newName = normalizeProjectName(newTitle);
+        if (!newName) {
+            return {
+                success: false,
+                error: `"${newTitle}" has no letters or numbers to build a folder name from`,
+            };
         }
 
         // Cannot rename while running (folder is in use)
@@ -55,6 +69,7 @@ export async function renameProjectCore(
         }
 
         const oldName = project.name;
+        const oldTitle = project.title;
         const oldPath = project.path;
 
         // Use name directly as folder (consistent with project creation)
@@ -92,11 +107,47 @@ export async function renameProjectCore(
             await context.stateManager.removeFromRecentProjects(oldPath);
         }
 
-        // Update the name
+        // Update both names. The slug drives the folder and the dedupe key; the
+        // title is what every surface renders via `getProjectDisplayName`.
         project.name = newName;
+        project.title = newTitle;
 
-        // Save the updated project (at the new location)
-        await context.stateManager.saveProject(project);
+        // Save the updated project (at the new location).
+        //
+        // ROLLBACK. The folder has already moved by this point, so a failure
+        // here leaves the directory at the new path and the manifest describing
+        // the old one -- and `projectFileLoader` reads `manifest.name`, so the
+        // project would render under its old name from a folder with the new
+        // one. That disagreement is exactly what titles are meant to prevent.
+        //
+        // Every step is local filesystem work, so undoing it is achievable in a
+        // way the cloud operations elsewhere in this codebase are not: move the
+        // directory back and restore the in-memory project. AI-bundle
+        // regeneration below is deliberately OUTSIDE this guard -- it is already
+        // best-effort and self-healing via the activation sweep, so failing it
+        // must not throw away a rename that otherwise succeeded.
+        try {
+            await context.stateManager.saveProject(project);
+        } catch (saveError) {
+            if (newPath !== oldPath) {
+                const undone = await rollbackRename(context, project, {
+                    oldName,
+                    oldTitle,
+                    oldPath,
+                    newPath,
+                    newTitle,
+                });
+                if (!undone) {
+                    return {
+                        success: false,
+                        error:
+                            `Rename failed and could not be undone. The project folder is now at `
+                            + `"${newPath}" but still records the name "${oldName}".`,
+                    };
+                }
+            }
+            throw saveError;
+        }
 
         // Regenerate AI context files when the folder moved. The MCP configs
         // (.mcp.json / .claude/mcp.json) bake the ABSOLUTE project path into the
@@ -142,5 +193,77 @@ export async function renameProjectCore(
             success: false,
             error: 'Failed to rename project',
         };
+    }
+}
+
+
+/**
+ * Put a half-finished rename back.
+ *
+ * Called only when the folder has already moved and the manifest write then
+ * failed. Left alone, `projectFileLoader` would read the OLD `manifest.name`
+ * out of a directory carrying the NEW one — so the project renders under a name
+ * its folder does not have, which is the exact disagreement titles exist to
+ * prevent.
+ *
+ * Extracted rather than inlined: inline it tipped `renameProjectCore` to
+ * complexity 26 and seven levels of nesting, over this project's limits of 25
+ * and 5.
+ *
+ * @param context - handler context, for the logger
+ * @param project - the in-memory project to restore (mutated back in place)
+ * @param names - what it was, and where it was moved to
+ * @returns true when the project is back as it was; false when it is not, which
+ *   the caller must surface — it is the one state a user cannot infer from the UI
+ */
+async function rollbackRename(
+    context: HandlerContext,
+    project: Project,
+    names: {
+        oldName: string;
+        oldTitle: string | undefined;
+        oldPath: string;
+        newPath: string;
+        newTitle: string;
+    },
+): Promise<boolean> {
+    const { oldName, oldTitle, oldPath, newPath, newTitle } = names;
+    try {
+        await fsPromises.rename(newPath, oldPath);
+        project.path = oldPath;
+        project.name = oldName;
+        project.title = oldTitle;
+        restoreComponentPaths(project, newPath, oldPath);
+        context.logger.warn(
+            `[Rename] Save failed for "${newTitle}" — rolled the folder back to `
+            + `"${oldName}". The project is unchanged.`,
+        );
+        return true;
+    } catch (rollbackError) {
+        context.logger.error(
+            `[Rename] Save failed AND rollback failed for "${newTitle}". The folder is `
+            + `at "${newPath}" but the manifest still says "${oldName}". `
+            + (rollbackError instanceof Error ? rollbackError.message : String(rollbackError)),
+        );
+        return false;
+    }
+}
+
+/**
+ * Re-point every component path from one project root to another.
+ *
+ * @param project - the project whose componentInstances to rewrite
+ * @param from - the root they currently sit under
+ * @param to - the root they should sit under
+ */
+function restoreComponentPaths(project: Project, from: string, to: string): void {
+    if (!project.componentInstances) {
+        return;
+    }
+    for (const componentId of Object.keys(project.componentInstances)) {
+        const component = project.componentInstances[componentId];
+        if (component.path?.startsWith(from)) {
+            component.path = component.path.replace(from, to);
+        }
     }
 }

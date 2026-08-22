@@ -45,6 +45,8 @@ export interface ConfigureSectionBodyProps {
     onProjectNameChange: (value: string) => void;
     projectNameError?: string;
     projectNameTouched: boolean;
+    /** The slug derived from the name, shown so the user can find it on disk. */
+    projectFolder?: string;
     /** Catalog entries for the project's selected appBuilderComponents. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     /** Current componentConfigs (App Builder text values live here). */
@@ -79,12 +81,15 @@ function ProjectBody({
     onProjectNameChange,
     projectNameError,
     projectNameTouched,
+    projectFolder,
     hasServiceGroups,
 }: {
     projectName: string;
     onProjectNameChange: (value: string) => void;
     projectNameError?: string;
     projectNameTouched: boolean;
+    /** The slug derived from the name, shown so the user can find it on disk. */
+    projectFolder?: string;
     hasServiceGroups: boolean;
 }): React.ReactElement {
     return (
@@ -97,7 +102,12 @@ function ProjectBody({
                 width="100%"
                 validationState={getValidationState(projectNameError, projectNameTouched)}
                 errorMessage={projectNameError}
-                description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+                // The rule still holds, it just applies to the derived folder
+                // rather than to what is typed -- so say where it lands instead
+                // of dictating what to type.
+                description={
+                    projectFolder ? `Folder: ${projectFolder}` : undefined
+                }
             />
             {hasServiceGroups ? null : (
                 <Text UNSAFE_className="text-gray-600">

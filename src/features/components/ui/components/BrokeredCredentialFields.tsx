@@ -148,7 +148,7 @@ export function BrokeredCredentialFields({
     return (
         <View>
             {helpLine(
-                'Commerce credentials are provided automatically when sample data is imported.',
+                'Commerce credentials are provided automatically when a datapack is imported.',
                 'Use my own instead',
             )}
         </View>

@@ -70,4 +70,20 @@ describe.each(STATES)('the %s state', (_name, status, isRechecking) => {
 
         expect(centeringBox(container)?.style.height).toBe('');
     });
+
+    // minHeight alone was NOT enough, and the screenshot proving it (2026-08-20)
+    // showed the spinner pinned near the top of a tall pane. `.step-view-anim`
+    // carries `min-height: 100%` but its own height stays content-driven, so a
+    // percentage measured against it is indefinite and collapses. Growing as a
+    // flex item is what actually reaches the bottom of the pane -- its CSS
+    // comment calls this out as the opt-in a body has to take.
+    // Asserts the CLASS, not a computed style: jsdom applies no stylesheet, so
+    // reading flex-grow back would pass on an empty string forever. The first
+    // attempt at this fix used Spectrum's `flex` prop, which `Flex` drops
+    // silently -- it rendered no flex-grow and looked exactly like a fix.
+    it('grows to fill, because a percentage alone measures against nothing', () => {
+        const { container } = renderView(status, isRechecking);
+
+        expect(centeringBox(container)?.className).toContain('centered-feedback--fill');
+    });
 });

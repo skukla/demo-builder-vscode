@@ -15,47 +15,12 @@ import { type MutableRefObject, useEffect, useCallback, useRef, useState } from 
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
+import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenStoredPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
 
 const log = webviewLogger('useDaLiveAuth');
 
-/**
- * DA.live auth status message data
- */
-interface DaLiveAuthStatusData {
-    isAuthenticated: boolean;
-    error?: string;
-    /** Whether user has completed bookmarklet setup before */
-    setupComplete?: boolean;
-    /** Cached org name from previous successful verification */
-    orgName?: string;
-    /** Bookmarklet URL for token extraction (provided eagerly) */
-    bookmarkletUrl?: string;
-}
-
-/**
- * DA.live login opened message data
- */
-interface DaLiveLoginOpenedData {
-    bookmarkletUrl: string;
-}
-
-/**
- * DA.live token stored message data
- */
-interface DaLiveTokenStoredData {
-    success: boolean;
-    error?: string;
-}
-
-/**
- * DA.live token with org result message data
- */
-interface DaLiveTokenWithOrgResultData {
-    success: boolean;
-    error?: string;
-    email?: string;
-    orgName?: string;
-}
+// The wire shapes live in @/types/webviewPayloads — ONE declaration shared
+// with edsDaLiveAuthHandlers (this file used to carry its own copies).
 
 /**
  * Props for useDaLiveAuth hook
@@ -131,7 +96,7 @@ function buildEdsConfigWithOrg(
 
 /** Handle 'dalive-auth-status' message: update state based on auth and org presence. */
 function handleAuthStatusUpdate(
-    authData: DaLiveAuthStatusData,
+    authData: DaLiveAuthStatusPayload,
     edsConfigRef: EdsConfigRef,
     updateStateRef: UpdateStateRef,
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
@@ -155,7 +120,7 @@ function handleAuthStatusUpdate(
 
 /** Handle 'dalive-token-stored' message. */
 function handleTokenStored(
-    storedData: DaLiveTokenStoredData,
+    storedData: DaLiveTokenStoredPayload,
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
 ): void {
     if (storedData.success) {
@@ -170,7 +135,7 @@ function handleTokenStored(
 
 /** Handle 'dalive-token-with-org-result' message. */
 function handleTokenWithOrgResult(
-    resultData: DaLiveTokenWithOrgResultData,
+    resultData: DaLiveTokenWithOrgResultPayload,
     edsConfigRef: EdsConfigRef,
     updateStateRef: UpdateStateRef,
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
@@ -320,7 +285,7 @@ export function useDaLiveAuth({
 
         // Listen for auth status updates
         const unsubscribeStatus = webviewClient.onMessage('dalive-auth-status', (data) => {
-            const authData = data as DaLiveAuthStatusData;
+            const authData = data as DaLiveAuthStatusPayload;
             log.debug('Received DA.live auth status:', authData);
             setIsChecking(false);
 
@@ -336,32 +301,25 @@ export function useDaLiveAuth({
 
         // Listen for login opened (returns bookmarklet URL)
         const unsubscribeOpened = webviewClient.onMessage('dalive-login-opened', (data) => {
-            const openedData = data as DaLiveLoginOpenedData;
+            const openedData = data as DaLiveLoginOpenedPayload;
             log.debug('DA.live login opened, bookmarklet URL received');
             setBookmarkletUrl(openedData.bookmarkletUrl);
         });
 
         // Listen for token stored
         const unsubscribeStored = webviewClient.onMessage('dalive-token-stored', (data) => {
-            const storedData = data as DaLiveTokenStoredData;
+            const storedData = data as DaLiveTokenStoredPayload;
             log.debug('DA.live token stored:', storedData);
             handleTokenStored(storedData, updateDaLiveAuthRef);
         });
 
-        // Listen for auth errors
-        const unsubscribeError = webviewClient.onMessage('dalive-auth-error', (data) => {
-            const errorData = data as { error: string };
-            log.error('DA.live auth error:', errorData.error);
-            updateDaLiveAuthRef.current({
-                isAuthenticated: false,
-                isAuthenticating: false,
-                error: errorData.error,
-            });
-        });
-
+        // No `dalive-auth-error` listener any more: no code anywhere sends it
+        // (failures ride `dalive-auth-status`/`dalive-token-stored` with an
+        // `error` field), so it could never fire — found by the 2026-08-21
+        // channel inventory.
         // Listen for combined token + org result
         const unsubscribeTokenWithOrg = webviewClient.onMessage('dalive-token-with-org-result', (data) => {
-            const resultData = data as DaLiveTokenWithOrgResultData;
+            const resultData = data as DaLiveTokenWithOrgResultPayload;
             log.debug('DA.live token with org result:', resultData);
             handleTokenWithOrgResult(resultData, edsConfigRef, updateStateRef, updateDaLiveAuthRef);
         });
@@ -370,7 +328,6 @@ export function useDaLiveAuth({
             unsubscribeStatus();
             unsubscribeOpened();
             unsubscribeStored();
-            unsubscribeError();
             unsubscribeTokenWithOrg();
         };
     }, []); // Empty deps - runs once on mount

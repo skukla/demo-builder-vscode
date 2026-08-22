@@ -42,9 +42,15 @@ export function createHeadlessHandlerContext(
         // machine. Any tool over that handler needs this line first.
         prereqManager: new PrerequisitesManager(context.extensionPath, logger),
         authManager: ServiceLocator.getAuthenticationService(),
-        errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-        progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-        stepLogger: undefined as unknown as HandlerContext['stepLogger'],
+        // Deliberately absent on the agent surface. These are OPTIONAL on
+        // HandlerContext, and every reader in the handler tree uses `?.`
+        // (verified 2026-08-21: zero non-optional-chained reads of
+        // errorLogger/progressUnifier/stepLogger in src/), so plain undefined
+        // is the honest value — the old `undefined as unknown as` casts were
+        // widening a field that never needed it.
+        errorLogger: undefined,
+        progressUnifier: undefined,
+        stepLogger: undefined,
 
         logger,
         debugLogger: logger,

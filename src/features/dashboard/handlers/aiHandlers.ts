@@ -32,6 +32,7 @@ import {
 } from '@/features/project-creation/services';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 
 // Prompt CRUD + merge helpers moved to aiPromptHandlers.ts; re-export so the
 // existing import sites (dashboardHandlers, showPromptsPicker,
@@ -190,12 +191,13 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
     const emit = (currentOperation: string, message?: string): void => {
         stepNumber++;
         const progress = Math.round((stepNumber / totalSteps) * 100);
-        void context.sendMessage('creationProgress', {
+        const payload: CreationProgressPayload = {
             currentOperation,
             progress,
             message: message ?? '',
             logs: [],
-        });
+        };
+        void context.sendMessage('creationProgress', payload);
     };
 
     if (needsAiTooling) {

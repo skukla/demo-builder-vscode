@@ -7,12 +7,12 @@
 
 import { stripSecretValues } from '@/features/components/config/envVarKeys';
 import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import type { Project } from '@/types/base';
 import {
     SETTINGS_FILE_VERSION,
     type SettingsFile,
     type SettingsEdsConfig,
-} from '@/features/projects-dashboard/types/settingsFile';
-import type { Project } from '@/types/base';
+} from '@/types/settingsFile';
 
 /**
  * Result of parsing a settings file

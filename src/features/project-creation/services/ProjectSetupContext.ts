@@ -13,9 +13,10 @@
  */
 
 import type { Project } from '@/types';
-import type { ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
+import type { ComponentConfigs , ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
  * Unified context for project setup operations
@@ -31,7 +32,7 @@ export class ProjectSetupContext {
         private readonly handlerContext: HandlerContext,
         public readonly registry: ComponentRegistry,
         public readonly project: Project,
-        public readonly config: Record<string, unknown>,
+        public readonly config: ProjectCreationConfig,
     ) {}
 
     // ============= HandlerContext Delegation =============
@@ -70,7 +71,7 @@ export class ProjectSetupContext {
      * Get backend component ID from wizard config
      */
     getBackendId(): string | undefined {
-        return (this.config.components as { backend?: string })?.backend;
+        return this.config.components?.backend;
     }
 
     /**
@@ -85,22 +86,22 @@ export class ProjectSetupContext {
     /**
      * Get component configs from wizard state
      */
-    getComponentConfigs(): Record<string, Record<string, string | number | boolean | undefined>> | undefined {
-        return this.config.componentConfigs as Record<string, Record<string, string | number | boolean | undefined>> | undefined;
+    getComponentConfigs(): ComponentConfigs | undefined {
+        return this.config.componentConfigs;
     }
 
     /**
      * Get selected addon IDs from wizard state
      */
     getSelectedAddons(): string[] | undefined {
-        return this.config.selectedAddons as string[] | undefined;
+        return this.config.selectedAddons;
     }
 
     /**
      * Get selected demo package ID from wizard state
      */
     getSelectedPackage(): string | undefined {
-        return this.config.selectedPackage as string | undefined;
+        return this.config.selectedPackage;
     }
 
     /**

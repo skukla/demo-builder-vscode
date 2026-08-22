@@ -25,42 +25,16 @@ import { InlineRenameField } from '@/core/ui/components/forms';
 import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { normalizeProjectName } from '@/core/validation/normalizers';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
  * Props for the ProjectDashboardScreen component
  */
-interface ProjectDashboardScreenProps {
-    project?: {
-        name: string;
-        path: string;
-    };
-    hasMesh?: boolean;
-    /** Resolved brand name (e.g., "CitiSignal") */
-    brandName?: string;
-    /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
-    stackName?: string;
-    /** Whether this is an EDS project (always published, no start/stop) */
-    isEds?: boolean;
-    /** Live URL for EDS projects */
-    edsLiveUrl?: string;
-    /** DA.live authoring URL for EDS projects */
-    edsDaLiveUrl?: string;
-    /** Initial mesh status from card grid computation (avoids loading flash) */
-    initialMeshStatus?: string;
-    /** Initial EDS storefront status (for dynamic status display) */
-    initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
-    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
-    hasAdobeContext?: boolean;
-    /**
-     * Whether the Data Installer is switched on AND pointed at an API. Decided
-     * host-side (`isDataInstallerConfigured`) because both halves are settings.
-     */
-    dataInstallerAvailable?: boolean;
-    /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
-    appBuilderComponents?: Record<string, AppBuilderComponentState>;
-}
+/**
+ * Init payload (`DashboardInitialData`), relaxed to Partial: the wire always
+ * carries the required fields, but tests render the screen without them.
+ */
+export type ProjectDashboardScreenProps = Partial<DashboardInitialData>;
 
 /**
  * Project dashboard screen component
@@ -77,12 +51,11 @@ interface ProjectDashboardScreenProps {
 export function ProjectDashboardScreen({
     project,
     hasMesh = false,
-    brandName,
+    packageName,
     stackName,
     isEds = false,
     edsLiveUrl,
     edsDaLiveUrl,
-    initialMeshStatus,
     initialEdsStorefrontStatus,
     hasAdobeContext,
     dataInstallerAvailable,
@@ -140,10 +113,7 @@ export function ProjectDashboardScreen({
         aiRegenProgress,
         aiRegenError,
         regenerateAiFiles,
-    } = useDashboardStatus(
-        { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext },
-        isEdsStable,
-    );
+    } = useDashboardStatus({ hasMesh, initialEdsStorefrontStatus, hasAdobeContext }, isEdsStable);
 
     // Action handlers via extracted hook
     const {
@@ -208,8 +178,8 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // Build subtitle from brand/stack (e.g., "CitiSignal · Headless + PaaS")
-    const brandStackSubtitle = [brandName, stackName].filter(Boolean).join(' · ') || undefined;
+    // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
+    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
 
     // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
@@ -228,7 +198,11 @@ export function ProjectDashboardScreen({
                             <InlineRenameField
                                 name={displayName}
                                 disabled={isRunning}
-                                normalize={normalizeProjectName}
+                                // No `normalize`: the field takes the TITLE as typed.
+                                // `renameProjectCore` derives the slug from it and moves
+                                // the folder to match, so rewriting keystrokes to hyphens
+                                // here would only put the enforcement back in the one
+                                // place the user has to look at.
                                 onRename={renameInline}
                             />
                         }

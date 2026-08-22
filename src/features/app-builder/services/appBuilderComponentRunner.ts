@@ -45,6 +45,7 @@ import {
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentManager } from '@/features/components/services/componentManager';
+import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -516,7 +517,7 @@ async function teardownRemote(
 ): Promise<void> {
     const componentPath = project.componentInstances?.[id]?.path;
     const command =
-        state.kind === 'mesh' ? 'aio api-mesh:delete --autoConfirmAction' : 'aio app undeploy';
+        state.kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
     await withOrgContext(targetFor(project, deps), () =>
         deps.commandManager.execute(command, {
             cwd: componentPath,

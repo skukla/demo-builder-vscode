@@ -35,7 +35,7 @@ schedules.
 
 ## Procedure
 
-Run all four, then triage. ~30s total.
+Run all six, then triage. ~30s total.
 
 ```bash
 bash .claude/skills/component-extraction-scan/scan-classnames.sh src   # UI markup
@@ -43,6 +43,10 @@ bash .claude/skills/code-duplication-scan/scan.sh src                  # logic (
 bash .claude/skills/circular-dependency-scan/scan.sh src               # cycles (madge)
 bash .claude/skills/dead-code-scan/scan.sh src                         # orphans + doc drift
 bash .claude/skills/architecture-duplication-scan/signals.sh src       # competing impls
+# Boundary-cast audit — silenced type errors (the stackBackend / payload class).
+# Quote the glob args (zsh); the second grep drops comment-only lines.
+grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.tsx' \
+  | grep -vE ':[0-9]+:\s*(//|\*|/\*)'
 ```
 
 ### Baselines measured 2026-08-11 — a number at baseline is not news
@@ -53,6 +57,7 @@ bash .claude/skills/architecture-duplication-scan/signals.sh src       # competi
 | code-duplication (jscpd) | 64 clones, 0.70% lines | a jump, or any clone crossing a feature boundary |
 | circular-dependency | 13 cycles | any new cycle; most existing ones are same-feature handler/phase pairs |
 | dead-code doc-drift | 0 | any hit is real — it is confirmed against `git log` |
+| boundary-cast audit | 40 (6 `as never`, 34 `as unknown as`, 0 `as any`) — measured 2026-08-21 after the full first triage (all 55 original sites opened) plus the partial-HandlerContext resolution | any `as any`; any NEW cast; any existing cast on an ARGUMENT to a collaborator (see triage). Remaining sites all carry verdicts: `as never` — 1 documented Spectrum shim (CardActionsMenu), 4 in AddIntegrationFlowAdapter + 1 in stackComponentCollector (both deferred INTO the untyped-channels backlog item). `as unknown as` — ~16 bundled-JSON-to-declared-type consts (RESOLVED — the two contract suites in tests/templates/ enforce data↔schema and data↔interface; the casts stay but are check-backed; `../complete/2026-08-21-bundled-config-json-is-cast-not-validated.md`), the ~7 partial-HandlerContext casts (RESOLVED — callee parameters narrowed to the fields they read; `../complete/2026-08-21-partial-handler-contexts-cast-to-full.md`), 4 wizard-state/request launderings in createProjectTool + executor + 2 generic handler-wrapper casts in addIntegrationFlowHandlers (untyped-channels item), rest local DOM/stream/library shims. Every non-benign cluster has a backlog home — a future sweep reports MOVEMENT against this, it does not re-triage |
 
 Prior: 2026-08-05 — 9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
 drop from 9 to 4 is the `step-view`/`step-nav` shell finally being extracted, not the scan
@@ -87,6 +92,61 @@ reimplementing its internals instead of using it.
 - **Rule of Three**, with the standing override: if the same behaviour has already
   been FIXED separately on two surfaces, that is demonstrated drift and it extracts
   at two.
+- **Boundary casts**: what matters is POSITION, not count. A cast on an ARGUMENT
+  handed to a collaborator (`client.startImport(request as never)`,
+  `authManager: authManager as never`) is the class that produced four silent
+  production no-ops (CLAUDE.md "A cast at a call boundary is a silenced type
+  error") plus the five webview payload bugs — the collaborator dispatches on a
+  field the cast hides, and mocks cannot see it. A cast adapting a browser/DOM
+  API quirk inside one function (`timer as unknown as { unref?... }`) is noise.
+  Fix shape: build the object the callee declares, or widen the callee to
+  `unknown` where it treats the value as opaque (the 9144bee9 comm-manager
+  precedent) — never delete the cast by loosening the assertion.
+- **Relay chains** (guided, no scanner — judgment decides): a value passed
+  through ≥3 hops that never READ it, only forward it, flags a missing
+  boundary (a shared declaration, a context, a deps object). Raw threading
+  depth is NOT the signal — a long compiler-checked chain is verbose but
+  safe; a rename lights up every hop. What matters is (a) RELAY-ONLY hops,
+  because each one re-states the name/shape and re-statements drift (the old
+  dashboard entry was a pure relay with its own hand-typed payload copy —
+  where `brandName`/`initialMeshStatus` rotted), and (b) any UNCHECKED hop
+  (`unknown`/cast/`Record`) — everything downstream of it is convention-only
+  regardless of depth. Fix shape: one shared declaration spread through
+  (webviewPayloads precedent), or a deps object whose consumers declare
+  `Pick<>` of what they read (the 3df264c6 HandlerContext precedent) — a bag
+  WITHOUT per-consumer Picks just trades threading for partial-construction
+  casts, which is how seven of them accumulated.
+- **Call-site signals** (measured 2026-08-21 — raw fan-in is NOT one of them;
+  a popular function with a small stable contract is architecture working):
+  - *Fan-in × weak contract*: rank callees by caller count, flag those whose
+    return type is unchecked. `parseJSON<T>` is the worked example BOTH ways:
+    33 casting call sites nominated it, and the per-site audit ACQUITTED it —
+    every site null-checks and optional-chains, because its inputs (aio CLI
+    output, user files) fail routinely and routine failure forces defense.
+    Counts nominate; reading decides. Corollary recorded from the same audit:
+    drift hides where nothing ever visibly fails (bundled configs rotted;
+    battle-hardened CLI parsers did not). Audit record:
+    `.rptc/complete/2026-08-21-parsejson-call-sites-are-unchecked-casts.md`.
+  - *Policy-function bypasses*: for a function that encodes a policy
+    (getProjectDisplayName, withOrgContext, credential resolution), the
+    dangerous count is sites doing its job BY HAND — grep the raw access the
+    policy wraps and diff against its callers. Four missed display-name
+    sites were this class; a brand type is the durable fix.
+  - *Caller-halo duplication*: N sites wrapping the same callee in the same
+    surrounding ritual = missing helper. Recipe: normalized ±4-line windows
+    around each call site, cluster identical shapes (a ~30-line script; see
+    the sweep that added this). MEASURED characteristics: high precision,
+    LOW recall — 3 probes found 1 real lead (an ensureAdobeIOAuth
+    guard/cancelled-message pair, 2 sites, Rule-of-Three says wait), while
+    the healthy post-extraction case (withOrgContext, 26 sites) and the
+    known-duplicated case (parseJSON) both showed fully diverse halos. So:
+    use it to FIND leads, never to conclude absence. The high-precision
+    detectors for consolidation remain the incident triggers the house
+    already runs on: the same FIX applied at ≥2 sites (extract-at-two
+    override), the same BUG recurring at ≥2 sites, and a two-surface
+    disagreement (architecture-duplication-scan). After consolidating,
+    blessed residual duplication gets a coverage test
+    (webviewHandlerCoverage / getRegisteredTypes-loop precedent).
 
 ## Output
 

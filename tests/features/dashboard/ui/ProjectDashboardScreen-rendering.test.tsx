@@ -4,6 +4,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 describe('ProjectDashboardScreen - Rendering and Status', () => {
     let ctx: TestContext;
@@ -15,13 +16,25 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
 
     describe('Rendering', () => {
         it('should render project name from props', () => {
-            renderDashboard({ project: { name: 'Test Project', path: '/test/path' } });
+            renderDashboard({
+                project: { name: asDisplayName('Test Project'), path: '/test/path' },
+            });
             expect(screen.getByText('Test Project')).toBeInTheDocument();
         });
 
         it('should render default name when project prop missing', () => {
             renderDashboard();
             expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        });
+
+        // Regression: the wire field is `packageName` (resolvePackageStackNames →
+        // demo-packages.json `name`), but the screen prop was `brandName` — a name
+        // no producer sends — so the brand half of the subtitle never rendered.
+        // The mismatch lived in the untypechecked entry (index.tsx shadowed by
+        // index.ts) where `data?.brandName` read undefined forever.
+        it('renders the package · stack subtitle from the wire field names', () => {
+            renderDashboard({ packageName: 'CitiSignal', stackName: 'Headless + PaaS' });
+            expect(screen.getByText('CitiSignal · Headless + PaaS')).toBeInTheDocument();
         });
 
         it('should request status on mount', () => {

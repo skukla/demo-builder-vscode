@@ -7,16 +7,8 @@ import { WebviewCommunicationManager } from '@/core/communication';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
-
-/**
- * Initial data sent to the prompt library webview.
- */
-interface AiOverviewInitialData {
-    theme: 'dark' | 'light';
-    project: Project;
-}
+import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 /**
  * ShowAiCommand — opens the prompt library webview.
@@ -28,7 +20,7 @@ interface AiOverviewInitialData {
  * underneath is Claude-specific, but that's an implementation detail handled by
  * the `openInClaude` route.
  */
-export class ShowAiCommand extends BaseWebviewCommand {
+export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
     /**
      * Dispose any active AI panel (used during navigation / reset).
      */
@@ -69,28 +61,18 @@ export class ShowAiCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            this.subscribeToSurfaceChanges();
-
             this.logger.debug(`[AI] Opened prompt library for project: ${project.name}`);
         } catch (error) {
             await this.showError('Failed to open prompts', error as Error);
         }
     }
 
-    /**
-     * Push a `surface-changed` message to the webview when the user toggles
-     * `demoBuilder.ai.surface` via VS Code settings. The webview re-runs
-     * verify-ai-setup so extension-only affordances (Browse Claude sessions)
-     * appear or disappear without a manual reload of the AI dashboard.
-     */
-    private subscribeToSurfaceChanges(): void {
-        const listener = vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('demoBuilder.ai.surface')) {
-                void this.sendMessage('surface-changed');
-            }
-        });
-        this.disposables.add(listener);
-    }
+    // No surface-changed listener any more: it watched `demoBuilder.ai.surface`,
+    // a setting RETIRED in 7bbe1bd9 (removed from package.json; openInClaude
+    // resets leftover values as "legacy"). An unregistered key cannot be set,
+    // so the listener could never fire and its docstring claimed a user
+    // affordance that no longer exists. Nothing webview-side awaited the
+    // message either — found by the 2026-08-21 settings-seam audit.
 
     protected async getWebviewContent(): Promise<string> {
         if (!this.panel) {
@@ -122,9 +104,8 @@ export class ShowAiCommand extends BaseWebviewCommand {
             throw new Error('No project found');
         }
 
-        const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
-            ? 'dark'
-            : 'light';
+        const theme =
+            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
         return {
             theme,

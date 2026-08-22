@@ -8,6 +8,7 @@
 import type { Project } from '@/types';
 
 // We'll import from the new service location
+import type { MeshStatusInfo } from '@/types/webviewPayloads';
 import {
     buildStatusPayload,
     deriveMeshStatus,
@@ -70,7 +71,7 @@ describe('dashboardStatusService', () => {
                 lastModified: new Date(),
                 status: 'running',
             };
-            const meshInfo = {
+            const meshInfo: MeshStatusInfo = {
                 status: 'deployed',
                 endpoint: 'https://mesh.adobe.io/graphql',
             };

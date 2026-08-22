@@ -47,7 +47,7 @@ export interface DaLiveTokenInfo {
  * cannot be parsed (too few parts, invalid base64, or invalid JSON).
  *
  * Shared by storeToken (to extract email/expiry) and
- * validateDaLiveToken in edsHelpers (to validate client_id/expiry).
+ * validateDaLiveToken in daLiveAuthPrompt (to validate client_id/expiry).
  *
  * @param token - JWT token string
  * @returns Decoded payload or null on failure

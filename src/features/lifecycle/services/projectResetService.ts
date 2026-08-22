@@ -270,20 +270,15 @@ async function runTargetedMeshDeploy(
     context.logger.info(`${logPrefix} Redeploying mesh`);
 
     try {
-        const { deployMeshComponent } = await import('@/features/mesh/services/meshDeployment');
-        const { fetchMeshInfoFromAdobeIO } = await import('@/features/mesh/services/meshVerifier');
-        const { ServiceLocator } = await import('@/core/di');
-        const commandManager = ServiceLocator.getCommandExecutor();
-
-        const meshInfo = await fetchMeshInfoFromAdobeIO(context.logger);
-        const existingMeshId = meshInfo?.meshId || '';
-
-        const meshResult = await deployMeshComponent(
+        // Create-or-update from REMOTE truth — the shared rule lives in
+        // deployMeshCreateOrUpdate (one copy, was three).
+        const { deployMeshCreateOrUpdate } = await import(
+            '@/features/mesh/services/meshRedeploy'
+        );
+        const meshResult = await deployMeshCreateOrUpdate(
             meshPath,
-            commandManager,
             context.logger,
             (_msg, sub) => progress.report({ message: sub || _msg }),
-            existingMeshId,
         );
 
         if (meshResult.success && meshResult.data?.endpoint) {

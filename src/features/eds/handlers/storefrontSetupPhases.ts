@@ -41,6 +41,7 @@ import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarm
 import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontSetupProgressPayload, StorefrontSetupProgressPhase } from '@/types/webviewPayloads';
 
 // Public type re-exports
 export type { StorefrontSetupResult } from './storefrontSetupTypes';
@@ -105,7 +106,10 @@ function buildPipelineProgressCallback(
     context: HandlerContext,
 ): (info: PipelineProgressInfo) => void {
     return (info) => {
-        const mapping: Record<string, { phase: string; progress: number }> = {
+        const mapping: Record<
+            string,
+            { phase: StorefrontSetupProgressPhase; progress: number }
+        > = {
             'content-clear': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_CLEAR },
             'content-copy': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_COPY_START },
             'block-library': { phase: 'block-library', progress: PIPELINE_PROGRESS.BLOCK_LIBRARY },
@@ -118,8 +122,11 @@ function buildPipelineProgressCallback(
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
+        // Fallback for an operation the mapping doesn't know. It used to push
+        // the raw operation string as the phase — a value outside the phase
+        // vocabulary that the webview's bookkeeping silently ignored.
         const m = mapping[info.operation] ?? {
-            phase: info.operation,
+            phase: 'content' as const,
             progress: PIPELINE_PROGRESS.CONTENT_COPY_START,
         };
         let progress = m.progress;
@@ -138,7 +145,7 @@ function buildPipelineProgressCallback(
             message: info.message,
             subMessage: info.subMessage,
             progress,
-        });
+        } satisfies StorefrontSetupProgressPayload);
     };
 }
 
@@ -174,7 +181,6 @@ async function runConfigCodeSyncPhases(
                 edsConfig,
                 services,
                 repoInfo,
-                signal,
             );
             if (phase3Result) {
                 return {
@@ -193,16 +199,16 @@ async function runConfigCodeSyncPhases(
                     phase: 'auth-recovery',
                     message: 'DA.live session expired. Please re-authenticate to continue.',
                     progress: -1,
-                }),
+                } satisfies StorefrontSetupProgressPayload),
             onBeforeRetry: async () => {
             context.logger.info(
                 '[Storefront Setup] DA.live re-authenticated, resuming configuration',
             );
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'code-sync',
-                message: 'Resuming site configuration...',
+                message: 'Resuming setup...',
                 progress: 40,
-            });
+            } satisfies StorefrontSetupProgressPayload);
             },
         },
     );
@@ -302,14 +308,14 @@ async function runEdsPipelineWithRecovery(
                     phase: 'auth-recovery',
                     message: 'DA.live session expired. Please re-authenticate to continue.',
                     progress: -1,
-                }),
+                } satisfies StorefrontSetupProgressPayload),
             onBeforeRetry: async () => {
             logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'content',
                 message: 'Resuming content copy...',
                 progress: 50,
-            });
+            } satisfies StorefrontSetupProgressPayload);
             },
         },
     );
@@ -455,7 +461,7 @@ export async function executeStorefrontSetupPhases(
                     ? 'Site is live!'
                     : 'Content publish complete',
             progress: 100,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         return { success: true, ...repoInfo };
     } catch (error) {
         logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);

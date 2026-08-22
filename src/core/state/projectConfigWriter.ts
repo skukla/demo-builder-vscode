@@ -155,6 +155,9 @@ export class ProjectConfigWriter {
             // The manifest is the single source of truth
             const manifest: Record<string, unknown> = {
                 name: project.name,
+                // Only when set. Writing `title: undefined` would add a null key
+                // to every legacy manifest on first save for no gain.
+                ...(project.title ? { title: project.title } : {}),
                 version: '1.0.0',
                 // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
                 created: (project.created instanceof Date

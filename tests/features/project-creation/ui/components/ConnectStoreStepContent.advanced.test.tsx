@@ -619,7 +619,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 />,
             );
 
-            expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+            expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
         });
 

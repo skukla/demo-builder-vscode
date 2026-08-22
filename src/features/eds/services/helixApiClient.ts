@@ -2,16 +2,24 @@
  * Helix Admin API client (vscode-free).
  *
  * Pure HTTP wrapper for the subset of admin.hlx.page endpoints the storefront
- * sync flow needs (preview, publish, preview+publish). Exists so both the
- * extension process (via `helixService.ts`) and the standalone MCP server
- * process (via `mcp-server.ts`) can drive Helix without dragging in `vscode`.
+ * sync flow needs (preview, publish, preview+publish, unpublish). Used by the
+ * MCP server and `storefrontSyncService`.
+ *
+ * SINGLE SOURCE for Helix URL spelling and credentials (2026-08-22
+ * consolidation): `buildPartitionUrl`, `buildPublishHeaders` and
+ * `buildDeleteHeaders` are THE definitions — `helixService` imports them
+ * rather than carrying its own (the two things that drifted twice were
+ * exactly URL spelling and credentials: the DELETE credential in 2026-08-04,
+ * the missing publish `Authorization` found by the spine sweep). Per-call
+ * policy — error mapping, 429/400 retry loops, bulk orchestration, token
+ * discovery — stays with each caller; only the wire spelling lives here.
  *
  * Tokens are passed in by callers — this module does NOT discover or refresh
  * them. The extension obtains tokens through `GitHubTokenService` and the
  * DA.live IMS flow; the MCP server reads them from environment variables.
  */
 
-const HELIX_ADMIN_URL = 'https://admin.hlx.page';
+export const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 const DEFAULT_BRANCH = 'main';
 const DEFAULT_TIMEOUT_MS = 180_000;
 
@@ -34,14 +42,43 @@ export class HelixApiError extends Error {
     }
 }
 
-function normalizeWebPath(p: string): string {
+/**
+ * Canonical Helix path normalization: leading slash added, trailing slash
+ * trimmed (except root) — the trim rule came from helixService's copy when
+ * the two were unified.
+ */
+export function normalizeWebPath(p: string): string {
     if (!p) return '/';
-    return p.startsWith('/') ? p : `/${p}`;
+    const withLead = p.startsWith('/') ? p : `/${p}`;
+    return withLead.endsWith('/') && withLead !== '/' ? withLead.slice(0, -1) : withLead;
 }
 
-/** PUBLISH/PREVIEW credential: the GitHub token, plus the content-source token. */
-function buildHeaders(tokens: HelixTokens): Record<string, string> {
+/** The Helix Admin partitions this codebase addresses. */
+export type HelixPartition = 'preview' | 'live' | 'code' | 'status' | 'cache';
+
+/** THE spelling of a partition URL — every Helix caller builds through here. */
+export function buildPartitionUrl(
+    partition: HelixPartition,
+    org: string,
+    site: string,
+    branch: string,
+    path: string,
+): string {
+    return `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${normalizeWebPath(path)}`;
+}
+
+/**
+ * PUBLISH/PREVIEW credential. Authorization FIRST and load-bearing: once a
+ * site carries any `access.admin` role — which the setup pipeline itself
+ * grants — the admin API closes to callers without an accepted admin
+ * identity, and the GitHub token is not one. This builder lacked the header
+ * until the 2026-08-22 consolidation, so MCP-driven publishes failed on
+ * exactly the protected sites the extension had just created (same drift
+ * class as the DELETE credential, 2026-08-04).
+ */
+export function buildPublishHeaders(tokens: HelixTokens): Record<string, string> {
     return {
+        Authorization: `Bearer ${tokens.daLiveToken}`,
         'x-auth-token': tokens.githubToken,
         'x-content-source-authorization': `Bearer ${tokens.daLiveToken}`,
     };
@@ -64,7 +101,7 @@ function buildHeaders(tokens: HelixTokens): Record<string, string> {
  * publish token is withheld rather than sent alongside — the matrix says it 403s,
  * and sending both would leave it ambiguous which credential Helix honoured.
  */
-function buildDeleteHeaders(tokens: HelixTokens): Record<string, string> {
+export function buildDeleteHeaders(tokens: Pick<HelixTokens, 'daLiveToken'>): Record<string, string> {
     return { Authorization: `Bearer ${tokens.daLiveToken}` };
 }
 
@@ -76,7 +113,7 @@ async function callHelix(
 ): Promise<void> {
     const response = await fetch(url, {
         method: 'POST',
-        headers: buildHeaders(tokens),
+        headers: buildPublishHeaders(tokens),
         signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
 
@@ -108,7 +145,7 @@ export async function previewPage(
     tokens: HelixTokens,
     options?: HelixApiOptions,
 ): Promise<void> {
-    const url = `${HELIX_ADMIN_URL}/preview/${org}/${site}/${branch}${normalizeWebPath(path)}`;
+    const url = buildPartitionUrl('preview', org, site, branch, path);
     await callHelix(url, tokens, 'Preview', options);
 }
 
@@ -120,7 +157,7 @@ export async function publishPage(
     tokens: HelixTokens,
     options?: HelixApiOptions,
 ): Promise<void> {
-    const url = `${HELIX_ADMIN_URL}/live/${org}/${site}/${branch}${normalizeWebPath(path)}`;
+    const url = buildPartitionUrl('live', org, site, branch, path);
     await callHelix(url, tokens, 'Publish', options);
 }
 
@@ -159,7 +196,7 @@ async function deleteHelixPartition(
     tokens: HelixTokens,
     options: HelixApiOptions = {},
 ): Promise<boolean> {
-    const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${normalizeWebPath(path)}`;
+    const url = buildPartitionUrl(partition, org, site, branch, path);
     const response = await fetch(url, {
         method: 'DELETE',
         headers: buildDeleteHeaders(tokens),

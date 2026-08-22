@@ -3,7 +3,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
-import { buildProjectConfig, ImportedSettings } from '../wizard/wizardHelpers';
+import { buildProjectConfig } from '../wizard/wizardHelpers';
 import { isProgressActive } from './projectCreationPredicates';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -14,9 +14,14 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import { DemoPackage } from '@/types/demoPackages';
 import { WizardState } from '@/types/webview';
+import type { CreationFailedPayload } from '@/types/webviewPayloads';
+import type { ImportedSettings } from '@/types/wizard';
 
 /** Extract GitHub owner/repo from EDS config for GitHub App check */
-function extractGitHubRepoInfo(edsConfig: WizardState['edsConfig']): { owner?: string; repo?: string } {
+function extractGitHubRepoInfo(edsConfig: WizardState['edsConfig']): {
+    owner?: string;
+    repo?: string;
+} {
     if (!edsConfig) return {};
 
     const authenticatedUser = edsConfig.githubAuth?.user?.login;
@@ -35,9 +40,7 @@ function extractGitHubRepoInfo(edsConfig: WizardState['edsConfig']): { owner?: s
 }
 
 /** Success completion content */
-function SuccessContent({ isOpeningProject }: {
-    isOpeningProject: boolean;
-}) {
+function SuccessContent({ isOpeningProject }: { isOpeningProject: boolean }) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
@@ -52,7 +55,9 @@ function SuccessContent({ isOpeningProject }: {
                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">Project Created Successfully</Text>
-                    <Text UNSAFE_className="text-sm text-gray-600 text-center">Click below to view your projects</Text>
+                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                        Click below to view your projects
+                    </Text>
                 </Flex>
             </Flex>
         </CenteredFeedbackContainer>
@@ -60,7 +65,10 @@ function SuccessContent({ isOpeningProject }: {
 }
 
 /** Error/cancelled state content */
-function ErrorContent({ isCancelled, errorMessage }: {
+function ErrorContent({
+    isCancelled,
+    errorMessage,
+}: {
     isCancelled: boolean;
     errorMessage?: string;
 }) {
@@ -99,15 +107,17 @@ function handleCreationFailedMessage(
     setGitHubAppInstallData: (data: GitHubAppInstallData | null) => void,
     setPhase: (phase: StepPhase) => void,
 ): void {
-    const failedData = data as {
-        errorType?: string;
-        errorDetails?: { owner?: string; repo?: string; installUrl?: string };
-    };
+    const failedData = data as Partial<CreationFailedPayload>;
 
     if (failedData.errorType === 'GITHUB_APP_NOT_INSTALLED' && failedData.errorDetails) {
         const { owner, repo, installUrl } = failedData.errorDetails;
         if (owner && repo && installUrl) {
-            setGitHubAppInstallData({ owner, repo, installUrl, message: 'GitHub App installation required for code sync' });
+            setGitHubAppInstallData({
+                owner,
+                repo,
+                installUrl,
+                message: 'GitHub App installation required for code sync',
+            });
             setPhase('github-app-install');
         }
     }
@@ -126,8 +136,14 @@ function StepContentArea(props: {
     onGitHubAppInstalled: () => void;
 }) {
     const {
-        phase, progress, isActive, isCompleted, isOpeningProject,
-        showGenericError, isCancelled, githubAppInstallData,
+        phase,
+        progress,
+        isActive,
+        isCompleted,
+        isOpeningProject,
+        showGenericError,
+        isCancelled,
+        githubAppInstallData,
         onGitHubAppInstalled,
     } = props;
 
@@ -167,7 +183,11 @@ function StepContentArea(props: {
     if (phase === 'creating' && !progress) {
         return (
             <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Initializing" subMessage="Preparing to create your project..." />
+                <LoadingDisplay
+                    size="L"
+                    message="Initializing"
+                    subMessage="Preparing to create your project..."
+                />
             </CenteredFeedbackContainer>
         );
     }
@@ -175,9 +195,28 @@ function StepContentArea(props: {
     return null;
 }
 
-/** Footer area - renders the appropriate buttons for each phase */
-function StepFooterArea(props: {
+/**
+ * Footer area - renders the appropriate buttons for each phase.
+ *
+ * Exported for tests. The wizard's shared footer is hidden on this step
+ * (`shouldShowWizardFooter`), so whatever this returns IS the footer — and a
+ * state it does not cover is a state with no footer at all.
+ */
+export function StepFooterArea(props: {
     isActive: boolean;
+    /**
+     * `phase === 'creating'` with no progress event yet — the window between
+     * mounting this step and the first message from the extension.
+     *
+     * Its own footer covered every state EXCEPT this one, and the shared wizard
+     * footer is already gone by then (`shouldShowWizardFooter` hides on
+     * `create-project`, because this step draws its own). So the footer vanished
+     * for a beat on the way in from Publish Storefront — reported 2026-08-20.
+     *
+     * Cannot collide with the error branch below: that needs `progress.error`,
+     * so progress exists and this is false.
+     */
+    isStarting: boolean;
     isGitHubAppInstall: boolean;
     isCompleted: boolean;
     isOpeningProject: boolean;
@@ -189,16 +228,29 @@ function StepFooterArea(props: {
     onOpenProject: () => void;
 }) {
     const {
-        isActive, isGitHubAppInstall, isCompleted,
-        isOpeningProject, showGenericError, isCancelling, hasError,
-        onBack, onCancel, onOpenProject,
+        isActive,
+        isStarting,
+        isGitHubAppInstall,
+        isCompleted,
+        isOpeningProject,
+        showGenericError,
+        isCancelling,
+        hasError,
+        onBack,
+        onCancel,
+        onOpenProject,
     } = props;
 
-    if (isActive || isGitHubAppInstall) {
+    if (isActive || isStarting || isGitHubAppInstall) {
         return (
             <PageFooter
                 leftContent={
-                    <Button variant="secondary" onPress={onCancel} isQuiet isDisabled={isCancelling}>
+                    <Button
+                        variant="secondary"
+                        onPress={onCancel}
+                        isQuiet
+                        isDisabled={isCancelling}
+                    >
                         {getCancelButtonText(false, isCancelling)}
                     </Button>
                 }
@@ -210,7 +262,13 @@ function StepFooterArea(props: {
     if (isCompleted && !hasError) {
         return (
             <PageFooter
-                rightContent={!isOpeningProject && <Button variant="cta" onPress={onOpenProject}>View Projects</Button>}
+                rightContent={
+                    !isOpeningProject && (
+                        <Button variant="cta" onPress={onOpenProject}>
+                            View Projects
+                        </Button>
+                    )
+                }
                 constrainWidth={true}
             />
         );
@@ -219,7 +277,11 @@ function StepFooterArea(props: {
     if (showGenericError) {
         return (
             <PageFooter
-                leftContent={<Button variant="secondary" onPress={onBack} isQuiet>Back</Button>}
+                leftContent={
+                    <Button variant="secondary" onPress={onBack} isQuiet>
+                        Back
+                    </Button>
+                }
                 constrainWidth={true}
             />
         );
@@ -245,12 +307,19 @@ interface GitHubAppInstallData {
     message: string;
 }
 
-export function ProjectCreationStep({ state, onBack, importedSettings, packages }: ProjectCreationStepProps) {
+export function ProjectCreationStep({
+    state,
+    onBack,
+    importedSettings,
+    packages,
+}: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
     const [phase, setPhase] = useState<StepPhase>('creating');
-    const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(null);
+    const [githubAppInstallData, setGitHubAppInstallData] = useState<GitHubAppInstallData | null>(
+        null,
+    );
 
     const needsGitHubAppCheck = useMemo(() => {
         const stackId = state.selectedStack;
@@ -371,11 +440,12 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
     const isCancelled = phase === 'cancelled';
     const isFailed = phase === 'failed';
     const isCompleted = phase === 'completed';
-    const isActive = phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);
+    const isActive =
+        phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);
 
     // Helper: Should show generic error UI (not the github-app-install dialog)
-    const showGenericError = (progress?.error || isCancelled || isFailed) &&
-        phase !== 'github-app-install';
+    const showGenericError =
+        (progress?.error || isCancelled || isFailed) && phase !== 'github-app-install';
     const isGitHubAppInstall = phase === 'github-app-install';
 
     return (
@@ -398,6 +468,9 @@ export function ProjectCreationStep({ state, onBack, importedSettings, packages 
 
             <StepFooterArea
                 isActive={isActive}
+                // The body already treats this window as its own state
+                // (`phase === 'creating' && !progress`); the footer now agrees.
+                isStarting={phase === 'creating' && !progress}
                 isGitHubAppInstall={isGitHubAppInstall}
                 isCompleted={isCompleted}
                 isOpeningProject={isOpeningProject}

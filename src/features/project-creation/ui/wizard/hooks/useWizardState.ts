@@ -6,22 +6,20 @@ import {
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
-    ImportedSettings,
-    EditProjectConfig,
-    WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow';
-import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
+import type { GetComponentsDataResponse } from '@/types/webviewRequests';
+import type { EditProjectConfig, ImportedSettings , WizardStepDefinition } from '@/types/wizard';
 
 const log = webviewLogger('useWizardState');
 
 interface UseWizardStateProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: WizardStepConfigWithRequirements[];
+    wizardSteps?: WizardStepDefinition[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig;
@@ -67,11 +65,9 @@ interface UseWizardStateReturn {
     /** Set confirming selection state */
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
     /** Full component data with envVars from backend */
-    componentsData: { success: boolean; type: string; data: ComponentsData } | null;
+    componentsData: GetComponentsDataResponse | null;
     /** Set components data */
-    setComponentsData: React.Dispatch<
-        React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>
-    >;
+    setComponentsData: React.Dispatch<React.SetStateAction<GetComponentsDataResponse | null>>;
 }
 
 /**
@@ -98,7 +94,8 @@ function buildEditModeEdsConfig(
             ? {
                   isAuthenticated: false,
                   isChecking: true,
-                  user: { login: owner },
+                  // Seed with the login only; the auth check fills the rest.
+                  user: { login: owner, email: null, name: null, avatarUrl: null },
               }
             : undefined,
         daLiveAuth: hasDaLive
@@ -149,7 +146,8 @@ function buildImportModeEdsConfig(
         githubAuth: hasGithub
             ? {
                   isAuthenticated: true,
-                  user: { login: owner },
+                  // Seed with the login only; the auth check fills the rest.
+                  user: { login: owner, email: null, name: null, avatarUrl: null },
               }
             : undefined,
         daLiveAuth: hasDaLive
@@ -251,6 +249,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
     const editSettings = editProject.settings;
     log.info('Initializing wizard in edit mode', {
         projectName: editProject.projectName,
+        projectTitle: editProject.projectTitle,
         projectPath: editProject.projectPath,
         hasSelections: !!editSettings.selections,
         hasAdobe: !!editSettings.adobe,
@@ -274,6 +273,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
     return {
         currentStep: firstStep,
         projectName: editProject.projectName,
+        projectTitle: editProject.projectTitle,
         wizardMode: 'edit',
         editProjectPath: editProject.projectPath,
         editOriginalName: editProject.projectName,
@@ -304,7 +304,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
  * Compute initial state based on mode (edit vs create) and any imported settings
  */
 function computeInitialState(
-    wizardSteps: { id: string; name: string; enabled: boolean }[] | undefined,
+    wizardSteps: WizardStepDefinition[] | undefined,
     editProject: EditProjectConfig | undefined,
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,
@@ -495,11 +495,7 @@ export function useWizardState({
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
 
     // Component data from backend
-    const [componentsData, setComponentsData] = useState<{
-        success: boolean;
-        type: string;
-        data: ComponentsData;
-    } | null>(null);
+    const [componentsData, setComponentsData] = useState<GetComponentsDataResponse | null>(null);
 
     // Convenience update function
     // IMPORTANT: Must be memoized to prevent infinite loops in child components

@@ -19,9 +19,9 @@ import {
     isMeshBusy,
     isMeshDeploying,
     type AiReadyState,
-    type MeshStatus,
+    type MeshStatusUpdatePayload,
     type OrgCheckState,
-    type ProjectStatus,
+    type DashboardStatusUpdatePayload,
     type StatusDisplay,
     type UseDashboardStatusProps,
     type UseDashboardStatusReturn,
@@ -43,6 +43,7 @@ import type {
 } from '@/features/dashboard/services/onOpenChecks';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 
 // Public API — everything consumers imported from this module before the
 // decomposition still resolves here.
@@ -52,7 +53,7 @@ export type {
     EdsStorefrontStatus,
     MeshStatus,
     OrgCheckState,
-    ProjectStatus,
+    DashboardStatusUpdatePayload,
     StatusColor,
     StatusDisplay,
     StatusRemedy,
@@ -99,9 +100,9 @@ export function useDashboardStatus(
     props: UseDashboardStatusProps = {},
     isEds = false,
 ): UseDashboardStatusReturn {
-    const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext } = props;
+    const { hasMesh, initialEdsStorefrontStatus, hasAdobeContext } = props;
 
-    const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
+    const [projectStatus, setProjectStatus] = useState<DashboardStatusUpdatePayload | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
@@ -149,7 +150,7 @@ export function useDashboardStatus(
         }
 
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
-            const projectData = data as ProjectStatus;
+            const projectData = data as DashboardStatusUpdatePayload;
             // Merge status update, preserving mesh status only during active deployment
             // AND only if the new status is a transient 'checking' state.
             // This prevents update checks from resetting mesh button state mid-deployment
@@ -174,7 +175,7 @@ export function useDashboardStatus(
         });
 
         const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
-            const meshData = data as { status: MeshStatus; message?: string; endpoint?: string };
+            const meshData = data as MeshStatusUpdatePayload;
             setProjectStatus((prev) =>
                 prev
                     ? {
@@ -218,11 +219,7 @@ export function useDashboardStatus(
         // modal renders this live via LoadingDisplay; no cross-talk with the
         // wizard because the wizard is a separate webview.
         const unsubscribeProgress = webviewClient.onMessage('creationProgress', (data: unknown) => {
-            const payload = data as {
-                currentOperation?: string;
-                progress?: number;
-                message?: string;
-            };
+            const payload = data as Partial<CreationProgressPayload>;
             if (!payload?.currentOperation) return;
             setAiRegenProgress({
                 currentOperation: payload.currentOperation,
@@ -394,13 +391,11 @@ export function useDashboardStatus(
     ]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
-        // Use initialMeshStatus from init payload to avoid loading flash
-        // Translate persisted values: 'stale' → 'config-changed' (dashboard terminology)
-        const effectiveMeshStatus =
-            meshStatus ||
-            (initialMeshStatus === 'stale'
-                ? 'config-changed'
-                : (initialMeshStatus as MeshStatus | undefined));
+        // No init-payload seed: the first statusUpdate (which is also what
+        // unblocks the surfaces that render this) already carries the DERIVED
+        // mesh status — auth/deploying/error aware, unlike the persisted
+        // summary the retired `initialMeshStatus` seed replayed.
+        const effectiveMeshStatus = meshStatus;
 
         if (!effectiveMeshStatus) {
             // If we know hasMesh, use it
@@ -431,7 +426,7 @@ export function useDashboardStatus(
         }
 
         return { color: 'gray', text: 'Unknown' };
-    }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
+    }, [meshStatus, meshMessage, hasMesh, projectStatus]);
 
     // AI Ready badge — pure derivation, see deriveAiReadyState for the color
     // semantics and precedence order.

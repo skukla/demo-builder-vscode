@@ -161,7 +161,7 @@ const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 const RESET = 'Reset Project';
-const REMOVE = 'Remove Sample Data';
+const REMOVE = 'Remove Datapack';
 
 const testPackages = [
     {
@@ -267,7 +267,7 @@ describe('resetEdsProjectWithUI — sample data', () => {
 
         const second = (vscode.window.showWarningMessage as jest.Mock).mock.calls[1];
         expect(String(second[0])).toMatch(/bodea/);
-        expect(String(second[0])).toMatch(/sample data/i);
+        expect(String(second[0])).toMatch(/datapack/i);
     });
 
     /** Rule 2 — the important one. */

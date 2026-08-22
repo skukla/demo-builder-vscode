@@ -130,7 +130,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             createMockHandlerContext() as HandlerContext,
             createMockRegistry(),
             project,
-            {}
+            { projectName: 'test-project' }
         );
 
         return {

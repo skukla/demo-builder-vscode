@@ -9,15 +9,7 @@
  * @module features/eds/ui/steps/repoSelectionInline.helpers
  */
 
-import {
-    Button,
-    Checkbox,
-    Flex,
-    Heading,
-    Text,
-    TextField,
-    View,
-} from '@adobe/react-spectrum';
+import { Button, Checkbox, Flex, Heading, Text, TextField, View } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import React from 'react';
 import {
@@ -26,12 +18,14 @@ import {
     buildCodeSyncInstallSteps,
     buildCodeSyncInstallSummary,
 } from '../helpers/codeSyncInstallContent';
+import { InlineNotice } from '@/core/ui/components/feedback';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { type ElapsedStage, useElapsedStage } from '@/core/ui/hooks/useElapsedStage';
 import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
@@ -170,6 +164,15 @@ export function computeRepoValid(
     }
     if (!selectedRepo || isLoading) return false;
 
+    // A non-`main` default branch does NOT block. It is surfaced as a warning at
+    // the point of choice instead (`RepoSelectionInline`), because the reason to
+    // care has moved three times in one session and a block needs a settled
+    // justification that a warning does not. What is settled: our seven
+    // `main--{repo}--{owner}` URL builders and the reset's
+    // `git clone --branch main` both assume it, so such a repo will not work —
+    // but the user, not our inference, gets to make that call.
+    // See `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md`.
+
     // A populated repo that is not a storefront cannot complete setup: the
     // steps that need scripts/scripts.js and scripts/delayed.js skip
     // themselves, and the run still reports Complete. Reset is the remedy, so
@@ -276,35 +279,47 @@ export function shouldShowAppStatus(
 export function resolveCodeSyncView(
     status: GitHubAppStatus,
     isRechecking: boolean,
-): { kind: 'checking' | 'verified' | 'needs-install' | 'unverifiable' } {
+    siteNotPossibleYet = false,
+): { kind: 'checking' | 'verified' | 'needs-install' | 'after-setup' } {
     if (status.isChecking || isRechecking) return { kind: 'checking' };
-    if (status.isInstalled === true) return { kind: 'verified' };
 
-    // Not yet asked. Never "missing" — we have no answer to report.
+    // The two DEFINITIVE shapes, both read off the body's `code.status` on an
+    // outer 200 (`githubAppService.checkHelixStatus`). Only these are answers.
+    if (status.isInstalled === true) return { kind: 'verified' };
+    if (status.codeStatus === 404) return { kind: 'needs-install' };
+
+    // The probe was SKIPPED, so `isInstalled` is still null and the `checking`
+    // branch below would spin forever. Ordered ahead of it for that reason.
+    if (siteNotPossibleYet) return { kind: 'after-setup' };
+
+    // Not yet asked. Never "missing", and never "after setup" either — we have
+    // no answer to report because we have not finished asking.
     if (status.isInstalled === null) return { kind: 'checking' };
 
-    // Undetermined means the check never resolved — a refused credential or an
-    // unreachable service — and that says NOTHING about the app. Reporting it as
-    // missing sends the user to reinstall one that is already there, which is
-    // exactly what the old "Registering..." row did.
+    // EVERYTHING else means Adobe has not told us anything about the App, and
+    // at this point in the flow it structurally cannot.
     //
-    // Read the HANDLER's verdict, not the absence of a number. It sends
-    // `installUrl` when it is confident enough to offer the install and withholds
-    // it when it is not. `githubAppService` warns about the shortcut this used to
-    // take: `httpNotFound` is the only signal meaning "Helix has never heard of
-    // this repo", and callers "must not re-derive it from codeStatus === undefined,
-    // which is equally true of a 401/403/5xx".
+    // In Helix 5 a "site" is a Configuration Service record, created during
+    // setup. `admin.hlx.page/status` reports on the site, so before that record
+    // exists it answers `404 no such site` — App installed or not, storefront
+    // content or not. Measured unauthenticated 2026-08-20, where 401 means the
+    // site exists (auth is checked before existence) and 404 means it does not:
     //
-    // That shortcut is why a brand-new repository — Helix 404, no `code.status` to
-    // report, install genuinely required — showed "Couldn't verify" and offered
-    // nothing but a re-check that could never come good.
-    if (status.undetermined) return { kind: 'unverifiable' };
-
-    // Positive evidence either way: the handler offered somewhere to install, or
-    // Helix reported an actual code.status. With neither, claim nothing.
-    if (status.installUrl || status.codeStatus !== undefined) return { kind: 'needs-install' };
-
-    return { kind: 'unverifiable' };
+    //   skukla/kukla-bodea       404   App installed, full template content
+    //   skukla/kukla-citisignal  401
+    //   skukla/demo-builder-test 401   registered, nothing published
+    //   adobe/helix-website      401
+    //
+    // Four repos with the App; three have sites. So storefront content is not
+    // the condition either — this view was first gated on readiness, and a repo
+    // that had JUST been reset to the template still landed here.
+    //
+    // This replaces `cannot-verify`, which showed install steps and a "Check
+    // Again". Both were dead ends: the install cannot create a site, and the
+    // re-check cannot succeed, so pressing it returned to the same screen every
+    // time. `undetermined` (a refused credential) lands here too — also not
+    // something an install fixes, and also resolved by checking later.
+    return { kind: 'after-setup' };
 }
 
 export function computeCodeSyncValid(
@@ -329,7 +344,18 @@ export function computeCodeSyncValid(
     // refuses — the exact bug class this check was broken by before.
     const definitivelyMissing =
         githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === 404;
-    return !definitivelyMissing;
+    if (definitivelyMissing) return false;
+
+    // An INFERRED missing App does not gate. It was gated on briefly (an
+    // acknowledgement click), and the only way to make that honest was a line
+    // saying why Continue was held — which turned out to be one more paragraph
+    // on a screen that already said the same thing three ways. The screen IS the
+    // encouragement: it is titled "Make sure AEM Code Sync is installed", lists
+    // the steps, and offers the button. A forced click on top of an inference we
+    // know is unreliable bought friction, not safety.
+    //
+    // The DEFINITIVE case above still blocks, because that one is measured.
+    return true;
 }
 
 /**
@@ -389,6 +415,33 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * install steps grow past it and scroll. One state centred and the next
  * top-aligned is the jump reported as "the message is too high in the web view".
  */
+/**
+ * Copy for a Code Sync check that outlives a glance.
+ *
+ * Two different checks render this same view. The selection-time probe passes
+ * `skipTrigger` and answers in about a second. "Check Again"
+ * (`pollGitHubAppInstallation`) does NOT, so when Helix has never heard of the
+ * repo the handler TRIGGERS a real code sync and polls for it — bounded by
+ * `TIMEOUTS.LONG` over 30 attempts in `checkGitHubAppHandler.triggerAndWaitForCodeSync`,
+ * i.e. up to three minutes. That path previously showed one static line for its
+ * whole duration, so the user with the most to wait for got the least evidence
+ * anything was happening.
+ *
+ * The copy hedges on purpose. From the webview we cannot see WHICH path the
+ * handler took — only that it has not answered yet. Past ~6s the trigger path is
+ * much the likelier one, so "may be" is the strongest claim the evidence carries.
+ * The three-minute figure is read from the timeout above, not estimated.
+ */
+export const CODE_SYNC_CHECK_STAGES: ElapsedStage[] = [
+    { afterMs: 6000, message: 'Still waiting on Adobe\u2026' },
+    {
+        afterMs: 20000,
+        message:
+            'Adobe may be running a first-time sync for this repository. ' +
+            'That can take up to three minutes.',
+    },
+];
+
 export function CodeSyncStatusView({
     createdRepo,
     selectedRepoFullName,
@@ -397,6 +450,7 @@ export function CodeSyncStatusView({
     recheckMessage,
     onCheckAgain,
     onOpenInstallPage,
+    siteNotPossibleYet = false,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -407,8 +461,17 @@ export function CodeSyncStatusView({
     recheckMessage: string;
     onCheckAgain: () => void;
     onOpenInstallPage: () => void;
+    /**
+     * Skip the probe entirely: we already know Adobe has no site for this repo,
+     * so asking costs a round trip to be told nothing. Purely an optimisation
+     * now — the view lands on `after-setup` either way. See
+     * {@link resolveCodeSyncView}.
+     */
+    siteNotPossibleYet?: boolean;
 }): React.ReactElement {
-    const view = resolveCodeSyncView(status, isRechecking);
+    const view = resolveCodeSyncView(status, isRechecking, siteNotPossibleYet);
+    // Unconditional: every branch below returns, so this must precede them all.
+    const longWait = useElapsedStage(view.kind === 'checking', CODE_SYNC_CHECK_STAGES);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
     const owner = createdRepo?.owner ?? fallbackOwner;
     const repo = createdRepo?.name ?? fallbackRepo;
@@ -418,8 +481,14 @@ export function CodeSyncStatusView({
             <CenteredFeedbackContainer fill>
                 <LoadingDisplay
                     size="L"
-                    message="Checking AEM Code Sync"
-                    subMessage={recheckMessage || `Verifying ${owner}/${repo}...`}
+                    message="Checking AEM Code Sync..."
+                    // A caller-supplied line is always more specific than an
+                    // elapsed-time guess -- the retry loop's "attempt 2 of 5" must
+                    // not be overwritten by it.
+                    subMessage={
+                        recheckMessage || longWait || `Verifying ${owner}/${repo}...`
+                    }
+                    helperText="This may take a minute after a fresh install"
                 />
             </CenteredFeedbackContainer>
         );
@@ -429,6 +498,34 @@ export function CodeSyncStatusView({
     // was centered, so the pane's content jumped to the top the moment the check
     // finished — the same view, in a different place, for no reason the user can
     // see. `CenteredFeedbackContainer` is the house treatment for exactly this.
+    if (view.kind === 'after-setup') {
+        return (
+            <CenteredFeedbackContainer fill>
+                <StatusDisplay
+                    variant="info"
+                    title="Code Sync is checked after setup"
+                    height="auto"
+                    actions={[
+                        {
+                            label: CODE_SYNC_INSTALL_ACTION,
+                            variant: 'secondary',
+                            onPress: onOpenInstallPage,
+                        },
+                    ]}
+                >
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        {/* No longer "because it isn't a storefront": a repo reset to
+                            the template, with all 3342 files on main, still answers
+                            404. The site is a Configuration Service record created
+                            during setup, and nothing before that creates one. */}
+                        {`Adobe doesn't have a site for ${owner}/${repo} yet — setup ` +
+                            'creates one, and verifies AEM Code Sync straight afterwards.'}
+                    </Text>
+                </StatusDisplay>
+            </CenteredFeedbackContainer>
+        );
+    }
+
     if (view.kind === 'verified') {
         return (
             <CenteredFeedbackContainer fill>
@@ -440,34 +537,20 @@ export function CodeSyncStatusView({
         );
     }
 
-    if (view.kind === 'unverifiable') {
-        // Distinct from "not installed" ON PURPOSE. Adobe refusing the credential
-        // says nothing about the app, and telling someone to install one that is
-        // already there is the wrong remedy.
-        return (
-            <CenteredFeedbackContainer fill>
-                <StatusDisplay
-                    variant="warning"
-                    title="Couldn't verify AEM Code Sync"
-                    height="auto"
-                    actions={[
-                        { label: CODE_SYNC_RECHECK_ACTION, variant: 'accent', onPress: onCheckAgain },
-                    ]}
-                >
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        Adobe did not answer for {owner}/{repo}. This does not mean the app is
-                        missing — a new repository can take a few minutes to register.
-                    </Text>
-                </StatusDisplay>
-            </CenteredFeedbackContainer>
-        );
-    }
+    // ONE view for every shape of "we cannot tell". Says what we noticed if we
+    // noticed anything, shows the install steps, and always lets the user past —
+    // our signal is a guess here, and a guess must never be a wall.
+    const definitive = view.kind === 'needs-install';
 
     return (
         <CenteredFeedbackContainer fill>
             <StatusDisplay
                 variant="info"
-                title="Install the AEM Code Sync App"
+                title={
+                    definitive
+                        ? 'Install the AEM Code Sync App'
+                        : 'Make sure AEM Code Sync is installed'
+                }
                 height="auto"
                 actions={[
                     {
@@ -475,13 +558,35 @@ export function CodeSyncStatusView({
                         variant: 'accent',
                         onPress: onOpenInstallPage,
                     },
-                    { label: CODE_SYNC_RECHECK_ACTION, variant: 'secondary', onPress: onCheckAgain },
+                    {
+                        label: CODE_SYNC_RECHECK_ACTION,
+                        variant: 'secondary',
+                        onPress: onCheckAgain,
+                    },
                 ]}
             >
-                <NumberedInstructions
-                    description={buildCodeSyncInstallSummary(owner, repo)}
-                    instructions={buildCodeSyncInstallSteps(owner, repo)}
-                />
+                {/* The summary and steps are shared with the mid-run install dialog
+                    and have already been trimmed once; do not pad around them.
+                    Three paragraphs were added here on 2026-08-20 and the screen
+                    became a wall — one repeating what the Repository step had
+                    just said about this repo, two saying in different words what
+                    the title and the buttons already carry.
+
+                    What is left: the title states the ask, the steps say what to
+                    do on GitHub, the buttons do it. The single line below earns
+                    its place only while Continue is held, because a disabled
+                    button with no stated reason is its own bug. */}
+                <NumberedInstructions instructions={buildCodeSyncInstallSteps(owner, repo)} />
+                {/* Below the steps, not above them. This surface centres its title,
+                    and a paragraph directly under it competed with the heading for
+                    the same glance. `GitHubAppInstallDialog` keeps it as the
+                    `description` lead-in because a modal has no centred title to
+                    compete with — the shared COPY is identical either way, which
+                    is the drift `codeSyncInstallContent` guards against. Where a
+                    surface puts it is that surface's call. */}
+                <Text UNSAFE_className="text-sm text-gray-600">
+                    {buildCodeSyncInstallSummary(owner, repo)}
+                </Text>
             </StatusDisplay>
         </CenteredFeedbackContainer>
     );
@@ -603,7 +708,17 @@ export function describeResetOption(
     readiness: RepoReadinessState | undefined,
     resetToTemplate: boolean,
     disabled: boolean,
+    unusable = false,
 ): { checked: boolean; locked: boolean; tone: 'info' | 'warn' | 'none'; message: string } {
+    // Nothing to say while the repo is unusable for a DIFFERENT reason. Its own
+    // notice is already on screen, and "Setup cannot complete without a reset"
+    // would be a false promise here — the reset clones `--branch main`, which is
+    // exactly what this repo does not have. Two amber lines competing, one of
+    // them wrong.
+    if (unusable) {
+        return { checked: false, locked: true, tone: 'none' as const, message: '' };
+    }
+
     if (disabled) return { checked: false, locked: true, tone: 'none', message: '' };
 
     if (readiness?.kind === 'empty') {
@@ -622,8 +737,8 @@ export function describeResetOption(
             locked: false,
             tone: 'warn',
             message:
-                `Missing ${readiness.missing.join(', ')}. `
-                + 'Setup cannot complete without a reset.',
+                `Missing ${readiness.missing.join(', ')}. ` +
+                'Setup cannot complete without a reset.',
         };
     }
 
@@ -645,11 +760,45 @@ export function describeResetOption(
  * the reset because setup cannot otherwise succeed; a real storefront gets the
  * original prompt and warning.
  */
+/**
+ * The non-`main` default-branch notice.
+ *
+ * A NOTICE, not a full-pane `StatusDisplay`: nothing here is fatal and the repo
+ * picker below stays usable. Rendered as a wall once (2026-08-20) and it
+ * swallowed the list while Continue was one checkbox away.
+ *
+ * Returns null when the branch is fine or unknown — unknown is not a fault (a
+ * repo list cached before `defaultBranch` existed carries none).
+ *
+ * @param selectedRepo - The chosen repo, if any
+ * @returns The notice, or null
+ */
+export function DefaultBranchNotice({
+    selectedRepo,
+}: {
+    selectedRepo?: GitHubRepoItem;
+}): React.ReactElement | null {
+    const branch = selectedRepo?.defaultBranch;
+    if (!selectedRepo || !branch || branch === 'main') return null;
+
+    return (
+        <InlineNotice
+            title="This repository uses a different default branch"
+            testId="default-branch-notice"
+        >
+            Demo Builder builds storefronts from <strong>main</strong>, and{' '}
+            {selectedRepo.fullName} defaults to <strong>{branch}</strong>. Rename its default
+            branch to main on GitHub, or choose a different repository.
+        </InlineNotice>
+    );
+}
+
 export function ResetToTemplateOption({
     resetToTemplate,
     onResetToTemplateChange,
     disabled = false,
     readiness,
+    unusable = false,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
@@ -657,11 +806,18 @@ export function ResetToTemplateOption({
     disabled?: boolean;
     /** Undefined while the readiness check is in flight. */
     readiness?: RepoReadinessState;
+    /**
+     * The repo cannot be used for a reason a reset would NOT fix — today, a
+     * non-`main` default branch. Silences this control so the notice above it
+     * is the only thing asking for attention.
+     */
+    unusable?: boolean;
 }): React.ReactElement {
     const { checked, locked, tone, message } = describeResetOption(
         readiness,
         resetToTemplate,
         disabled,
+        unusable,
     );
 
     return (

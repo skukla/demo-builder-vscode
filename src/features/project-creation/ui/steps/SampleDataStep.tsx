@@ -61,7 +61,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     // hook reads a field the envelope has not got, and a guard refusal comes back
     // looking exactly like a success. This step had both bugs: an empty list
     // forever, with no reason shown.
-    const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
+    const { load, value, failure, settled } = useDataInstallerRequest<Page<DatapackSummary>>(
         'find-datapacks',
     );
 
@@ -152,11 +152,15 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         () => load({ includeCommunity: false }),
                         {
                             onOpenSettings: openDataInstallerSettings,
-                            extraDetail: 'You can create this project without sample data.',
+                            extraDetail: 'You can create this project without a datapack.',
                         },
                     )}
                 </CenteredFeedbackContainer>
-            ) : loading ? (
+            ) : !settled ? (
+                // `!settled`, not `loading`: `loading` starts false and the fetch
+                // runs from a useEffect, i.e. after the first paint -- so frame 1
+                // rendered the grid below for one frame before the loader appeared.
+                // Reported as a blip 2026-08-20.
                 // Not an empty grid. A None card over an empty grid states "there
                 // is no sample data" for as long as the fetch takes — the same
                 // false-empty this step showed for its whole broken life.
@@ -166,18 +170,22 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 // alone top-aligns here: it centres via height:100%, and .step-view
                 // above this is a padded block with no height for that to measure.
                 <CenteredFeedbackContainer>
-                    <LoadingDisplay size="L" message="Loading sample data..." />
+                    <LoadingDisplay
+                        size="L"
+                        message="Loading datapacks..."
+                        helperText="This should only take a moment"
+                    />
                 </CenteredFeedbackContainer>
             ) : (
                 <>
                     <SearchField
-                        aria-label="Filter sample data"
-                        placeholder="Filter sample data..."
+                        aria-label="Filter datapacks"
+                        placeholder="Filter datapacks..."
                         value={query}
                         onChange={setQuery}
                         width="100%"
                     />
-                    <div className="sample-data-grid" role="radiogroup" aria-label="Sample data">
+                    <div className="sample-data-grid" role="radiogroup" aria-label="Datapacks">
                         {/* None is the opt-out, not a catalog entry, so no query
                             hides it — filtering it away would leave the group with
                             nothing selectable exactly when the user wants nothing. */}
@@ -197,7 +205,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                     </div>
                     {query && visible.length === 0 ? (
                         <p className="sample-data-note">
-                            No sample data matches “{query}”.
+                            No datapacks match “{query}”.
                         </p>
                     ) : null}
                 </>

@@ -26,17 +26,40 @@ export interface AiMcpsListProps {
     isLoading?: boolean;
 }
 
+/**
+ * Display labels for the servers Demo Builder wires, keyed by the `.mcp.json`
+ * server id (mirrors AiSkillsList's BUNDLE_LABELS). The raw ids
+ * (`commerce-extensibility`, `dropins`) read as config plumbing in a capability
+ * catalog; an id we don't recognise renders as itself rather than a guess.
+ */
+const SERVER_LABELS: Record<string, string> = {
+    'demo-builder': 'Demo Builder',
+    'commerce-extensibility': 'Adobe App Builder',
+    playwright: 'Playwright',
+    dropins: 'Adobe Commerce Dropins',
+};
+
+function labelOf(entry: McpInventoryEntry): string {
+    return SERVER_LABELS[entry.id] ?? entry.id;
+}
+
 /** Format the right-hand side of the row based on inspection status. */
 function summarize(entry: McpInventoryEntry): string {
     if (entry.status === 'timeout') return 'timed out';
-    if (entry.status === 'error') return entry.error ? `error: ${entry.error}` : 'error: inspector failed';
+    if (entry.status === 'error')
+        return entry.error ? `error: ${entry.error}` : 'error: inspector failed';
     const count = entry.tools?.length ?? 0;
     return `${count} ${count === 1 ? 'tool' : 'tools'}`;
 }
 
-export function AiMcpsList({ mcps, hasError = false, isLoading = false }: AiMcpsListProps): React.ReactElement {
+export function AiMcpsList({
+    mcps,
+    hasError = false,
+    isLoading = false,
+}: AiMcpsListProps): React.ReactElement {
+    // Sort by the DISPLAYED label, not the id — the list renders labels.
     const sorted = useMemo(
-        () => [...mcps].sort((a, b) => a.id.localeCompare(b.id)),
+        () => [...mcps].sort((a, b) => labelOf(a).localeCompare(labelOf(b))),
         [mcps],
     );
 
@@ -72,13 +95,13 @@ export function AiMcpsList({ mcps, hasError = false, isLoading = false }: AiMcps
 
     return (
         <Flex direction="column" gap="size-100" data-testid="ai-mcps-list">
-            {sorted.map(entry => (
+            {sorted.map((entry) => (
                 <Text
                     key={entry.id}
                     data-testid={`ai-mcp-${entry.id}`}
                     UNSAFE_className="text-gray-800"
                 >
-                    {entry.id} · {summarize(entry)}
+                    {labelOf(entry)} · {summarize(entry)}
                 </Text>
             ))}
         </Flex>

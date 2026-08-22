@@ -69,7 +69,13 @@ interface UseAsyncDataReturn<T> {
  *
  * return (
  *   <>
- *     {loading && !hasLoadedOnce && <LoadingDisplay />}
+ *     {/* `!hasLoadedOnce`, NOT `loading && !hasLoadedOnce`. `loading` starts
+ *         false and a fetch is kicked off from a useEffect, which React runs
+ *         after the first paint -- so the `loading &&` form is false on frame 1
+ *         and renders the loaded view for a frame first. Two views shipped that
+ *         blip (2026-08-20). Ask whether anything has ARRIVED, not whether a
+ *         request is in flight. *\/}
+ *     {!hasLoadedOnce && <LoadingDisplay />}
  *     {error && <StatusDisplay variant="error" message={error} />}
  *     {projects && <ProjectList items={projects} />}
  *   </>

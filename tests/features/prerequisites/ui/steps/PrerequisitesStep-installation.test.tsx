@@ -135,11 +135,11 @@ describe('PrerequisitesStep - Installation Flow', () => {
         const installButton = screen.getByText('Install');
         await user.click(installButton);
 
-        // Component sends check-prerequisites on mount, then install-prerequisite when button clicked
+        // Component sends check-prerequisites on mount, then install-prerequisite when button clicked.
+        // The handler resolves the target from prereqId alone; the id/name echo
+        // was a pair of dead fields deleted by the 2026-08-21 channel inventory.
         expect(mockPostMessage).toHaveBeenCalledWith('install-prerequisite', {
             prereqId: 0,
-            id: 'docker',
-            name: 'Docker'
         });
         // Verify it was actually called (may not be the first call due to check-prerequisites)
         const installCalls = mockPostMessage.mock.calls.filter(

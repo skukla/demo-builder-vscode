@@ -11,6 +11,7 @@
  */
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
+import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { resolveProjectCredentials } from './commerceCredentialBroker';
 import { DataInstallerWriteClient } from './dataInstallerWriteClient';
 import { watchImportJob } from './importJobRunner';
@@ -54,10 +55,27 @@ const PROGRESS_VERB: Record<SampleDataMode, string> = {
  * 2026-08-17 when that progress line was read as evidence that reset reinstalls
  * data — it does not, and a backlog item was nearly written around the label.
  */
+/**
+ * One live progress update for a sample-data job. Callers compose it for
+ * their surface: the wizard puts the count in the loading title and the
+ * processing types in the detail row (the three-row contract); the reset
+ * notification flattens it to one line.
+ */
+export interface SampleDataProgress {
+    /** 'Installing' or 'Removing' — phrased by the job mode. */
+    verb: string;
+    /** Types finished (success or error). */
+    done: number;
+    /** Total types in the job. */
+    total: number;
+    /** Friendly labels of the types processing RIGHT NOW (often one). */
+    processing: string[];
+}
+
 export function buildSampleDataDeps(
     context: HandlerContext,
     project: SampleDataProject,
-    report: (message: string) => void,
+    report: (progress: SampleDataProgress) => void,
     mode: SampleDataMode = 'install',
 ): SampleDataDeps {
     return {
@@ -99,13 +117,13 @@ export function buildSampleDataDeps(
 
         startImport: async (request) => {
             const client = await writeClient(context);
-            return client.startImport(request as never);
+            return client.startImport(request);
         },
 
         // The Reset workflow's half. Same request, same client, different verb.
         startDelete: async (request) => {
             const client = await writeClient(context);
-            return client.startDelete(request as never);
+            return client.startDelete(request);
         },
 
         /**
@@ -138,11 +156,17 @@ export function buildSampleDataDeps(
         },
 
         onProgress: (perType) => {
-            const done = Object.values(perType).filter(
-                (state) => state === 'success' || state === 'error',
-            ).length;
-            const verb = PROGRESS_VERB[mode];
-            report(`${verb} sample data — ${done} of ${Object.keys(perType).length} types done`);
+            const entries = Object.entries(perType);
+            report({
+                verb: PROGRESS_VERB[mode],
+                done: entries.filter(
+                    ([, state]) => state === 'success' || state === 'error',
+                ).length,
+                total: entries.length,
+                processing: entries
+                    .filter(([, state]) => state === 'processing')
+                    .map(([code]) => dataTypeLabel(code)),
+            });
         },
     };
 }

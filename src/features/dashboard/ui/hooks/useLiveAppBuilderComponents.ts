@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { AppBuilderComponentsSnapshotPayload } from '@/types/webviewPayloads';
 
 /** Module-level stable empty map — avoids a new object ref each render. */
 const EMPTY_COMPONENTS: Record<string, AppBuilderComponentState> = {};
@@ -42,7 +43,7 @@ export function useLiveAppBuilderComponents(
 
     useEffect(() => {
         return webviewClient.onMessage('appBuilderComponentsSnapshot', (data: unknown) => {
-            const payload = data as { components?: Record<string, AppBuilderComponentState> };
+            const payload = data as Partial<AppBuilderComponentsSnapshotPayload>;
             // A malformed push must never blank the grid.
             if (payload?.components) {
                 setComponents(payload.components);

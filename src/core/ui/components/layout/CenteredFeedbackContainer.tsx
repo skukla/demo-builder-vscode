@@ -31,6 +31,19 @@ export interface CenteredFeedbackContainerProps {
      *
      * The parent has to have a resolvable height for this to do anything — a
      * percentage measures against the nearest definite ancestor.
+     *
+     * Which is why this ALSO grows, via `.centered-feedback--fill`. Spectrum's
+     * `Flex` accepts container props only and DROPS a `flex` item prop without
+     * complaint — the rendered style carried no `flex-grow` at all, so the first
+     * attempt at this fix was a silent no-op that every existing test agreed
+     * with. `minHeight: '100%'` alone was not
+     * enough inside `.step-view-anim`: that wrapper carries `min-height: 100%`
+     * but its own HEIGHT stays content-driven, so a percentage measured against
+     * it is indefinite and collapses. The wrapper's CSS comment says a body
+     * "can opt in with flex-1" — this is that opt-in, made automatic, because
+     * every caller passing `fill` is asking for exactly it. Growing as a flex
+     * item does not cap anything: taller content still grows and the scroll
+     * stays on the pane.
      */
     fill?: boolean;
 }
@@ -83,6 +96,7 @@ const CenteredFeedbackContainerComponent: React.FC<CenteredFeedbackContainerProp
             direction="column"
             justifyContent="center"
             alignItems="center"
+            UNSAFE_className={fill ? 'centered-feedback--fill' : undefined}
             minHeight={fill ? '100%' : translateSpectrumToken(height)}
             maxWidth={maxWidth ? translateSpectrumToken(maxWidth) : undefined}
         >

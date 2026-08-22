@@ -9,33 +9,17 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
+import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload, GitHubUser } from '@/types/webviewPayloads';
 
 const log = webviewLogger('useGitHubAuth');
 
 /** Stable empty-array reference for the orgs default (re-render-loop guard). */
 const EMPTY_ORGS: string[] = [];
 
-/**
- * GitHub auth status message data
- */
-interface GitHubAuthStatusData {
-    isAuthenticated: boolean;
-    user?: {
-        login: string;
-        avatarUrl?: string;
-        email?: string;
-    };
-    /** GitHub orgs the user is a member of — populates the wizard's namespace picker */
-    orgs?: string[];
-    error?: string;
-}
-
-/**
- * GitHub OAuth error message data
- */
-interface GitHubOAuthErrorData {
-    error: string;
-}
+// The wire shapes live in @/types/webviewPayloads — ONE declaration shared
+// with edsGitHubHandlers. This file used to carry its own copies, and the
+// user twin had drifted: it typed email/avatarUrl as optional strings when
+// the sender's GitHubUser declares them nullable, and omitted `name`.
 
 /**
  * Props for useGitHubAuth hook
@@ -56,7 +40,7 @@ interface UseGitHubAuthReturn {
     /** Whether initial auth check is in progress */
     isChecking: boolean;
     /** Authenticated user info */
-    user?: { login: string; avatarUrl?: string; email?: string };
+    user?: GitHubUser;
     /** GitHub orgs the user is a member of */
     orgs: string[];
     /** Error message if auth failed */
@@ -149,7 +133,7 @@ export function useGitHubAuth({
 
         // Listen for auth status updates
         const unsubscribeStatus = webviewClient.onMessage('github-auth-status', (data) => {
-            const authData = data as GitHubAuthStatusData;
+            const authData = data as GitHubAuthStatusPayload;
             log.debug('Received GitHub auth status:', authData);
 
             // Initial check complete
@@ -166,7 +150,7 @@ export function useGitHubAuth({
 
         // Listen for OAuth completion
         const unsubscribeComplete = webviewClient.onMessage('github-auth-complete', (data) => {
-            const authData = data as GitHubAuthStatusData;
+            const authData = data as GitHubAuthStatusPayload;
             log.debug('GitHub OAuth complete:', authData);
 
             // Auth complete
@@ -183,7 +167,7 @@ export function useGitHubAuth({
 
         // Listen for OAuth errors
         const unsubscribeError = webviewClient.onMessage('github-oauth-error', (data) => {
-            const errorData = data as GitHubOAuthErrorData;
+            const errorData = data as GitHubOAuthErrorPayload;
             log.error('GitHub OAuth error:', errorData.error);
 
             // Auth check complete (with error)

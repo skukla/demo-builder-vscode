@@ -30,6 +30,17 @@ interface GitHubAppInstallDialogProps {
     installUrl: string;
     /** Error message from code sync failure */
     message: string;
+    /**
+     * Helix has no SITE for this repo (outer HTTP 404), as opposed to knowing
+     * the site and reporting no code sync for it (`code.status: 404`).
+     *
+     * `/status` reports on the site, so this says NOTHING about whether the App
+     * is installed — and an install cannot resolve it. Measured on
+     * skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the AEM Code
+     * Sync installation and the endpoint 404'd anyway. Drives a different title,
+     * body and action order below.
+     */
+    siteUnregistered?: boolean;
     /** Called when app installation is detected */
     onInstallDetected: () => void;
 }
@@ -38,11 +49,11 @@ export function GitHubAppInstallDialog({
     owner,
     repo,
     installUrl,
+    siteUnregistered = false,
     onInstallDetected,
 }: GitHubAppInstallDialogProps) {
     const [isChecking, setIsChecking] = useState(false);
     const [hasError, setHasError] = useState(false);
-    const [lastCodeStatus, setLastCodeStatus] = useState<number | undefined>(undefined);
 
     const handleOpenInstallPage = () => {
         // Open the URL in the system browser via VS Code API
@@ -58,13 +69,11 @@ export function GitHubAppInstallDialog({
             const result = await webviewClient.request<{
                 success: boolean;
                 isInstalled: boolean;
-                codeStatus?: number;
             }>('check-github-app', { owner, repo, lenient: true });
 
             if (result.success && result.isInstalled) {
                 onInstallDetected();
             } else {
-                setLastCodeStatus(result.codeStatus);
                 setHasError(true);
             }
         } catch (error) {
@@ -85,6 +94,51 @@ export function GitHubAppInstallDialog({
                     subMessage={`Verifying ${owner}/${repo}...`}
                 />
             </CenteredFeedbackContainer>
+        );
+    }
+
+    // Helix has no site for this repo. An install flow cannot fix that, so it is
+    // not what this screen leads with -- Check Again is the action, and Install
+    // App stays only as a secondary "if you have not already".
+    if (siteUnregistered) {
+        return (
+            <StatusDisplay
+                variant="info"
+                title="Waiting for Adobe to register your repository"
+                height="auto"
+                actions={[
+                    {
+                        label: CODE_SYNC_RECHECK_ACTION,
+                        icon: <Refresh />,
+                        variant: 'accent',
+                        onPress: handleCheckInstallation,
+                    },
+                    {
+                        label: CODE_SYNC_INSTALL_ACTION,
+                        icon: <LinkOut />,
+                        variant: 'secondary',
+                        onPress: handleOpenInstallPage,
+                    },
+                ]}
+            >
+                <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                    {`Adobe does not have a site for ${owner}/${repo} yet. This usually ` +
+                        'settles within a minute or two of the repository being set up.'}
+                </Text>
+                {hasError && (
+                    <Text
+                        UNSAFE_className="text-sm text-orange-700 text-center"
+                        marginTop="size-200"
+                    >
+                        {/* Deliberately NOT "the App is missing". We cannot see the App
+                            from here, and saying so is what sent someone through eleven
+                            reinstalls. If it never settles, AEM Code Sync not being
+                            installed is ONE possible cause, offered as such. */}
+                        ⚠️ Still not registered. If this persists, check that AEM Code
+                        Sync has access to this repository.
+                    </Text>
+                )}
+            </StatusDisplay>
         );
     }
 
@@ -117,9 +171,13 @@ export function GitHubAppInstallDialog({
 
             {hasError && (
                 <Text UNSAFE_className="text-sm text-orange-700 text-center" marginTop="size-200">
-                    {lastCodeStatus === undefined
-                        ? '⚠️ Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
-                        : '⚠️ App not detected yet. Please complete the installation and try again.'}
+                    {/* This branch is now reached ONLY for a measured inner 404 --
+                        Helix knows the site and reports no code sync -- so the
+                        install advice is warranted. The old `codeStatus === undefined`
+                        arm claimed "still being registered ... for new repositories"
+                        about the outer 404, which is a different repo state entirely
+                        and is handled above. */}
+                    ⚠️ App not detected yet. Please complete the installation and try again.
                 </Text>
             )}
         </StatusDisplay>

@@ -3,13 +3,13 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
-import type { StepCondition } from './stepFiltering';
 import { hasMeshInDependencies } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
-import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Filters committed custom block library selections to remove any that
@@ -37,28 +37,6 @@ export interface WizardStepConfig {
     id: WizardStep;
     name: string;
     description?: string;
-}
-
-/**
- * Extended step configuration with optional component requirements.
- * Used for loading wizard-steps.json which may include requiredComponents.
- */
-export interface WizardStepConfigWithRequirements {
-    id: string;
-    name: string;
-    description?: string;
-    enabled: boolean;
-    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
-    requiredComponents?: string[];
-    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
-    requiredAny?: string[];
-    /**
-     * Optional: Condition for stack/auth-based filtering.
-     * Reuses the canonical StepCondition from stepFiltering.ts (DRY) so all
-     * condition keys (stackRequires, stackRequiresAny, requiresAdobeAuth,
-     * showWhenNoStack, createModeOnly) type-check here.
-     */
-    condition?: StepCondition;
 }
 
 // ============================================================================
@@ -104,7 +82,7 @@ export function isComponentSelected(
  * @returns Filtered steps that should be displayed
  */
 export function filterStepsByComponents(
-    allSteps: WizardStepConfigWithRequirements[],
+    allSteps: WizardStepDefinition[],
     selectedComponents: ComponentSelection | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     return allSteps
@@ -237,63 +215,6 @@ export function computeStateUpdatesForBackwardNav(
 // ============================================================================
 // State Initialization Helpers
 // ============================================================================
-
-/**
- * Imported settings shape for wizard pre-population
- */
-export interface ImportedSettings {
-    source?: {
-        project?: string;
-    };
-    selections?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    configs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    adobe?: {
-        orgId?: string;
-        orgName?: string;
-        projectId?: string;
-        projectName?: string;
-        projectTitle?: string;
-        workspaceId?: string;
-        workspaceName?: string;
-        workspaceTitle?: string;
-    };
-    /** Package ID from the source project (e.g., 'citisignal', 'buildright') */
-    selectedPackage?: string;
-    /** Stack ID from the source project (e.g., 'headless-paas') */
-    selectedStack?: string;
-    /** Selected optional addons (e.g., ['adobe-commerce-aco']) */
-    selectedAddons?: string[];
-    /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
-    selectedBlockLibraries?: string[];
-    /** Custom block libraries added by URL */
-    customBlockLibraries?: CustomBlockLibrary[];
-    /** EDS configuration (for Edge Delivery Services stacks) */
-    edsConfig?: SettingsEdsConfig;
-    /** Custom GitHub sources for App Builder integrations, keyed by integration id (`name` = shell-instance display name) */
-    appBuilderComponentSources?: Record<
-        string,
-        { owner: string; repo: string; branch?: string; name?: string }
-    >;
-    /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
-    additionalConsoleApis?: string[];
-    /** The same picks, ATTRIBUTED per integration id — the durable form. */
-    componentApiPicks?: Record<string, string[]>;
-}
-
-/**
- * Configuration for editing an existing project
- */
-export interface EditProjectConfig {
-    projectName: string;
-    projectPath: string;
-    settings: ImportedSettings;
-}
 
 /**
  * Build initial component selection from imported settings or defaults.
@@ -560,7 +481,7 @@ function extractImportedMeshEndpoint(
 
 /** Validate stack/package configuration consistency and log warnings */
 function validateStackPackageConfig(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     packages: DemoPackage[] | undefined,
 ): void {
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
@@ -583,7 +504,7 @@ function validateStackPackageConfig(
 
 /** Resolve frontend source from selected package/storefront combination */
 function resolveFrontendSourceFromPackage(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     packages: DemoPackage[] | undefined,
 ): GitSource | undefined {
     if (!packages || !wizardState.selectedStack || !wizardState.selectedPackage) {
@@ -595,7 +516,7 @@ function resolveFrontendSourceFromPackage(
 
 /** Validate that stack lookup succeeded and log warnings if not */
 function validateStackLookup(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     stack: ReturnType<typeof getStackById> | undefined,
 ): void {
     if (wizardState.selectedStack && !stack) {
@@ -613,7 +534,7 @@ function validateStackLookup(
 }
 
 /** Build EDS config object for project creation from wizard EDS state */
-function buildProjectEdsConfig(wizardState: WizardState) {
+function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
     const eds = wizardState.edsConfig;
     if (!eds) return undefined;
 
@@ -699,11 +620,41 @@ function unionConsoleApiPicks(
  * @param importedSettings - Optional imported settings for mesh reuse detection
  * @param packages - Optional packages array to resolve frontend source from storefronts
  */
+/**
+ * The slice of wizard state {@link buildProjectConfig} actually reads. A full
+ * WizardState is assignable; the MCP create_project tool builds exactly this
+ * slice headlessly (it used to cast a partial object
+ * `as unknown as WizardState`, which hid every missing field).
+ */
+export type ProjectConfigSource = Pick<
+    WizardState,
+    | 'projectName'
+    | 'projectTitle'
+    | 'adobeOrg'
+    | 'adobeProject'
+    | 'adobeWorkspace'
+    | 'componentConfigs'
+    | 'selectedStack'
+    | 'selectedOptionalDependencies'
+    | 'apiMesh'
+    | 'storeDiscoveryData'
+    | 'selectedPackage'
+    | 'datapack'
+    | 'selectedAppBuilderComponents'
+    | 'appBuilderComponentSources'
+    | 'selectedConsoleApis'
+    | 'selectedAddons'
+    | 'selectedBlockLibraries'
+    | 'customBlockLibraries'
+    | 'editProjectPath'
+    | 'edsConfig'
+>;
+
 export function buildProjectConfig(
-    wizardState: WizardState,
+    wizardState: ProjectConfigSource,
     importedSettings?: ImportedSettings | null,
     packages?: DemoPackage[],
-) {
+): ProjectCreationConfig {
     const importedMeshEndpoint = extractImportedMeshEndpoint(wizardState.componentConfigs);
     validateStackPackageConfig(wizardState, packages);
     const frontendSource = resolveFrontendSourceFromPackage(wizardState, packages);
@@ -723,6 +674,7 @@ export function buildProjectConfig(
 
     return {
         projectName: wizardState.projectName,
+        projectTitle: wizardState.projectTitle,
         adobe: {
             organization: wizardState.adobeOrg?.id,
             organizationName: wizardState.adobeOrg?.name,

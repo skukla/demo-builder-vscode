@@ -16,13 +16,15 @@
  */
 
 import { DataInstallerClient } from '../services/dataInstallerClient';
-import { isDataInstallerEnabled, resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
+import {
+    isDataInstallerEnabled,
+    resolveDataInstallerBaseUrl,
+} from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import type { DatapackId, OperationMode } from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
 
 const LOG_PREFIX = '[Data Installer]';
 
@@ -48,7 +50,11 @@ export type DataInstallerAccess =
     | { ok: false; response: HandlerResponse };
 
 /** Shape a guard refusal into a HandlerResponse with an actionable code. */
-function refuse(error: string, code: ErrorCode, extra: Record<string, unknown> = {}): DataInstallerAccess {
+function refuse(
+    error: string,
+    code: ErrorCode,
+    extra: Record<string, unknown> = {},
+): DataInstallerAccess {
     return { ok: false, response: { success: false, error, code, ...extra } };
 }
 
@@ -69,9 +75,7 @@ export async function resolveDataInstallerAccess(
     // The refusal keeps its INVALID_OPERATION code, which is what
     // `renderDataInstallerFailure` already branches on to offer the settings fix.
     if (!isDataInstallerEnabled()) {
-        context.logger.warn(
-            `${LOG_PREFIX} Refused: demoBuilder.dataInstaller.enabled is false.`,
-        );
+        context.logger.warn(`${LOG_PREFIX} Refused: demoBuilder.dataInstaller.enabled is false.`);
         return refuse(
             'The Data Installer is turned off. Enable demoBuilder.dataInstaller.enabled to use it.',
             ErrorCode.INVALID_OPERATION,
@@ -102,7 +106,7 @@ export async function resolveDataInstallerAccess(
     const interactive = context.panel !== undefined;
     if (interactive) {
         const authResult = await ensureAdobeIOAuth({
-            authManager: authManager as never,
+            authManager,
             logger: context.logger,
             logPrefix: LOG_PREFIX,
             warningMessage: 'Adobe sign-in required to browse Data Installer datapacks.',
@@ -215,7 +219,9 @@ interface DatapackRefPayload {
 
 export const dataInstallerHandlers = defineHandlers({
     'check-datapack-service': async (context: HandlerContext): Promise<HandlerResponse> =>
-        withClient(context, 'Could not reach the Data Installer API.', (client) => client.checkHealth()),
+        withClient(context, 'Could not reach the Data Installer API.', (client) =>
+            client.checkHealth(),
+        ),
 
     'find-datapacks': async (
         context: HandlerContext,
@@ -245,7 +251,13 @@ export const dataInstallerHandlers = defineHandlers({
             const inventory =
                 detail.dataTypes.length > 0
                     ? await client.batchGetDataItems(id, detail.dataTypes)
-                    : { present: [], missing: [], presentCount: 0, missingCount: 0, requestedCount: 0 };
+                    : {
+                          present: [],
+                          missing: [],
+                          presentCount: 0,
+                          missingCount: 0,
+                          requestedCount: 0,
+                      };
             return { detail, inventory };
         });
     },
@@ -272,7 +284,12 @@ export const dataInstallerHandlers = defineHandlers({
 
     'list-installed-datapacks': async (
         context: HandlerContext,
-        payload?: { commerceInstance?: string; datapackName?: string; limit?: number; skip?: number },
+        payload?: {
+            commerceInstance?: string;
+            datapackName?: string;
+            limit?: number;
+            skip?: number;
+        },
     ): Promise<HandlerResponse> =>
         withClient(context, 'Could not list installed datapacks.', (client) =>
             client.getInstalledDatapacks({ ...(payload ?? {}) }),

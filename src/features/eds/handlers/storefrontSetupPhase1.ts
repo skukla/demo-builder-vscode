@@ -13,6 +13,7 @@ import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Execute Phase 1: GitHub repository setup (create, use existing, or pre-created)
@@ -47,10 +48,11 @@ export async function executePhaseGitHubRepo(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: 'Using repository...',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
-        });
+        } satisfies StorefrontSetupProgressPayload);
 
         // ADR-006 Step 4b applies here too: the wizard's "Create Repository"
         // button creates the repo BEFORE storefront setup runs, so this branch
@@ -120,8 +122,9 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Pinning to verified canonical state...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 12,
-    });
+    } satisfies StorefrontSetupProgressPayload);
     await pinIfThinLayer(
         edsConfig,
         services,
@@ -134,9 +137,10 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 }
 
 /**
@@ -183,16 +187,24 @@ async function pinIfThinLayer(
 /**
  * Handle existing repository setup (parse info, gate on the App, optional reset).
  *
- * The AEM Code Sync gate runs HERE, between resolving the repo and the first
- * write to it. It used to run in Phase 2 (progress 28), which is after this
- * phase's `resetToTemplate` (progress 6) and after Phase 2 has pushed fstab.yaml,
- * installed block collections, and vendored the smart-404 and Quick Edit
- * scripts. A user whose repo lacked the App therefore had it rewritten and was
- * only then told setup could not continue — and the reset branch is not the only
- * casualty: declining the reset still leaves the Phase 2 writes landing in a repo
- * the user asked to preserve.
+ * WHERE the AEM Code Sync gate runs depends on whether the repo is being reset,
+ * because that decides whether the question can be answered at all.
  *
- * Returning a result here aborts the pipeline before anything is written.
+ * - **No reset.** The repo is already a storefront, so Helix has a site and the
+ *   status endpoint answers. The gate runs before the first write, which is the
+ *   job it was moved here for: it used to run in Phase 2 (progress 28), after
+ *   fstab.yaml, block collections and the vendored smart-404 / Quick Edit
+ *   scripts had all landed in a repo the user asked to preserve.
+ * - **Reset.** The repo is NOT a storefront yet, so there is no site and the
+ *   endpoint returns `404 no such site` whatever the App is doing. The gate runs
+ *   AFTER the reset, which is the first moment it can succeed.
+ *
+ * The reset case does give up the "learn before your repo is written to"
+ * guarantee — but only where that guarantee was already hollow, since the check
+ * could not have told them anything, and only where the user has explicitly
+ * ticked reset and consented to the rewrite.
+ *
+ * Returning a result aborts the pipeline.
  *
  * @returns an early result when the App is missing or unverifiable, else null
  */
@@ -232,21 +244,41 @@ async function executePhaseExistingRepo(
     );
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: 'Using existing repository...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
-    const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo);
-    if (appGateResult) return appGateResult;
+    // Check BEFORE the first write ONLY when the repo can already answer.
+    //
+    // `admin.hlx.page/status` reports on the SITE, not the App. A repo that is
+    // not a storefront yet has no site, so it answers `404 no such site` however
+    // the App is configured — measured on skukla/kukla-bodea 2026-08-20, where
+    // the App was demonstrably installed (GitHub listed the repo) and the status
+    // endpoint 404'd anyway, 28 minutes after a successful code-sync trigger.
+    //
+    // Checking a to-be-reset repo here therefore cannot succeed, and the failure
+    // wears the one costume we keep having to remove: "install the App". So the
+    // check moves below the reset for that case, where the repo has fstab.yaml
+    // and Helix can finally answer.
+    //
+    // When the user DECLINED the reset the repo is already a storefront, so the
+    // check both works and still does its original job — stopping Phase 2 from
+    // writing into a repo they asked to preserve. It stays here for them.
+    if (!edsConfig.resetToTemplate) {
+        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo);
+        if (appGateResult) return appGateResult;
+    }
 
     if (edsConfig.resetToTemplate) {
         logger.info('[Storefront Setup] Resetting repository to template...');
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: 'Resetting repository to template...',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 6,
-        });
+        } satisfies StorefrontSetupProgressPayload);
 
         if (edsConfig.codePatchSource) {
             // Thin-layer flow: bulk Tree reset to canonical@LKG + apply canonical
@@ -272,14 +304,25 @@ async function executePhaseExistingRepo(
             );
         }
         logger.info('[Storefront Setup] Repository reset to template');
+
+        // NOW the repo is a storefront, so the question is answerable. The reset
+        // push is also what makes it answerable: the AEM Code Sync webhook fires
+        // on that push and Helix registers the site, so `afterReset` lets the
+        // resolver wait out the gap rather than read a not-yet-registered site as
+        // a missing App.
+        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
+            afterReset: true,
+        });
+        if (appGateResult) return appGateResult;
     }
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     return null;
 }
@@ -302,8 +345,9 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Creating GitHub repository from template...',
+        subMessage: repoInfo.repoName,
         progress: 5,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
 
@@ -335,9 +379,10 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Waiting for repository content...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 10,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 

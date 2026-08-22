@@ -6,13 +6,13 @@
  */
 
 import { hasComponentEnvVars } from '@/features/dashboard/ui/configure/configureHelpers';
-import type { ComponentData } from '@/features/dashboard/ui/configure/configureTypes';
+import type { TransformedComponentDefinition } from '@/types/components';
 
 describe('configureHelpers accessor functions', () => {
     describe('hasComponentEnvVars', () => {
         it('should return true when required env vars are present', () => {
             // Given: A component with required environment variables
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -29,7 +29,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return true when optional env vars are present', () => {
             // Given: A component with optional environment variables
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -46,7 +46,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return true when both required and optional env vars are present', () => {
             // Given: A component with both required and optional environment variables
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -64,7 +64,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return false when no env vars are configured', () => {
             // Given: A component with no environment variables
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {},
@@ -79,7 +79,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return false when configuration is undefined', () => {
             // Given: A component with no configuration
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
             };
@@ -104,7 +104,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return false when env var arrays are empty', () => {
             // Given: A component with empty env var arrays
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -122,7 +122,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return false when requiredEnvVars is undefined and optionalEnvVars is empty', () => {
             // Given: A component with undefined required and empty optional env vars
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -139,7 +139,7 @@ describe('configureHelpers accessor functions', () => {
 
         it('should return false when optionalEnvVars is undefined and requiredEnvVars is empty', () => {
             // Given: A component with empty required and undefined optional env vars
-            const componentDef: ComponentData = {
+            const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 configuration: {
@@ -157,7 +157,7 @@ describe('configureHelpers accessor functions', () => {
         describe('real-world scenarios', () => {
             it('should handle typical frontend component with API endpoint vars', () => {
                 // Given: A typical frontend component configuration
-                const componentDef: ComponentData = {
+                const componentDef: TransformedComponentDefinition = {
                     id: 'headless',
                     name: 'CitiSignal NextJS Frontend',
                     configuration: {
@@ -175,7 +175,7 @@ describe('configureHelpers accessor functions', () => {
 
             it('should handle backend service with authentication vars', () => {
                 // Given: A backend service with auth configuration
-                const componentDef: ComponentData = {
+                const componentDef: TransformedComponentDefinition = {
                     id: 'adobe-commerce-paas',
                     name: 'Adobe Commerce PaaS',
                     configuration: {
@@ -192,7 +192,7 @@ describe('configureHelpers accessor functions', () => {
 
             it('should handle component with only optional debug vars', () => {
                 // Given: A component with only debug variables
-                const componentDef: ComponentData = {
+                const componentDef: TransformedComponentDefinition = {
                     id: 'debug-utility',
                     name: 'Debug Utility',
                     configuration: {
@@ -209,7 +209,7 @@ describe('configureHelpers accessor functions', () => {
 
             it('should handle component without any configuration', () => {
                 // Given: A basic component without configuration
-                const componentDef: ComponentData = {
+                const componentDef: TransformedComponentDefinition = {
                     id: 'static-assets',
                     name: 'Static Assets',
                     description: 'Static assets component with no configuration',

@@ -23,12 +23,7 @@ import { buildAppBuilderComponentFieldGroups } from './appBuilderComponentFieldM
 import { validateServiceGroups } from './configureFieldValidation';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import { buildConfigureSections, toStepRailTabs } from './configureSections';
-import type {
-    ComponentsData,
-    SaveConfigurationResponse,
-    ServiceGroup,
-    UniqueField,
-} from './configureTypes';
+import type { SaveConfigurationResponse, ServiceGroup, UniqueField } from './configureTypes';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -42,6 +37,7 @@ import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { ACCS_OAUTH_CLIENT_ID } from '@/features/components/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
@@ -49,38 +45,22 @@ import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreD
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AuthoringExperience, Project } from '@/types/base';
+import type { AuthoringExperience } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
+import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
 /** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 const EMPTY_PROVIDED: Record<string, string> = {};
 const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
 
-interface ConfigureScreenProps {
-    project: Project;
-    componentsData: ComponentsData;
-    existingEnvValues?: Record<string, Record<string, string>>;
-    existingProjectNames?: string[];
-    /** Whether this is an EDS project — gates the Authoring Experience radio. */
-    isEds?: boolean;
-    /** Resolved authoring experience seeding the radio (EDS only). */
-    authoringExperience?: AuthoringExperience;
-    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
-    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars?: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
-    appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
-    /**
-     * Component-declared secrets this project holds, booleans only.
-     *
-     * A migrated credential is in the OS keychain, which this webview cannot read.
-     * Without the flag a required password field renders empty and a save writes a
-     * blank over a working credential.
-     */
-    componentSecretFlags?: Record<string, Record<string, boolean>>;
-}
+/**
+ * Init payload (`ConfigureInitialData`): `project` and `componentsData` stay
+ * required (the entry guards on them before mounting); the rest is relaxed to
+ * Partial because tests render the screen without the full wire.
+ */
+export type ConfigureScreenProps = Pick<ConfigureInitialData, 'project' | 'componentsData'> &
+    Partial<Omit<ConfigureInitialData, 'project' | 'componentsData'>>;
 
 /** Derive save button label from saving/deploying state */
 function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
@@ -113,7 +93,12 @@ export function ConfigureScreen({
     // `retainContextWhenHidden`, which already preserves it across a tab-away.
     // `componentConfigs` does reset on that init; the asymmetry is accepted.
     const [activeSectionId, setActiveSectionId] = useState('project-info');
-    const [projectName, setProjectName] = useState(project.name);
+    // The TITLE as typed, not the slug. `handleRenameProject` derives the slug
+    // from it on save, so this field never has to show hyphens.
+    // Explicitly `string`: this holds RAW user input while they type. It is
+    // seeded from the display name but stops being one the moment a key lands,
+    // so branding the state would be a lie the compiler then enforces.
+    const [projectName, setProjectName] = useState<string>(getProjectDisplayName(project));
     const [projectNameTouched, setProjectNameTouched] = useState(false);
 
     // Focus trap for keyboard navigation
@@ -139,7 +124,7 @@ export function ConfigureScreen({
     // This keeps the Save button disabled during mesh/storefront deployment
     useEffect(() => {
         const unsubscribe = webviewClient.onMessage('deployment-status', (data) => {
-            const payload = data as { isDeploying: boolean };
+            const payload = data as DeploymentStatusPayload;
             setIsDeploying(payload.isDeploying);
         });
         return unsubscribe;
@@ -148,13 +133,20 @@ export function ConfigureScreen({
     // Validate project name
     const projectNameError = useMemo(() => {
         if (!projectNameTouched) return undefined;
-        return getProjectNameError(projectName, existingProjectNames, project.name);
+        // Validate the DERIVED slug: it is what has to be a legal folder and what
+        // `existingProjectNames` holds. Validating the raw title would reject
+        // every capital and space the field now exists to allow.
+        return getProjectNameError(
+            normalizeProjectName(projectName),
+            existingProjectNames,
+            project.name,
+        );
     }, [projectName, existingProjectNames, project.name, projectNameTouched]);
 
-    // Handle project name change with normalization
+    // Keep what was typed. It used to run `normalizeProjectName` on every
+    // keystroke, so "My Bodea Demo" rewrote itself under the cursor.
     const handleProjectNameChange = useCallback((value: string) => {
-        const normalized = normalizeProjectName(value);
-        setProjectName(normalized);
+        setProjectName(value);
         setProjectNameTouched(true);
     }, []);
 
@@ -233,8 +225,13 @@ export function ConfigureScreen({
         setIsSaving(true);
         try {
             // Include projectName if it changed
+            // Compare against the TITLE, so editing only the capitalisation of a
+            // title still counts as a change. Comparing to the slug would treat
+            // "bodea demo" -> "Bodea Demo" as a no-op and silently discard it.
             const newProjectName =
-                projectName.trim() !== project.name ? projectName.trim() : undefined;
+                projectName.trim() !== getProjectDisplayName(project)
+                    ? projectName.trim()
+                    : undefined;
             // The authoring-experience preference is EDS-only; for non-EDS projects
             // it is omitted entirely so the payload shape is unchanged.
             const result = await webviewClient.request<SaveConfigurationResponse>(
@@ -266,7 +263,11 @@ export function ConfigureScreen({
         componentSecretFlags,
         touchedFields,
         projectName,
-        project.name,
+        // `project`, not `project.name`: handleSave now compares against
+        // `getProjectDisplayName(project)`, which reads `title` too. Depending on
+        // `.name` alone left a stale closure that would compare a new title
+        // against an old one and silently drop the rename.
+        project,
         isEds,
         authoringExperience,
     ]);
@@ -371,6 +372,7 @@ export function ConfigureScreen({
                                 onProjectNameChange={handleProjectNameChange}
                                 projectNameError={projectNameError}
                                 projectNameTouched={projectNameTouched}
+                                projectFolder={normalizeProjectName(projectName)}
                                 appBuilderComponentCatalog={appBuilderComponentCatalog}
                                 componentConfigs={componentConfigs}
                                 providedEnvVars={providedEnvVars}

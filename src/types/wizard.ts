@@ -5,6 +5,7 @@
  * providing a single source of truth for step props patterns.
  */
 
+import type { SettingsFile } from './settingsFile';
 import { WizardState, WizardStep } from './webview';
 
 /**
@@ -55,4 +56,82 @@ export interface NavigableStepProps extends BaseStepProps {
 export interface TrackableStepProps extends BaseStepProps {
     /** List of completed steps (for navigation restrictions) */
     completedSteps?: WizardStep[];
+}
+
+/**
+ * Condition for showing a wizard step
+ */
+export interface StepCondition {
+    /**
+     * Stack property that must be truthy for this step to be shown.
+     * Maps to Stack properties like 'requiresGitHub' or 'requiresDaLive'.
+     */
+    stackRequires?: 'requiresGitHub' | 'requiresDaLive';
+
+    /**
+     * Array of stack properties where at least ONE must be truthy.
+     * Used for combined steps that should show when GitHub OR DA.live is required.
+     */
+    stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
+
+    /**
+     * If true, this step is only shown when NO predefined stack is selected.
+     * Used for steps like Component Selection that are hidden when a stack
+     * already determines the components, but should appear for a future
+     * "Custom" option where users manually select components.
+     *
+     * NOTE: This condition is deliberately kept for future extensibility.
+     * When a "Custom" brand option is added, it won't set selectedStack,
+     * allowing this step to appear for manual component configuration.
+     */
+    showWhenNoStack?: boolean;
+
+    /**
+     * If true, this step is only shown in create mode (not edit mode).
+     * Used for steps like EDS preflight that create external resources
+     * which already exist for existing projects.
+     */
+    createModeOnly?: boolean;
+}
+
+/**
+ * The wizard's view of imported/copied settings. The wire always carries a
+ * full `SettingsFile` (every fill site — file import via `parseSettingsFile`,
+ * copy-from-project and edit mode via `extractSettingsFromProject` — produces
+ * one), but the wizard reads it defensively, so every field is optional.
+ * Derived, not re-declared: this WAS a hand-maintained near-copy of
+ * `SettingsFile` that drifted field by field.
+ */
+export type ImportedSettings = Partial<SettingsFile>;
+
+/**
+ * Configuration for editing an existing project (wizard edit mode).
+ */
+export interface EditProjectConfig {
+    /** The SLUG — still the identity `editOriginalName` compares against. */
+    projectName: string;
+    /** The TITLE, so the name field shows what the user called it. */
+    projectTitle?: string;
+    projectPath: string;
+    settings: ImportedSettings;
+}
+
+/**
+ * One entry of wizard-steps.json — THE step-definition shape, shared by the
+ * producer (createProject reads and validates the config) and every consumer
+ * (StepLogger, the wizard bundle's init data, wizardHelpers' filters). This
+ * was declared four times with subtly different fields before; producer and
+ * consumer must check against this one declaration.
+ */
+export interface WizardStepDefinition {
+    id: string;
+    name: string;
+    description?: string;
+    enabled: boolean;
+    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
+    requiredComponents?: string[];
+    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
+    requiredAny?: string[];
+    /** Optional: Condition for stack/auth-based filtering. */
+    condition?: StepCondition;
 }

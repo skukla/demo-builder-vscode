@@ -21,7 +21,6 @@ import { CONTENT_COPY_BATCH_SIZE, DA_LIVE_BASE_URL, normalizePath } from './daLi
 import { DaLiveContentCopy } from './daLiveContentCopy';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { type DaLiveSourceResult } from './types';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /** DA.live authoring block-library operations. */
@@ -835,10 +834,9 @@ export class DaLiveBlockLibraryOperations {
         for (const block of blocks) {
             try {
                 const blockDocUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks/${block.id}.html`;
-                const response = await fetch(blockDocUrl, {
+                const response = await this.apiClient.fetchWithRetry(blockDocUrl, {
                     method: 'HEAD',
                     headers: { Authorization: `Bearer ${token}` },
-                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
                 });
                 if (response.ok) {
                     existingIds.push(block.id);

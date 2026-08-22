@@ -15,7 +15,11 @@
  */
 
 import * as vscode from 'vscode';
-import { dataInstallerHandlers, handleOpenDataInstallerSettings, importHandlers } from '../handlers';
+import {
+    dataInstallerHandlers,
+    handleOpenDataInstallerSettings,
+    importHandlers,
+} from '../handlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
@@ -23,13 +27,15 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
 const WEBVIEW_ID = 'demoBuilder.dataInstaller';
 const TITLE = 'Data Installer';
 
-export class ShowDataInstallerCommand extends BaseWebviewCommand {
+export class ShowDataInstallerCommand extends BaseWebviewCommand<DataInstallerInitialData> {
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }
@@ -75,14 +81,18 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand {
      * project name rides along only so the import flow (Stage 2) can name a default
      * target without a second round trip.
      */
-    protected async getInitialData(): Promise<Record<string, unknown>> {
+    protected async getInitialData(): Promise<DataInstallerInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
+        // No annotation needed any more: the payload field itself is branded
+        // `ProjectDisplayName`, so `project.name` here stops compiling at the
+        // return statement.
+        const projectName = project ? getProjectDisplayName(project) : asDisplayName('');
         return {
             theme,
-            projectName: project?.name ?? '',
+            projectName,
         };
     }
 

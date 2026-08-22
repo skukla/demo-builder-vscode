@@ -39,73 +39,12 @@ export const createMockWizardSteps = () => [
     { id: 'create-project', name: 'Create Project', enabled: true },
 ];
 
-/**
- * Edit project configuration for edit mode tests
- */
-export interface EditProjectConfig {
-    projectPath: string;
-    projectName: string;
-    settings: {
-        version: number;
-        selections?: {
-            frontend?: string;
-            backend?: string;
-            dependencies?: string[];
-            integrations?: string[];
-            appBuilder?: string[];
-        };
-        configs?: Record<string, Record<string, string | boolean | number | undefined>>;
-        adobe?: {
-            orgId?: string;
-            orgName?: string;
-            projectId?: string;
-            projectName?: string;
-            projectTitle?: string;
-            workspaceId?: string;
-            workspaceName?: string;
-            workspaceTitle?: string;
-        };
-    };
-}
-
-/**
- * Create mock editProject prop for edit mode tests
- */
-export const createMockEditProject = (
-    overrides: Partial<EditProjectConfig> = {}
-): EditProjectConfig => ({
-    projectPath: '/Users/test/.demo-builder/projects/test-project',
-    projectName: 'test-project',
-    settings: {
-        version: 1,
-        selections: {
-            frontend: 'headless',
-            backend: 'commerce-paas',
-            dependencies: ['commerce-mesh'],
-            integrations: [],
-            appBuilder: [],
-        },
-        configs: {
-            'headless': { port: 3000 },
-        },
-        adobe: {
-            orgId: 'org123',
-            orgName: 'Test Organization',
-            projectId: 'proj456',
-            projectName: 'TestProject',
-            projectTitle: 'Test Project Title',
-            workspaceId: 'ws789',
-            workspaceName: 'Development',
-            workspaceTitle: 'Development',
-        },
-    },
-    ...overrides,
-});
-
-// Helper to create mock imported settings for import flow tests
+// Helper to create mock imported settings for import flow tests.
+// Shape pinned by ImportedSettings (= Partial<SettingsFile>): `version` is a
+// NUMBER and there is no `exportedFrom` field — the old string/invented pair
+// survived only while this fixture was checked against a hand-copied type.
 export const createMockImportedSettings = () => ({
-    version: '1.0.0',
-    exportedFrom: 'Demo Builder',
+    version: 1,
     adobe: {
         orgId: 'org123',
         orgName: 'Test Organization',
@@ -122,7 +61,7 @@ export const createMockImportedSettings = () => ({
         appBuilder: [],
     },
     configs: {
-        'headless': { port: 3000 },
+        headless: { port: 3000 },
     },
     source: {
         project: 'my-existing-project',
@@ -138,16 +77,16 @@ export const createMockComponentsDataResponse = () => ({
                 id: 'headless',
                 name: 'CitiSignal Next.js',
                 description: 'Frontend application',
-                configuration: { services: [] }
-            }
+                configuration: { services: [] },
+            },
         ],
         backends: [
             {
                 id: 'commerce-paas',
                 name: 'Adobe Commerce PaaS',
                 description: 'Backend platform',
-                configuration: { services: [] }
-            }
+                configuration: { services: [] },
+            },
         ],
         dependencies: [],
         integrations: [],
@@ -182,10 +121,5 @@ export const cleanupTest = async () => {
 
 // Custom render with theme provider wrapper
 export const renderWithTheme = (ui: React.ReactElement, options = {}) => {
-    return rtlRender(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>,
-        options
-    );
+    return rtlRender(<Provider theme={defaultTheme}>{ui}</Provider>, options);
 };

@@ -29,7 +29,13 @@ function budgetedTypes(): Set<string> {
     const end = source.indexOf('};', start);
     expect(start).toBeGreaterThan(-1);
     const body = source.slice(start, end);
-    return new Set([...body.matchAll(/^\s*'([^']+)':\s*TIMEOUTS\./gm)].map((m) => m[1]));
+    // Keys appear quoted ('get-projects') or bare (listConsoleApis) — prettier
+    // unquotes any key that is a valid identifier, so match both forms.
+    return new Set(
+        [...body.matchAll(/^\s*(?:'([^']+)'|([A-Za-z_$][\w$]*)):\s*TIMEOUTS\./gm)].map(
+            (m) => m[1] ?? m[2]
+        )
+    );
 }
 
 describe('REQUEST_TIMEOUTS', () => {
@@ -58,6 +64,15 @@ describe('REQUEST_TIMEOUTS', () => {
     // "Sign In with Adobe" action needed to await it (2026-07-31).
     it.each(['authenticate', 'reAuthenticate'])('budgets the browser sign-in %s', (type) => {
         expect([...budgetedTypes()]).toContain(type);
+    });
+
+    // The Code Sync check is fast ONLY when the caller passes `skipTrigger`.
+    // "Check Again" does not, so on a repo Helix has never indexed the handler
+    // triggers a real code sync and polls it for up to TIMEOUTS.LONG. Unbudgeted,
+    // the frontend gave up at 30s and rendered "couldn't verify" over a sync that
+    // was still running — and the gate on that step reads that verdict.
+    it('budgets the Code Sync check for the path that triggers a sync', () => {
+        expect([...budgetedTypes()]).toContain('check-github-app');
     });
 
     // Every Adobe-console call routes through getServicesForOrg or a subscribe PUT,

@@ -90,13 +90,6 @@ jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     },
 }));
 
-jest.mock('@/features/components/ui/steps/ComponentSelectionStep', () => ({
-    ComponentSelectionStep: ({ setCanProceed }: any) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="component-selection-step">Component Selection Step</div>;
-    },
-}));
-
 jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', () => ({
     ConnectStoreStepContent: ({ onValidationChange }: any) => {
         React.useEffect(() => onValidationChange(true), [onValidationChange]);

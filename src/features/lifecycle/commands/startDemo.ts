@@ -10,6 +10,7 @@ import { sleep } from '@/core/utils/sleep';
 import { validateNodeVersion } from '@/core/validation';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
+import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 
 /**
  * Command to start the demo frontend server
@@ -359,7 +360,7 @@ export class StartDemoCommand extends BaseCommand {
                     this.logger.debug(`[Start Demo] Sending demoStateChanged with runningProjectPath: ${project.path}`);
                     await projectsPanel.webview.postMessage({
                         type: 'demoStateChanged',
-                        payload: { runningProjectPath: project.path },
+                        payload: { runningProjectPath: project.path } satisfies DemoStateChangedPayload,
                     });
                 }
 

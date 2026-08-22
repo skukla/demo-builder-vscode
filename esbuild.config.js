@@ -195,7 +195,9 @@ function runMcpProxyBuild() {
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
     wizard:       'src/features/project-creation/ui/wizard/index.tsx',
-    dashboard:    'src/features/dashboard/ui/index.tsx',
+    // main.tsx, not index.tsx: an index.ts barrel sits beside it, and tsc keeps
+    // only one file per basename — an index.tsx entry here is never typechecked.
+    dashboard:    'src/features/dashboard/ui/main.tsx',
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',
     projectsList: 'src/features/projects-dashboard/ui/index.tsx',

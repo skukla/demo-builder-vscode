@@ -57,6 +57,17 @@ function pending() {
 }
 
 /**
+ * The very first frame: nothing loading, nothing loaded.
+ *
+ * `useVSCodeRequest` starts `loading` FALSE and the fetch is kicked off from a
+ * useEffect, which React runs after the first paint. So this state is real and
+ * every mount passes through it — `pending()` above is the frame AFTER.
+ */
+function notYetAsked() {
+    return { loading: false, error: null, data: null };
+}
+
+/**
  * A guard refusal — `success:false` with a reason. It does NOT reject.
  *
  * The `code` is what the shared failure renderer branches on; matching the
@@ -312,7 +323,7 @@ describe('SampleDataStep', () => {
  */
 describe('SampleDataStep — filtering', () => {
     async function typeQuery(text: string) {
-        const field = screen.getByRole('searchbox', { name: /filter sample data/i });
+        const field = screen.getByRole('searchbox', { name: /filter datapacks/i });
         fireEvent.change(field, { target: { value: text } });
     }
 
@@ -376,7 +387,7 @@ describe('SampleDataStep — filtering', () => {
 
         await typeQuery('zzzz-no-such-pack');
 
-        expect(screen.getByText(/no sample data matches/i)).toBeInTheDocument();
+        expect(screen.getByText(/no datapacks match/i)).toBeInTheDocument();
     });
 
     /** A choice already made must survive a query that hides its card. */
@@ -414,7 +425,24 @@ describe('SampleDataStep — loading', () => {
         mockState = pending();
         renderStep();
 
-        expect(screen.queryByRole('searchbox', { name: /filter sample data/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('searchbox', { name: /filter datapacks/i })).not.toBeInTheDocument();
+    });
+
+    /**
+     * The blip, reported 2026-08-20: for one frame the grid rendered before the
+     * spinner did.
+     *
+     * The branch asked `loading`, which is false until the useEffect fires —
+     * i.e. until after the first paint. So the first frame had nothing loading
+     * and nothing loaded, fell past the spinner, and drew the empty grid. It
+     * asks `!settled` now: has anything actually come back?
+     */
+    it('shows the spinner on the FIRST frame, before the fetch has even started', () => {
+        mockState = notYetAsked();
+        renderStep();
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByRole('radio', { name: 'None' })).not.toBeInTheDocument();
     });
 
     it('replaces the spinner with the grid once the catalog lands', async () => {

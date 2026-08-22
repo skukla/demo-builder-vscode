@@ -33,6 +33,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
@@ -40,8 +41,9 @@ import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
-export class ShowIntegrationsCommand extends BaseWebviewCommand {
+export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }
@@ -82,14 +84,18 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
      * which the manifest carries — the banner names where every integration in
      * this project deploys).
      */
-    protected async getInitialData(): Promise<Record<string, unknown>> {
+    protected async getInitialData(): Promise<IntegrationsInitialData> {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
+        // No annotation needed any more: the payload field itself is branded
+        // `ProjectDisplayName`, so `project.name` here stops compiling at the
+        // return statement.
+        const projectName = project ? getProjectDisplayName(project) : asDisplayName('');
         return {
             theme,
-            projectName: project?.name ?? '',
+            projectName,
             hasAdobeContext: Boolean(project?.adobe?.organization),
             appBuilderComponents: project?.appBuilderComponents,
             commerceStoreStructure: project?.commerceStoreStructure,

@@ -24,6 +24,8 @@ import { ErrorCode } from '@/types/errorCodes';
 import { isTimeout, toAppError } from '@/types/errors';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
+import type { PrerequisiteInstallCompletePayload, PrerequisiteStatusPayload } from '@/types/webviewPayloads';
+import type { InstallPrerequisiteRequestPayload } from '@/types/webviewRequests';
 
 /**
  * Get target Node versions for installation (SOP §3 compliance)
@@ -96,7 +98,7 @@ async function resolveNodeTargetVersions(
         if (satisfied) {
             context.logger.debug(`[Prerequisites] Node ${version}.x already installed, skipping installation`);
             context.debugLogger.debug(`[Prerequisites] Version satisfaction check passed - no installation needed for Node ${version}`);
-            await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+            await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true } satisfies PrerequisiteInstallCompletePayload);
             return { targetVersions: undefined, earlyReturn: true };
         }
         context.debugLogger.debug(`[Prerequisites] Node ${version}.x not satisfied, proceeding with installation`);
@@ -118,7 +120,7 @@ async function resolveNodeTargetVersions(
 
     if (!targetVersions || targetVersions.length === 0) {
         context.logger.debug(`[Prerequisites] All required Node versions already installed`);
-        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true } satisfies PrerequisiteInstallCompletePayload);
         return { targetVersions: undefined, earlyReturn: true };
     }
 
@@ -154,7 +156,7 @@ async function resolvePerNodeTargetVersions(
 
     if (!targetVersions || targetVersions.length === 0) {
         context.logger.debug(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available in fnm`);
-        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true } satisfies PrerequisiteInstallCompletePayload);
         return { targetVersions: undefined, earlyReturn: true };
     }
 
@@ -186,14 +188,15 @@ async function executeInstallSteps(
         await context.progressUnifier?.executeStep(
             step, counter, total,
             async (progress) => {
-                await context.sendMessage('prerequisite-status', {
+                const stepStatus: PrerequisiteStatusPayload = {
                     index: prereqId,
                     name: prereq.name,
                     status: 'checking',
                     message: ver ? `${step.message.replace(/{version}/g, ver)} for Node ${ver}` : step.message,
                     required: !prereq.optional,
                     unifiedProgress: progress,
-                });
+                };
+                await context.sendMessage('prerequisite-status', stepStatus);
             },
             ver ? { nodeVersion: ver } : undefined,
         );
@@ -315,13 +318,14 @@ async function installPlugins(
             const versionLabel = nodeVer ? ` for Node ${nodeVer}` : '';
             context.debugLogger.debug(`[Prerequisites] Installing plugin ${plugin.name}${versionLabel}`);
 
-            await context.sendMessage('prerequisite-status', {
+            const pluginStatus: PrerequisiteStatusPayload = {
                 index: prereqId,
                 name: prereq.name,
                 status: 'checking',
                 message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}...`,
                 required: !prereq.optional,
-            });
+            };
+            await context.sendMessage('prerequisite-status', pluginStatus);
 
             for (const cmd of pluginCommands.commands) {
                 try {
@@ -385,7 +389,7 @@ async function handleVerificationError(
         }
     }
 
-    await context.sendMessage('prerequisite-status', {
+    const verifyWarning: PrerequisiteStatusPayload = {
         index: prereqId,
         name: prereq.name,
         status: 'warning',
@@ -396,7 +400,8 @@ async function handleVerificationError(
             ? `Installation completed but verification timed out after ${TIMEOUTS.POLL.INTERVAL / 1000} seconds. Click Recheck to verify.`
             : `Installation completed but verification failed: ${errorMessage}. Click Recheck to verify.`,
         canInstall: false,
-    });
+    };
+    await context.sendMessage('prerequisite-status', verifyWarning);
     return { success: true };
 }
 
@@ -460,7 +465,7 @@ async function sendFinalInstallStatus(
         });
     }
 
-    await context.sendMessage('prerequisite-status', {
+    const finalStatus: PrerequisiteStatusPayload = {
         index: prereqId,
         name: prereq.name,
         status: determinePrerequisiteStatus(overallInstalled, !!prereq.optional),
@@ -472,7 +477,8 @@ async function sendFinalInstallStatus(
         canInstall: !overallInstalled,
         plugins: installResult.plugins,
         nodeVersionStatus: prereq.id === 'node' ? finalNodeVersionStatus : finalPerNodeVersionStatus,
-    });
+    };
+    await context.sendMessage('prerequisite-status', finalStatus);
 }
 
 /**
@@ -544,7 +550,7 @@ function isHeadless(context: HandlerContext): boolean {
  */
 export async function handleInstallPrerequisite(
     context: HandlerContext,
-    payload: { prereqId?: number; prerequisiteId?: string; version?: string },
+    payload: InstallPrerequisiteRequestPayload,
 ): Promise<SimpleResult> {
     try {
         const { version } = payload;
@@ -581,13 +587,14 @@ export async function handleInstallPrerequisite(
         }
 
         if (installPlan.manual && installPlan.url) {
-            await context.sendMessage('prerequisite-status', {
+            const manualStatus: PrerequisiteStatusPayload = {
                 index: prereqId,
                 name: prereq.name,
                 status: 'warning',
                 message: `Manual installation required. Open: ${installPlan.url}`,
                 required: !prereq.optional,
-            });
+            };
+            await context.sendMessage('prerequisite-status', manualStatus);
 
             // Only for a person who just clicked Install. Headless this is an
             // agent's call, and opening a browser window nobody asked for is the
@@ -657,7 +664,7 @@ export async function handleInstallPrerequisite(
             finalNodeVersionStatus, finalPerNodeVersionStatus,
         );
 
-        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+        await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true } satisfies PrerequisiteInstallCompletePayload);
 
         // Named, not bare. `{success: true}` renders as the literal "{}" through
         // `defaultShape`, so an agent learned nothing — not which prerequisite,

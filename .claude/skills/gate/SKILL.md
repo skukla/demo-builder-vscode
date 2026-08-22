@@ -57,6 +57,17 @@ npx tsc --noEmit 2>&1 | tail -15          # src/ (tsconfig.json excludes tests)
 npm run typecheck:tests 2>&1 | tail -15   # tests/ (tsconfig.test.json) — CI runs this too
 ```
 
+**If the change ADDED or RENAMED any .ts/.tsx file, also run the blind-spot check** —
+a green tsc is only as good as its file set, and tsc's include globs keep one file
+per basename (.ts beats .tsx): an `index.tsx` beside an `index.ts` barrel is
+silently NEVER typechecked. That gap hid a dead wire read in the dashboard entry
+for months (fixed 20f45f8f). CI runs this on every push; locally it only matters
+when the file set changed:
+
+```bash
+npm run validate:tsc-blindspots   # asserts both configs' file sets cover the disk
+```
+
 Whole-project typecheck (project references make per-file impossible). Both must be
 exit 0. The second one exists because `tsconfig.json` excludes test files and
 `@swc/jest` strips types — without it, nothing typechecks the test tree and fixtures
@@ -96,6 +107,7 @@ pushing, match CI exactly:
 npm run lint                                  # whole repo — the one that's easy to miss
 npx tsc --noEmit
 npm run typecheck:tests                       # test tree — CI gates on this too
+npm run validate:tsc-blindspots               # files tsc silently skips (basename shadowing) — CI gates on this
 npx jest --no-coverage > "$SCRATCH/gate-jest.txt" 2>&1   # full suite; never pipe through tail
 bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
 ```

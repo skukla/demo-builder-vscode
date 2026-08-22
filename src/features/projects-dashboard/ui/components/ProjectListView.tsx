@@ -8,6 +8,7 @@
 import { ListView, Item, Text, Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import {
     getStatusText,
     getStatusVariant,
@@ -53,7 +54,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 const statusVariant = getStatusVariant(project.status);
 
                 return (
-                    <Item key={project.path} textValue={project.name}>
+                    <Item key={project.path} textValue={getProjectDisplayName(project)}>
                         <Flex
                             alignItems="center"
                             justifyContent="space-between"
@@ -61,7 +62,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         >
                             <Flex alignItems="center" gap="size-150">
                                 <StatusDot variant={statusVariant} size={8} />
-                                <Text>{project.name}</Text>
+                                <Text>{getProjectDisplayName(project)}</Text>
                             </Flex>
                             <Text UNSAFE_className="text-gray-500 text-sm">
                                 {statusText}

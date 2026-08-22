@@ -196,17 +196,37 @@ export function WelcomeStep({
     }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);
 
     // Project Name Input - shared between both layouts
+    //
+    // The field takes the TITLE as typed and derives the slug from it. It used
+    // to run `normalizeProjectName` on every keystroke, so "My Bodea Demo"
+    // rewrote itself to "my-bodea-demo" under the cursor -- the enforcement was
+    // correct and the place it happened was not. The rule is unchanged; it now
+    // applies to a value the user does not have to look at.
+    //
+    // `projectName` still holds the slug, so every downstream consumer -- the
+    // folder, the dedupe check, `createHandler` -- is untouched. Validation runs
+    // on the SLUG for the same reason: it is what has to be a legal folder.
     const projectNameField = (
         <div className="brand-section">
             <TextField
                 label="Project Name"
                 placeholder="Enter project name..."
-                value={state.projectName}
-                onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
+                value={state.projectTitle ?? state.projectName ?? ''}
+                onChange={(value) =>
+                    updateState({ projectTitle: value, projectName: normalizeProjectName(value) })
+                }
                 validationState={getProjectNameValidationState(state.projectName)}
                 errorMessage={
                     state.projectName !== undefined
                         ? validateProjectName(state.projectName)
+                        : undefined
+                }
+                // Say where it lands, rather than making them type it. The folder
+                // is browsable on disk, so it is worth showing -- silently
+                // deriving a name the user then cannot find is its own bug.
+                description={
+                    state.projectName
+                        ? `Folder: ${state.projectName}`
                         : undefined
                 }
                 width="size-6000"

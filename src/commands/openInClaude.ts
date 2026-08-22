@@ -259,10 +259,15 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
     await context.globalState.update('demoBuilder.ai.onboardingCompleted', undefined);
     await context.globalState.update('demoBuilder.ai.firstClaudeOpenTipShown', undefined);
 
-    // Legacy AI user-settings — back to package.json defaults.
-    const aiConfig = vscode.workspace.getConfiguration('demoBuilder.ai');
-    await aiConfig.update('surface', undefined, vscode.ConfigurationTarget.Global);
-    await aiConfig.update('dockToRight', undefined, vscode.ConfigurationTarget.Global);
+    // No demoBuilder.ai.surface / dockToRight clears any more: those settings
+    // were removed from package.json in 7bbe1bd9, and VS Code REJECTS
+    // `update()` on an unregistered key — so the two clears this block used
+    // to attempt could only throw, aborting this function before the
+    // claudeCode cleanup below ever ran (callers swallow the rejection with
+    // a warn). Stale values in a user's settings.json are inert — VS Code
+    // ignores unregistered keys — so there is nothing to clean and no API
+    // that could clean it. Found by the manifest-mirrors settings check,
+    // 2026-08-21.
 
     // Clear any `claudeCode.preferredLocation` value Demo Builder wrote in
     // earlier versions; with the extension surface retired we no longer touch

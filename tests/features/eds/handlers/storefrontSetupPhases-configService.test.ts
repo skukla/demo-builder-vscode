@@ -322,7 +322,7 @@ describe('registerConfigurationService - existing repo 403', () => {
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
                 type === 'storefront-setup-progress' &&
                 payload.phase === 'site-config' &&
-                payload.message?.includes('da.live preview')
+                payload.message?.includes('DA.live preview')
         );
         expect(warningCall).toBeDefined();
         // Existing repo means the App was already installed — no propagation retry.
@@ -358,7 +358,7 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const hasWarning = sendCalls.some(
             ([type, payload]: [string, { message?: string }]) =>
-                type === 'storefront-setup-progress' && payload.message?.includes('da.live preview')
+                type === 'storefront-setup-progress' && payload.message?.includes('DA.live preview')
         );
         expect(hasWarning).toBe(false);
     });
@@ -399,7 +399,7 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
                 type === 'storefront-setup-progress' &&
                 payload.phase === 'site-config' &&
-                payload.message?.includes('da.live preview')
+                payload.message?.includes('DA.live preview')
         );
         expect(warningCall).toBeDefined();
     });

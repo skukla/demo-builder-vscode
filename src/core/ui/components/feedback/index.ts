@@ -14,6 +14,7 @@ export { StatusCard } from './StatusCard';
 export type { StatusCardProps } from './StatusCard';
 
 export { EmptyState } from './EmptyState';
+export { CtaEmptyState, type CtaEmptyStateAction, type CtaEmptyStateProps } from './CtaEmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
 export { StatusDisplay } from './StatusDisplay';
@@ -24,3 +25,5 @@ export type { LoadingOverlayProps } from './LoadingOverlay';
 
 export { SuccessStateDisplay } from './SuccessStateDisplay';
 export type { SuccessStateDisplayProps } from './SuccessStateDisplay';
+export { InlineNotice } from './InlineNotice';
+export type { InlineNoticeProps } from './InlineNotice';

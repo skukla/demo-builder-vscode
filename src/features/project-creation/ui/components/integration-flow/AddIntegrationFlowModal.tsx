@@ -25,7 +25,6 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { isPrebuiltIntegration } from '../../../services/appBuilderComponentCatalogLoader';
-import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { type FlowMode, FlowStageId } from './flowStages';
@@ -44,7 +43,7 @@ import { DestinationContext as SharedDestinationContext } from '@/core/ui/compon
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { WizardState } from '@/types/webview';
+import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 
 /** Stable empty selection (avoids the inline-array re-render gotcha). */
 const EMPTY_IDS: string[] = [];
@@ -74,10 +73,14 @@ export interface AddIntegrationFlowModalProps {
     mode: FlowMode;
     /** The integration whose API picks are being re-edited (mode 'api-edit' only). */
     editTarget?: ApiEditTarget;
-    state: WizardState;
+    state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
-    /** The stack's mesh catalog entry (tileStatus.meshComponentForStack), if any. */
-    meshComponent?: SelectableAppBuilderComponent;
+    /**
+     * The stack's mesh catalog entry, if any. Just the catalog entry — the
+     * flow reads id/name/description/requiredApis and never the
+     * package-resolved `requirement` the wizard's annotated entries add.
+     */
+    meshComponent?: AppBuilderComponentCatalogEntry;
     /** The FINISHED catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
@@ -229,7 +232,7 @@ function DestinationContext({
     stage,
     onChange,
 }: {
-    state: WizardState;
+    state: AdobeAuthSessionState;
     stage: FlowStageId;
     onChange: () => void;
 }): React.ReactElement | null {

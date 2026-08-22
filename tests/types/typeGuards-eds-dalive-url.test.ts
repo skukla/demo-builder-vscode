@@ -17,7 +17,7 @@
  *       https://da.live/canvas?nx=<branch>#/<org>/<site>/index
  *     `?nx=<branch>` pins the canvas to a specific pre-release da-nx branch.
  *     The branch is sourced from the demoBuilder.daLive.ewCanvasBranch setting
- *     (read by edsHelpers.getEwCanvasBranch); empty (the default) drops the ?nx override.
+ *     (read by authoringExperience.getEwCanvasBranch); empty (the default) drops the ?nx override.
  *
  * Non-EDS projects and projects missing org/site resolve to undefined.
  */

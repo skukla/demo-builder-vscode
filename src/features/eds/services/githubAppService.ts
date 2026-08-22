@@ -8,12 +8,13 @@
  */
 
 import type { GitHubTokenService } from './githubTokenService';
+import { HELIX_ADMIN_URL } from './helixApiClient';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /** Helix admin base URL for code sync checks */
-const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
+// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 /** GitHub App installation URL - direct to GitHub's app installation flow */
 const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
@@ -194,7 +195,7 @@ export class GitHubAppService {
         httpStatus?: number;
         helixError?: string;
     }> {
-        const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
+        const statusUrl = `${HELIX_ADMIN_URL}/status/${owner}/${repo}/main?editUrl=auto`;
 
         const response = await fetch(statusUrl, {
             method: 'GET',

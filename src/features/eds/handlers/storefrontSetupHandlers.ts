@@ -36,155 +36,28 @@ import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { StorefrontSetupCompletePayload, StorefrontSetupErrorPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
+import type {
+    StorefrontSetupCancelPayload,
+    StorefrontSetupPartialState,
+    StorefrontSetupStartPayload,
+} from '@/types/webviewRequests';
 
 // ==========================================================
 // Types
 // ==========================================================
 
-/**
- * Partial state tracking for storefront setup operations
- * Tracks which resources have been created for cleanup on cancel
- */
-export interface StorefrontSetupPartialState {
-    repoCreated: boolean;
-    repoUrl?: string;
-    repoOwner?: string;
-    repoName?: string;
-    contentCopied: boolean;
-    phase: string;
-}
 
-/**
- * Payload for storefront-setup-start message
- */
-export interface StorefrontSetupStartPayload {
-    projectName: string;
-    /** Component configurations for config.json generation */
-    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    /** Backend component ID for environment-aware config generation */
-    backendComponentId?: string;
-    /** Effective component dependencies (stack deps + user-selected optional deps) */
-    dependencies?: string[];
-    /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
-    selectedAddons?: string[];
-    /** Selected block library IDs (e.g., ['isle5', 'demo-team-blocks']) */
-    selectedBlockLibraries?: string[];
-    /** Custom block libraries added by URL */
-    customBlockLibraries?: CustomBlockLibrary[];
-    /** Selected package ID (e.g., 'citisignal') */
-    selectedPackage?: string;
-    /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
-    selectedStack?: string;
-    edsConfig: {
-        repoName: string;
-        repoMode?: 'new' | 'existing';
-        existingRepo?: string;
-        daLiveOrg: string;
-        daLiveSite: string;
-        githubOwner?: string;
-        isPrivate?: boolean;
-        resetToTemplate?: boolean;
-        skipContent?: boolean;
-        // Template repository info (from stack/brand config) for GitHub reset operations
-        templateOwner?: string;
-        templateRepo?: string;
-        // DA.live content source (explicit config, not derived from GitHub URL)
-        contentSource?: {
-            org: string;
-            site: string;
-            indexPath?: string;
-        };
-        // Second content source for the account chrome (hybrid packages).
-        accountContentSource?: {
-            org: string;
-            site: string;
-        };
-        // Optional BYOM content overlay URL (from demo-packages.json storefronts)
-        byomOverlayUrl?: string;
-        /**
-         * Why `byomOverlayUrl` resolved to nothing, as a user-facing sentence.
-         *
-         * Set by this handler at resolution time and read by phase 3, so the
-         * phases never touch VS Code settings. Phase 3 briefly did, inside the
-         * Configuration Service try/catch, where a failed config read surfaced
-         * as a bogus "Config Service incomplete" warning.
-         */
-        byomAbsentReason?: string;
-        // Selected existing repository (from searchable list)
-        selectedRepo?: {
-            name: string;
-            fullName: string;
-            htmlUrl: string;
-            isPrivate?: boolean;
-        };
-        // Selected existing DA.live site (from searchable list)
-        // Used to determine if user is using an existing site vs creating new
-        selectedSite?: {
-            id: string;
-            name: string;
-        };
-        // Whether to reset existing site content (repopulate with demo data)
-        // Only applies when selectedSite is set (existing site mode)
-        resetSiteContent?: boolean;
-        // Created repository info (set when the repo was created in RepoSelectionInline)
-        // If present, skip repo creation in StorefrontSetupStep
-        createdRepo?: {
-            owner: string;
-            name: string;
-            url: string;
-            fullName: string;
-        };
-        // Patch IDs to apply during setup (from demo-packages.json storefronts)
-        patches?: string[];
-        // Content patch IDs to apply during DA.live content copy (from demo-packages.json storefronts)
-        contentPatches?: string[];
-        // External source for content patches (from demo-packages.json storefronts)
-        contentPatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-        };
-        // Code patch IDs to apply during create/reset (ADR-006 Step 5; sibling
-        // of contentPatches, operates on repo files).
-        codePatches?: string[];
-        // External code-patch source (thin-layer storefronts per ADR-006).
-        codePatchSource?: {
-            owner: string;
-            repo: string;
-            path: string;
-        };
-        // Additive brand files + optional marker-bounded head.html snippet
-        // (from demo-packages.json storefronts), vendored by brandAssetPublisher.
-        brandAssets?: {
-            source: { owner: string; repo: string; branch: string };
-            files: Array<{ from: string; to: string }>;
-            headSnippet?: string;
-        };
-        // GitHub auth info from Connect Services step
-        githubAuth?: {
-            isAuthenticated?: boolean;
-            user?: {
-                login: string;
-                name?: string;
-                avatarUrl?: string;
-                email?: string;
-            };
-        };
-    };
-}
+// The request wire shapes live in @/types/webviewRequests — ONE declaration
+// shared with the wizard's StorefrontSetupStep (which used to carry its own
+// PartialState twin). Re-exported here for the phase modules' existing imports.
+export type {
+    StorefrontSetupCancelPayload,
+    StorefrontSetupPartialState,
+    StorefrontSetupStartPayload,
+} from '@/types/webviewRequests';
 
-/**
- * Payload for storefront-setup-cancel message
- */
-interface StorefrontSetupCancelPayload {
-    partialState?: StorefrontSetupPartialState;
-    edsConfig?: {
-        daLiveOrg?: string;
-        daLiveSite?: string;
-    };
-}
 
 // ==========================================================
 // Handlers
@@ -224,8 +97,11 @@ export async function handleCancelStorefrontSetup(
         );
 
         if (confirm !== 'Yes, Cancel') {
+            // No push here: the cancel request arrives on webview unmount, so
+            // there is nobody left to hear a 'storefront-setup-cancel-aborted'
+            // message — the old send had no listener anywhere (deleted by the
+            // 2026-08-21 channel inventory).
             context.logger.debug('[Storefront Setup] Cancel aborted by user');
-            await context.sendMessage('storefront-setup-cancel-aborted', {});
             return { success: true };
         }
     }
@@ -247,7 +123,7 @@ export async function handleCancelStorefrontSetup(
                 phase: 'cancelling',
                 message: 'Cleaning up resources...',
                 progress: 0,
-            });
+            } satisfies StorefrontSetupProgressPayload);
 
             const cleanupResult = await cleanupStorefrontSetupResources(
                 context,
@@ -269,7 +145,8 @@ export async function handleCancelStorefrontSetup(
         }
     }
 
-    await context.sendMessage('storefront-setup-cancelled', {});
+    // No 'storefront-setup-cancelled' push: same reason as above — the webview
+    // that asked for the cancel is already gone, and no listener ever existed.
     return { success: true };
 }
 
@@ -317,7 +194,7 @@ export async function handleStartStorefrontSetup(
         await context.sendMessage('storefront-setup-error', {
             message: 'Missing required parameters',
             error: 'Project name and EDS config are required',
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: 'Missing required parameters' };
     }
 
@@ -345,7 +222,7 @@ export async function handleStartStorefrontSetup(
             await context.sendMessage('storefront-setup-error', {
                 message: 'Authentication required',
                 error: 'Please authenticate with Adobe before starting storefront setup',
-            });
+            } satisfies StorefrontSetupErrorPayload);
             return { success: false, error: 'AuthenticationService not available' };
         }
 
@@ -361,7 +238,7 @@ export async function handleStartStorefrontSetup(
                 error: adobeResult.cancelled
                     ? 'Adobe sign-in was cancelled.'
                     : 'Adobe sign-in failed. Please try again.',
-            });
+            } satisfies StorefrontSetupErrorPayload);
             return { success: false, error: 'Adobe authentication required' };
         }
     } else {
@@ -376,7 +253,7 @@ export async function handleStartStorefrontSetup(
             error: daLiveResult.cancelled
                 ? 'DA.live sign-in was cancelled.'
                 : daLiveResult.error || 'Your DA.live session has expired.',
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: 'DA.live authentication required' };
     }
 
@@ -457,7 +334,7 @@ export async function handleStartStorefrontSetup(
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
-            });
+            } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };
         } else {
             throw new Error(result.error || 'Unknown error');
@@ -468,7 +345,7 @@ export async function handleStartStorefrontSetup(
         await context.sendMessage('storefront-setup-error', {
             message: 'Storefront setup failed',
             error: errorMessage,
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: errorMessage };
     } finally {
         context.sharedState.storefrontSetupAbortController = undefined;
