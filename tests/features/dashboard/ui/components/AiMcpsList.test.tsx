@@ -2,8 +2,9 @@
  * AiMcpsList Tests
  *
  * Renders the MCP servers wired into the current project's `.mcp.json` as a
- * lean list. Each row shows the server id, its current inspection status,
- * and (when healthy) the number of tools advertised by `tools/list`.
+ * lean list. Each row shows the server's display label (SERVER_LABELS, raw id
+ * fallback), its current inspection status, and (when healthy) the number of
+ * tools advertised by `tools/list`.
  *
  * Mirrors the AiSkillsList shape — error and empty states use plain language,
  * no health checkmarks (status is informational only).
@@ -19,28 +20,46 @@ function renderList(props: Partial<React.ComponentProps<typeof AiMcpsList>> = {}
     return render(
         <Provider theme={defaultTheme}>
             <AiMcpsList {...props} mcps={props.mcps ?? []} />
-        </Provider>,
+        </Provider>
     );
 }
 
 describe('AiMcpsList', () => {
-    it('lists each MCP server by id', () => {
+    it('lists each wired server under its display label (test ids stay keyed by server id)', () => {
         renderList({
             mcps: [
                 { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
                 { id: 'playwright', status: 'ok', tools: [{ name: 't', description: 'd' }] },
+                {
+                    id: 'commerce-extensibility',
+                    status: 'ok',
+                    tools: [{ name: 't', description: 'd' }],
+                },
+                { id: 'dropins', status: 'ok', tools: [{ name: 't', description: 'd' }] },
             ],
         });
 
-        expect(screen.getByTestId('ai-mcp-demo-builder')).toBeInTheDocument();
-        expect(screen.getByTestId('ai-mcp-playwright')).toBeInTheDocument();
+        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder');
+        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright');
+        expect(screen.getByTestId('ai-mcp-commerce-extensibility')).toHaveTextContent(
+            'Adobe App Builder'
+        );
+        expect(screen.getByTestId('ai-mcp-dropins')).toHaveTextContent('Adobe Commerce Dropins');
+    });
+
+    it('falls back to the raw id for a server it does not recognise', () => {
+        renderList({
+            mcps: [{ id: 'user-added-server', status: 'ok', tools: [] }],
+        });
+
+        expect(screen.getByTestId('ai-mcp-user-added-server')).toHaveTextContent(
+            'user-added-server'
+        );
     });
 
     it('shows "1 tool" (singular) for a server with one tool', () => {
         renderList({
-            mcps: [
-                { id: 'single', status: 'ok', tools: [{ name: 'only', description: 'd' }] },
-            ],
+            mcps: [{ id: 'single', status: 'ok', tools: [{ name: 'only', description: 'd' }] }],
         });
 
         expect(screen.getByTestId('ai-mcp-single')).toHaveTextContent(/1 tool\b/i);
@@ -89,7 +108,7 @@ describe('AiMcpsList', () => {
         expect(screen.getByTestId('ai-mcps-error')).toBeInTheDocument();
     });
 
-    it('sorts MCPs alphabetically by id for predictable rendering', () => {
+    it('sorts unrecognised servers alphabetically by their id (= their label)', () => {
         renderList({
             mcps: [
                 { id: 'zeta', status: 'ok', tools: [] },
@@ -99,8 +118,24 @@ describe('AiMcpsList', () => {
         });
 
         const rows = screen.getAllByTestId(/^ai-mcp-/);
-        const ids = rows.map(r => r.getAttribute('data-testid'));
+        const ids = rows.map((r) => r.getAttribute('data-testid'));
         expect(ids).toEqual(['ai-mcp-alpha', 'ai-mcp-beta', 'ai-mcp-zeta']);
+    });
+
+    it('sorts by the DISPLAYED label, not the id', () => {
+        // Discriminating pair: by id, demo-builder < dropins; by label,
+        // "Adobe Commerce Dropins" < "Demo Builder". The list renders labels,
+        // so the dropins row must come first.
+        renderList({
+            mcps: [
+                { id: 'demo-builder', status: 'ok', tools: [] },
+                { id: 'dropins', status: 'ok', tools: [] },
+            ],
+        });
+
+        const rows = screen.getAllByTestId(/^ai-mcp-/);
+        const ids = rows.map((r) => r.getAttribute('data-testid'));
+        expect(ids).toEqual(['ai-mcp-dropins', 'ai-mcp-demo-builder']);
     });
 });
 
