@@ -914,7 +914,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: 'Checking configurations...',
+            message: 'Preparing content copy...',
         });
 
         // Auth pages missing from source — stubs created after the main copy loop
