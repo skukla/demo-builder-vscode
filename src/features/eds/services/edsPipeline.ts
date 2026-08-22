@@ -440,7 +440,10 @@ async function pipelinePublishContent(
                 onProgress?.({
                     operation: 'content-publish',
                     message: info.message,
-                    subMessage: info.currentPath,
+                    // The bulk job reports counts but never the page it is on —
+                    // fall back to the site so the detail row is never blank
+                    // while the title counts up.
+                    subMessage: info.currentPath ?? `${repoOwner}/${repoName}`,
                     current: info.current,
                     total: info.total,
                 });
