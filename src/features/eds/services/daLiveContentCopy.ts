@@ -18,7 +18,6 @@ import {
     CONTENT_COPY_BATCH_SIZE,
     DA_LIVE_BASE_URL,
     MAX_RETRY_ATTEMPTS,
-    RETRYABLE_STATUS_CODES,
     getRetryDelay,
     normalizePath,
 } from './daLiveConstants';
@@ -139,6 +138,12 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
 }
 
 /** Copy authored content between DA.live sites. */
+// TRANSPORT JURISDICTION (2026-08-22 consolidation): writes to admin.da.live
+// go through `apiClient.fetchWithRetry` (shared retry + one-shot-body factory
+// + page-level 429 tolerance). The remaining raw `fetch` calls here target the
+// PUBLIC CDN (aem.live / aem.page) — a different system, deliberately outside
+// the DA.live client: probes swallow errors by design and must not inherit
+// retries, and CDN reads carry their own 404-tolerant semantics.
 export class DaLiveContentCopy {
     constructor(
         private readonly apiClient: DaLiveApiClient,
@@ -342,6 +347,9 @@ export class DaLiveContentCopy {
 
         for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
+                // CDN read: raw fetch on purpose (see the jurisdiction note on
+                // the class). Non-OK is terminal — only network errors retry,
+                // via this loop.
                 const sourceResponse = await fetch(sourceUrl, {
                     signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
                 });
@@ -372,29 +380,30 @@ export class DaLiveContentCopy {
                     : await sourceResponse.blob();
 
                 const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
-                const formData = new FormData();
-                formData.append('data', contentBlob);
 
-                const response = await fetch(destUrl, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: formData,
-                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-                });
+                // DA.live write via the shared client: 5xx/network retries live
+                // THERE now (this loop used to re-run the whole source+dest
+                // pair); the factory rebuilds the one-shot FormData per attempt
+                // from the reusable blob.
+                const response = await this.apiClient.fetchWithRetry(
+                    destUrl,
+                    () => {
+                        const formData = new FormData();
+                        formData.append('data', contentBlob);
+                        return {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}` },
+                            body: formData,
+                        };
+                    },
+                    { rateLimit: 'return' },
+                );
 
                 if (response.ok) return true;
 
                 // Token expired — throw so caller can pause-and-prompt for re-auth
                 if (response.status === 401) {
                     throw new DaLiveAuthError('DA.live token expired during content copy');
-                }
-
-                if (
-                    RETRYABLE_STATUS_CODES.includes(response.status) &&
-                    attempt < MAX_RETRY_ATTEMPTS
-                ) {
-                    await sleep(getRetryDelay(attempt));
-                    continue;
                 }
 
                 let errorDetail = '';
@@ -491,15 +500,21 @@ export class DaLiveContentCopy {
             const destNormalizedPath = normalizePath(destPath);
             const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${destNormalizedPath}.html`;
 
-            const formData = new FormData();
-            formData.append('data', new Blob([htmlContent], { type: 'text/html' }));
-
-            const response = await fetch(destUrl, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
+            // DA.live write via the shared client (retry + fresh FormData per
+            // attempt; page-level 429 tolerance).
+            const response = await this.apiClient.fetchWithRetry(
+                destUrl,
+                () => {
+                    const formData = new FormData();
+                    formData.append('data', new Blob([htmlContent], { type: 'text/html' }));
+                    return {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}` },
+                        body: formData,
+                    };
+                },
+                { rateLimit: 'return' },
+            );
 
             if (response.ok) {
                 this.logger.info(`[DA.live] Copied spreadsheet ${sourcePath}`);
@@ -552,6 +567,10 @@ export class DaLiveContentCopy {
         formData.append('destination', `/${destOrg}/${destSite}/`);
 
         try {
+            // Deliberately NOT via fetchWithRetry: one whole-site bulk copy on
+            // a VERY_LONG timeout — auto-retrying 5xx here could triple a
+            // multi-minute operation, and the reset flow that calls this owns
+            // its own recovery.
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
@@ -1029,16 +1048,23 @@ export class DaLiveContentCopy {
                         '</div></main><footer></footer></body>',
                     ].join('');
                     const blob = new Blob([stubHtml], { type: 'text/html' });
-                    const formData = new FormData();
-                    formData.append('data', blob);
 
                     const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
-                    const response = await fetch(destUrl, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                        body: formData,
-                        signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-                    });
+                    // DA.live write via the shared client (retry + fresh
+                    // FormData per attempt; 429 tolerated per stub).
+                    const response = await this.apiClient.fetchWithRetry(
+                        destUrl,
+                        () => {
+                            const fd = new FormData();
+                            fd.append('data', blob);
+                            return {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                                body: fd,
+                            };
+                        },
+                        { rateLimit: 'return' },
+                    );
 
                     if (response.ok) {
                         copiedFiles.push(authPath);

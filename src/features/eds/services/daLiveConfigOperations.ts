@@ -20,7 +20,6 @@
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { hasWriteAccess } from './daLiveOrgOperations';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -302,10 +301,9 @@ export class DaLiveConfigOperations {
         });
 
         try {
-            const getResponse = await fetch(configUrl, {
+            const getResponse = await this.apiClient.fetchWithRetry(configUrl, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             if (getResponse.ok) {
@@ -360,18 +358,20 @@ export class DaLiveConfigOperations {
         token: string,
         configData: Record<string, unknown>,
     ): Promise<{ success: boolean; error?: string }> {
-        const formData = new FormData();
-        formData.append('config', JSON.stringify(configData));
-
         try {
-            const response = await fetch(configUrl, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    // Don't set Content-Type — fetch sets the multipart boundary for FormData.
-                },
-                body: formData,
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            // Factory: the FormData body is one-shot, so each retry attempt
+            // gets a fresh one (shared-client contract, 2026-08-22).
+            const response = await this.apiClient.fetchWithRetry(configUrl, () => {
+                const formData = new FormData();
+                formData.append('config', JSON.stringify(configData));
+                return {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        // Don't set Content-Type — fetch sets the multipart boundary for FormData.
+                    },
+                    body: formData,
+                };
             });
 
             if (response.ok) {

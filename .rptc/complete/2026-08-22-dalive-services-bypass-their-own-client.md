@@ -3,6 +3,20 @@
 **Filed:** 2026-08-22
 **Origin:** The spine sweep (call-path-audit, DA.live row). Sibling of
 `2026-08-22-helix-publish-has-two-engines.md` — same disease, milder form.
+**SHIPPED 2026-08-22, same day filed.** Client extended first (RED tests):
+`fetchWithRetry` accepts a per-attempt request FACTORY (one-shot FormData
+bodies) and a `rateLimit: 'return'` mode (page-level 429 tolerance). Then
+migrated: contentCopy's three DA.live writes (its compound retry loop now
+retries only the CDN source read; dest retries live in the client — pinned by
+the new `daLiveContentCopy-retry.test.ts`, including fresh-FormData-per-
+attempt and skip-page-on-429), configService's five calls (internal client),
+sourceOperations (3), configOperations (2, factory), blockLibraryOperations
+(1), and orgOperations — whose PRIVATE byte-near copy of the whole retry loop
+is deleted (it keeps only its own 401-throw policy). Documented exceptions
+stay raw on purpose: CDN reads/probes, the VERY_LONG whole-site bulk copy,
+the module-level write-access probe. Two test suites needed the §8 mock
+audit (stale global-fetch setups → client mock / faithful fake). All 177
+affected suites green.
 
 ## The claim (verified 2026-08-22)
 

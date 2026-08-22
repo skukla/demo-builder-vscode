@@ -6,7 +6,18 @@ const makeLogger = () =>
 const makeApiClient = () =>
     ({
         getImsToken: jest.fn().mockResolvedValue('tok-123'),
-        fetchWithRetry: jest.fn(),
+        // Faithful fake: delegate to global fetch (which the suite mocks) and
+        // resolve the per-attempt request factory the real client supports —
+        // so the existing fetchMock sequences and body assertions keep pinning
+        // the actual wire calls.
+        fetchWithRetry: jest.fn((url: string, options: unknown) =>
+            global.fetch(
+                url,
+                typeof options === 'function'
+                    ? (options as () => RequestInit)()
+                    : (options as RequestInit),
+            ),
+        ),
         createErrorFromResponse: jest.fn(),
     }) as never;
 

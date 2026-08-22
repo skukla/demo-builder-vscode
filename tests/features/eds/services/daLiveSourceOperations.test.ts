@@ -128,7 +128,7 @@ describe('DaLiveSourceOperations', () => {
 
     describe('deleteSource', () => {
         it('reports success on 200', async () => {
-            mockFetch.mockResolvedValue(makeResponse(200));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
 
             await expect(service.deleteSource('org', 'site', '/page')).resolves.toEqual({
                 success: true,
@@ -136,7 +136,7 @@ describe('DaLiveSourceOperations', () => {
         });
 
         it('reports success on 404 (already gone)', async () => {
-            mockFetch.mockResolvedValue(makeResponse(404));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(404));
 
             await expect(service.deleteSource('org', 'site', '/page')).resolves.toEqual({
                 success: true,
@@ -144,7 +144,7 @@ describe('DaLiveSourceOperations', () => {
         });
 
         it('reports failure on other status', async () => {
-            mockFetch.mockResolvedValue(makeResponse(500));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(500));
 
             const result = await service.deleteSource('org', 'site', '/page');
             expect(result.success).toBe(false);
@@ -153,19 +153,19 @@ describe('DaLiveSourceOperations', () => {
 
     describe('sourceExists', () => {
         it('returns true when the GET is ok', async () => {
-            mockFetch.mockResolvedValue(makeResponse(200));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
 
             await expect(service.sourceExists('org', 'site', '/page')).resolves.toBe(true);
         });
 
         it('returns false on 404', async () => {
-            mockFetch.mockResolvedValue(makeResponse(404));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(404));
 
             await expect(service.sourceExists('org', 'site', '/page')).resolves.toBe(false);
         });
 
         it('returns false when fetch throws', async () => {
-            mockFetch.mockRejectedValue(new Error('network'));
+            apiClient.fetchWithRetry.mockRejectedValue(new Error('network'));
 
             await expect(service.sourceExists('org', 'site', '/page')).resolves.toBe(false);
         });
@@ -185,8 +185,9 @@ describe('DaLiveSourceOperations', () => {
                     makeResponse(200, [{ path: '/org/site/sub/inner', ext: 'html' }])
                 );
 
-            // All DELETE/GET calls (deleteSource + deleteSiteRoot) go through global.fetch.
-            mockFetch.mockResolvedValue(makeResponse(200));
+            // Since the 2026-08-22 transport consolidation, deleteSource and
+            // deleteSiteRoot ALSO ride the shared client.
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
 
             const onProgress = jest.fn();
             const result = await service.deleteAllSiteContent('org', 'site', onProgress);
@@ -196,19 +197,18 @@ describe('DaLiveSourceOperations', () => {
             expect(result.deletedCount).toBe(2);
             expect(result.deletedPaths).toEqual(['/page', '/sub/inner']);
             expect(onProgress).toHaveBeenCalledTimes(2);
-            // deleteSource for 2 files + 1 dir, plus deleteSiteRoot = 4 fetch calls.
-            expect(mockFetch).toHaveBeenCalledTimes(4);
+            // 2 list calls + deleteSource for 2 files + 1 dir + deleteSiteRoot = 6 client calls.
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledTimes(6);
         });
 
         it('deletes only the site root when the site is already empty', async () => {
             apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, []));
-            mockFetch.mockResolvedValue(makeResponse(200));
 
             const result = await service.deleteAllSiteContent('org', 'site');
 
             expect(result).toEqual({ success: true, deletedCount: 0, deletedPaths: [] });
-            // Only the site-root DELETE.
-            expect(mockFetch).toHaveBeenCalledTimes(1);
+            // The empty list + the site-root DELETE, both via the client.
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledTimes(2);
         });
     });
 

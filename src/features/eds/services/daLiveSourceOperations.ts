@@ -16,7 +16,6 @@
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
 import { DaLiveNetworkError, type DaLiveEntry, type DaLiveSourceResult } from './types';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -142,10 +141,9 @@ export class DaLiveSourceOperations {
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
 
         try {
-            const response = await fetch(url, {
+            const response = await this.apiClient.fetchWithRetry(url, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             // 200/204 = deleted, 404 = already doesn't exist (both are success)
@@ -174,10 +172,9 @@ export class DaLiveSourceOperations {
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/`;
 
         try {
-            const response = await fetch(url, {
+            const response = await this.apiClient.fetchWithRetry(url, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
 
             if (response.ok || response.status === 404) {
@@ -342,10 +339,9 @@ export class DaLiveSourceOperations {
             const token = await this.apiClient.getImsToken();
             const normalized = normalizePath(path);
             const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
-            const response = await fetch(url, {
+            const response = await this.apiClient.fetchWithRetry(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });
             return response.ok;
         } catch {

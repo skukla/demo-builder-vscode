@@ -241,12 +241,14 @@ describe('spine choke-points', () => {
     });
 
     it('da.live HOST: the admin.da.live literal is defined once, in daLiveConstants', () => {
-        // Audited 2026-08-22: the operations layer is one intended leaf client
-        // (daLiveApiClient) + N services — but several services still run raw
-        // fetch with hand-rolled retries (consolidation filed:
-        // 2026-08-22-dalive-services-bypass-their-own-client.md). What IS
-        // single-sourced now is the host: four local copies of the base URL
-        // were folded into the one exported constant in this audit.
+        // Audited AND consolidated 2026-08-22: the host is single-sourced
+        // here, and the transport consolidation shipped the same day — every
+        // DA.live admin write rides daLiveApiClient.fetchWithRetry (per-
+        // attempt body factories for one-shot FormData, page-level 429
+        // tolerance); orgOperations' private retry-loop copy is deleted. The
+        // deliberate exceptions are documented in place: CDN reads/probes
+        // (different system), the whole-site bulk copy (VERY_LONG timeout,
+        // retries would triple it), and the module-level write-access probe.
         const primitive = /['"`]https:\/\/admin\.da\.live/;
         const spine = ['features/eds/services/daLiveConstants.ts'];
 
