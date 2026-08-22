@@ -439,10 +439,11 @@ export async function showDaLiveAuthQuickPick(
 /**
  * Validate the collected token and pin it to the namespace.
  *
- * Runs for BOTH token sources. The clipboard path already proved identity in
- * `isDaLiveTokenPositivelyIdentified`, but the typed path has proved nothing
- * yet, so validation happens here regardless — the clipboard is simply checked
- * twice, which is cheap and keeps this the single place a token becomes real.
+ * Runs for BOTH token sources. The clipboard path already passed
+ * `validateDaLiveTokenStrict` inside `readTokenFromClipboard`, but the typed
+ * path has proved nothing yet, so validation happens here regardless — the
+ * clipboard is simply checked twice, which is cheap and keeps this the single
+ * place a token becomes real.
  *
  * Never throws: every failure returns a result the caller reports.
  *
