@@ -75,7 +75,10 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
 
 jest.mock('@/core/ui/components/feedback', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
-    StatusDisplay: ({ title, actions }: any) => (
+    // The empty state moved from StatusDisplay to the shared CtaEmptyState
+    // (2026-08-22, matching the Projects first-run look); same testid so the
+    // suite keeps asserting behaviour, not markup.
+    CtaEmptyState: ({ title, actions }: any) => (
         <div data-testid="empty-state">
             {title}
             {actions?.map((a: any) => (

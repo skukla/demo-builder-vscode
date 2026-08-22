@@ -1,14 +1,16 @@
 /**
  * DashboardEmptyState Component
  *
- * Displays an empty state for the Projects Dashboard with CTAs to create or import a project.
+ * The Projects Dashboard's first-run empty state — a thin wrapper over the
+ * shared {@link CtaEmptyState} (this file used to carry the layout itself;
+ * it moved to core/ui when the Integrations surface adopted the same look,
+ * 2026-08-22).
  */
 
-import { Flex, Text, Button } from '@adobe/react-spectrum';
-import type { FocusableRefValue } from '@react-types/shared';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
-import React, { useCallback } from 'react';
+import React from 'react';
+import { CtaEmptyState, type CtaEmptyStateAction } from '@/core/ui/components/feedback';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -33,54 +35,25 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     buttonText = 'New',
     autoFocus = false,
 }) => {
-    const focusRef = useCallback((node: FocusableRefValue<HTMLElement, HTMLElement> | null) => {
-        if (autoFocus && node) {
-            const domNode = node.UNSAFE_getDOMNode?.() ?? node as unknown as HTMLElement;
-            domNode?.focus();
-        }
-    }, [autoFocus]);
+    const actions: CtaEmptyStateAction[] = [
+        { label: buttonText, variant: 'cta', onPress: onCreate, icon: <Add /> },
+    ];
+    if (onImportFromFile) {
+        // Import option for users with exported settings
+        actions.push({
+            label: 'Import',
+            variant: 'secondary',
+            onPress: onImportFromFile,
+            icon: <Import />,
+        });
+    }
 
     return (
-        <Flex
-            justifyContent="center"
-            alignItems="center"
-            height="100%"
-            minHeight="350px"
-        >
-            <Flex
-                direction="column"
-                alignItems="center"
-                gap="size-300"
-                UNSAFE_className="centered-content-narrow"
-            >
-                <Text UNSAFE_className="text-lg">
-                    <strong>{title}</strong>
-                </Text>
-                <Text UNSAFE_className="description-text">
-                    Get started by creating your first demo project.
-                </Text>
-                <Flex gap="size-200" alignItems="center">
-                    <Button
-                        ref={focusRef}
-                        variant="cta"
-                        onPress={onCreate}
-                    >
-                        <Add />
-                        <Text>{buttonText}</Text>
-                    </Button>
-
-                    {/* Import option for users with exported settings */}
-                    {onImportFromFile && (
-                        <Button
-                            variant="secondary"
-                            onPress={onImportFromFile}
-                        >
-                            <Import />
-                            <Text>Import</Text>
-                        </Button>
-                    )}
-                </Flex>
-            </Flex>
-        </Flex>
+        <CtaEmptyState
+            title={title}
+            description="Get started by creating your first demo project."
+            actions={actions}
+            autoFocus={autoFocus}
+        />
     );
 };
