@@ -916,6 +916,7 @@ export class DaLiveContentCopy {
             total: 0,
             percentage: 0,
             message: 'Preparing content copy...',
+            currentFile: `${contentPaths.length} pages from ${source.org}/${source.site}`,
         });
 
         // Auth pages missing from source — stubs created after the main copy loop
