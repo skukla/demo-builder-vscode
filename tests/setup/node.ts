@@ -43,6 +43,23 @@ process.env.DEMO_BUILDER_MCP_SOCKET_DIR = path.join(
     `w${process.env.JEST_WORKER_ID ?? '0'}`
 );
 
+// Keep test PROJECT scans (and writes) out of the real projects directory.
+//
+// The same two activation suites run the real activate(), which fires the
+// AI-bundle activation sweep — and that sweep WRITES `.mcp.json` /
+// `.claude/mcp.json` / `.claude/settings.json` into every project its scanner
+// finds. On 2026-08-22 it found the developer's real project and clobbered its
+// MCP config with the test's mock extension path (and truncated `.mcp.json` to
+// zero bytes when the run tore down mid-write). Point the projects root at a
+// per-run, per-worker sandbox under the same tmp tree the socket fix uses; the
+// directory is never created, so scans see a clean "no projects yet" ENOENT.
+// Suites that need a specific root still override + restore it locally.
+process.env.DEMO_BUILDER_PROJECTS_DIR = path.join(
+    socketRootForRun(),
+    `w${process.env.JEST_WORKER_ID ?? '0'}`,
+    'projects'
+);
+
 afterEach(() => {
     // Reset ServiceLocator to prevent singleton pollution between tests
     ServiceLocator.reset();

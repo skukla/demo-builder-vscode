@@ -8,7 +8,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockHomedir, createMockProject, type TestMocks } from './stateManager.testUtils';
+import {
+    setupMocks,
+    mockHomedir,
+    createMockProject,
+    type TestMocks,
+} from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
@@ -29,7 +34,7 @@ describe('StateManager - Utilities', () => {
             const mockManifest = {
                 name: 'Test Project',
                 created: '2024-01-01',
-                lastModified: '2024-01-02'
+                lastModified: '2024-01-02',
             };
 
             (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
@@ -75,7 +80,7 @@ describe('StateManager - Utilities', () => {
             const { stateManager } = testMocks;
             const mockManifest = {
                 name: 'Test Project',
-                created: '2024-01-01'
+                created: '2024-01-01',
             };
 
             (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
@@ -101,13 +106,13 @@ describe('StateManager - Utilities', () => {
                 name: 'Test Project',
                 created: '2024-01-01',
                 componentInstances: {
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'CitiSignal Next.js',
                         status: 'ready',
-                        type: 'frontend'
-                    }
-                }
+                        type: 'frontend',
+                    },
+                },
             };
 
             (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
@@ -121,14 +126,17 @@ describe('StateManager - Utilities', () => {
 
             // Create mock terminal with matching name
             const mockTerminal = {
-                name: 'Test Project - Frontend'
+                name: 'Test Project - Frontend',
             } as unknown as vscode.Terminal;
 
             // Inject terminal provider that returns our mock terminal
             const terminalProvider = () => [mockTerminal];
 
             // Load project with injected terminal provider
-            const project = await stateManager.loadProjectFromPath('/test/project', terminalProvider);
+            const project = await stateManager.loadProjectFromPath(
+                '/test/project',
+                terminalProvider
+            );
 
             // The key assertions: status should be 'running' when terminal is detected
             // Note: No log is emitted for this routine detection (removed to prevent log spam)
@@ -143,13 +151,13 @@ describe('StateManager - Utilities', () => {
                 name: 'Test Project',
                 created: '2024-01-01',
                 componentInstances: {
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'CitiSignal Next.js',
                         status: 'ready',
-                        type: 'frontend'
-                    }
-                }
+                        type: 'frontend',
+                    },
+                },
             };
 
             (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
@@ -163,14 +171,17 @@ describe('StateManager - Utilities', () => {
 
             // Create mock terminal with DIFFERENT name
             const mockTerminal = {
-                name: 'Other Project - Frontend'
+                name: 'Other Project - Frontend',
             } as unknown as vscode.Terminal;
 
             // Inject terminal provider that returns terminal with different name
             const terminalProvider = () => [mockTerminal];
 
             // Load project with injected terminal provider
-            const project = await stateManager.loadProjectFromPath('/test/project', terminalProvider);
+            const project = await stateManager.loadProjectFromPath(
+                '/test/project',
+                terminalProvider
+            );
 
             // Status should be 'stopped' when no matching terminal found
             expect(project?.status).toBe('stopped');
@@ -194,6 +205,29 @@ describe('StateManager - Utilities', () => {
     });
 
     describe('getAllProjects', () => {
+        // The scanner resolves the projects root via resolveProjectsRoot(), and
+        // tests/setup/node.ts points DEMO_BUILDER_PROJECTS_DIR at a per-worker
+        // sandbox. These tests key their fs mocks on the mockHomedir path, so
+        // aim the env at that same path for the block.
+        let prevProjectsDir: string | undefined;
+
+        beforeEach(() => {
+            prevProjectsDir = process.env.DEMO_BUILDER_PROJECTS_DIR;
+            process.env.DEMO_BUILDER_PROJECTS_DIR = path.join(
+                mockHomedir,
+                '.demo-builder',
+                'projects'
+            );
+        });
+
+        afterEach(() => {
+            if (prevProjectsDir === undefined) {
+                delete process.env.DEMO_BUILDER_PROJECTS_DIR;
+            } else {
+                process.env.DEMO_BUILDER_PROJECTS_DIR = prevProjectsDir;
+            }
+        });
+
         it('should return all projects from projects directory', async () => {
             const { stateManager } = testMocks;
             const projectsDir = path.join(mockHomedir, '.demo-builder', 'projects');
@@ -202,7 +236,7 @@ describe('StateManager - Utilities', () => {
                 if (dir === projectsDir) {
                     return Promise.resolve([
                         { name: 'project1', isDirectory: () => true },
-                        { name: 'project2', isDirectory: () => true }
+                        { name: 'project2', isDirectory: () => true },
                     ]);
                 }
                 return Promise.resolve([]);
@@ -225,7 +259,7 @@ describe('StateManager - Utilities', () => {
                 if (dir === projectsDir) {
                     return Promise.resolve([
                         { name: 'project1', isDirectory: () => true },
-                        { name: 'not-a-project', isDirectory: () => true }
+                        { name: 'not-a-project', isDirectory: () => true },
                     ]);
                 }
                 return Promise.resolve([]);
@@ -255,7 +289,7 @@ describe('StateManager - Utilities', () => {
                 if (dir === projectsDir) {
                     return Promise.resolve([
                         { name: 'old-project', isDirectory: () => true },
-                        { name: 'new-project', isDirectory: () => true }
+                        { name: 'new-project', isDirectory: () => true },
                     ]);
                 }
                 return Promise.resolve([]);
@@ -294,7 +328,7 @@ describe('StateManager - Utilities', () => {
                 if (dir === projectsDir) {
                     return Promise.resolve([
                         { name: 'project1', isDirectory: () => true },
-                        { name: 'readme.txt', isDirectory: () => false }
+                        { name: 'readme.txt', isDirectory: () => false },
                     ]);
                 }
                 return Promise.resolve([]);
@@ -325,7 +359,7 @@ describe('StateManager - Utilities', () => {
 
             await Promise.all([
                 stateManager.saveProject(project1 as Project),
-                stateManager.saveProject(project2 as Project)
+                stateManager.saveProject(project2 as Project),
             ]);
 
             const current = await stateManager.getCurrentProject();
@@ -354,7 +388,7 @@ describe('StateManager - Utilities', () => {
             const invalidProject = {
                 name: null,
                 path: '',
-                status: 'invalid'
+                status: 'invalid',
             } as unknown as Parameters<typeof stateManager.saveProject>[0];
 
             // FIXED: Errors should now be propagated (not swallowed)
@@ -370,13 +404,13 @@ describe('StateManager - Utilities', () => {
                 port: 3000,
                 startTime: new Date(),
                 command: 'npm start',
-                status: 'running'
+                status: 'running',
             };
 
             // Concurrent add and remove
             await Promise.all([
                 stateManager.addProcess('test', processInfo),
-                stateManager.removeProcess('test')
+                stateManager.removeProcess('test'),
             ]);
 
             // Should handle gracefully - process may or may not exist
