@@ -170,7 +170,11 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 // alone top-aligns here: it centres via height:100%, and .step-view
                 // above this is a padded block with no height for that to measure.
                 <CenteredFeedbackContainer>
-                    <LoadingDisplay size="L" message="Loading sample data..." />
+                    <LoadingDisplay
+                        size="L"
+                        message="Loading sample data..."
+                        helperText="This should only take a moment"
+                    />
                 </CenteredFeedbackContainer>
             ) : (
                 <>

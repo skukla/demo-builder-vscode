@@ -48,7 +48,8 @@ export async function executePhaseGitHubRepo(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: 'Using repository...',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
         } satisfies StorefrontSetupProgressPayload);
@@ -121,6 +122,7 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Pinning to verified canonical state...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 12,
     } satisfies StorefrontSetupProgressPayload);
     await pinIfThinLayer(
@@ -135,6 +137,7 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -241,7 +244,8 @@ async function executePhaseExistingRepo(
     );
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: 'Using existing repository...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -272,6 +276,7 @@ async function executePhaseExistingRepo(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: 'Resetting repository to template...',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 6,
         } satisfies StorefrontSetupProgressPayload);
 
@@ -314,6 +319,7 @@ async function executePhaseExistingRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -339,6 +345,7 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Creating GitHub repository from template...',
+        subMessage: repoInfo.repoName,
         progress: 5,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -372,6 +379,7 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Waiting for repository content...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 10,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);

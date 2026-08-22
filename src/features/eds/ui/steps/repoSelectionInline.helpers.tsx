@@ -481,13 +481,14 @@ export function CodeSyncStatusView({
             <CenteredFeedbackContainer fill>
                 <LoadingDisplay
                     size="L"
-                    message="Checking AEM Code Sync"
+                    message="Checking AEM Code Sync..."
                     // A caller-supplied line is always more specific than an
                     // elapsed-time guess -- the retry loop's "attempt 2 of 5" must
                     // not be overwritten by it.
                     subMessage={
                         recheckMessage || longWait || `Verifying ${owner}/${repo}...`
                     }
+                    helperText="This may take a minute after a fresh install"
                 />
             </CenteredFeedbackContainer>
         );

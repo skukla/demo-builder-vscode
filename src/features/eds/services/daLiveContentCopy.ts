@@ -904,6 +904,7 @@ export class DaLiveContentCopy {
             total: 0,
             percentage: 0,
             message: 'Enumerating source content...',
+            currentFile: `${source.org}/${source.site}`,
         });
 
         // Enumerate and filter source content paths (list API w/ CDN-index fallback,

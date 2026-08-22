@@ -1644,7 +1644,7 @@ export class HelixService {
 
             onProgress?.({
                 phase: HelixService.PublishPhases.PUBLISHING,
-                message: `Publishing pages (${i + 1}/${pages.length})`,
+                message: `Publishing to CDN (${i + 1}/${pages.length})`,
                 current: i,
                 total: pages.length,
                 currentPath: path,

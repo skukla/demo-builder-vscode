@@ -287,7 +287,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             expect(screen.queryByText('Catalog Service')).not.toBeInTheDocument();
         });
 
-        it('shows the step-level "Detecting store structure…" loader (centered, like auth) while detecting', () => {
+        it('shows the step-level "Detecting store structure..." loader (centered, like auth) while detecting', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
             configurePaasConnectionFilled();
             // Detection in flight: no store data yet.
@@ -301,7 +301,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             // Same treatment as the auth step: LoadingDisplay inside CenteredFeedbackContainer.
             const centered = screen.getByTestId('centered-feedback');
             expect(within(centered).getByTestId('loading-display')).toHaveTextContent(
-                'Detecting store structure…'
+                'Detecting store structure...'
             );
             // The cascade is NOT rendered while detecting (step-level loader replaces it).
             expect(

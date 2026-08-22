@@ -239,7 +239,11 @@ async function pipelineClearContent(
     const { daLiveContentOps, helixService, logger } = services;
     const { daLiveOrg, daLiveSite, repoOwner, repoName } = context;
 
-    onProgress?.({ operation: 'content-clear', message: 'Clearing existing DA.live content...' });
+    onProgress?.({
+        operation: 'content-clear',
+        message: 'Clearing existing DA.live content...',
+        subMessage: `${daLiveOrg}/${daLiveSite}`,
+    });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
 
     const clearResult = await daLiveContentOps.deleteAllSiteContent(
@@ -329,6 +333,7 @@ async function pipelineCopyContent(
     onProgress?.({
         operation: 'content-copy',
         message: 'Populating DA.live content...',
+        subMessage: `from ${contentSource.org}/${contentSource.site}`,
     });
 
     // The brand source has no /customer/* pages by design when an account
@@ -420,6 +425,7 @@ async function pipelinePublishContent(
     onProgress?.({
         operation: 'content-publish',
         message: 'Publishing content to CDN...',
+        subMessage: `${repoOwner}/${repoName}`,
     });
 
     logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);

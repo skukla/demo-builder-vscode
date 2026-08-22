@@ -82,6 +82,7 @@ export async function executePhaseHelixConfig(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
         message: 'Configuring Edge Delivery Services...',
+        subMessage: `${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
         progress: 20,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -140,7 +141,7 @@ export async function executePhaseHelixConfig(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Helix configured',
+        message: 'Edge Delivery Services configured',
         progress: 35,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -157,7 +158,8 @@ async function pushFstabToGitHub(
 ): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Pushing fstab.yaml configuration...',
+        message: 'Connecting content source...',
+        subMessage: `fstab.yaml → ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
         progress: 25,
     } satisfies StorefrontSetupProgressPayload);
     const fstabContent = generateFstabContent({
@@ -261,6 +263,7 @@ async function installBlockCollectionsWithTracking(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'storefront-code',
             message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
+            subMessage: allLibraries.map((lib) => lib.name).join(', '),
             progress: 28,
         } satisfies StorefrontSetupProgressPayload);
         const result = await installBlockCollections(

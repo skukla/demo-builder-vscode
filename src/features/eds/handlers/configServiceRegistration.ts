@@ -56,6 +56,7 @@ export async function registerConfigurationService(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: 'Registering site with Configuration Service...',
+        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 46,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -131,7 +132,7 @@ export async function registerConfigurationService(
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'site-config',
                 message:
-                    '⚠️ Configuration Service registration failed — da.live preview may not work',
+                    '⚠️ Configuration Service registration failed — DA.live preview may not work',
                 progress: 47,
             } satisfies StorefrontSetupProgressPayload);
         }
@@ -190,7 +191,7 @@ export async function registerConfigurationService(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
             message:
-                '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
+                '⚠️ Configuration Service setup incomplete — DA.live preview may need manual configuration',
             progress: 49,
         } satisfies StorefrontSetupProgressPayload);
         if (edsConfig.byomOverlayUrl) {

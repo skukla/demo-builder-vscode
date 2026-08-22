@@ -85,7 +85,7 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
     it('shows the compact spinner+label while detecting (no dropdowns/Re-detect)', () => {
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
-        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+        expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
         // The spinner stands in for the whole row — no dropdowns or Re-detect yet.
         expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
         // initial detect. The user's selection is preserved in the field values.
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
-        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+        expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
         expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
     });
 
@@ -106,7 +106,7 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
         expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
         // The dropdowns ARE the result — no separate success confirmation.
         expect(screen.queryByText('Store structure detected')).not.toBeInTheDocument();
-        expect(screen.queryByText('Detecting store structure…')).not.toBeInTheDocument();
+        expect(screen.queryByText('Detecting store structure...')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
     });
 
@@ -114,12 +114,12 @@ describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)
         const { rerender } = render(
             <StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />
         );
-        expect(screen.getByText('Detecting store structure…')).toBeInTheDocument();
+        expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
 
         rerender(
             <StoreConfigFieldRow {...buildProps({ isFetching: false, hasStoreData: true })} />
         );
-        expect(screen.queryByText('Detecting store structure…')).not.toBeInTheDocument();
+        expect(screen.queryByText('Detecting store structure...')).not.toBeInTheDocument();
         expect(screen.getByTestId('store-selection-row')).toBeInTheDocument();
     });
 

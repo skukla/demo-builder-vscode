@@ -121,25 +121,32 @@ interface StorefrontSetupStepProps {
 }
 
 /**
- * Get helper text for loading display based on phase
- * These provide time estimates or additional context, not action descriptions
+ * Row 3 of the loading display: a STATIC expectation for the phase — how long
+ * it usually takes, or what it is waiting on. Never a phase description: that
+ * is the title's job, and a description here read as a second, slower status
+ * (the 2026-08-22 loading-message audit). Every phase gets a value so the
+ * block never reflows between phases.
  */
 function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
         case 'repository':
             return 'This may take up to 30 seconds';
         case 'storefront-code':
-            return 'Installing blocks and configuring storefront';
+            return 'This may take about a minute';
         case 'code-sync':
-            return 'Verifying Edge Delivery Services connection';
+            return 'This may take up to a minute';
         case 'site-config':
-            return 'Configuring site permissions and routing';
+            return 'This may take up to a minute';
         case 'content':
             return 'This may take 1-2 minutes';
         case 'block-library':
-            return 'Setting up block library in DA.live';
+            return 'This may take up to 30 seconds';
         case 'publish':
             return 'This may take 2-3 minutes';
+        case 'auth-recovery':
+            return 'Waiting for you to finish signing in';
+        case 'cancelling':
+            return 'This should only take a moment';
         default:
             return undefined;
     }

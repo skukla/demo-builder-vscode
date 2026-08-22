@@ -80,6 +80,7 @@ function PhaseSpinner({ phases }: { phases: Phases }): React.ReactElement {
                 size="L"
                 message={phases.phaseMessage ?? ''}
                 subMessage={phases.phaseSubMessage}
+                helperText="This may take a minute"
             />
         </CenteredFeedbackContainer>
     );
