@@ -7,48 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Signing in to DA.live again after the token expires used to take four
-interactions. It now takes one.
+## [1.0.0-beta.136] - 2026-08-22
+
+A wide release: three campaigns land together — every extension↔webview message
+now travels a declared shape, thirteen destructive actions are pinned to a
+single implementation each, and the wizard's loading and progress surfaces
+follow one contract. Plus a new MCP server for storefront work and a rebuilt
+DA.live sign-in.
+
+### Added
+
+- **Adobe Commerce Dropins MCP for EDS storefronts.** Projects with an EDS
+  storefront now get `@dropins/mcp` in their AI bundle — 21 tools covering
+  drop-in discovery (slots, events, containers, design tokens, GraphQL queries),
+  block scaffolding, health checks (`analyze_project`, `check_block_health`,
+  `get_upgrade_diff`), and docs search. Verified live against a real storefront
+  before shipping: every vendored dropin resolves in its registry. Existing
+  projects will be offered **Regenerate AI files** on the dashboard (a real
+  package download is needed).
+- **Readable project titles.** A project can carry a display title while the
+  slug stays under the hood. The title shows on the dashboard and in the
+  wizard's edit mode, and everywhere a project can be named accepts one.
+- **Honest AEM Code Sync verification.** The wizard now verifies Code Sync only
+  where Adobe can actually answer, reports three clear outcomes instead of six,
+  never claims "the App isn't installed" from a site check, and holds Continue
+  until the install page has been opened when the App's presence is only
+  inferred.
+- **Live Datapack install progress.** The wizard title carries the count
+  (`Installing Datapack (3/12)`) and the detail row names the data types
+  installing right now; the reset notification composes the same data as a
+  single line.
+- **Friendly MCP names in the AI Capabilities modal.** Rows read
+  `Adobe App Builder · 11 tools` instead of raw config ids.
 
 ### Changed
 
-- **DA.live sign-in no longer asks for your namespace every time.** The org is
-  the GitHub namespace, it is pinned in storage the first time you sign in, and
-  only an explicit sign-out clears it — a token expiring never did. The flow was
-  asking you to re-type a value it already held. It now asks only when nothing is
-  pinned, and when it does ask, it asks **first**: identifying yourself after
-  handing over a credential was backwards.
-- **You no longer paste the token.** The da.live bookmarklet already copies it to
-  your clipboard, so the flow reads it from there. The notification button is now
-  **Continue** rather than "Paste Token", and the paste box appears only when the
-  clipboard holds no usable token — saying so, rather than opening a box that
-  looks like your click did nothing.
+- **"Sample Data" is now "Datapacks"** on every user-facing surface — dashboard
+  tile, wizard area, step copy, progress lines, reset dialog, credential notes.
+- **DA.live sign-in: one interaction instead of four.** Your namespace is pinned
+  the first time you sign in (a token expiring never clears it — only an
+  explicit sign-out does), and the token is read from the clipboard where the
+  da.live bookmarklet put it. The notification button is now **Continue**; the
+  paste box appears only when the clipboard holds nothing usable.
+- **One loading contract across the wizard.** Every loading state shows a step
+  summary, a live-detail row (repo, site, page counts, libraries), and a time
+  expectation. Two mislabelled progress messages were corrected along the way.
+- **The Integrations empty screen matches the Projects first-run screen**, with
+  tighter copy; both now ride one shared component.
+- **Playwright MCP updates un-frozen.** `^0.0.75` was an exact pin (a caret on a
+  0.0.x version allows nothing newer), so installs were stuck on 0.0.75. Now
+  `~0.0.79`, which tracks patch releases.
 
 ### Fixed
 
+- **Publishing to admin-protected sites.** The shared Helix client was missing
+  its `Authorization` header on publish — found and fixed while consolidating
+  the two parallel publish engines into one.
 - **A token-shaped string was accepted as a DA.live credential.** Validation
-  passed anything starting with `eyJ` whose payload it could not read — and base64
-  of any JSON begins `eyJ` and contains no `.`, so an encoded config file, a
-  copied secret or any foreign JWT qualified. It was then stored, written to
-  `~/.aem/da-token.json`, and sent as `Authorization: Bearer` to Adobe. Every path
-  that turns an untrusted string into a stored credential — the clipboard read and
-  both webview sign-in handlers — now requires proof: the payload must parse, name
+  passed anything starting with `eyJ` whose payload it could not read — and
+  base64 of any JSON begins `eyJ` and contains no `.`, so an encoded config
+  file, a copied secret or any foreign JWT qualified. Every path that turns an
+  untrusted string into a stored credential — the clipboard read and both
+  webview sign-in handlers — now requires proof: the payload must parse, name
   DA.live's client, and carry a real expiry.
-- **A token with no readable expiry could evict a working one.** Without an expiry
-  the extension invented "24 hours from now", and the shared agent-token cache
-  keeps whichever copy expires later — so the invented one displaced a real
-  credential and every later call failed while the extension still reported itself
-  signed in.
+- **A token with no readable expiry could evict a working one.** Without an
+  expiry the extension invented "24 hours from now", and the shared agent-token
+  cache keeps whichever copy expires later — so the invented one displaced a
+  real credential while the extension still reported itself signed in.
+- **Closing the wizard during the DA.live re-auth pause** now cancels setup and
+  offers cleanup instead of leaving the run in limbo.
+- **Repos whose default branch is not `main` are refused with the reason**,
+  instead of failing mysteriously later.
+- **The Configure screen receives secret-field flags again**, and the
+  dashboard's package-name subtitle is restored — both silently dropped at an
+  untyped webview boundary and caught by the typing campaign.
+- **First-frame loading blips.** Webviews show their loading state on the first
+  frame, and the component registry is fetched once per webview, not once per
+  mount.
+- **`check-github-app` no longer trips the 30-second default message timeout.**
+- **The wizard footer survives the Publish Storefront → Create Project
+  handoff.**
+- **Test runs can no longer write into real projects.** The activation sweep's
+  project scanner bypassed the projects-root override, so a plain jest run swept
+  the developer's real `~/.demo-builder/projects` and clobbered a real project's
+  MCP config. The scanner now honors `DEMO_BUILDER_PROJECTS_DIR` and the test
+  suite sandboxes it per run.
 
 ### Internal
 
+- **Spine campaign complete: 13/13 destructive actions pinned to one
+  implementation each** (`tests/templates/spine-chokepoints.test.ts`), via the
+  new `call-path-audit` skill. Its three filed consolidations were executed in
+  the same window: one Helix engine, every DA.live admin write on the shared
+  retrying client (with page-level 429 tolerance), and one mesh
+  create-or-update rule shared by both resets and headless deploy.
+- **Every extension↔webview channel typed in both directions.** One declaration
+  per wire shape; the fake MessageType protocol surface deleted; boundary-cast
+  ratchet 40 → 31 with `as any` at 0, enforced by test.
 - `edsHelpers.ts` (1228 lines, six unrelated responsibilities) split into six
   single-responsibility modules behind a re-export barrel; no consumer or test
   changed. Admin API key persistence lifted out of `helixService.ts` into
   `helixKeyStore.ts`, with its 88 existing tests passing untouched.
-- The god-file backlog item was measured and found to be pointed at the two
-  smallest candidates in the repo; corrected to name the three that measurement
-  actually condemns.
+- AI bundle version 15 → 16.
+- Release-cut passes: `rptc-hygiene-scan` ran (advisory findings only).
+  `codebase-sweep` and `dream` were deliberately skipped this cut — this release
+  contains the sweep campaign itself, so a re-sweep would re-measure what just
+  shipped. The next cut should run both.
 
 ## [1.0.0-beta.135] - 2026-08-19
 
