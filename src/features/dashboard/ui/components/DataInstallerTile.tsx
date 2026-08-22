@@ -25,7 +25,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 export function DataInstallerTile(): React.ReactElement {
     return (
         <DashboardTile
-            label="Sample Data"
+            label="Datapacks"
             icon={<Data size="L" />}
             onPress={() => webviewClient.postMessage('openDataInstaller')}
             action="dataInstaller"

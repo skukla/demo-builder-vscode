@@ -1655,7 +1655,7 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker('Installing Sample Data', 92, `Installing ${chosen.name}\u2026`);
+    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}\u2026`);
 
     try {
         const { installSampleData } = await import(
@@ -1672,7 +1672,7 @@ export async function executeSampleDataPhase(
                 // installed right now in the detail row (pack name until the
                 // first type starts).
                 progressTracker(
-                    `Installing Sample Data (${sd.done}/${sd.total})`,
+                    `Installing Datapack (${sd.done}/${sd.total})`,
                     94,
                     sd.processing.join(', ') || chosen.name,
                 ),
@@ -1680,7 +1680,7 @@ export async function executeSampleDataPhase(
         );
 
         progressTracker(
-            'Installing Sample Data',
+            'Installing Datapack',
             96,
             describeSampleDataResult(chosen.name, result),
         );
@@ -1691,9 +1691,9 @@ export async function executeSampleDataPhase(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[Sample Data] Phase failed, continuing: ${reason}`);
         progressTracker(
-            'Installing Sample Data',
+            'Installing Datapack',
             96,
-            `Sample data could not be installed \u2014 ${reason}`,
+            `Datapack could not be installed \u2014 ${reason}`,
         );
     }
 }
@@ -1704,10 +1704,10 @@ function describeSampleDataResult(
     result: { ran: boolean; skipped?: boolean; outcome?: string; reason?: string },
 ): string {
     if (result.skipped) {
-        return `Skipped sample data \u2014 ${result.reason ?? 'nothing to install'}`;
+        return `Skipped datapack \u2014 ${result.reason ?? 'nothing to install'}`;
     }
     if (!result.ran) {
-        return `Sample data could not be installed \u2014 ${result.reason ?? 'the import did not start'}`;
+        return `Datapack could not be installed \u2014 ${result.reason ?? 'the import did not start'}`;
     }
     if (result.outcome === 'success') {
         return `Installed ${name}`;

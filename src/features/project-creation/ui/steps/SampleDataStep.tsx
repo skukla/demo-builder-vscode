@@ -152,7 +152,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         () => load({ includeCommunity: false }),
                         {
                             onOpenSettings: openDataInstallerSettings,
-                            extraDetail: 'You can create this project without sample data.',
+                            extraDetail: 'You can create this project without a datapack.',
                         },
                     )}
                 </CenteredFeedbackContainer>
@@ -172,20 +172,20 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
-                        message="Loading sample data..."
+                        message="Loading datapacks..."
                         helperText="This should only take a moment"
                     />
                 </CenteredFeedbackContainer>
             ) : (
                 <>
                     <SearchField
-                        aria-label="Filter sample data"
-                        placeholder="Filter sample data..."
+                        aria-label="Filter datapacks"
+                        placeholder="Filter datapacks..."
                         value={query}
                         onChange={setQuery}
                         width="100%"
                     />
-                    <div className="sample-data-grid" role="radiogroup" aria-label="Sample data">
+                    <div className="sample-data-grid" role="radiogroup" aria-label="Datapacks">
                         {/* None is the opt-out, not a catalog entry, so no query
                             hides it — filtering it away would leave the group with
                             nothing selectable exactly when the user wants nothing. */}
@@ -205,7 +205,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                     </div>
                     {query && visible.length === 0 ? (
                         <p className="sample-data-note">
-                            No sample data matches “{query}”.
+                            No datapacks match “{query}”.
                         </p>
                     ) : null}
                 </>

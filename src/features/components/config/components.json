@@ -354,7 +354,7 @@
             "type": "text",
             "required": false,
             "placeholder": "your_oauth_client_id",
-            "description": "Optional override. Leave blank — Demo Builder fetches a shared credential from the discovery service when it imports sample data. Fill this in only to use your own Adobe OAuth Server-to-Server credential instead.",
+            "description": "Optional override. Leave blank — Demo Builder fetches a shared credential from the discovery service when it imports a datapack. Fill this in only to use your own Adobe OAuth Server-to-Server credential instead.",
             "group": "accs"
         },
         "ACCS_OAUTH_CLIENT_SECRET": {

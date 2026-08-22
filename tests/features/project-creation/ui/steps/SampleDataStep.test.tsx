@@ -323,7 +323,7 @@ describe('SampleDataStep', () => {
  */
 describe('SampleDataStep — filtering', () => {
     async function typeQuery(text: string) {
-        const field = screen.getByRole('searchbox', { name: /filter sample data/i });
+        const field = screen.getByRole('searchbox', { name: /filter datapacks/i });
         fireEvent.change(field, { target: { value: text } });
     }
 
@@ -387,7 +387,7 @@ describe('SampleDataStep — filtering', () => {
 
         await typeQuery('zzzz-no-such-pack');
 
-        expect(screen.getByText(/no sample data matches/i)).toBeInTheDocument();
+        expect(screen.getByText(/no datapacks match/i)).toBeInTheDocument();
     });
 
     /** A choice already made must survive a query that hides its card. */
@@ -425,7 +425,7 @@ describe('SampleDataStep — loading', () => {
         mockState = pending();
         renderStep();
 
-        expect(screen.queryByRole('searchbox', { name: /filter sample data/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('searchbox', { name: /filter datapacks/i })).not.toBeInTheDocument();
     });
 
     /**

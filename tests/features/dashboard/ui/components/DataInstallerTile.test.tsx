@@ -52,13 +52,13 @@ describe('DataInstallerTile', () => {
     it('names the surface it opens', () => {
         render(<DataInstallerTile />);
 
-        expect(screen.getByText(/sample data/i)).toBeInTheDocument();
+        expect(screen.getByText('Datapacks')).toBeInTheDocument();
     });
 
     it('opens the Data Installer when pressed', () => {
         render(<DataInstallerTile />);
 
-        fireEvent.click(screen.getByText(/sample data/i).closest('button')!);
+        fireEvent.click(screen.getByText('Datapacks').closest('button')!);
 
         expect(posted.postMessage).toHaveBeenCalledWith('openDataInstaller');
     });
@@ -71,7 +71,7 @@ describe('DataInstallerTile', () => {
     it('does not send the integrations message', () => {
         render(<DataInstallerTile />);
 
-        fireEvent.click(screen.getByText(/sample data/i).closest('button')!);
+        fireEvent.click(screen.getByText('Datapacks').closest('button')!);
 
         expect(posted.postMessage).not.toHaveBeenCalledWith('openIntegrations');
         expect(posted.postMessage).toHaveBeenCalledTimes(1);

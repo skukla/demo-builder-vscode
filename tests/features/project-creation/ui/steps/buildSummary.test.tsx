@@ -104,8 +104,8 @@ describe('commerceSummaryGroup', () => {
             'Connection',
             'Business',
             'Catalog',
-            // Sample data seeds this backend, so it recaps with it.
-            'Sample data',
+            // The datapack seeds this backend, so it recaps with it.
+            'Datapacks',
         ]);
     });
 

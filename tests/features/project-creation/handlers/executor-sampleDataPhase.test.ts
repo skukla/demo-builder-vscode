@@ -74,7 +74,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenCalledWith(
-            expect.stringMatching(/sample data/i),
+            expect.stringMatching(/datapack/i),
             expect.any(Number),
             expect.any(String),
         );

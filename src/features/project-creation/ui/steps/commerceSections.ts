@@ -65,7 +65,7 @@ export const ROW_LABELS: Record<CommerceSectionId, string> = {
     connection: 'Connection',
     'business-structure': 'Business',
     catalog: 'Catalog',
-    'sample-data': 'Sample data',
+    'sample-data': 'Datapacks',
 };
 
 /** Human labels for the step/tab titles (the vertical step list nav). */
@@ -75,7 +75,7 @@ export const SECTION_TITLES: Record<CommerceSectionId, string> = {
     connection: 'Connection',
     'business-structure': 'Business Structure',
     catalog: 'Catalog',
-    'sample-data': 'Sample Data',
+    'sample-data': 'Datapacks',
 };
 
 /** Context flags the section-state model needs beyond persisted wizard state. */
