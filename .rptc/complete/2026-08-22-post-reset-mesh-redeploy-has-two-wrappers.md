@@ -3,7 +3,16 @@
 **Filed:** 2026-08-22
 **Origin:** The mesh call-path audit (the first spine choke-point audit; its
 worked example and the pinning test are `tests/templates/spine-chokepoints.test.ts`).
-**Status:** Deferred by the user with intent to do it ("we're gonna want to do it").
+**Status:** SHIPPED 2026-08-22. The duplicated KNOWLEDGE was the
+create-or-update rule — "source the existing mesh id from REMOTE truth" —
+copied three times with its own explanatory comment. Now ONE copy:
+`mesh/services/meshRedeploy.deployMeshCreateOrUpdate`, called by the EDS
+reset, the non-EDS reset, AND the headless deploy (all three, per this item's
+design note). One correction to the filed design: the helper does NOT own
+`updateMeshState`/`saveProject` — the audit showed the two resets genuinely
+differ there (EDS saves after success, non-EDS deliberately defers), so
+persistence stayed with callers as their own policy. All 65 proof suites ran
+unchanged, zero mock edits needed; full gate green.
 
 ## The claim (verified, both files read 2026-08-22)
 

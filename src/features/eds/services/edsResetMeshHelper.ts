@@ -15,8 +15,7 @@ import {
     withOrgContext,
     type OrgContextTarget,
 } from '@/core/shell';
-import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
+import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -44,22 +43,14 @@ async function deployMeshAndPersist(
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
 
     try {
-        // Create-or-update: source the existing mesh id from Adobe I/O (remote
-        // truth), like deployMeshHeadless and projectResetService — local
-        // metadata can be stale in BOTH directions (mesh created or deleted
-        // out-of-band). Runs inside the caller's withOrgContext wrapper, so the
-        // probe targets the project's workspace.
-        const meshInfo = await fetchMeshInfoFromAdobeIO(context.logger);
-        const existingMeshId = meshInfo?.meshId || '';
-        const commandManager = ServiceLocator.getCommandExecutor();
-
-        // meshComponent.path is guaranteed non-null: redeployApiMesh checked before calling
-        const meshDeployResult = await deployMeshComponent(
+        // Create-or-update from REMOTE truth — the shared rule lives in
+        // deployMeshCreateOrUpdate (one copy, was three). Runs inside the
+        // caller's withOrgContext wrapper, so the probe targets the project's
+        // workspace. meshComponent.path is non-null: redeployApiMesh checked.
+        const meshDeployResult = await deployMeshCreateOrUpdate(
             meshComponent.path as string,
-            commandManager,
             context.logger,
             (msg, sub) => report(12, sub || msg),
-            existingMeshId,
         );
 
         if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
