@@ -579,7 +579,17 @@ async function removeProjectSampleData(
         // from the runner, which knows which half of a restore is running.
         const result = await removeSampleData(
             project,
-            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'remove'),
+            buildSampleDataDeps(
+                context,
+                project,
+                (sd) =>
+                    progress.report({
+                        message: `${sd.verb} sample data (${sd.done}/${sd.total})${
+                            sd.processing.length > 0 ? ` — ${sd.processing.join(', ')}` : ''
+                        }`,
+                    }),
+                'remove',
+            ),
         );
 
         if (result.ran && result.outcome !== 'success') {

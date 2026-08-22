@@ -222,28 +222,40 @@ describe('buildSampleDataDeps — watch', () => {
  * no message: it is trusted.
  */
 describe('buildSampleDataDeps — progress wording', () => {
+    // Since 2026-08-22 the report is STRUCTURED (verb/done/total/processing)
+    // and each surface composes its own line — the invariants below are the
+    // same ones the old string assertions guarded.
     const perType = { categories: 'success', products: 'pending' } as never;
 
     it('says Removing when built for a removal', () => {
         const report = jest.fn();
         buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
 
-        expect(report).toHaveBeenCalledWith(expect.stringContaining('Removing sample data'));
-        expect(report).not.toHaveBeenCalledWith(expect.stringContaining('Installing'));
+        expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Removing' }));
     });
 
     it('CONTROL — still says Installing for an install', () => {
         const report = jest.fn();
         buildSampleDataDeps(makeContext(), PROJECT, report, 'install').onProgress?.(perType);
 
-        expect(report).toHaveBeenCalledWith(expect.stringContaining('Installing sample data'));
+        expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Installing' }));
     });
 
     it('counts finished types, not pending ones', () => {
         const report = jest.fn();
         buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
 
-        expect(report).toHaveBeenCalledWith(expect.stringContaining('1 of 2'));
+        expect(report).toHaveBeenCalledWith(expect.objectContaining({ done: 1, total: 2 }));
+    });
+
+    it('names the types processing right now, with friendly labels', () => {
+        const report = jest.fn();
+        const live = { categories: 'success', customer_groups: 'processing' } as never;
+        buildSampleDataDeps(makeContext(), PROJECT, report, 'install').onProgress?.(live);
+
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ processing: ['Customer groups'] }),
+        );
     });
 });
 

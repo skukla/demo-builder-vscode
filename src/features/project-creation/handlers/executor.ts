@@ -1667,8 +1667,15 @@ export async function executeSampleDataPhase(
 
         const result = await installSampleData(
             project,
-            buildSampleDataDeps(context, project, (message) =>
-                progressTracker('Installing Sample Data', 94, message),
+            buildSampleDataDeps(context, project, (sd) =>
+                // Three-row contract: count in the title, the types being
+                // installed right now in the detail row (pack name until the
+                // first type starts).
+                progressTracker(
+                    `Installing Sample Data (${sd.done}/${sd.total})`,
+                    94,
+                    sd.processing.join(', ') || chosen.name,
+                ),
             ),
         );
 
