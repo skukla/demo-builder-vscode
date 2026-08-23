@@ -16,7 +16,13 @@
  * @module features/eds/services/edsResetUI
  */
 
-import { executeEdsReset, extractResetParams, type EdsResetParams, type EdsResetResult } from './edsResetService';
+import {
+    executeEdsReset,
+    extractResetParams,
+    type EdsResetParams,
+    type EdsResetResult,
+} from './edsResetService';
+import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
@@ -66,7 +72,12 @@ async function checkDaLiveAuth(
     logPrefix: string,
 ): Promise<EdsResetResult | null> {
     const { ensureDaLiveAuth } = await import('../handlers/edsHelpers');
-    const result = await ensureDaLiveAuth(context, logPrefix);
+    // The org hands the guard its server probe target: a locally-valid token
+    // the server refuses is caught HERE, before the three-minute pipeline,
+    // instead of surfacing as 52 "missing permission" 403s mid-reset.
+    const probeOrg = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata
+        ?.daLiveOrg as string | undefined;
+    const result = await ensureDaLiveAuth(context, logPrefix, probeOrg);
 
     if (result.authenticated) return null;
 
@@ -216,7 +227,7 @@ async function checkGitHubAppInstallation(
 
     const appWarning = await vscode.window.showWarningMessage(
         'The AEM Code Sync GitHub App is not installed on this repository. ' +
-        'Without it, code changes will not sync to the CDN and the site may not work correctly.',
+            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
         'Install App',
         'Continue Anyway',
     );
@@ -227,7 +238,8 @@ async function checkGitHubAppInstallation(
 
         const afterInstall = await vscode.window.showInformationMessage(
             'After installing the app, click Continue to proceed with the reset.',
-            'Continue', 'Cancel',
+            'Continue',
+            'Cancel',
         );
         if (afterInstall === 'Continue') {
             return null;
@@ -257,7 +269,10 @@ async function showResetResultNotifications(
 ): Promise<void> {
     if (result.success) {
         void vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: `"${projectName}" reset successfully` },
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `"${projectName}" reset successfully`,
+            },
             async () => sleep(TIMEOUTS.UI.NOTIFICATION),
         );
 
@@ -276,18 +291,24 @@ async function showResetResultNotifications(
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(
             `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
-            `Please install the app and try again.`,
+                `Please install the app and try again.`,
             'Install GitHub App',
         );
         if (selection === 'Install GitHub App' && result.errorDetails?.installUrl) {
-            await vscode.env.openExternal(vscode.Uri.parse(result.errorDetails.installUrl as string));
+            await vscode.env.openExternal(
+                vscode.Uri.parse(result.errorDetails.installUrl as string),
+            );
         }
     } else if (result.error) {
         if (showLogsOnError) {
             const { getLogger } = await import('@/core/logging');
-            vscode.window.showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs').then(sel => {
-                if (sel === 'Show Logs') { getLogger().show(false); }
-            });
+            vscode.window
+                .showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs')
+                .then((sel) => {
+                    if (sel === 'Show Logs') {
+                        getLogger().show(false);
+                    }
+                });
         } else {
             vscode.window.showErrorMessage(`Failed to reset EDS project: ${result.error}`);
         }
@@ -319,14 +340,20 @@ async function showResetResultNotifications(
  */
 export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promise<EdsResetResult> {
     const {
-        project, context,
+        project,
+        context,
         logPrefix = '[EdsReset]',
-        includeBlockLibrary = false, verifyCdn = false, redeployMesh, showLogsOnError = false,
+        includeBlockLibrary = false,
+        verifyCdn = false,
+        redeployMesh,
+        showLogsOnError = false,
         packages,
     } = options;
 
     const vscode = await import('vscode');
-    const { getDaLiveAuthService, resolveByomOverlayConfig } = await import('../handlers/edsHelpers');
+    const { getDaLiveAuthService, resolveByomOverlayConfig } = await import(
+        '../handlers/edsHelpers'
+    );
     const { createDaLiveServiceTokenProvider } = await import('./daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
@@ -357,7 +384,8 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
         `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
-        { modal: true }, confirmButton,
+        { modal: true },
+        confirmButton,
     );
     if (confirmation !== confirmButton) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
@@ -384,13 +412,22 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
     try {
         return await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: 'Resetting EDS Project', cancellable: false },
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Resetting EDS Project',
+                cancellable: false,
+            },
             async (progress) => {
                 context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
 
                 // Pre-flight auth checks
                 progress.report({ message: 'Checking authentication...' });
-                const daLiveResult = await checkDaLiveAuth(context, project, originalStatus, logPrefix);
+                const daLiveResult = await checkDaLiveAuth(
+                    context,
+                    project,
+                    originalStatus,
+                    logPrefix,
+                );
                 if (daLiveResult) return daLiveResult;
                 const daLiveAuthService = getDaLiveAuthService(context.context);
 
@@ -404,17 +441,33 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
                 if (project.adobe?.organization) {
                     progress.report({ message: 'Checking Adobe I/O authentication...' });
-                    const adobeResult = await checkAdobeAuth(project, context, originalStatus, logPrefix);
+                    const adobeResult = await checkAdobeAuth(
+                        project,
+                        context,
+                        originalStatus,
+                        logPrefix,
+                    );
                     if (adobeResult) return adobeResult;
 
                     progress.report({ message: 'Checking Adobe organization...' });
-                    const orgResult = await checkOrgContext(project, context, originalStatus, logPrefix);
+                    const orgResult = await checkOrgContext(
+                        project,
+                        context,
+                        originalStatus,
+                        logPrefix,
+                    );
                     if (orgResult) return orgResult;
                 }
 
                 progress.report({ message: 'Checking GitHub App...' });
                 const appResult = await checkGitHubAppInstallation(
-                    vscode, context, repoOwner, repoName, project, originalStatus, logPrefix,
+                    vscode,
+                    context,
+                    repoOwner,
+                    repoName,
+                    project,
+                    originalStatus,
+                    logPrefix,
                 );
                 if (appResult) return appResult;
 
@@ -431,7 +484,9 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                         paramsResult.params.daLiveOrg,
                         paramsResult.params.daLiveSite,
                     ),
-                    includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,
+                    includeBlockLibrary,
+                    verifyCdn,
+                    redeployMesh: redeployMesh ?? hasMesh,
                 };
 
                 // BEFORE the storefront reset, because the pipeline's last step
@@ -449,10 +504,9 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     await removeProjectSampleData(project, context, progress);
                 }
 
-                const result = await executeEdsReset(
-                    resetParams, context, tokenProvider,
-                    (p) => { progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` }); },
-                );
+                const result = await executeEdsReset(resetParams, context, tokenProvider, (p) => {
+                    progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
+                });
 
                 await showResetResultNotifications(vscode, result, project.name, showLogsOnError);
                 return result;
@@ -463,7 +517,6 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
         await context.stateManager.saveProject(project);
     }
 }
-
 
 /**
  * Can this project's sample data actually be removed? Started early, awaited late.
@@ -537,9 +590,14 @@ async function confirmSampleDataRemoval(
     }
 
     const removeButton = 'Remove Datapack';
+    // "anything you added by hand stays": pack-scoped removal confirmed by the
+    // Data Installer service owner 2026-08-22 — a removal takes only what the
+    // pack imported, so the reassurance is a fact, not a guess (backlog item
+    // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
     const answer = await vscode.window.showWarningMessage(
         `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
-            'This deletes it from the Commerce instance and can take several minutes. ' +
+            'This deletes the data this pack imported from the Commerce instance — ' +
+            'anything you added by hand stays — and can take several minutes. ' +
             'Resetting the storefront does not require it.',
         { modal: true },
         removeButton,

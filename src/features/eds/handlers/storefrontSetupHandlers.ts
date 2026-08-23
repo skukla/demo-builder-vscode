@@ -37,7 +37,11 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { StorefrontSetupCompletePayload, StorefrontSetupErrorPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
+import type {
+    StorefrontSetupCompletePayload,
+    StorefrontSetupErrorPayload,
+    StorefrontSetupProgressPayload,
+} from '@/types/webviewPayloads';
 import type {
     StorefrontSetupCancelPayload,
     StorefrontSetupPartialState,
@@ -48,7 +52,6 @@ import type {
 // Types
 // ==========================================================
 
-
 // The request wire shapes live in @/types/webviewRequests — ONE declaration
 // shared with the wizard's StorefrontSetupStep (which used to carry its own
 // PartialState twin). Re-exported here for the phase modules' existing imports.
@@ -57,7 +60,6 @@ export type {
     StorefrontSetupPartialState,
     StorefrontSetupStartPayload,
 } from '@/types/webviewRequests';
-
 
 // ==========================================================
 // Handlers
@@ -245,8 +247,10 @@ export async function handleStartStorefrontSetup(
         context.logger.info('[Storefront Setup] No mesh selected — skipping Adobe I/O auth check');
     }
 
-    // Pre-flight: Check DA.live authentication (with inline re-auth)
-    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
+    // Pre-flight: Check DA.live authentication (with inline re-auth). The org
+    // arms the guard's server probe — a locally-valid token the server refuses
+    // is caught here rather than as "missing permission" 403s mid-pipeline.
+    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]', edsConfig.daLiveOrg);
     if (!daLiveResult.authenticated) {
         await context.sendMessage('storefront-setup-error', {
             message: 'DA.live authentication expired',
