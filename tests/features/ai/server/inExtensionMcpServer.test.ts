@@ -270,17 +270,23 @@ describe('InExtensionMcpServer', () => {
         expect(fs.existsSync(socketPath)).toBe(true);
     });
 
-    it('the surviving server is still reachable after the old one disposes', async () => {
+    it('a reload (dispose, then bind) leaves the successor reachable', async () => {
         // The file existing is necessary but not sufficient — what matters is
         // that a client can still connect and get tools. Asserting reachability
         // is what makes this test about the bug rather than about a stat call.
+        //
+        // This used to bind the successor OVER the live outgoing server (the
+        // last-writer-wins takeover) and assert it survived the disposal. The
+        // first-window-wins guard ended that semantic deliberately: a live
+        // listener keeps its name (see the socketOwnership suite), so the real
+        // reload sequence — dispose, THEN bind — is what this now pins.
         const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await outgoing.start();
-        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
-        await server.start();
-
         outgoing.dispose();
         await new Promise((r) => setTimeout(r, 50));
+
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await server.start();
 
         const names = await listToolsOverSocket(socketPath);
         expect(names.length).toBeGreaterThan(0);

@@ -397,7 +397,7 @@ Thin tools declared as data and dispatched to existing handler maps:
 | `create_project` | `createProjectTool.ts` | Full wizard pipeline, headless. |
 | `get_current_project` | `currentProjectTool.ts` | Resolve the active project (persisted current-project pointer); returns `{ name, path }` or `null`. |
 | `delete_project` | `deleteProjectTool.ts` | **Irreversible** — needs `confirm:true` + `confirmName` echo. Local only. |
-| `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. |
+| `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. The confirm-gate refusal and every result name the project (`project`), so an agent can catch a wrong current-project pointer before confirming. |
 | `apply_updates` | `applyUpdatesTool.ts` | Check (no confirm) / apply (`confirm:true`) across all update categories. |
 
 ### Cloud resources & storefront content
