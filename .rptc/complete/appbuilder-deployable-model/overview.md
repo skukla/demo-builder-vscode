@@ -1,5 +1,21 @@
 # Plan: App Builder deployable model (Model B) — overview
 
+> ## CLOSED 2026-08-23 — the gap list is shipped; the remainders live in their own items
+>
+> Re-measured at user prompting ("I think this may be shipped?") — correct.
+> This overview predates execution and its status block had gone false three
+> ways: D3 is MERGED (5d6f4956, 2026-07-15), D2 Track A is WIRED (the mesh
+> handlers call the API subscriber through `apiSubscriberClientAdapter.ts` —
+> verified today), and step 09 happened (`MeshErrorDialog` no longer exists
+> in src). The "Gaps to resolve" list is shipped nearly end to end: the
+> wizard picker with three front doors + Review listing (Review fixed
+> 2026-08-23), the dashboard integrations grid with per-id status/deploy/
+> redeploy/remove/rename, env-schema collection via Configure, secrets in
+> SecretStorage, shell instancing (D4). What survives is tracked by its own
+> items: `2026-06-17-appbuilder-app-package-bound.md` (D5 gate) and
+> `2026-06-17-appbuilder-app-only-project.md` (D6). `getWorkspaceCredential`
+> remains deliberately pre-positioned (unimported ≠ cruft).
+
 > ## ⚠️ D1, D2 and D3 have SHIPPED — do not execute their step files
 >
 > Verified 2026-08-13 against `src/` and ADR-011, whose status note reads: *"D1 (keyed state +
