@@ -486,6 +486,16 @@ sheets renders correctly with none.
 > deleted: the b2b template has no live site (17 silent 404s per reset), the
 > defaults make the sheets optional, and where the fetch could succeed it
 > committed a code snapshot shadowing live-editable content.
+>
+> **Follow-up (same day): sentinel STUBS.** Missing sheets still 404 in the
+> browser console (the boilerplate requests all 16 per page load, and a
+> browser logs every failed request — no JS can suppress it), which reads as
+> breakage during any demo with devtools open. `placeholderStubs.ts` commits a
+> static one-row sentinel sheet per requested path — creation (one bulk
+> commit in phase 2) and reset (inside the bulk override commit) both wire it.
+> The row's key (`_stub`) is looked up by nothing; an EMPTY sheet would not
+> do (the fetch code warns "No placeholder data found" on `data.length === 0`).
+> Real DA.live sheets shadow the stubs via content-over-code — self-retiring.
 
 ### Why author-later works: Helix Content > Code Precedence
 

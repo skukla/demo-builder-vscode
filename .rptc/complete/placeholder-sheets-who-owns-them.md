@@ -24,6 +24,12 @@
 > The design answer for future packages: author `/placeholders/*` sheets in
 > the DA.live source; the copy carries them; dropins' compiled-in English
 > defaults cover everyone else.
+>
+> **Addendum (same day): the console errors themselves were then also
+> silenced** — static one-row sentinel stubs (`placeholderStubs.ts`), wired
+> into creation (one bulk commit) and reset (the bulk override commit). An
+> empty sheet would still warn (`data.length` check in commerce.js), hence
+> the sentinel row; real DA sheets shadow the stubs (content-over-code).
 
 **Filed:** 2026-08-15, from chasing nine console 404s on a freshly reset storefront.
 **Severity:** cosmetic at most, and possibly ZERO. Filed as a design question, not

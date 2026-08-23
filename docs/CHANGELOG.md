@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The storefront's placeholder console errors are gone.** Every page load
+  requested 16 optional UI-label sheets that don't exist, and the browser
+  prints each failed request in red — harmless (labels fall back to built-in
+  defaults) but it reads as breakage whenever devtools are open in a demo.
+  Two-part fix: the reset-time code fetch that tried (and, for the b2b
+  template, always failed — its source host doesn't exist) to download the
+  sheets was deleted — label overrides are DA.live content and the content
+  copy already carries them; and both creation and reset now commit tiny
+  self-documenting stub sheets so every request answers 200 quietly. A brand
+  that later authors real label sheets in DA.live automatically overrides the
+  stubs.
+
 - **The scraping skills warned about a Chromium download that never happens.**
   Measured: the Playwright MCP drives the machine's installed Google Chrome by
   default (verified on both shipped versions with the bundled-browser store

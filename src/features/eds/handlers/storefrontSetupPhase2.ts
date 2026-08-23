@@ -23,6 +23,7 @@ import {
     installInspectorTagging,
 } from '../services/inspectorHelpers';
 import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
+import { placeholderStubTreeEntries } from '../services/placeholderStubs';
 import { installQuickEdit } from '../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../services/types';
 import { addPdpCaveat, describeSmart404Skip } from './edsHelpers';
@@ -87,6 +88,27 @@ export async function executePhaseHelixConfig(
     } satisfies StorefrontSetupProgressPayload);
 
     await pushFstabToGitHub(githubFileOps, repoInfo, edsConfig, context, logger);
+
+    // Placeholder stub sheets, one bulk commit: the boilerplate requests 16
+    // optional label sheets per page load and the browser prints every 404 to
+    // the console (no JS can suppress it) — red noise during any demo with
+    // devtools open. Real label overrides are DA.live content and shadow the
+    // stubs (content-over-code). Non-fatal: a failed commit costs console
+    // cosmetics, never the setup.
+    try {
+        await githubFileOps.commitTreeToBranch(
+            repoInfo.repoOwner,
+            repoInfo.repoName,
+            'main',
+            placeholderStubTreeEntries(),
+            'chore: placeholder stub sheets (console hygiene)',
+        );
+        logger.info('[Storefront Setup] Placeholder stub sheets committed');
+    } catch (error) {
+        logger.warn(
+            `[Storefront Setup] Placeholder stubs skipped (non-fatal): ${(error as Error).message}`,
+        );
+    }
 
     const allLibraries = collectAllBlockLibraries(
         effectiveBlockLibraries,

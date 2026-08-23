@@ -19,6 +19,7 @@ import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
 import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
+import { addPlaceholderStubOverrides } from './placeholderStubs';
 import { installQuickEdit } from './quickEditPublisher';
 import type { GitHubTreeInput } from './types';
 import {
@@ -265,14 +266,16 @@ export async function resetRepoToTemplate(
         );
     }
 
-    // Placeholder sheets are deliberately NOT fetched here (deleted 2026-08-23).
-    // They are UI-label dictionaries and belong to CONTENT: the DA.live copy's
-    // full-tree walk carries any /placeholders sheets a source authors (sheets
-    // are .xlsx on DA.live — see daLiveContentCopy), verified live on isle5.
-    // The old code fetch pulled them from the TEMPLATE's live site into CODE
-    // files — a host that does not exist for the b2b template (17 silent 404s
-    // per reset), and a content-shadowing snapshot where it did. Dropins ship
-    // English defaults compiled in; a PDP rendered correctly with zero sheets.
+    // Placeholder sheets are deliberately NOT fetched here (fetch deleted
+    // 2026-08-23). They are UI-label dictionaries and belong to CONTENT: the
+    // DA.live copy's full-tree walk carries any /placeholders sheets a source
+    // authors (sheets are .xlsx on DA.live — see daLiveContentCopy), verified
+    // live on isle5. Dropins ship English defaults compiled in. What DOES go
+    // in are static sentinel STUBS — the boilerplate requests these 16 sheets
+    // per page load and the browser prints every 404 to the console, which no
+    // JS can suppress; the stubs answer 200 and are shadowed by real DA
+    // content the moment a brand authors sheets (content-over-code).
+    addPlaceholderStubOverrides(fileOverrides);
 
     // Determine the template ref to reset against. Thin-layer storefronts
     // (codePatchSource configured) pin to the verified canonical LKG SHA;
