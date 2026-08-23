@@ -1,5 +1,27 @@
 # `executeEdsPipeline` is a 254-line orchestrator at complexity 27
 
+> ## CLOSED 2026-08-23 — rewritten as the declarative step list, live-validated on all three paths
+>
+> Executed exactly as this item designed it, on its own branch
+> (`refactor/eds-pipeline-step-list`), after settling the two questions it
+> required: the shared locals became a three-field `PipelineContext`
+> (contentFilesCopied, libraryPaths, patchReport) that IS the accumulating
+> result, and the per-step error semantics are DECLARED on each descriptor
+> (`onError: 'continue'` + the exact failure-log prefix for library-publish
+> and prewarm; everything else aborts through the single outer catch, which
+> keeps the DaLiveAuthError rethrow). Gating lives in `when` predicates in
+> data; the orchestrator is a loop; the complexity-27 warning is gone and the
+> whole-repo lint reports zero warnings.
+>
+> Live-validated per this item's own bar, all three consumer paths against
+> real cloud resources on 2026-08-23: refresh-block-library (proved by the
+> CDN's fresh last-modified), reset (full pipeline incl. clear + prewarm),
+> and create (CitiSignal/ACCS via the wizard). The FIRST live run caught a
+> real regression from the same day's legacyLookupKey work — three
+> daLiveSite readers without the repo-name fallback, one of which broke
+> reset in beta.138 — which is precisely why the live-runs requirement was
+> written in.
+
 **Filed:** 2026-08-19, after `decompose-god-file` rejected `edsPipeline.ts` as a
 decomposition target and pointed here instead.
 **Type:** complexity reduction, NOT a file split. See below for why that matters.
