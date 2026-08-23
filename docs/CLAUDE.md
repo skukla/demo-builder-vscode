@@ -77,7 +77,7 @@ await setLoadingState(panel, getContent, message, logger);
 
 ## Testing
 
-The project has a large automated Jest suite (~574 suites) — see
+The project has a large automated Jest suite (~1,130 suites) — see
 `tests/README.md` for organization, run commands, coverage, and how to write
 new tests. Never pipe jest output through `tail`/`head`/`grep`; redirect to a
 file instead.

@@ -8,9 +8,15 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
+import { resolveIntegrationRows } from '../components/integration-flow';
 import type { ComponentData, ComponentsData } from './ReviewStep';
+import { meshComponentForStack } from './tileStatus';
 import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
+import type { DemoPackage } from '@/types/demoPackages';
+import type { Stack } from '@/types/stacks';
+import type { WizardState } from '@/types/webview';
 
 /**
  * Component info item structure for the review list.
@@ -23,13 +29,16 @@ export interface ComponentInfoItem {
 
 /**
  * Components state shape from wizard state.
+ *
+ * Deliberately WITHOUT `integrations`/`appBuilder` id lists: those fields exist
+ * on the persisted config only as a legacy fallback (`selectedAppBuilderIds` in
+ * executor.ts), and the wizard hardcodes them empty — the Review screen renders
+ * integrations from the resolved names instead (resolveReviewIntegrationNames).
  */
 interface ComponentsState {
     frontend?: string;
     backend?: string;
     dependencies?: string[];
-    integrations?: string[];
-    appBuilder?: string[];
 }
 
 /**
@@ -58,10 +67,11 @@ export function resolveServiceNames(
     }
 
     // Check if backend PROVIDES services (e.g., ACCS has them built-in)
-    const providesServices = (backend.configuration?.providesServices as string[] | undefined) || [];
+    const providesServices =
+        (backend.configuration?.providesServices as string[] | undefined) || [];
     if (providesServices.length > 0) {
         return providesServices
-            .map((id) => services[id]?.name ? `${services[id].name} (built-in)` : null)
+            .map((id) => (services[id]?.name ? `${services[id].name} (built-in)` : null))
             .filter((name): name is string => Boolean(name));
     }
 
@@ -88,6 +98,7 @@ export function buildComponentInfoList(
     meshStatus: string | undefined,
     componentsData: ComponentsData | undefined,
     backendServiceNames?: string[],
+    integrationNames?: string[],
 ): ComponentInfoItem[] {
     if (!components || !componentsData) {
         return [];
@@ -156,33 +167,49 @@ export function buildComponentInfoList(
         }
     }
 
-    // Integrations
-    if (components.integrations && componentsData.integrations) {
-        const integrations = components.integrations
-            .map((id) => componentsData.integrations?.find((i) => i.id === id))
-            .filter((i): i is NonNullable<typeof i> => Boolean(i));
-
-        if (integrations.length > 0) {
-            info.push({
-                label: 'Integrations',
-                value: integrations.map((i) => i.name).join(', '),
-            });
-        }
-    }
-
-    // App Builder
-    if (components.appBuilder && componentsData.appBuilder) {
-        const apps = components.appBuilder
-            .map((id) => componentsData.appBuilder?.find((a) => a.id === id))
-            .filter((a): a is NonNullable<typeof a> => Boolean(a));
-
-        if (apps.length > 0) {
-            info.push({
-                label: 'App Builder',
-                value: apps.map((a) => a.name).join(', '),
-            });
-        }
+    // Integrations — the resolved display names (mesh excluded; it renders as
+    // Middleware above). Fed by resolveReviewIntegrationNames, NOT by the
+    // legacy `components.integrations`/`components.appBuilder` id lists: the
+    // only caller never populated those (buildProjectConfig hardcodes both to
+    // []), so this section rendered nothing for every hand-picked integration
+    // while its unit tests — which passed the fields directly — stayed green.
+    if (integrationNames && integrationNames.length > 0) {
+        info.push({
+            label: 'Integrations',
+            value: integrationNames.join(', '),
+        });
     }
 
     return info;
+}
+
+/**
+ * Resolve the wizard's selected integrations to display names for Review.
+ *
+ * Rides the SAME resolver the builder summary and IntegrationsStep render from
+ * (`resolveIntegrationRows`), so a custom import shows its user-facing name
+ * (falling back to the repo), a shell instance shows its given name, and a
+ * catalog entry shows its catalog name. Mesh rows are excluded — the mesh
+ * renders as Middleware in the component list already.
+ *
+ * @param state - Wizard state (selection ids + custom sources + API picks)
+ * @param packages - Demo package catalog (for the stack's mesh entry)
+ * @param stacks - Stack catalog (for the stack's mesh entry)
+ * @returns One display name per configured non-mesh integration
+ */
+export function resolveReviewIntegrationNames(
+    state: WizardState,
+    packages: DemoPackage[],
+    stacks: Stack[],
+): string[] {
+    const stack = state.selectedStack
+        ? stacks.find((s) => s.id === state.selectedStack)
+        : undefined;
+    const catalog = getAvailableAppBuilderComponents(
+        stack?.backend ?? '',
+        stack?.frontend ?? '',
+    ).filter((entry) => entry.kind === 'integration');
+    return resolveIntegrationRows(state, meshComponentForStack(state, packages, stacks), catalog)
+        .filter((row) => row.kind !== 'mesh')
+        .map((row) => row.name);
 }

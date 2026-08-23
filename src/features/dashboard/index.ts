@@ -27,4 +27,4 @@ export { dashboardHandlers } from './handlers';
 // They are internal to the dashboard feature. Use dashboardHandlers with dispatchHandler.
 
 // Note: UI Components (screens, hooks) are NOT exported here.
-// They are imported directly by dashboard webview in the webpack bundle.
+// They are imported directly by the dashboard webview in its esbuild browser bundle.

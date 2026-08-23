@@ -1,5 +1,23 @@
 # Block authoring has no oracle — the type scale exists and nothing points at it
 
+> ## TIER 1 SHIPPED 2026-08-23 — now gated on field feedback
+>
+> The guidance exists in three places (AI bundle v18): AGENTS.md's Storefront
+> section carries the standing rule (read the `--type-*` properties in
+> `styles/styles.css`, style text with `font: var(--type-…)`, never invent a
+> size, and don't copy from the inconsistent neighbouring blocks);
+> `commerce-block-mapper` maps a scraped type scale ONTO the shipped properties
+> instead of raw values; `refine-visual-match` fixes typography deltas by
+> editing the scale or snapping to it, never by nudging literals. Phrased as
+> "read the properties" per this item's own constraint — no token list to rot.
+>
+> **What remains is the MEASURE step, and it needs the field:** the failure was
+> inferred from mechanism, never observed (no Claude-authored block existed to
+> inspect). Next "fonts are too small" complaint — or next authored block —
+> check whether its CSS uses `var(--type-…)`. If the complaint recurs WITH the
+> guidance in place, tier 2 (a Playwright `getComputedStyle` check) is the next
+> step, bounded so it does not become a fourth iteration loop.
+
 ## Provenance
 
 Asked 2026-08-13: "Should Playwright also verify EDS block appearance? I often get complaints

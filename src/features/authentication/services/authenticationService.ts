@@ -522,6 +522,15 @@ export class AuthenticationService {
     }
 
     /**
+     * Sync a remote Adobe I/O project's title to a renamed demo (best-effort;
+     * never throws past the fetcher — see `renameRemoteProject` there).
+     */
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.renameRemoteProject(orgId, projectId, title);
+    }
+
+    /**
      * Create an OAuth S2S credential on the current workspace.
      * Returns the new credential with client_id, or undefined on failure.
      */

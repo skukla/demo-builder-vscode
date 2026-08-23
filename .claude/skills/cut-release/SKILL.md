@@ -42,6 +42,14 @@ decide what (if anything) to fix before tagging.
   shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
   section — a "(none)" from a check that did not run looks identical to a clean one. Findings
   are for the record, never a blocker on the tag.
+- **`npm run eds:drift`** — did the external contracts EDS builds on (Helix Admin status,
+  Config Service site + roster, DA.live site config, the aem.live path-encoding rule) move
+  since the last release? NEEDS interactive credentials (`EDS_DRIFT_*` env vars — GitHub
+  token, DA.live IMS token, a real storefront's identifiers), which is exactly why it is a
+  manual advisory here and can NEVER be a CI gate — wired into CI it fails on missing
+  credentials and gets disabled. Same rules as `npm run data-installer:drift` (shared core);
+  a FAILED row means the check could not run, a DRIFTED row means the contract moved.
+  Advisory only — never a blocker on the tag.
 Offer them; do not silently skip. If the user declines, say so in the release notes
 so the next cut knows the interval. These were documented as "runs at release cuts"
 long before anything invoked them — naming the step here is what makes that true.

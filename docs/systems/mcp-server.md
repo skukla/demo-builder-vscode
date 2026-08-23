@@ -75,7 +75,8 @@ Three processes, one logical server:
 1. **Claude Code** spawns a small Node process and talks MCP to it over stdio.
    That's all the client knows or cares about.
 2. **`dist/mcp-proxy.js`** is a ~one-job forwarder: copy bytes between its stdio
-   and a **Unix domain socket** (UDS) whose path is fixed per workspace. It
+   and a **Unix domain socket** (UDS) whose path is fixed (derived from the
+   projects root). It
    exists only to bridge "client speaks stdio" with "the real server lives in an
    already-running process."
 3. **The in-extension server** (`InExtensionMcpServer`,
@@ -93,17 +94,20 @@ host to talk to. So the server must live where that code already runs. The proxy
 is the small adapter that lets a stdio-only client reach a server embedded in a
 long-lived process.
 
-### Why a per-workspace socket?
+### Why a deterministic socket path?
 
-The socket path is derived deterministically from the open workspace folder
-(`resolveMcpSocketPath` in `src/features/ai/server/mcpSocketPath.ts` — a SHA-256
-of the absolute path, truncated to keep under the OS's ~104-char UDS limit).
-This means:
+The socket path is derived deterministically from the **projects root** — not
+the workspace folder (`resolveMcpSocketPath` in
+`src/features/ai/server/mcpSocketPath.ts` — a SHA-256 of the absolute path,
+truncated to keep under the OS's ~104-char UDS limit). This means:
 
 - The config Claude Code reads is **stable across restarts** — no rewriting a
   port number on every activation.
-- Each VS Code window/workspace gets its own socket, so two open projects don't
-  collide.
+- Every window computes the **same** root socket; the first window to bind
+  serves it (first-window-wins, see `bindSocket`), and `serverInfo.version`
+  names which build answered. The dual-listen shim that additionally bound a
+  distinct workspace-folder socket was removed 2026-08-23 — nothing targets a
+  workspace socket in the always-root model.
 - `mcpSocketPath.ts` is deliberately **`vscode`-free** because *both* ends (the
   extension server and the bundled proxy) import it and must agree on the path.
 
@@ -794,7 +798,7 @@ result. The underlying service is mocked; the test asserts the tool's gating
 | File | Role |
 |---|---|
 | `src/features/ai/server/inExtensionMcpServer.ts` | The UDS server; per-connection `McpServer`; logging shim. |
-| `src/features/ai/server/mcpSocketPath.ts` | Deterministic per-workspace socket path (`vscode`-free). |
+| `src/features/ai/server/mcpSocketPath.ts` | Deterministic socket path from the projects root (`vscode`-free). |
 | `src/mcp-proxy.ts` → `dist/mcp-proxy.js` | stdio↔UDS forwarder Claude Code spawns. |
 | `src/mcp-server.ts` | Shared `registerProjectTools` + file-tool helpers (`vscode`-free). Standalone bootstrap retired. |
 | `src/features/ai/server/headlessHandlerContext.ts` | Builds a webview-less `HandlerContext`. |

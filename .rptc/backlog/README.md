@@ -28,7 +28,21 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-13** (THIRD pass — a claim-validation pass; see below).
+> **Index last reconciled: 2026-08-23** (FOURTH pass — the first FULL re-measure: every
+> active item's central claim checked against the code by four parallel read-only agents,
+> each claim paired with the command that would falsify it and a positive control on every
+> absence). Score across 33 items measured: **10 fully current, 5 dead (archived same day:
+> Model A seed, site-access tools, AI-surface phase 4, data-installer writes, Code Sync
+> reference + the org-context residual entry), 12 partially dead (entries rewritten in
+> place with dated re-measure notes), 6 current-with-stale-citations or gated.** The
+> third pass's age rule held perfectly: everything filed on a re-measure day stayed true;
+> the 2026-06→08 age band was again a coin flip. Two new lessons: (a) an item can die in
+> NINE DAYS (site-access, filed 08-14, shipped by phase 4 before 08-23); (b) a proposal
+> can be built AND reverted between reconciles, leaving the index advertising as "proposed"
+> something the code now argues against (the install-click gate). The re-measure-before-
+> pickup rule is not optional at ANY age.
+>
+> **Previous: 2026-08-13** (THIRD pass — a claim-validation pass; see below).
 > The second pass verified in both directions with a control for each: 65 links, 0 dead;
 > 38 items, every one reachable from a `####` entry or as a numbered slice inside one.
 >
@@ -124,7 +138,7 @@ Verified merged to `develop` and moved out of `.rptc/plans/` during the 2026-06-
 
 Also resolved since last index (now archived to `../complete/`): **oversized test-file splits** (0 `max-lines` warnings — the rule skips blanks/comments, and the worst file counts 481 of 500), **regenerate-AI-files progress** (shipped as `aiRegenProgress` in `useDashboardStatus.ts`; the old note pointed at a `creationProgress` symbol in `features/ai/handlers/`, a path that has since moved to `features/dashboard/handlers/`), **logs-toggle → sidebar**, and **B2B feature-pack dropin delivery**. The **DaLive permission-log "typo"** was a false positive — deleted outright rather than archived, since there was never anything to do.
 
-⚠️ **`jest worker force-exit` was listed here as resolved and is NOT** — see §F. It reproduces on demand as of 2026-08-05.
+The `jest worker force-exit` warning (once wrongly listed here as resolved, then reopened) is now genuinely CLOSED — diagnosed 2026-08-23 as jest-worker's hardcoded 500ms deadline, not a leak; see the 2026-08 archive section.
 
 ---
 
@@ -132,17 +146,21 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
-#### Bodea's shared catalogs assign identical categories ([`2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md))
+#### Native consent for destructive MCP operations ([`2026-08-23-mcp-destructive-ops-native-consent.md`](2026-08-23-mcp-destructive-ops-native-consent.md))
 
-**Measured, and it changes what the Bodea demo can claim.** All three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
+Filed 2026-08-23 from the user watching the agent publish path live: once a DA.live session exists, the extension-side gate on live-CDN writes (`publish_page`, `sync_storefront`, `delete_page`, …) is the agent-supplied `confirm: true` — an honor system that is all that remains when a user allowlists the MCP tools in their harness. Proposed: the handler raises a native VS Code confirm dialog before executing, converting convention into consent that survives allowlisting. Decisions at pickup: headless escape hatch (setting, default on) vs destructive-only subset; derive the gated list from the read-only-name allowlist (the probe's denylist→allowlist history is the argument); batch ops must not raise N dialogs. Same-day counterweight from walking the path live: the route must stay agent-traversable — one auth touch (IMS has no headless grant), then zero interaction beyond the chosen consent policy; `sign_in(dalive)` currently hangs silently on a VS Code QuickPick instead of returning instructions, and skills should front-load `get_auth_status` so the human touch happens at flow start, not mid-pipeline.
+
+#### Datapack authoring loop — export, modify, publish-your-own via project skills ([`2026-08-23-datapack-authoring-loop.md`](2026-08-23-datapack-authoring-loop.md))
+
+Filed 2026-08-23 from user direction: a project's agent should carry the whole loop — export a datapack, modify it for a use case, publish your own version — through skills visible in the skills modal, with the instance as the working copy and export as the atomic commit. More exists than expected (export tools + modal + the `import-datapack` skill's capture guidance are all live), and the one blocker — **the export store-step lacks its database address (`MONGO_URI`) on the shared stage deployment, re-confirmed live 2026-08-23** (root cause in `docs/systems/data-installer.md` §6b). The architecture is unchanged: one shared service, the extension purely its client — the fix is a one-variable config-set + redeploy by whoever OPERATES the service now, and it fixes export for every SC at once. A personal throwaway deployment is recorded in the item as an optional testing stopgap only, explicitly not the design. Own-version publishing is CLOSED as the service's designed workflow (create a private `shared: false` pack, export versions into it, selective per-type filters — service docs distilled in [`../research/data-installer-service-docs/research.md`](../research/data-installer-service-docs/research.md); raw exports gitignored). The Bodea differentiation is the acceptance test — targeting a user-owned private pack, never the shared `bodea`. **The Postman collections (2026-08-23) revealed the full API and a route that works TODAY**: data-item editing (add/update/delete/batch-get, `add-data-item` proven on stage), version PROMOTE (the atomic-commit semantics), pack lifecycle, async+poll — so the pack-first half of the tools/skill is buildable now. The storage architecture is **OPEN with a binding constraint (2026-08-23): ONE pack registry** — the packs live in the database, so any new deployment is a second registry and the org's packs diverge. Three shapes in the item, preference-ordered: adopt/fix the existing deployment in place (exhaust first — the ask is workspace handover, not a variable); full cutover (App Builder Database migration + copy the registry + EVERY consumer repoints); or partition (shared packs read from the original, user packs in the new service, per-source routing). An organizational decision the user drives; the App Builder Database research stands whichever shape wins.
+
+**↳ Acceptance milestone — Bodea's shared catalogs assign identical categories** ([`2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md))
+
+**Measured, and it changes what the Bodea demo can claim.** Picked up 2026-08-23: a concrete differentiation proposal is in the item — REVISED the same day after comparing against the actual pack data (drop only `software`/`wi-fi`/`critical-power-equipment` from ServerSavvy Solutions; the structural `bodea` root and `products` container stay in every catalog, since dropping a structural ancestor can hide its children from tree queries; Default and Platinum Buyer untouched so the tier-price demo is unconfounded). Re-measure satisfied by provenance: `get_datapack` shows `bodea@main` unchanged since 2026-06-18, which predates the measurement. **No pack change is needed to implement it** (clarified same day): the pack rows are only the import seed — an SC can apply the differentiation on any live instance via the Admin's Set Pricing and Structure today (per-instance, reset re-seeds it), and the durable form is a request to the pack's owner (CoreTech) or a versioned fork. Sequence: prove demo-locally first, then pursue the pack change. **The user is applying the instance edits himself (2026-08-23)** on a running Bodea-connected demo; the round trip back into a pack is the acceptance test of [`2026-08-23-datapack-authoring-loop.md`](2026-08-23-datapack-authoring-loop.md). Original finding: all three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
 
 #### Move deliberately to a per-SC Adobe I/O project ([`per-sc-io-project.md`](per-sc-io-project.md))
 
 **Retire the separately-deployed shared service; each SC gets their own Adobe I/O project.** Five items: (a) the `demo-builder-s2s` credential — **CANNOT MOVE**, settled 2026-08-16; (b) store discovery; (c) prerender — **a separate research item, do not decide it here**; (d) a single SC-built mesh and (e) SC-built integration packages, both **already built**, which is what makes this credible rather than speculative. (a) cannot move, and the reason turned out to be entitlement rather than reach: a credential in the Solution Led Commerce SC org cannot be subscribed to `ACCS-REST-API` at all — the service carries no product profile there (control: twelve other services in that org DO offer products), and the subscribe is refused inside an HTTP 200. The subscription IS the entitlement, so such a credential never gains `commerce.accs`. Measured 2026-08-16, both orgs compared: `.rptc/complete/data-installer-credential-broker/step-05.md`. **Three things must exist first, all verified 2026-08-16:** no notion of a REQUIRED deployable in the catalog schema (one entry today, `app-builder-shell`); no upgrade path for a deployed integration (staleness detection is mesh-shaped — **the cost centre**, since today one deployment serves everyone and a fix ships once); and no dedup, so two demo projects sharing a workspace each believe they own the deployment and the second deploy silently overwrites the first. D1 shipped; D2–D6 pending. What it buys: retires four actions, an AES-256-GCM per-site key store, a drift checker, the org-keyed `accsDiscovery.services` setting, and `byom.overlayUrl` — which today ships a stage Runtime endpoint as a default in this PUBLIC repo. Filed 2026-08-16.
-
-#### What "AEM Code Sync installed" can and cannot be known from ([`2026-08-19-code-sync-detection-limits.md`](2026-08-19-code-sync-detection-limits.md))
-
-**Mostly reference, plus ONE proposal** — filed so nobody re-derives it, and so nobody "fixes" the detector with an API that cannot answer. `admin.hlx.page/status/{owner}/{repo}/main` answers on TWO levels and conflating them is where every bug in this area came from. The OUTER status is about the SITE (measured with a control: `kukla-bodea` → `404 no such site`, a real storefront → `401 not authenticated`, and the 404 lands BEFORE auth). The INNER `code.status`, present only on an outer 200, is a real App detector — `404` there means "Helix knows the repo and has no code sync", which is why "AEM Code Sync Verified" is a measured statement worth keeping. The gap is the outer 404: no body, no inner status, and the code returned `isInstalled: false` anyway — the one fabricated verdict, contained in `fa7d2b4f` by `siteUnknownReason.ts`. **No GitHub API closes it**, both measured: `/user/installations` → 403 (needs a user-to-server token issued by the App; we hold `gho_`), `/repos/{o}/{r}/installation` needs Adobe's App JWT. A token-TYPE limit, not a scope one — no scope helps. Only Adobe can close it. **Prior art:** `adobe-commerce/storefront-tools` hit the same wall and DELETED its verification on 2026-08-05 (`fbae1c3`), replacing it with a 7-second wait — but their constraint is that a Cloudflare Worker holds no user credential, while this extension sends the user's token as `x-auth-token`. Do NOT copy the wait; it trades a real signal for a timer. Their worker DOES independently corroborate the 404-vs-401 split on a different endpoint. **One takeaway proposed:** gate Continue on the install link being clicked — it closes the remaining hole where an existing-repo user with a missing App walks past the prompt and is halted at Phase 3 AFTER the repo was reset and written to, and it does so without the stranding risk of blocking on an unreliable signal. A second takeaway (treat an outer 401/403 as site-exists) was proposed and REJECTED the same day: their 401 means "site exists, you may not see it" because they call anonymously, ours would mean "our credential was refused" — same status code, different fact — and it would edit the classifier behind the eleven-reinstalls incident for zero gain. The item records why, so it does not come back. Filed 2026-08-19.
 
 #### `executeEdsPipeline` is a 254-line orchestrator at complexity 27 ([`2026-08-19-eds-pipeline-orchestrator-complexity.md`](2026-08-19-eds-pipeline-orchestrator-complexity.md))
 
@@ -151,10 +169,6 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 #### Files over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
 
 **Re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
-
-#### MCP tools for Configuration Service site access ([`mcp-site-access-tools.md`](mcp-site-access-tools.md))
-
-Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -171,116 +185,35 @@ Five sequenced slices; **slice 1 gates the rest**:
 
 1. **Deploy spine — ✅ LANDED on `develop`** ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md), `20fae62f`). `app-builder` registry category + `deployAppComponent` (sibling of mesh, idempotent `aio app deploy`) + singular `appState` + the dead `appBuilder` field wired through install/persist + block-library-style additive add/remove + role-gate extension + dashboard `AppBuilderCard`. Public git URL only. **Caveat:** Step-7 live `aio` probes (deploy-prune default, `app delete action` undeploy, trigger/rule orphan-on-rename) deferred to a live workspace.
 2. **Curated catalog — ✅ SHIPPED** ([`../complete/2026-06-17-appbuilder-app-curated-catalog.md`](../complete/2026-06-17-appbuilder-app-curated-catalog.md), `94b633cf` + rename `65c40b04`). Delivered via the wizard **"Add-an-Integration"** feature: declarative `config/app-builder-components.json` catalog (seeded `commerce-paas-mesh`/`commerce-eds-mesh`/`headless-commerce-mesh`) + `appBuilderComponentCatalogLoader` (catalog pick AND custom-URL entry coexist) + wizard/configure selection UI + `executor.ts` deploy routing. Resolved the open question: curated mesh baselines live in this catalog. Verified on `develop` 2026-07-07 (index was stale).
-3. **Package-bound — ⛔ GATED on the first real bound integration** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md), rewritten 2026-07-09 after a staleness audit — [`../research/appbuilder-slice3-staleness/research.md`](../research/appbuilder-slice3-staleness/research.md)). Mechanism + schema fields exist; `onlyForPackages` exclusion is live. But the auto-include pieces are production-dead (no seeding, no locked UI, no summary visibility), the proposed `citisignal-headless` binding target doesn't exist as a package id, and the only bindable entries (meshes) would be behaviorally redundant. Real scope is in the rewritten item; pick up when a `kind:'integration'` app purpose-built for a package exists (shell lineage, slice 4, or BuildRight rebuild).
+3. **Package-bound — ⛔ GATED on the first real bound integration** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md), rewritten 2026-07-09; **re-measured 2026-08-23**). Mechanism + schema fields exist; `onlyForPackages` exclusion is live. Two of the three "production-dead" pieces have since resolved: the dead symbols (`AppBuilderComponentsStepContent`, `computeSelectedAppBuilderComponents`) are DELETED outright, and the locked UI SHIPPED 2026-08-23 as the generic required-component lock (`isRequiredComponent` in `useProjectBuilder.ts` covers `nativeForPackages` entries and the required mesh with one predicate, pinned by tests). Still live: no seeding on stack select, and the gate itself — the catalog still holds exactly one entry and no `kind:'integration'` app purpose-built for a package exists. (The ReviewStep visibility half resolved 2026-08-23: Review now renders ALL selected integrations, required ones included, via `resolveReviewIntegrationNames`.)
 4. **Scaffold-and-author — ❌ RETIRED, subsumed by shell instancing** ([`2026-06-17-appbuilder-app-scaffold-author.md`](../complete/2026-06-17-appbuilder-app-scaffold-author.md), verdict at the top of the item). Shell instancing (2026-07-16, `feature/shell-instancing` — [`2026-07-16-shell-instancing-named-ai-integrations.md`](../complete/shell-instancing/item.md)) delivers create-new-and-author-with-AI via named shell instances; the `aio app init` scaffold mode is not being built.
-5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
+5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice. **Re-measured 2026-08-23, cheaper than filed:** the schema/type claim holds (`stacks.schema.json` still requires `frontend`), but its blocker 2 is dead — `components.json` no longer carries an embedded `stacks` block, so `stacks.json` is the sole definition and there is no second copy to reconcile. The item's `components.json:272-297` and `executor.ts:1101` citations are stale (the throw is now stack-only at `executor.ts:~1453`, and the frontend add is already conditional).
 
 #### Promote a shell-built custom app to a repo ([`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md))
 
 Layer 3 of deterministic-integrations, scoped out. A dashboard action on a blank-shell-built custom app that creates a new GitHub repo (owner picker via `getUserOrgs`) and pushes the app's local dir (fresh history, `.env`/secrets excluded), recording the repo on the component — so it can later be imported via "Import a repo". Reuses `GitHubRepoOperations` / `GitHubTokenService` / the deploy-action pattern. Real forks: public-vs-private repo, secrets hygiene (non-negotiable). Gated on the shell build-out maturing.
 
-#### Custom integration — language standard + singular→packages model ([`2026-07-15-custom-integration-language-and-model.md`](2026-07-15-custom-integration-language-and-model.md))
-
-User-confirmed 2026-07-15: the product noun for the custom, action-carrying integration is **"custom integration"** (ERP / CRM / Firefly), never "App Builder app" (that's the impl substrate). The user-facing string rename **shipped this session** (KindStage/CustomStage/IntegrationsStep/AppBuilderCard/integrationRows/deployApp/appDeployment/appComponentManager + the blank-shell catalog name); internal identifiers kept. Backed by deep research ([`../research/app-builder-integration-model/research.md`](../research/app-builder-integration-model/research.md), six agents) that **corrected the model**: NOT "one app, many packages" but **many separate App Builder apps → one shared Adobe I/O workspace, isolated by per-integration OpenWhisk package renaming**. Six items: (1) language ✅ + (2) `appState` persist ✅ (`f91669cb`) shipped. **(3) ADR-011 D3 = keystone — ✅ MERGED to develop `5d6f4956` 2026-07-16**: the keyed map is serialized (legacy manifests migrate on load), the singular write path is retired, the dashboard renders one integrations list (mesh first row), mesh unified. (4) integration display **name** — folded into D3, shipped with it. (5) **remote Adobe I/O project rename** — none today, but `@adobe/aio-lib-console` `editProject` is installed/unwired; small independent fix. (6) **integrations UX** — ✅ **SHIPPED BOTH SURFACES**: the dashboard card grid (`../complete/integrations-grid/`, re-hosted by `../complete/integrations-surface/`), and the wizard on 2026-08-15 (`fix/wizard-integrations-parity`) — the SHARED `IntegrationCard` extracted to `core/ui/components/integrations/`, the destination hoisted to one line, `IntegrationResultRow` + `RenameIntegrationModal` deleted. Wizard/dashboard visual parity stops short of the grid and drawer by design (`../complete/integrations-surface/overview.md:97-105`; 720px column, no pre-deploy status). Plus a doc correction. Cross-links §A slices + §E. **Only item 5 (remote Adobe I/O project rename) is left in this file.**
-
 #### Prereqs architecture reframe — two-tier (Path A) ([`2026-06-11-prereqs-architecture-reframe.md`](2026-06-11-prereqs-architecture-reframe.md))
 
-Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. (The original `.116` target slipped; we're on `.121`.) Unblocks the Claude CLI detection plan below.
+Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. Unblocks the Claude CLI detection plan below. **Re-measured 2026-08-23: all five structural claims hold** — no `scope` discriminator, the schema drift (dead `groups`/`multiVersion`/`versionCheck`, missing `perNodeVersion`) is unchanged, all 5 entries still `optional: false`, the prereqs step survived the v6 wizard rebuild as step 2, and no welcome panel/walkthrough exists. The v6 rebuild touched nothing this item measures.
 
 #### Engine-aware AI launch + detect + opt-in install ([`claude-cli-detection-and-install/`](claude-cli-detection-and-install/overview.md))
 
 **⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
-#### Adobe org-context — residual workstreams ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md))
-
-Core self-heal **shipped** (see Recently shipped). Residual scope from the original consolidation, **verify against current code before picking up**: (B) concurrency safety — re-pin under an exclusive lock spanning select→command and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Was the FIX-FIRST gate for the App-Builder-deployable + workspace work; the gate is cleared now that the self-heal landed.
-
-#### Audit: project-level facts stored per-component ([`2026-08-11-project-level-facts-stored-per-component.md`](2026-08-11-project-level-facts-stored-per-component.md))
-
-`componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
-
-#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/)) — **now phase 4 of `.rptc/plans/ai-surface/`**
-
-Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
-could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
-exposed by descriptor rows. The apparent gap is mostly not one — reading the 41 handlers
-without a row splits them into UI navigation, fire-and-forget dispatchers, and capability
-already reachable through one of the 32 tools registered outside the descriptor tables. That
-turned up a disqualifier `mcp-tool-authoring` does not state: a handler can be perfectly
-headless and still unexposable because its return carries the DISPATCH rather than the
-OUTCOME (`handleSyncStorefront` is two lines that run a command and return success), so
-exposing it hands an agent a tool that cannot fail. Real gaps are on the guidance side —
-authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
-surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
-is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
-
-#### Data Installer — MCP write tools ([`2026-08-16-data-installer-mcp-write-tools.md`](2026-08-16-data-installer-mcp-write-tools.md)) — **fast-follow to phase 4**
-
-Filed 2026-08-16 during phase 4, whose plan puts `src/features/data-installer/` out of scope —
-the largest single hole in the agent surface, so the exclusion is now a scheduled decision
-rather than a permanent one. Six datapack READS are exposed and were all optimised in phase 2
-(`get_datapack_activity` 25,056 → 5,709; `list_installed_datapacks` 16,611 → 4,055). **Zero
-writes are**, though `OPERATION_MODE` has always been typed `import | export | delete |
-validate`. Nine real unexposed handlers, read from the maps: import start/validate/status/
-target/scopes/reset, credential provisioning, export start/list.
-
-Two things changed since the exclusion was written. The credential blocker moved — develop
-landed the shared-credential broker (ADR-014) and research established one Commerce credential
-reaches every instance in its org. And phase 2 produced six concrete optimisations (page-size
-defaults, no dashboard-only fields, index/detail, never fabricate an envelope field, a recorded
-ceiling per tool, pollable progress) that should go in from day one rather than as a later pass.
-
-**Also records a measurement defect worth its own item:** `ai-coverage-scan` reported 31
-unexposed data-installer handlers; reading the maps gives 9. Its extractor matches handler keys
-by regex across a whole file and counts nested object keys (`auth: context.authManager`, and
-`success`/`data`/`context` inside handler bodies). A depth-aware parser written to check it also
-failed its control. The same inflation applies to every map the scan reports, so no phase-4
-number should be sized from it without reading. **Not blocked.**
-
-#### App Builder deployable model — the unresolved gaps ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
-
-Moved from `plans/` 2026-08-13. **Corrected the same day: an earlier version of this entry said
-"D1 is built and D2–D6 have not started." That was wrong in both directions.** ADR-011's status
-note records D1 and D2 as shipped and **D3 shipped 2026-07-15** (`5d6f4956`), and there is no
-D4–D6 track — the plan defines D1, D2 Track A/B and D3. Verified against `src/`: all nine
-substantive D3 steps fail, two of them naming modules that have since been DELETED
-(`deployAppHeadless`, `appComponentManager`), so their "surgical anchors" point into files that
-no longer exist. The step files are now flagged at the top of the overview as history, not
-instructions.
-
-**What actually remains is the "Gaps to resolve" section** — work the shipped tracks never
-covered: per-deployable `.env` + env-var graph + secrets (marked HIGH, pressure-tested
-2026-06-19 — catalog entries must bring their own env-var schema and there is no collection
-surface for arbitrary integrations), the deployables list UX, per-deployable status model,
-removal confirmation for a destructive cloud op, error/recovery states, and the AI-shell flow.
-Scope from that section, never from the step files. **Track A pre-positions
-`getWorkspaceCredential`** — `dead-code-scan` reports it as an unused export and it is NOT
-cruft. Not blocked.
-
-
-### D. Deferred by design (gated on an external condition)
-
 #### The other webview message channels are still untyped ([`2026-08-21-webview-push-channels-are-untyped.md`](2026-08-21-webview-push-channels-are-untyped.md))
 
-The 2026-08-20 payload-typing pass closed the `init` channel — one of ~30. Every other extension↔webview message (`statusUpdate` family, snapshots, auth flows, request/response pairs) still crosses as an object literal on one side and a hopeful cast on the other, and since `9144bee9` the comm manager honestly takes `unknown`, so nothing forces agreement. **Deliberately NOT a project**: the gate is "a channel causes a bug" — then type THAT channel, one per slice, using the two worked examples (webviewPayloads for init; `StatusPayload` `95bdf0b0`). The item carries the slice rules and per-channel kickoff prompt. Filed 2026-08-21.
-
-#### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
-
-Phase 1 (matching names + auto-migration on reset) shipped (`23efd831`, `b2169699`). This entry is now the cleanup batch: retire `SiteRegistrationParams.legacyLookupKey`, the `cleanUpLegacyRegistration` branch, the 4th arg to `buildSiteConfigParams`, the `daLiveSite` manifest field. **Verified these symbols still exist.** Single-day deletion. Pick up only after telemetry confirms no `storefrontNameMigration` activations for 30+ days.
+**Re-measured 2026-08-23 — mostly done; this entry had lagged its own item.** The push campaign and the request direction BOTH shipped since filing: `webviewPayloads.ts` now declares 44 exports (7 init shapes + ~37 push payloads) and `webviewRequests.ts` covers the request direction; the four named `AddIntegrationFlowAdapter` casts are gone. Still true: the comm manager takes `unknown` (`sendMessage(type, payload?: unknown)`), so nothing FORCES a new channel to declare its shape, and ~45 payload-less action requests remain untyped (the item's own "Remaining tail (LOW priority)"). Standing rule, not a project: declare the payload when you next touch a channel. `as never` count drifted 31 → 36 — watch the ratchet. Filed 2026-08-21.
 
 #### Rebuild BuildRight on the thin-layer model ([`2026-06-10-buildright-eds-disposition.md`](2026-06-10-buildright-eds-disposition.md))
 
 Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
 
-#### PDP empty-data redirect to native /404 ([`2026-06-09-pdp-graceful-empty-state.md`](2026-06-09-pdp-graceful-empty-state.md))
+#### App Builder component — D3 dual-flow removal ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
 
-When an SC deletes a SKU, the cached PDP serves the template and the drop-in gets no data. Honest UX = redirect to the storefront's native `/404`. **Investigate first**: does `@dropins/storefront-pdp` expose an empty-state callback before building a DOM-polling wrapper. Ships as a Demo Builder code patch (ADR-006). Phase 0 investigation 15–30 min.
+Rewritten 2026-07-09; **re-measured 2026-08-23 and shrunk again**: edit-mode rehydration has SHIPPED (`buildEditModeIntegrationState` in `useWizardState.ts:216` seeds selections, sources, keyed API picks AND the mesh optional-dependency — the item's remaining-scope #2 went with it). **The ReviewStep bug was FIXED the same day** (`resolveReviewIntegrationNames` in `reviewStepHelpers.tsx` — Review now renders integrations through the same resolver the builder summary uses; the dead `components.appBuilder` read is gone and the never-wired `summarizeSelectedAppBuilderComponents` deleted). Remaining: only the **D3 dual-flow removal** (the mirror-write in `appBuilderComponentSelectionState.ts`).
 
-#### App Builder component — edit-mode rehydration + ReviewStep visibility ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
-
-Rewritten 2026-07-09: two of the three original claims were already resolved on `develop` (`buildProjectConfig` serialization EXISTS; custom-URL provisioning EXISTS via creation Phase 3b + the rebuilt `CustomIntegrationRow`; `showCustomDoor` is obsolete). Remaining: edit-mode rehydration (nothing persists the selections to rehydrate FROM), the live ReviewStep bug (reads always-empty `components.appBuilder`, so hand-picked integrations are invisible on Review), and the coupled **D3 dual-flow removal**.
-
-#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
+#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
 
 One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
 
@@ -303,106 +236,75 @@ for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulati
 
 #### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
-Serve multiple locales (eventually multiple brands) from a single project. Repurposes the wizard `settings` step as **Business Structure** (Connection, Primary Store, Regions & Locales, reserved Additional Brands). Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
-
-#### Decouple project from VS Code workspace folder ([`2026-05-30-decouple-project-from-workspace.md`](2026-05-30-decouple-project-from-workspace.md))
-
-Switching projects from the home grid reloads the workspace folder, reactivating the extension host. Goal: render the picked project's dashboard in-place without a window reload; anchor the workspace only when a workspace-requiring action fires. Multi-day — touches `StateManager`, MCP server lifecycle, terminal/AI Chat anchoring, file watchers. **Caveat (carried from the archived MCP-binding item): the headline premise shipped fixed 2026-06-02 — re-scope before picking this up; do not execute it as written.**
+Serve multiple locales (eventually multiple brands) from a single project. **Re-measured 2026-08-23: the container shipped, the feature did not.** The v6 wizard rebuild delivered this item's structural proposal — a "Business Structure" sub-step exists inside the Commerce area (`commerceSections.ts:76`) — but as a SINGLE website/store/store-view scope selector feeding catalog gating and datapack import. Zero locale code anywhere in `src/` (measured with controls). So the item's "repurpose the settings step" plan is stale; what remains is adding the locale axis INSIDE the existing step. Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
 
 #### EDS site-scraping capability ([`2026-05-28-eds-site-scraping.md`](2026-05-28-eds-site-scraping.md))
 
-Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows (Mod Agent; Playwright MCP). **Gated on Mod Agent access** (request filed 2026-05-28). Phase 1 ~1 day of config; Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) ~1–2 weeks — defer until Phase 1 validates.
+Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
 
 #### Monorepo independent release tracking ([`monorepo-independent-release-tracking/`](monorepo-independent-release-tracking/overview.md))
 
-Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need.
+Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need — **re-measured 2026-08-23: still no repo serves two components** (4 distinct source URLs, each used once), and the plan's file map is stale: `COMPONENT_REPOS` no longer exists (repo resolution lives in `componentRepositoryResolver.ts`) and `templates/components.json` is now `src/features/components/config/components.json`. Fix the citations before executing.
 
 ### F. Maintenance cycle anchors
-
-#### DX follow-through — verification pipeline + guidance freshness ([`2026-07-03-dx-verification-pipeline.md`](2026-07-03-dx-verification-pipeline.md))
-
-Deferred items from the 2026-07-03 DX audit (`../research/dx-audit/research.md`): secret-file PreToolUse guard, evidence capture in the `gate` skill + fresh-context `/code-review` habit, periodic re-verification of the `<!-- Last verified -->` markers now stamped on every CLAUDE.md, and removal of the unused webpack devDependencies.
 
 #### Structural baseline ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
 
 Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.
 
-#### Legacy / soft-deprecation cleanup ([`2026-05-21-legacy-soft-deprecation.md`](2026-05-21-legacy-soft-deprecation.md))
-
-**Re-measured 2026-08-13 — nearly all done.** The old text here ("~30 inventoried items… 3 zero-caller deletions are ready any time") was ~2.5 months stale: L1–L5 executed in Cycle 4 (PR #8, 2026-05-31) and three of the four follow-ups have shipped since. `@deprecated` in `src/` is down to **1** (`envFileGenerator.ts`, a Category-A keep), lint is **0 warnings / 0 errors**, and `componentHandler.ts` is deleted. What remains is small: half of follow-up 2 (`stalenessDetector.ts` still carries a service class *and* ten standalone function exports) plus the never-scheduled `demoPackageLoader` test seam. **Do not execute the batch plan in the file** — it is history; the banner at the top has the current scope.
-
-### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
-
-#### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
-
-Filed 2026-08-13, raised by the Data Installer session and re-measured here before filing.
-**EDS has 36 service files making external HTTP calls and no drift checker** — Helix Admin,
-DA.live, Config Service and GitHub, all with offline-only tests, so any of those contracts can
-move and the suite stays green. `tests/fixtures/eds/` exists but only 2 test files read it, and
-the three ad-hoc `scripts/test-*helix*` probes contain zero fixture references, so none would
-notice a shape change. Not theoretical: the Helix DELETE-auth rule, the Config Service lookup
-key, the DA.live site-vs-org scope and the aem.live path-encoding limit were each discovered by
-breakage. `scripts/dataInstallerDrift.js` is the reference, and its four rules are load-bearing
-— a non-200 is a FAILURE never "no drift", ADDED keys are not drift, coverage is action ×
-PARAMETER, and a nonsense control invalidates the run if it passes. **Cannot be a CI gate**: it
-needs interactive credentials, so it is a manual pre-release check in `cut-release`'s advisory
-block — say so, or someone wires it into CI, watches it fail, and disables it. Scope EDS only;
-reads only. Not blocked.
+### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
 #### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
 
 Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
-Playwright help, or SLICC?" **Neither: the tool is not the problem.** Measured — every
-generated storefront ships **36 `--type-*` custom properties** (a full scale, size and
-line-height per role) in `aem-boilerplate-commerce`'s `styles.css`, and **no generated skill
-mentions them** (zero hits; control confirms the files are read). So an authoring agent picks
-sizes by eye, and `refine-visual-match` cannot correct it because that skill requires
-`.scraped/<domain>/` references — outside the scrape flow there is no oracle, so iteration runs
-against taste, unbounded. Playwright already screenshots at 1440/375 and caps at 3 rounds; the
-missing piece is a standard, not an instrument. SLICC was ruled out 2026-05-28 (BYOT-key
-friction vs auto-install), **though that assessment was scoped to scraping** and is not
-automatically closed for verification. Cheapest fix first: tell the skills the scale exists,
-measure, and only then consider a computed-style checker. **Two honest gaps:** no
-Claude-authored block was available to observe, so the failure is inferred — step 1 is
-reproducing it; and the boilerplate is itself inconsistent (13 of 83 block stylesheets use the
-tokens, 6 hardcode), so an agent reading neighbours finds both conventions. Not blocked.
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
 
 #### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
 
-Filed 2026-08-13. Most of this already works — packages install automatically into the
-isolated `.demo-builder-mcp/`, `.mcp.json` is written for the user, install failure is
-surfaced, a package that goes missing is caught by `detectMcpDrift` and healed, a broken
-server shows in the AI Capabilities modal, and `scrape-reference-site` tells the agent how to
-recover. Three gaps remain. **(1) The biggest download is invisible:** `@playwright/mcp` is
-only the server; Playwright fetches a ~150 MB Chromium on first USE, and nothing in `src/`
-knows that binary exists — on a restricted network it fails at an agent mid-scrape, as an
-error the extension never sees. **(2) Progress is a label, not progress** — one opaque step
-claiming "up to a minute" it cannot know. **(3) There is no opt-out, and the blocker is not
-the toggle:** `ai-defaults.json` declares packages, `DEMO_BUILDER_ALWAYS_ON_SKILLS` declares
-skills, and **nothing connects them** — the skill→tool dependency exists only as prose inside
-skill bodies, so "which skills are disabled if I opt out?" has no machine-readable answer.
-Nor is it all-or-nothing: of the six EDS scraping skills only three drive Playwright, the
-other three work on already-scraped material. **The state to avoid is a skill that tells an
-agent to use a tool that is not installed** — worse than no skill, because the agent tries,
-fails and improvises. Step 1 is declaring the dependency. Do the composition axis of
-[`2026-08-13-tier-the-ai-bundle-refresh.md`](../complete/2026-08-13-tier-the-ai-bundle-refresh.md)
-first — it SHIPPED 2026-08-14 (`d2cb8e85`), so that dependency is already met; this shares its
-gate. Not blocked.
+Filed 2026-08-13; **re-measured 2026-08-23 — two of its three gaps have shrunk or closed.**
+**(1) The invisible-download gap is mostly dead:** the premise ("Playwright fetches ~150 MB
+Chromium on first use, nothing in `src/` knows") was measured FALSE on 2026-08-22 — the MCP
+drives the machine's installed Chrome by default, and `src/` now says so in three places
+(the v17 skill correction, `ai-defaults.json`, `constants.ts`). What survives is only the
+runtime pre-check for Chrome-less machines (a Chrome-detection + `ms-playwright` cache stat;
+today only `mcpInspector.ts` even mentions the env var). **(2) Progress is still a label,
+not progress** — `aiHandlers.ts` emits one opaque step and `aiDefaultsInstaller.ts` has zero
+progress wiring (verified with a control). **(3) The skill→tool dependency is DECLARED and
+ENFORCED** — `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts:83` maps exactly the three
+Playwright-driving skills, and `skillsWriter.ts` gates generation on it, so a project
+without the tool no longer receives skills that command it. Remaining live work: the
+opt-out surface itself, the progress fix, and the re-scoped Chrome-less pre-check. Not
+blocked.
 
-
-#### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
-
-Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) **shipped** on
-`develop`. **Active seed:** add 1+ App Builder apps to a demo project (**Model A** — user-supplied git
-repos deployed via `aio app deploy` into the demo's existing workspace; the Mesh lifecycle,
-multiplied). Supersedes the old Effort 1b cleanup. **Effort 2 (discovery least-privilege token):
-DECLINED 2026-06-15** — closes no attacker exposure; VS Code Secret Storage is the cheap fix if
-at-rest plaintext ever matters.
 
 ---
 
 ## Recently shipped — 2026-08
 
+- **Audit: project-level facts stored per-component** — closed 2026-08-23 via the item's own preferred fix (mechanism, not per-key). The one reachable write/read divergence post-reconcile was ORPHANED entries: component removal never deleted `componentConfigs[id]`, and configGenerator's sweep gives mesh entries override priority — so a removed mesh's stale `ADOBE_COMMERCE_URL` could outvote the backend's fresh value (the 2026-08-10 failure shape, open for all 11 non-scope keys). Removal now deletes the entry + `stripOrphanedComponentConfigs` sweeps existing manifests on load; none of the 11 keys needs per-key single-sourcing. ACO keys classified out of reach (no config surface walks addons/tools) ([`../complete/2026-08-11-project-level-facts-stored-per-component.md`](../complete/2026-08-11-project-level-facts-stored-per-component.md))
+- **DX follow-through — verification pipeline + guidance freshness** — closed 2026-08-23, all four items shipped or found shipped: the secret-file guard BUILT as router rule `20-secret-files` (hard-stop; .env* + high-confidence secret content bound for the public repo; router now parses Write/Edit content; 10 RED-first pins); guidance freshness BUILT as a path-drift section in `doc-drift.sh` (continuous, deterministic existed-vs-illustrative split — first run found 25 real stale refs, 23 fixed same turn); gate evidence + fresh-context review found already shipped (gate's extracted-lines discipline + RPTC automatic verify); webpack devDeps shipped `4bb0197b6` ([`../complete/2026-07-03-dx-verification-pipeline.md`](../complete/2026-07-03-dx-verification-pipeline.md))
+- **PDP empty-data redirect to native /404 (warm path)** — closed 2026-08-23. The investigate-first gate resolved cheaply: `fetchProductData` returns null for an unknown SKU (pinned in the vendored bundle) and the boilerplate initializer holds that null right before mounting — the fix is a 3-line guard using the file's own `loadErrorPage()` (= the native-404 redirect this item decided). Shipped as code patch `pdp-empty-data-redirect` (b2b + citisignal-b2b ledgers, LKG-gate verified), wired into all 6 `codePatches` arrays, and proven live on the bodea demo: fake-SKU PDP published (RED: empty block), guard synced (GREEN: redirect to the native 404), throwaway page deleted ([`../complete/2026-06-09-pdp-graceful-empty-state.md`](../complete/2026-06-09-pdp-graceful-empty-state.md))
+- **Decouple project from VS Code workspace folder** — closed 2026-08-23: the goal had already shipped via the always-root home model (in-place dashboard rendering off the persisted pointer; `shouldReHomeToRoot` re-homes stray project-anchored windows), and the item's acceptance criteria — removing the `.115` dual-listen MCP shim — executed after verifying nothing targets the secondary socket (every `.mcp.json` pins the root socket; cwd-derived proxies fall back to live-socket discovery). `secondarySocketPath`, `mcpSocketBindings`, four dual-listen tests, and their describe are gone; ADR-012 amended, mcp-server.md socket section rewritten. One deliberate deviation: `bindSocket()` stays a method (it since grew the rename + first-window-wins machinery) ([`../complete/2026-05-30-decouple-project-from-workspace.md`](../complete/2026-05-30-decouple-project-from-workspace.md))
+- **Retire `legacyLookupKey` infrastructure** — closed 2026-08-23 under the user-decided Option A: repair now runs the storefront name migration BEFORE re-registering (same migration reset runs; a failed migration aborts the repair instead of repairing into the broken name), which made the legacy branch dead on every path — so `legacyLookupKey`, its params field, and `cleanUpLegacyRegistration` are deleted, `buildSiteConfigParams` is 4-arg, and the manifest's `daLiveSite` is stripped on load ONLY when it equals the repo name (an unequal value stays — it is the migration net's detection signal and the pointer to where the DA content lives; readers fall back to the repo name). Repair surfaces now say they can rename a DA site ([`../complete/2026-06-08-rename-existing-da-content-to-repo-name.md`](../complete/2026-06-08-rename-existing-da-content-to-repo-name.md))
+- **App Builder deployable model — the unresolved gaps** — archived 2026-08-23 at user prompting ("I think this may be shipped?" — correct): the gap list predated execution and shipped nearly end to end (wizard picker + three front doors, dashboard integrations grid with per-id lifecycle, env-schema collection, secrets in SecretStorage, shell instancing), and the two claims this morning's re-measure left unmeasured were verified today — D2 Track A IS wired (mesh handlers → apiSubscriberClientAdapter) and step 09 happened (MeshErrorDialog gone). Remainders live in their own items: slice 3 (package binding, gated) and slice 5 (app-only projects) ([`../complete/appbuilder-deployable-model/overview.md`](../complete/appbuilder-deployable-model/overview.md))
+- **EDS contract drift checker** — shipped 2026-08-23 as `npm run eds:drift`: the four already-bitten contracts pinned (Helix status two-level semantics, Config Service site entry keyed on the REPO + org roster, DA.live site-scope config, the aem.live percent-encoding rejection as a behavioural probe with an invalidating control), over a shared drift core extracted from the Data Installer checker (its 33 tests untouched). `--capture` bootstraps fixtures (first run pending — needs a real storefront's credentials; until then checks FAIL loudly by design); wired into `cut-release`'s advisory block with the not-a-CI-gate reasoning; the three ad-hoc `scripts/test-*` probes retired ([`../complete/2026-08-13-eds-contract-drift-checker.md`](../complete/2026-08-13-eds-contract-drift-checker.md))
+- **Custom integration — language standard + model** — CLOSED 2026-08-23 with item 5, the last live piece: a demo rename now syncs the remote Adobe I/O project title (best-effort, PATCH of `{title}` only) — and ONLY when the remote title still matches the demo's old identity, so a user-selected shared Console project is never renamed by a demo rename ([`../complete/2026-07-15-custom-integration-language-and-model.md`](../complete/2026-07-15-custom-integration-language-and-model.md))
+- **Legacy / soft-deprecation cleanup** — CLOSED 2026-08-23 with its last item: the `stalenessDetector.ts` service class (a pure delegation wrapper, zero production callers, only its own DI test instantiated it) deleted; the function surface is the one public surface, 222 mesh tests green untouched ([`../complete/2026-05-21-legacy-soft-deprecation.md`](../complete/2026-05-21-legacy-soft-deprecation.md))
+- **AI surface coverage — phase 4** — found EXECUTED when re-measured 2026-08-23: every group (1–8) landed or was explicitly decided against in the plan's own annotations; the tool surface is 103 (57 direct + 46 descriptor rows), not the filed 58; the two example gaps (data-installer writes, prerequisites) are both closed. The backlog file predated execution and was never updated. `.rptc/plans/ai-surface/` still holds the annotated plan — verify its OTHER phases before archiving that dir too ([`../complete/ai-surface-coverage/overview.md`](../complete/ai-surface-coverage/overview.md))
+- **Data Installer — MCP write tools** — found SHIPPED when re-measured 2026-08-23: 8 of the 9 named handlers are descriptor-row tools (`start_datapack_import`, `validate_datapack_import`, `reset_datapack`, `start_datapack_export`, + the four target/scope/status/export-list reads); `delete-datapack` and `async-process-status` stay deliberately withheld. One-line residue: `provision-accs-credentials` is still handler-only — expose or decline it next time this surface is touched ([`../complete/2026-08-16-data-installer-mcp-write-tools.md`](../complete/2026-08-16-data-installer-mcp-write-tools.md))
+- **Code Sync detection limits** — archived 2026-08-23 as pure reference: its one proposal (gate Continue on the install-link click) was BUILT 2026-08-20 (`d70ef9b5`) and deliberately REVERTED the same day (`28c385b7`, reasoning now in `repoSelectionInline.helpers.tsx` — a forced click on an unreliable inference bought friction, not safety); `siteUnknownReason.ts`, which the item cites as load-bearing, was deleted `111fc968`. The reference half (two-level status semantics, GitHub API dead ends) re-measured current and lives on in code docblocks ([`../complete/2026-08-19-code-sync-detection-limits.md`](../complete/2026-08-19-code-sync-detection-limits.md))
+- **Adobe org-context — residual workstreams** — index entry retired 2026-08-23 after re-measure: facet B's concurrency risk was dissolved (per-invocation `withOrgContext` env targeting + `ResourceLocker.executeExclusive` wired through `commandExecutor`), the typed non-retryable `ORG_MISMATCH` shipped end-to-end (error code + `non_retryable: true` + the proxy refusing to retry it + AGENTS.md guidance), and the human org-picker was built and deliberately withdrawn (`e552f503` → `66f2888e`). The item file was already in `complete/`; only its live index entry survived it ([`../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md`](../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md))
+- **MCP tools for Configuration Service site access** — found ALREADY SHIPPED when picked up 2026-08-23: AI-surface phase 4 (Group 6) delivered the whole scope in `siteTools.ts` — `get_site_access`, `set_site_admin` (grant/revoke merged, confirm-gated), `repair_site_configuration` — wired, tested (36), documented, in the bundle; every filed constraint honored, one deliberate deviation (unmasked emails, rationale in the module docstring). The item aged out in nine days without its death being visible — the index's re-measure-before-pickup rule caught the picker, not the filer ([`../complete/mcp-site-access-tools.md`](../complete/mcp-site-access-tools.md))
+- **App Builder attach — Model A seed** — archived 2026-08-23 during a whole-backlog review: everything in the item is shipped, declined, or superseded. The seed's five "build new" gaps all exist on develop via the ADR-011 track (`deployAppComponent`, the keyed `appBuilderComponents` map, the dashboard integrations grid, per-integration package renaming, `getProvidedEnvVars`); Effort 1 shipped long ago; Effort 2 stays declined. Adjacent remainders live in their own items ([`../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md`](../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md))
 - **Jest worker force-exit warning** — closed 2026-08-23, diagnosed to the mechanism. A live-handle audit of all 1130 suites found and fixed the only two real leaks: two `commerceStoreDiscovery` error-path tests under-mocked a `Promise.all` fan-out (calls 2–3 fell through the fetch spy to REAL fetches whose DNS+TLS handles lived for seconds), and `componentManager-install-git-clone`'s install-by-tag test hit the LIVE GitHub API (its 404 fell back to the configured tag, so it passed while touching the network). The residual warning is NOT a test leak: jest-worker's hardcoded 500ms end-of-run deadline racing twelve simultaneous worker teardowns — a SIGTERM dump on a warned run never even executed, proving the laggard's loop was blocked in teardown/GC, not idling on a handle. Machine-state-sensitive (~44% before and after); recurrence is not a regression unless the handle audit (recipe in `tests/README.md`) shows a leak ([`../complete/2026-06-09-jest-worker-force-exit.md`](../complete/2026-06-09-jest-worker-force-exit.md))
 - **Catalog prewarm fails on a store view with no Catalog Service index** — closed 2026-08-23, all three decisions made. The ordering question was already answered in code (creation imports the datapack before prewarming, and the creation-time pipeline deliberately passes no project to the step-8 prewarm — the item’s premise went stale between filing and pickup). An unindexed scope is a supported state with a documented, non-self-serve remedy: Live Search's public Catalog data retention policy HIBERNATES an environment whose catalog stays empty 45 days (or a testing env unqueried 90), and syncing products does not by itself wake it (internal search-team corroboration, paraphrased) — the fix is an Adobe support request titled "Reactivate Live Search". The warn now carries that remedy, that runtime smart-404 covers every PDP regardless, and that Republish or Reset re-runs prewarming (Republish gained prewarm the same day — decided and implemented in the shared republish spine, so the dashboard button and MCP sync_content both retry it); branch-discriminated from generic failures, both pinned by test. No products(skus:) fallback ([`../complete/2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md`](../complete/2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md))
 - **Placeholder sheets: does anything need them?** — answered and fixed 2026-08-23: the reset-time code fetch (`fetchPlaceholderFiles`) and its 16-path `placeholderSheets` inventory are DELETED. Closed by a dominance argument, every link verified: the DA.live copy's full-tree walk carries authored sheets (they are `.xlsx` on DA.live; verified live on isle5), so a source with sheets needs no fetch and a source without has nothing to fetch — while the fetch targeted the template's live site, dead for b2b (17 silent 404s per reset) and content-shadowing where alive. Content owns labels; dropins' compiled-in English defaults cover the rest. Docs synced (`eds-content-separation.md` rewritten around creating-vs-copying; ADR-008 amended); a stale ledger shipping the retired field is ignored leniently, pinned by test. Same-day follow-up: the console 404s themselves silenced via static one-row sentinel stubs (`placeholderStubs.ts`, wired into creation + reset; empty sheets would still warn — the fetch code checks `data.length`; real DA sheets shadow the stubs) ([`../complete/placeholder-sheets-who-owns-them.md`](../complete/placeholder-sheets-who-owns-them.md))

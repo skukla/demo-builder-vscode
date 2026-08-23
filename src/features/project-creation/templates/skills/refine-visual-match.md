@@ -45,7 +45,7 @@ For each section, classify the delta:
 | **Layout structure** | Missing section, wrong section order, section split | HIGH — fix in round 1 |
 | **Section presence** | Reference has hero+grid+CTA; demo only has hero+grid | HIGH — add the missing block |
 | **Spacing scale** | Hero padding too tight, grid gaps off | MEDIUM — fix in round 2 |
-| **Typography scale** | Heading weight too light, line-height off | MEDIUM — fix in round 2 |
+| **Typography scale** | Heading weight too light, line-height off | MEDIUM — fix in round 2. Fix by editing the `--type-*` properties in `styles/styles.css` (or snapping the block to `font: var(--type-…)` if it hardcodes a size) — never by nudging a literal `font-size` in block CSS |
 | **Color shade variance** | Brand red is the right hue but slightly off saturation | LOW — accept or fix in round 3 |
 | **Animation / motion** | Reference has a slide-in; demo is static | LOW — usually accept (EDS is static-first) |
 | **Pixel-level positioning** | Element 4px lower than reference | LOWEST — usually accept |

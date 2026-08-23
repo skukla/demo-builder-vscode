@@ -640,10 +640,24 @@ export async function removeAppBuilderComponent(
         ...(project.componentApiPicks
             ? { componentApiPicks: { ...project.componentApiPicks } }
             : {}),
+        // The component's env-value copies go with it too. Configure's fan-out
+        // writes a shared field only to SELECTED components, but the env/config
+        // generators sweep the WHOLE map — configGenerator with
+        // mesh-overrides-non-mesh priority — so a stranded entry's stale copy of
+        // ADOBE_COMMERCE_URL (etc.) would outvote the backend's fresh value on
+        // the next publish. Same failure shape as the 2026-08-10 wrong-website
+        // bug. `stripOrphanedComponentConfigs` (loader) sweeps entries older
+        // removals already stranded.
+        ...(project.componentConfigs
+            ? { componentConfigs: { ...project.componentConfigs } }
+            : {}),
     };
     delete cleared.appBuilderComponents[id];
     if (cleared.componentApiPicks) {
         delete cleared.componentApiPicks[id];
+    }
+    if (cleared.componentConfigs) {
+        delete cleared.componentConfigs[id];
     }
     // Sync the caller's reference too — a later save from a stale reference
     // would otherwise RESURRECT the removed integration (see persistOutcome).
@@ -652,6 +666,9 @@ export async function removeAppBuilderComponent(
     // caller's copy would otherwise restore the picks we just dropped.
     if (cleared.componentApiPicks) {
         project.componentApiPicks = cleared.componentApiPicks;
+    }
+    if (cleared.componentConfigs) {
+        project.componentConfigs = cleared.componentConfigs;
     }
     await deps.saveProject(cleared);
 

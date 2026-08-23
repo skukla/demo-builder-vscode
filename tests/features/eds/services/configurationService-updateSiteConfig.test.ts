@@ -67,8 +67,8 @@ describe('ConfigurationService', () => {
                             role: { admin: ['a@adobe.com', 'b@adobe.com'] },
                             requireAuth: 'auto',
                         }),
-                        { status: 200 },
-                    ),
+                        { status: 200 }
+                    )
                 ) // GET access (capture)
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // PUT
@@ -79,7 +79,7 @@ describe('ConfigurationService', () => {
             expect(result.success).toBe(true);
             const restore = fetchSpy.mock.calls[3];
             expect(restore[0]).toBe(
-                'https://admin.hlx.page/config/test-user/sites/my-site/access/admin.json',
+                'https://admin.hlx.page/config/test-user/sites/my-site/access/admin.json'
             );
             expect(restore[1].method).toBe('POST');
             expect(JSON.parse(restore[1].body)).toEqual({
@@ -102,7 +102,9 @@ describe('ConfigurationService', () => {
             // The DELETE must never have been issued.
             expect(fetchSpy).toHaveBeenCalledTimes(1);
             expect(
-                fetchSpy.mock.calls.some((c: unknown[]) => (c[1] as RequestInit)?.method === 'DELETE'),
+                fetchSpy.mock.calls.some(
+                    (c: unknown[]) => (c[1] as RequestInit)?.method === 'DELETE'
+                )
             ).toBe(false);
         });
 
@@ -116,7 +118,7 @@ describe('ConfigurationService', () => {
                 .mockResolvedValueOnce(
                     new Response(JSON.stringify({ role: { admin: ['a@x.test', 'b@x.test'] } }), {
                         status: 200,
-                    }),
+                    })
                 ) // GET access (capture)
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // PUT
@@ -133,7 +135,7 @@ describe('ConfigurationService', () => {
         it('retries the restore once before declaring the grants lost', async () => {
             fetchSpy
                 .mockResolvedValueOnce(
-                    new Response(JSON.stringify({ role: { admin: ['a@x.test'] } }), { status: 200 }),
+                    new Response(JSON.stringify({ role: { admin: ['a@x.test'] } }), { status: 200 })
                 )
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // PUT
@@ -161,19 +163,19 @@ describe('ConfigurationService', () => {
         });
 
         it('carries 401 out when the SESSION died, not the role', async () => {
-        // `classify` folds 401 and 403 into `not_authorized`, which is right for
-        // deciding whether to retry and wrong for choosing a remedy: a 403 needs
-        // a grant, a 401 needs a sign-in. Hardcoding 403 sent an expired session
-        // to grant itself a role it already held.
-        fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 })); // GET access
+            // `classify` folds 401 and 403 into `not_authorized`, which is right for
+            // deciding whether to retry and wrong for choosing a remedy: a 403 needs
+            // a grant, a 401 needs a sign-in. Hardcoding 403 sent an expired session
+            // to grant itself a role it already held.
+            fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 })); // GET access
 
-        const result = await service.updateSiteConfig(params);
+            const result = await service.updateSiteConfig(params);
 
-        expect(result.success).toBe(false);
-        expect(result.statusCode).toBe(401);
-    });
+            expect(result.success).toBe(false);
+            expect(result.statusCode).toBe(401);
+        });
 
-    it('does not POST a restore when there were no grants to preserve', async () => {
+        it('does not POST a restore when there were no grants to preserve', async () => {
             // A site with no access doc captures {} — restoring an empty map
             // would write a doc that did not exist and is pure noise.
             fetchSpy
@@ -194,7 +196,7 @@ describe('ConfigurationService', () => {
                 .mockResolvedValueOnce(
                     new Response(JSON.stringify({ role: { admin: ['a@adobe.com'] } }), {
                         status: 200,
-                    }),
+                    })
                 )
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // DELETE
                 .mockResolvedValueOnce(new Response(null, { status: 200 })) // PUT
@@ -220,7 +222,7 @@ describe('ConfigurationService', () => {
             // First call: DELETE
             expect(fetchSpy.mock.calls[1][1].method).toBe('DELETE');
             expect(fetchSpy.mock.calls[1][0]).toBe(
-                'https://admin.hlx.page/config/test-user/sites/my-site.json',
+                'https://admin.hlx.page/config/test-user/sites/my-site.json'
             );
 
             // Second call: PUT (register)
@@ -267,116 +269,10 @@ describe('ConfigurationService', () => {
             expect(result.statusCode).toBe(401);
         });
 
-        // Legacy-registration cleanup. Storefronts created on builds before
-        // commit 164fd251 registered their Helix site config under the DA.live
-        // site name; current builds register under the GitHub repo name.
-        // When `legacyLookupKey` is supplied, updateSiteConfig must DELETE
-        // that legacy registration before the normal DELETE+PUT, otherwise
-        // Helix elects the orphan as the primary content site and 403s every
-        // write against the new registration.
-        describe('legacy lookup key cleanup', () => {
-            const paramsWithLegacy: SiteRegistrationParams = {
-                org: 'skukla',
-                site: 'b2b-boilerplate',
-                codeOwner: 'skukla',
-                codeRepo: 'b2b-boilerplate',
-                contentSourceUrl: 'https://content.da.live/skukla/b2b-boilerplate-content/',
-                legacyLookupKey: { org: 'skukla', site: 'b2b-boilerplate-content' },
-            };
-
-            it('DELETEs the legacy registration before the normal DELETE+PUT when legacyLookupKey is set', async () => {
-                fetchSpy
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // GET access (capture)
-                    .mockResolvedValueOnce(new Response(null, { status: 204 })) // legacy DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
-
-                const result = await service.updateSiteConfig(paramsWithLegacy);
-
-                expect(result.success).toBe(true);
-                expect(fetchSpy).toHaveBeenCalledTimes(4);
-
-                // First call: DELETE at the LEGACY key (DA site name)
-                expect(fetchSpy.mock.calls[1][1].method).toBe('DELETE');
-                expect(fetchSpy.mock.calls[1][0]).toBe(
-                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate-content.json',
-                );
-                // Second call: DELETE at the NEW key (GitHub repo name)
-                expect(fetchSpy.mock.calls[2][1].method).toBe('DELETE');
-                expect(fetchSpy.mock.calls[2][0]).toBe(
-                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
-                );
-                // Third call: PUT at the NEW key
-                expect(fetchSpy.mock.calls[3][1].method).toBe('PUT');
-                expect(fetchSpy.mock.calls[3][0]).toBe(
-                    'https://admin.hlx.page/config/skukla/sites/b2b-boilerplate.json',
-                );
-            });
-
-            it('treats a 404 on the legacy DELETE as success (no orphan to clean up)', async () => {
-                fetchSpy
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // GET access (capture)
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // legacy DELETE 404
-                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
-
-                const result = await service.updateSiteConfig(paramsWithLegacy);
-
-                expect(result.success).toBe(true);
-                expect(fetchSpy).toHaveBeenCalledTimes(4);
-            });
-
-            it('does not invoke a legacy DELETE when legacyLookupKey is absent', async () => {
-                fetchSpy
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // GET access (capture)
-                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
-
-                const result = await service.updateSiteConfig(params);
-
-                expect(result.success).toBe(true);
-                expect(fetchSpy).toHaveBeenCalledTimes(3);
-                // calls[0] is the access capture; the first CONFIG call goes to the
-                // new registration, not any legacy one.
-                expect(fetchSpy.mock.calls[1][0]).toBe(
-                    'https://admin.hlx.page/config/test-user/sites/my-site.json',
-                );
-            });
-
-            it('does not invoke a legacy DELETE when the legacy key matches the current key', async () => {
-                // Edge case: someone constructs params with legacyLookupKey === current key.
-                // The pre-flight DELETE would otherwise duplicate the normal DELETE.
-                const paramsSameKey: SiteRegistrationParams = {
-                    ...params,
-                    legacyLookupKey: { org: params.org, site: params.site },
-                };
-                fetchSpy
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // GET access (capture)
-                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
-
-                const result = await service.updateSiteConfig(paramsSameKey);
-
-                expect(result.success).toBe(true);
-                expect(fetchSpy).toHaveBeenCalledTimes(3);
-            });
-
-            it('proceeds with the normal flow even when the legacy DELETE fails with a non-404 error', async () => {
-                // The legacy cleanup is best-effort. A 403 or 500 on the legacy
-                // DELETE shouldn't block the user from re-registering the new
-                // site — the orphan is a self-inflicted state, not a security
-                // boundary. Log it and continue.
-                fetchSpy
-                    .mockResolvedValueOnce(new Response('Not Found', { status: 404 })) // GET access (capture)
-                    .mockResolvedValueOnce(new Response('Forbidden', { status: 403 })) // legacy DELETE 403
-                    .mockResolvedValueOnce(new Response(null, { status: 200 })) // normal DELETE
-                    .mockResolvedValueOnce(new Response(null, { status: 201 })); // PUT
-
-                const result = await service.updateSiteConfig(paramsWithLegacy);
-
-                expect(result.success).toBe(true);
-                expect(fetchSpy).toHaveBeenCalledTimes(4);
-            });
-        });
+        // The 'legacy lookup key cleanup' describe lived here until 2026-08-23.
+        // legacyLookupKey is retired: reset and repair both run the storefront
+        // name migration before registering, and the migration's own DELETE+PUT
+        // removes the legacy registration — so updateSiteConfig never again
+        // sees a mismatched name to clean up after.
     });
 });

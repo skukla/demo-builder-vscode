@@ -39,12 +39,8 @@ export async function publishConfigAndRegisterSite(
         repoOwner,
         repoName,
         daLiveOrg,
-        daLiveSite,
         byomOverlayUrl,
-    }: Pick<
-        EdsResetParams,
-        'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite' | 'byomOverlayUrl'
-    >,
+    }: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'byomOverlayUrl'>,
     githubTokenService: GitHubTokenService,
     tokenProvider: TokenProvider,
     logger: Logger,
@@ -88,13 +84,7 @@ export async function publishConfigAndRegisterSite(
         // storefront) got no 409 or 401 handling at all.
         const outcome = await registerSiteConfig({
             configurationService: configService,
-            siteParams: buildSiteConfigParams(
-                repoOwner,
-                repoName,
-                daLiveOrg,
-                daLiveSite,
-                byomOverlayUrl,
-            ),
+            siteParams: buildSiteConfigParams(repoOwner, repoName, daLiveOrg, byomOverlayUrl),
             // Carries the publish-key re-mint. Before it moved into the registrar
             // this path wrote the config — destroying the key — and never minted a
             // new one, so every reset silently killed runtime PDP self-heal.

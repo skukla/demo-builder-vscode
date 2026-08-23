@@ -1,5 +1,24 @@
 # Service Resolution Pattern
 
+> **Status (verified 2026-08-23): the resolver engine described below was
+> deleted** (`serviceResolver.ts`, removed in `b5c1256cb` as over-engineered).
+> What survives of the pattern today:
+>
+> - the `providesServices` / `requiredServices` declarations in
+>   `components.json` (validated by `tests/templates/type-json-alignment-…`)
+> - **Review-screen labeling**: a backend that PROVIDES services shows them as
+>   "(built-in)" instead of listing required ones —
+>   `src/features/project-creation/ui/steps/reviewStepHelpers.tsx`
+> - **requiredServices-driven env resolution**: Configure's field list
+>   (`src/features/components/ui/hooks/useComponentConfig.ts`), env file
+>   generation (`src/features/project-creation/helpers/envFileGenerator.ts`),
+>   and the `component_requirements` MCP tool
+>
+> The prompt-skipping resolution this doc centers on — cross-referencing a
+> component's requires against the backend's provides to suppress redundant
+> prompts — has **no current implementation**. Nothing compares the two lists.
+> Treat the sections below as the design record of the deleted engine.
+
 ## Overview
 
 The **Service Resolution Pattern** enables intelligent dependency management in the component registry by allowing components to declare what services they **provide** in addition to what services they **require**.
@@ -382,6 +401,7 @@ Allow components to satisfy requirements with alternatives:
 
 - **Schema**: `src/features/components/config/components.schema.json`
 - **Types**: `src/types/components.ts`
-- **Resolver**: `src/features/components/services/serviceResolver.ts`
-- **Tests**: `tests/unit/features/components/services/serviceResolver.test.ts`
+- **Provides display**: `src/features/project-creation/ui/steps/reviewStepHelpers.tsx`
+- **Requires resolution**: `src/features/components/ui/hooks/useComponentConfig.ts`, `src/features/project-creation/helpers/envFileGenerator.ts`
 - **Components**: `src/features/components/config/components.json`
+- ~~Resolver~~: deleted in `b5c1256cb` (see status note at top)

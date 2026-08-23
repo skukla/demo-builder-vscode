@@ -1,5 +1,38 @@
 # Decouple project from VS Code workspace folder
 
+> ## CLOSED 2026-08-23 — goal had already shipped; the dual-listen cleanup executed
+>
+> The re-measure found the GOAL delivered by the always-root home model: plain
+> project selection renders the dashboard in-place off the persisted pointer
+> (no window reload); only shift/cmd-click opens a new window, and activation's
+> `shouldReHomeToRoot` re-homes any project-anchored window to the projects
+> root. What remained was this item's acceptance criteria: remove the
+> dual-listen MCP shim shipped in `.115`.
+>
+> **Verified before removing** (the item's own gate): always-root does NOT make
+> primary == secondary in every window (any window on a non-root folder still
+> differs) — but no client targets the secondary socket anymore. Every
+> `.mcp.json` (home and per-project) pins the projects-root socket, and a
+> cwd-derived global-registration proxy that misses it falls back to
+> live-socket discovery. The shim's stated purpose (AI Verification
+> `demo-builder · timed out`) is served entirely by the primary. The secondary
+> bind also littered dead workspace-socket files that nothing ever unlinks
+> (dispose deliberately leaves the shared name in place), and a dead
+> deterministic path can divert cwd-derived resolution — removal stops minting
+> those.
+>
+> Removed: `secondarySocketPath` option + secondary-bind branch
+> (`inExtensionMcpServer.ts`), `mcpSocketBindings` (`mcpSocketPath.ts` —
+> extension.ts and diagnostics.ts now call `resolveMcpSocketPath(projectsDir)`
+> directly), the four dual-listen tests, and the `mcpSocketBindings` describe.
+> Deviation from the item's step 2: `bindSocket()` stays a private method
+> rather than being inlined — it since grew the private-name rename and
+> first-window-wins probe machinery and is cohesive on its own. Docs synced:
+> ADR-012 amended (dated), `docs/systems/mcp-server.md` socket section rewritten.
+>
+> Gate: full suite 1132/14865 green, whole-repo lint 0 errors, both typechecks clean.
+
+
 **Filed:** 2026-05-30
 **Origin:** Fix-session for "extension resets when switching projects from the list"
 

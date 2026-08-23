@@ -282,7 +282,7 @@ multi-workspace.
 - `MeshDeploymentService` - Mesh deployment orchestration
 - `MeshEndpointService` - Endpoint URL generation
 - `MeshVerificationService` - Deployment verification
-- `StalenessDetector` - Config staleness detection
+- `stalenessDetector.ts` - Config staleness detection (function surface: `detectMeshChanges`, `updateMeshState`, `detectFrontendChanges`, …; the parallel service class was deleted 2026-08-23 — zero production callers)
 
 **Responsibilities:**
 - Mesh configuration building

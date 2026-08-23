@@ -93,3 +93,6 @@ jscpd-output/
 .jest-cache/
 .playwright-mcp/
 .serena/
+
+# Internal service doc drops (Adobe wiki exports) — local reference only, never published
+.rptc/research/*.doc

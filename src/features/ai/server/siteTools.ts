@@ -107,13 +107,13 @@ export function registerSiteTools(
                 'get_site_access first; this identity must already hold the role.',
             inputSchema: {
                 email: z.string().describe('The address to grant or revoke'),
-                admin: z
-                    .boolean()
-                    .describe('true grants the admin role, false revokes it'),
+                admin: z.boolean().describe('true grants the admin role, false revokes it'),
                 confirm: z
                     .boolean()
                     .optional()
-                    .describe('Must be true — this changes access for another person; ask the user first'),
+                    .describe(
+                        'Must be true — this changes access for another person; ask the user first',
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -148,7 +148,9 @@ export function registerSiteTools(
             description:
                 "Re-run the Configuration Service registration for the current project's storefront " +
                 '— the write that fails when the caller holds no admin role, leaving a storefront ' +
-                'that builds but serves no product pages. Requires confirm:true. Does NOT publish; ' +
+                'that builds but serves no product pages. On a legacy project whose DA.live site ' +
+                'name differs from the repo name, this first migrates the name (renames the DA ' +
+                'site, deletes the old site root). Requires confirm:true. Does NOT publish; ' +
                 'call republish afterwards.',
             inputSchema: {
                 confirm: z
@@ -175,7 +177,9 @@ export function registerSiteTools(
                 return asText({ error: 'No current project is open' });
             }
 
-            const result = await repairSiteConfigForProject(project, ctx.context, ctx.logger);
+            const result = await repairSiteConfigForProject(project, ctx.context, ctx.logger, (p) =>
+                ctx.stateManager.saveProject(p),
+            );
 
             // Say what remains rather than reporting a bare success. A registration
             // that has not been republished changes nothing a visitor can see, and
@@ -259,7 +263,9 @@ export function registerSiteTools(
                 confirmName: z
                     .string()
                     .optional()
-                    .describe('Must equal the project name exactly — guards the old site root deletion'),
+                    .describe(
+                        'Must equal the project name exactly — guards the old site root deletion',
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

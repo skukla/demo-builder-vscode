@@ -80,18 +80,6 @@ export interface InExtensionMcpServerOptions {
      */
     credentials?: McpCredentialProvider;
     /**
-     * Second UDS path. When VS Code's workspace is a project folder (not the
-     * projects root), proxies spawned from per-project `.mcp.json` files target
-     * the projects-root socket (per mcpConfigWriter's
-     * resolveMcpSocketPath(path.dirname(project.path)) contract). Listening on
-     * both sockets lets the server accept connections regardless of which socket
-     * the proxy is wired to. Omit to disable; pass the same value as
-     * `socketPath` and dedup happens (single bind). Goes away when the
-     * decouple-project-from-workspace backlog lands; until then this prevents
-     * `demo-builder · timed out` in AI Verification.
-     */
-    secondarySocketPath?: string;
-    /**
      * Build identity reported as `serverInfo.version` on every `initialize`.
      *
      * The socket name is sha256(projects root), identical in every window, and
@@ -130,27 +118,12 @@ export class InExtensionMcpServer {
     async start(): Promise<void> {
         await fsPromises.mkdir(mcpSocketDir(), { recursive: true, mode: 0o700 });
 
-        // Bind the primary socket (workspace folder). Always required.
+        // One socket: the projects-root path. The dual-listen shim (a
+        // secondarySocketPath bound when the workspace folder differed) was
+        // removed 2026-08-23 with the decouple-project-from-workspace closure:
+        // in the always-root model every .mcp.json pins this root socket, and a
+        // cwd-derived proxy that misses it falls back to live-socket discovery.
         await this.bindSocket(this.socketPath);
-
-        // Bind the secondary socket only if it's set AND distinct from primary.
-        // The common single-bind case (workspace = projects root, where primary
-        // and secondary collapse to the same path) skips this cleanly.
-        if (
-            this.options.secondarySocketPath &&
-            this.options.secondarySocketPath !== this.socketPath
-        ) {
-            try {
-                await this.bindSocket(this.options.secondarySocketPath);
-            } catch (err) {
-                // The caller drops this object on a failed start (extension.ts
-                // logs and leaves the field undefined), so a primary left
-                // listening here can never be disposed — it holds the shared name
-                // for the life of the window with nothing able to release it.
-                this.dispose();
-                throw err;
-            }
-        }
     }
 
     /**

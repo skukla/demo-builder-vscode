@@ -30,7 +30,7 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~574 suites; see `tests/README.md`)
+- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites; see `tests/README.md`)
 
 ## Development Workflow
 
@@ -82,9 +82,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 ### Modifying Wizard Steps
 → See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
-  - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
-  - `src/features/mesh/ui/steps/` - API Mesh step
   - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`), `SampleDataStep` (area id `'sample-data'`: records which datapack seeds this project — never imports; always complete, so it cannot gate Continue); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub holding the mesh dual-flow mirror-write)
   - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
 → Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations/Sample Data area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
@@ -193,8 +191,9 @@ any of them because each shared the wrong scope:
 
 - grepped `src/features/components/config/`; the catalog is in `project-creation/config/`
   → "that plan is unmerged", wrong
-- grepped `.claude/skills/`; the App Builder skills are global in `~/.claude/skills/`
-  → "12 of 13 facts are in no skill", wrong
+- grepped `.claude/skills/`; the App Builder skills were global in `~/.claude/skills/` at
+  the time (family deleted 2026-08-23; those facts live in
+  `.rptc/research/appbuilder-deployable-model/`) → "12 of 13 facts are in no skill", wrong
 - `${PIPESTATUS[0]}` is bash and this shell is zsh (`$pipestatus`, 1-indexed), so the
   exit code came back **empty** and blank output read as "passed" — as are `${!arr[@]}`,
   `declare -A` and `local -n`. Run bash-array snippets through `bash -c` or rewrite them;

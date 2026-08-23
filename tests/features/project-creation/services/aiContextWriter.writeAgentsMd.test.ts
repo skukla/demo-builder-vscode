@@ -163,6 +163,30 @@ describe('aiContextWriter', () => {
             });
         });
 
+        // The boilerplate ships a complete type scale (36 `--type-*` custom
+        // properties in styles/styles.css) and no generated guidance mentioned
+        // it, so an agent authoring a block picked font sizes by eye — measured
+        // 2026-08-13 ("fonts are too small", unbounded visual iteration). The
+        // Storefront section now names the scale as a standing rule. Phrased as
+        // "read the properties" rather than a hardcoded token list: the scale
+        // belongs to aem-boilerplate-commerce, and naming 36 tokens here would
+        // rot when that template re-versions.
+        describe('storefront type-scale guidance', () => {
+            it('tells EDS agents to use the shipped --type-* scale, never invented sizes', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('--type-');
+                expect(result).toContain('styles/styles.css');
+                expect(result).toMatch(/never (invent|hard-?code)/i);
+            });
+
+            it('omits the guidance for projects without an EDS storefront', () => {
+                const result = generateAgentsMd(makeHeadlessProject(), STACKS);
+
+                expect(result).not.toContain('--type-');
+            });
+        });
+
         describe('component repositories', () => {
             it('lists every component instance that has a githubRepo', () => {
                 const project = makeEdsProject({

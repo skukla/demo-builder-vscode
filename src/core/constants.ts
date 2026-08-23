@@ -126,7 +126,16 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // shipped versions. The wrong claim made agents warn customers about a
 // download that never happens; corrected to name the real case (Chrome-less
 // machines only, via install-browser).
-export const AI_CONTEXT_VERSION = 17;
+// v18: the type-scale oracle (backlog 2026-08-13). The boilerplate ships 36
+// `--type-*` custom properties in styles/styles.css and NO generated guidance
+// mentioned them (measured with controls), so agents authoring blocks picked
+// font sizes by eye — "fonts are too small", unbounded visual iteration.
+// AGENTS.md's Storefront section now carries the standing rule (read the
+// scale, `font: var(--type-…)`, never invent a size), and the two scrape-flow
+// skills (commerce-block-mapper, refine-visual-match) route typography fixes
+// through the scale. Phrased as "read the properties", never a token list —
+// the scale belongs to aem-boilerplate-commerce and a hardcoded list rots.
+export const AI_CONTEXT_VERSION = 18;
 
 /**
  * Component IDs for standardized component instance access

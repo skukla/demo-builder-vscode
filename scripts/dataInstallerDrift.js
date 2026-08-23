@@ -43,6 +43,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { shapeDrift, checkEndpoint: coreCheckEndpoint } = require('./lib/driftCore');
 
 const FIXTURES = path.join(__dirname, '..', 'tests', 'fixtures', 'data-installer');
 
@@ -144,123 +145,19 @@ function modeFindings(counts) {
     return findings;
 }
 
-/** The JSON type of a value, flattening arrays and null out of `typeof`. */
-function typeOf(value) {
-    if (value === null) return 'null';
-    if (Array.isArray(value)) return 'array';
-    return typeof value;
-}
-
 /**
- * Shape differences between a committed fixture and a live response.
- *
- * Reports MISSING keys and CHANGED types. Ignores values entirely, and ignores
- * keys the live response added.
- *
- * @param {unknown} expected - the fixture
- * @param {unknown} actual - the live body
- * @param {string} at - JSON path of the current node
- * @returns {{path: string, kind: 'missing'|'type', expected: string, actual: string}[]}
- */
-function shapeDrift(expected, actual, at = '$') {
-    const expectedType = typeOf(expected);
-    const actualType = typeOf(actual);
-
-    // A null on either side carries no shape information — the field is nullable
-    // and this row happens not to have a value. Reporting it made the FIRST live
-    // run cry drift on three log fields whose contract had not moved.
-    if (expectedType === 'null' || actualType === 'null') {
-        return [];
-    }
-
-    if (expectedType !== actualType) {
-        return [{ path: at, kind: 'type', expected: expectedType, actual: actualType }];
-    }
-
-    if (expectedType === 'object') {
-        const out = [];
-        // Sorted so the report is byte-identical run to run — a checker whose
-        // output reorders reads as a change and destroys its own signal.
-        for (const key of Object.keys(expected).sort()) {
-            if (!Object.prototype.hasOwnProperty.call(actual, key)) {
-                out.push({ path: `${at}.${key}`, kind: 'missing', expected: typeOf(expected[key]), actual: 'absent' });
-                continue;
-            }
-            out.push(...shapeDrift(expected[key], actual[key], `${at}.${key}`));
-        }
-        return out;
-    }
-
-    if (expectedType === 'array') {
-        // An empty live array is not drift: it means no rows today, not a moved
-        // shape. Only compare when both sides have something to compare.
-        if (expected.length === 0 || actual.length === 0) return [];
-        // MERGED, not element 0. Rows are heterogeneous — optional fields are
-        // absent or null on some — so trusting the first row makes the verdict
-        // depend on row ORDER, and an unchanged API reports drift on a different
-        // day. That is what the first live run did.
-        return shapeDrift(mergeElements(expected), mergeElements(actual), `${at}[*]`);
-    }
-
-    return [];
-}
-
-/**
- * One representative element carrying every key any element has.
- *
- * The first non-null value wins for each key, so a key present-but-null in row 0
- * and populated in row 7 is typed from row 7.
- */
-function mergeElements(items) {
-    const objects = items.filter((item) => typeOf(item) === 'object');
-    if (objects.length === 0) return items[0];
-
-    const merged = {};
-    for (const item of objects) {
-        for (const key of Object.keys(item)) {
-            if (!Object.prototype.hasOwnProperty.call(merged, key) || merged[key] === null) {
-                merged[key] = item[key];
-            }
-        }
-    }
-    return merged;
-}
-
-/**
- * Check one endpoint against its fixture.
- *
- * Never throws — every failure mode comes back as `{ok:false}` with a reason, so a
- * caller cannot mistake an error for a clean result.
- *
- * @returns {Promise<{action:string, ok:boolean, unreachable?:boolean, error?:string, drift:object[]}>}
+ * Check one endpoint against its fixture (thin adapter over the shared core in
+ * `scripts/lib/driftCore.js`, keeping this script's token-based signature —
+ * the Data Installer authenticates every read with one IMS Bearer token).
  */
 async function checkEndpoint({ action, url, fixture, token, fetchImpl }) {
-    let response;
-    try {
-        response = await fetchImpl(url, { headers: { Authorization: `Bearer ${token}` } });
-    } catch (error) {
-        return { action, ok: false, unreachable: true, drift: [], error: String(error.message || error) };
-    }
-
-    if (response.status !== 200) {
-        return {
-            action,
-            ok: false,
-            unreachable: true,
-            drift: [],
-            error: `HTTP ${response.status} — the service did not answer this action`,
-        };
-    }
-
-    let body;
-    try {
-        body = JSON.parse(await response.text());
-    } catch {
-        return { action, ok: false, drift: [], error: 'could not parse the response as JSON' };
-    }
-
-    const drift = shapeDrift(fixture, body);
-    return { action, ok: drift.length === 0, drift };
+    return coreCheckEndpoint({
+        action,
+        url,
+        fixture,
+        headers: { Authorization: `Bearer ${token}` },
+        fetchImpl,
+    });
 }
 
 /** The IMS token the extension itself uses. */

@@ -9,9 +9,13 @@
 
 import {
     buildComponentInfoList,
+    resolveReviewIntegrationNames,
     resolveServiceNames,
 } from '@/features/project-creation/ui/steps/reviewStepHelpers';
-import type { ComponentData, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
+import type {
+    ComponentData,
+    ComponentsData,
+} from '@/features/project-creation/ui/steps/ReviewStep';
 
 describe('reviewStepHelpers', () => {
     describe('resolveServiceNames', () => {
@@ -83,7 +87,11 @@ describe('reviewStepHelpers', () => {
                     },
                 },
             ];
-            const result = resolveServiceNames('test-backend', backendsWithUnknownService, mockServices);
+            const result = resolveServiceNames(
+                'test-backend',
+                backendsWithUnknownService,
+                mockServices
+            );
             expect(result).toEqual(['Catalog Service', 'Live Search']);
         });
     });
@@ -109,19 +117,13 @@ describe('reviewStepHelpers', () => {
                 { id: 'luma', name: 'Luma Storefront' },
             ],
             backends: mockBackends,
-            dependencies: [
-                { id: 'other-dep', name: 'Other Dependency' },
-            ],
-            mesh: [
-                { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh' },
-            ],
+            dependencies: [{ id: 'other-dep', name: 'Other Dependency' }],
+            mesh: [{ id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh' }],
             integrations: [
                 { id: 'analytics', name: 'Adobe Analytics' },
                 { id: 'target', name: 'Adobe Target' },
             ],
-            appBuilder: [
-                { id: 'custom-app', name: 'Custom App' },
-            ],
+            appBuilder: [{ id: 'custom-app', name: 'Custom App' }],
         };
 
         describe('frontend component', () => {
@@ -138,7 +140,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined, // meshStatus
                     mockComponentsData,
-                    [], // backendServiceNames
+                    [] // backendServiceNames
                 );
 
                 // Then: Should include frontend info
@@ -160,7 +162,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Frontend should have no sub-items (demo-inspector removed)
@@ -183,7 +185,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Should include middleware info
@@ -204,7 +206,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     'deployed', // meshStatus
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Middleware value should be a React element indicating deployment
@@ -227,7 +229,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Should NOT include middleware
@@ -250,7 +252,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Should include backend info
@@ -272,7 +274,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    ['Catalog Service', 'Live Search'], // backendServiceNames
+                    ['Catalog Service', 'Live Search'] // backendServiceNames
                 );
 
                 // Then: Backend should have service sub-items
@@ -294,7 +296,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [], // backendServiceNames
+                    [] // backendServiceNames
                 );
 
                 // Then: Backend should have no sub-items
@@ -318,7 +320,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Dependencies should only include 'other-dep' (mesh shown separately)
@@ -340,7 +342,7 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
                 // Then: Should NOT include Dependencies section
@@ -349,101 +351,64 @@ describe('reviewStepHelpers', () => {
             });
         });
 
-        describe('integrations', () => {
-            it('should include integrations when selected', () => {
-                // Given: State with integrations
-                const state = {
-                    components: {
-                        integrations: ['analytics', 'target'],
-                    },
-                };
-
-                // When: Building component info list
+        describe('integrations (resolved from the live wizard selection)', () => {
+            // The old blocks here drove `components.integrations` /
+            // `components.appBuilder` — fields the ONLY production caller never
+            // populates (ReviewStep builds {frontend, backend, dependencies} and
+            // buildProjectConfig hardcodes both to []). Those tests passed for
+            // months while the Review screen showed nothing: a mock cannot see a
+            // malformed CALL. The helper now takes the resolved names instead,
+            // and ReviewStep feeds it from resolveIntegrationRows — the same
+            // spine the builder summary and IntegrationsStep render from.
+            it('renders one Integrations row from the resolved names', () => {
                 const result = buildComponentInfoList(
-                    state.components,
+                    { frontend: 'venia' },
                     undefined,
                     mockComponentsData,
                     [],
+                    ['ERP Sync', 'Custom Integration']
                 );
 
-                // Then: Should include integrations
                 const integrationsItem = result.find((item) => item.label === 'Integrations');
                 expect(integrationsItem).toBeDefined();
-                expect(integrationsItem?.value).toBe('Adobe Analytics, Adobe Target');
+                expect(integrationsItem?.value).toBe('ERP Sync, Custom Integration');
             });
 
-            it('should NOT include Integrations section when none selected', () => {
-                // Given: State with no integrations
-                const state = {
-                    components: {},
-                };
-
-                // When: Building component info list
+            it('renders no Integrations row when no names are resolved', () => {
                 const result = buildComponentInfoList(
-                    state.components,
+                    { frontend: 'venia' },
                     undefined,
                     mockComponentsData,
                     [],
+                    []
                 );
 
-                // Then: Should NOT include Integrations section
-                const integrationsItem = result.find((item) => item.label === 'Integrations');
-                expect(integrationsItem).toBeUndefined();
+                expect(result.find((item) => item.label === 'Integrations')).toBeUndefined();
             });
-        });
 
-        describe('app builder', () => {
-            it('should include App Builder apps when selected', () => {
-                // Given: State with app builder apps
-                const state = {
-                    components: {
+            it('ignores the dead legacy fields — names are the only input', () => {
+                // Pins the removal: components.integrations / components.appBuilder
+                // must no longer produce rows even when set, so the dead path
+                // cannot silently come back beside the live one.
+                const result = buildComponentInfoList(
+                    {
+                        integrations: ['analytics'],
                         appBuilder: ['custom-app'],
-                    },
-                };
-
-                // When: Building component info list
-                const result = buildComponentInfoList(
-                    state.components,
+                    } as never,
                     undefined,
                     mockComponentsData,
-                    [],
+                    []
                 );
 
-                // Then: Should include App Builder section
-                const appBuilderItem = result.find((item) => item.label === 'App Builder');
-                expect(appBuilderItem).toBeDefined();
-                expect(appBuilderItem?.value).toBe('Custom App');
-            });
-
-            it('should NOT include App Builder section when none selected', () => {
-                // Given: State with no app builder apps
-                const state = {
-                    components: {},
-                };
-
-                // When: Building component info list
-                const result = buildComponentInfoList(
-                    state.components,
-                    undefined,
-                    mockComponentsData,
-                    [],
-                );
-
-                // Then: Should NOT include App Builder section
-                const appBuilderItem = result.find((item) => item.label === 'App Builder');
-                expect(appBuilderItem).toBeUndefined();
+                expect(result.find((item) => item.label === 'Integrations')).toBeUndefined();
+                expect(result.find((item) => item.label === 'App Builder')).toBeUndefined();
             });
         });
 
         describe('empty/undefined handling', () => {
             it('should return empty array when components is undefined', () => {
                 // Given: Undefined components
-                const result = buildComponentInfoList(
-                    undefined,
-                    undefined,
-                    mockComponentsData,
-                    [],
-                );
+                const result = buildComponentInfoList(undefined, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
                 expect(result).toEqual([]);
@@ -458,12 +423,7 @@ describe('reviewStepHelpers', () => {
                 };
 
                 // When: Building component info list
-                const result = buildComponentInfoList(
-                    state.components,
-                    undefined,
-                    undefined,
-                    [],
-                );
+                const result = buildComponentInfoList(state.components, undefined, undefined, []);
 
                 // Then: Should return empty array
                 expect(result).toEqual([]);
@@ -471,12 +431,7 @@ describe('reviewStepHelpers', () => {
 
             it('should handle empty components object', () => {
                 // Given: Empty components object
-                const result = buildComponentInfoList(
-                    {},
-                    undefined,
-                    mockComponentsData,
-                    [],
-                );
+                const result = buildComponentInfoList({}, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
                 expect(result).toEqual([]);
@@ -484,15 +439,13 @@ describe('reviewStepHelpers', () => {
         });
 
         describe('result ordering', () => {
-            it('should maintain consistent order: Frontend, Middleware, Backend, Dependencies, Integrations, App Builder', () => {
-                // Given: State with all component types
+            it('should maintain consistent order: Frontend, Middleware, Backend, Dependencies, Integrations', () => {
+                // Given: State with all component types + resolved integration names
                 const state = {
                     components: {
                         frontend: 'venia',
                         backend: 'adobe-commerce',
                         dependencies: ['eds-commerce-mesh', 'other-dep'],
-                        integrations: ['analytics'],
-                        appBuilder: ['custom-app'],
                     },
                 };
 
@@ -502,6 +455,7 @@ describe('reviewStepHelpers', () => {
                     undefined,
                     mockComponentsData,
                     [],
+                    ['ERP Sync']
                 );
 
                 // Then: Order should be consistent
@@ -512,9 +466,53 @@ describe('reviewStepHelpers', () => {
                     'Backend',
                     'Dependencies',
                     'Integrations',
-                    'App Builder',
                 ]);
             });
+        });
+    });
+
+    describe('resolveReviewIntegrationNames', () => {
+        // Drives the REAL resolver spine (resolveIntegrationRows) with the REAL
+        // bundled catalog — the mocked-vs-bundled-JSON trap: `app-builder-shell`
+        // is the one genuine `kind: 'integration'` entry, and inventing catalog
+        // ids here would test a catalog that does not exist.
+        it('resolves a custom import to its display name, falling back to the repo', () => {
+            const state = {
+                selectedAppBuilderComponents: ['erp-sync-import', 'crm-import'],
+                appBuilderComponentSources: {
+                    'erp-sync-import': { owner: 'acme', repo: 'erp-sync', name: 'ERP Sync' },
+                    'crm-import': { owner: 'acme', repo: 'crm-connector' },
+                },
+            };
+
+            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+                'ERP Sync',
+                'crm-connector',
+            ]);
+        });
+
+        it('resolves the blank shell catalog entry by its catalog name', () => {
+            // Real bundled id — resolves via the entry.blank branch.
+            const state = {
+                selectedAppBuilderComponents: ['app-builder-shell'],
+                appBuilderComponentSources: {},
+            };
+
+            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+                'Custom Integration',
+            ]);
+        });
+
+        it('excludes unknown ids and returns [] for an empty selection', () => {
+            // An id with no source and no catalog entry cannot be named — the
+            // row resolver drops it, and Review must not render a raw id.
+            const state = {
+                selectedAppBuilderComponents: ['not-a-real-entry'],
+                appBuilderComponentSources: {},
+            };
+
+            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([]);
+            expect(resolveReviewIntegrationNames({} as never, [], [])).toEqual([]);
         });
     });
 });

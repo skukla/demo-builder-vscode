@@ -32,7 +32,7 @@ import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
-import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
@@ -473,12 +473,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         inExtensionMcpServer?.dispose();
         inExtensionMcpServer = undefined;
 
-        // No early return on a missing workspace. The window model is "homed at
-        // the projects root, project selected by pointer" — shouldReHomeToRoot
-        // explicitly declines to act on an undefined workspace, and openInClaude
-        // launches at the root. Refusing to start without a folder left anyone
-        // driving the extension from the sidebar with no MCP server at all.
-        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        // The workspace folder plays no part here. The window model is "homed
+        // at the projects root, project selected by pointer" — the socket is
+        // derived from the projects root alone, so the server starts the same
+        // with no folder open at all (refusing to start without one once left
+        // anyone driving the extension from the sidebar with no MCP server).
         const projectsDir = resolveProjectsRoot();
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
@@ -492,18 +491,15 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             getGitHubToken: async () =>
                 (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
         };
-        // Workspace mode mismatch protection: when the workspace is a project
-        // folder (set by `vscode.openFolder` during project-switch from the
-        // home grid), the server binds the project-folder socket, but proxies
-        // spawned from per-project `.mcp.json` files target the projects-root
-        // socket (per mcpConfigWriter's resolveMcpSocketPath(path.dirname(
-        // project.path)) contract). Listening on both sockets bridges the
-        // mismatch. When workspace IS the projects root, the secondary path
-        // collapses to the primary and the server transparently single-binds.
-        // Goes away when the decouple-project-from-workspace backlog ships.
-        // Root socket is primary and always bound; a distinct workspace is bound
-        // additionally. See mcpSocketBindings.
-        const { primary, secondary } = mcpSocketBindings(projectsDir, workspacePath);
+        // One socket: the projects-root path, derivable without an open
+        // workspace (the window model is "homed at the projects root, project
+        // selected by pointer"). Every .mcp.json — home and per-project alike —
+        // pins this socket. The dual-listen shim that additionally bound a
+        // distinct workspace-folder socket was removed 2026-08-23 with the
+        // decouple-project-from-workspace closure: nothing targets a
+        // workspace socket anymore, and a cwd-derived proxy that misses this
+        // one falls back to live-socket discovery.
+        const socketPath = resolveMcpSocketPath(projectsDir);
         // Name the serving host in serverInfo.version. Every window computes the
         // same socket name and the last to bind silently owns it, so without this
         // an MCP client has no way to tell which extension host answered — two
@@ -511,10 +507,9 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // stamp the activation `[Build]` line prints; undefined when unreadable,
         // which falls back to the static version.
         const buildInfo = await readBuildInfo(context.extensionPath);
-        const server = new InExtensionMcpServer(primary, projectsDir, logger, {
+        const server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
-            secondarySocketPath: secondary,
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,

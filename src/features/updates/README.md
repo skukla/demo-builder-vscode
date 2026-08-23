@@ -249,7 +249,7 @@ Return latest version for channel
 - `fetch` - GitHub API calls and download
 
 ### Used By
-- `src/commands/checkUpdates.ts` - Manual update check command
+- `src/features/updates/commands/checkUpdates.ts` - Manual update check command
 - `src/extension.ts` - Background update checking (optional)
 
 ## Usage Examples

@@ -1,5 +1,64 @@
 # Retire `legacyLookupKey` infrastructure (Phase 2 — post-fleet-migration cleanup)
 
+> ## EXECUTED 2026-08-23 — Option A decided and shipped the same day
+>
+> The re-measure below stopped this item at the repair gap; the user decided
+> **Option A: make repair migrate-first**, and the full batch then executed:
+>
+> 1. **Repair migrates first.** `repairSiteConfigForProject` now runs
+>    `findStorefrontNameMismatch` → `migrateStorefrontNameForProject` before
+>    `repairSiteConfig`; a failed migration aborts the repair (`status:
+>    'failed'`) rather than repairing INTO the broken name. The command and the
+>    `repair_site_configuration` MCP tool both pass a persist callback; the MCP
+>    tool's description and the commands/CLAUDE.md row now say repair can rename
+>    a DA site.
+> 2. **`legacyLookupKey` retired.** The param, its `SiteRegistrationParams`
+>    field, and `cleanUpLegacyRegistration` are deleted;
+>    `buildSiteConfigParams` is 4-arg (no `daLiveSite` param — content source
+>    URL uses the repo name). All 5 call sites updated.
+> 3. **Manifest `daLiveSite` strip-when-equal only** (the blanket-strip
+>    correction below held): `stripRedundantDaLiveSite` in the project file
+>    loader drops the field when it equals the repo name; an UNEQUAL value is
+>    preserved as the migration net's detection signal + content pointer.
+>    Readers (`getEdsDaLiveTarget`, `getEdsDaLiveUrl`,
+>    `extractRepublishParams`, MCP promote context, cleanupDaLiveSites) fall
+>    back to the repo name.
+>
+> Gate: full suite 1132/14873 green, whole-repo lint 0 errors, both typechecks
+> clean. Original re-measure record kept below for the reasoning.
+
+> ## RE-MEASURED 2026-08-23 — NOT safe to execute as written; one live consumer the item predates
+>
+> Picked up under the clean-codebase trigger and stopped by the trace. The
+> legacy branch is DEAD on every create/reset/migration path (reset's step 0
+> heals `params.daLiveSite` in place before registration, and a migration
+> error aborts the reset — so `buildSiteConfigParams` never sees unequal
+> names there). But **`repairSiteConfigHeadless` — shipped 2026-08-14, after
+> this item was filed — reads the MANIFEST's `daLiveSite` via
+> `extractRepublishParams` and does NOT migrate first.** For an unmigrated
+> straggler, repair is the one path where `cleanUpLegacyRegistration` still
+> fires, and it is load-bearing there: the orphan registration it deletes is
+> what "403s every write" — the exact symptom Repair exists to fix. Deleting
+> the branch would break repair for precisely the users most likely to need
+> it. The straggler population is unmeasurable (the telemetry the trigger
+> assumed never existed).
+>
+> **The path to actually finishing this item** (a product decision, not a
+> unilateral edit): make repair run `migrateStorefrontNamingIfNeeded` first,
+> like reset does — then every path heals-before-registers, the branch goes
+> dead everywhere, and the whole batch below executes as written. Note the
+> repair surfaces (`Repair Site Configuration` command,
+> `repair_site_configuration` MCP tool with its confirm gate) would then be
+> able to rename a DA site as a side effect, which their current copy does
+> not mention — decide and update the copy together.
+>
+> Also corrected: the `daLiveSite` manifest field is NOT retirable-by-strip
+> as step 3 says — on stragglers it differs from the repo name and is the
+> load-bearing pointer to where the DA content actually lives (readers
+> correctly prefer it), AND it is the migration net's detection signal. A
+> blanket strip-on-load would blind the net; only a strip-when-equal is ever
+> safe, and only after the repair fix above.
+
 ## Status
 
 **The user-facing migration shipped in commits `23efd831` and `b2169699`** (2026-06-08). New projects always satisfy `daLiveSite === repoName`, and existing projects auto-migrate on their next reset (copy DA → re-register Helix at new URL → patch manifest → delete old DA site). The original Phase 2 plan called for that migration plus a follow-up cleanup batch; the migration is done, this entry is now scoped to the cleanup batch.

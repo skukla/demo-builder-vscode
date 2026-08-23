@@ -1,5 +1,16 @@
 # Legacy / Soft-Deprecation Cleanup — Cycle Plan
 
+> ## CLOSED 2026-08-23 — the last item shipped
+>
+> The `stalenessDetector.ts` dual surface is gone: the `StalenessDetectorService`
+> class was a pure delegation wrapper with ZERO production callers (its only
+> instantiation was its own DI test) — deleted along with that test; the nine
+> standalone function exports are the one public surface, with the internal
+> logger-injected implementations kept as normal injection plumbing. 24 mesh
+> service suites (222 tests) green with no edits — the behavior-preserving
+> proof. Everything else in this item had already shipped across earlier
+> cycles (re-measured 2026-08-13 and again 2026-08-23).
+
 > ## ⚠️ RE-MEASURED 2026-08-13 — almost all of this is done
 >
 > The backlog index described this as *"~30 inventoried items across `src/`… 3 zero-caller

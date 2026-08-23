@@ -195,6 +195,26 @@ export class ProjectFileLoader {
                 project.componentSelections?.backend,
             );
 
+            // Legacy `daLiveSite` metadata: since the DA/repo name unification
+            // the field duplicates the repo name, and readers fall back to it —
+            // so an EQUAL value is dead weight and is dropped on load. An
+            // UNEQUAL value is preserved deliberately: it is both the pointer
+            // to where the DA content actually lives on an unmigrated legacy
+            // project AND the name-migration net's detection signal — a blanket
+            // strip would blind that net. Read-side only; the on-disk manifest
+            // is untouched until the next write.
+            stripRedundantDaLiveSite(project);
+
+            // Orphaned config entries: removal deletes a component's
+            // componentConfigs entry going forward, but entries stranded by
+            // earlier removals live in existing manifests — and two readers
+            // sweep the WHOLE map (envFileGenerator's fallback loop;
+            // configGenerator's merge, where a MESH entry overrides the
+            // backend). Runs AFTER reconcileComponentSelections so a freshly
+            // reconciled selection counts as live. Read-side only; the on-disk
+            // manifest is untouched until the next write.
+            stripOrphanedComponentConfigs(project);
+
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);
 
@@ -345,4 +365,71 @@ export class ProjectFileLoader {
             }
         }
     }
+}
+
+/**
+ * Drop a `daLiveSite` metadata value that merely duplicates the repo name.
+ *
+ * Exported for its own test. The unequal case is preserved on purpose — see
+ * the call-site comment: on an unmigrated legacy project the value points at
+ * where the DA content actually lives, and it is the storefront-name
+ * migration's detection signal.
+ *
+ * @param project - the freshly loaded project (mutated in place)
+ */
+export function stripRedundantDaLiveSite(project: Project): void {
+    const edsInstance = project.componentInstances?.['eds-storefront'];
+    const metadata = edsInstance?.metadata;
+    if (!metadata) return;
+    const daLiveSite = metadata.daLiveSite as string | undefined;
+    const githubRepo = metadata.githubRepo as string | undefined;
+    if (!daLiveSite || !githubRepo) return;
+    const repoName = githubRepo.split('/')[1];
+    if (daLiveSite === repoName) {
+        delete metadata.daLiveSite;
+    }
+}
+
+/**
+ * Drop `componentConfigs` entries for components that are no longer part of
+ * the project.
+ *
+ * Configure's fan-out writes a shared field only to SELECTED declaring
+ * components, while the env/config generators sweep every entry in the map —
+ * configGenerator with mesh-overrides-non-mesh priority. An entry stranded by
+ * a component removal therefore holds a stale copy that can outvote the live
+ * backend's fresh value (the same failure shape as the 2026-08-10
+ * wrong-website bug, for every non-scope key).
+ *
+ * Liveness is deliberately broad — every id any writer can legitimately key:
+ * the selection lists, `selectedAddons`, installed instances, and keyed App
+ * Builder entries. Exported for its own test.
+ *
+ * @param project - the freshly loaded project (mutated in place)
+ * @returns whether any entry was removed
+ */
+export function stripOrphanedComponentConfigs(project: Project): boolean {
+    const configs = project.componentConfigs;
+    if (!configs) return false;
+
+    const selections = project.componentSelections;
+    const live = new Set<string>([
+        ...(selections?.frontend ? [selections.frontend] : []),
+        ...(selections?.backend ? [selections.backend] : []),
+        ...(selections?.dependencies ?? []),
+        ...(selections?.integrations ?? []),
+        ...(selections?.appBuilder ?? []),
+        ...(project.selectedAddons ?? []),
+        ...Object.keys(project.componentInstances ?? {}),
+        ...Object.keys(project.appBuilderComponents ?? {}),
+    ]);
+
+    let changed = false;
+    for (const id of Object.keys(configs)) {
+        if (!live.has(id)) {
+            delete configs[id];
+            changed = true;
+        }
+    }
+    return changed;
 }

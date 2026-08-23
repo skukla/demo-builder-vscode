@@ -33,10 +33,7 @@
  */
 
 import type * as vscode from 'vscode';
-import {
-    getDaLiveAuthService,
-    resolveByomOverlayConfig,
-} from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configurationService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { resolveStorefrontConfig } from '@/features/eds/services/edsResetParams';
@@ -44,6 +41,10 @@ import {
     repairSiteConfig,
     type RepairSiteConfigResult,
 } from '@/features/eds/services/repairSiteConfigHeadless';
+import {
+    findStorefrontNameMismatch,
+    migrateStorefrontNameForProject,
+} from '@/features/eds/services/storefrontNameMigrationForProject';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -60,8 +61,34 @@ export async function repairSiteConfigForProject(
     project: Project,
     context: vscode.ExtensionContext,
     logger: Logger,
+    persist: (project: Project) => Promise<unknown>,
     onProgress?: (message: string) => void | Promise<void>,
 ): Promise<RepairSiteConfigResult> {
+    // Migrate-first (decided 2026-08-23): on an unmigrated legacy project the
+    // manifest's daLiveSite differs from the repo name, and registering off it
+    // repairs the storefront INTO the mismatched state — repair was the last
+    // path that skipped the heal reset already runs. Run the same migration
+    // first; a failed migration aborts, because a repair that re-registers the
+    // broken name is not a repair. This can rename the DA site and delete the
+    // old site root — the repair surfaces' copy says so.
+    const mismatch = findStorefrontNameMismatch(project);
+    if (mismatch) {
+        const migration = await migrateStorefrontNameForProject(
+            mismatch,
+            context,
+            logger,
+            persist,
+            onProgress,
+        );
+        if (!migration.migrated) {
+            return {
+                status: 'failed',
+                verified: false,
+                error: `storefront name migration failed before repair: ${migration.error ?? 'unknown'}`,
+            };
+        }
+    }
+
     const { byomOverlayUrl } = resolveStorefrontConfig(project);
     const daLiveAuth = getDaLiveAuthService(context);
     const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuth);

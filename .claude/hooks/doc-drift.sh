@@ -50,5 +50,46 @@ if hits:
     print('\n'.join(hits))
     print('  Fix the doc or restore the symbol — a doc describing absent code is how')
     print('  deleted things come back.')
+
+# PATH references — the other axis of guidance rot. The 2026-07 DX audit found
+# 30-35% of ~9,000 guidance lines stale, mostly paths pointing at moved or
+# deleted files. Same deterministic split as symbols: a missing path WITH git
+# history existed and was moved/deleted (real drift); one with no history was
+# only ever illustrative (ignored).
+import os
+guidance = docs + [p for p in ('CLAUDE.md', 'tests/README.md') if os.path.exists(p)]
+PATH_RE = re.compile(r'`((?:src|docs|tests|scripts|media|\.claude|\.rptc)/[A-Za-z0-9_./-]+)`')
+path_hits = []
+seen = set()
+HISTORICAL = re.compile(
+    r'migrated from|migration from|absorbed|the former|now gone|both directories are gone|'
+    r'was deleted|retired|renamed from|replaced|used to|previously|superseded',
+    re.I)
+for d in guidance:
+    body = re.sub(r'```.*?```', '', open(d, errors='ignore').read(), flags=re.S)
+    lines = body.splitlines()
+    for ref in sorted(set(PATH_RE.findall(body))):
+        ref = ref.rstrip('/').split('#')[0]
+        if (d, ref) in seen or os.path.exists(ref):
+            continue
+        # Same split the symbol check makes: a path mentioned only in
+        # historically-framed sentences is record, not a live claim.
+        mentions = [l for l in lines if ref in l]
+        if mentions and all(HISTORICAL.search(l) for l in mentions):
+            continue
+        seen.add((d, ref))
+        # A gitignored path (e.g. .rptc/prompt.md) is deliberately absent from
+        # the tree, and referencing it is usually the point — not drift.
+        if subprocess.run(['git', 'check-ignore', '-q', ref]).returncode == 0:
+            continue
+        n = len(subprocess.run(['git', 'log', '--oneline', '-1', '--', ref],
+                               capture_output=True, text=True).stdout.splitlines())
+        if n:
+            path_hits.append(f'  {d}: {ref} (tracked once, now gone)')
+if path_hits:
+    print('[doc-drift] guidance references paths that no longer exist:')
+    print('\n'.join(path_hits))
+    print('  Fix the reference (the file moved or was deleted) and refresh the')
+    print("  doc's Last-verified marker while you are there.")
 PY
 exit 0

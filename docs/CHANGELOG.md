@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.138] - 2026-08-23
+
+
+### Added
+
+- **Stale product pages now land on the storefront's native 404.** A product
+  page that was published and later lost its SKU (deleted in Commerce, changed
+  catalog) kept serving from the CDN and rendered an empty product block — no
+  title, no price, no image. Storefronts created or reset from this build carry
+  a small guard: when Commerce returns no data for the SKU, the shopper is
+  redirected to the storefront's native 404 page instead. Proven live end to
+  end before shipping.
+- **Renaming a demo keeps its Adobe I/O project title in sync.** When the
+  remote Console project's title still matches the demo's old identity, a demo
+  rename now updates it too (best-effort, title only). A shared Console
+  project you selected yourself is never renamed.
+- **EDS contract drift checker** (`npm run eds:drift`, maintainers): the four
+  external contracts that have each already broken a release — Helix status
+  semantics, Config Service site keying + admin roster, DA.live site-scope
+  config, and the aem.live path-encoding rule — are pinned as runnable checks.
+- **Generated AI guidance routes typography through the shipped type scale.**
+  AI-authored storefront blocks kept inventing font sizes; the generated
+  agent guidance now carries the standing rule (use `font: var(--type-…)`)
+  and the scraping skills follow it — retune the scale once, every block
+  follows. Existing projects pick this up automatically (AI bundle v18).
+
+### Fixed
+
+- **Repair Site Configuration now heals a legacy site name before repairing.**
+  On a project whose DA.live site name predates the name unification, repair
+  used to re-register the broken name — the one state it existed to fix. It
+  now runs the same rename migration a project reset runs, first; a failed
+  migration stops the repair instead of repairing into the broken state. With
+  every path healing before registering, the legacy lookup-key machinery is
+  retired outright.
+- **Hand-picked integrations now show on the wizard's Review screen.** Review
+  read a legacy field the wizard always leaves empty while the real selection
+  sat two lines away; it now resolves names through the same code the
+  builder's summary column uses.
+- **A removed component's configuration copies die with it.** Removing a mesh
+  or integration left its stored env values behind, and the config generator
+  could prefer that stale copy over the backend's fresh one on the next
+  publish — the same failure shape as the wrong-website bug fixed in an
+  earlier build, still open for eleven other settings. Removal now deletes
+  the copies, and existing projects are swept clean on load.
+- **Patch pinning is safe to turn on.** The storefront patch system reads two
+  things from its patches repo — the patch ledger and the verified-canonical
+  pointer — and they resolved through different rules, so cutting the repo's
+  first release would have applied release-day patches to a daily-advancing
+  canonical. Both now resolve through one shared rule.
+
+### Changed
+
+- **The extension's MCP server binds exactly one socket** (the projects-root
+  path). The dual-listen workaround from beta.115 is retired: nothing targets
+  a workspace-folder socket in the always-root window model, and each
+  secondary bind left behind a dead socket file that could divert resolution.
+
+### Removed
+
+- The unused webpack devDependencies (the build has been esbuild throughout)
+  and a callerless mesh staleness-detector service class.
+
 ## [1.0.0-beta.137] - 2026-08-23
 
 ### Fixed

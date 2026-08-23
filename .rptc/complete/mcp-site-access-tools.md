@@ -1,6 +1,24 @@
 # MCP tools for Configuration Service site access
 
-**Filed:** 2026-08-14, during the `config-service-admin-grant` verify loop.
+> ## CLOSED 2026-08-23 — shipped by AI-surface phase 4 (Group 6), better than specified
+>
+> `src/features/ai/server/siteTools.ts` carries the whole scope and more, verified
+> live in the tree, the real-SDK registration suite, the built bundle, and
+> `docs/systems/mcp-server.md`: `get_site_access` (read, no confirm gate),
+> `set_site_admin` (the grant/revoke pair merged into ONE confirm-gated tool —
+> the module docstring records why the split-by-mutation shape this item proposed
+> was not used), and `repair_site_configuration` (confirm-gated; reports
+> `nextStep: republish`). Every constraint below is honored in code: `verified`
+> is a re-read, `not_authorized` surfaces `orgAdmins`, the last-admin refusal
+> passes through. ONE deliberate deviation: emails are UNMASKED, with the
+> rationale in the docstring — the tool's purpose is naming who can grant a
+> role, and a masked address can neither be relayed nor passed to
+> `set_site_admin`; the masking convention belongs to the diagnostics report.
+> 36 tests in `siteTools.test.ts`.
+>
+> Archived when picked up for implementation and found already built — the
+> index's own age rule ("re-measure the central claim before pickup") fired on
+> the picker, not the filer.
 **Depends on:** `.rptc/plans/config-service-admin-grant/` (steps 01–04 shipped).
 
 ## Goal

@@ -118,7 +118,7 @@ export async function migrateStorefrontNamingIfNeeded(
     // same updateSiteConfig path the normal reset uses — it DELETEs then
     // PUTs, which forces Helix to recompute the contentBusId from the new
     // URL and shake off the stale primary-site stamp tied to the old bus.
-    const newParams = buildSiteConfigParams(repoOwner, repoName, daLiveOrg, repoName, byomOverlayUrl);
+    const newParams = buildSiteConfigParams(repoOwner, repoName, daLiveOrg, byomOverlayUrl);
     const updateResult = await configService.updateSiteConfig(newParams);
     // Computed BEFORE the failure return: a re-registration that failed AND lost
     // the grants used to report only the error string, dropping the half nothing

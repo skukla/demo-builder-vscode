@@ -49,8 +49,18 @@ const UNPINNED_REF = 'main';
  *
  * A fallback is never cached: a transient failure on the release lookup must
  * not leave the channel unpinned for the rest of the session.
+ *
+ * Exported as the ONE ref authority for the patches repo: `readLkgSha`
+ * (lkgReader) resolves through this too, so the ledger and the LKG pointer
+ * always come from the same snapshot — a release freezes both together, and
+ * the main fallback tracks both together. Split refs meant release-day
+ * ledgers applied against a daily-advancing canonical.
  */
-async function resolveRef(owner: string, repo: string, logger: Logger): Promise<string> {
+export async function resolvePatchRef(
+    owner: string,
+    repo: string,
+    logger: Logger,
+): Promise<string> {
     const key = `${owner}/${repo}`;
     const cached = refCache.get(key);
     if (cached) return cached;
@@ -109,7 +119,7 @@ export function fetchExternalPatches<T>(
     logger.info(`[Patch] Fetching ${fileName} from ${source.owner}/${source.repo}`);
 
     const promise = (async () => {
-        const ref = await resolveRef(source.owner, source.repo, logger);
+        const ref = await resolvePatchRef(source.owner, source.repo, logger);
         const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${source.path}/${fileName}`;
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),

@@ -167,6 +167,22 @@ export function buildStorefront(project: Project): string {
     );
     lines.push('> Helix picks up pushes to the GitHub repo automatically for preview.');
     lines.push('> For live: push changes to GitHub — Helix picks up the update automatically.');
+    lines.push('');
+    // The storefront ships a complete typography scale and agents did not know
+    // it existed, so block CSS grew hand-picked font sizes ("fonts are too
+    // small") with no oracle to iterate against. Deliberately phrased as "read
+    // the properties" — the scale belongs to the boilerplate, and a hardcoded
+    // token list here would rot when it re-versions. Note the boilerplate's own
+    // blocks are inconsistent (some hardcode sizes), so "match the neighbours"
+    // is explicitly not the rule.
+    lines.push('> **Typography rule:** the storefront ships a complete type scale as');
+    lines.push('> `--type-*` custom properties in `styles/styles.css` (display, headline, body,');
+    lines.push('> details — each a full `font` shorthand with size and line-height). When writing');
+    lines.push('> block CSS, read that file and use `font: var(--type-…)` for every text style —');
+    lines.push(
+        '> never invent a `font-size`, and do not copy one from a neighbouring block (a few',
+    );
+    lines.push('> boilerplate blocks hardcode sizes; they are the exception, not the pattern).');
 
     return lines.join('\n');
 }

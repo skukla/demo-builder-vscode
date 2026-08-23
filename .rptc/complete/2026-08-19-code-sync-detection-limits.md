@@ -1,5 +1,21 @@
 # What "AEM Code Sync installed" can and cannot be known from
 
+> ## ARCHIVED 2026-08-23 — pure reference now; both proposals resolved, one citation dead
+>
+> The one live proposal (gate Continue on the install-link click) was BUILT
+> (`d70ef9b5`, 2026-08-20) and deliberately REVERTED the same day (`28c385b7`);
+> the current code carries the argument against re-proposing it
+> (`repoSelectionInline.helpers.tsx`: "A forced click on top of an inference we
+> know is unreliable bought friction, not safety" — only a MEASURED missing App,
+> inner `code.status` 404, gates). Proposal A was rejected on filing day.
+> Also: `siteUnknownReason.ts`, which the kickoff prompt below cites as
+> load-bearing, was DELETED in `111fc968` (2026-08-20) when its last consumer
+> went; the outer-404 containment now lives in `checkGitHubAppHandler.ts`
+> (`httpNotFound === true`). The reference half — the two-level status reading,
+> the GitHub API dead ends, the token-type limit — re-measured current and
+> survives in the docblocks of `githubAppService.ts` and
+> `appInstallationResolver.ts`.
+
 **Filed:** 2026-08-19, from the `kukla-bodea` field report.
 **Severity:** low as it now stands — the fabrication is contained (`fa7d2b4f`).
 Filed so nobody re-derives this from scratch, and so nobody "fixes" the detector

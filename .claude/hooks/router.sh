@@ -27,6 +27,9 @@ payload=$(cat)
 # needs a new token means adding it here too.
 case "$payload" in
     *jest*|*curl*|*wget*|*httpie*|*.tsx*|*mcp__*|*WebFetch*|*WebSearch*) ;;
+    # 20-secret-files. `.env` admits the path guard; the rest are NECESSARY
+    # substrings of each content pattern the rule can block on.
+    *.env*|*"PRIVATE KEY"*|*ghp_*|*ghs_*|*github_pat_*|*AKIA*|*xox*|*mongodb*) ;;
     # `npm test` / `npm run test:*` start jest without the string "jest" anywhere
     # in the command, so 15-jest-concurrent would never see them. Matched on the
     # two-word literal rather than a bare *test* — that would drag in every path
@@ -59,12 +62,13 @@ print("\x1f".join([
     g(o.get("tool_name")),
     g(ti.get("command")),
     g(ti.get("file_path")),
+    g(ti.get("content")) or g(ti.get("new_string")),
     g(o.get("session_id")) or "nosession",
 ]))
 ' 2>/dev/null) || exit 0
 [ -z "$fields" ] && exit 0
 
-IFS=$'\037' read -r TOOL CMD FILE SESSION <<<"$fields"
+IFS=$'\037' read -r TOOL CMD FILE CONTENT SESSION <<<"$fields"
 [ -n "$SESSION" ] || SESSION=nosession
 
 RULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rules"
@@ -85,7 +89,7 @@ for rule in "$RULES_DIR"/*.rule; do
     declare -f rule_match >/dev/null 2>&1 || continue
     declare -f rule_message >/dev/null 2>&1 || continue
 
-    rule_match "$TOOL" "$CMD" "$FILE" || continue
+    rule_match "$TOOL" "$CMD" "$FILE" "$CONTENT" || continue
 
     if [ "$rule_once" = "1" ]; then
         marker="${TMPDIR:-/tmp}/.dbv-${rule_id}-${SESSION}"

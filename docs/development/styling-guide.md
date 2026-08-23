@@ -44,7 +44,7 @@ Major sections include:
 
 ### The cn() Function
 
-Located in `src/webviews/utils/classNames.ts`, the `cn()` function helps compose CSS classes:
+Located in `src/core/ui/utils/classNames.ts`, the `cn()` function helps compose CSS classes:
 
 ```typescript
 import { cn } from '../utils/classNames';

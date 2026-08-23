@@ -1,5 +1,22 @@
 # EDS has no contract drift checker, and it is the largest external-contract exposure here
 
+> ## CLOSED 2026-08-23 — shipped as `npm run eds:drift`
+>
+> `scripts/edsDrift.js` over a shared core (`scripts/lib/driftCore.js`,
+> extracted from the Data Installer checker with its 33 tests untouched — the
+> four paid-for rules now live once). Pins the four contracts that already
+> bit: Helix status (two-level outer/inner semantics), Config Service site
+> entry (keyed on the REPO, pinned by test) + org roster, DA.live SITE-scope
+> config, and the aem.live percent-encoding rejection as a behavioural probe
+> with a root-200 control that INVALIDATES the run rather than reporting an
+> unreadable verdict. `--capture` bootstraps fixtures (review before commit —
+> public repo; the fixtures README says what to redact). Wired into
+> `cut-release`'s advisory block with the not-a-CI-gate reasoning written
+> next to it. The three ad-hoc `scripts/test-*` probes are retired (deleted;
+> ADR-002's citations annotated). Fixtures not yet captured — first
+> `--capture` run needs a real storefront's credentials; until then every
+> check FAILS loudly by design.
+
 ## Provenance
 
 Raised 2026-08-13 by the Data Installer session, routed here because EDS is shared territory.

@@ -98,6 +98,29 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         expect(saved.componentInstances?.['eds-accs-mesh']).toBeUndefined();
     });
 
+    it('drops the removed mesh\u2019s componentConfigs entry — an orphan copy outlives every write', async () => {
+        // The fan-out audit (2026-08-23): Configure writes a shared field only to
+        // SELECTED declaring components, but two readers sweep the WHOLE map —
+        // and configGenerator gives mesh entries override priority. A removed
+        // mesh's leftover copy of ADOBE_COMMERCE_URL would beat the backend's
+        // fresh value on the next config.json publish. The orphan dies with the
+        // component.
+        const project = meshProject();
+        project.componentConfigs = {
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://fresh.example/graphql' },
+            'eds-accs-mesh': { ACCS_GRAPHQL_ENDPOINT: 'https://stale.example/graphql' },
+        };
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
+
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        expect(saved.componentConfigs?.['eds-accs-mesh']).toBeUndefined();
+        expect(saved.componentConfigs?.['adobe-commerce-accs']).toEqual({
+            ACCS_GRAPHQL_ENDPOINT: 'https://fresh.example/graphql',
+        });
+    });
+
     /**
      * The integration half of the same rule, found by probing live (2026-08-17).
      *

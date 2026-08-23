@@ -1,5 +1,17 @@
 # Custom integration — language standard + singular→packages model
 
+> ## CLOSED 2026-08-23 — item 5, the last live piece, shipped
+>
+> `renameRemoteProject` exists end to end: `adobeEntityFetcher` PATCHes only
+> `{ title }` via aio-lib-console `editProject` (never the machine name),
+> `authenticationService` re-exports it, and `renameProjectCore` syncs the
+> remote Console project title on a demo rename — best-effort, non-fatal, and
+> ONLY when the remote title still matches the demo's old identity, so a
+> user-selected shared Console project is never renamed by a demo rename
+> (the product decision the item left open, decided conservatively).
+> RED-first; args asserted per the mock-blindness rule. Items 1–4 and 6 had
+> shipped previously — this closes the file.
+
 ## Provenance
 
 Scoped 2026-07-15 during a `/rptc:research` into the on-disk project layout for a project

@@ -325,7 +325,7 @@ AuthenticationService (orchestrator)
 - `src/features/mesh` - Pre-flight auth checks before mesh operations
 - `src/features/dashboard` - Quick auth status for dashboard loads
 - `src/features/project-creation` - Wizard authentication step
-- `src/commands/deployMesh.ts` - Auth verification before deployment
+- `src/features/mesh/commands/deployMesh.ts` - Auth verification before deployment
 - `src/features/authentication/ui/steps/` - Authentication UI steps
 
 ## Usage Examples

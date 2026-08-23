@@ -15,6 +15,7 @@
  * @module features/eds/services/lkgReader
  */
 
+import { resolvePatchRef } from './externalPatchFetcher';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types';
 
@@ -55,7 +56,12 @@ export async function readLkgSha(
     logger: Logger,
 ): Promise<string | undefined> {
     const filePath = source.lkgFile ?? 'last-known-good';
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${filePath}`;
+    // Same ref authority as the ledger fetch (see resolvePatchRef): a release
+    // freezes ledger + LKG pointer together; the main fallback tracks both
+    // together. A hardcoded `main` here skewed the pair the day a release
+    // existed.
+    const ref = await resolvePatchRef(source.owner, source.repo, logger);
+    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${filePath}`;
     try {
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),

@@ -26,9 +26,7 @@ import { deriveMeshCatalogEntries } from './meshCatalogDerivation';
 import type {
     AppBuilderComponentsCatalog,
     AppBuilderComponentCatalogEntry,
-    AppBuilderComponentEnvVar,
 } from '@/types/appBuilderComponents';
-import type { AddonSource } from '@/types/demoPackages';
 
 const authored = appBuilderComponentsConfig as unknown as AppBuilderComponentsCatalog;
 
@@ -202,32 +200,8 @@ export function buildCustomIntegrationEntry(
     };
 }
 
-/**
- * Resolve an App Builder component id to its GitHub source.
- *
- * @param id - The appBuilderComponent id
- * @returns The {owner, repo, branch} source, or undefined if unknown
- */
-export function getAppBuilderComponentSource(id: string): AddonSource | undefined {
-    return getAppBuilderComponentEntry(id)?.source;
-}
-
-/**
- * Get an App Builder component's own env-var schema.
- *
- * @param id - The appBuilderComponent id
- * @returns The env schema array (empty if unknown or none declared)
- */
-export function getAppBuilderComponentEnvSchema(id: string): AppBuilderComponentEnvVar[] {
-    return getAppBuilderComponentEntry(id)?.envSchema ?? [];
-}
-
-/**
- * Get the display name for an App Builder component.
- *
- * @param id - The appBuilderComponent id
- * @returns The name, or the id as fallback
- */
-export function getAppBuilderComponentName(id: string): string {
-    return getAppBuilderComponentEntry(id)?.name ?? id;
-}
+// Three one-line accessors over getAppBuilderComponentEntry were deleted
+// 2026-08-23 (getAppBuilderComponentName / -Source / -EnvSchema): every
+// production consumer reads the entry's field directly, and the accessors'
+// only references were their own tests. Read `entry.<field>` off
+// getAppBuilderComponentEntry rather than re-adding a wrapper per field.

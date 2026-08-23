@@ -33,6 +33,8 @@ jest.mock('@/features/eds/services/repairSiteConfigHeadless', () => ({
     repairSiteConfig: (...args: unknown[]) => mockRepairSiteConfig(...args),
 }));
 
+jest.mock('@/features/eds/services/storefrontNameMigrationForProject');
+
 jest.mock('@/features/eds/services/edsResetParams', () => ({
     resolveStorefrontConfig: (...args: unknown[]) => mockResolveStorefrontConfig(...args),
 }));
@@ -57,71 +59,139 @@ const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionC
 /** The single argument object `repairSiteConfig` was called with. */
 const callParams = () => mockRepairSiteConfig.mock.calls[0][0];
 
+const persistFn = jest.fn().mockResolvedValue(undefined);
+
+const {
+    findStorefrontNameMismatch: mockFindMismatch,
+    migrateStorefrontNameForProject: mockMigrateForProject,
+} = jest.requireMock('@/features/eds/services/storefrontNameMigrationForProject');
+
 beforeEach(() => {
     jest.clearAllMocks();
     mockRepairSiteConfig.mockResolvedValue({ status: 'repaired', verified: true });
     mockResolveStorefrontConfig.mockReturnValue({});
     mockGetUserEmail.mockResolvedValue('someone@example.com');
+    (mockFindMismatch as jest.Mock).mockReturnValue(null);
+    (mockMigrateForProject as jest.Mock).mockResolvedValue({
+        skipped: false,
+        migrated: true,
+        publishKeyRenewed: true,
+    });
 });
 
 describe('repairSiteConfigForProject', () => {
     it('passes the project straight through', async () => {
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         expect(callParams().project).toBe(project);
     });
 
     it('returns what the headless service returned, unchanged', async () => {
         const result = { status: 'not_authorized', verified: false, setupUrl: 'https://x' };
         mockRepairSiteConfig.mockResolvedValue(result);
-        await expect(repairSiteConfigForProject(project, context, logger)).resolves.toBe(result);
+        await expect(repairSiteConfigForProject(project, context, logger, persistFn)).resolves.toBe(
+            result
+        );
     });
 
     it('builds the ConfigurationService over the DA.live token provider', async () => {
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         const params = callParams();
         const provider = (createDaLiveServiceTokenProvider as jest.Mock).mock.results[0].value;
 
         expect(params.tokenProvider).toBe(provider);
         expect(params.configurationService).toBeInstanceOf(ConfigurationService);
         // The service and the pin must authorize as the SAME identity.
-        expect((params.configurationService as unknown as { tokenProvider: unknown }).tokenProvider)
-            .toBe(provider);
+        expect(
+            (params.configurationService as unknown as { tokenProvider: unknown }).tokenProvider
+        ).toBe(provider);
     });
 
     it("resolves the overlay against the PACKAGE's url, not just the setting", async () => {
-        mockResolveStorefrontConfig.mockReturnValue({ byomOverlayUrl: 'https://pkg.example/overlay' });
+        mockResolveStorefrontConfig.mockReturnValue({
+            byomOverlayUrl: 'https://pkg.example/overlay',
+        });
 
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         callParams().resolveOverlayUrl('acme', 'storefront');
 
         expect(mockResolveByomOverlayConfig).toHaveBeenCalledWith(
             'https://pkg.example/overlay',
             'acme',
-            'storefront',
+            'storefront'
         );
     });
 
     it('reads the storefront config for THIS project', async () => {
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         expect(mockResolveStorefrontConfig).toHaveBeenCalledWith(project);
     });
 
     it('passes the DA.live user email through for the admin pin', async () => {
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         expect(callParams().userEmail).toBe('someone@example.com');
     });
 
     it('sends undefined rather than a blank email', async () => {
         mockGetUserEmail.mockResolvedValue('');
-        await repairSiteConfigForProject(project, context, logger);
+        await repairSiteConfigForProject(project, context, logger, persistFn);
         expect(callParams().userEmail).toBeUndefined();
     });
 
     it('forwards progress to the caller when one is given', async () => {
         const onProgress = jest.fn();
-        await repairSiteConfigForProject(project, context, logger, onProgress);
+        await repairSiteConfigForProject(project, context, logger, persistFn, onProgress);
 
         await callParams().onProgress?.('Re-registering...');
         expect(onProgress).toHaveBeenCalledWith('Re-registering...');
+    });
+});
+
+describe('migrate-first (decided 2026-08-23)', () => {
+    // Repair used to register straight off the manifest's daLiveSite, which on
+    // an unmigrated legacy project meant repairing INTO the mismatched state —
+    // and it was the last live consumer of the legacyLookupKey cleanup. Repair
+    // now runs the same name migration reset runs first, so every path
+    // heals-before-registers and the legacy infrastructure retires.
+    it('runs the name migration BEFORE registering when the names mismatch', async () => {
+        const candidate = { projectName: 'demo', repoName: 'demo-repo', daLiveSite: 'old-name' };
+        (mockFindMismatch as jest.Mock).mockReturnValue(candidate);
+
+        const result = await repairSiteConfigForProject(project, context, logger, persistFn);
+
+        expect(result.status).toBe('repaired');
+        expect(mockMigrateForProject).toHaveBeenCalledWith(
+            candidate,
+            context,
+            logger,
+            persistFn,
+            undefined
+        );
+        const migrationOrder = (mockMigrateForProject as jest.Mock).mock.invocationCallOrder[0];
+        const repairOrder = mockRepairSiteConfig.mock.invocationCallOrder[0];
+        expect(migrationOrder).toBeLessThan(repairOrder);
+    });
+
+    it('does NOT register when the migration fails — repairing into the broken name is not a repair', async () => {
+        (mockFindMismatch as jest.Mock).mockReturnValue({ projectName: 'demo' });
+        (mockMigrateForProject as jest.Mock).mockResolvedValue({
+            skipped: false,
+            migrated: false,
+            publishKeyRenewed: false,
+            error: 'DA copy failed',
+        });
+
+        const result = await repairSiteConfigForProject(project, context, logger, persistFn);
+
+        expect(result.status).toBe('failed');
+        expect(result.verified).toBe(false);
+        expect(result.error).toContain('DA copy failed');
+        expect(mockRepairSiteConfig).not.toHaveBeenCalled();
+    });
+
+    it('goes straight to registration when the names already match', async () => {
+        await repairSiteConfigForProject(project, context, logger, persistFn);
+
+        expect(mockMigrateForProject).not.toHaveBeenCalled();
+        expect(mockRepairSiteConfig).toHaveBeenCalledTimes(1);
     });
 });

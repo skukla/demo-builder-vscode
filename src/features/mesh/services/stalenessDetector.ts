@@ -5,8 +5,10 @@
  * - Environment variables used in mesh.json
  * - Source file hashes (resolvers, schemas, config)
  *
- * DI Pattern: StalenessDetectorService uses constructor injection for logger.
- * Backward-compatible function exports use a lazy-loaded default logger.
+ * One public surface: the module-level function exports. Logger-dependent
+ * internals take an injected logger; the public exports default it lazily.
+ * (A parallel StalenessDetectorService class existed until 2026-08-23 with
+ * zero production callers — deleted, per the no-dual-surface cleanup.)
  */
 
 import * as crypto from 'crypto';
@@ -100,77 +102,8 @@ function getDefaultLogger(): Logger {
     return _defaultLogger;
 }
 
-/**
- * StalenessDetectorService - Detects changes requiring API Mesh redeployment
- *
- * Uses constructor injection for the logger dependency (DI pattern).
- * Provides instance methods that use the injected logger.
- */
-export class StalenessDetectorService {
-    private logger: Logger;
-
-    constructor(logger: Logger) {
-        this.logger = logger;
-    }
-
-    /**
-     * Get current mesh-related environment variables from component config
-     */
-    getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
-        return getMeshEnvVarsImpl(componentConfig);
-    }
-
-    /**
-     * Fetch deployed mesh configuration from Adobe I/O
-     */
-    async fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
-        return fetchDeployedMeshConfigImpl(this.logger);
-    }
-
-    /**
-     * Calculate hash of mesh source files
-     */
-    async calculateMeshSourceHash(meshComponentPath: string): Promise<string | null> {
-        return calculateMeshSourceHashImpl(meshComponentPath, this.logger);
-    }
-
-    /**
-     * Get current mesh state from project
-     */
-    getCurrentMeshState(project: Project): MeshState | null {
-        return getCurrentMeshStateImpl(project);
-    }
-
-    /**
-     * Detect if mesh has changes requiring redeployment
-     */
-    async detectMeshChanges(
-        project: Project,
-        newComponentConfigs: Record<string, unknown>,
-    ): Promise<MeshChanges> {
-        return detectMeshChangesImpl(project, newComponentConfigs, this.logger);
-    }
-
-    /**
-     * Update mesh state after deployment
-     *
-     * @param project - The project to update
-     * @param endpoint - The deployed mesh endpoint URL
-     */
-    async updateMeshState(project: Project, endpoint?: string): Promise<void> {
-        return updateMeshStateImpl(project, endpoint, this.logger);
-    }
-
-    /**
-     * Detect if frontend env vars have changed since demo started
-     */
-    detectFrontendChanges(project: Project): boolean {
-        return detectFrontendChangesImpl(project);
-    }
-}
-
 // ============================================================================
-// Implementation Functions (shared between service and backward-compatible exports)
+// Logger-injected implementations (public exports below default the logger)
 // ============================================================================
 
 /**

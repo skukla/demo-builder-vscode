@@ -2,7 +2,11 @@ import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { getStackById } from '../hooks/useSelectedStack';
 import { hasRequiredReviewData } from './reviewPredicates';
-import { buildComponentInfoList, resolveServiceNames } from './reviewStepHelpers';
+import {
+    buildComponentInfoList,
+    resolveReviewIntegrationNames,
+    resolveServiceNames,
+} from './reviewStepHelpers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks';
@@ -43,7 +47,12 @@ interface ReviewStepProps extends BaseStepProps {
  * Uses fixed-width labels for consistent alignment across all cards
  * Supports optional sub-items displayed as a secondary line
  */
-function LabelValue({ label, value, icon, subItems }: {
+function LabelValue({
+    label,
+    value,
+    icon,
+    subItems,
+}: {
     label: string;
     value: React.ReactNode;
     icon?: React.ReactNode;
@@ -70,9 +79,7 @@ function LabelValue({ label, value, icon, subItems }: {
                     )}
                 </Flex>
                 {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className="description-text">
-                        {subItems.join(' · ')}
-                    </Text>
+                    <Text UNSAFE_className="description-text">{subItems.join(' · ')}</Text>
                 )}
             </Flex>
         </Flex>
@@ -92,7 +99,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
                 backgroundColor: 'var(--spectrum-gray-75)',
             }}
         >
-            <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
+            <Text
+                UNSAFE_className={cn(
+                    'text-sm',
+                    'font-semibold',
+                    'text-gray-600',
+                    'text-uppercase',
+                    'letter-spacing-05',
+                )}
+            >
                 {title}
             </Text>
             <Flex direction="column" gap="size-150" marginTop="size-150">
@@ -103,12 +118,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /** Derive GitHub repo display info from EDS config */
-function deriveGithubRepoInfo(edsConfig: WizardState['edsConfig']): { fullName: string; mode: string } | null {
+function deriveGithubRepoInfo(
+    edsConfig: WizardState['edsConfig'],
+): { fullName: string; mode: string } | null {
     if (!edsConfig) return null;
 
-    const owner = edsConfig.selectedRepo?.fullName?.split('/')[0]
-        || edsConfig.githubAuth?.user?.login
-        || '';
+    const owner =
+        edsConfig.selectedRepo?.fullName?.split('/')[0] || edsConfig.githubAuth?.user?.login || '';
     const repoName = edsConfig.selectedRepo?.name || edsConfig.repoName || '';
     if (!repoName) return null;
 
@@ -127,7 +143,9 @@ function deriveGithubRepoInfo(edsConfig: WizardState['edsConfig']): { fullName: 
 }
 
 /** Derive DA.live display info from EDS config */
-function deriveDaLiveInfo(edsConfig: WizardState['edsConfig']): { org: string; site: string; mode: string } | null {
+function deriveDaLiveInfo(
+    edsConfig: WizardState['edsConfig'],
+): { org: string; site: string; mode: string } | null {
     if (!edsConfig) return null;
 
     const org = edsConfig.daLiveOrg || '';
@@ -140,11 +158,14 @@ function deriveDaLiveInfo(edsConfig: WizardState['edsConfig']): { org: string; s
 
 /** Resolve display name preferring title over name */
 function resolveDisplayName(title?: string, name?: string): string | undefined {
-    return (title && title.length > 0) ? title : name;
+    return title && title.length > 0 ? title : name;
 }
 
 /** Project configuration section (package + architecture) */
-function ProjectConfigSection({ packageName, stackName }: {
+function ProjectConfigSection({
+    packageName,
+    stackName,
+}: {
     packageName?: string;
     stackName?: string;
 }) {
@@ -158,7 +179,11 @@ function ProjectConfigSection({ packageName, stackName }: {
 }
 
 /** Adobe I/O context section (org, project, workspace) */
-function AdobeIOSection({ orgName, projectName, workspaceName }: {
+function AdobeIOSection({
+    orgName,
+    projectName,
+    workspaceName,
+}: {
     orgName?: string;
     projectName?: string;
     workspaceName?: string;
@@ -174,21 +199,32 @@ function AdobeIOSection({ orgName, projectName, workspaceName }: {
 }
 
 /** Components section (frontend, backend, dependencies, etc.) */
-function ComponentsSection({ componentInfo }: {
+function ComponentsSection({
+    componentInfo,
+}: {
     componentInfo: Array<{ label: string; value: React.ReactNode; subItems?: string[] }>;
 }) {
     if (componentInfo.length === 0) return <View />;
     return (
         <Section title="COMPONENTS">
             {componentInfo.map((item, index) => (
-                <LabelValue key={index} label={item.label} value={item.value} subItems={item.subItems} />
+                <LabelValue
+                    key={index}
+                    label={item.label}
+                    value={item.value}
+                    subItems={item.subItems}
+                />
             ))}
         </Section>
     );
 }
 
 /** Edge Delivery Services section (GitHub repo, DA.live, AEM Assets) */
-function EdsSection({ githubRepoInfo, daLiveInfo, aemAssetsEnabled }: {
+function EdsSection({
+    githubRepoInfo,
+    daLiveInfo,
+    aemAssetsEnabled,
+}: {
     githubRepoInfo: { fullName: string; mode: string } | null;
     daLiveInfo: { org: string; site: string; mode: string } | null;
     aemAssetsEnabled: boolean;
@@ -205,16 +241,13 @@ function EdsSection({ githubRepoInfo, daLiveInfo, aemAssetsEnabled }: {
             {daLiveInfo && (
                 <LabelValue
                     label="DA.live Project"
-                    value={daLiveInfo.org ? `${daLiveInfo.org}/${daLiveInfo.site}` : daLiveInfo.site}
+                    value={
+                        daLiveInfo.org ? `${daLiveInfo.org}/${daLiveInfo.site}` : daLiveInfo.site
+                    }
                     subItems={[daLiveInfo.mode]}
                 />
             )}
-            {aemAssetsEnabled && (
-                <LabelValue
-                    label="AEM Assets"
-                    value="Enabled"
-                />
-            )}
+            {aemAssetsEnabled && <LabelValue label="AEM Assets" value="Enabled" />}
         </Section>
     );
 }
@@ -222,36 +255,86 @@ function EdsSection({ githubRepoInfo, daLiveInfo, aemAssetsEnabled }: {
 /** Check if EDS config has meaningful data */
 function hasEdsConfiguration(edsConfig: WizardState['edsConfig']): boolean {
     if (!edsConfig) return false;
-    return Boolean(edsConfig.repoName || edsConfig.selectedRepo || edsConfig.daLiveSite || edsConfig.selectedSite);
+    return Boolean(
+        edsConfig.repoName ||
+            edsConfig.selectedRepo ||
+            edsConfig.daLiveSite ||
+            edsConfig.selectedSite,
+    );
 }
 
-export function ReviewStep({ state, setCanProceed, componentsData, packages, stacks }: ReviewStepProps) {
+export function ReviewStep({
+    state,
+    setCanProceed,
+    componentsData,
+    packages,
+    stacks,
+}: ReviewStepProps) {
     useCanProceed(state, setCanProceed, hasRequiredReviewData);
 
     const stack = useMemo(
-        () => state.selectedStack ? getStackById(state.selectedStack) : undefined,
+        () => (state.selectedStack ? getStackById(state.selectedStack) : undefined),
         [state.selectedStack],
     );
 
     const backendServiceNames = useMemo(
-        () => resolveServiceNames(stack?.backend, componentsData?.backends, componentsData?.services),
+        () =>
+            resolveServiceNames(stack?.backend, componentsData?.backends, componentsData?.services),
         [stack?.backend, componentsData?.backends, componentsData?.services],
     );
 
-    const componentSelection = useMemo(() => stack ? {
-        frontend: stack.frontend,
-        backend: stack.backend,
-        dependencies: [...(stack.dependencies || []), ...(state.selectedOptionalDependencies || [])],
-    } : undefined, [stack, state.selectedOptionalDependencies]);
+    const componentSelection = useMemo(
+        () =>
+            stack
+                ? {
+                      frontend: stack.frontend,
+                      backend: stack.backend,
+                      dependencies: [
+                          ...(stack.dependencies || []),
+                          ...(state.selectedOptionalDependencies || []),
+                      ],
+                  }
+                : undefined,
+        [stack, state.selectedOptionalDependencies],
+    );
+
+    // The configured integrations, resolved to display names through the same
+    // spine the builder summary renders from. NOT read off componentSelection:
+    // the config's `components.appBuilder` is a hardcoded-empty legacy field,
+    // and reading it here is what made hand-picked integrations invisible on
+    // Review for months.
+    const integrationNames = useMemo(
+        () => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),
+        [state, packages, stacks],
+    );
 
     const componentInfo = useMemo(
-        () => buildComponentInfoList(componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames),
-        [componentSelection, state.apiMesh?.meshStatus, componentsData, backendServiceNames],
+        () =>
+            buildComponentInfoList(
+                componentSelection,
+                state.apiMesh?.meshStatus,
+                componentsData,
+                backendServiceNames,
+                integrationNames,
+            ),
+        [
+            componentSelection,
+            state.apiMesh?.meshStatus,
+            componentsData,
+            backendServiceNames,
+            integrationNames,
+        ],
     );
 
     const adobeOrgName = state.adobeOrg?.name;
-    const adobeProjectName = resolveDisplayName(state.adobeProject?.title, state.adobeProject?.name);
-    const adobeWorkspaceName = resolveDisplayName(state.adobeWorkspace?.title, state.adobeWorkspace?.name);
+    const adobeProjectName = resolveDisplayName(
+        state.adobeProject?.title,
+        state.adobeProject?.name,
+    );
+    const adobeWorkspaceName = resolveDisplayName(
+        state.adobeWorkspace?.title,
+        state.adobeWorkspace?.name,
+    );
 
     const edsConfig = state.edsConfig;
     const hasEdsConfig = hasEdsConfiguration(edsConfig);
@@ -260,14 +343,16 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
     const daLiveInfo = useMemo(() => deriveDaLiveInfo(edsConfig), [edsConfig]);
 
     const aemAssetsEnabled = useMemo(() => {
-        return state.componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT]?.AEM_ASSETS_ENABLED === 'true';
+        return (
+            state.componentConfigs?.[COMPONENT_IDS.EDS_STOREFRONT]?.AEM_ASSETS_ENABLED === 'true'
+        );
     }, [state.componentConfigs]);
 
     const packageName = state.selectedPackage
-        ? packages?.find(p => p.id === state.selectedPackage)?.name
+        ? packages?.find((p) => p.id === state.selectedPackage)?.name
         : undefined;
     const stackName = state.selectedStack
-        ? stacks?.find(s => s.id === state.selectedStack)?.name
+        ? stacks?.find((s) => s.id === state.selectedStack)?.name
         : undefined;
 
     return (
@@ -286,7 +371,13 @@ export function ReviewStep({ state, setCanProceed, componentsData, packages, sta
                 }}
             >
                 {/* Span both columns when no Adobe I/O section */}
-                <div style={(!adobeOrgName && !adobeProjectName && !adobeWorkspaceName) ? { gridColumn: '1 / -1' } : undefined}>
+                <div
+                    style={
+                        !adobeOrgName && !adobeProjectName && !adobeWorkspaceName
+                            ? { gridColumn: '1 / -1' }
+                            : undefined
+                    }
+                >
                     <ProjectConfigSection packageName={packageName} stackName={stackName} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (

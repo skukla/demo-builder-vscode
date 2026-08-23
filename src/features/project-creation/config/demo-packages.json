@@ -135,7 +135,8 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
-            "account-page-column-layout"
+            "account-page-column-layout",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -174,7 +175,8 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
-            "account-page-column-layout"
+            "account-page-column-layout",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -277,7 +279,8 @@
             "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
-            "product-teaser-image-url-handling"
+            "product-teaser-image-url-handling",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -333,7 +336,8 @@
             "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
-            "product-teaser-image-url-handling"
+            "product-teaser-image-url-handling",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -444,7 +448,8 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
-            "account-page-column-layout"
+            "account-page-column-layout",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -510,7 +515,8 @@
             "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
             "commerce-account-sidebar-selector-race",
-            "account-page-column-layout"
+            "account-page-column-layout",
+            "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
             "owner": "skukla",

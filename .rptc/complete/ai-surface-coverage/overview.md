@@ -1,5 +1,20 @@
 # AI surface coverage — tools and skills against Demo Builder features
 
+> ## CLOSED 2026-08-23 — phase 4 executed; every group landed or was explicitly decided against
+>
+> Re-measured during the whole-backlog re-measure pass. The premise ("58 tools,
+> zero prerequisites surface, a data-installer read/write asymmetry") is dead:
+> the tool surface is now **103** (57 direct registerTool sites + 46 descriptor
+> rows), and phase 4's groups 1–8 are all present in `src/features/ai/server/`
+> or recorded as deliberate ❌ decisions in the plan's own annotations
+> (`.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md`). The two
+> example gaps are both closed: data-installer has 8 write/status tools, and
+> prerequisites has `check_prerequisites` + `install_prerequisite`. This file
+> and its index entry were written pre-execution and never updated — the
+> classic fixing-commits-never-touch-.rptc failure. The `.rptc/plans/ai-surface/`
+> dir still holds the annotated plan; whether ALL its phases are complete was
+> not verified here — check before archiving that too.
+
 **Status:** planned, not started — **adopted as phase 4 of
 `.rptc/plans/ai-surface/`** (2026-08-16). Read that program's `overview.md` first: it sequences
 this work AFTER response quality and enforcement, so new tools land against a tested convention.

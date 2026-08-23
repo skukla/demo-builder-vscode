@@ -89,7 +89,6 @@ export async function registerConfigurationService(
             repoInfo.repoOwner,
             repoInfo.repoName,
             edsConfig.daLiveOrg,
-            edsConfig.daLiveSite,
             edsConfig.byomOverlayUrl,
         );
         const registration = await registerSiteConfig({
