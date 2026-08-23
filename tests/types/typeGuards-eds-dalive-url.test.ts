@@ -33,8 +33,8 @@ const edsProject = {
             name: 'Edge Delivery Services',
             status: 'deployed',
             metadata: {
-                daLiveOrg: 'leahrayard',
-                daLiveSite: 'leah-b2b-demo',
+                daLiveOrg: 'fieldorg',
+                daLiveSite: 'field-b2b-demo',
             },
         },
     },
@@ -43,33 +43,33 @@ const edsProject = {
 describe('getEdsDaLiveUrl - experience branch', () => {
     it('returns the Universal Editor URL for a valid EDS project', () => {
         expect(getEdsDaLiveUrl(edsProject, 'da-live-classic')).toBe(
-            'https://da.live/#/leahrayard/leah-b2b-demo',
+            'https://da.live/#/fieldorg/field-b2b-demo',
         );
     });
 
     it('returns the param-less production EW canvas URL by default', () => {
         // Default ewCanvasBranch arg is '' → no ?nx override, doc still required.
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace')).toBe(
-            'https://da.live/canvas#/leahrayard/leah-b2b-demo/index',
+            'https://da.live/canvas#/fieldorg/field-b2b-demo/index',
         );
     });
 
     it('returns the param-less production EW canvas URL when the branch is empty', () => {
         // An empty branch drops the ?nx override → the documented production form.
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', '')).toBe(
-            'https://da.live/canvas#/leahrayard/leah-b2b-demo/index',
+            'https://da.live/canvas#/fieldorg/field-b2b-demo/index',
         );
     });
 
     it('pins the canvas to a pre-release branch via the ?nx override', () => {
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', 'exp-workspace')).toBe(
-            'https://da.live/canvas?nx=exp-workspace#/leahrayard/leah-b2b-demo/index',
+            'https://da.live/canvas?nx=exp-workspace#/fieldorg/field-b2b-demo/index',
         );
     });
 
     it('honors a custom ewCanvasBranch in the ?nx override', () => {
         expect(getEdsDaLiveUrl(edsProject, 'experience-workspace', 'main')).toBe(
-            'https://da.live/canvas?nx=main#/leahrayard/leah-b2b-demo/index',
+            'https://da.live/canvas?nx=main#/fieldorg/field-b2b-demo/index',
         );
     });
 
@@ -84,7 +84,7 @@ describe('getEdsDaLiveUrl - experience branch', () => {
 
     it('defaults to the Universal Editor form when no experience arg is passed (back-compat)', () => {
         expect(getEdsDaLiveUrl(edsProject)).toBe(
-            'https://da.live/#/leahrayard/leah-b2b-demo',
+            'https://da.live/#/fieldorg/field-b2b-demo',
         );
     });
 
@@ -105,7 +105,7 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         const noOrg = {
             selectedStack: 'eds-dalive',
             componentInstances: {
-                'eds-storefront': { metadata: { daLiveSite: 'leah-b2b-demo' } },
+                'eds-storefront': { metadata: { daLiveSite: 'field-b2b-demo' } },
             },
         } as unknown as Project;
 
@@ -116,7 +116,7 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         const noSite = {
             selectedStack: 'eds-dalive',
             componentInstances: {
-                'eds-storefront': { metadata: { daLiveOrg: 'leahrayard' } },
+                'eds-storefront': { metadata: { daLiveOrg: 'fieldorg' } },
             },
         } as unknown as Project;
 

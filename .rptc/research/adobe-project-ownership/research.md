@@ -7,9 +7,9 @@ has since been consolidated.
 **Question:** How does the extension assert ownership and deletion rights on Adobe
 Console projects, and why are some projects the user created not deletable?
 
-Prompted by an observation: "Team Meeting", "<name> and <name> Mesh" and "Kukla Mesh"
+Prompted by an observation: "Team Meeting", "<name> and <name> Mesh" and "Demo Mesh"
 (the two personal names redacted — the point is that projects get named after people)
-show a delete affordance in the Adobe Demo System org; "Kukla ACO" and "Solution
+show a delete affordance in the Adobe Demo System org; "Demo ACO" and "Solution
 Led Architects Integration Service" do not — all reported as created by the same
 person.
 
@@ -64,8 +64,8 @@ suffix, **three distinct GUIDs**.
 
 | Project | Deletable | `who_created` |
 |---|---|---|
-| Kukla Mesh | yes | the user's CURRENT id (deletable ⟹ matches the token's `user_id`, by construction) |
-| Kukla ACO | no | the user's FORMER id |
+| Demo Mesh | yes | the user's CURRENT id (deletable ⟹ matches the token's `user_id`, by construction) |
+| Demo ACO | no | the user's FORMER id |
 | Solution Led Architects Integration Service | no | another former id |
 
 **Answer: the user created all three.** Their personal Adobe ID and federated
@@ -102,7 +102,7 @@ top two both reasoned from project NAMES, and the winner reasoned from none.
 
 | # | Explanation | Confidence |
 |---|---|---|
-| 1 | Created on the user's behalf by a **service**, not by the user. ACO provisioning creates its Console project server-side, so `who_created` would be the provisioning identity. Fits "Kukla ACO" by name. | Medium-high |
+| 1 | Created on the user's behalf by a **service**, not by the user. ACO provisioning creates its Console project server-side, so `who_created` would be the provisioning identity. Fits "Demo ACO" by name. | Medium-high |
 | 2 | Created by **another person** — a shared team asset the user requested rather than created. Fits "Solution Led Architects Integration Service" by name. | Medium |
 | 3 | **Different IMS identity**: the `@<authsrc>.e` suffix differs if the project was created under a different identity type than the current CLI token. | Low-medium |
 | 4 | `who_created` **absent** on those entries → fail closed. Prior research found it universally present, but in one org at one moment. | Low |
@@ -113,7 +113,7 @@ top two both reasoned from project NAMES, and the winner reasoned from none.
 
 The gate is wrong in both directions:
 
-- **False negative — CONFIRMED by §2, and permanent.** The user created "Kukla
+- **False negative — CONFIRMED by §2, and permanent.** The user created "Demo
   ACO" under an IMS identity that was later consolidated. The gate compares one
   CURRENT `user_id` against `who_created` and has no notion of identity history,
   so every project made under a former GUID is orphaned in our UI forever — no

@@ -128,7 +128,7 @@ function applyFieldDefaults(
             // a stored value. Package defaults used to override, which stomped the
             // user's saved Business Structure scope (e.g. their selected website) back
             // to the brand's codes every time the wizard loaded a project (2026-08-13,
-            // leah-b2b-demo). Restamping brand codes on a real package SWITCH is
+            // field-b2b-demo). Restamping brand codes on a real package SWITCH is
             // WelcomeStep's handlePackageSelect, which clears the old package's keys
             // so this fill applies the new ones. The blank check is per component
             // because STORAGE is per component — not because divergent values are

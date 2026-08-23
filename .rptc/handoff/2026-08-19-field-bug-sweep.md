@@ -27,7 +27,7 @@ import actually being enumerated.
 One create with a datapack selected closes this. Watch for
 `[Catalog Prewarm] N/N SKUs pre-published` after `Installing Sample Data`.
 
-### 2. Leah is not unblocked by the release alone
+### 2. The field SC is not unblocked by the release alone
 
 `.135` fixes the code. She still needs, in order:
 
@@ -35,21 +35,21 @@ One create with a datapack selected closes this. Watch for
 2. Set `demoBuilder.daLive.aemAuthorUrl` — **bare host**, no `https://` prefix.
    The shared demo AEM; the value is in the author's VS Code settings.
 3. Set `demoBuilder.dataInstaller.apiBaseUrl` to the team deployment.
-4. Reset `leah-bodea` — that rewrites the AEM Assets binding and re-runs pre-warm.
+4. Reset `field-bodea` — that rewrites the AEM Assets binding and re-runs pre-warm.
 
 Without 2 and 3 she sees the same two failures on `.135` that she saw on `.133`.
 
 ### 3. Her OLDER site's 403 was never explained
 
 ```
-[Helix] Admin API Key creation failed: 403     (leahrayard/leah-b2b-demo, 11:33:59)
+[Helix] Admin API Key creation failed: 403     (fieldorg/field-b2b-demo, 11:33:59)
 [PublishKey] No publish key registered — products added after setup will 404 on first visit
 ```
 
 This is her **older** project, not the bodea site, and it was misattributed to the
 bodea run twice during triage before the site name was checked. Her bodea site
 minted and registered a key fine six minutes later, so it is specific to
-`leah-b2b-demo` — plausibly a site created before admin pinning existed. Not filed
+`field-b2b-demo` — plausibly a site created before admin pinning existed. Not filed
 as a backlog item because it has one data point and no reproduction.
 
 ## What was learned that the entries do not say

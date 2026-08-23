@@ -218,7 +218,7 @@ describe('IntegrationsScreen', () => {
                     hasAdobeContext
                     appBuilderComponents={{}}
                     projectName={asDisplayName('demo-builder-test')}
-                    destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                 />
             );
             settleStatus(handlers);
@@ -255,13 +255,13 @@ describe('IntegrationsScreen', () => {
 
     describe('formatDestination', () => {
         it('joins project and workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' })).toBe(
-                'Kukla Mesh · Stage'
+            expect(formatDestination({ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' })).toBe(
+                'Demo Mesh · Stage'
             );
         });
 
         it('returns the project alone when there is no workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
+            expect(formatDestination({ projectTitle: 'Demo Mesh' })).toBe('Demo Mesh');
         });
 
         // Undefined, not an empty string — the caller hides the line on undefined,
@@ -280,7 +280,7 @@ describe('IntegrationsScreen', () => {
                     hasAdobeContext
                     projectName={asDisplayName('demo-builder-test')}
                     appBuilderComponents={{ a: DEPLOYED }}
-                    destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                 />
             );
             settleStatus(handlers);
@@ -305,7 +305,7 @@ describe('IntegrationsScreen', () => {
                         hasAdobeContext
                         projectName={asDisplayName('demo-builder-test')}
                         appBuilderComponents={{ a: DEPLOYED }}
-                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                        destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
                 settleStatus(handlers);
@@ -313,7 +313,7 @@ describe('IntegrationsScreen', () => {
                 // The crumb is the LOCAL project only; the remote destination
                 // moved to the band's context row.
                 expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
-                expect(screen.getByTestId('page-destination')).toHaveTextContent('Kukla Mesh');
+                expect(screen.getByTestId('page-destination')).toHaveTextContent('Demo Mesh');
             });
 
             // The case the original band tests were really reaching for: a project
@@ -337,7 +337,7 @@ describe('IntegrationsScreen', () => {
              * The destination moved OUT of the header and INTO the band.
              *
              * It used to ride in the subtitle as a third crumb —
-             * "demo-builder-test · Kukla Mesh · Stage" — on the reasoning that
+             * "demo-builder-test · Demo Mesh · Stage" — on the reasoning that
              * the band was "otherwise about acting on the list". The band's left
              * side is not actions: it holds the count, with most of its width
              * empty. It is context-left / actions-right, exactly like the project
@@ -355,17 +355,17 @@ describe('IntegrationsScreen', () => {
                         hasAdobeContext
                         appBuilderComponents={{ a: DEPLOYED }}
                         projectName={asDisplayName('demo-builder-test')}
-                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                        destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
                 settleStatus(handlers);
 
                 const band = screen.getByTestId('page-destination');
-                expect(band).toHaveTextContent('Kukla Mesh');
+                expect(band).toHaveTextContent('Demo Mesh');
                 expect(band).toHaveTextContent('Stage');
                 // The header keeps the LOCAL project name and nothing else.
                 expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
-                expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
+                expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Demo Mesh');
             });
 
             /**
@@ -387,7 +387,7 @@ describe('IntegrationsScreen', () => {
                     <IntegrationsScreen
                         hasAdobeContext
                         appBuilderComponents={{ a: DEPLOYED }}
-                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                        destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
                 settleStatus(handlers);
@@ -405,7 +405,7 @@ describe('IntegrationsScreen', () => {
                     <IntegrationsScreen
                         hasAdobeContext
                         appBuilderComponents={{ a: DEPLOYED }}
-                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                        destination={{ projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' }}
                     />
                 );
                 settleStatus(handlers);
@@ -595,7 +595,7 @@ describe('IntegrationsScreen', () => {
  * the band is about acting on the list.
  */
 describe('IntegrationsScreen — destination control', () => {
-    const DEST = { projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' };
+    const DEST = { projectTitle: 'Demo Mesh', workspaceTitle: 'Stage' };
 
     it('offers Change beside the destination in the band', () => {
         const handlers = captureHandlers();

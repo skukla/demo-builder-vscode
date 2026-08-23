@@ -73,8 +73,8 @@ import type { Logger } from '@/types/logger';
 
 const AEM_AUTHOR_URL = 'author-p158081-e1683323.adobeaemcloud.com';
 const IMS_ORG_ID = 'ABCDEF1234567890@AdobeOrg';
-const DA_LIVE_ORG = 'leahrayard';
-const DA_LIVE_SITE = 'leah-b2b-demo';
+const DA_LIVE_ORG = 'fieldorg';
+const DA_LIVE_SITE = 'field-b2b-demo';
 const SITE_ROW_KEY = `/${DA_LIVE_ORG}/${DA_LIVE_SITE}`;
 
 describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
@@ -271,7 +271,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
     });
 
     /**
-     * Leah's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
+     * The field SC's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
      * nothing more — a binding existed, and there was no way to tell WHAT it
      * pointed at. `demoBuilder.daLive.aemAuthorUrl` ships with a default
      * (a shared demo-system AEM host), so "the key was written" says nothing

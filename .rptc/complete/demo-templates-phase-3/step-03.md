@@ -86,7 +86,7 @@ describe('ComponentSelectionStep - Simplified', () => {
 
         it('should NOT render Integration Service checkbox', () => {
             renderWithProvider(<ComponentSelectionStep {...defaultProps} />);
-            expect(screen.queryByText('Kukla Integration Service')).not.toBeInTheDocument();
+            expect(screen.queryByText('Demo Integration Service')).not.toBeInTheDocument();
         });
     });
 

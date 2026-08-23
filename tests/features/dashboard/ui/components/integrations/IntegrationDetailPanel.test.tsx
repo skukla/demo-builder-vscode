@@ -267,10 +267,10 @@ describe('IntegrationDetailPanel', () => {
         // Without this test, de-duplicating them later would be a silent
         // regression rather than a decision.
         it('renders Destination when the host supplies one', () => {
-            renderPanel(makeModel(), { destinationLabel: 'Kukla Mesh · Stage' });
+            renderPanel(makeModel(), { destinationLabel: 'Demo Mesh · Stage' });
 
             expect(screen.getByText('Destination')).toBeInTheDocument();
-            expect(screen.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
+            expect(screen.getByText('Demo Mesh · Stage')).toBeInTheDocument();
         });
 
         it('omits Destination when the project has no Adobe target', () => {

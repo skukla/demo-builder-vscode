@@ -55,7 +55,7 @@ describe('handleCheckPrerequisites — user optional-dependency picks', () => {
     });
 
     it('omits mesh from currentComponentSelection.dependencies when the user did NOT opt in', async () => {
-        // Repro of Leah's field case: CitiSignal + EDS+ACCS, no mesh selected.
+        // Repro of the field SC's field case: CitiSignal + EDS+ACCS, no mesh selected.
         // The eds-accs stack has eds-accs-mesh in optionalDependencies, but
         // the user left it unchecked, so selectedOptionalDependencies is [].
         const context = createMockContext();

@@ -7,7 +7,7 @@ Adobe project/workspace is only reachable by starting **Add Integration** and us
 `Change` link on the destination context line — you cannot get to it from an existing
 integration at all (reported 2026-07-31, screenshot: Order Sync flyout).
 
-The integration detail flyout shows `Destination  Kukla Mesh · Stage` as a read-only row,
+The integration detail flyout shows `Destination  Demo Mesh · Stage` as a read-only row,
 with actions Redeploy / Verify / Manage APIs / Remove. No destination control anywhere.
 
 ## The decision that shapes this
@@ -26,7 +26,7 @@ Placement follows scope: the control belongs on the **page**, not the card.
 ## Locked decisions
 
 1. The Integrations page action band gains a destination context line with an inline `Change`:
-   `2 integrations    Kukla Mesh · Stage  Change    [Project Dashboard]  [Add integration]`
+   `2 integrations    Demo Mesh · Stage  Change    [Project Dashboard]  [Add integration]`
 2. It REUSES the treatment already built for the Add Integration modal
    (`.intflow-dest-context`, `DestinationContext` in `AddIntegrationFlowModal.tsx`) — same
    fact, same rendering, both places. Extract it rather than copy it (this is the third
@@ -57,7 +57,7 @@ destination choice never leaves the webview:
 - No handler anywhere writes `project.adobe`.
 
 Observed live: a user created a Console project ("Team Meeting") from inside the modal. Adobe
-really created it; the modal showed it; the Integrations header still read `Kukla Mesh`; and
+really created it; the modal showed it; the Integrations header still read `Demo Mesh`; and
 the integration deployed to the OLD namespace (`285361-kuklameshf4e4-stage`) with no error.
 
 So the control needs BOTH halves built — persistence and migration — not just the UI.

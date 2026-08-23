@@ -6,7 +6,7 @@ An `app-builder-shell` catalog entry the user can pick in Add-an-Integration, wh
 deploys a minimal working app and lands the user in a repo purpose-seeded for AI-first
 development.
 
-## The template repo (external artifact — needs Steve's call on home/name)
+## The template repo (external artifact — needs the maintainer's call on home/name)
 
 Recommended: `skukla/app-builder-shell`, public. Contents:
 

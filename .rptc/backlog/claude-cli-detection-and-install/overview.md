@@ -3,7 +3,7 @@
 **Status:** Draft. UX decisions locked in below; implementation sized but not started. Scope expanded from "detect missing Claude CLI" to "make the AI engine path engine-aware so future Codex support drops in via a config map," following confirmation from the project owner.
 **Filed:** 2026-06-11
 **Updated:** 2026-06-11 with engine-aware framing and the convention-coupling audit results from the codebase sweep.
-**Origin:** Field issue with Leah Rayard. She has Claude Desktop installed (the Electron app) but no Claude Code CLI on PATH. The extension's "AI Ready" badge stayed green, she clicked "Open in Claude Code," and got `zsh: command not found: claude` in a VS Code terminal with no guidance about what's missing or how to fix it.
+**Origin:** Field issue with a field SC. They have Claude Desktop installed (the Electron app) but no Claude Code CLI on PATH. The extension's "AI Ready" badge stayed green, they clicked "Open in Claude Code," and got `zsh: command not found: claude` in a VS Code terminal with no guidance about what's missing or how to fix it.
 
 ## What we're fixing
 
@@ -82,7 +82,7 @@ The sweep found four classes of Claude-specific conventions that the launch/inst
 3. **Skill discovery format** (`.claude/skills/<name>.md` with YAML frontmatter) — Claude Code's specific convention. Whether Codex consumes the same format or a different one is unknown.
 4. **CLAUDE.md pointer files** — root and `.claude/` directory both get a `"see @AGENTS.md\n"` one-liner. Codex's `@FILENAME` import convention (if any) is unknown.
 
-The reasoning for splitting these out: the engine setting + launch path + install path are enough infrastructure to ship the immediate fix (Leah's case + the broader badge accuracy) and to put the seam in the right place. The convention work is non-trivial, blocked on Codex docs we don't have, and shouldn't gate shipping the immediate-need fix.
+The reasoning for splitting these out: the engine setting + launch path + install path are enough infrastructure to ship the immediate fix (the field SC's case + the broader badge accuracy) and to put the seam in the right place. The convention work is non-trivial, blocked on Codex docs we don't have, and shouldn't gate shipping the immediate-need fix.
 
 When Codex wiring lands, it'll be one of two things:
 - **If Codex uses the same conventions** (e.g., reads `.claude/mcp.json` or `@AGENTS.md` natively), nothing in the convention layer needs to change — Codex inherits everything.
@@ -202,7 +202,7 @@ The constraint matters: don't auto-run the curl installer. The "auto-install" co
 Two reasons:
 
 1. **There's no meaningful "jail" available.** The existing "jails" in this extension are an illusion: fnm is installed globally via Homebrew; Node is installed under fnm's per-version directories (not really a jail — it's just version management); aio-cli lives in fnm's Node 20 global bin (jailed to fnm Node 20, but the extension switches Node version per shell-out, so the user can't easily use it from another terminal without `fnm use 20`). That pattern works because aio-cli is a Node package and its version is tied to a Node version. Claude Code is not a Node package — it's a Rust/Node bundle distributed as a brew cask or a self-contained installer. There's no per-Node-version equivalent to lock it to.
-2. **Jailing would conflict with using Claude outside the extension.** If we somehow installed Claude into fnm's Node 20 bin (which we can't, but hypothetically), the user wouldn't have `claude` on their normal PATH. They'd need `fnm use 20` to run it from a fresh terminal. That's a real conflict — Leah probably wants `claude` available in any terminal she opens, not just terminals where she's pre-loaded fnm. Installing globally via Homebrew puts the binary at `/opt/homebrew/bin/claude` (on Apple Silicon) or `/usr/local/bin/claude` (Intel), both on default PATH. No conflict with extension or non-extension use.
+2. **Jailing would conflict with using Claude outside the extension.** If we somehow installed Claude into fnm's Node 20 bin (which we can't, but hypothetically), the user wouldn't have `claude` on their normal PATH. They'd need `fnm use 20` to run it from a fresh terminal. That's a real conflict — the field SC probably wants `claude` available in any terminal they open, not just terminals where they have pre-loaded fnm. Installing globally via Homebrew puts the binary at `/opt/homebrew/bin/claude` (on Apple Silicon) or `/usr/local/bin/claude` (Intel), both on default PATH. No conflict with extension or non-extension use.
 
 **Cross-contamination concern (worth knowing):** Claude's config and auth state live under `~/.claude/`. That directory is shared by every `claude` process the user runs, regardless of how Claude was installed. So if the user installs Claude via our extension and also uses Claude for their own projects, they share auth and CLI history. That's the same situation as if they installed Claude themselves manually — installing through the extension doesn't add any new sharing.
 
@@ -392,7 +392,7 @@ Verify during implementation:
 Target: ship as part of beta.115 or next release window.
 
 Acceptance criteria:
-  - Leah (or anyone) opens a project, sees yellow "AI Setup incomplete"
+  - The field SC (or anyone) opens a project, sees yellow "AI Setup incomplete"
     badge (the SAME yellow badge fnm/Node/aio-cli prereqs would surface
     — visual reuse, not a new badge variant)
   - Clicks the badge → AiCapabilitiesModal opens with a new "Claude

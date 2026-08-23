@@ -68,7 +68,7 @@ export interface ConfigServiceProbeResult {
      *
      * Its own refusal is a finding, not a gap: a roster you cannot read means no
      * admin is visible to ask, which is what makes the Code Sync setup flow the
-     * only remaining path (observed on `leahrayard`, 2026-08-14).
+     * only remaining path (observed on `fieldorg`, 2026-08-14).
      */
     orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
     /**

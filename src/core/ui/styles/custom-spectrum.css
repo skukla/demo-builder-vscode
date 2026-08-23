@@ -2109,7 +2109,7 @@ button[class*="spectrum-Button"][disabled],
 /* One size for the whole row — it sits beside SearchHeader's 12px count, and
    11px uppercase (borrowed from the dashboard's badge rows, where it stands
    alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
-   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
+   reads as a phrase: "Deploys to Demo Mesh · Stage". The three roles separate by
    COLOUR now that size does not: dim label, darker value, blue action. */
 .page-destination-label {
     font-size: 12px;

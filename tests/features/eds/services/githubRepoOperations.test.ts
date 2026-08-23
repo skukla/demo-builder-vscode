@@ -107,17 +107,17 @@ describe('GitHub Repository Operations', () => {
             const service = new GitHubRepoOperations(mockTokenService);
             mockOctokitRequest.mockResolvedValue({
                 data: {
-                    id: 99, name: 'leah-demo',
-                    full_name: 'demo-system-stores/leah-demo',
-                    html_url: 'https://github.com/demo-system-stores/leah-demo',
-                    clone_url: 'https://github.com/demo-system-stores/leah-demo.git',
+                    id: 99, name: 'field-demo',
+                    full_name: 'demo-system-stores/field-demo',
+                    html_url: 'https://github.com/demo-system-stores/field-demo',
+                    clone_url: 'https://github.com/demo-system-stores/field-demo.git',
                     default_branch: 'main',
                 },
             });
 
             // When: createFromTemplate is called with the team org as the target owner
             await service.createFromTemplate(
-                'adobe', 'template', 'leah-demo', false, 'demo-system-stores',
+                'adobe', 'template', 'field-demo', false, 'demo-system-stores',
             );
 
             // Then: GitHub generate API receives the owner override so the
@@ -133,16 +133,16 @@ describe('GitHub Repository Operations', () => {
             const service = new GitHubRepoOperations(mockTokenService);
             mockOctokitRequest.mockResolvedValue({
                 data: {
-                    id: 99, name: 'leah-demo',
-                    full_name: 'leahrayard/leah-demo',
-                    html_url: 'https://github.com/leahrayard/leah-demo',
-                    clone_url: 'https://github.com/leahrayard/leah-demo.git',
+                    id: 99, name: 'field-demo',
+                    full_name: 'fieldorg/field-demo',
+                    html_url: 'https://github.com/fieldorg/field-demo',
+                    clone_url: 'https://github.com/fieldorg/field-demo.git',
                     default_branch: 'main',
                 },
             });
 
             // When: createFromTemplate called without targetOwner
-            await service.createFromTemplate('adobe', 'template', 'leah-demo');
+            await service.createFromTemplate('adobe', 'template', 'field-demo');
 
             // Then: the API call body has no `owner` key — GitHub defaults to
             // creating under the authenticated user

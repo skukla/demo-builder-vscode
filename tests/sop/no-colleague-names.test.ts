@@ -1,24 +1,3 @@
-/*
- * ── NOT INSTALLED YET ───────────────────────────────────────────────────────
- * Parked here rather than in `tests/sop/` because it is currently RED: the
- * corpus still names a second colleague across roughly thirty sites, and that
- * redaction needs decisions this file cannot make — whether an org handle
- * inside a real reproduction is redactable, whether shipped CHANGELOG entries
- * are in scope, and whether a stable pseudonym should keep the thread between
- * regression tests about one incident. It also flags the maintainer's own
- * name, which may well be fine.
- *
- * Landing a red test breaks CI, and quarantining it would violate this
- * project's own no-soft-deprecation rule. So it waits here until the corpus is
- * clean, then moves to `tests/sop/no-colleague-names.test.ts` unchanged. This
- * tree is outside the runner's `roots`, so nothing collects it meanwhile.
- *
- * Verified working: it found a second colleague that a name-grep could not.
- * Known limit: it matches attribution CONSTRUCTIONS, so it caught 3 of ~30
- * mentions — narrative prose ("field issue with X") is invisible to it.
- * ────────────────────────────────────────────────────────────────────────────
- */
-
 /**
  * SOP: prose attributes facts to a ROLE, never to a named person.
  *
@@ -28,9 +7,15 @@
  * colleague's name. **This repository is public and `.rptc/` is tracked**, so a name
  * written into a doc is a name published.
  *
- * That rule had no enforcement, and between being written and 2026-08-23 it was
- * broken fourteen times across nine files — service-author attributions in docs, in
- * plans, and in two test comments. This is the enforcement.
+ * That rule had no enforcement. Between being written and 2026-08-23 it was broken
+ * across roughly ninety sites and fifty-nine files — three people, in docs, plans,
+ * skills, shipped CHANGELOG entries, source comments and test fixtures. All were
+ * rewritten to roles on 2026-08-23. This is the enforcement that keeps it that way.
+ *
+ * NOT in scope, deliberately: `package.json`'s `author` and `publisher`, and the
+ * `skukla/*` repository URLs the code actually resolves. That is the project's own
+ * published address, not an attribution — redacting it would break the product and
+ * protect nobody.
  *
  * WHY A HEURISTIC RATHER THAN A DENYLIST. The obvious check is a list of names to
  * refuse. It cannot exist here: a denylist of real colleagues committed to a public

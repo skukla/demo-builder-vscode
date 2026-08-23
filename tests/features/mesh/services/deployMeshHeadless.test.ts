@@ -130,10 +130,10 @@ describe('deployMeshHeadless', () => {
     // targeting. `aio`'s org/project/workspace selection is a process-global the
     // extension deliberately stopped writing (Phase 4a), so an untargeted `aio`
     // child falls back to whatever some earlier session left in `aio console
-    // where` — here a deleted project, "Kukla Mesh Test". The CLI reported it
+    // where` — here a deleted project, "Demo Mesh Test". The CLI reported it
     // plainly in stdout:
     //
-    //     Selected project: Kukla Mesh Test
+    //     Selected project: Demo Mesh Test
     //     The specified organization, project, and workspace combination is
     //     invalid or disabled.
     //

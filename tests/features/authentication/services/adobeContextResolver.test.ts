@@ -234,10 +234,10 @@ describe('AdobeContextResolver', () => {
         it('returns undefined when the CLI-persisted project is not in the list', async () => {
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({
-                project: 'Kukla Mesh Test',
+                project: 'Demo Mesh Test',
             });
             mockFetcher.getProjects.mockResolvedValue([
-                { id: 'proj1', name: 'Kukla Mesh', title: 'Kukla Mesh' },
+                { id: 'proj1', name: 'Demo Mesh', title: 'Demo Mesh' },
             ]);
 
             const result = await resolver.getCurrentProject();

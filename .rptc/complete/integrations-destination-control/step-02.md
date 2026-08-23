@@ -76,7 +76,7 @@ opposite is not.
 The move deploys blind. Nothing lists what is already deployed at the destination,
 and that matters because **two local projects can point at one Adobe workspace** —
 observed live 2026-08-07, when re-pointing `my-commerce-demo` landed it on the same
-`Kukla Mesh · Stage` as `demo-builder-test`.
+`Demo Mesh · Stage` as `demo-builder-test`.
 
 Consequences, none of them currently detected:
 

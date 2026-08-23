@@ -195,7 +195,7 @@ describe('EDS Handlers', () => {
         });
 
         it('stale-session recovery: validateToken 401 → force fresh OAuth → fresh token stored', async () => {
-            // The leahrayard scenario: VS Code returned a cached session whose
+            // The fieldorg scenario: VS Code returned a cached session whose
             // token has been revoked since (user cleared the OAuth app in
             // GitHub Settings, password reset, etc.). validateToken comes back
             // invalid; the handler triggers `forceNewSession` to mint a new
@@ -203,8 +203,8 @@ describe('EDS Handlers', () => {
             const vscode = await import('vscode');
             const getSession = vscode.authentication.getSession as jest.Mock;
             getSession
-                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'leahrayard' } })
-                .mockResolvedValueOnce({ accessToken: 'fresh-token', account: { label: 'leahrayard' } });
+                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'fieldorg' } })
+                .mockResolvedValueOnce({ accessToken: 'fresh-token', account: { label: 'fieldorg' } });
             mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
 
             const { handleGitHubOAuth } = await import('@/features/eds/handlers/edsGitHubHandlers');
@@ -226,10 +226,10 @@ describe('EDS Handlers', () => {
             // token was just minted, a transient 401 here would re-trigger
             // the prompt forever.
             expect(mockGitHubTokenService.validateToken).toHaveBeenCalledTimes(1);
-            // UI sees the post-reauth user (still leahrayard).
+            // UI sees the post-reauth user (still fieldorg).
             expect(mockContext.sendMessage).toHaveBeenCalledWith('github-auth-complete', expect.objectContaining({
                 isAuthenticated: true,
-                user: expect.objectContaining({ login: 'leahrayard' }),
+                user: expect.objectContaining({ login: 'fieldorg' }),
             }));
         });
 
@@ -237,7 +237,7 @@ describe('EDS Handlers', () => {
             const vscode = await import('vscode');
             const getSession = vscode.authentication.getSession as jest.Mock;
             getSession
-                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'leahrayard' } })
+                .mockResolvedValueOnce({ accessToken: 'stale-cached-token', account: { label: 'fieldorg' } })
                 .mockResolvedValueOnce(null); // user cancelled the forced re-auth prompt
             mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
 

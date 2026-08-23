@@ -294,7 +294,7 @@ describe('AdobeEntityFetcher', () => {
         });
 
         it('returns a REAL empty list as [] (distinguishable from a failed read)', async () => {
-            // Leah's case (2026-08-13): the SDK answered successfully with zero
+            // the field SC's case (2026-08-13): the SDK answered successfully with zero
             // orgs. That must come back as [], not undefined — the dashboard
             // check maps [] to the org-mismatch warning (forced Switch IMS Org).
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);

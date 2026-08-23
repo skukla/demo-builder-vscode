@@ -1,6 +1,6 @@
 # First App Builder app — AI-built shell + runtime API access
 
-**Status:** Planning (created 2026-07-09 from Steve's direction during the slice-3 staleness research)
+**Status:** Planning (created 2026-07-09 from the maintainer's direction during the slice-3 staleness research)
 **Supersedes as "first app":** the package-bound slice-3 example binding (which research showed
 has no meaningful activation data — see step-05 and
 `.rptc/research/appbuilder-slice3-staleness/research.md`).
@@ -57,7 +57,7 @@ This exposes one real capability gap and one tooling gap:
       Playwright stays EDS-gated.
 - [x] **Step 2 — Shell template repo + catalog entry** (`step-02.md`): catalog entry +
       tests landed; shell content authored and committed locally (scratchpad) — **repo
-      creation pending Steve** (`gh repo create` of a PUBLIC repo is blocked in auto mode;
+      creation pending the maintainer** (`gh repo create` of a PUBLIC repo is blocked in auto mode;
       run: `gh repo create skukla/app-builder-shell --public --source <scratchpad>/app-builder-shell --push`).
       Found+fixed a real regression the unrestricted entry exposed:
       `ensureMeshApiSubscribed` treated "any catalog row matches the axes" as "a mesh
@@ -73,14 +73,14 @@ This exposes one real capability gap and one tooling gap:
 - [~] **Step 4 — AI guidance + end-to-end verification** (`step-04.md`): guidance DONE
       (pending commit) — `extend-app-builder-app.md` skill (conditional on
       `projectNeedsAppBuilderTooling`), AGENTS.md "Adding Adobe API Access" section,
-      `AI_CONTEXT_VERSION` → 3. **Live Firefly walkthrough remains** (needs Steve's F5
+      `AI_CONTEXT_VERSION` → 3. **Live Firefly walkthrough remains** (needs the maintainer's F5
       window; checklist in step-04.md).
 - [x] **Step 5 — Backlog corrections from the slice-3 research** (`step-05.md`): DONE —
       package-bound item rewritten (gated, corrected facts, real scope), persistence item
       pruned to rehydration + the ReviewStep visibility bug, backlog README synced, and
       the two binding fields declared in `app-builder-components.schema.json`.
 - [x] **Step 6 — API assignment UI in the Integrations sub-steps** (`step-06.md`, added
-      2026-07-09 at Steve's direction): **ABSORBED 2026-07-10 by
+      2026-07-09 at the maintainer's direction): **ABSORBED 2026-07-10 by
       `.rptc/plans/integrations-flow-redesign/`** — the wizard facet shipped as the
       `ApiAccessStage` in the Add Integration modal journey (not inside the since-deleted
       `AddIntegrationModal`); dashboard "Manage APIs" shipped as `ManageApisModal`;

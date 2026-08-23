@@ -11,7 +11,7 @@ was to replace the manual capture with programmatic capture while keeping the
 AI-driven block authoring that already worked.
 
 Deferred because **Mod Agent access requires Adobe provisioning** (Slack
-channel `#aem-agent-experience-modernization-users`, ~10 min). Steve has
+channel `#aem-agent-experience-modernization-users`, ~10 min). The maintainer has
 requested access; users will need to request it too. Phase 1 ships both
 workflows but Workflow A is dead UX until access lands, so work pauses until
 that provisioning is in place AND the team has used Mod Agent enough to know
@@ -192,7 +192,7 @@ Pick up when real demand surfaces:
 
 > Pick up the EDS site-scraping plan in
 > `.rptc/backlog/2026-05-28-eds-site-scraping.md`. **Phase 0 first** — verify
-> Mod Agent access at `aemcoder.adobe.io` (Steve's request was filed
+> Mod Agent access at `aemcoder.adobe.io` (the maintainer's request was filed
 > 2026-05-28; check status). If access is live, ship Phase 1 (config +
 > markdown only, ~1 day): the `@playwright/mcp` prereq, the
 > `ai-defaults.json` wiring, the six skills, and the `Open AEM Modernization

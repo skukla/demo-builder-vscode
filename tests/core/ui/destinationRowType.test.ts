@@ -7,7 +7,7 @@
  *   DEPLOYS TO           11px    uppercase, borrowed from the dashboard's badge
  *                                rows, where it sits alone rather than beside a
  *                                12px count
- *   Kukla Mesh · Stage   12.5px  (.dest-context) — matches nothing in the scale
+ *   Demo Mesh · Stage   12.5px  (.dest-context) — matches nothing in the scale
  *   Change               12px    (.inline-action-link)
  *
  * 11 / 12 / 12.5 / 12 on one line is what "slightly off" was.

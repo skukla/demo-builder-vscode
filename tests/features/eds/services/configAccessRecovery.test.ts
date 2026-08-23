@@ -41,9 +41,9 @@ const logger: Logger = {
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
 
 const SITE = {
-    owner: 'leahrayard',
-    repo: 'leah-b2b-demo',
-    contentSourceUrl: 'https://content.da.live/leahrayard/leah-b2b-demo/',
+    owner: 'fieldorg',
+    repo: 'field-b2b-demo',
+    contentSourceUrl: 'https://content.da.live/fieldorg/field-b2b-demo/',
     userEmail: 'teammate@example.test',
 };
 
@@ -127,7 +127,7 @@ describe('logConfigAccessState', () => {
 
         expect(state).toBe('granted');
         expect(logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('leahrayard/leah-b2b-demo'),
+            expect.stringContaining('fieldorg/field-b2b-demo'),
         );
         expect(logger.info).toHaveBeenCalledWith(expect.stringMatching(/admin access confirmed/i));
     });

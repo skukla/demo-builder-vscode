@@ -2,7 +2,7 @@
 
 **Status:** Draft. Root cause confirmed via field data; UX decisions locked; ready to implement.
 **Filed:** 2026-06-11
-**Origin:** Field issue with Leah Rayard. Her CitiSignal storefront created successfully but the DA.live Library never showed the AEM Assets entry. Steve's reset-of-his-own-storefront works (Library shows AEM Assets). Both flows go through the same code (`executeEdsPipeline` → `applyDaLiveOrgConfigSettings` → `DaLiveContentOperations.applyOrgConfig`), so the divergence had to be at runtime, not in the code path. Diagnostic confirmed it.
+**Origin:** Field issue with a field SC. Their CitiSignal storefront created successfully but the DA.live Library never showed the AEM Assets entry. The maintainer's reset of their own storefront works (Library shows AEM Assets). Both flows go through the same code (`executeEdsPipeline` → `applyDaLiveOrgConfigSettings` → `DaLiveContentOperations.applyOrgConfig`), so the divergence had to be at runtime, not in the code path. Diagnostic confirmed it.
 
 ## Root cause
 
@@ -14,16 +14,16 @@ The code at lines 2418-2446 handles the GET response with three branches:
 - **404** → "No existing config — safe to create fresh" (because there are no permissions to lose if nothing exists)
 - **anything else** → bail out with `{ success: false }` and a generic error string
 
-The caller (`applyDaLiveOrgConfigSettings` in `edsHelpers.ts:634`) treats failure as non-fatal — logs a warn and the pipeline continues — so the storefront create succeeds even when the binding write fails. Which is why Leah's storefront shipped but her DA.live Library has no AEM Assets entry.
+The caller (`applyDaLiveOrgConfigSettings` in `edsHelpers.ts:634`) treats failure as non-fatal — logs a warn and the pipeline continues — so the storefront create succeeds even when the binding write fails. Which is why the field SC's storefront shipped but their DA.live Library has no AEM Assets entry.
 
 **The actual DA.live behavior:** when `/config/<org>/` has never been written for a user, DA.live returns **401, not 404**. Most likely because the endpoint requires owner-auth and a non-existent config has no owner record to authenticate against — so DA.live can't distinguish "not allowed" from "not yet created" and defaults to 401.
 
 The existing 404 branch was correct in spirit (handle "config doesn't exist yet") but wrong in code (it only matches 404, never the 401 that real first-time users actually see).
 
 **Diagnostic confirmation:**
-- Steve has a prior DA.live presence from earlier projects. His `GET /config/skukla/` → 200 with existing JSON. Read-modify-write succeeds. Binding lands. Library shows AEM Assets. ✓
-- Leah was a first-time DA.live user when she created. Her `GET /config/leahrayard/` → 401 (verified by Leah herself opening the URL in her browser). Extension bailed at line 2434. Binding never wrote. Library has no AEM Assets. ✗
-- Her `demoBuilder.daLive.aemAuthorUrl` setting is populated (confirmed by Steve), so the precondition for the binding to write was met — only the read failed.
+- The maintainer has a prior DA.live presence from earlier projects. Their `GET /config/skukla/` → 200 with existing JSON. Read-modify-write succeeds. Binding lands. Library shows AEM Assets. ✓
+- The field SC was a first-time DA.live user when they created. Their `GET /config/fieldorg/` → 401 (verified by the field SC opening the URL in their own browser). Extension bailed at line 2434. Binding never wrote. Library has no AEM Assets. ✗
+- Their `demoBuilder.daLive.aemAuthorUrl` setting is populated (confirmed by the maintainer), so the precondition for the binding to write was met — only the read failed.
 
 This pattern almost certainly applies to **every first-time DA.live SC** who's joining the team. Maddie too, once she gets past her own auth gap from earlier in this thread.
 
@@ -115,9 +115,9 @@ This step has no behavior change. Lints clean, tests pass, the function lives in
 After both steps ship:
 
 1. A first-time DA.live SC (e.g., Maddie or any future colleague who hasn't created a project before) creates a CitiSignal demo through the wizard. The wizard completes normally.
-2. They open `https://da.live` and navigate to their site's content. The Library sidebar shows both **Blocks** and **AEM Assets** entries — matching what Steve sees today after reset.
+2. They open `https://da.live` and navigate to their site's content. The Library sidebar shows both **Blocks** and **AEM Assets** entries — matching what the maintainer sees today after reset.
 3. Their `https://admin.da.live/config/<their-namespace>/` endpoint, after the create, returns 200 with a JSON body that includes a row `{ key: "aem.repositoryId", value: "<aem-author-host>" }`.
-4. Steve's existing reset and republish flows still work (no regression).
+4. The maintainer's existing reset and republish flows still work (no regression).
 5. An SC who attempts to create against an org they don't own gets `[EDS Config] Failed to apply settings: Cannot read or write to org config (401): verify DA.live ownership of "<org>".` in the debug log, and their storefront still creates (binding write is non-fatal, per current behavior).
 
 ## Risk + rollback
@@ -142,7 +142,7 @@ After both steps ship:
 
 - **The wizard's "Assets Enabled" toggle wiring** (raised earlier in this thread). Today the toggle controls the storefront-level `commerce-assets-enabled` flag in `config.json` but does not gate the DA.live binding write. They're decoupled by design and this fix doesn't couple them. If you want the toggle to gate the binding write, that's a separate decision — file as its own plan if it becomes a real requirement.
 - **Pre-flight write-access verification at auth time.** The picker plan (parked on `feature/eds-namespace-picker`) deliberately removed the upfront write-access gate. This fix's HEAD probe is narrower — only on the specific 401 read branch, only as a safety check before "create fresh." We are NOT reintroducing a gate that runs before every create.
-- **Steve's environment-checking workflow.** Steve's storefronts work because of his prior DA.live presence. Nothing in this fix needs to change his experience.
+- **The maintainer's environment-checking workflow.** The maintainer's storefronts work because of their prior DA.live presence. Nothing in this fix needs to change that experience.
 
 ## Kickoff prompt
 

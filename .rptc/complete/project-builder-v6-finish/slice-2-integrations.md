@@ -1,6 +1,6 @@
 # Slice 2 — Integrations area: tile surface + API Mesh tile (v6 R2)
 
-**Status:** Plan. Scope locked with Steve: build the **prototype's Mesh + Experience Platform tile surface** (NOT the richer typed-Add / App-Builder-App model). Do **Mesh first** (this slice); Experience Platform is a follow-up slice.
+**Status:** Plan. Scope locked with the maintainer: build the **prototype's Mesh + Experience Platform tile surface** (NOT the richer typed-Add / App-Builder-App model). Do **Mesh first** (this slice); Experience Platform is a follow-up slice.
 **Design source:** `.rptc/research/project-builder-ux/prototype-v6-interactive.html` → `renderIntegrations()`.
 **Research:** infra map gathered 2026-06-26 (mesh toggle, Adobe I/O provisioning, sign-in gate, area plumbing) — see findings inline below.
 

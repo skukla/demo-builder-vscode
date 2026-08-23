@@ -192,7 +192,7 @@ Codebase (our reuse points):
 
 ## Spike log (2026-07-02) — live validation against Adobe Demo System
 
-Ran the `aio` CLI against **Adobe Demo System** (org `285361`) / **Kukla Mesh Test** (project
+Ran the `aio` CLI against **Adobe Demo System** (org `285361`) / **Demo Mesh Test** (project
 `4566206088345706102`, workspaces Production `…745404` + Stage `…745405`). Findings, in order:
 
 1. **`aio event` is bundled** — `aio event --help` works out of the box (topics: `provider`,
@@ -212,13 +212,13 @@ Ran the `aio` CLI against **Adobe Demo System** (org `285361`) / **Kukla Mesh Te
    `createOAuthServerToServerCredential`, wrapped list-first by `ensureOAuthCredentialId`; the SDK libs
    (`@adobe/aio-lib-console`, `@adobe/aio-lib-ims`) are already dependencies. So the S2S requirement is
    an automatable step, not a wall.
-6. **Kukla Mesh Test is mesh-only** → both workspaces lack S2S → it holds **no** event providers, so
+6. **Demo Mesh Test is mesh-only** → both workspaces lack S2S → it holds **no** event providers, so
    it can't reproduce the provider scenario without first adding a credential. (Reassuring for the
    feature: no-S2S ⟹ nothing to tear down.)
 
 **Still OPEN (needs a live provider to confirm):** the exact field in `aio event provider list --json`
 that ties a provider to a workspace (for filtering the org-wide list). Blocked in this session because
-Kukla Mesh Test has no S2S credential / no providers. Options to close it: (a) add an S2S credential to
+Demo Mesh Test has no S2S credential / no providers. Options to close it: (a) add an S2S credential to
 a workspace via the Console UI, then create a throwaway provider; (b) script `createOAuthServerToServerCredential`
 the way the feature will; or (c) confirm during implementation against a workspace that has a real provider.
 
@@ -233,7 +233,7 @@ the way the feature will; or (c) confirm during implementation against a workspa
 
 ## Spike close (2026-07-03) — full end-to-end delete executed
 
-Completed the flow live: created an S2S credential + throwaway provider on Kukla Mesh Test / Stage,
+Completed the flow live: created an S2S credential + throwaway provider on Demo Mesh Test / Stage,
 reproduced the delete-block, tore down, and deleted the project (user-approved). All findings:
 
 1. **Bare S2S credential 403s on the Events API.** `createOAuthServerToServerCredential` alone is not
@@ -259,7 +259,7 @@ reproduced the delete-block, tore down, and deleted the project (user-approved).
    is OPAQUE — it never mentions event providers — which is exactly why the feature must tear down
    pre-emptively rather than parse the failure.
 5. **Causality proven.** `deleteProvider(orgId, projectId, workspaceId, providerId)` → retry
-   `deleteProject` → **OK**. Kukla Mesh Test deleted 2026-07-03.
+   `deleteProject` → **OK**. Demo Mesh Test deleted 2026-07-03.
 6. **What does NOT block deletion:** the deployed API Mesh and the S2S credential — both were still
    present at delete time. Only the event provider blocked. (No registrations existed; with
    registrations the documented order registrations → providers still applies.)

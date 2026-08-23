@@ -10,7 +10,7 @@
  * a storefront reset (which repeats the same refused call), and stopped. It was
  * also gated to new repos by assumption — `storefrontSetupPhase3` only retried a
  * 403 when `repoMode === 'new'` — so an existing project had no path whatsoever.
- * That is what left `leahrayard/leah-b2b-demo` unable to serve a single PDP.
+ * That is what left `fieldorg/field-b2b-demo` unable to serve a single PDP.
  *
  * ## The one thing we cannot promise
  *
@@ -206,7 +206,7 @@ export async function announceConfigAccess(
  *
  * The role otherwise exists only as a side effect of whoever installed the Code
  * Sync App — which is why an older site can refuse its own owner with no in-app
- * way back (2026-08-13, leah-b2b-demo). Writing it here makes the grant a fact
+ * way back (2026-08-13, field-b2b-demo). Writing it here makes the grant a fact
  * of registration.
  *
  * MERGES, never replaces: `ensureSiteAdmin` reads first, so a site that already

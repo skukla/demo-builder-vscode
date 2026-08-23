@@ -14,7 +14,7 @@
  *   A caller who gets 403 reading `config/{org}/sites/{site}.json` gets 403 on
  *   `.../access/admin.json` too, so a self-heal cannot exist — it would be the
  *   extension escalating its own privilege.
- * - Authorization is per-ORG. An admin of `skukla` is refused on `leahrayard`,
+ * - Authorization is per-ORG. An admin of `skukla` is refused on `fieldorg`,
  *   so "ask a teammate" only works for a teammate already inside that org.
  *
  * The role itself is minted for the GitHub user who installs the AEM Code Sync

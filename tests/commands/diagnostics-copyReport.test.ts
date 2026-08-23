@@ -233,7 +233,7 @@ describe('buildSummaryLines', () => {
     });
 
     it('says the roster is UNREADABLE rather than printing an empty admin list', () => {
-        // Leah's shape. An empty list would read as "this org has no admins",
+        // the field SC's shape. An empty list would read as "this org has no admins",
         // a different and much scarier claim than "you cannot see them".
         const report = makeReport({
             configService: {

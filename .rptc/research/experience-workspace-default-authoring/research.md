@@ -4,7 +4,7 @@
 - **Type:** Hybrid (web + codebase)
 - **Status:** Complete — ready for `/rptc:plan`
 - **Target release:** .116 (one feature)
-- **Decision owner:** Steve
+- **Decision owner:** The maintainer
 
 ---
 
@@ -40,7 +40,7 @@ Primary source: <https://docs.da.live/about/early-access/experience-workspace>
 
 ## Resolved: the EW alpha URL
 
-Steve + Leah's working URL was `https://da.live/canvas?nx=exp-workspace#/leahrayard/leah-b2b-demo/index.html`, which showed *"You are loading an outdated demo version of Experience Workspace."*
+The maintainer + the field SC's working URL was `https://da.live/canvas?nx=exp-workspace#/fieldorg/field-b2b-demo/index.html`, which showed *"You are loading an outdated demo version of Experience Workspace."*
 
 - `?nx=exp-workspace` is a **branch override** pointing at the stale `exp-workspace--da-nx--adobe.aem.live` demo build — the source of the "outdated" warning.
 - The docs (verified 2026-06-11) describe the current alpha as the **param-less** form. They mention **no** `?nxver`/`?nx` parameter. Plain `da.live/canvas` serves the current alpha.
@@ -48,8 +48,8 @@ Steve + Leah's working URL was `https://da.live/canvas?nx=exp-workspace#/leahray
 - Path segment is real and includes the doc (e.g. `/index.html`). Include a path; default to the site root if none is stored.
 
 **Browser-verified 2026-06-11:**
-- `https://da.live/canvas#/skukla/citisignal-b2b/index.html` (Steve's own site) loads the EW shell with no "outdated" warning; Content view loads. Confirms param-less = current alpha.
-- Loading Leah's site (`da.live/canvas#/leahrayard/leah-b2b-demo/index.html`) as Steve showed Content view "Failed to load (403)" — a **cross-account DA permission artifact**, not a product gap (Steve isn't on Leah's org permission sheet). Not a concern for the feature.
+- `https://da.live/canvas#/skukla/citisignal-b2b/index.html` (the maintainer's own site) loads the EW shell with no "outdated" warning; Content view loads. Confirms param-less = current alpha.
+- Loading the field SC's site (`da.live/canvas#/fieldorg/field-b2b-demo/index.html`) as the maintainer showed Content view "Failed to load (403)" — a **cross-account DA permission artifact**, not a product gap (the maintainer isn't on the field SC's org permission sheet). Not a concern for the feature.
 - **Layout (WYSIWYG) view renders blank** on a storefront without Quick Edit wired — this is the exact symptom the Quick Edit vendoring step fixes.
 
 ---

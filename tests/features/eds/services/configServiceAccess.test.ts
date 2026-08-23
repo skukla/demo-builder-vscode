@@ -90,7 +90,7 @@ describe('readOrgAdmins', () => {
         // different (and much scarier) claim than "you cannot see them".
         mockFetchOnce(403);
 
-        const result = await readOrgAdmins(tokenProvider, 'leahrayard', logger);
+        const result = await readOrgAdmins(tokenProvider, 'fieldorg', logger);
 
         expect(result.status).toBe('not_authorized');
         expect(result.admins).toBeUndefined();
@@ -164,8 +164,8 @@ describe('the grant wire format (through ensureSiteAdmin)', () => {
 
         const result = await ensureSiteAdmin(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'fieldorg',
+            'field-b2b-demo',
             'teammate@example.test',
             logger,
         );
@@ -208,8 +208,8 @@ describe('probeConfigWriteAccess — the oracle', () => {
 
         const result = await probeConfigWriteAccess(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'fieldorg',
+            'field-b2b-demo',
             logger,
         );
 
@@ -233,8 +233,8 @@ describe('probeConfigWriteAccess — the oracle', () => {
 
         const result = await probeConfigWriteAccess(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'fieldorg',
+            'field-b2b-demo',
             logger,
         );
 
@@ -274,18 +274,18 @@ describe('buildCodeSyncSetupUrl', () => {
         // org/site/url/user; omitting `url` drops the content source and the
         // Content step lands empty.
         const url = buildCodeSyncSetupUrl({
-            owner: 'leahrayard',
-            repo: 'leah-b2b-demo',
-            contentSourceUrl: 'https://content.da.live/leahrayard/leah-b2b-demo/',
+            owner: 'fieldorg',
+            repo: 'field-b2b-demo',
+            contentSourceUrl: 'https://content.da.live/fieldorg/field-b2b-demo/',
             userEmail: 'teammate@example.test',
         });
 
         const parsed = new URL(url);
         expect(parsed.origin + parsed.pathname).toBe('https://tools.aem.live/bot/setup');
-        expect(parsed.searchParams.get('org')).toBe('leahrayard');
-        expect(parsed.searchParams.get('site')).toBe('leah-b2b-demo');
+        expect(parsed.searchParams.get('org')).toBe('fieldorg');
+        expect(parsed.searchParams.get('site')).toBe('field-b2b-demo');
         expect(parsed.searchParams.get('url')).toBe(
-            'https://content.da.live/leahrayard/leah-b2b-demo/',
+            'https://content.da.live/fieldorg/field-b2b-demo/',
         );
         expect(parsed.searchParams.get('user')).toBe('teammate@example.test');
     });
@@ -386,8 +386,8 @@ describe('ensureSiteAdmin', () => {
 
         const result = await ensureSiteAdmin(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'fieldorg',
+            'field-b2b-demo',
             'teammate@example.test',
             logger,
         );

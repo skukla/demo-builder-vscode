@@ -161,7 +161,7 @@ is a fine planning assumption and a bad runtime one, so keep the graceful `AUTH_
 path rather than assuming creation succeeds.
 
 Measured on the owner's machine: org `285361` already holds TWO I/O projects — the discovery
-service's, and `KuklaMeshf4E4` created **per demo project** for the mesh. **The extension
+service's, and `DemoMeshf4E4` created **per demo project** for the mesh. **The extension
 already creates per-project I/O projects in some flows**; what is missing is only the case
 where nothing else triggers one. `bodea-template-test` sits in `285361` with no I/O project
 at all — the reported failure, visible on disk.

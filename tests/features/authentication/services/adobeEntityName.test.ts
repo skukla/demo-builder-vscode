@@ -13,7 +13,7 @@ import {
 
 describe('deriveAdobeEntityName', () => {
     it('strips spaces so a friendly title becomes an alphanumeric name', () => {
-        expect(deriveAdobeEntityName('Kukla Test', 'ZZZZ')).toBe('KuklaTestZZZZ');
+        expect(deriveAdobeEntityName('Demo Test', 'ZZZZ')).toBe('DemoTestZZZZ');
     });
 
     it('strips punctuation, hyphens, and underscores', () => {
@@ -45,7 +45,7 @@ describe('deriveAdobeEntityName', () => {
     });
 
     it('is fully alphanumeric for a typical title (default random suffix)', () => {
-        expect(deriveAdobeEntityName('Kukla Test')).toMatch(/^[A-Za-z0-9]+$/);
+        expect(deriveAdobeEntityName('Demo Test')).toMatch(/^[A-Za-z0-9]+$/);
     });
 });
 

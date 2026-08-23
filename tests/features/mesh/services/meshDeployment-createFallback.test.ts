@@ -42,7 +42,7 @@ jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
 
 const ALREADY_HAS_MESH_STDOUT =
     'Selected organization: Adobe Demo System\n' +
-    'Selected project: Kukla Mesh Test\n' +
+    'Selected project: Demo Mesh Test\n' +
     'Select workspace: Stage\n' +
     'The provided mesh contains placeholders. Starting mesh interpolation process.\n' +
     'Selected org, project and workspace already has a mesh\n';

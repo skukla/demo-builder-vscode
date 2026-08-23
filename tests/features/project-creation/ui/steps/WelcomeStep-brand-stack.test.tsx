@@ -331,7 +331,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
         });
 
         it('clears both packages’ configDefault keys from componentConfigs on a package change', () => {
-            // Regression (2026-08-13, leah-b2b-demo): package defaults are FILL-only in
+            // Regression (2026-08-13, field-b2b-demo): package defaults are FILL-only in
             // useComponentConfig, so a package change must clear the outgoing and
             // incoming packages' configDefault keys here — otherwise the old brand's
             // store codes survive the switch and the new brand's never apply. Keys the

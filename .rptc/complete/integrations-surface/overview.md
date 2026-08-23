@@ -79,7 +79,7 @@ evidence, not skipped. See "Decisions to confirm" #0.
 3. **Destination banner → RESTORE.** The integrations-grid plan cut it as YAGNI because the
    "workspace name [is] not in init payload". That premise is stale — `.demo-builder.json`
    carries `adobe.projectTitle` and `adobe.workspaceTitle` (verified on `demo-builder-test`:
-   "Kukla Mesh" / "Stage"). Renders once above the grid with a Change affordance, and repeats as
+   "Demo Mesh" / "Stage"). Renders once above the grid with a Change affordance, and repeats as
    a `Destination` row in the detail panel.
 
 ## What to do with `feature/integrations-grid`

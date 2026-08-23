@@ -1,7 +1,7 @@
 # Config Service admin access — detect, recover, verify, prevent
 
 **Promoted from backlog 2026-08-14** (research: `research.md`, all API facts
-live-verified that day). Trigger: `leahrayard/leah-b2b-demo` could not register
+live-verified that day). Trigger: `fieldorg/field-b2b-demo` could not register
 its BYOM overlay — every `/config/*` call refused `403 [admin] not authorized`
 — so no PDP could render, and the extension's only response was prose telling
 her to reset, which repeats the same refused call.
@@ -10,13 +10,13 @@ her to reset, which repeats the same refused call.
 
 **Nobody can grant themselves, and no outsider can grant them either.**
 
-| Probe (2026-08-14, Steve's identity, admin on `skukla`) | Result |
+| Probe (2026-08-14, the maintainer's identity, admin on `skukla`) | Result |
 |---|---|
 | `GET config/skukla/sites/bodea-source.json` | 200 |
 | `POST config/skukla/sites/bodea-source/access/admin.json` | 200, persisted |
-| `GET config/leahrayard.json` | **403 `[admin] not authorized`** |
-| `GET config/leahrayard/sites/leah-b2b-demo.json` | **403** |
-| `GET config/leahrayard/sites/leah-b2b-demo/access/admin.json` | **403** |
+| `GET config/fieldorg.json` | **403 `[admin] not authorized`** |
+| `GET config/fieldorg/sites/field-b2b-demo.json` | **403** |
+| `GET config/fieldorg/sites/field-b2b-demo/access/admin.json` | **403** |
 
 Two conclusions, both load-bearing:
 
@@ -30,7 +30,7 @@ Also established: **the org roster is the blanket grant.** `bodea-source` has
 `access.admin.role = {}` (empty) yet its owner has full access, because
 `config/{org}.json` lists `{email, roles:["admin"]}`. Site-level access is
 ADDITIVE on top. So a missing org roster entry refuses every site in the org —
-which is Leah's shape.
+which is the field SC's shape.
 
 **Therefore the only bootstrap for a user with no role is a flow that writes with
 authority that is not theirs** — the AEM Code Sync bot. `tools.aem.live/bot/setup`
@@ -50,7 +50,7 @@ Nothing technical gates recovery to new repos. Today the Code Sync install URL i
 surfaced only for `repoMode === 'new'` (`RepoSelectionInline.tsx`) and the 403
 propagation retry is gated on `repoMode === 'new'`
 (`storefrontSetupPhase3.ts`) — both by ASSUMPTION that an existing repo's 403 is
-permanent. That assumption is what left Leah with no path. Un-gating it is small.
+permanent. That assumption is what left the field SC with no path. Un-gating it is small.
 
 What we cannot promise is that the Adobe flow re-mints a role for an org that
 already exists. So the design **verifies instead of assuming**: it polls the
@@ -72,7 +72,7 @@ the leg, never the wish.
 
 Steps 01–02 give a refused user a verified route where they previously had none.
 The recovery is NOT gated on `repoMode`, so an edit/republish reaches it exactly
-as a new project does — the gap that left Leah stranded.
+as a new project does — the gap that left the field SC stranded.
 
 All seven steps have shipped. Four safety properties are load-bearing and
 pinned by tests:

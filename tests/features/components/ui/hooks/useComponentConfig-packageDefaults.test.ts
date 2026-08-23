@@ -1,7 +1,7 @@
 /**
  * useComponentConfig — package config defaults vs saved store scope.
  *
- * Regression suite for the 2026-08-13 field report (leah-b2b-demo): opening the
+ * Regression suite for the 2026-08-13 field report (field-b2b-demo): opening the
  * edit wizard on a citisignal-package project stomped the user's saved store
  * scope (website/store/store view chosen in Business Structure) back to the
  * package's configDefaults (citisignal_*), and the republished config.json
@@ -113,7 +113,7 @@ const CITISIGNAL_DEFAULTS = {
     ACCS_STORE_VIEW_CODE: 'citisignal_us',
 };
 
-/** A user-selected Business Structure scope (Leah's Bodea site). */
+/** A user-selected Business Structure scope (the field SC's Bodea site). */
 const SAVED_BODEA_SCOPE = {
     ACCS_WEBSITE_CODE: 'base',
     ACCS_STORE_CODE: 'main_website_store',

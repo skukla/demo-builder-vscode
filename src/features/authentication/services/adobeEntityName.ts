@@ -32,9 +32,9 @@ export function randomNameSuffix(length: number = SUFFIX_LENGTH): string {
 /**
  * Derive an alphanumeric Adobe I/O machine name from a free-form title.
  *
- * @param title - the free-form title the user typed (e.g. "Kukla Test")
+ * @param title - the free-form title the user typed (e.g. "Demo Test")
  * @param suffix - uniqueness suffix (defaults to a random alphanumeric run; injectable for tests)
- * @returns an alphanumeric name (e.g. "KuklaTest7g2k")
+ * @returns an alphanumeric name (e.g. "DemoTest7g2k")
  */
 export function deriveAdobeEntityName(title: string, suffix: string = randomNameSuffix()): string {
     const base = (title || '').replace(/[^A-Za-z0-9]/g, '').slice(0, MAX_BASE_LENGTH);

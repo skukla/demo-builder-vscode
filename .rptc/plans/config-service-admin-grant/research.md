@@ -1,6 +1,6 @@
 # Config Service admin grant — foolproof, verifiable
 
-**Filed:** 2026-08-14 (from the leah-b2b-demo triage; requested by Steve mid-fix)
+**Filed:** 2026-08-14 (from the field-b2b-demo triage; requested by the maintainer mid-fix)
 **Status:** SUPERSEDED 2026-08-14 — steps 01–04 shipped; see `overview.md`.
 
 > Everything below is the PRE-implementation record, kept as a dated snapshot of
@@ -16,7 +16,7 @@ A user whose repo has AEM Code Sync installed can still be refused every
 `admin.hlx.page/config/*` read and write with `403 [admin] not authorized` — the
 admin role is per-Adobe-identity per-namespace, minted at Code Sync *install*
 time, and an old install can predate the role bootstrap or the user's current
-identity association. Observed on `leahrayard/leah-b2b-demo` (2026-08-13):
+identity association. Observed on `fieldorg/field-b2b-demo` (2026-08-13):
 Helix bulk publish and DA.live accepted the same IMS token that `/config/*`
 refused; the repo is hers and Code Sync was verified installed. The failure was
 silent for months (registration was a warning) until the BYOM overlay made the
@@ -40,16 +40,16 @@ That splits the feature into three cases, and only the first two are ours:
 |---|---|---|
 | **New site** (creating user installs Code Sync → role minted) | the creator | POST the grant explicitly at registration instead of relying on the install side effect, and add teammates. Immunizes every new site. |
 | **Existing site, caller IS admin** (fixing a teammate) | an admin | Read roster → "add user" → POST → re-read as the oracle. The self-serve path for a whole team. |
-| **Existing site, caller is NOT admin** (Leah) | nobody in-app | Cannot be fixed programmatically from that session. Extension's job is to say so precisely and route to the human path. |
+| **Existing site, caller is NOT admin** (the field SC) | nobody in-app | Cannot be fixed programmatically from that session. Extension's job is to say so precisely and route to the human path. |
 
 Today the extension does NOTHING programmatic here — the role arrives purely as a
 side effect of the user's own Code Sync install, which is why new projects work
-and Leah's does not. Evidence: the install URL is only surfaced for
+and the field SC's does not. Evidence: the install URL is only surfaced for
 `repoMode === 'new'` (`RepoSelectionInline.tsx`), and the 403 propagation retry
 is gated on `repoMode === 'new'` (`storefrontSetupPhase3.ts`) — an existing repo
-with a 403 was assumed permanently broken, which is exactly Leah's case.
+with a 403 was assumed permanently broken, which is exactly the field SC's case.
 
-**Open, and it decides Leah's self-serve path:** does `tools.aem.live/bot/setup`
+**Open, and it decides the field SC's self-serve path:** does `tools.aem.live/bot/setup`
 authorize its Users step off the *caller's* admin role, or off the GitHub App
 installation (which would let a repo owner with no role bootstrap themselves)?
 Cannot be answered from an account that already holds admin. Cheapest test: have
@@ -63,10 +63,10 @@ Users step saves.
    the loop with.
 2. **Grant** (new): when the CURRENT identity holds admin (200), write the
    namespace/site access config adding another user's email to the admin role —
-   "grant teammate@example.test admin on leahrayard". Verify by reading the config back
+   "grant teammate@example.test admin on fieldorg". Verify by reading the config back
    and finding the email. This is how a teammate or the original installer
    repairs someone else's access without touching GitHub.
-3. **Bootstrap** (new, Leah's case — nobody reachable holds admin): only a Code
+3. **Bootstrap** (new, the field SC's case — nobody reachable holds admin): only a Code
    Sync (re)install mints a role. Make it foolproof: deep-link to the repo's
    AEM Code Sync installation settings (uninstall → install under the user's
    GitHub account, with their Adobe session current), then POLL the config read
@@ -89,7 +89,7 @@ step, so both humans and agents can run it.
   probe below.)
 - Bootstrap, verbatim mechanism: "the github.com user who added the AEM Code Sync
   App will be added as admin" — at ORG creation. Old orgs/sites created before
-  this flow never minted a role, which is the Leah case.
+  this flow never minted a role, which is the the field SC case.
 - tools.aem.live/bot/setup exposes this as its "Site users" step (observed
   2026-08-14, `skukla/bodea-source`): + Add user → email + role chips; saving
   with 0 users is valid (org-level admins retain access), and the tool's own log
@@ -102,7 +102,7 @@ admin@example.test = org admin):
   `users: [{id, email, roles: ["admin"]}]` — the install-minted admin is a
   literal roster entry. (`config/{org}/access/admin.json` and
   `config/{org}/access.json` both 404 — the org roster IS `config/{org}.json`.)
-  Leah's 403 = her email absent from `config/leahrayard.json` users.
+  The field SC's 403 = their email absent from `config/fieldorg.json` users.
 - **Site access read confirmed**: `GET config/{org}/sites/{site}/access/admin.json`
   → `{role: {...}, requireAuth: "auto"}`; the same block is inlined in the site
   config as `access.admin` (site config `version: 6`).
@@ -119,7 +119,7 @@ admin@example.test = org admin):
   call; probe: POST `{"role":{}}` and read back — likely run 2026-08-14, record
   the result here).
 - Whether a SITE-level `admin` role suffices for `PUT config/{org}/sites/{site}.json`
-  (what Leah's republish needs), or whether the org roster entry is required —
+  (what the field SC's republish needs), or whether the org roster entry is required —
   and if org-level, whether `POST config/{org}.json` with an appended user works
   the same way (do NOT test mutations on a live shared org).
 - Does a Code Sync re-install re-mint the org roster entry for an OLD repo (the

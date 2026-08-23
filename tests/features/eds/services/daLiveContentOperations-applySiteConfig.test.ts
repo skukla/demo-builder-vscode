@@ -84,7 +84,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.applySiteConfig('fieldorg', 'field-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -92,7 +92,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         expect(mockFetch).toHaveBeenCalledTimes(2);
 
         const postCall = mockFetch.mock.calls[1];
-        expect(postCall[0]).toContain('/config/leahrayard/leah-b2b-demo');
+        expect(postCall[0]).toContain('/config/fieldorg/field-b2b-demo');
         expect(postCall[1].method).toBe('POST');
 
         const formData = postCall[1].body as FormData;
@@ -139,7 +139,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.applySiteConfig('fieldorg', 'field-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -176,16 +176,16 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.applySiteConfig('fieldorg', 'field-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
         expect(result.success).toBe(true);
         // Ownership governs site writes → probe must be called with the ORG
-        expect(mockHasWriteAccess).toHaveBeenCalledWith('leahrayard', 'test-token');
+        expect(mockHasWriteAccess).toHaveBeenCalledWith('fieldorg', 'test-token');
         expect(mockFetch).toHaveBeenCalledTimes(2);
         const postCall = mockFetch.mock.calls[1];
-        expect(postCall[0]).toContain('/config/leahrayard/leah-b2b-demo');
+        expect(postCall[0]).toContain('/config/fieldorg/field-b2b-demo');
         expect(postCall[1].method).toBe('POST');
     });
 
@@ -228,7 +228,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
                     offset: 0,
                     limit: 2,
                     data: [
-                        { key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' },
+                        { key: 'editor.path', value: '/fieldorg/field-b2b-demo=https://da.live/canvas#' },
                         { key: 'aem.repositoryId', value: 'author-p158081-e1683323.adobeaemcloud.com' },
                     ],
                 },
@@ -241,7 +241,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
 
         const result = await service.applySiteConfig(
-            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+            'fieldorg', 'field-b2b-demo', {}, ['editor.path'],
         );
 
         expect(result.success).toBe(true);
@@ -287,7 +287,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
 
             const result = await service.applySiteConfig(
-                'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
+                'fieldorg', 'field-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
             );
 
             expect(result.success).toBe(true);
@@ -308,7 +308,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
 
             const result = await service.applySiteConfig(
-                'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
+                'fieldorg', 'field-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
             );
 
             expect(result.success).toBe(true);
@@ -334,7 +334,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
                     total: 1,
                     offset: 0,
                     limit: 1,
-                    data: [{ key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' }],
+                    data: [{ key: 'editor.path', value: '/fieldorg/field-b2b-demo=https://da.live/canvas#' }],
                 },
                 permissions: permissionsSheet,
             }),
@@ -346,7 +346,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
 
         const result = await service.applySiteConfig(
-            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+            'fieldorg', 'field-b2b-demo', {}, ['editor.path'],
         );
 
         expect(result.success).toBe(true);
@@ -378,7 +378,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
 
         const result = await service.applySiteConfig(
-            'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
+            'fieldorg', 'field-b2b-demo', {}, ['editor.path'],
         );
 
         expect(result.success).toBe(true);
@@ -398,7 +398,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
                     total: 1,
                     offset: 0,
                     limit: 1,
-                    data: [{ key: 'editor.path', value: '/leahrayard/leah-b2b-demo=https://da.live/canvas#' }],
+                    data: [{ key: 'editor.path', value: '/fieldorg/field-b2b-demo=https://da.live/canvas#' }],
                 },
             }),
         });
@@ -409,7 +409,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
 
         const result = await service.applySiteConfig(
-            'leahrayard', 'leah-b2b-demo',
+            'fieldorg', 'field-b2b-demo',
             { 'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com' },
             ['editor.path'],
         );

@@ -7,7 +7,7 @@
 > FIRST; everything above it is the original 2026-08-15 record, kept because its
 > reasoning about coupling-vs-size is still correct.
 
-**Filed:** 2026-08-15, from the `fix/leah-128-bugs` release prep.
+**Filed:** 2026-08-15, from the `fix/field-128-bugs` release prep.
 **Severity:** low — a project guideline, not a gate. `eslint` does not flag these
 and CI does not fail on them.
 

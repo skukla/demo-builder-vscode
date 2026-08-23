@@ -17,7 +17,7 @@ that changed the answer, and sections written under it are marked where they sti
 
 ### Shape 1 — shared I/O project per org, as a credential holder
 
-One Adobe I/O project per org doing exactly what `KuklaMeshf4E4` already does for
+One Adobe I/O project per org doing exactly what `DemoMeshf4E4` already does for
 `demo-builder-test`: hold the OAuth S2S pair so the extension can use it. The shared actions
 stay where they are. Small, and confined to the credential problem.
 
@@ -285,7 +285,7 @@ Three consequences, and the first two kill designs that looked reasonable an hou
 
 **Measured on this machine, and stated with its limit:** both local projects bind to org
 `285361`, and org `285361` already contains TWO I/O projects — `<discovery-io-project>` (the discovery
-service) and `KuklaMeshf4E4`, the latter created **per demo project** for the mesh. So the
+service) and `DemoMeshf4E4`, the latter created **per demo project** for the mesh. So the
 extension already creates per-project I/O projects in some flows; what is missing is only the
 case where nothing else triggers one. `bodea-template-test` is bound to `285361` with no I/O
 project at all, which is the reported failure, visible on disk.

@@ -557,7 +557,7 @@ no-match search renders an empty grid. That now shows
 Integrations   demo-builder-test        <- header: the LOCAL project only
 ------------------------------------------------------------------
 [Filter integrations...] [refresh]   [Project Dashboard] [Add integration]
-2 integrations           Deploys to Kukla Mesh . Stage  Change
+2 integrations           Deploys to Demo Mesh . Stage  Change
 ```
 
 The destination rides the END of SearchHeader's count row via its `countTrailing`

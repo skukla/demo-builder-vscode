@@ -8,7 +8,7 @@
  * all: it was minted invisibly by the AEM Code Sync install, and when it was
  * missing the only remedy anyone could offer was prose. A teammate who already
  * holds the role can now fix a colleague in about ten seconds
- * (2026-08-13, leah-b2b-demo).
+ * (2026-08-13, field-b2b-demo).
  *
  * The command owns UX only. Reading, mutating, and — critically — VERIFYING each
  * change by re-reading live in `siteAccessManagerHeadless`, so an MCP tool can
@@ -107,7 +107,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
      *
      * Note this is NOT the wizard's Code Sync step. That one proves the GitHub
      * App is installed — a different fact, and one that can be true while this
-     * is false (2026-08-13, leah-b2b-demo).
+     * is false (2026-08-13, field-b2b-demo).
      */
     private async reportCannotManage(project: Project, listing: SiteAccessListing): Promise<void> {
         if (listing.status === 'no_credential') {
