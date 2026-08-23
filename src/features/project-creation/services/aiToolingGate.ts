@@ -21,6 +21,27 @@ import type { Project } from '@/types/base';
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 
 /**
+ * Whether third-party tooling is enabled — injected by the extension at
+ * activation (`setThirdPartyToolsResolver`, wired to the
+ * `demoBuilder.ai.enableThirdPartyTools` setting). Defaults to true so pure
+ * callers and tests see the shipped default; the same injection pattern as
+ * `HelixService.setDefaultDaLiveTokenProvider`.
+ *
+ * This is deliberately the ONE code point for the opt-out: every gate seam
+ * (mcpConfigWriter, aiDefaultsInstaller both call sites,
+ * resolveAvailableMcpToolIds → skillsWriter) routes through
+ * {@link aiDefaultsEntryApplies}, so a `thirdParty` entry and its dependent
+ * skills switch off together — atomically, per the third-party-tooling item's
+ * "change all or none" constraint.
+ */
+let thirdPartyToolsEnabled: () => boolean = () => true;
+
+/** Wire the setting in (activation); tests may inject a stub. */
+export function setThirdPartyToolsResolver(resolver: () => boolean): void {
+    thirdPartyToolsEnabled = resolver;
+}
+
+/**
  * True when the project does App Builder-adjacent development: an EDS
  * storefront (Commerce extensibility), any mesh component, or an attached
  * App Builder component.
@@ -40,6 +61,13 @@ export function projectNeedsAppBuilderTooling(project: Project): boolean {
  * `requires` declaration.
  */
 export function aiDefaultsEntryApplies(entry: AiDefaultsMcpServer, project: Project): boolean {
+    // The third-party escape hatch gates BEFORE the composition check: a
+    // disabled tool applies to no project, so its package is not installed,
+    // its .mcp.json entry is not written, and the skills that drive it are
+    // gated out by resolveAvailableMcpToolIds — one switch, every seam.
+    if (entry.thirdParty && !thirdPartyToolsEnabled()) {
+        return false;
+    }
     if (entry.requires === 'eds-storefront') {
         return Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path);
     }
@@ -69,4 +97,56 @@ export function resolveAvailableMcpToolIds(
             .filter((entry) => installed.has(entry.package))
             .map((entry) => entry.id),
     );
+}
+
+/** Why a tool-driving skill is absent — rendered by the AI Capabilities modal. */
+export interface GatedSkillReason {
+    /** Skill filename (e.g. 'scrape-reference-site.md'). */
+    file: string;
+    /** The ai-defaults tool id the skill drives. */
+    toolId: string;
+    /**
+     * - 'setting-disabled': the tool is thirdParty and the opt-out is off.
+     * - 'tool-missing': the tool applies but its package is not installed
+     *   (Regenerate AI Files installs it).
+     */
+    reason: 'setting-disabled' | 'tool-missing';
+}
+
+/**
+ * The tool-driving skills this project QUALIFIES for but does not have, each
+ * with why — so the AI Capabilities modal can state the reason instead of
+ * silently omitting a skill (third-party-tooling item, step 4). A skill whose
+ * tool does not apply to the project at all (e.g. Playwright on a non-EDS
+ * project) is not listed: that absence is composition, not a condition.
+ */
+export function gatedSkillReasons(
+    project: Project,
+    installedPackages: string[],
+    dependencies: Readonly<Record<string, string>>,
+): GatedSkillReason[] {
+    const installed = new Set(installedPackages);
+    const reasons: GatedSkillReason[] = [];
+    for (const [file, toolId] of Object.entries(dependencies)) {
+        const entry = aiDefaults.mcpServers.find((e) => e.id === toolId);
+        if (!entry) continue;
+        if (aiDefaultsEntryApplies(entry, project)) {
+            if (!installed.has(entry.package)) {
+                reasons.push({ file, toolId, reason: 'tool-missing' });
+            }
+            continue;
+        }
+        // Does not apply — distinguish the opt-out from plain composition by
+        // asking again with the third-party check bypassed.
+        if (entry.thirdParty && !thirdPartyToolsEnabled()) {
+            const appliesOtherwise =
+                entry.requires === 'eds-storefront'
+                    ? Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path)
+                    : projectNeedsAppBuilderTooling(project);
+            if (appliesOtherwise) {
+                reasons.push({ file, toolId, reason: 'setting-disabled' });
+            }
+        }
+    }
+    return reasons;
 }

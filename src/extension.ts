@@ -31,6 +31,8 @@ import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { createAgentOperationNotifier } from '@/features/ai/server/agentOperationNotifier';
+import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';
+import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/thirdPartyToolingSettingListener';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
@@ -117,6 +119,15 @@ export async function activate(context: vscode.ExtensionContext) {
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+
+    // Third-party tooling opt-out: the ONE code point for the gate lives in
+    // aiToolingGate (pure); the setting is injected here so every seam —
+    // creation, regenerate, activation sweep — reads the same answer.
+    setThirdPartyToolsResolver(() =>
+        vscode.workspace
+            .getConfiguration('demoBuilder')
+            .get<boolean>('ai.enableThirdPartyTools', true),
+    );
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"
@@ -381,6 +392,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
         context.subscriptions.push(
             registerEwSettingChangeListener({ context, stateManager, logger }),
+            // Step 7 of the third-party-tooling item: re-enabling must install.
+            registerThirdPartyToolingSettingListener(context.extensionPath, logger),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)

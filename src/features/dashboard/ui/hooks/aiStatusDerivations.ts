@@ -13,6 +13,7 @@ import type { AiReadyState, VerifyAiSetupResponse } from './dashboardStatusTypes
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /** Stable empty references so identity doesn't churn each render. */
+const EMPTY_GATED: never[] = [];
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 const EMPTY_MCPS: McpInventoryEntry[] = [];
 const EMPTY_EDITED_FILES: string[] = [];
@@ -41,10 +42,16 @@ export function deriveAiInventoryView(
     aiSkillsError: boolean;
     aiMcpsError: boolean;
     aiEditedFiles: string[];
+    aiGatedSkills: Array<{
+        file: string;
+        toolId: string;
+        reason: 'setting-disabled' | 'tool-missing';
+    }>;
 } {
     const inventory = verifyResult?.inventory;
     return {
         aiSkills: inventory?.skills ?? EMPTY_SKILLS,
+        aiGatedSkills: inventory?.gatedSkills ?? EMPTY_GATED,
         aiMcps: inventory?.mcps ?? EMPTY_MCPS,
         aiInventoryLoading: !verifyResult && !verifyFailed,
         aiSkillsError: Boolean(inventory?.skillsError) || verifyFailed,

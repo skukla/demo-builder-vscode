@@ -1,5 +1,33 @@
 # Make third-party AI tooling visible, optional, and coherently gated
 
+> ## CLOSED 2026-08-23 — steps 3–7 shipped in one slice (AI bundle v19)
+>
+> - **Opt-out (step 3)**: `demoBuilder.ai.enableThirdPartyTools` (default on —
+>   the escape hatch, not a new decision). Deliberately NOT a fifth gate seam:
+>   entries flagged `thirdParty: true` in ai-defaults (Playwright) are gated
+>   inside `aiDefaultsEntryApplies` via an injected resolver wired at
+>   activation, so all four seams inherit one answer and the dependent skills
+>   gate atomically with the tool (`resolveAvailableMcpToolIds`).
+> - **Stated absences (step 4)**: `gatedSkillReasons` (aiToolingGate) computes
+>   which tool-driving skills the project QUALIFIES for but lacks and why
+>   ('setting-disabled' vs 'tool-missing'); the AI Capabilities modal renders
+>   them as a "Not available" group with the reason on each row.
+> - **Chrome-less pre-check (step 5)**: `checkPlaywrightBrowser` in the
+>   verifier — when the Playwright package is installed, warn if neither
+>   Google Chrome nor a cached ms-playwright chromium exists ("install Chrome
+>   or npx playwright install chromium"). Nothing is downloaded; knowing is
+>   the win.
+> - **Real progress (step 6)**: `installAiDefaultsMcpTools` streams npm's own
+>   output lines through a new onProgress callback (creation + regenerate
+>   both wired); the guessed "up to a minute" claim is gone.
+> - **Re-enable installs (step 7)**: `registerThirdPartyToolingSettingListener`
+>   — on setting change, one prompt offers Apply Now, which runs tier 3 +
+>   tiers 1+2 per project (hash-and-skip protected).
+>
+> Earlier: steps 1–2 shipped 2026-08-14 (the dependency declaration + skill
+> gating). Gap 1's premise was corrected 2026-08-22 (Playwright drives
+> installed Chrome; no download on Chrome-equipped machines).
+
 > ## ⏳ PARTIAL — step 1 (the enabling declaration) SHIPPED 2026-08-14
 >
 > `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts` (beside

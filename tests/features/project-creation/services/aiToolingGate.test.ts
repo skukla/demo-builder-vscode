@@ -8,6 +8,7 @@ import {
     projectNeedsAppBuilderTooling,
     aiDefaultsEntryApplies,
     resolveAvailableMcpToolIds,
+    setThirdPartyToolsResolver,
 } from '@/features/project-creation/services/aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaultsMcpServer } from '@/types/aiDefaults';
@@ -183,5 +184,51 @@ describe('resolveAvailableMcpToolIds', () => {
     it('matches on package names, not entry ids', () => {
         // A package literally named "playwright" is not @playwright/mcp.
         expect(resolveAvailableMcpToolIds(edsProject, ['playwright']).size).toBe(0);
+    });
+});
+
+describe('third-party opt-out (the one code point for every seam)', () => {
+    const edsProject = makeProject({
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: { id: COMPONENT_IDS.EDS_STOREFRONT, path: '/p/sf' },
+        },
+    } as never);
+    const playwrightEntry = {
+        id: 'playwright',
+        package: '@playwright/mcp',
+        version: '~0.0.79',
+        command: 'node',
+        args: ['x'],
+        description: 'd',
+        requires: 'eds-storefront',
+        thirdParty: true,
+    } as never;
+    const adobeEntry = { ...(playwrightEntry as object), id: 'dropins', thirdParty: undefined } as never;
+
+    afterEach(() => setThirdPartyToolsResolver(() => true));
+
+    it('a thirdParty entry stops applying when the setting is off', () => {
+        expect(aiDefaultsEntryApplies(playwrightEntry, edsProject)).toBe(true);
+        setThirdPartyToolsResolver(() => false);
+        expect(aiDefaultsEntryApplies(playwrightEntry, edsProject)).toBe(false);
+    });
+
+    it('non-thirdParty entries are untouched by the setting', () => {
+        setThirdPartyToolsResolver(() => false);
+        expect(aiDefaultsEntryApplies(adobeEntry, edsProject)).toBe(true);
+    });
+
+    it('resolveAvailableMcpToolIds drops the tool with the setting — skills gate with it', () => {
+        // The bundled ai-defaults flags playwright as thirdParty; with the
+        // package installed and the setting OFF, the tool id must vanish,
+        // which is what gates the three Playwright-driving skills.
+        setThirdPartyToolsResolver(() => false);
+        const ids = resolveAvailableMcpToolIds(edsProject, ['@playwright/mcp']);
+        expect(ids.has('playwright')).toBe(false);
+    });
+
+    it('defaults to enabled when nothing injected the setting', () => {
+        const ids = resolveAvailableMcpToolIds(edsProject, ['@playwright/mcp']);
+        expect(ids.has('playwright')).toBe(true);
     });
 });

@@ -196,7 +196,8 @@ describe('aiHandlers — regenerating AI files', () => {
             // record rides along so the installer can filter entries by `requires`.
             expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
                 PROJECT_WITH_STOREFRONT.path,
-                PROJECT_WITH_STOREFRONT
+                PROJECT_WITH_STOREFRONT,
+                expect.any(Function)
             );
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).

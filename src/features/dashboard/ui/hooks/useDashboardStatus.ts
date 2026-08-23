@@ -444,7 +444,15 @@ export function useDashboardStatus(
 
     // Capability lists for the "View AI Capabilities" surface (extracted helper
     // — see deriveAiInventoryView).
-    const { aiSkills, aiMcps, aiInventoryLoading, aiSkillsError, aiMcpsError, aiEditedFiles } =
+    const {
+        aiSkills,
+        aiMcps,
+        aiInventoryLoading,
+        aiSkillsError,
+        aiMcpsError,
+        aiEditedFiles,
+        aiGatedSkills,
+    } =
         deriveAiInventoryView(verifyResult, verifyFailed);
 
     return {
@@ -466,6 +474,7 @@ export function useDashboardStatus(
         aiMcps,
         aiMcpsError,
         aiEditedFiles,
+        aiGatedSkills,
         aiInventoryLoading,
         aiBusy,
         aiRegenProgress,

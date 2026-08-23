@@ -44,6 +44,10 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
 
         await handleRegenerateAiFiles(context);
 
-        expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(meshProject.path, meshProject);
+        expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
+            meshProject.path,
+            meshProject,
+            expect.any(Function)
+        );
     });
 });

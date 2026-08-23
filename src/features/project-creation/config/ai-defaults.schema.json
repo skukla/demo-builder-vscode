@@ -1,10 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AI Defaults",
-  "description": "Always-installed AI infrastructure for Demo Builder projects — MCP servers added to every generated project alongside the demo-builder entry.",
+  "description": "Always-installed AI infrastructure for Demo Builder projects \u2014 MCP servers added to every generated project alongside the demo-builder entry.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["mcpServers"],
+  "required": [
+    "mcpServers"
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -12,11 +14,19 @@
     },
     "mcpServers": {
       "type": "array",
-      "description": "MCP servers installed into the per-project isolated tools dir (<project>/.demo-builder-mcp/ — see aiDefaultsInstaller.ts). Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, with its args anchored to the isolated dir.",
+      "description": "MCP servers installed into the per-project isolated tools dir (<project>/.demo-builder-mcp/ \u2014 see aiDefaultsInstaller.ts). Each entry is added to .claude/mcp.json and .mcp.json next to demo-builder, with its args anchored to the isolated dir.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "package", "version", "command", "args", "description", "requires"],
+        "required": [
+          "id",
+          "package",
+          "version",
+          "command",
+          "args",
+          "description",
+          "requires"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -36,7 +46,9 @@
           },
           "args": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Arguments passed to command. Relative paths are anchored to the isolated tools dir by mcpConfigWriter (Claude Code's launch cwd is the project root, where node_modules/... would not resolve)."
           },
           "description": {
@@ -45,8 +57,15 @@
           },
           "requires": {
             "type": "string",
-            "enum": ["eds-storefront", "app-builder-tooling"],
+            "enum": [
+              "eds-storefront",
+              "app-builder-tooling"
+            ],
             "description": "Which projects this entry applies to: 'eds-storefront' = only projects with an installed EDS storefront; 'app-builder-tooling' = any project doing App Builder-adjacent work (EDS storefront, mesh, or attached App Builder component). Evaluated by aiDefaultsEntryApplies (aiToolingGate.ts)."
+          },
+          "thirdParty": {
+            "type": "boolean",
+            "description": "True for tooling published outside Adobe (e.g. Playwright). Additionally gated on the demoBuilder.ai.enableThirdPartyTools setting; dependent skills are removed with the tool."
           }
         }
       }

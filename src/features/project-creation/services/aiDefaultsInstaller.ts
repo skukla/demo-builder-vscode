@@ -86,6 +86,7 @@ export function resolveMcpToolsDir(projectPath: string): string {
 export async function installAiDefaultsMcpTools(
     projectPath: string,
     project: Project,
+    onProgress?: (message: string) => void,
 ): Promise<InstallAiDefaultsResult> {
     const toolsDir = resolveMcpToolsDir(projectPath);
 
@@ -118,11 +119,25 @@ export async function installAiDefaultsMcpTools(
 
     const executor = ServiceLocator.getCommandExecutor();
     try {
+        // Stream npm's own output into the caller's progress line — real
+        // progress instead of one opaque block with a guessed duration
+        // (third-party-tooling item, step 6). npm prints sparsely without a
+        // TTY, so lines are forwarded as they come; the caller's step title
+        // carries the package names either way.
         const result = await executor.execute('npm install', {
             cwd: toolsDir,
             timeout: TIMEOUTS.VERY_LONG,
             enhancePath: true,
             shell: DEFAULT_SHELL,
+            ...(onProgress
+                ? {
+                      streaming: true,
+                      onOutput: (data: string) => {
+                          const line = data.trim().split('\n').pop()?.trim();
+                          if (line) onProgress(line);
+                      },
+                  }
+                : {}),
         });
 
         if (result.code !== 0) {

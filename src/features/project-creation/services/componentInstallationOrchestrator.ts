@@ -142,7 +142,9 @@ export async function installAllComponents(context: InstallationContext): Promis
     // NON-FATAL: MCP tooling is optional — a failure here must never abort
     // project creation, so log a warning and carry on.
     if (projectNeedsAppBuilderTooling(project)) {
-        const mcpResult = await installAiDefaultsMcpTools(project.path, project);
+        const mcpResult = await installAiDefaultsMcpTools(project.path, project, (line) =>
+            progressTracker('Installing Components', 55, line),
+        );
         if (!mcpResult.success) {
             logger.warn(
                 `[Project Creation] AI MCP tools install failed (non-fatal): ${mcpResult.error ?? 'unknown error'}`,

@@ -59,6 +59,7 @@ export const SETTING_KEYS = [
     'demoBuilder.blockLibraries.custom',
     'demoBuilder.blockLibraries.syncBehavior',
     'demoBuilder.appBuilderComponents.custom',
+    'demoBuilder.ai.enableThirdPartyTools',
     'demoBuilder.daLive.aemAuthorUrl',
     'demoBuilder.daLive.IMSOrgId',
     'demoBuilder.daLive.authoringExperience',

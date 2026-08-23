@@ -17,6 +17,7 @@
 
 import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import { inspectAllServers } from './mcpInspector';
 import { detectSessionMcps } from './sessionMcpDetector';
@@ -44,6 +45,16 @@ export interface AiVerificationResult {
     inventory: AiInventory;
 }
 
+/** Cheap existence probe (access-based; false on any error). */
+async function fsExists(p: string): Promise<boolean> {
+    try {
+        await fsPromises.access(p);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -67,7 +78,8 @@ export async function verifyAiSetup(
             checkMcpConfig(projectPath),
             checkMcpBinary(extensionDistPath),
             checkSkillFiles(projectPath),
-        ]),
+            checkPlaywrightBrowser(projectPath),
+        ]).then((results) => results.filter((c): c is AiCheckResult => c !== null)),
         gatherInventory(projectPath),
         detectEditedFiles(projectPath, recordedHashes),
     ]);
@@ -234,4 +246,67 @@ function aggregateStatus(checks: AiCheckResult[]): 'ok' | 'warning' | 'error' {
     if (checks.some(c => c.status === 'error')) return 'error';
     if (checks.some(c => c.status === 'warning')) return 'warning';
     return 'ok';
+}
+
+/**
+ * A browser Playwright can actually drive — the third-party-tooling item's
+ * Chrome-less pre-check (step 5).
+ *
+ * `@playwright/mcp` drives the machine's installed Google Chrome by default
+ * (measured 2026-08-22 on 0.0.75/0.0.79 — no download when Chrome exists).
+ * A Chrome-less machine needs the one-time ~150 MB Chromium the server's
+ * `install-browser` subcommand fetches into the ms-playwright cache. Without
+ * either, the three scraping skills fail MID-SCRAPE with no warning — this
+ * check makes the absence visible up front. Knowing is the win: nothing is
+ * downloaded here, deliberately.
+ *
+ * Runs only when the Playwright package is actually installed in the
+ * project's isolated tools dir (absent = not applicable or opted out — the
+ * skills are gated with it, so there is nothing to warn about). Returns null
+ * to stay out of the checks list entirely in that case.
+ */
+async function checkPlaywrightBrowser(projectPath: string): Promise<AiCheckResult | null> {
+    const playwrightInstalled = await fsExists(
+        path.join(projectPath, '.demo-builder-mcp', 'node_modules', '@playwright', 'mcp'),
+    );
+    if (!playwrightInstalled) return null;
+
+    const chromePaths =
+        process.platform === 'darwin'
+            ? ['/Applications/Google Chrome.app']
+            : process.platform === 'win32'
+              ? [
+                    path.join(
+                        process.env['PROGRAMFILES'] ?? 'C:\\Program Files',
+                        'Google/Chrome/Application/chrome.exe',
+                    ),
+                ]
+              : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'];
+    for (const p of chromePaths) {
+        if (await fsExists(p)) return { name: 'playwright-browser', status: 'ok' };
+    }
+
+    const cacheDir =
+        process.platform === 'darwin'
+            ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
+            : process.platform === 'win32'
+              ? path.join(process.env['LOCALAPPDATA'] ?? '', 'ms-playwright')
+              : path.join(os.homedir(), '.cache', 'ms-playwright');
+    try {
+        const entries = await fsPromises.readdir(cacheDir);
+        if (entries.some((e) => e.startsWith('chromium'))) {
+            return { name: 'playwright-browser', status: 'ok' };
+        }
+    } catch {
+        // absent cache — fall through to the warning
+    }
+
+    return {
+        name: 'playwright-browser',
+        status: 'warning',
+        message:
+            'No Google Chrome and no cached Playwright browser found — the site-scraping ' +
+            'skills cannot drive a browser on this machine. Install Google Chrome, or run ' +
+            '"npx playwright install chromium" (one-time ~150 MB).',
+    };
 }
