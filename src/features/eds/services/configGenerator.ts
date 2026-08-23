@@ -389,7 +389,8 @@ export function buildConfigGeneratorParams(project: Project): ConfigGeneratorPar
         githubOwner,
         repoName,
         daLiveOrg: String(metadata?.daLiveOrg ?? ''),
-        daLiveSite: String(metadata?.daLiveSite ?? ''),
+        // Legacy-first, repo fallback (the loader strips the equal copy).
+        daLiveSite: String(metadata?.daLiveSite ?? repoName),
         ...extractConfigParams(project),
     };
 }
