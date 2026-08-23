@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hand-picked integrations now show on the wizard's Review screen.** They
+  were invisible: Review read a legacy field the wizard always leaves empty,
+  while the real selection sat in a sibling field two lines away — and the
+  section's unit tests fed the dead field directly, so they stayed green the
+  whole time. Review now resolves integration names through the same code the
+  builder's summary column uses, so catalog entries, custom imports (by their
+  given display name), and AI-built custom integrations all appear; the mesh
+  keeps its own Middleware row. A helper that was built for this exact job but
+  never wired up is deleted.
+
 ## [1.0.0-beta.137] - 2026-08-23
 
 ### Fixed

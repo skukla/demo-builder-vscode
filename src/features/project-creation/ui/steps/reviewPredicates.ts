@@ -5,15 +5,6 @@
  */
 
 import { hasMeshInDependencies } from '@/core/constants';
-import { getAppBuilderComponentName } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
-
-/** A selected appBuilderComponent summarized for the Review step. */
-export interface ReviewedAppBuilderComponent {
-    /** Display name (resolved via getAppBuilderComponentName, falls back to id). */
-    name: string;
-    /** True when the package marks this appBuilderComponent required (shown "Included"). */
-    included: boolean;
-}
 
 /**
  * Minimal state interface for review data validation
@@ -47,22 +38,9 @@ export function hasRequiredReviewData(state: ReviewState): boolean {
     return true;
 }
 
-/**
- * Summarize selected appBuilderComponents for the Review step.
- *
- * Resolves each id to its display name (falling back to the id) and flags
- * required ones as "Included" (locked, auto-included by the package).
- *
- * @param appBuilderComponentIds - The selected appBuilderComponent ids
- * @param requiredIds - Ids the package marks required
- * @returns One ReviewedAppBuilderComponent per selected id
- */
-export function summarizeSelectedAppBuilderComponents(
-    appBuilderComponentIds: readonly string[],
-    requiredIds: readonly string[],
-): ReviewedAppBuilderComponent[] {
-    return appBuilderComponentIds.map(id => ({
-        name: getAppBuilderComponentName(id),
-        included: requiredIds.includes(id),
-    }));
-}
+// `summarizeSelectedAppBuilderComponents` lived here from 2026-06 to 2026-08-23
+// WITHOUT A SINGLE PRODUCTION CALLER — built "for the Review step", fully
+// unit-tested, never wired, while Review showed no integrations at all. The
+// live path is `resolveReviewIntegrationNames` (reviewStepHelpers), which rides
+// the same resolver the builder summary renders from and also names custom
+// imports and shell instances, which the catalog-only lookup here could not.

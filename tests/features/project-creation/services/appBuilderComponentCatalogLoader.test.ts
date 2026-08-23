@@ -13,9 +13,6 @@ import {
     isPrebuiltIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
-    getAppBuilderComponentSource,
-    getAppBuilderComponentEnvSchema,
-    getAppBuilderComponentName,
     buildCustomIntegrationEntry,
     isBlankSource,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
@@ -101,36 +98,19 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
     });
 
-    describe('getAppBuilderComponentSource', () => {
-        it('returns the {owner, repo, branch} source for a seeded entry', () => {
-            const source = getAppBuilderComponentSource('eds-commerce-mesh');
-            // Derived from the registry git url — the repo name deliberately
-            // differs from the id, which is what the deleted authored rows got wrong.
-            expect(source).toEqual(
+    describe('entry source derivation', () => {
+        // Read via getAppBuilderComponentEntry — the per-field accessors were
+        // deleted 2026-08-23 (test-only callers). The assertion itself stays:
+        // the repo name is derived from the registry git url and deliberately
+        // differs from the id, which is what the deleted authored rows got wrong.
+        it('derives {owner, repo} from the registry git url for a seeded entry', () => {
+            expect(getAppBuilderComponentEntry('eds-commerce-mesh')?.source).toEqual(
                 expect.objectContaining({ owner: 'skukla', repo: 'commerce-eds-mesh' })
             );
         });
 
-        it('returns undefined for an unknown id', () => {
-            expect(getAppBuilderComponentSource('nope')).toBeUndefined();
-        });
-    });
-
-    describe('getAppBuilderComponentEnvSchema', () => {
-        it('returns the env schema array for a seeded entry', () => {
-            const schema = getAppBuilderComponentEnvSchema('eds-commerce-mesh');
-            expect(Array.isArray(schema)).toBe(true);
-        });
-
-        it('returns [] for an unknown id', () => {
-            expect(getAppBuilderComponentEnvSchema('nope')).toEqual([]);
-        });
-    });
-
-    describe('getAppBuilderComponentName', () => {
-        it('returns the display name, falling back to id', () => {
-            expect(getAppBuilderComponentName('eds-commerce-mesh')).toBeTruthy();
-            expect(getAppBuilderComponentName('unknown-xyz')).toBe('unknown-xyz');
+        it('resolves no entry for an unknown id', () => {
+            expect(getAppBuilderComponentEntry('nope')).toBeUndefined();
         });
     });
 
@@ -399,14 +379,27 @@ const S = { owner: 'o', repo: 'r', branch: 'main' };
  * kind:'integration'.
  */
 describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () => {
-    const mesh = { id: 'eds-accs-mesh', name: 'M', description: '', kind: 'mesh' as const, source: S };
+    const mesh = {
+        id: 'eds-accs-mesh',
+        name: 'M',
+        description: '',
+        kind: 'mesh' as const,
+        source: S,
+    };
     const shell = {
-        id: 'app-builder-shell', name: 'Custom Integration', description: '',
-        kind: 'integration' as const, blank: true, source: S,
+        id: 'app-builder-shell',
+        name: 'Custom Integration',
+        description: '',
+        kind: 'integration' as const,
+        blank: true,
+        source: S,
     };
     const real = {
-        id: 'erp-sync', name: 'ERP Sync', description: '',
-        kind: 'integration' as const, source: S,
+        id: 'erp-sync',
+        name: 'ERP Sync',
+        description: '',
+        kind: 'integration' as const,
+        source: S,
     };
 
     it('excludes a mesh — the kind picker offers it as "API Mesh"', () => {
