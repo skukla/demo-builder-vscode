@@ -80,23 +80,56 @@ silently in the direction of showing something that should be hidden.
 
 ## Differentiation proposal (drafted 2026-08-23 — awaiting the data decision)
 
-**Re-measure status: NOT re-run** — the 2026-08-23 pickup found no Extension Dev
-Host serving the MCP socket, so the live category sets could not be re-fetched.
-The proposal below is designed against the 2026-08-17 measurement; re-run the
-fetch (kickoff prompt) before executing.
+**Re-measure status (2026-08-23, second pass): satisfied by provenance.** The
+live probe reached the running host and `get_datapack` shows `bodea@main`
+last updated **2026-06-18** — BEFORE the 2026-08-17 measurement — so the
+measured category sets describe the current pack. (Caveat: if `@main` is
+ref-backed, content could in principle move without the registry stamp; the
+row-level read surface is not exposed through the agent tools, so execution
+should still start by re-reading `b2b_shared_catalog_categories` from the
+pack source.)
 
-The cleanest demo story keeps each catalog demonstrating ONE thing:
+The cleanest demo story keeps each catalog demonstrating ONE thing —
+**revised 2026-08-23 after comparing against the actual category list**: the
+first draft dropped `bodea` and `products` from ServerSavvy, but `bodea` is
+the pack's hidden ROOT and `products` reads as a structural container, and
+dropping a structural ancestor from a shared catalog can hide its assigned
+children from category-tree queries. Differentiate only the browsable
+categories; the structural spine stays in every catalog.
 
 | Shared catalog | Categories | What it demonstrates |
 |---|---|---|
 | Default (General) | all 11 (unchanged) | the walk-up baseline |
-| ServerSavvy Solutions | `servers`, `racks`, `cooling-equipment`, `cables`, `switching`, `services` (6 of 11 — drop `software`, `wi-fi`, `critical-power-equipment`, `products`, `bodea`) | **catalog-driven VISIBILITY**: a server-room reseller whose nav genuinely differs |
+| ServerSavvy Solutions | keep `bodea`, `products` (structure) + `servers`, `racks`, `cooling-equipment`, `cables`, `switching`, `services` — **drop only `software`, `wi-fi`, `critical-power-equipment`** (8 of 11) | **catalog-driven VISIBILITY**: a server-room reseller whose nav genuinely differs |
 | Platinum Buyer | all 11 (unchanged) | **PRICE**: same catalog, better prices (the 49 tier-priced products keep working untouched) |
 
 Why this shape: differentiating ONE catalog is enough to make visibility
-observable (the item's step 1 "is also the test"), and leaving Platinum Buyer's
-categories alone keeps the existing tier-price demo exactly as it is — the two
-mechanisms stay separately demonstrable instead of confounded in one login.
+observable (the item's step 1 "is also the test"), leaving Platinum Buyer's
+categories alone keeps the existing tier-price demo exactly as it is, and
+keeping the structural spine everywhere removes the tree-visibility risk —
+the demo line stays crisp: "this reseller doesn't see software, wi-fi, or
+critical power".
+
+**Implementing it does NOT require changing the pack** (clarified 2026-08-23,
+user's point). The pack rows are the import SEED; the live assignments belong
+to each instance and are editable there. Three paths:
+
+1. **Demo-local, today:** ACCS Admin → Catalog → Shared Catalogs →
+   ServerSavvy Solutions → Set Pricing and Structure → untick the three
+   categories. Proves the demo story on any instance immediately. Limits:
+   per-instance, and a reset that re-imports the pack restores the identical
+   assignments.
+2. **Pack-durable:** change `b2b_shared_catalog_categories` in the pack so
+   every future import lands differentiated. The pack's owner is
+   **CoreTech** (shared pack) — this is a request to the owner or a
+   versioned fork, not a unilateral edit.
+3. **Extension code (rejected):** a post-import mutation step would maintain
+   a permanent divergence between pack and instance.
+
+Sequence: prove with path 1 on one instance; if the story lands, pursue
+path 2. Path 1's repeatable form is exactly the tabled instance-hygiene
+design's assisted-manual-step shape (instruct with exact names → Admin deep
+link → verify by API re-read).
 
 Execution is a DATA change to the pack (`bodea@main`), outside this repo — the
 pack source is external (see `project_bodea_template`: the bodea-source repo is
