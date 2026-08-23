@@ -1,5 +1,12 @@
 # Datapack authoring loop — export, modify, publish-your-own via project skills
 
+> **ACTIVATED 2026-08-23 → [`../plans/datapack-authoring-loop/overview.md`](../plans/datapack-authoring-loop/overview.md).**
+> The plan is the design and the work; this file stays as the filed record of how the item
+> was scoped. One thing the plan measured that changes the shape: the READ half of pack
+> editing is already shipped (`getDataItem`, `batchGetDataItems` on the read client), so
+> Route B's gap is five write operations that appear nowhere in `src/` —
+> `create-datapack`, `add-data-item`, `update-data-item`, `delete-data-item`, `promote`.
+
 **Filed:** 2026-08-23, from user direction while closing the Bodea
 differentiation question. The Bodea change is this feature's first live test.
 
