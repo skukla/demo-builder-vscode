@@ -116,7 +116,7 @@ export type {
 } from './services/codeSyncErrors';
 
 // Note: UI Components (steps, hooks) are NOT exported here.
-// They are imported directly by WizardContainer.tsx in the webpack bundle
+// They are imported directly by WizardContainer.tsx in the esbuild browser bundle
 // to avoid mixing React/Node.js compilation contexts.
 
 // Handlers

@@ -533,7 +533,7 @@ class CreateProjectWebviewCommand extends BaseWebviewCommand {
 ### Common Issues
 
 1. **Webview Not Loading**
-   - Check webpack build
+   - Check the esbuild build
    - Verify resource paths
    - Check CSP settings
 

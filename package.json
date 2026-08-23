@@ -155,7 +155,7 @@
           "demoBuilder.autoZoom": {
             "type": "boolean",
             "default": false,
-            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default \u2014 zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
+            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default — zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
           },
           "demoBuilder.updateChannel": {
             "type": "string",
@@ -167,7 +167,7 @@
             "enumDescriptions": [
               "Production releases only",
               "Beta prereleases (testing)",
-              "Alpha preview builds \u2014 honored only for repository collaborators; others fall back to beta"
+              "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
             ],
             "default": "stable",
             "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
@@ -221,12 +221,12 @@
                 "demo-team-blocks"
               ],
               "enumDescriptions": [
-                "Demo Team Block Collection \u2014 general-purpose blocks built by the Demo Team, usable in any EDS storefront"
+                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
               ]
             },
             "uniqueItems": true,
             "default": [],
-            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default \u2014 package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
+            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
           },
           "demoBuilder.blockLibraries.custom": {
             "type": "array",
@@ -247,7 +247,7 @@
             "enumDescriptions": [
               "Prompt before applying upstream library updates or promoting local changes to a library",
               "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
-              "Never touch block library remotes \u2014 promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+              "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
             ],
             "default": "ask",
             "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
@@ -274,7 +274,7 @@
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "",
-            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required \u2014 set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required — set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
           },
           "demoBuilder.daLive.IMSOrgId": {
             "type": "string",
@@ -388,7 +388,7 @@
             "type": "string",
             "default": "",
             "format": "uri",
-            "description": "Data Installer API base URL, without a trailing action segment. Required \u2014 set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+            "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
           }
         }
       }
@@ -461,6 +461,7 @@
     "hooks": "node scripts/hooks.js",
     "docs:check": "node scripts/hooks.js coverage",
     "data-installer:drift": "node scripts/dataInstallerDrift.js",
+    "eds:drift": "node scripts/edsDrift.js",
     "generate:manifest-schema": "node scripts/generate-manifest-schema.js"
   },
   "devDependencies": {
@@ -491,7 +492,6 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.0",
-    "html-webpack-plugin": "^5.6.4",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "jscpd": "^4.0.5",
@@ -505,10 +505,7 @@
     "ts-prune": "^0.10.3",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.16.0",
-    "webpack": "^5.101.3",
-    "webpack-bundle-analyzer": "^4.10.2",
-    "webpack-cli": "^6.0.1"
+    "typescript-eslint": "^8.16.0"
   },
   "dependencies": {
     "@adobe/aio-lib-console": "^5.4.2",
@@ -520,6 +517,7 @@
     "@octokit/plugin-retry": "^7.2.1",
     "@types/uuid": "^10.0.0",
     "adm-zip": "^0.5.16",
+    "ajv": "^8.20.0",
     "async-mutex": "^0.5.0",
     "axios": "^1.6.0",
     "crypto-js": "^4.2.0",
@@ -530,7 +528,6 @@
     "semver": "^7.5.4",
     "uuid": "^13.0.0",
     "yaml": "^2.3.4",
-    "zod": "^3.23.0",
-    "ajv": "^8.20.0"
+    "zod": "^3.23.0"
   }
 }

@@ -107,7 +107,7 @@ The main command for displaying the Projects List as the home screen.
 **Features:**
 - Extends `BaseWebviewCommand` for standardized webview management
 - Uses `projectsListHandlers` object literal with `dispatchHandler` for message handling
-- Loads the `projectsList` webpack bundle (4-bundle pattern)
+- Loads the `projectsList` esbuild browser bundle
 - Auto-shows on extension activation when no current project
 
 **Usage:**
