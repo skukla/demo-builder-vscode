@@ -39,7 +39,23 @@
    (verified 2026-08-23): `useWizardState.ts` `buildEditModeIntegrationState`
    computes `meshDeps` from `selections.dependencies` and seeds
    `selectedOptionalDependencies` on edit.
-3. **D3 dual-flow removal** (the whole live item now): the mesh ↔
+3. **D3 dual-flow removal** (the whole live item now) — **re-verified 2026-08-23
+   at pickup, then deliberately deferred to lead a fresh session** (a
+   cross-boundary contract change per the pipeline item's own
+   reviewer-not-tired rule). What that check established: the prerequisite is
+   NOT yet met — creation still consumes the mesh from
+   `components.dependencies` (`loadComponentDefinitions` reads
+   `typedConfig.components?.dependencies`; `selectedAppBuilderIds` EXCLUDES
+   mesh-kind ids; the mesh instance installs via the dependencies list), and
+   the mirror also feeds the WIRE (`storefrontSetupHandlers.ts:220` gates
+   `needsMesh` on `payload.dependencies` from the webview). So the removal
+   means teaching, in order: buildProjectConfig's serialization, creation's
+   component loading + mesh phase, the storefront-setup payload gate, the
+   wizard step filter (`hasMeshInDependencies`), and reset's rebuild — to
+   derive the mesh from `selectedAppBuilderComponents` — THEN deleting the
+   mirror and flipping `useWizardState-dualFlow` from a lock into a
+   removed-behavior pin.
+   Original statement: the mesh ↔
    `selectedOptionalDependencies` mirror-write in
    `appBuilderComponentSelectionState.ts` + `useProjectBuilder`, locked by
    `useWizardState-dualFlow.test.tsx`. Do NOT remove before creation consumes mesh ids
