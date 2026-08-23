@@ -19,9 +19,13 @@
 > HIBERNATED, and (per the search team, paraphrased) syncing products does
 > NOT by itself recreate the index; each store view has its own. That is
 > exactly the demo-instance story: sit empty → hibernate → import a pack →
-> "No index was found", indefinitely. The remedy is an Adobe support request
+> "No index was found", indefinitely. A field-reported first try (unverified,
+> ACCS case 2026-08-23): edit any product attribute — a metadata update can
+> force index creation. The documented remedy is an Adobe support request
 > titled "Reactivate Live Search" with the environment id (restored within a
-> couple of hours). The warn now carries all of that, plus what still works
+> couple of hours). Both clauses of the policy were verified to apply to ACCS
+> (2026-08-23): the 45-day empty-catalog clause hits production AND testing
+> environments; the 90-day unqueried clause hits testing only. The warn now carries all of that, plus what still works
 > (runtime smart-404 publishes each PDP on first visit — prewarm is an
 > optimization) and the retry. Republish did NOT prewarm when this
 > closed; decided AND implemented the same day: `republishStorefrontContent`

@@ -78,11 +78,13 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
      * demo-instance cause is Live Search's public "Catalog data retention
      * policy": an environment whose catalog stays empty for 45 days (or a
      * testing environment unqueried for 90) is HIBERNATED, and importing
-     * products does not by itself wake it — reactivation is an Adobe support
-     * request titled "Reactivate Live Search". The warn must carry that
-     * remedy, plus what still works (smart-404 covers runtime; Reset re-runs
-     * prewarm) — not only what failed. A generic enumeration error keeps the
-     * plain line (previous test).
+     * products does not by itself wake it — the cheap first try is a product
+     * attribute edit (field-reported on ACCS, 2026-08-23: a metadata update
+     * can force index creation; not in the public docs), and the documented
+     * remedy is an Adobe support request titled "Reactivate Live Search". The
+     * warn must carry both, plus what still works (smart-404 covers runtime;
+     * Republish re-runs prewarm) — not only what failed. A generic
+     * enumeration error keeps the plain line (previous test).
      */
     it('gives actionable guidance on the no-index failure specifically', async () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -101,6 +103,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
 
         const warns = JSON.stringify((mockLogger.warn as jest.Mock).mock.calls);
         expect(warns).toContain('Catalog data retention policy');
+        expect(warns).toContain('edit any product attribute');
         expect(warns).toContain('Reactivate Live Search');
         expect(warns).toContain('smart-404');
         expect(warns).toContain('Republish');

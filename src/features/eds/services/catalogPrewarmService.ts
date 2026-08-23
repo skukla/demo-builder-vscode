@@ -275,7 +275,9 @@ export async function prewarmCatalog(
         // retention policy" (Live Search overview): an environment whose
         // catalog stays EMPTY for 45 days — or a testing environment unqueried
         // for 90 — is hibernated, and importing products does NOT by itself
-        // wake it; reactivation is an Adobe support request. Prewarm is an
+        // wake it; a product-attribute edit is a field-reported (unverified)
+        // way to force index creation, and the documented remedy is an Adobe
+        // support request. Prewarm is an
         // optimization either way: the runtime smart-404 publishes each PDP on
         // first visit regardless.
         if (/no index was found/i.test(reason)) {
@@ -284,7 +286,10 @@ export async function prewarmCatalog(
                     `Live Search hibernates an environment's search data when its catalog stays ` +
                     `empty for 45 days, or a testing environment goes unqueried for 90 (see ` +
                     `"Catalog data retention policy" in the Live Search overview) — and importing ` +
-                    `products does not by itself wake it. If this instance sat empty or idle, an ` +
+                    `products does not by itself wake it. Cheap first try: edit any product ` +
+                    `attribute in the Admin — a metadata update can trigger index creation ` +
+                    `(field-reported, not in the public docs) — and retry after ~15 minutes. ` +
+                    `If search still fails, an ` +
                     `Adobe support request titled "Reactivate Live Search" (include the environment ` +
                     `id) restores it within a couple of hours. A brand-new scope may instead still ` +
                     `be indexing — retry later. Product pages still work meanwhile: the runtime ` +
