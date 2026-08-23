@@ -7,7 +7,8 @@ has since been consolidated.
 **Question:** How does the extension assert ownership and deletion rights on Adobe
 Console projects, and why are some projects the user created not deletable?
 
-Prompted by an observation: "Team Meeting", "Steve and Jeff Mesh" and "Kukla Mesh"
+Prompted by an observation: "Team Meeting", "<name> and <name> Mesh" and "Kukla Mesh"
+(the two personal names redacted — the point is that projects get named after people)
 show a delete affordance in the Adobe Demo System org; "Kukla ACO" and "Solution
 Led Architects Integration Service" do not — all reported as created by the same
 person.

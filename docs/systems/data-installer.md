@@ -452,7 +452,7 @@ Two operational facts learned the hard way:
     website 1 (`base`) — pack said `[3]`, REST readback said `[1]` — and no
     phantom website appeared. The substitution is real on the deployed service.
 
-  **The intended workflow, confirmed by Jeff (the service author), 2026-08-14:**
+  **The intended workflow, confirmed by the service author, 2026-08-14:**
   *"[Create the website] before import. Then you can specify site and store on
   the data pack import. It will validate to make sure they exist."*
 
@@ -519,8 +519,8 @@ not a defect to chase. Three independent confirmations (2026-08-14):
   `carvello`, and three third-party dev packs. The `products` JSON schema
   permits the field; nothing populates it.
 
-**Where images actually come from**: AEM Assets. Confirmed by Jeff (the service
-author), 2026-08-14 — asked whether SCs are meant to supply product images in a
+**Where images actually come from**: AEM Assets. Confirmed by the service
+author, 2026-08-14 — asked whether SCs are meant to supply product images in a
 pack, the answer was *"was expected to be in AEM"*. The EDS storefront's
 `AEM_ASSETS_ENABLED` setting renders to `commerce-assets-enabled` in generated
 `config.json` and tells the dropins to resolve product images through Assets.
@@ -531,13 +531,13 @@ different mechanism with a different consumer. See
 `.claude/skills/eds-publish-and-config` for the scoping rules on the second one.
 
 **The escape hatch, if a demo genuinely needs catalog-hosted images**: Commerce's
-native product API accepts them, base64-encoded (Jeff, same conversation). That
+native product API accepts them, base64-encoded (the service author, same conversation). That
 is outside the Data Installer entirely — a separate script against
 `POST /V1/products/:sku/media`, not something a datapack can carry.
 
 ### Customer segments are not supported
 
-Jeff, 2026-08-14: *"true, api doesn't support"*. Segments cannot be imported,
+The service author, 2026-08-14: *"true, api doesn't support"*. Segments cannot be imported,
 exported, or seeded by any pack — same permanent-gap class as quotes and
 requisition lists (no processor exists for those either; the vocabulary is 21
 import / 18 export types and none of the three appear). Anything a demo needs in

@@ -26,7 +26,7 @@ checkboxes let users walk into and validate cannot catch.
 
 ## The intended workflow, from the service author
 
-Jeff, 2026-08-14, asked directly what happens when a pack's hardcoded website
+Asked directly, 2026-08-14, what happens when a pack's hardcoded website
 ids have no corresponding website: *"Yes before import. Then you can specify
 site and store on the data pack import. It will validate to make sure they
 exist."*

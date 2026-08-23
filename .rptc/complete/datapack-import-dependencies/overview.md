@@ -96,7 +96,7 @@ said 4 where the live catalog says 5. Two mitigations, both cheap:
 2. Each edge carries its evidence in the source, so the next person can tell a
    documented edge from an inferred one without re-deriving this analysis.
 
-The durable fix is Jeff exposing `depends_on` for import mode; the service already
+The durable fix is the service author exposing `depends_on` for import mode; the service already
 has it in `data_processors_import.json`. Worth asking for, not worth blocking on.
 
 ## What gets built

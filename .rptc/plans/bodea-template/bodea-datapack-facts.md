@@ -154,11 +154,11 @@ where da.live's Library reads it to show an Assets panel to authors. Site scope 
 — org-scoped once meant the block library appeared but the Assets panel did not. **Nothing to do
 with product images.**
 
-**CONFIRMED BY THE SERVICE'S AUTHOR (Jeff, via Steve, 2026-08-14):** asked whether SCs supply
+**CONFIRMED BY THE SERVICE'S AUTHOR (2026-08-14):** asked whether SCs supply
 product images in a pack — *"was expected to be in AEM."* So Path A is the intended design, not
 an inference.
 
-*Fallback only:* Jeff also noted *"Images could be done via the native product api. They would
+*Fallback only:* the service author also noted *"Images could be done via the native product api. They would
 need to be encoded."* — base64 through `POST /V1/products/:sku/media`, entirely outside the Data
 Installer and requiring a separate script. One runbook line as an escape hatch; not the plan.
 
@@ -210,7 +210,7 @@ the placeholder), not a permanent condition to design around.
     silently empties a catalog.
 
   **If we ever adopt a branded Bodea website**, the prerequisite is a documented "create it
-  first" step (Jeff's flow). The pipeline already supports it: as of 2026-08-14 the extension
+  first" step (the service author's flow). The pipeline already supports it: as of 2026-08-14 the extension
   sends `website_code`/`store_code` on import and reset, and the import modal's picker states
   the precondition. No code change needed on our side — only a runbook step and a config flip.
 - **Product images** — see above.

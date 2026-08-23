@@ -252,7 +252,7 @@ describe('start-datapack-import', () => {
         });
 
         /**
-         * Targeting is the intended path (Jeff, the service author, 2026-08-14:
+         * Targeting is the intended path (the service author, 2026-08-14:
          * create the website first, "then you can specify site and store on the
          * data pack import"). The handler's job is to pass a complete pair
          * through and refuse a half one — the service 400s on a half pair, and

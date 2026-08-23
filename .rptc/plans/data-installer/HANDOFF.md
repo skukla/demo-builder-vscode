@@ -115,7 +115,7 @@ declined. Remaining, in execution order:
 The standing cost accepted with this: the branch keeps rebasing onto develop
 (six times on 2026-08-13 alone) until all six are done.
 
-## Next action — get Jeff's answer on ACCS export
+## Next action — get the service author's answer on ACCS export
 
 Stage 3 is the only DoD item left, and it is blocked on the service rather than
 on this branch. Every export returns 200 / `success: false` / `exported: 0` with

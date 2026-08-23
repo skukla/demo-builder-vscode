@@ -46,7 +46,7 @@ This file is the design.
 
 ## Why
 
-Jeff Britts' team deployed a **Data Installer API** — an Adobe App Builder service that
+A partner team deployed a **Data Installer API** — an Adobe App Builder service that
 stores Commerce sample-data "datapacks" in MongoDB and installs them into live Commerce
 instances. It holds a curated catalog of 11 demo brands and is in active use (1060+ request
 logs, 35 tracked installations).

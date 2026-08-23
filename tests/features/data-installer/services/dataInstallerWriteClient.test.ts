@@ -157,7 +157,7 @@ describe('DataInstallerWriteClient', () => {
         });
 
         /**
-         * Targeting, per the service author (Jeff, 2026-08-14): "you can specify
+         * Targeting, per the service author (2026-08-14): "you can specify
          * site and store on the data pack import. It will validate to make sure
          * they exist." The pair drives `session_website_id`, which the service
          * substitutes into every pack `website_ids` — so this is what decides
