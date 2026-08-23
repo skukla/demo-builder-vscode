@@ -82,8 +82,12 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
                 cancellable: false,
             },
             (progress) =>
-                repairSiteConfigForProject(project, this.context, this.logger, (message) =>
-                    progress.report({ message }),
+                repairSiteConfigForProject(
+                    project,
+                    this.context,
+                    this.logger,
+                    (p) => this.stateManager.saveProject(p),
+                    (message) => progress.report({ message }),
                 ),
         );
     }
