@@ -146,3 +146,6 @@ Steps 01–04 are buildable now. Step 05 is the proof.
   in a request body. `buildExportBody` already carries that as a comment.
 - **Redact before committing.** This repo is public and `.rptc/` is tracked: no colleague
   names, no internal endpoints, no live record ids in any writeup this plan produces.
+  A proposed enforcement for that rule sits beside this plan as
+  [`proposed-no-colleague-names.test.ts`](proposed-no-colleague-names.test.ts) — not
+  installed, and its banner says what has to be decided before it can be.
