@@ -28,7 +28,21 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-13** (THIRD pass — a claim-validation pass; see below).
+> **Index last reconciled: 2026-08-23** (FOURTH pass — the first FULL re-measure: every
+> active item's central claim checked against the code by four parallel read-only agents,
+> each claim paired with the command that would falsify it and a positive control on every
+> absence). Score across 33 items measured: **10 fully current, 5 dead (archived same day:
+> Model A seed, site-access tools, AI-surface phase 4, data-installer writes, Code Sync
+> reference + the org-context residual entry), 12 partially dead (entries rewritten in
+> place with dated re-measure notes), 6 current-with-stale-citations or gated.** The
+> third pass's age rule held perfectly: everything filed on a re-measure day stayed true;
+> the 2026-06→08 age band was again a coin flip. Two new lessons: (a) an item can die in
+> NINE DAYS (site-access, filed 08-14, shipped by phase 4 before 08-23); (b) a proposal
+> can be built AND reverted between reconciles, leaving the index advertising as "proposed"
+> something the code now argues against (the install-click gate). The re-measure-before-
+> pickup rule is not optional at ANY age.
+>
+> **Previous: 2026-08-13** (THIRD pass — a claim-validation pass; see below).
 > The second pass verified in both directions with a control for each: 65 links, 0 dead;
 > 38 items, every one reachable from a `####` entry or as a numbered slice inside one.
 >
@@ -140,10 +154,6 @@ The `jest worker force-exit` warning (once wrongly listed here as resolved, then
 
 **Retire the separately-deployed shared service; each SC gets their own Adobe I/O project.** Five items: (a) the `demo-builder-s2s` credential — **CANNOT MOVE**, settled 2026-08-16; (b) store discovery; (c) prerender — **a separate research item, do not decide it here**; (d) a single SC-built mesh and (e) SC-built integration packages, both **already built**, which is what makes this credible rather than speculative. (a) cannot move, and the reason turned out to be entitlement rather than reach: a credential in the Solution Led Commerce SC org cannot be subscribed to `ACCS-REST-API` at all — the service carries no product profile there (control: twelve other services in that org DO offer products), and the subscribe is refused inside an HTTP 200. The subscription IS the entitlement, so such a credential never gains `commerce.accs`. Measured 2026-08-16, both orgs compared: `.rptc/complete/data-installer-credential-broker/step-05.md`. **Three things must exist first, all verified 2026-08-16:** no notion of a REQUIRED deployable in the catalog schema (one entry today, `app-builder-shell`); no upgrade path for a deployed integration (staleness detection is mesh-shaped — **the cost centre**, since today one deployment serves everyone and a fix ships once); and no dedup, so two demo projects sharing a workspace each believe they own the deployment and the second deploy silently overwrites the first. D1 shipped; D2–D6 pending. What it buys: retires four actions, an AES-256-GCM per-site key store, a drift checker, the org-keyed `accsDiscovery.services` setting, and `byom.overlayUrl` — which today ships a stage Runtime endpoint as a default in this PUBLIC repo. Filed 2026-08-16.
 
-#### What "AEM Code Sync installed" can and cannot be known from ([`2026-08-19-code-sync-detection-limits.md`](2026-08-19-code-sync-detection-limits.md))
-
-**Mostly reference, plus ONE proposal** — filed so nobody re-derives it, and so nobody "fixes" the detector with an API that cannot answer. `admin.hlx.page/status/{owner}/{repo}/main` answers on TWO levels and conflating them is where every bug in this area came from. The OUTER status is about the SITE (measured with a control: `kukla-bodea` → `404 no such site`, a real storefront → `401 not authenticated`, and the 404 lands BEFORE auth). The INNER `code.status`, present only on an outer 200, is a real App detector — `404` there means "Helix knows the repo and has no code sync", which is why "AEM Code Sync Verified" is a measured statement worth keeping. The gap is the outer 404: no body, no inner status, and the code returned `isInstalled: false` anyway — the one fabricated verdict, contained in `fa7d2b4f` by `siteUnknownReason.ts`. **No GitHub API closes it**, both measured: `/user/installations` → 403 (needs a user-to-server token issued by the App; we hold `gho_`), `/repos/{o}/{r}/installation` needs Adobe's App JWT. A token-TYPE limit, not a scope one — no scope helps. Only Adobe can close it. **Prior art:** `adobe-commerce/storefront-tools` hit the same wall and DELETED its verification on 2026-08-05 (`fbae1c3`), replacing it with a 7-second wait — but their constraint is that a Cloudflare Worker holds no user credential, while this extension sends the user's token as `x-auth-token`. Do NOT copy the wait; it trades a real signal for a timer. Their worker DOES independently corroborate the 404-vs-401 split on a different endpoint. **One takeaway proposed:** gate Continue on the install link being clicked — it closes the remaining hole where an existing-repo user with a missing App walks past the prompt and is halted at Phase 3 AFTER the repo was reset and written to, and it does so without the stranding risk of blocking on an unreliable signal. A second takeaway (treat an outer 401/403 as site-exists) was proposed and REJECTED the same day: their 401 means "site exists, you may not see it" because they call anonymously, ours would mean "our credential was refused" — same status code, different fact — and it would edit the classifier behind the eleven-reinstalls incident for zero gain. The item records why, so it does not come back. Filed 2026-08-19.
-
 #### `executeEdsPipeline` is a 254-line orchestrator at complexity 27 ([`2026-08-19-eds-pipeline-orchestrator-complexity.md`](2026-08-19-eds-pipeline-orchestrator-complexity.md))
 
 **A complexity item, not a decomposition one — and the distinction is the finding.** `edsPipeline.ts` is 839 lines and was briefly filed as a god file on size alone; `decompose-god-file`'s own coupling test rejects it (5 non-type imports against a >15 signal, ONE public export against >10, a single entity domain), and its rule is "threshold without coupling → leave it". Decisively, **splitting the file would not move the number the eslint warning is about**: all 27 branches are step-gating inside `executeEdsPipeline` itself (`clearExistingContent`, `skipContent`, `contentSource`, `includeBlockLibrary`, `purgeCache`, `skipPublish`, `libraryPaths.length`, `byomOverlayUrl && project`, plus nested try/catch), and extracting the eight private helpers leaves every one of them. The fix is a declarative step list, which collapses the orchestrator to a loop. **Not a quick win:** this is the shared spine of create, reset AND refresh-block-library, all provisioning real cloud resources, and two things need settling first — the steps share mutable locals that a step list must make an explicit context, and their error semantics deliberately differ per step. Filed 2026-08-19.
@@ -167,9 +177,9 @@ Five sequenced slices; **slice 1 gates the rest**:
 
 1. **Deploy spine — ✅ LANDED on `develop`** ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md), `20fae62f`). `app-builder` registry category + `deployAppComponent` (sibling of mesh, idempotent `aio app deploy`) + singular `appState` + the dead `appBuilder` field wired through install/persist + block-library-style additive add/remove + role-gate extension + dashboard `AppBuilderCard`. Public git URL only. **Caveat:** Step-7 live `aio` probes (deploy-prune default, `app delete action` undeploy, trigger/rule orphan-on-rename) deferred to a live workspace.
 2. **Curated catalog — ✅ SHIPPED** ([`../complete/2026-06-17-appbuilder-app-curated-catalog.md`](../complete/2026-06-17-appbuilder-app-curated-catalog.md), `94b633cf` + rename `65c40b04`). Delivered via the wizard **"Add-an-Integration"** feature: declarative `config/app-builder-components.json` catalog (seeded `commerce-paas-mesh`/`commerce-eds-mesh`/`headless-commerce-mesh`) + `appBuilderComponentCatalogLoader` (catalog pick AND custom-URL entry coexist) + wizard/configure selection UI + `executor.ts` deploy routing. Resolved the open question: curated mesh baselines live in this catalog. Verified on `develop` 2026-07-07 (index was stale).
-3. **Package-bound — ⛔ GATED on the first real bound integration** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md), rewritten 2026-07-09 after a staleness audit — [`../research/appbuilder-slice3-staleness/research.md`](../research/appbuilder-slice3-staleness/research.md)). Mechanism + schema fields exist; `onlyForPackages` exclusion is live. But the auto-include pieces are production-dead (no seeding, no locked UI, no summary visibility), the proposed `citisignal-headless` binding target doesn't exist as a package id, and the only bindable entries (meshes) would be behaviorally redundant. Real scope is in the rewritten item; pick up when a `kind:'integration'` app purpose-built for a package exists (shell lineage, slice 4, or BuildRight rebuild).
+3. **Package-bound — ⛔ GATED on the first real bound integration** ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md), rewritten 2026-07-09; **re-measured 2026-08-23**). Mechanism + schema fields exist; `onlyForPackages` exclusion is live. Two of the three "production-dead" pieces have since resolved: the dead symbols (`AppBuilderComponentsStepContent`, `computeSelectedAppBuilderComponents`) are DELETED outright, and the locked UI SHIPPED 2026-08-23 as the generic required-component lock (`isRequiredComponent` in `useProjectBuilder.ts` covers `nativeForPackages` entries and the required mesh with one predicate, pinned by tests). Still live: no seeding on stack select, the ReviewStep visibility half (its `integrations` prop has zero callers), and the gate itself — the catalog still holds exactly one entry and no `kind:'integration'` app purpose-built for a package exists.
 4. **Scaffold-and-author — ❌ RETIRED, subsumed by shell instancing** ([`2026-06-17-appbuilder-app-scaffold-author.md`](../complete/2026-06-17-appbuilder-app-scaffold-author.md), verdict at the top of the item). Shell instancing (2026-07-16, `feature/shell-instancing` — [`2026-07-16-shell-instancing-named-ai-integrations.md`](../complete/shell-instancing/item.md)) delivers create-new-and-author-with-AI via named shell instances; the `aio app init` scaffold mode is not being built.
-5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice.
+5. **App-only / no-storefront project — partial on 1, parallel** ([`2026-06-17-appbuilder-app-only-project.md`](2026-06-17-appbuilder-app-only-project.md)). Frontend-optional stack schema work; heaviest, least-coupled slice. **Re-measured 2026-08-23, cheaper than filed:** the schema/type claim holds (`stacks.schema.json` still requires `frontend`), but its blocker 2 is dead — `components.json` no longer carries an embedded `stacks` block, so `stacks.json` is the sole definition and there is no second copy to reconcile. The item's `components.json:272-297` and `executor.ts:1101` citations are stale (the throw is now stack-only at `executor.ts:~1453`, and the frontend add is already conditional).
 
 #### Promote a shell-built custom app to a repo ([`2026-07-13-promote-app-to-repo.md`](2026-07-13-promote-app-to-repo.md))
 
@@ -181,57 +191,15 @@ User-confirmed 2026-07-15: the product noun for the custom, action-carrying inte
 
 #### Prereqs architecture reframe — two-tier (Path A) ([`2026-06-11-prereqs-architecture-reframe.md`](2026-06-11-prereqs-architecture-reframe.md))
 
-Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. (The original `.116` target slipped; we're on `.121`.) Unblocks the Claude CLI detection plan below.
+Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. Unblocks the Claude CLI detection plan below. **Re-measured 2026-08-23: all five structural claims hold** — no `scope` discriminator, the schema drift (dead `groups`/`multiVersion`/`versionCheck`, missing `perNodeVersion`) is unchanged, all 5 entries still `optional: false`, the prereqs step survived the v6 wizard rebuild as step 2, and no welcome panel/walkthrough exists. The v6 rebuild touched nothing this item measures.
 
 #### Engine-aware AI launch + detect + opt-in install ([`claude-cli-detection-and-install/`](claude-cli-detection-and-install/overview.md))
 
 **⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
-#### Adobe org-context — residual workstreams ([`2026-06-15-adobe-org-context-self-heal-consolidation.md`](../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md))
-
-Core self-heal **shipped** (see Recently shipped). Residual scope from the original consolidation, **verify against current code before picking up**: (B) concurrency safety — re-pin under an exclusive lock spanning select→command and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Was the FIX-FIRST gate for the App-Builder-deployable + workspace work; the gate is cleared now that the self-heal landed.
-
 #### Audit: project-level facts stored per-component ([`2026-08-11-project-level-facts-stored-per-component.md`](2026-08-11-project-level-facts-stored-per-component.md))
 
-`componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
-
-#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/)) — **now phase 4 of `.rptc/plans/ai-surface/`**
-
-Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
-could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
-exposed by descriptor rows. The apparent gap is mostly not one — reading the 41 handlers
-without a row splits them into UI navigation, fire-and-forget dispatchers, and capability
-already reachable through one of the 32 tools registered outside the descriptor tables. That
-turned up a disqualifier `mcp-tool-authoring` does not state: a handler can be perfectly
-headless and still unexposable because its return carries the DISPATCH rather than the
-OUTCOME (`handleSyncStorefront` is two lines that run a command and return success), so
-exposing it hands an agent a tool that cannot fail. Real gaps are on the guidance side —
-authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
-surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
-is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
-
-#### Data Installer — MCP write tools ([`2026-08-16-data-installer-mcp-write-tools.md`](2026-08-16-data-installer-mcp-write-tools.md)) — **fast-follow to phase 4**
-
-Filed 2026-08-16 during phase 4, whose plan puts `src/features/data-installer/` out of scope —
-the largest single hole in the agent surface, so the exclusion is now a scheduled decision
-rather than a permanent one. Six datapack READS are exposed and were all optimised in phase 2
-(`get_datapack_activity` 25,056 → 5,709; `list_installed_datapacks` 16,611 → 4,055). **Zero
-writes are**, though `OPERATION_MODE` has always been typed `import | export | delete |
-validate`. Nine real unexposed handlers, read from the maps: import start/validate/status/
-target/scopes/reset, credential provisioning, export start/list.
-
-Two things changed since the exclusion was written. The credential blocker moved — develop
-landed the shared-credential broker (ADR-014) and research established one Commerce credential
-reaches every instance in its org. And phase 2 produced six concrete optimisations (page-size
-defaults, no dashboard-only fields, index/detail, never fabricate an envelope field, a recorded
-ceiling per tool, pollable progress) that should go in from day one rather than as a later pass.
-
-**Also records a measurement defect worth its own item:** `ai-coverage-scan` reported 31
-unexposed data-installer handlers; reading the maps gives 9. Its extractor matches handler keys
-by regex across a whole file and counts nested object keys (`auth: context.authManager`, and
-`success`/`data`/`context` inside handler bodies). A depth-aware parser written to check it also
-failed its control. The same inflation applies to every map the scan reports, so no phase-4
-number should be sized from it without reading. **Not blocked.**
+`componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11, **re-measured 2026-08-23: 17 of 27** declared env vars have more than one owner (two new single-owner vars joined since; the multi-owner set is unchanged); 6 are the Commerce scope keys (single-sourced 2026-08-11 — on the WRITE side only, the declarations were never deduplicated), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
 
 #### App Builder deployable model — the unresolved gaps ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
 
@@ -258,7 +226,7 @@ cruft. Not blocked.
 
 #### The other webview message channels are still untyped ([`2026-08-21-webview-push-channels-are-untyped.md`](2026-08-21-webview-push-channels-are-untyped.md))
 
-The 2026-08-20 payload-typing pass closed the `init` channel — one of ~30. Every other extension↔webview message (`statusUpdate` family, snapshots, auth flows, request/response pairs) still crosses as an object literal on one side and a hopeful cast on the other, and since `9144bee9` the comm manager honestly takes `unknown`, so nothing forces agreement. **Deliberately NOT a project**: the gate is "a channel causes a bug" — then type THAT channel, one per slice, using the two worked examples (webviewPayloads for init; `StatusPayload` `95bdf0b0`). The item carries the slice rules and per-channel kickoff prompt. Filed 2026-08-21.
+**Re-measured 2026-08-23 — mostly done; this entry had lagged its own item.** The push campaign and the request direction BOTH shipped since filing: `webviewPayloads.ts` now declares 44 exports (7 init shapes + ~37 push payloads) and `webviewRequests.ts` covers the request direction; the four named `AddIntegrationFlowAdapter` casts are gone. Still true: the comm manager takes `unknown` (`sendMessage(type, payload?: unknown)`), so nothing FORCES a new channel to declare its shape, and ~45 payload-less action requests remain untyped (the item's own "Remaining tail (LOW priority)"). Standing rule, not a project: declare the payload when you next touch a channel. `as never` count drifted 31 → 36 — watch the ratchet. Filed 2026-08-21.
 
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
 
@@ -270,11 +238,11 @@ Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a
 
 #### PDP empty-data redirect to native /404 ([`2026-06-09-pdp-graceful-empty-state.md`](2026-06-09-pdp-graceful-empty-state.md))
 
-When an SC deletes a SKU, the cached PDP serves the template and the drop-in gets no data. Honest UX = redirect to the storefront's native `/404`. **Investigate first**: does `@dropins/storefront-pdp` expose an empty-state callback before building a DOM-polling wrapper. Ships as a Demo Builder code patch (ADR-006). Phase 0 investigation 15–30 min.
+When an SC deletes a SKU, the cached PDP serves the template and the drop-in gets no data. Honest UX = redirect to the storefront's native `/404`. **Re-scoped 2026-08-23: half of this shipped for the OTHER path.** The smart-404 snippet (`pdp404Snippet.ts:194-198`) now does exactly this redirect on the COLD path (URL 404s at the CDN, render trigger fails) — and its comment states this item's UX reasoning as the decided contract, so do not re-decide it. What remains is only the WARM path this item was filed against: a previously-published PDP serves 200 from the content bus indefinitely, so the snippet never runs and the drop-in still renders an empty block. **Investigate first**: does `@dropins/storefront-pdp` expose an empty-state callback before building a DOM-polling wrapper. Ships as a Demo Builder code patch (ADR-006).
 
 #### App Builder component — edit-mode rehydration + ReviewStep visibility ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
 
-Rewritten 2026-07-09: two of the three original claims were already resolved on `develop` (`buildProjectConfig` serialization EXISTS; custom-URL provisioning EXISTS via creation Phase 3b + the rebuilt `CustomIntegrationRow`; `showCustomDoor` is obsolete). Remaining: edit-mode rehydration (nothing persists the selections to rehydrate FROM), the live ReviewStep bug (reads always-empty `components.appBuilder`, so hand-picked integrations are invisible on Review), and the coupled **D3 dual-flow removal**.
+Rewritten 2026-07-09; **re-measured 2026-08-23 and shrunk again**: edit-mode rehydration has SHIPPED (`buildEditModeIntegrationState` in `useWizardState.ts:216` seeds selections, sources, keyed API picks AND the mesh optional-dependency — the item's remaining-scope #2 went with it). Remaining, both verified live: the **ReviewStep bug** — `reviewStepHelpers.tsx:173` reads `components.appBuilder`, which `wizardHelpers.ts:697` hardcodes to `[]` while the populated `selectedAppBuilderComponents` sits two lines away, so hand-picked integrations are invisible on Review (a small standalone fix) — and the coupled **D3 dual-flow removal** (the mirror-write in `appBuilderComponentSelectionState.ts`).
 
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
@@ -299,25 +267,25 @@ for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulati
 
 #### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
-Serve multiple locales (eventually multiple brands) from a single project. Repurposes the wizard `settings` step as **Business Structure** (Connection, Primary Store, Regions & Locales, reserved Additional Brands). Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
+Serve multiple locales (eventually multiple brands) from a single project. **Re-measured 2026-08-23: the container shipped, the feature did not.** The v6 wizard rebuild delivered this item's structural proposal — a "Business Structure" sub-step exists inside the Commerce area (`commerceSections.ts:76`) — but as a SINGLE website/store/store-view scope selector feeding catalog gating and datapack import. Zero locale code anywhere in `src/` (measured with controls). So the item's "repurpose the settings step" plan is stale; what remains is adding the locale axis INSIDE the existing step. Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
 
 #### Decouple project from VS Code workspace folder ([`2026-05-30-decouple-project-from-workspace.md`](2026-05-30-decouple-project-from-workspace.md))
 
-Switching projects from the home grid reloads the workspace folder, reactivating the extension host. Goal: render the picked project's dashboard in-place without a window reload; anchor the workspace only when a workspace-requiring action fires. Multi-day — touches `StateManager`, MCP server lifecycle, terminal/AI Chat anchoring, file watchers. **Caveat (carried from the archived MCP-binding item): the headline premise shipped fixed 2026-06-02 — re-scope before picking this up; do not execute it as written.**
+**Re-measured 2026-08-23: the GOAL has shipped — this is now a small cleanup question, not a multi-day feature.** Plain project selection no longer reloads the window: `dashboardHandlers.ts:204-235` renders the picked project's dashboard in-place off the persisted pointer, and only shift/cmd-click (`forceNewWindow`) still anchors a workspace; the always-root re-home (`extension.ts:415-428`) replaced project-anchored workspaces entirely. What survives is one orphaned remainder: the MCP dual-listen shim (`secondarySocketPath` in `inExtensionMcpServer.ts`) whose tests explicitly pin it "so the decouple work later" cannot drop it — that later is now. Re-verify whether always-root makes primary==secondary (then it is a plain dead-code removal) and close this item either way.
 
 #### EDS site-scraping capability ([`2026-05-28-eds-site-scraping.md`](2026-05-28-eds-site-scraping.md))
 
-Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows (Mod Agent; Playwright MCP). **Gated on Mod Agent access** (request filed 2026-05-28). Phase 1 ~1 day of config; Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) ~1–2 weeks — defer until Phase 1 validates.
+Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
 
 #### Monorepo independent release tracking ([`monorepo-independent-release-tracking/`](monorepo-independent-release-tracking/overview.md))
 
-Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need.
+Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need — **re-measured 2026-08-23: still no repo serves two components** (4 distinct source URLs, each used once), and the plan's file map is stale: `COMPONENT_REPOS` no longer exists (repo resolution lives in `componentRepositoryResolver.ts`) and `templates/components.json` is now `src/features/components/config/components.json`. Fix the citations before executing.
 
 ### F. Maintenance cycle anchors
 
 #### DX follow-through — verification pipeline + guidance freshness ([`2026-07-03-dx-verification-pipeline.md`](2026-07-03-dx-verification-pipeline.md))
 
-Deferred items from the 2026-07-03 DX audit (`../research/dx-audit/research.md`): secret-file PreToolUse guard, evidence capture in the `gate` skill + fresh-context `/code-review` habit, periodic re-verification of the `<!-- Last verified -->` markers now stamped on every CLAUDE.md, and removal of the unused webpack devDependencies.
+Deferred items from the 2026-07-03 DX audit (`../research/dx-audit/research.md`), **re-measured 2026-08-23**: secret-file PreToolUse guard (still absent — six rules exist, none covers secrets; a new rule file in `.claude/hooks/rules/` is the insertion point), the fresh-context `/code-review` pre-push habit (the OTHER half of that item — evidence capture — has since shipped in `gate`'s §5 report format), periodic re-verification of the `<!-- Last verified -->` markers (present on 8 CLAUDE.md files, seven of them now ~7 weeks past their stamp — the premise proves itself), and removal of the four unused webpack devDependencies (all still in `package.json`; still the cheapest item in the backlog).
 
 #### Structural baseline ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
 
@@ -325,7 +293,7 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 #### Legacy / soft-deprecation cleanup ([`2026-05-21-legacy-soft-deprecation.md`](2026-05-21-legacy-soft-deprecation.md))
 
-**Re-measured 2026-08-13 — nearly all done.** The old text here ("~30 inventoried items… 3 zero-caller deletions are ready any time") was ~2.5 months stale: L1–L5 executed in Cycle 4 (PR #8, 2026-05-31) and three of the four follow-ups have shipped since. `@deprecated` in `src/` is down to **1** (`envFileGenerator.ts`, a Category-A keep), lint is **0 warnings / 0 errors**, and `componentHandler.ts` is deleted. What remains is small: half of follow-up 2 (`stalenessDetector.ts` still carries a service class *and* ten standalone function exports) plus the never-scheduled `demoPackageLoader` test seam. **Do not execute the batch plan in the file** — it is history; the banner at the top has the current scope.
+**Re-measured 2026-08-13, and AGAIN 2026-08-23 — down to one item.** `@deprecated` in `src/` holds at **1** (`envFileGenerator.ts`, a Category-A keep). The `demoPackageLoader` test seam is DONE — better than done: it shipped, became the documented reference example (`tests/README.md` names it), and is machine-enforced repo-wide (`tests/sop/no-config-leaf-mocks.test.ts`, empty allowlist). All that remains is the `stalenessDetector.ts` dual surface: the service class plus **nine** standalone function exports (the "ten" previously recorded here counted the type re-export). One mechanical refactor. **Do not execute the batch plan in the file** — it is history; the banner at the top has the current scope. This entry has now been wrong twice; it earned its own warning.
 
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
@@ -365,31 +333,30 @@ tokens, 6 hardcode), so an agent reading neighbours finds both conventions. Not 
 
 #### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
 
-Filed 2026-08-13. Most of this already works — packages install automatically into the
-isolated `.demo-builder-mcp/`, `.mcp.json` is written for the user, install failure is
-surfaced, a package that goes missing is caught by `detectMcpDrift` and healed, a broken
-server shows in the AI Capabilities modal, and `scrape-reference-site` tells the agent how to
-recover. Three gaps remain. **(1) The biggest download is invisible:** `@playwright/mcp` is
-only the server; Playwright fetches a ~150 MB Chromium on first USE, and nothing in `src/`
-knows that binary exists — on a restricted network it fails at an agent mid-scrape, as an
-error the extension never sees. **(2) Progress is a label, not progress** — one opaque step
-claiming "up to a minute" it cannot know. **(3) There is no opt-out, and the blocker is not
-the toggle:** `ai-defaults.json` declares packages, `DEMO_BUILDER_ALWAYS_ON_SKILLS` declares
-skills, and **nothing connects them** — the skill→tool dependency exists only as prose inside
-skill bodies, so "which skills are disabled if I opt out?" has no machine-readable answer.
-Nor is it all-or-nothing: of the six EDS scraping skills only three drive Playwright, the
-other three work on already-scraped material. **The state to avoid is a skill that tells an
-agent to use a tool that is not installed** — worse than no skill, because the agent tries,
-fails and improvises. Step 1 is declaring the dependency. Do the composition axis of
-[`2026-08-13-tier-the-ai-bundle-refresh.md`](../complete/2026-08-13-tier-the-ai-bundle-refresh.md)
-first — it SHIPPED 2026-08-14 (`d2cb8e85`), so that dependency is already met; this shares its
-gate. Not blocked.
+Filed 2026-08-13; **re-measured 2026-08-23 — two of its three gaps have shrunk or closed.**
+**(1) The invisible-download gap is mostly dead:** the premise ("Playwright fetches ~150 MB
+Chromium on first use, nothing in `src/` knows") was measured FALSE on 2026-08-22 — the MCP
+drives the machine's installed Chrome by default, and `src/` now says so in three places
+(the v17 skill correction, `ai-defaults.json`, `constants.ts`). What survives is only the
+runtime pre-check for Chrome-less machines (a Chrome-detection + `ms-playwright` cache stat;
+today only `mcpInspector.ts` even mentions the env var). **(2) Progress is still a label,
+not progress** — `aiHandlers.ts` emits one opaque step and `aiDefaultsInstaller.ts` has zero
+progress wiring (verified with a control). **(3) The skill→tool dependency is DECLARED and
+ENFORCED** — `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts:83` maps exactly the three
+Playwright-driving skills, and `skillsWriter.ts` gates generation on it, so a project
+without the tool no longer receives skills that command it. Remaining live work: the
+opt-out surface itself, the progress fix, and the re-scoped Chrome-less pre-check. Not
+blocked.
 
 
 ---
 
 ## Recently shipped — 2026-08
 
+- **AI surface coverage — phase 4** — found EXECUTED when re-measured 2026-08-23: every group (1–8) landed or was explicitly decided against in the plan's own annotations; the tool surface is 103 (57 direct + 46 descriptor rows), not the filed 58; the two example gaps (data-installer writes, prerequisites) are both closed. The backlog file predated execution and was never updated. `.rptc/plans/ai-surface/` still holds the annotated plan — verify its OTHER phases before archiving that dir too ([`../complete/ai-surface-coverage/overview.md`](../complete/ai-surface-coverage/overview.md))
+- **Data Installer — MCP write tools** — found SHIPPED when re-measured 2026-08-23: 8 of the 9 named handlers are descriptor-row tools (`start_datapack_import`, `validate_datapack_import`, `reset_datapack`, `start_datapack_export`, + the four target/scope/status/export-list reads); `delete-datapack` and `async-process-status` stay deliberately withheld. One-line residue: `provision-accs-credentials` is still handler-only — expose or decline it next time this surface is touched ([`../complete/2026-08-16-data-installer-mcp-write-tools.md`](../complete/2026-08-16-data-installer-mcp-write-tools.md))
+- **Code Sync detection limits** — archived 2026-08-23 as pure reference: its one proposal (gate Continue on the install-link click) was BUILT 2026-08-20 (`d70ef9b5`) and deliberately REVERTED the same day (`28c385b7`, reasoning now in `repoSelectionInline.helpers.tsx` — a forced click on an unreliable inference bought friction, not safety); `siteUnknownReason.ts`, which the item cites as load-bearing, was deleted `111fc968`. The reference half (two-level status semantics, GitHub API dead ends) re-measured current and lives on in code docblocks ([`../complete/2026-08-19-code-sync-detection-limits.md`](../complete/2026-08-19-code-sync-detection-limits.md))
+- **Adobe org-context — residual workstreams** — index entry retired 2026-08-23 after re-measure: facet B's concurrency risk was dissolved (per-invocation `withOrgContext` env targeting + `ResourceLocker.executeExclusive` wired through `commandExecutor`), the typed non-retryable `ORG_MISMATCH` shipped end-to-end (error code + `non_retryable: true` + the proxy refusing to retry it + AGENTS.md guidance), and the human org-picker was built and deliberately withdrawn (`e552f503` → `66f2888e`). The item file was already in `complete/`; only its live index entry survived it ([`../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md`](../complete/2026-06-15-adobe-org-context-self-heal-consolidation.md))
 - **MCP tools for Configuration Service site access** — found ALREADY SHIPPED when picked up 2026-08-23: AI-surface phase 4 (Group 6) delivered the whole scope in `siteTools.ts` — `get_site_access`, `set_site_admin` (grant/revoke merged, confirm-gated), `repair_site_configuration` — wired, tested (36), documented, in the bundle; every filed constraint honored, one deliberate deviation (unmasked emails, rationale in the module docstring). The item aged out in nine days without its death being visible — the index's re-measure-before-pickup rule caught the picker, not the filer ([`../complete/mcp-site-access-tools.md`](../complete/mcp-site-access-tools.md))
 - **App Builder attach — Model A seed** — archived 2026-08-23 during a whole-backlog review: everything in the item is shipped, declined, or superseded. The seed's five "build new" gaps all exist on develop via the ADR-011 track (`deployAppComponent`, the keyed `appBuilderComponents` map, the dashboard integrations grid, per-integration package renaming, `getProvidedEnvVars`); Effort 1 shipped long ago; Effort 2 stays declined. Adjacent remainders live in their own items ([`../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md`](../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md))
 - **Jest worker force-exit warning** — closed 2026-08-23, diagnosed to the mechanism. A live-handle audit of all 1130 suites found and fixed the only two real leaks: two `commerceStoreDiscovery` error-path tests under-mocked a `Promise.all` fan-out (calls 2–3 fell through the fetch spy to REAL fetches whose DNS+TLS handles lived for seconds), and `componentManager-install-git-clone`'s install-by-tag test hit the LIVE GitHub API (its 404 fell back to the configured tag, so it passed while touching the network). The residual warning is NOT a test leak: jest-worker's hardcoded 500ms end-of-run deadline racing twelve simultaneous worker teardowns — a SIGTERM dump on a warned run never even executed, proving the laggard's loop was blocked in teardown/GC, not idling on a handle. Machine-state-sensitive (~44% before and after); recurrence is not a regression unless the handle audit (recipe in `tests/README.md`) shows a leak ([`../complete/2026-06-09-jest-worker-force-exit.md`](../complete/2026-06-09-jest-worker-force-exit.md))

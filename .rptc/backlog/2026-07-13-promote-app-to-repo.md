@@ -41,7 +41,9 @@ integration isn't the user's to publish. Requires an origin marker on the compon
 - **Reuse:** `GitHubTokenService`/OAuth + `getUserOrgs` (auth + owner picker), `GitHubRepoOperations`
   (repo create), the shell/git executor (commit + push), `normalizeRepositoryName`,
   `componentInstances` (local path), the deploy/remove dashboard-action + handler pattern
-  (`DeployAppCommand` / `removeAppComponent` in `@/features/app-builder`).
+  (the keyed per-id handlers in `appBuilderComponentHandlers.ts` — `deployById` /
+  `removeAppBuilderComponent`; the singular `DeployAppCommand` this line used to cite was
+  retired with ADR-011 D3, corrected 2026-08-23).
 - **New:** the create-empty + push step, secrets/history hygiene (#1, #3), the `promoteApp` handler
   + dashboard action, and an origin flag on the component so the action gates + doesn't re-create.
 

@@ -1,5 +1,22 @@
 # Data Installer — MCP write tools (import / export / validate / reset)
 
+> ## CLOSED 2026-08-23 — shipped: 8 of the 9 named handlers are descriptor-row tools
+>
+> `DATA_INSTALLER_DESCRIPTORS` (`dataInstallerDescriptors.ts`) carries
+> `start_datapack_import`, `validate_datapack_import`, `reset_datapack`,
+> `start_datapack_export`, `get_datapack_import_target`,
+> `list_datapack_import_scopes`, `get_datapack_import_status`,
+> `list_datapack_export_items` — the exact handler types this item listed as
+> unexposed. The six reads it named remain as the positive control.
+> `delete-datapack` and `async-process-status` stay withheld as intended, with
+> the reasoning quoted in `readDescriptors.ts`. The appended "prerequisites has
+> no surface" section is also dead (`check_prerequisites` +
+> `install_prerequisite` shipped).
+>
+> **The one-line residue:** `provision-accs-credentials` is still handler-only
+> (`importHandlers.ts`) with no descriptor row — expose it or record the
+> decision not to, next time this surface is touched.
+
 **Provenance:** scoped 2026-08-16 during phase 4 of `.rptc/plans/ai-surface/`, as a fast-follow.
 Phase 4's plan puts `src/features/data-installer/` out of scope ("Stage 2 owns it and another
 session owns that feature"), and that exclusion is the largest single hole in the agent surface.
