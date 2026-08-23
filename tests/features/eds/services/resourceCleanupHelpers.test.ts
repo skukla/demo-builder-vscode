@@ -139,7 +139,10 @@ describe('extractEdsMetadata', () => {
         expect(metadata).toEqual({
             githubRepo: 'owner/repo',
             daLiveOrg: 'test-org',
-            daLiveSite: undefined,
+            // Repo-name fallback: the loader strips a daLiveSite equal to the
+            // repo name, so an absent field means "same as the repo" — without
+            // this, deleting a migrated project skipped the DA site cleanup.
+            daLiveSite: 'repo',
             backendType: undefined,
         });
     });

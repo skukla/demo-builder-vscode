@@ -589,7 +589,13 @@ async function confirmSampleDataRemoval(
         return false;
     }
 
-    const removeButton = 'Remove Datapack';
+    const removeButton: import('vscode').MessageItem = { title: 'Remove Datapack' };
+    // `isCloseAffordance` REPLACES the modal's automatic "Cancel" button.
+    // "Cancel" here read as "abort the whole reset" when it actually meant
+    // "keep the data and continue" (user-reported 2026-08-23) — this question
+    // is a yes/no about the datapack only, and its buttons now say so. Esc
+    // maps to Keep Data: dismissal takes the safe branch.
+    const keepButton: import('vscode').MessageItem = { title: 'Keep Data', isCloseAffordance: true };
     // "anything you added by hand stays": pack-scoped removal confirmed by the
     // Data Installer service owner 2026-08-22 — a removal takes only what the
     // pack imported, so the reassurance is a fact, not a guess (backlog item
@@ -601,8 +607,9 @@ async function confirmSampleDataRemoval(
             'Resetting the storefront does not require it.',
         { modal: true },
         removeButton,
+        keepButton,
     );
-    return answer === removeButton;
+    return answer?.title === removeButton.title;
 }
 
 /**

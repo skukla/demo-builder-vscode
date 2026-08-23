@@ -588,8 +588,11 @@
           "description": "Grandparent website ID — denormalized for convenience"
         },
         "is_active": {
-          "type": "boolean",
-          "description": "Whether this store view is active"
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "Whether this store view is active. Commerce's REST API sends the integers 1/0, not booleans — read from a real bodea manifest 2026-08-23, after the boolean-only declaration had every project load warning \"is_active must be boolean\" three times per view. Consumers check truthiness, which both shapes satisfy."
         }
       },
       "required": [
