@@ -883,7 +883,7 @@ extension must NEVER do that. It is the service's own secret, we do not hold it,
 and putting a database URI in a request body is not something this client will
 ever do.
 
-### The export contract differs from import's in three ways### The export contract differs from import's in three ways
+### The export contract differs from import's in three ways
 
 - **Request**: the export docs use `base_url` and no `commerce_instance`
   (`EXPORT_GUIDE.md` scenarios 1 and 2). **The deployed service rejects that
