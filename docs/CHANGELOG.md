@@ -7,8 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.137] - 2026-08-23
+
 ### Fixed
 
+- **A refused DA.live credential is no longer misreported as a missing
+  permission.** Before a storefront pipeline starts, the extension probes the
+  DA.live admin server: a 401 indicts the credential (sign in again — with
+  prompt copy that says so), while a 403 is a genuine permission fact.
+  Previously a refused credential surfaced as a permission problem that no
+  permission grant could fix.
+- **A package that requires an API Mesh can no longer be built without one.**
+  The required mesh row in the wizard is locked (no Remove action, a
+  "Required by this package" subline), the toggle refuses, and Continue holds
+  until the mesh is selected. Closes the silent failure where a
+  mesh-requiring storefront was created meshless and rendered empty product
+  blocks.
+- **Two VS Code windows no longer silently trade the AI's connection.** The
+  in-extension MCP server uses first-window-wins socket binding: a window
+  that finds another already serving leaves it in place and says so, instead
+  of silently taking the socket. `reset_eds_project` also names its target
+  project in the confirmation gate and every result.
 - **"No index was found" now comes with its real remedy — and Republish can
   retry pre-warming.** Catalog pre-warming on a demo instance often fails
   because Live Search hibernates search data (documented policy: 45 days with
