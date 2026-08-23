@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.139] - 2026-08-23
+
+**Update promptly if you are on beta.138** — it shipped a regression that
+refuses project reset and block-library refresh on most projects.
+
+### Fixed
+
+- **Reset and Refresh Block Library work again.** beta.138 began slimming
+  project manifests (dropping a DA.live site name that merely duplicates the
+  repo name), and three readers missed the memo — reset and refresh refused
+  every migrated project with "DA.live configuration missing", project
+  deletion would have silently skipped the DA.live site cleanup, and
+  config generation could produce empty site coordinates. All three now fall
+  back to the repo name. Caught by a live run within hours of the release.
+- **The reset datapack prompt is a real yes/no.** Its "Cancel" button read as
+  "abort the whole reset" when it actually meant "keep the data and
+  continue". The buttons are now Remove Datapack / Keep Data, and Escape
+  takes the safe branch.
+- **Project-load warnings tell the truth, once.** Store-view manifests
+  warned "is_active must be boolean" on every load — Commerce's API sends
+  integers, and the declared type was wrong, not your data. Fixed at the
+  type, and manifest shape warnings now print once per issue per session
+  instead of a wall of repeats.
+
+### Changed
+
+- **The EDS content pipeline is a declarative step list.** The shared spine
+  of create, reset, and refresh-block-library was one orchestrator with 27
+  branching paths; each step now declares its own condition and error
+  behavior, and the orchestrator is a loop. Validated live on all three
+  paths against real cloud resources before merging.
+- **Publishing the block library reports what it is doing** — how many
+  paths, then the verification pass — instead of a bare spinner with a
+  static time estimate.
+
 ## [1.0.0-beta.138] - 2026-08-23
 
 
