@@ -146,6 +146,12 @@ early return above. This fix removes MCP's dependence on that item rather than
 depending on it; the "secondary socket" it describes as temporary is now the
 permanent primary.
 
+*Amendment 2026-08-23:* the additional workspace-folder bind (the dual-listen
+shim) was removed when the decouple item closed — every `.mcp.json` pins the
+projects-root socket, and a cwd-derived proxy that misses it falls back to
+live-socket discovery, so nothing targeted the secondary. The server binds
+exactly one socket: the projects-root path.
+
 ## Open questions
 
 - Whether an agent filing issues should use the colleague's GitHub identity or a

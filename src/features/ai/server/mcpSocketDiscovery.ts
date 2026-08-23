@@ -45,7 +45,7 @@ import { mcpSocketDir, resolveMcpSocketPath } from './mcpSocketPath';
  * Per-candidate liveness-probe budget. A dead socket file refuses instantly
  * (ECONNREFUSED); the timeout only guards against a wedged listener.
  */
-export const SOCKET_PROBE_TIMEOUT_MS = 500;
+const SOCKET_PROBE_TIMEOUT_MS = 500;
 
 /** Successful resolution — where the socket path came from. */
 export interface ProxyTarget {

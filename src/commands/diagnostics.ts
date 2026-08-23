@@ -36,7 +36,7 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
-import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import {
     probeCredentialService,
@@ -247,8 +247,7 @@ export class DiagnosticsCommand {
         // one-project-one-workspace model and reported "not running" whenever no
         // folder was open, which is the normal state for this window model.
         const projectsDir = resolveProjectsRoot();
-        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const { primary: socketPath } = mcpSocketBindings(projectsDir, workspacePath);
+        const socketPath = resolveMcpSocketPath(projectsDir);
 
         const result = await probeInExtensionMcpTools(socketPath);
         if (!result.ok) {
