@@ -30,6 +30,7 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
+import { createAgentOperationNotifier } from '@/features/ai/server/agentOperationNotifier';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
@@ -510,6 +511,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
+            // Agent-triggered mutations get the same visible progress their
+            // dashboard buttons show, plus a landed outcome — the agent's own
+            // report may never reach the user. First slice of the
+            // consent/visibility design; see agentOperationNotifier.
+            longRunningNotifier: createAgentOperationNotifier(logger),
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,

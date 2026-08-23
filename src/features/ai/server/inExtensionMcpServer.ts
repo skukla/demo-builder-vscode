@@ -35,8 +35,27 @@ const SERVER_VERSION = '1.0.0';
  * carry secrets (e.g. `update_project_config.content` holds `.env` contents).
  * `info` → "Demo Builder: User Logs"; `debug` → "Demo Builder: Debug Logs"; errors → both.
  */
+/**
+ * Whether a tool's NAME reads as a query. Everything else is treated as
+ * mutating and routed through the injected long-running notifier.
+ *
+ * An allowlist, deliberately (same reasoning as mcp-live-probe's --force
+ * gate, which started as a denylist and let `sync_content` and `republish`
+ * straight through): a false positive costs one unnecessary notification,
+ * a false negative is a live-CDN mutation running invisibly. A new tool
+ * with a novel name fails CLOSED into "mutating".
+ */
+export function isReadOnlyToolName(name: string): boolean {
+    return /^(list|get|read|check|find|verify|inspect|show|describe)_/.test(name);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function withToolLogging(server: any, logger: Logger): any {
+function withToolLogging(
+    server: any,
+    logger: Logger,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    notifier?: (toolName: string, run: () => Promise<any>) => Promise<any>,
+): any {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
@@ -47,8 +66,12 @@ function withToolLogging(server: any, logger: Logger): any {
                     args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                 logger.info(`[MCP] tool: ${name}`);
                 logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
+                const invoke =
+                    notifier && !isReadOnlyToolName(name)
+                        ? () => notifier(name, () => handler(args))
+                        : () => handler(args);
                 try {
-                    const result = await handler(args);
+                    const result = await invoke();
                     logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
                     return result;
                 } catch (err) {
@@ -73,6 +96,17 @@ export interface InExtensionMcpServerOptions {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     registerExtraTools?: (server: any) => void;
+    /**
+     * Visibility for agent-triggered mutations (injected — this module stays
+     * vscode-free). Wraps the HANDLER CALL of every tool whose name is not
+     * read-shaped ({@link isReadOnlyToolName}); the extension supplies a
+     * vscode.window.withProgress implementation that also lands the outcome,
+     * because the agent's own report may never reach the user (disconnected
+     * client, closed chat — both observed live 2026-08-23 around a 2-minute
+     * refresh that mutated the live site invisibly).
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    longRunningNotifier?: (toolName: string, run: () => Promise<any>) => Promise<any>;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,
@@ -235,7 +269,7 @@ export class InExtensionMcpServer {
         // Wrap so every tool logs to the extension channels; registerProjectTools
         // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
         // are registered through the same wrapper.
-        const logged = withToolLogging(server, this.logger);
+        const logged = withToolLogging(server, this.logger, this.options.longRunningNotifier);
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
         this.options.registerExtraTools?.(logged);
 

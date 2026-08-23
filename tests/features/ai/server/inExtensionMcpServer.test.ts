@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
-import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { InExtensionMcpServer, isReadOnlyToolName } from '@/features/ai/server/inExtensionMcpServer';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap } from '@/types/handlers';
 import {
@@ -292,5 +292,64 @@ describe('InExtensionMcpServer', () => {
             .readdirSync(path.dirname(socketPath))
             .filter((n) => n.startsWith(path.basename(socketPath) + '.'));
         expect(leftovers).toEqual([]);
+    });
+});
+
+describe('agent-operation visibility (the notifier seam)', () => {
+    let socketPath: string;
+    let server: InExtensionMcpServer | undefined;
+    const projectsDir = path.join(os.tmpdir(), `dbmcp-notif-projects-${process.pid}`);
+
+    beforeEach(() => {
+        const id = Math.random().toString(16).slice(2, 10);
+        socketPath = path.join(os.tmpdir(), `dbmcp-test-${id}.sock`);
+    });
+
+    afterEach(() => {
+        server?.dispose();
+        server = undefined;
+        fs.rmSync(socketPath, { force: true });
+    });
+
+    // An MCP-triggered republish/sync/refresh runs for minutes against live
+    // resources with zero VS Code surface (seen live 2026-08-23: a 2-minute
+    // library refresh whose only evidence was the CDN's last-modified). The
+    // injected notifier is the extension's chance to raise withProgress; the
+    // server stays vscode-free and gates by tool NAME — read-shaped names
+    // (list_/get_/read_/…) never notify.
+    it('routes a mutating tool call through the injected notifier; read tools bypass it', async () => {
+        const seen: string[] = [];
+        const notifier = jest.fn(async (name: string, run: () => Promise<unknown>) => {
+            seen.push(name);
+            return run();
+        });
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            longRunningNotifier: notifier,
+        });
+        await server.start();
+
+        // list_projects is read-shaped: must NOT notify, and must still answer.
+        const names = await listToolsOverSocket(socketPath);
+        expect(names).toContain('list_projects');
+        await callToolOverSocket(socketPath, 'list_projects', {});
+        expect(seen).toEqual([]);
+
+        // sync_storefront is mutating: must go through the notifier (the call
+        // itself fails on the empty projects dir — irrelevant; the notifier
+        // fires BEFORE the handler).
+        await callToolOverSocket(socketPath, 'sync_storefront', {
+            projectName: 'nope',
+            commitMessage: 'x',
+        }).catch(() => undefined);
+        expect(seen).toEqual(['sync_storefront']);
+    });
+
+    it('isReadOnlyToolName: the allowlist fails closed', () => {
+        for (const name of ['list_projects', 'get_auth_status', 'read_page', 'check_mesh']) {
+            expect(isReadOnlyToolName(name)).toBe(true);
+        }
+        for (const name of ['sync_storefront', 'republish', 'delete_page', 'brand_new_tool']) {
+            expect(isReadOnlyToolName(name)).toBe(false);
+        }
     });
 });

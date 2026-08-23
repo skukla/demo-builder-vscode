@@ -103,7 +103,16 @@ Together the three legs are one design: **sign-in needs a human, destructive
 ops need consent, long operations need to be seen.** Design them as one
 surface when this item is picked up.
 
-**The visibility leg is independently shippable, and is the first slice**
+**✅ Visibility leg SHIPPED 2026-08-23** (same day): `longRunningNotifier`
+option on `InExtensionMcpServer` — every tool whose name is not read-shaped
+(`isReadOnlyToolName`, allowlist failing closed) runs inside the extension's
+injected `withProgress` notification, with the outcome landed in the window
+(status bar on success, warning toast on failure). Implementation:
+`agentOperationNotifier.ts`; pins in both suites. The consent dialog (leg 2)
+slots into the SAME wrapper — before `run()`, same classification.
+
+Original slice note, for the record: **the visibility leg is independently
+shippable, and is the first slice**
 (explicitly requested 2026-08-23 — the wizard-side sub-messages shipped in
 beta.139, but an MCP-triggered republish/sync/refresh/reset still runs with
 zero VS Code surface). Shape: a wrapper at tool-REGISTRATION level in the
