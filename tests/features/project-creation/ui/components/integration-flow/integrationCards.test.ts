@@ -94,11 +94,23 @@ describe('toIntegrationCards', () => {
             expect(card.menuActions).toEqual(expected);
         });
 
-        it('always offers Remove — every row can be dropped from the build', () => {
+        it('always offers Remove — every non-required row can be dropped from the build', () => {
             for (const kind of ['mesh', 'catalog', 'blank', 'custom'] as const) {
                 const [card] = toIntegrationCards([row({ kind })]);
                 expect(card.menuActions).toContain('remove');
             }
+        });
+
+        it('offers a REQUIRED mesh row no Remove — and no verbs at all, hiding the kebab', () => {
+            // The mesh-required enforcement: a package that declares
+            // requiresMesh cannot have its mesh dropped from the build. The
+            // silent alternative was a storefront pointed at the bare Commerce
+            // endpoint rendering empty product blocks. Empty menuActions is the
+            // established "no kebab" signal (IntegrationActionsMenu returns
+            // null on length 0).
+            const [card] = toIntegrationCards([row({ kind: 'mesh', required: true })]);
+            expect(card.menuActions).toEqual([]);
+            expect(card.required).toBe(true);
         });
     });
 
@@ -171,14 +183,14 @@ describe('sublineFor', () => {
     // kebab's Manage APIs opens the picker, which lists them.
     it('joins the source line and the API count', () => {
         expect(sublineFor(toIntegrationCards([row()])[0])).toBe(
-            'Custom integration · acme/erp-sync · 2 APIs',
+            'Custom integration · acme/erp-sync · 2 APIs'
         );
     });
 
     it('singularises a lone API', () => {
-        expect(sublineFor(toIntegrationCards([row({ apis: ['AdobeIOManagementAPISDK'] })])[0])).toBe(
-            'Custom integration · acme/erp-sync · 1 API',
-        );
+        expect(
+            sublineFor(toIntegrationCards([row({ apis: ['AdobeIOManagementAPISDK'] })])[0])
+        ).toBe('Custom integration · acme/erp-sync · 1 API');
     });
 
     it('drops the source segment when the row has none', () => {
@@ -190,7 +202,19 @@ describe('sublineFor', () => {
     // honestly rather than printing "0 APIs" if that ever changes.
     it('drops the API segment when there are none', () => {
         expect(sublineFor(toIntegrationCards([row({ apis: [] })])[0])).toBe(
-            'Custom integration · acme/erp-sync',
+            'Custom integration · acme/erp-sync'
         );
+    });
+
+    it('explains a required mesh — the card with no kebab must say why', () => {
+        const [card] = toIntegrationCards([
+            row({
+                kind: 'mesh',
+                required: true,
+                sourceLine: 'Commerce data via API Mesh',
+                apis: [],
+            }),
+        ]);
+        expect(sublineFor(card)).toBe('Commerce data via API Mesh · Required by this package');
     });
 });

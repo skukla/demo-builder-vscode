@@ -18,6 +18,7 @@
  * @module features/project-creation/ui/components/integration-flow/integrationRows
  */
 
+import type { AppBuilderComponentRequirement } from '../../../services/appBuilderComponentSelection';
 import { isMeshSelected } from '../../steps/tileStatus';
 import { BASELINE_CODE } from './apiAccessConstants';
 import { RESERVED_EXISTING_KEY, type IntegrationKind } from './flowStages';
@@ -48,6 +49,12 @@ export interface IntegrationRow {
      * (which has no source record to rename).
      */
     renamable?: boolean;
+    /**
+     * True when the package's resolved mesh requirement locks this row in the
+     * build (mesh rows only; `requiresMesh` with the storefront override
+     * honoured). The card layer withholds Remove and says why.
+     */
+    required?: boolean;
 }
 
 const MESH_FALLBACK_NAME = 'API Mesh';
@@ -82,7 +89,9 @@ function isShellInstanceSource(
     source: { owner: string; repo: string },
     template: { owner: string; repo: string } | undefined,
 ): boolean {
-    return template !== undefined && source.owner === template.owner && source.repo === template.repo;
+    return (
+        template !== undefined && source.owner === template.owner && source.repo === template.repo
+    );
 }
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */
@@ -101,7 +110,11 @@ function destinationCommitted(state: AdobeAuthSessionState): boolean {
  * @param requiredApis - the integration's deterministic required APIs (mesh/catalog
  *   entry `requiredApis`; empty for custom/import apps that carry only picks)
  */
-function apiCodesFor(state: AdobeAuthSessionState, id: string, requiredApis: string[] = []): string[] {
+function apiCodesFor(
+    state: AdobeAuthSessionState,
+    id: string,
+    requiredApis: string[] = [],
+): string[] {
     const picks = state.selectedConsoleApis?.[id] ?? [];
     return [...new Set<string>([BASELINE_CODE, ...requiredApis, ...picks])];
 }
@@ -119,8 +132,12 @@ function apiCodesFor(state: AdobeAuthSessionState, id: string, requiredApis: str
  */
 export function resolveIntegrationRows(
     state: AdobeAuthSessionState,
-    meshComponent: AppBuilderComponentCatalogEntry | undefined,
-    components: AppBuilderComponentCatalogEntry[],
+    meshComponent:
+        | (AppBuilderComponentCatalogEntry & { requirement?: AppBuilderComponentRequirement })
+        | undefined,
+    components: Array<
+        AppBuilderComponentCatalogEntry & { requirement?: AppBuilderComponentRequirement }
+    >,
 ): IntegrationRow[] {
     const needsSetup = !destinationCommitted(state);
     const meshRows: IntegrationRow[] = [];
@@ -135,6 +152,7 @@ export function resolveIntegrationRows(
             sourceLine: meshComponent.description || MESH_FALLBACK_SOURCE_LINE,
             needsSetup,
             apis: apiCodesFor(state, meshComponent.id, meshComponent.requiredApis),
+            required: meshComponent.requirement === 'required',
         });
     }
 
@@ -186,6 +204,10 @@ export function resolveIntegrationRows(
             sourceLine: entry.description || `Catalog · ${entry.name}`,
             needsSetup,
             apis: apiCodesFor(state, id, entry.requiredApis),
+            // Generic, not mesh-only: a nativeForPackages entry resolves
+            // requirement:'required' in the selection model and gets the same
+            // row/card lock the required mesh does.
+            required: entry.requirement === 'required',
         });
     }
 

@@ -69,7 +69,8 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend
+                EDS_PAAS.frontend,
+                'eds-paas'
             );
             const ids = result.map((d) => d.id);
             expect(ids).toContain('eds-commerce-mesh');
@@ -81,7 +82,8 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 'unknown-backend',
-                'unknown-frontend'
+                'unknown-frontend',
+                'eds-paas'
             );
             // The blank shell declares no compatibleBackends/Frontends, so it is
             // available on every stack — including this degenerate one.
@@ -95,7 +97,8 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage({ requiresMesh: 'optional' }),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend
+                EDS_PAAS.frontend,
+                'eds-paas'
             );
             const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             expect(mesh?.requirement).toBe('optional');
@@ -105,7 +108,34 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage({ requiresMesh: true }),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend
+                EDS_PAAS.frontend,
+                'eds-paas'
+            );
+            const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
+            expect(mesh?.requirement).toBe('required');
+        });
+
+        it('honours the storefront-level override — stack requiresMesh:true beats package false', () => {
+            // The live case: citisignal declares requiresMesh:false at package
+            // level and true on its headless-paas storefront. resolveRequirement
+            // used to read the raw package field, silently disagreeing with
+            // getResolvedMeshRequirement (the canonical resolver) on a shipping
+            // combination.
+            const result = getSelectableAppBuilderComponents(
+                makePackage({
+                    requiresMesh: false,
+                    storefronts: {
+                        'eds-paas': {
+                            name: 'EDS PaaS',
+                            description: 'EDS on PaaS',
+                            source: gitSource,
+                            requiresMesh: true,
+                        },
+                    },
+                }),
+                EDS_PAAS.backend,
+                EDS_PAAS.frontend,
+                'eds-paas'
             );
             const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             expect(mesh?.requirement).toBe('required');
@@ -115,7 +145,8 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
                 EDS_PAAS.backend,
-                EDS_PAAS.frontend
+                EDS_PAAS.frontend,
+                'eds-paas'
             );
             const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             // No package requirement and no native scoping → user-toggleable.
@@ -159,7 +190,8 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
         const result = getSelectableAppBuilderComponents(
             makePackage({ id: 'citisignal' }),
             'b',
-            'f'
+            'f',
+            'any-stack'
         );
         const entry = result.find((d) => d.id === 'native-thing');
         expect(entry?.requirement).toBe('required');
@@ -171,7 +203,8 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
         const result = getSelectableAppBuilderComponents(
             makePackage({ id: 'citisignal' }),
             'b',
-            'f'
+            'f',
+            'any-stack'
         );
         expect(result.map((d) => d.id)).not.toContain('buildright-only');
     });
@@ -182,7 +215,8 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
         const result = getSelectableAppBuilderComponents(
             makePackage({ id: 'buildright' }),
             'b',
-            'f'
+            'f',
+            'any-stack'
         );
         const entry = result.find((d) => d.id === 'buildright-only');
         expect(entry?.requirement).toBe('optional');

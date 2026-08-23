@@ -39,6 +39,18 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn() },
 }));
 
+// Real catalog by default; individual tests append a nativeForPackages entry to
+// drive the generic required-component guard (the catalog ships none today).
+jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
+    const actual = jest.requireActual(
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+    );
+    return {
+        ...actual,
+        getAvailableAppBuilderComponents: jest.fn(actual.getAvailableAppBuilderComponents),
+    };
+});
+
 import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
 import {
     getNativeBlockLibraries,
@@ -424,5 +436,136 @@ describe('useProjectBuilder — same-stack re-select preserves the mesh selectio
         const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
         // meshRequirement 'optional' → no auto-seed → reset to [] on the CHANGE.
         expect(call.selectedOptionalDependencies).toEqual([]);
+    });
+});
+
+describe('required mesh cannot be toggled off', () => {
+    // The mesh-required enforcement's defense-in-depth: the card layer hides
+    // Remove on a required mesh, and this guard makes the underlying toggle
+    // refuse too — a second door found later must not reopen the hole (the
+    // silent failure is a storefront on the bare Commerce endpoint rendering
+    // empty product blocks).
+    it('ignores a toggle-off for the mesh when the package requires it', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue(true);
+        const { result, updateState } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
+            selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
+        });
+
+        act(() => {
+            result.current.onAppBuilderComponentToggle('eds-commerce-mesh', false);
+        });
+
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('still allows toggle-off when the mesh is optional', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue('optional');
+        const { result, updateState } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
+            selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
+        });
+
+        act(() => {
+            result.current.onAppBuilderComponentToggle('eds-commerce-mesh', false);
+        });
+
+        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toEqual([]);
+        expect(call.selectedOptionalDependencies).toEqual([]);
+    });
+
+    it('never blocks toggle-ON, required or not', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue(true);
+        const { result, updateState } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+        });
+
+        act(() => {
+            result.current.onAppBuilderComponentToggle('eds-commerce-mesh', true);
+        });
+
+        expect(updateState).toHaveBeenCalled();
+    });
+});
+
+describe('required NON-mesh components cannot be removed (generic guard)', () => {
+    // The lock is generic: a nativeForPackages catalog entry resolves
+    // requirement:'required' exactly like a required mesh, and both removal
+    // doors (the toggle and the remove callback) must refuse it.
+    const { getAvailableAppBuilderComponents } = jest.requireMock(
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+    ) as { getAvailableAppBuilderComponents: jest.Mock };
+    const actualLoader = jest.requireActual(
+        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+    ) as { getAvailableAppBuilderComponents: (b: string, f: string) => unknown[] };
+
+    const nativeEntry = {
+        id: 'native-thing',
+        name: 'Native Thing',
+        description: 'Ships with citisignal',
+        kind: 'integration',
+        source: { owner: 'o', repo: 'native-thing', branch: 'main' },
+        nativeForPackages: ['citisignal'],
+    };
+
+    beforeEach(() => {
+        getAvailableAppBuilderComponents.mockImplementation((b: string, f: string) => [
+            ...actualLoader.getAvailableAppBuilderComponents(b, f),
+            nativeEntry,
+        ]);
+    });
+
+    afterEach(() => {
+        getAvailableAppBuilderComponents.mockImplementation(
+            actualLoader.getAvailableAppBuilderComponents
+        );
+    });
+
+    it('onRemoveAppBuilderComponent refuses a nativeForPackages entry', () => {
+        const { result, updateState } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            selectedAppBuilderComponents: ['native-thing'],
+        });
+
+        act(() => {
+            result.current.onRemoveAppBuilderComponent('native-thing');
+        });
+
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('onAppBuilderComponentToggle refuses toggling the same entry off', () => {
+        const { result, updateState } = setup({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            selectedAppBuilderComponents: ['native-thing'],
+        });
+
+        act(() => {
+            result.current.onAppBuilderComponentToggle('native-thing', false);
+        });
+
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('still removes it for a package it is NOT native to', () => {
+        const { result, updateState } = setup({
+            selectedPackage: 'custom',
+            selectedStack: 'headless-paas',
+            selectedAppBuilderComponents: ['native-thing'],
+        });
+
+        act(() => {
+            result.current.onRemoveAppBuilderComponent('native-thing');
+        });
+
+        expect(updateState).toHaveBeenCalled();
     });
 });

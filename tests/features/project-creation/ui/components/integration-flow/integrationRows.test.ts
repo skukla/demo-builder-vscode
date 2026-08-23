@@ -62,6 +62,45 @@ describe('resolveIntegrationRows — mesh row (both-key check)', () => {
         expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toEqual([]);
     });
 
+    it("stamps the mesh row required when the resolved requirement is 'required'", () => {
+        // The requirement rides the SelectableAppBuilderComponent the caller
+        // already resolves (meshComponentForStack); the row carries it so the
+        // card layer can withhold Remove and say why.
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
+            { ...MESH_ENTRY, requirement: 'required' },
+            CATALOG
+        );
+
+        expect(rows[0]).toMatchObject({ kind: 'mesh', required: true });
+    });
+
+    it('leaves the mesh row removable when the requirement is optional (or absent)', () => {
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
+            { ...MESH_ENTRY, requirement: 'optional' },
+            CATALOG
+        );
+
+        expect(rows[0].required).toBeFalsy();
+    });
+
+    it('stamps a NON-mesh row required from its catalog annotation (nativeForPackages path)', () => {
+        // The lock is generic, not mesh-special-cased: a future nativeForPackages
+        // integration resolves requirement:'required' in the selection model and
+        // must ride the same row/card lock (backlog: appbuilder-app-package-bound).
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['erp-sync'] }),
+            undefined,
+            CATALOG.map((entry) =>
+                entry.id === 'erp-sync' ? { ...entry, requirement: 'required' as const } : entry
+            )
+        );
+
+        const erp = rows.find((row) => row.id === 'erp-sync');
+        expect(erp).toMatchObject({ required: true });
+    });
+
     it('yields no mesh row when the stack has no mesh component (meshComponent undefined)', () => {
         const rows = resolveIntegrationRows(
             state({ selectedOptionalDependencies: ['eds-accs-mesh'] }),
@@ -111,6 +150,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
                 sourceLine: 'Syncs orders into an ERP backend',
                 needsSetup: true,
                 apis: [BASELINE_CODE], // baseline only (no free picks)
+                required: false, // no requirement annotation on the entry
             } satisfies IntegrationRow,
         ]);
     });

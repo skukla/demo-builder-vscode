@@ -14,7 +14,8 @@
  * card took its label from one and its dot from another.
  *
  * React-free and webview-safe: the only cross-feature imports are the pure
- * bundled-JSON catalog lookups (same precedent as AppBuilderComponentRow).
+ * bundled-JSON catalog lookups (the established webview-safe import precedent —
+ * a comparison here used to name AppBuilderComponentRow, deleted long since).
  *
  * Deliberate prototype deviation (plan YAGNI): the DEPLOYED mesh card has NO
  * "Open ↗" face — the GraphQL endpoint answers POSTs, not a browser GET; the
@@ -30,10 +31,7 @@ import type {
     CommerceScopePart,
     IntegrationCardModel,
 } from '@/core/ui/components/integrations';
-import {
-    getStatusDisplay,
-    severityToDot,
-} from '@/core/ui/utils/statusVocabulary';
+import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import {
     ACCS_WEBSITE_CODE,
@@ -357,16 +355,19 @@ function meshMenuActions(
  * Service PRICE modifier, not a location. It sits in the scope-key and staleness
  * lists defensively, but no component declares it, so it reaches no `.env`.
  */
-const COMMERCE_SCOPE_PARTS: { label: string; keys: string[]; list: keyof CommerceStoreStructure }[] =
-    [
-        { label: 'Website', keys: [ACCS_WEBSITE_CODE, PAAS_WEBSITE_CODE], list: 'websites' },
-        { label: 'Store', keys: [ACCS_STORE_CODE, PAAS_STORE_CODE], list: 'storeGroups' },
-        {
-            label: 'Store view',
-            keys: [ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE],
-            list: 'storeViews',
-        },
-    ];
+const COMMERCE_SCOPE_PARTS: {
+    label: string;
+    keys: string[];
+    list: keyof CommerceStoreStructure;
+}[] = [
+    { label: 'Website', keys: [ACCS_WEBSITE_CODE, PAAS_WEBSITE_CODE], list: 'websites' },
+    { label: 'Store', keys: [ACCS_STORE_CODE, PAAS_STORE_CODE], list: 'storeGroups' },
+    {
+        label: 'Store view',
+        keys: [ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE],
+        list: 'storeViews',
+    },
+];
 
 /**
  * Read the deployed Commerce scope off a mesh entry's captured `.env` snapshot,

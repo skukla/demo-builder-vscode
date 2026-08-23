@@ -73,6 +73,12 @@ export interface IntegrationCardModel {
      */
     menuActions: CardAction[];
     /**
+     * True when the package locks this component into the build (a required
+     * mesh in the wizard). The producer withholds Remove from `menuActions`;
+     * this flag lets the subline say why. Dashboard cards never set it.
+     */
+    required?: boolean;
+    /**
      * The keyed `appBuilderComponents` id to act on, when it differs from `id`.
      *
      * Only the mesh sets it. The mesh card's `id` is the literal `'mesh'` — a

@@ -222,6 +222,54 @@ describe('isIntegrationsComplete', () => {
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(true);
     });
 
+    // Required-mesh backstop: a package that requires a mesh cannot leave the
+    // area without one. Without this, the failure is SILENT and deferred —
+    // config generation falls back to the bare Commerce endpoint and the demo
+    // renders 200s with empty product blocks.
+    describe('required mesh backstop', () => {
+        const requiredMeshPackages = [
+            { id: 'citisignal', name: 'Citisignal', requiresMesh: true },
+        ] as unknown as DemoPackage[];
+
+        it('is false when the package requires a mesh and none is selected', () => {
+            const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
+            expect(isIntegrationsComplete(s, requiredMeshPackages, stacks)).toBe(false);
+        });
+
+        it('honours the storefront-level override (package false, stack true)', () => {
+            const overridePackages = [
+                {
+                    id: 'citisignal',
+                    name: 'Citisignal',
+                    requiresMesh: false,
+                    storefronts: { 'eds-paas': { requiresMesh: true } },
+                },
+            ] as unknown as DemoPackage[];
+            const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
+            expect(isIntegrationsComplete(s, overridePackages, stacks)).toBe(false);
+        });
+
+        it('completes once the required mesh is selected with a destination', () => {
+            const s = state({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                selectedAppBuilderComponents: ['eds-commerce-mesh'],
+                adobeAuth: { isAuthenticated: true, isChecking: false },
+                adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
+                adobeProject: { id: 'p1', name: 'proj' },
+                adobeWorkspace: { id: 'w1', name: 'ws' },
+            });
+            expect(isIntegrationsComplete(s, requiredMeshPackages, stacks)).toBe(true);
+        });
+
+        it('does not fire on a stack whose architecture has no mesh component', () => {
+            // requiresMesh:true on a no-mesh stack has nothing to require —
+            // the resolver finds no mesh entry, so the area completes.
+            const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' });
+            expect(isIntegrationsComplete(s, requiredMeshPackages, stacks)).toBe(true);
+        });
+    });
+
     // App Builder integration (non-mesh) on a stack with NO mesh — the generalized
     // gate must NOT report complete just because there is no mesh: a selected
     // integration still needs a deployment destination.

@@ -23,6 +23,7 @@
  */
 
 import { useCallback } from 'react';
+import { getSelectableAppBuilderComponents } from '../../services/appBuilderComponentSelection';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
@@ -280,8 +281,38 @@ export function useProjectBuilder(
         ],
     );
 
+    /**
+     * True when the package's resolved requirement locks this component into
+     * the build — the required mesh (`requiresMesh`, storefront override
+     * honoured) or a `nativeForPackages` catalog entry. One predicate for both
+     * removal doors below.
+     */
+    const isRequiredComponent = useCallback(
+        (id: string): boolean => {
+            const pkg = packages.find((p) => p.id === state.selectedPackage);
+            const stack = stacks.find((s) => s.id === state.selectedStack);
+            if (!pkg || !stack) return false;
+            const entry = getSelectableAppBuilderComponents(
+                pkg,
+                stack.backend,
+                stack.frontend,
+                stack.id,
+            ).find((candidate) => candidate.id === id);
+            return entry?.requirement === 'required';
+        },
+        [packages, stacks, state.selectedPackage, state.selectedStack],
+    );
+
     const onAppBuilderComponentToggle = useCallback(
         (id: string, isSelected: boolean) => {
+            // A required component cannot be toggled OFF. The card layer
+            // already hides Remove on it; this guard is defense in depth so a
+            // second door found later cannot reopen the hole — dropping a
+            // required mesh silently pointed the storefront at the bare
+            // Commerce endpoint, rendering 200s with empty product blocks.
+            if (!isSelected && isRequiredComponent(id)) {
+                return;
+            }
             const nextComponents = withSelectedAppBuilderComponent(
                 selectedAppBuilderComponents,
                 id,
@@ -316,6 +347,7 @@ export function useProjectBuilder(
             selectedAppBuilderComponents,
             selectedOptionalDependencies,
             state.selectedConsoleApis,
+            isRequiredComponent,
             updateState,
         ],
     );
@@ -355,6 +387,11 @@ export function useProjectBuilder(
 
     const onRemoveAppBuilderComponent = useCallback(
         (id: string) => {
+            // Same lock as the toggle: a package-required component cannot be
+            // removed from the build through ANY door.
+            if (isRequiredComponent(id)) {
+                return;
+            }
             const next = withSelectedAppBuilderComponent(selectedAppBuilderComponents, id, false);
             const sources = { ...(state.appBuilderComponentSources ?? {}) };
             delete sources[id];
@@ -372,6 +409,7 @@ export function useProjectBuilder(
             selectedAppBuilderComponents,
             state.appBuilderComponentSources,
             state.selectedConsoleApis,
+            isRequiredComponent,
             updateState,
         ],
     );

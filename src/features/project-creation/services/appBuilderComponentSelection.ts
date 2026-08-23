@@ -22,6 +22,7 @@
  */
 
 import { getAvailableAppBuilderComponents } from './appBuilderComponentCatalogLoader';
+import { getResolvedMeshRequirement } from './demoPackageLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 
@@ -51,11 +52,16 @@ function isAvailableForPackage(entry: AppBuilderComponentCatalogEntry, packageId
 function resolveRequirement(
     pkg: DemoPackage,
     entry: AppBuilderComponentCatalogEntry,
+    stackId: string,
 ): AppBuilderComponentRequirement {
     if (entry.nativeForPackages?.includes(pkg.id)) {
         return 'required';
     }
-    if (entry.kind === 'mesh' && pkg.requiresMesh === true) {
+    // getResolvedMeshRequirement, never the raw pkg.requiresMesh: the
+    // storefront-level override wins, and reading the raw field here silently
+    // disagreed with every other consumer on a shipping combination
+    // (citisignal + headless-paas: package says false, storefront says true).
+    if (entry.kind === 'mesh' && getResolvedMeshRequirement(pkg, stackId) === true) {
         return 'required';
     }
     return 'optional';
@@ -70,14 +76,16 @@ function resolveRequirement(
  * @param pkg - The selected demo package (provides id + requiresMesh)
  * @param backendId - Selected backend id (e.g. "adobe-commerce-paas")
  * @param frontendId - Selected frontend id (e.g. "eds-storefront")
+ * @param stackId - Selected stack id — resolves the storefront-level requiresMesh override
  * @returns Axis-filtered, package-scoped, requirement-annotated entries
  */
 export function getSelectableAppBuilderComponents(
     pkg: DemoPackage,
     backendId: string,
     frontendId: string,
+    stackId: string,
 ): SelectableAppBuilderComponent[] {
     return getAvailableAppBuilderComponents(backendId, frontendId)
-        .filter(entry => isAvailableForPackage(entry, pkg.id))
-        .map(entry => ({ ...entry, requirement: resolveRequirement(pkg, entry) }));
+        .filter((entry) => isAvailableForPackage(entry, pkg.id))
+        .map((entry) => ({ ...entry, requirement: resolveRequirement(pkg, entry, stackId) }));
 }

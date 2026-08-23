@@ -41,6 +41,10 @@ import { ActionButton, Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
 import {
+    getSelectableAppBuilderComponents,
+    type SelectableAppBuilderComponent,
+} from '../../services/appBuilderComponentSelection';
+import {
     AddIntegrationFlowModal,
     buildReservedIds,
     isApiEditable,
@@ -224,16 +228,34 @@ export function IntegrationsStep({
     // ALL stack-compatible catalog entries (mesh + integration + blank) — the
     // reserved-id domain needs every catalog id (a blank-instance name slugging
     // to one would clone the wrong repo via the executor's catalog-first lookup).
+    // Deliberately UNSCOPED (raw loader): reserved ids must cover entries a
+    // package excludes, or a blank instance could slug onto an excluded id.
     const availableEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
         () => getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? ''),
         [stack],
     );
+    const pkg = useMemo(
+        () => packages.find((candidate) => candidate.id === state.selectedPackage),
+        [packages, state.selectedPackage],
+    );
     // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
     // integration" gallery) vs. the blank starter app (the "Build custom"
-    // card) — the blank is NOT a pre-built integration and never shows in the gallery.
-    const integrationEntries = useMemo<AppBuilderComponentCatalogEntry[]>(
-        () => availableEntries.filter((entry) => entry.kind === 'integration'),
-        [availableEntries],
+    // card) — the blank is NOT a pre-built integration and never shows in the
+    // gallery. From the ANNOTATED, package-scoped selection (not the raw
+    // loader): `onlyForPackages` exclusions apply to the gallery, and each
+    // entry carries its resolved requirement so a required row locks
+    // (`resolveIntegrationRows` reads it).
+    const integrationEntries = useMemo<SelectableAppBuilderComponent[]>(
+        () =>
+            pkg && stack
+                ? getSelectableAppBuilderComponents(
+                      pkg,
+                      stack.backend,
+                      stack.frontend,
+                      stack.id,
+                  ).filter((entry) => entry.kind === 'integration')
+                : [],
+        [pkg, stack],
     );
     const catalog = useMemo(
         () => integrationEntries.filter((entry) => !entry.blank),
@@ -281,10 +303,7 @@ export function IntegrationsStep({
     // know: identity, origin and API count. No deploy status — nothing is
     // deployed yet, so a status would read the same on every card.
     const cards = useMemo(() => toIntegrationCards(rows), [rows]);
-    const rowsById = useMemo(
-        () => new Map(rows.map((row) => [row.id, row])),
-        [rows],
-    );
+    const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
 
     const onRemoveRow = useCallback(
         (row: IntegrationRow): void => {
@@ -347,9 +366,7 @@ export function IntegrationsStep({
         <>
             <StepAreaShell
                 areaLabel="Integrations"
-                viewClassName={
-                    rows.length === 0 ? 'int-results int-results--empty' : 'int-results'
-                }
+                viewClassName={rows.length === 0 ? 'int-results int-results--empty' : 'int-results'}
             >
                 {cards.length === 0 && <EmptyState onAdd={openAdd} />}
                 {cards.length > 0 && (
