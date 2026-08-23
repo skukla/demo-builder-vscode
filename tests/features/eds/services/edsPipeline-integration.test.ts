@@ -16,10 +16,20 @@ import {
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
+// Present in the mock so the library-publish step's verify pass runs instead of
+// throwing on an undefined import (the old orchestrator swallowed that throw
+// identically, which is how the gap hid).
+const mockVerifyLibraryPreviewed = jest.fn().mockResolvedValue(true);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
+    verifyLibraryPreviewed: (...args: unknown[]) => mockVerifyLibraryPreviewed(...args),
+}));
+
+const mockPrewarmCatalog = jest.fn().mockResolvedValue({ skipped: true });
+jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
+    prewarmCatalog: (...args: unknown[]) => mockPrewarmCatalog(...args),
 }));
 
 describe('executeEdsPipeline - integration', () => {
@@ -450,6 +460,43 @@ describe('executeEdsPipeline - integration', () => {
                 'publishContent',
                 'publishLibrary',
             ]);
+        });
+
+        it('continues when library publish fails — the step is declared non-fatal', async () => {
+            mockPublishLibraryPaths.mockRejectedValueOnce(new Error('bulk job refused'));
+
+            const result = await executeEdsPipeline(
+                {
+                    ...baseParams,
+                    contentSource: { org: 'o', site: 's' },
+                    includeBlockLibrary: true,
+                },
+                services
+            );
+
+            expect(result.success).toBe(true);
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Block library publish failed: bulk job refused')
+            );
+        });
+
+        it('continues when catalog pre-warming throws — defense in depth is declared on the step', async () => {
+            mockPrewarmCatalog.mockRejectedValueOnce(new Error('enumeration exploded'));
+
+            const result = await executeEdsPipeline(
+                {
+                    ...baseParams,
+                    contentSource: { org: 'o', site: 's' },
+                    byomOverlayUrl: 'https://overlay.example',
+                    project: { name: 'p' } as never,
+                },
+                services
+            );
+
+            expect(result.success).toBe(true);
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Catalog pre-warming threw unexpectedly: enumeration exploded')
+            );
         });
 
         it('should handle skipContent + includeBlockLibrary (custom package)', async () => {
