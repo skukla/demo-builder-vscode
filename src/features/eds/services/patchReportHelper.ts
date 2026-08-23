@@ -161,7 +161,13 @@ export function formatUnappliedToast(unapplied: UnifiedPatchResult[]): string {
         clauses.push(`${references.length} ${noun} couldn't be copied (${references.map(r => r.target).join(', ')})`);
     }
 
-    return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted; the drift-gate will surface any obsolete patches.`;
+    // "This toast is the only detector" is literal for CONTENT patches: the
+    // LKG drift-gate verifies code ledgers against clonable canonicals, but
+    // content patches target DA.live-authored pages it never reads. Two
+    // obsolete content patches sat undetected until a user read this toast
+    // (2026-08-23) — so the copy asks for the report instead of promising a
+    // gate that is not watching.
+    return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted. If this repeats on every create/reset, the patch is likely obsolete — please report it.`;
 }
 
 /**

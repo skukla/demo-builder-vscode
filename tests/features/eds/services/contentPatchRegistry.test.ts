@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(8);
+        expect(CONTENT_PATCHES.length).toBe(5);
     });
 
     it('each patch has required fields', () => {
@@ -140,29 +140,7 @@ describe('applyContentPatches', () => {
         );
     });
 
-    it('applies smart-watches category patch (PaaS: 38 → 5)', async () => {
-        const html = '<div class="product-list-page"><p>38</p></div>';
-        const result = await applyContentPatches(
-            html,
-            '/smart-watches',
-            ['smart-watches-category-id'],
-            mockLogger,
-        );
-        expect(result.html).toBe('<div class="product-list-page"><p>5</p></div>');
-        expect(result.results[0].applied).toBe(true);
-    });
 
-    it('applies smart-watches category patch (ACCS: 38 → 9)', async () => {
-        const html = '<div class="product-list-page"><p>38</p></div>';
-        const result = await applyContentPatches(
-            html,
-            '/smart-watches',
-            ['smart-watches-category-id-accs'],
-            mockLogger,
-        );
-        expect(result.html).toBe('<div class="product-list-page"><p>9</p></div>');
-        expect(result.results[0].applied).toBe(true);
-    });
 
     it('applies smart-watches url-path patch', async () => {
         const html = '<div><div>urlPath</div>\n      <div>smart-watches</div></div>';
@@ -201,32 +179,6 @@ describe('applyContentPatches', () => {
         expect(result.results[0].applied).toBe(false);
     });
 
-    it('applies phones heading reorder patch', async () => {
-        const html = [
-            '<div>',
-            '  <div class="product-list-page">',
-            '    <div>',
-            '      <div>category</div>',
-            '      <div>41</div>',
-            '    </div>',
-            '    <div>',
-            '      <div>urlPath</div>',
-            '      <div>phones</div>',
-            '    </div>',
-            '  </div>',
-            '  <h1 id="phones">Phones</h1>',
-            '  <div class="enrichment">',
-            '</div>',
-        ].join('\n');
-        const result = await applyContentPatches(
-            html,
-            '/phones',
-            ['phones-heading-reorder'],
-            mockLogger,
-        );
-        expect(result.html).toContain('<h1 id="phones">Phones</h1>\n  <div class="product-list-page">');
-        expect(result.results[0].applied).toBe(true);
-    });
 });
 
 describe('getContentPatches', () => {
