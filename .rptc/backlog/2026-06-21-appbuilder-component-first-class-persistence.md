@@ -1,9 +1,11 @@
-# App Builder component — remaining persistence gaps (ReviewStep read + optionalDependencies rehydration + D3)
+# App Builder component — remaining persistence gaps (D3 dual-flow removal only)
 
 > Date prefix = original deferral snapshot (Slice 2, 2026-06-21). Rewritten 2026-07-09
 > after the slice-3 staleness research; **narrowed again 2026-07-10** after the
 > integrations-flow redesign (`.rptc/plans/integrations-flow-redesign/`) shipped most of
-> the remaining scope.
+> the remaining scope; **narrowed a third time 2026-08-23** — the whole-backlog
+> re-measure found scope item 2 already shipped, and item 1 (the ReviewStep bug)
+> was fixed the same day (`9a4f7afc`). Only D3 remains.
 
 ## Resolved since (do NOT redo)
 
@@ -27,17 +29,19 @@
 
 ## Remaining scope
 
-1. **ReviewStep App Builder row reads the wrong field** (live user-visible bug):
-   `reviewStepHelpers.tsx` reads `components.appBuilder`, which `buildProjectConfig`
-   still hardcodes to `[]` — even a user-selected catalog integration is invisible on
-   Review. Should read `selectedAppBuilderComponents` (and show custom sources).
-   Small enough to fix standalone.
-2. **`selectedOptionalDependencies` rehydration in edit mode**: the mesh mirror key is
-   not seeded on edit, so a mesh-only project's edit session relies on the appBuilder-key
-   half of the both-key check. Decide with D3 (below) — rehydrating a key that D3 wants
-   to delete may be wasted work.
-3. **D3 dual-flow removal** (unchanged): the mesh ↔ `selectedOptionalDependencies`
-   mirror-write in `appBuilderComponentSelectionState.ts` + `useProjectBuilder`, locked by
+1. ~~ReviewStep App Builder row reads the wrong field~~ — **FIXED 2026-08-23**
+   (`9a4f7afc`): Review renders integrations via `resolveReviewIntegrationNames`
+   (`reviewStepHelpers.tsx`), riding the same `resolveIntegrationRows` spine as the
+   builder summary; the dead `components.appBuilder` read is gone and pinned so it
+   cannot return, and the never-wired `summarizeSelectedAppBuilderComponents` was
+   deleted with it.
+2. ~~`selectedOptionalDependencies` rehydration in edit mode~~ — **SHIPPED**
+   (verified 2026-08-23): `useWizardState.ts` `buildEditModeIntegrationState`
+   computes `meshDeps` from `selections.dependencies` and seeds
+   `selectedOptionalDependencies` on edit.
+3. **D3 dual-flow removal** (the whole live item now): the mesh ↔
+   `selectedOptionalDependencies` mirror-write in
+   `appBuilderComponentSelectionState.ts` + `useProjectBuilder`, locked by
    `useWizardState-dualFlow.test.tsx`. Do NOT remove before creation consumes mesh ids
    from `selectedAppBuilderComponents`; the auth/IO step gating depends on
    `hasMeshInDependencies` (now in `src/core/constants.ts`, consumed by
@@ -50,9 +54,10 @@
 
 ## Kickoff prompt
 
-"Resume the App Builder persistence remainder
-(`.rptc/backlog/2026-06-21-appbuilder-component-first-class-persistence.md` — narrowed
-2026-07-10; serialization, custom provisioning, edit rehydration, and summary visibility
-are DONE, don't redo). Scope: fix the ReviewStep integration visibility (reads
-always-empty `components.appBuilder`), then decide `selectedOptionalDependencies`
-rehydration together WITH the D3 dual-flow removal. Strict TDD."
+"Execute the D3 dual-flow removal
+(`.rptc/backlog/2026-06-21-appbuilder-component-first-class-persistence.md` — everything
+else in this item is DONE, don't redo). Scope: retire the mesh ↔
+`selectedOptionalDependencies` mirror-write once creation consumes mesh ids from
+`selectedAppBuilderComponents`; the `hasMeshInDependencies` step-gating consumers must
+move with it, and `useWizardState-dualFlow.test.tsx` is the lock to update last.
+Re-measure this item's claims against the code first. Strict TDD."
