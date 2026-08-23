@@ -30,6 +30,10 @@ import {
 } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
+import type {
+    DestinationRef,
+    SetProjectDestinationRequestPayload as SetProjectDestinationPayload,
+} from '@/types/webviewRequests';
 
 /** One side of the destination — the flow's `adobeProject` / `adobeWorkspace` shape. */
 // The request wire shapes live in @/types/webviewRequests — ONE declaration
@@ -38,7 +42,6 @@ export type {
     DestinationRef,
     SetProjectDestinationRequestPayload as SetProjectDestinationPayload,
 } from '@/types/webviewRequests';
-import type { DestinationRef, SetProjectDestinationRequestPayload as SetProjectDestinationPayload } from '@/types/webviewRequests';
 
 /**
  * Persist the Adobe project/workspace a project's integrations deploy to.
@@ -225,7 +228,6 @@ async function applyDestination(
     }
     return { success: true, data: { destination: project.adobe, previous, move } };
 }
-
 
 export const destinationHandlers = defineHandlers({
     setProjectDestination: handleSetProjectDestination,

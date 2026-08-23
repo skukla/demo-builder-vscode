@@ -1,5 +1,24 @@
 # What does a datapack removal actually delete?
 
+> ## ANSWERED 2026-08-22 — pack-scoped, by the cheaper route
+>
+> Asked the Data Installer service owner directly (the route this item itself
+> named as cheaper than the experiment): **a removal is pack-scoped and cannot
+> clear an instance** — data a user created by hand is out of its reach. The
+> experiment is superseded; the answer is verbal, not measured, but it comes
+> from the person who owns the behaviour.
+>
+> **Pack-scoped branch applied same day:** the reset removal prompt now says
+> "anything you added by hand stays" (`edsResetUI.ts`,
+> `confirmSampleDataRemoval`) — the expectation gap was the real risk and the
+> prompt now closes it with a statement that is a fact rather than a guess.
+>
+> **Successor item:** since removal can never produce a clean instance, the
+> "clean slate" want moved to its own item —
+> [`../backlog/2026-08-22-instance-wipe-option.md`](../backlog/2026-08-22-instance-wipe-option.md):
+> an explicit option to wipe as much data from the instance as the service
+> allows.
+
 **Filed:** 2026-08-17, from the reset sample-data work.
 **A question, not a defect. One experiment answers it.**
 

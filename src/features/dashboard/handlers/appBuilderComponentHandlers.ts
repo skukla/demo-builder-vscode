@@ -25,7 +25,6 @@
  */
 
 import * as vscode from 'vscode';
-import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
 import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
@@ -54,6 +53,7 @@ import type { AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { AppBuilderComponentRowStatus } from '@/types/webviewPayloads';
+import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 
 /**
  * Run the deploy guard order (auth → org-mismatch → App Builder permission).

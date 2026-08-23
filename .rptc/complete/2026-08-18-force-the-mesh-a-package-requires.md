@@ -1,5 +1,35 @@
 # A package that requires a mesh must be forced to add one
 
+> ## SHIPPED 2026-08-23 — designed and built in one pass
+>
+> The investigation first corrected two premises: BuildRight is NOT the only
+> declarer (`citisignal`'s `headless-paas` storefront override resolves
+> `requiresMesh: true`, and CitiSignal is featured), and the requirement
+> predicate existed TWICE in disagreement — `resolveRequirement`
+> (appBuilderComponentSelection.ts) read the raw package field while
+> `getResolvedMeshRequirement` honoured the storefront override.
+>
+> What shipped:
+> - **One predicate.** `resolveRequirement` now delegates to
+>   `getResolvedMeshRequirement` (stackId threaded through
+>   `getSelectableAppBuilderComponents`); the orphaned
+>   `AppBuilderComponentsStepContent` — the only consumer of the wrong copy,
+>   imported by nothing — was deleted with its test.
+> - **The mesh row locks.** A required mesh's card offers no Remove (empty
+>   menuActions hides the kebab) and its subline says "Required by this
+>   package"; `onAppBuilderComponentToggle` refuses the toggle-off as defense
+>   in depth.
+> - **The Continue backstop.** `isIntegrationsComplete` — whose signature
+>   already received the package and stack catalogs unused — now returns false
+>   while a required mesh is missing from the selection.
+> - The seeding half already existed (`onStackSelect` auto-adds the required
+>   mesh; `create_project` seeds from the same resolver), which is why the
+>   whole fix is guards, not plumbing.
+>
+> The silent failure this closes: config generation fell back to the bare
+> Commerce GraphQL endpoint (`MESH_ENDPOINT` is optional on both frontends),
+> and the demo rendered 200s with empty product blocks.
+
 **Filed:** 2026-08-18, from the `create_project` guard conversation.
 **Status:** NOT DESIGNED. The requirement below is settled; the surface is not.
 

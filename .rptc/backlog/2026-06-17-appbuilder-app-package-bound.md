@@ -4,6 +4,22 @@
 > after a three-agent staleness audit
 > (`.rptc/research/appbuilder-slice3-staleness/research.md`) — the original "small,
 > activation only" framing was wrong in both directions. Slice 3 of 5.
+>
+> **Update 2026-08-23 (mesh-required enforcement shipped):** the two dead symbols this
+> item names are now DELETED — `AppBuilderComponentsStepContent` and
+> `computeSelectedAppBuilderComponents` both had zero production callers. And the
+> "locked UI" design decision (§3 below) is settled by precedent for the MESH case:
+> the required mesh's result card withholds Remove (empty menuActions hides the
+> kebab), its subline reads "Required by this package", and the toggle refuses —
+> i.e. the "shown as included, not removable" default this item proposed. The lock
+> is GENERIC as of the same day: `IntegrationRow.required` is stamped for any entry
+> whose resolved requirement is 'required' (mesh AND `nativeForPackages`), the
+> gallery/rows read the annotated package-scoped selection (so `onlyForPackages`
+> exclusions now apply to the gallery too), and both removal doors
+> (`onAppBuilderComponentToggle`, `onRemoveAppBuilderComponent`) refuse a required
+> id via one shared predicate — all pinned by tests. What this slice still owns:
+> AUTO-ATTACH (nothing seeds a `nativeForPackages` entry into the selection — the
+> lock only holds what is already there) and the first real package-bound entry.
 
 ## What the audit established (verified on `develop`, 2026-07-09)
 
