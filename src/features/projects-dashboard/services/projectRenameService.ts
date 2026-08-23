@@ -64,7 +64,10 @@ export async function renameProjectCore(
         } catch (validationError) {
             return {
                 success: false,
-                error: validationError instanceof Error ? validationError.message : 'Invalid project name',
+                error:
+                    validationError instanceof Error
+                        ? validationError.message
+                        : 'Invalid project name',
             };
         }
 
@@ -141,8 +144,8 @@ export async function renameProjectCore(
                     return {
                         success: false,
                         error:
-                            `Rename failed and could not be undone. The project folder is now at `
-                            + `"${newPath}" but still records the name "${oldName}".`,
+                            `Rename failed and could not be undone. The project folder is now at ` +
+                            `"${newPath}" but still records the name "${oldName}".`,
                     };
                 }
             }
@@ -174,12 +177,18 @@ export async function renameProjectCore(
                     /* best-effort */
                 }
                 context.logger.warn(
-                    `[Rename] AI context regeneration failed for "${newName}" — MCP/AI configs `
-                    + 'may reference the old path until "Regenerate AI files" is run. '
-                    + (regenError instanceof Error ? regenError.message : String(regenError)),
+                    `[Rename] AI context regeneration failed for "${newName}" — MCP/AI configs ` +
+                        'may reference the old path until "Regenerate AI files" is run. ' +
+                        (regenError instanceof Error ? regenError.message : String(regenError)),
                 );
             }
         }
+
+        // Best-effort: keep the remote Adobe I/O project's title in sync — but
+        // only when it still matches the demo's old identity (see the helper;
+        // a user-selected shared Console project must never be renamed by a
+        // demo rename).
+        await syncRemoteProjectTitle(context, project, oldTitle ?? oldName, newTitle);
 
         context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
 
@@ -188,7 +197,10 @@ export async function renameProjectCore(
             data: { success: true, newName, newPath },
         };
     } catch (error) {
-        context.logger.error('Failed to rename project', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to rename project',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to rename project',
@@ -196,6 +208,66 @@ export async function renameProjectCore(
     }
 }
 
+/**
+ * Sync the remote Adobe I/O project title after a demo rename (best-effort).
+ *
+ * The Console project's title is set FROM the demo name when the wizard
+ * provisions one in-app, and silently diverging names are the disagreement
+ * class titles exist to prevent. But `project.adobe` can equally reference a
+ * PRE-EXISTING Console project the user selected in the wizard — renaming that
+ * would mutate shared infrastructure named by someone else. The guard: sync
+ * only when the remote title still MATCHES the demo's old title/name (proof
+ * the two were in sync); anything else is left alone with a debug line.
+ *
+ * Non-fatal by construction: the local rename has already succeeded and
+ * persisted; a remote refusal (wrong org → 403, SDK unavailable, offline)
+ * costs a warn and nothing more.
+ *
+ * @param context - handler context (authManager may be absent — e.g. tests)
+ * @param project - the already-renamed project (mutated when the sync lands)
+ * @param oldIdentity - the demo's previous title (or name when untitled)
+ * @param newTitle - the new title to push
+ */
+async function syncRemoteProjectTitle(
+    context: HandlerContext,
+    project: Project,
+    oldIdentity: string,
+    newTitle: string,
+): Promise<void> {
+    const adobe = project.adobe;
+    if (!adobe?.organization || !adobe.projectId || !context.authManager) {
+        return;
+    }
+    if (adobe.projectTitle !== oldIdentity) {
+        context.logger.debug(
+            `[Rename] Remote project title "${adobe.projectTitle}" differs from the old demo ` +
+                `identity — leaving the shared Adobe I/O project untouched.`,
+        );
+        return;
+    }
+    try {
+        const renamed = await context.authManager.renameRemoteProject(
+            adobe.organization,
+            adobe.projectId,
+            newTitle,
+        );
+        if (renamed) {
+            adobe.projectTitle = newTitle;
+            await context.stateManager.saveProjectConfigOnly(project);
+            context.logger.info(`[Rename] Remote Adobe I/O project title synced to "${newTitle}"`);
+        } else {
+            context.logger.warn(
+                `[Rename] Could not sync the remote Adobe I/O project title — the demo was ` +
+                    `renamed, the Console project still shows "${adobe.projectTitle}".`,
+            );
+        }
+    } catch (error) {
+        context.logger.warn(
+            `[Rename] remote project title sync failed (non-fatal): ` +
+                (error instanceof Error ? error.message : String(error)),
+        );
+    }
+}
 
 /**
  * Put a half-finished rename back.
@@ -235,15 +307,15 @@ async function rollbackRename(
         project.title = oldTitle;
         restoreComponentPaths(project, newPath, oldPath);
         context.logger.warn(
-            `[Rename] Save failed for "${newTitle}" — rolled the folder back to `
-            + `"${oldName}". The project is unchanged.`,
+            `[Rename] Save failed for "${newTitle}" — rolled the folder back to ` +
+                `"${oldName}". The project is unchanged.`,
         );
         return true;
     } catch (rollbackError) {
         context.logger.error(
-            `[Rename] Save failed AND rollback failed for "${newTitle}". The folder is `
-            + `at "${newPath}" but the manifest still says "${oldName}". `
-            + (rollbackError instanceof Error ? rollbackError.message : String(rollbackError)),
+            `[Rename] Save failed AND rollback failed for "${newTitle}". The folder is ` +
+                `at "${newPath}" but the manifest still says "${oldName}". ` +
+                (rollbackError instanceof Error ? rollbackError.message : String(rollbackError)),
         );
         return false;
     }

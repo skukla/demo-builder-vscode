@@ -328,3 +328,78 @@ describe('rollback when the save fails after the move', () => {
         expect(String(result.error)).toMatch(/could not be undone/i);
     });
 });
+
+describe('remote Adobe I/O project title sync', () => {
+    // The Console project title is set from the demo name when the wizard
+    // provisions a project in-app. Renaming the demo re-syncs that title —
+    // but ONLY when the remote title still matches the demo's old title/name:
+    // project.adobe can reference a PRE-EXISTING Console project the user
+    // selected, and a demo rename must never mutate shared infrastructure
+    // named by someone else. Best-effort: a remote failure never fails the
+    // local rename.
+    const remoteRename = jest.fn().mockResolvedValue(true);
+
+    function contextWithAuth(): HandlerContext {
+        const ctx = createMockContext();
+        (ctx as unknown as { authManager: unknown }).authManager = {
+            renameRemoteProject: remoteRename,
+        };
+        return ctx;
+    }
+
+    function adobeProject(remoteTitle: string): Project {
+        mockAccess.mockRejectedValue(new Error('ENOENT'));
+        return createMockProject({
+            title: 'Old Title',
+            adobe: {
+                organization: 'org-1',
+                projectId: 'proj-1',
+                projectTitle: remoteTitle,
+            },
+        } as Partial<Project>);
+    }
+
+    beforeEach(() => {
+        remoteRename.mockClear();
+        remoteRename.mockResolvedValue(true);
+    });
+
+    it('renames the remote project when its title matches the old demo title', async () => {
+        const project = adobeProject('Old Title');
+        const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
+
+        expect(result.success).toBe(true);
+        expect(remoteRename).toHaveBeenCalledWith('org-1', 'proj-1', 'New Title');
+        expect(project.adobe?.projectTitle).toBe('New Title');
+    });
+
+    it('does NOT touch a remote project whose title differs (user-selected shared project)', async () => {
+        const project = adobeProject('Corporate Shared Project');
+        const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
+
+        expect(result.success).toBe(true);
+        expect(remoteRename).not.toHaveBeenCalled();
+        expect(project.adobe?.projectTitle).toBe('Corporate Shared Project');
+    });
+
+    it('treats a remote rename failure as non-fatal (local rename still succeeds)', async () => {
+        remoteRename.mockRejectedValue(new Error('403'));
+        const project = adobeProject('Old Title');
+        const ctx = contextWithAuth();
+
+        const result = await renameProjectCore(ctx, project, 'New Title');
+
+        expect(result.success).toBe(true);
+        expect(ctx.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('remote'),
+        );
+    });
+
+    it('skips silently when the context has no authManager', async () => {
+        const project = adobeProject('Old Title');
+        const result = await renameProjectCore(createMockContext(), project, 'New Title');
+
+        expect(result.success).toBe(true);
+        expect(remoteRename).not.toHaveBeenCalled();
+    });
+});

@@ -1138,6 +1138,51 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Sync a remote Adobe I/O project's TITLE to a renamed demo (best-effort).
+     *
+     * `editProject` is a PATCH (aio-lib-console
+     * `patch_console_organizations__orgId__projects__projectId_`), so
+     * `{ title }` alone is the deliberate payload — the machine `name` (part
+     * of the project's identity) and description are never touched by a
+     * rename. Org/project ids come from the demo's persisted `adobe` config,
+     * not from the SDK's ambient selection: a wrong-org token gets a 403 from
+     * the API, which is the org guard a best-effort cosmetic sync needs —
+     * callers get `false` and move on, never an exception.
+     *
+     * @param orgId - Organization id from `project.adobe.organization`
+     * @param projectId - Project id from `project.adobe.projectId`
+     * @param title - The new human-readable title
+     * @returns true when the remote title was updated; false on any refusal
+     */
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+        try {
+            if (!this.sdkClient.isInitialized()) {
+                this.debugLogger.debug('[Entity Fetcher] SDK not available for project rename');
+                return false;
+            }
+
+            const client = this.sdkClient.getClient() as {
+                editProject: (
+                    orgId: string,
+                    projectId: string,
+                    details: { title: string }
+                ) => Promise<unknown>;
+            };
+
+            await client.editProject(orgId, projectId, { title });
+            this.debugLogger.info(
+                `[Entity Fetcher] Renamed remote project ${projectId} title to "${title}"`,
+            );
+            return true;
+        } catch (error) {
+            this.debugLogger.warn(
+                `[Entity Fetcher] Remote project rename refused: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            return false;
+        }
+    }
+
+    /**
      * Create the "Stage" workspace to mirror the App Builder template.
      *
      * createFireflyProject provisions only the default Production workspace; the Console's
