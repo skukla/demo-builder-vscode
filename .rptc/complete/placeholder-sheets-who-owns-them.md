@@ -1,5 +1,30 @@
 # Placeholder sheets: does anything need them, and should code fetch them at all?
 
+> ## ANSWERED AND FIXED 2026-08-23 — the code path is deleted; content owns labels
+>
+> The gating check ("does the B2B DA source have sheets the copy skips?") was
+> closed WITHOUT the token, by a dominance argument with every link verified:
+> the DA.live copy's list-API walk is full-tree and includes sheets (they are
+> `.xlsx` on DA.live — `daLiveContentCopy`'s own comment), no filter touches
+> `/placeholders`, and the observed project's source is the user's own org
+> (list-API path certain). So: if a source HAS sheets, the copy carries them
+> (verified live on isle5 — `/placeholders/global.json` serves from DA content
+> in no GitHub repo); if it doesn't, there is nothing to fetch; and the code
+> fetch targeted the TEMPLATE's live site either way — dead for b2b, a
+> content-shadowing snapshot where alive. Dominated in every branch.
+>
+> Deleted: `fetchPlaceholderFiles` (edsResetRepoHelper), the
+> `placeholderSheets` inventory field + 16-path list
+> (runtimeSurfaceInventory), and the resolver's merge of the derived field
+> (a ledger still shipping it is read leniently and ignored — pinned by test).
+> Docs synced: `eds-content-separation.md` rewritten around the
+> creating-vs-copying distinction (creation via the source API fails; blob
+> copy works), ADR-008 amended to retire the category.
+>
+> The design answer for future packages: author `/placeholders/*` sheets in
+> the DA.live source; the copy carries them; dropins' compiled-in English
+> defaults cover everyone else.
+
 **Filed:** 2026-08-15, from chasing nine console 404s on a freshly reset storefront.
 **Severity:** cosmetic at most, and possibly ZERO. Filed as a design question, not
 a defect — the evidence says the current code path may simply be unnecessary.

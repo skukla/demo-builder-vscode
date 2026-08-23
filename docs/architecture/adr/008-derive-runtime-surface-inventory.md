@@ -7,6 +7,18 @@
 
 Related: [ADR-006](006-thin-layer-storefront-customization.md) — the last-known-good (LKG) gate this ADR proposes to extend. Originating bug: the 2026-06 `/customer/nav` silently-dropped-fragment incident.
 
+> **Amendment 2026-08-23 — the placeholder-sheet category was retired.** The
+> `placeholderSheets` inventory field and its consumer (the reset-time
+> `fetchPlaceholderFiles` code fetch) were deleted: placeholder sheets are
+> UI-label dictionaries that belong to CONTENT — the DA.live copy's full-tree
+> walk carries any a source authors (`/placeholders` remains in the
+> `spreadsheets` backfill list), dropins ship English defaults compiled in, and
+> the code fetch targeted the template's live site, which does not exist for
+> the b2b template. The resolver ignores a generated `runtime-surfaces.json`
+> that still ships the field (lenient parsing). The rest of this ADR —
+> fragments, auth pages, spreadsheets, and the derivation gate — stands
+> unchanged; mentions of placeholder sheets below are historical context.
+
 ---
 
 ## Context
