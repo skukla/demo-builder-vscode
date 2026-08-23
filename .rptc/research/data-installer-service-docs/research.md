@@ -87,6 +87,46 @@ The source drop's collections (admin-auth + client-auth variants; both point
   general capture path and still requires a working export — the user's own
   Runtime deployment with his own MongoDB.
 
+## App Builder Database — the storage answer (researched 2026-08-23, public docs)
+
+The MONGO_URI problem class can be ELIMINATED, not configured: App Builder now
+ships a native document database whose library is, in the guide's own words,
+"intentionally modeled on the MongoDB Node Driver striving to be a **near
+drop-in replacement** for applications developed for MongoDB and/or AWS
+DocumentDB."
+
+Facts, each from the public docs
+([storage/database](https://developer.adobe.com/app-builder/docs/guides/app_builder_guides/storage/database),
+[db-runtime-actions](https://developer.adobe.com/app-builder/docs/guides/app_builder_guides/storage/db-runtime-actions),
+[adobe/aio-lib-db](https://github.com/adobe/aio-lib-db)):
+
+- **No URI, no secrets, no connection string anywhere.** Inside an action:
+  IMS token from `@adobe/aio-sdk` → `libDb.init({token})` → `db.connect()` →
+  `client.collection('x').find({...})`. Actions need the
+  `include-ims-credentials: true` annotation. The failure mode that broke
+  export ("MongoDB connection URI required") is structurally impossible.
+- **Provisioning is declarative**: database config in `app.config.yaml`
+  provisions automatically during `aio app deploy` (or `aio app db provision
+  [--region]`). One database per workspace, strictly isolated. Regions:
+  amer (default) / apac / emea / aus; init region must match.
+- **GA** (announced 2026-03), and the announcement states 40 GB of database
+  storage per App Builder pack — verify the quota page at implementation.
+- **Migration surface, measured against the service source**: the service
+  uses the raw `mongodb` driver (^6.0.0) in `actions/database/*` and its
+  lib. Method census across ~170 call sites: `find` 131, `findOne` 14,
+  `insertOne` 7, `updateOne` 7, `deleteOne` 4, `updateMany`/`insertMany`/
+  `deleteMany` 3 each, `countDocuments` 1 — ALL within aio-lib-db's
+  documented surface — plus the only two things needing verification:
+  **`startSession` ×2** (sessions/transactions — not mentioned in the
+  aio-lib-db docs read so far) and **`aggregate` ×2** (claimed supported;
+  verify the specific pipeline stages).
+
+**Consequence for the shared-service architecture:** the team-operated
+deployment needs NO external database at all. Migrate the service from the
+`mongodb` driver to `@adobe/aio-lib-db` (small, bounded — the census above),
+deploy to a team workspace, and storage provisions itself with the deploy.
+No Atlas, no secret, no per-user anything. Every SC exports to THE service.
+
 ## What this settles for `.rptc/backlog/2026-08-23-datapack-authoring-loop.md`
 
 - Gap 2 (own-version publishing) is **CLOSED as designed-in**: create a

@@ -106,29 +106,33 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 
 ## Constraints
 
-- **THE PATH (settled 2026-08-23, third revision — the record of how it
-  moved is below): the user deploys the service to Adobe Runtime in his own
-  workspace, with his OWN MongoDB.** The shared deployment will not be
-  changed — its operator will not be setting variables — so gap 1 is closed
-  by ownership, not by waiting. The design conversation with the service's
-  author settled the hosting question long ago: Runtime, never embedded in
-  the extension ("use the runtime — that way you don't have to manage it").
-  The extension stays a pure client; `demoBuilder.dataInstaller.apiBaseUrl`
-  points at the user's deployment. Source drop + turnkey guide are local
-  (`data-installer-api-b2b/`; config values stay out of this PUBLIC repo).
-- **Seeding is self-solving:** the new registry starts empty, but the
-  user's instance already holds the full Bodea data — the FIRST export
-  (which works, because his deployment has his `MONGO_URI`) captures it
-  into his own private pack. Shared packs remain reachable by temporarily
-  pointing the setting back at the shared service for an import;
-  per-operation service selection is a possible later feature if that
-  round trip gets annoying.
-- Revision record, so the reasoning is not relitigated: (1) first framed as
-  "relay a fix request to the operator" — dead, the operator will not
-  change the deployment; (2) then "optional personal stopgap" — wrong
-  framing; the user's own deployment IS the design, per the author's own
-  hosting advice. What was never on the table: hosting the service inside
-  the extension.
+- **THE ARCHITECTURE (settled 2026-08-23, final revision — trail below): a
+  TEAM-OPERATED shared deployment on App Builder, storing in App Builder's
+  native Database — no MongoDB anywhere, no per-user infrastructure.** The
+  requirement is a TRUE export to THE service with zero user-side setup.
+  Measured: no production deployment exists (candidate namespaces 404) and
+  the stage health check confirms no database is configured there; its
+  operator will not be changing it. So the demo-system team deploys the
+  service once (precedent: the team already operates the shared
+  accs-discovery service the same way), after migrating its storage from
+  the raw `mongodb` driver to `@adobe/aio-lib-db` — App Builder Database,
+  GA, a documented near drop-in for the MongoDB driver, credentialed by
+  IMS token with NO connection string (the failure class that broke export
+  cannot exist), provisioned automatically with the deploy. Migration is
+  small and measured (~170 call sites, all but 4 plainly supported; verify
+  `startSession` ×2 and `aggregate` ×2) — see
+  `.rptc/research/data-installer-service-docs/research.md`. Every SC's
+  extension points `demoBuilder.dataInstaller.apiBaseUrl` at the one URL.
+- **Seeding:** the new registry starts empty; the user's Bodea-loaded
+  instance seeds it via the first working export, and pack-item batch-copy
+  can migrate any needed packs from the old stage registry (its read +
+  add-data-item paths work).
+- Revision trail, so the reasoning is not relitigated: (1) "relay a fix
+  request to the operator" — dead, the operator will not change the
+  deployment; (2) "user's own deployment with his own Mongo" — rejected:
+  per-user infrastructure violates the adoption requirement; (3) the
+  App Builder Database migration removes the database dependency entirely.
+  Never on the table: hosting the service inside the extension.
 - Generated-bundle changes follow `ai-context-authoring` (four gate seams,
   AI_CONTEXT_VERSION bump, regenerate parity).
 - Build order (revised after the Postman map): **Route B's tools and skill
