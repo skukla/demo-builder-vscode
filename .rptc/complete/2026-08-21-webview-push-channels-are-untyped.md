@@ -1,5 +1,13 @@
 # The other webview message channels are still untyped
 
+> ## CONVERTED TO A STANDING RULE 2026-08-23 — a rule is not finishable work
+>
+> This item could never leave the backlog because "type a channel when you
+> touch it" never ends. The rule, the slice discipline, and the worked
+> examples now live in `.claude/skills/webview-command-handler/SKILL.md`,
+> which is the thing actually loaded when someone touches a channel. This
+> file stays as the record + the remaining cast-cluster leads below.
+
 **Filed:** 2026-08-21
 **Push-channel campaign COMPLETE 2026-08-21** — every live extension→webview
 push channel now has ONE declaration in `@/types/webviewPayloads` that both
