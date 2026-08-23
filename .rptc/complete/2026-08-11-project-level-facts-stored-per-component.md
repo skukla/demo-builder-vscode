@@ -1,5 +1,48 @@
 # Audit: project-level facts stored per-component in `componentConfigs`
 
+> ## CLOSED 2026-08-23 — audited per the item's own plan; the mechanism fixed once, no per-key work needed
+>
+> **Owner table regenerated**: 27 env vars, 17 multi-owner — same set as filed.
+>
+> **The audit's verdict on the mechanism.** The write side (Configure's
+> fan-out) targets SELECTED declaring components; two readers sweep the WHOLE
+> map: `envFileGenerator`'s first-non-empty fallback loop and
+> `configGenerator`'s merge — the latter with **mesh-overrides-non-mesh
+> priority** for every non-scope key. With `reconcileComponentSelections`
+> running on every load (additive: installed ⇒ selected), the only reachable
+> divergence between those two sets was **orphaned entries**: component
+> removal (`removeAppBuilderComponent`) cleared the instance, the keyed entry,
+> the selection and the API picks — and never `componentConfigs[id]`. Concrete
+> failure available before this fix: remove a mesh, repoint
+> `ADOBE_COMMERCE_URL` in Configure (writes to the backend only), and the next
+> config.json publish uses the mesh orphan's STALE value — the 2026-08-10
+> wrong-website failure shape, open for all 11 non-scope keys.
+>
+> **Fixed as fix (2), the item's preferred shape — mechanism, not per-key:**
+> 1. Removal now deletes `componentConfigs[id]` (with the same
+>    stale-reference sync the sibling maps get).
+> 2. Load-time migration `stripOrphanedComponentConfigs` sweeps entries whose
+>    id is no longer live (liveness = selection lists ∪ `selectedAddons` ∪
+>    instances ∪ keyed App Builder entries), running AFTER reconcile.
+>
+> With orphans gone the sets converge: every map entry is live, and every
+> Configure-editable live entry is in the fan-out. **None of the 11 keys needs
+> per-key single-sourcing.** The scope-key fix stands unchanged on its own
+> merits (the one family with a demonstrated failure keeps its backend-first
+> read priority).
+>
+> **Classified out of the mechanism's reach**: the ACO family (4 keys,
+> declared by an addon + a tool) never enters EITHER config surface — neither
+> Configure's `useSelectedComponents` nor the wizard's
+> `collectStackComponents` walks addons or tools — so the fan-out cannot
+> touch it and it cannot drift by this mechanism. Post-creation ACO credential
+> editability is a separate product question, recorded here, not chased.
+> The linked-field note (derived key written onto a non-declarer) stays as
+> filed: harmless, wrong by construction, cosmetic after this fix.
+>
+> Gate: full suite 1133/14881 green (4 RED-first pins), whole-repo lint 0
+> errors, both typechecks clean.
+
 **Filed:** 2026-08-11, during the duplicated-Commerce-scope fix.
 
 ## Provenance
