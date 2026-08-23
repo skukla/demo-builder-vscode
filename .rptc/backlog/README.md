@@ -148,7 +148,7 @@ The `jest worker force-exit` warning (once wrongly listed here as resolved, then
 
 #### Bodea's shared catalogs assign identical categories ([`2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md))
 
-**Measured, and it changes what the Bodea demo can claim.** All three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
+**Measured, and it changes what the Bodea demo can claim.** Picked up 2026-08-23: a concrete differentiation proposal is now in the item (narrow ServerSavvy Solutions to 6 server-room categories; leave Default and Platinum Buyer untouched so the tier-price demo is unconfounded) — **awaiting the data decision**, and the re-measure its kickoff requires could not run (no Extension Dev Host serving the MCP socket); execution is a pack-data change outside this repo. Original finding: all three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
 
 #### Move deliberately to a per-SC Adobe I/O project ([`per-sc-io-project.md`](per-sc-io-project.md))
 
@@ -244,7 +244,7 @@ When an SC deletes a SKU, the cached PDP serves the template and the drop-in get
 
 Rewritten 2026-07-09; **re-measured 2026-08-23 and shrunk again**: edit-mode rehydration has SHIPPED (`buildEditModeIntegrationState` in `useWizardState.ts:216` seeds selections, sources, keyed API picks AND the mesh optional-dependency — the item's remaining-scope #2 went with it). **The ReviewStep bug was FIXED the same day** (`resolveReviewIntegrationNames` in `reviewStepHelpers.tsx` — Review now renders integrations through the same resolver the builder summary uses; the dead `components.appBuilder` read is gone and the never-wired `summarizeSelectedAppBuilderComponents` deleted). Remaining: only the **D3 dual-flow removal** (the mirror-write in `appBuilderComponentSelectionState.ts`).
 
-#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
+#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
 
 One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
 
@@ -316,20 +316,16 @@ reads only. Not blocked.
 #### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
 
 Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
-Playwright help, or SLICC?" **Neither: the tool is not the problem.** Measured — every
-generated storefront ships **36 `--type-*` custom properties** (a full scale, size and
-line-height per role) in `aem-boilerplate-commerce`'s `styles.css`, and **no generated skill
-mentions them** (zero hits; control confirms the files are read). So an authoring agent picks
-sizes by eye, and `refine-visual-match` cannot correct it because that skill requires
-`.scraped/<domain>/` references — outside the scrape flow there is no oracle, so iteration runs
-against taste, unbounded. Playwright already screenshots at 1440/375 and caps at 3 rounds; the
-missing piece is a standard, not an instrument. SLICC was ruled out 2026-05-28 (BYOT-key
-friction vs auto-install), **though that assessment was scoped to scraping** and is not
-automatically closed for verification. Cheapest fix first: tell the skills the scale exists,
-measure, and only then consider a computed-style checker. **Two honest gaps:** no
-Claude-authored block was available to observe, so the failure is inferred — step 1 is
-reproducing it; and the boilerplate is itself inconsistent (13 of 83 block stylesheets use the
-tokens, 6 hardcode), so an agent reading neighbours finds both conventions. Not blocked.
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
 
 #### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
 

@@ -78,6 +78,32 @@ silently in the direction of showing something that should be hidden.
 - The pack's root "Bodea" category has `include_in_menu: false`, so nav content
   never came from the category tree in the first place.
 
+## Differentiation proposal (drafted 2026-08-23 — awaiting the data decision)
+
+**Re-measure status: NOT re-run** — the 2026-08-23 pickup found no Extension Dev
+Host serving the MCP socket, so the live category sets could not be re-fetched.
+The proposal below is designed against the 2026-08-17 measurement; re-run the
+fetch (kickoff prompt) before executing.
+
+The cleanest demo story keeps each catalog demonstrating ONE thing:
+
+| Shared catalog | Categories | What it demonstrates |
+|---|---|---|
+| Default (General) | all 11 (unchanged) | the walk-up baseline |
+| ServerSavvy Solutions | `servers`, `racks`, `cooling-equipment`, `cables`, `switching`, `services` (6 of 11 — drop `software`, `wi-fi`, `critical-power-equipment`, `products`, `bodea`) | **catalog-driven VISIBILITY**: a server-room reseller whose nav genuinely differs |
+| Platinum Buyer | all 11 (unchanged) | **PRICE**: same catalog, better prices (the 49 tier-priced products keep working untouched) |
+
+Why this shape: differentiating ONE catalog is enough to make visibility
+observable (the item's step 1 "is also the test"), and leaving Platinum Buyer's
+categories alone keeps the existing tier-price demo exactly as it is — the two
+mechanisms stay separately demonstrable instead of confounded in one login.
+
+Execution is a DATA change to the pack (`bodea@main`), outside this repo — the
+pack source is external (see `project_bodea_template`: the bodea-source repo is
+one of the pending external steps). Step 2 (a nav block reading Catalog Service
+against the customer's own catalog) stays a separate build, only worth starting
+after the data ships and re-measures as differentiated.
+
 ## Kickoff prompt
 
 > Read `.rptc/backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`.
