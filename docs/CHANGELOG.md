@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **"No index was found" now comes with its real remedy — and Republish can
+  retry pre-warming.** Catalog pre-warming on a demo instance often fails
+  because Live Search hibernates search data (documented policy: 45 days with
+  an empty catalog, or 90 unqueried for testing environments) and importing
+  products does not wake it. The log now says exactly that and names the fix —
+  an Adobe support request titled "Reactivate Live Search" with the
+  environment ID — instead of a bare failure line. And once the index is back,
+  the dashboard's Republish (and the AI's `sync_content`) now re-runs
+  pre-warming, so the heavyweight Reset is no longer the only retry; Republish
+  also refreshes previously pre-warmed product pages, which the content
+  publish alone never touched.
 - **The storefront's placeholder console errors are gone.** Every page load
   requested 16 optional UI-label sheets that don't exist, and the browser
   prints each failed request in red — harmless (labels fall back to built-in
