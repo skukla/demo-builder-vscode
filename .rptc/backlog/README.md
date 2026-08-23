@@ -124,7 +124,7 @@ Verified merged to `develop` and moved out of `.rptc/plans/` during the 2026-06-
 
 Also resolved since last index (now archived to `../complete/`): **oversized test-file splits** (0 `max-lines` warnings — the rule skips blanks/comments, and the worst file counts 481 of 500), **regenerate-AI-files progress** (shipped as `aiRegenProgress` in `useDashboardStatus.ts`; the old note pointed at a `creationProgress` symbol in `features/ai/handlers/`, a path that has since moved to `features/dashboard/handlers/`), **logs-toggle → sidebar**, and **B2B feature-pack dropin delivery**. The **DaLive permission-log "typo"** was a false positive — deleted outright rather than archived, since there was never anything to do.
 
-⚠️ **`jest worker force-exit` was listed here as resolved and is NOT** — see §F. It reproduces on demand as of 2026-08-05.
+The `jest worker force-exit` warning (once wrongly listed here as resolved, then reopened) is now genuinely CLOSED — diagnosed 2026-08-23 as jest-worker's hardcoded 500ms deadline, not a leak; see the 2026-08 archive section.
 
 ---
 
@@ -331,7 +331,7 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 **Re-measured 2026-08-13 — nearly all done.** The old text here ("~30 inventoried items… 3 zero-caller deletions are ready any time") was ~2.5 months stale: L1–L5 executed in Cycle 4 (PR #8, 2026-05-31) and three of the four follow-ups have shipped since. `@deprecated` in `src/` is down to **1** (`envFileGenerator.ts`, a Category-A keep), lint is **0 warnings / 0 errors**, and `componentHandler.ts` is deleted. What remains is small: half of follow-up 2 (`stalenessDetector.ts` still carries a service class *and* ten standalone function exports) plus the never-scheduled `demoPackageLoader` test seam. **Do not execute the batch plan in the file** — it is history; the banner at the top has the current scope.
 
-### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
+### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
 #### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
 
@@ -390,19 +390,11 @@ first — it SHIPPED 2026-08-14 (`d2cb8e85`), so that dependency is already met;
 gate. Not blocked.
 
 
-#### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
-
-Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) **shipped** on
-`develop`. **Active seed:** add 1+ App Builder apps to a demo project (**Model A** — user-supplied git
-repos deployed via `aio app deploy` into the demo's existing workspace; the Mesh lifecycle,
-multiplied). Supersedes the old Effort 1b cleanup. **Effort 2 (discovery least-privilege token):
-DECLINED 2026-06-15** — closes no attacker exposure; VS Code Secret Storage is the cheap fix if
-at-rest plaintext ever matters.
-
 ---
 
 ## Recently shipped — 2026-08
 
+- **App Builder attach — Model A seed** — archived 2026-08-23 during a whole-backlog review: everything in the item is shipped, declined, or superseded. The seed's five "build new" gaps all exist on develop via the ADR-011 track (`deployAppComponent`, the keyed `appBuilderComponents` map, the dashboard integrations grid, per-integration package renaming, `getProvidedEnvVars`); Effort 1 shipped long ago; Effort 2 stays declined. Adjacent remainders live in their own items ([`../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md`](../complete/2026-06-15-integration-service-cleanup-and-discovery-token.md))
 - **Jest worker force-exit warning** — closed 2026-08-23, diagnosed to the mechanism. A live-handle audit of all 1130 suites found and fixed the only two real leaks: two `commerceStoreDiscovery` error-path tests under-mocked a `Promise.all` fan-out (calls 2–3 fell through the fetch spy to REAL fetches whose DNS+TLS handles lived for seconds), and `componentManager-install-git-clone`'s install-by-tag test hit the LIVE GitHub API (its 404 fell back to the configured tag, so it passed while touching the network). The residual warning is NOT a test leak: jest-worker's hardcoded 500ms end-of-run deadline racing twelve simultaneous worker teardowns — a SIGTERM dump on a warned run never even executed, proving the laggard's loop was blocked in teardown/GC, not idling on a handle. Machine-state-sensitive (~44% before and after); recurrence is not a regression unless the handle audit (recipe in `tests/README.md`) shows a leak ([`../complete/2026-06-09-jest-worker-force-exit.md`](../complete/2026-06-09-jest-worker-force-exit.md))
 - **Catalog prewarm fails on a store view with no Catalog Service index** — closed 2026-08-23, all three decisions made. The ordering question was already answered in code (creation imports the datapack before prewarming, and the creation-time pipeline deliberately passes no project to the step-8 prewarm — the item’s premise went stale between filing and pickup). An unindexed scope is a supported state with a documented, non-self-serve remedy: Live Search's public Catalog data retention policy HIBERNATES an environment whose catalog stays empty 45 days (or a testing env unqueried 90), and syncing products does not by itself wake it (internal search-team corroboration, paraphrased) — the fix is an Adobe support request titled "Reactivate Live Search". The warn now carries that remedy, that runtime smart-404 covers every PDP regardless, and that Republish or Reset re-runs prewarming (Republish gained prewarm the same day — decided and implemented in the shared republish spine, so the dashboard button and MCP sync_content both retry it); branch-discriminated from generic failures, both pinned by test. No products(skus:) fallback ([`../complete/2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md`](../complete/2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md))
 - **Placeholder sheets: does anything need them?** — answered and fixed 2026-08-23: the reset-time code fetch (`fetchPlaceholderFiles`) and its 16-path `placeholderSheets` inventory are DELETED. Closed by a dominance argument, every link verified: the DA.live copy's full-tree walk carries authored sheets (they are `.xlsx` on DA.live; verified live on isle5), so a source with sheets needs no fetch and a source without has nothing to fetch — while the fetch targeted the template's live site, dead for b2b (17 silent 404s per reset) and content-shadowing where alive. Content owns labels; dropins' compiled-in English defaults cover the rest. Docs synced (`eds-content-separation.md` rewritten around creating-vs-copying; ADR-008 amended); a stale ledger shipping the retired field is ignored leniently, pinned by test. Same-day follow-up: the console 404s themselves silenced via static one-row sentinel stubs (`placeholderStubs.ts`, wired into creation + reset; empty sheets would still warn — the fetch code checks `data.length`; real DA sheets shadow the stubs) ([`../complete/placeholder-sheets-who-owns-them.md`](../complete/placeholder-sheets-who-owns-them.md))

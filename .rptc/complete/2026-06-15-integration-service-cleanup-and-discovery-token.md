@@ -1,5 +1,23 @@
 # integration-service / appBuilderApps cleanup + store-discovery least-privilege token
 
+> ## CLOSED 2026-08-23 — everything here is shipped, declined, or superseded
+>
+> Archived during a whole-backlog review. Effort 1 (remove integration-service +
+> appBuilderApps) shipped long ago; Effort 2 (least-privilege token) was DECLINED
+> 2026-06-15 and stays declined. The "Model A feature seed" — the reason the item
+> stayed active — is **fully shipped** by the ADR-011 track, verified against
+> `src/features/app-builder/` on 2026-08-23: every "build new" gap it lists exists
+> on develop. `aio app deploy` → `deployAppComponent` (`appDeployment.ts`); the
+> per-app ARRAY → the keyed `project.appBuilderComponents` map (D3, `5d6f4956`);
+> the dashboard add/redeploy surface → the integrations card grid with per-id
+> deploy/redeploy/remove/rename; namespace coexistence → per-integration
+> OpenWhisk package renaming; per-app env → `getProvidedEnvVars`. The open
+> decisions it deferred were settled by that work too (source = catalog AND
+> custom URL; placement = wizard and dashboard). Remaining adjacent work is
+> tracked by its own items: `appbuilder-deployable-model/` (gaps),
+> `2026-06-21-appbuilder-component-first-class-persistence.md` (edit-mode
+> rehydration), slices 3/5 of the app-family entry.
+
 ## Provenance
 
 Surfaced 2026-06-15 while fixing the store-discovery credential race
