@@ -238,7 +238,7 @@ async function runContentPipeline(
             // Surface unapplied patches (if any) via the unified toast helper.
             // Headless callers (MCP/AI reset) get warn-level logging only; UI
             // callers can wrap this function and inject `showWarning` later.
-            reportUnapplied(patchReport, context.logger);
+            await reportUnapplied(patchReport, context.logger);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;

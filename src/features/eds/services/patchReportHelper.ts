@@ -23,6 +23,7 @@
 
 import type { CodePatchResult } from './codePatchRegistry';
 import type { ContentPatchResult } from './contentPatchRegistry';
+import { OBSOLETE_MISS_THRESHOLD, trackPatchMisses } from './patchMissTracker';
 import type { Logger } from '@/types';
 
 /**
@@ -145,7 +146,10 @@ export function getUnapplied(report: PatchReport): UnifiedPatchResult[] {
  * load-bearing properties are "names ids" and "doesn't imply the
  * demo is broken."
  */
-export function formatUnappliedToast(unapplied: UnifiedPatchResult[]): string {
+export function formatUnappliedToast(
+    unapplied: UnifiedPatchResult[],
+    missCounts: Record<string, number> = {},
+): string {
     if (unapplied.length === 0) return '';
 
     const patches = unapplied.filter(u => u.kind !== 'reference');
@@ -167,6 +171,17 @@ export function formatUnappliedToast(unapplied: UnifiedPatchResult[]): string {
     // obsolete content patches sat undetected until a user read this toast
     // (2026-08-23) — so the copy asks for the report instead of promising a
     // gate that is not watching.
+    // Escalation from the miss tracker: at the threshold, "might be obsolete"
+    // becomes "is likely obsolete" with the count — the durable drift signal
+    // content patches otherwise lack (patchMissTracker's docstring has the
+    // full story).
+    const obsolete = Object.entries(missCounts)
+        .filter(([, n]) => n >= OBSOLETE_MISS_THRESHOLD)
+        .map(([id, n]) => `${id} has not applied in ${n} consecutive runs — likely obsolete, retire it from the ledger`);
+    if (obsolete.length > 0) {
+        clauses.push(obsolete.join('; '));
+    }
+
     return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted. If this repeats on every create/reset, the patch is likely obsolete — please report it.`;
 }
 
@@ -197,13 +212,23 @@ export function logUnapplied(report: PatchReport, logger: Logger): void {
  * `showWarning` is optional for headless safety. When omitted (MCP /
  * AI reset tool) the helper still logs every unapplied entry.
  */
-export function reportUnapplied(
+export async function reportUnapplied(
     report: PatchReport,
     logger: Logger,
     showWarning?: (message: string) => void,
-): void {
+): Promise<void> {
     logUnapplied(report, logger);
+    // Count consecutive misses even on an all-applied run — applying is what
+    // RESETS a patch's counter. Fail-open inside; never blocks the report.
+    const missCounts = await trackPatchMisses(report, logger);
+    for (const [id, n] of Object.entries(missCounts)) {
+        if (n >= OBSOLETE_MISS_THRESHOLD) {
+            logger.warn(
+                `[Patch] '${id}' has not applied in ${n} consecutive runs — likely obsolete; retire it from the ledger`,
+            );
+        }
+    }
     const unapplied = getUnapplied(report);
     if (unapplied.length === 0) return;
-    showWarning?.(formatUnappliedToast(unapplied));
+    showWarning?.(formatUnappliedToast(unapplied, missCounts));
 }

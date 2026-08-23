@@ -452,7 +452,7 @@ export async function executeStorefrontSetupPhases(
         if (signal.aborted) throw new Error('Operation cancelled');
 
         // Single toast covering canonical + block + content patches.
-        reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
+        await reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'complete',
