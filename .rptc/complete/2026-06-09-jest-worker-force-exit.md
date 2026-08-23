@@ -8,6 +8,46 @@ priority: medium
 
 # Jest worker process force-exits during parallel test runs
 
+> ## CLOSED 2026-08-23 — diagnosed to the mechanism; the leaks that existed are fixed; the residual warning is not a test leak
+>
+> **Two real leaks were found and fixed** by auditing every suite's live handles
+> at file end (probe in the shared setup files, 250ms settle, all 1130 suites):
+>
+> - `commerceStoreDiscovery.test.ts` — two error-path tests queued ONE
+>   `mockResolvedValueOnce` while the SUT's `Promise.all` fires THREE fetches;
+>   calls 2–3 fell through the `jest.spyOn(globalThis, 'fetch')` to the REAL
+>   fetch. Four live requests per run; each held a TLSSocket + an in-flight DNS
+>   lookup for seconds (`tls.connect` creates the socket object before DNS
+>   resolves, and a nonexistent `.test` name takes seconds to fail).
+> - `componentManager-install-git-clone.test.ts` — the install-by-tag path calls
+>   `fetchLatestReleaseTag`, which hit the LIVE GitHub API (`api.github.com`
+>   404'd and the code fell back to the configured tag, so the test passed while
+>   making a real network call). Now mocked as a 404 — same fallback, offline.
+>
+> **The residual warning is NOT caused by test code — pinned, not assumed:**
+>
+> - After the fixes, every one of the 1130 suites returns to the baseline handle
+>   set (worker IPC + stdio) within 250ms of finishing. Nothing leaks.
+> - The warning fires from jest-worker's `FORCE_EXIT_DELAY = 500` — a HARDCODED
+>   wall-clock deadline (verified in jest-worker 30.2.0, same in 27) between the
+>   end-of-run END message and worker exit. The child never calls
+>   `process.exit()`; it must drain its event loop. At `maxWorkers: 75%`, twelve
+>   workers tear down simultaneously while the main process aggregates results.
+> - A SIGTERM-handler dump was installed in the workers (jest's force-exit sends
+>   SIGTERM before SIGKILL, so the handler fires exactly on the force-exited
+>   worker). On a warned run, the dump NEVER RAN: the laggard's loop was blocked
+>   (final-suite teardown / GC under CPU contention), too busy to service a
+>   signal — not idling on a leaked handle. `--detectOpenHandles` agreeing
+>   (nothing found) now makes sense: there is nothing to find.
+> - Rate is machine-state-sensitive: 3/8 uninstrumented runs warned post-fix
+>   (~baseline 44%); the same suite then went 0/10 under light instrumentation.
+>   Do not read a few clean runs as "fixed" or a warned run as a regression.
+>
+> **Standing guidance:** the warning does not indicate a leak in this repo's
+> tests unless a handle audit shows one (recipe in `tests/README.md`). The only
+> lever that reduces the rate is fewer workers — rejected: 25% costs ~2× the
+> wall clock to silence a benign line. The 500ms deadline is not configurable.
+
 ## Symptom
 
 When running broad Jest sweeps in parallel (e.g. across multiple feature directories), the run finishes successfully but Jest emits:
