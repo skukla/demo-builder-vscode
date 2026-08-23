@@ -9,6 +9,7 @@
  * HEAD per D1 proceed-and-warn).
  */
 
+import { _clearExternalPatchCacheForTests } from '@/features/eds/services/externalPatchFetcher';
 import { readLkgSha } from '@/features/eds/services/lkgReader';
 import type { Logger } from '@/types';
 
@@ -24,6 +25,7 @@ const originalFetch = global.fetch;
 
 beforeEach(() => {
     jest.clearAllMocks();
+    _clearExternalPatchCacheForTests();
     global.fetch = jest.fn();
 });
 
@@ -68,7 +70,10 @@ describe('readLkgSha — happy path', () => {
 
         await readLkgSha(SOURCE, mockLogger);
 
-        const calledUrl = fetchMock.mock.calls[0][0] as string;
+        // The shared release-ref lookup precedes the content fetch; select the raw call.
+        const calledUrl = fetchMock.mock.calls
+            .map((c) => String(c[0]))
+            .find((u) => u.includes('raw.githubusercontent'));
         expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/last-known-good');
     });
 
@@ -84,7 +89,9 @@ describe('readLkgSha — happy path', () => {
             mockLogger,
         );
 
-        const calledUrl = fetchMock.mock.calls[0][0] as string;
+        const calledUrl = fetchMock.mock.calls
+            .map((c) => String(c[0]))
+            .find((u) => u.includes('raw.githubusercontent'));
         expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/b2b/last-known-good');
     });
 });
@@ -169,5 +176,59 @@ describe('readLkgSha — failure modes', () => {
         expect(malformedWarn).toBeDefined();
         // The warn line itself should not be 10000 chars
         expect(malformedWarn!.length).toBeLessThan(300);
+    });
+});
+
+// ==========================================================================
+// Ref consistency with the ledger fetch
+// ==========================================================================
+
+describe('readLkgSha — release-ref consistency', () => {
+    // The ledger fetch pins to the latest published release (see
+    // externalPatchFetcher). The LKG fetch hardcoded `main`, so the day the
+    // first release was cut, ledgers would freeze at the tag while the LKG
+    // pointer kept advancing — release-day patches applied to today's
+    // canonical, with preconditions the daily gate never verified together.
+    // Both fetches must resolve THROUGH THE SAME ref.
+    it('fetches the LKG file at the resolved release tag when one exists', async () => {
+        global.fetch = jest.fn().mockImplementation((url: string) => {
+            if (String(url).includes('api.github.com')) {
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({ tag_name: 'v1.2.3' }),
+                });
+            }
+            return Promise.resolve({ ok: true, text: () => Promise.resolve(VALID_SHA) });
+        });
+
+        const sha = await readLkgSha(SOURCE, mockLogger);
+
+        expect(sha).toBe(VALID_SHA);
+        const rawUrls = (global.fetch as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .filter((u) => u.includes('raw.githubusercontent'));
+        expect(rawUrls).toEqual([
+            'https://raw.githubusercontent.com/skukla/eds-demo-patches/v1.2.3/last-known-good',
+        ]);
+    });
+
+    it('falls back to main when no release exists (matching the ledger fetch)', async () => {
+        global.fetch = jest.fn().mockImplementation((url: string) => {
+            if (String(url).includes('api.github.com')) {
+                return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+            }
+            return Promise.resolve({ ok: true, text: () => Promise.resolve(VALID_SHA) });
+        });
+
+        const sha = await readLkgSha(SOURCE, mockLogger);
+
+        expect(sha).toBe(VALID_SHA);
+        const rawUrls = (global.fetch as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .filter((u) => u.includes('raw.githubusercontent'));
+        expect(rawUrls).toEqual([
+            'https://raw.githubusercontent.com/skukla/eds-demo-patches/main/last-known-good',
+        ]);
     });
 });
