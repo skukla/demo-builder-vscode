@@ -23,8 +23,11 @@
 >    illustrative; gitignored and historically-framed mentions skipped. First
 >    run found 25 real stale references (including one introduced THAT DAY by
 >    a backlog archive move — the detector's natural positive control); 23
->    fixed in the same turn, 2 deliberately left standing (they flag the dead
->    service-resolution pattern, escalated separately).
+>    fixed in the same turn; the last 2 flagged the service-resolution docs,
+>    resolved same day — the pattern turned out PARTLY alive (a .tsx consumer a
+>    .ts-only grep had missed: Review-screen "(built-in)" labeling), so the fix
+>    was honest doc correction, not deletion. The wrong-scope grep is the
+>    lesson: --include='*.ts' silently excludes .tsx.
 > 4. **Webpack devDependencies — shipped** `4bb0197b6` (2026-08-23): all four
 >    removed, lockfile regenerated, six comments corrected.
 

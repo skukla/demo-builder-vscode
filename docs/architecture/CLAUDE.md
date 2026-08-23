@@ -20,8 +20,10 @@
   `src/features/components/services/componentManager.ts`,
   `src/features/components/config/components.json`.
 - [`service-resolution-pattern.md`](service-resolution-pattern.md) — How
-  components declare services they *provide* as well as *require*,
-  eliminating redundant service prompts in the registry.
+  components declare services they *provide* as well as *require*. Partly
+  historical: the resolver engine was deleted; what survives is Review-screen
+  "(built-in)" labeling and requiredServices-driven env resolution (see the
+  doc's status note).
 - [`state-ownership.md`](state-ownership.md) — Single-source-of-truth
   principle for project state; written after the mesh-endpoint dual-storage
   bug.
