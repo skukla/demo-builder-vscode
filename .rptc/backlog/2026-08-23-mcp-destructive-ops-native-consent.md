@@ -102,3 +102,15 @@ the notification too, since the agent's own report may never reach the user
 Together the three legs are one design: **sign-in needs a human, destructive
 ops need consent, long operations need to be seen.** Design them as one
 surface when this item is picked up.
+
+**The visibility leg is independently shippable, and is the first slice**
+(explicitly requested 2026-08-23 — the wizard-side sub-messages shipped in
+beta.139, but an MCP-triggered republish/sync/refresh/reset still runs with
+zero VS Code surface). Shape: a wrapper at tool-REGISTRATION level in the
+in-extension server that raises `vscode.window.withProgress` for non-read-only
+tools (same name classification the consent gate will use), streaming the
+handler's onProgress messages into the notification and landing the OUTCOME
+there too — the agent's own report may never reach the user (disconnected
+client, closed chat; both happened live on 2026-08-23). ~1h + pins; give it
+the same live-verification treatment the pipeline rewrite got. The consent
+dialog can then land inside the same wrapper later.
