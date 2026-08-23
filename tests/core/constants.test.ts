@@ -51,8 +51,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // only Chrome-less machines need the install-browser download. Without the
     // bump, existing projects keep skills that warn about a download that
     // never happens.
-    it('is 17 (Playwright uses installed Chrome — download claim corrected)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(17);
+    // v18: the type-scale rule. AGENTS.md + two scrape-flow skills now point
+    // agents at the boilerplate's --type-* scale instead of letting them
+    // invent font sizes. Without the bump, existing projects keep bundles
+    // whose agents pick sizes by eye.
+    it('is 18 (block typography routes through the shipped --type-* scale)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(18);
     });
 });
 

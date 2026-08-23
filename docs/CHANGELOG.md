@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **AI-authored blocks stop inventing font sizes.** Every storefront ships a
+  complete typography scale (the `--type-*` properties in `styles/styles.css`),
+  but nothing generated ever told the AI it exists — so blocks grew hand-picked
+  sizes and "the fonts are too small" had no one-place fix. The generated
+  AGENTS.md now carries the standing rule (use `font: var(--type-…)`, never
+  invent a size), and the scraping skills route typography through the scale,
+  so retuning it once retunes every block. AI bundle version 17 → 18; existing
+  projects pick this up automatically on the next extension start.
 - **Hand-picked integrations now show on the wizard's Review screen.** They
   were invisible: Review read a legacy field the wizard always leaves empty,
   while the real selection sat in a sibling field two lines away — and the
