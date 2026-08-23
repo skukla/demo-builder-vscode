@@ -5,7 +5,9 @@ Phase 4's plan puts `src/features/data-installer/` out of scope ("Stage 2 owns i
 session owns that feature"), and that exclusion is the largest single hole in the agent surface.
 Filed so the exclusion is a scheduled decision rather than a permanent one.
 
-**Status:** not started. Fast-follow to phase 4.
+**Status:** not started. Fast-follow to phase 4. **Scope narrowed 2026-08-23: eight handlers, not
+nine.** `start-datapack-export` is blocked service-side and must not be exposed — see "The export
+half is blocked" below.
 
 ## The asymmetry
 
@@ -31,8 +33,8 @@ The unexposed writes, read from the handler maps rather than counted by a regex:
 | `list-datapack-import-scopes` | `importHandlers` | selectable scopes |
 | `reset-datapack` | `importHandlers` | undo an import |
 | `provision-accs-credentials` | `importHandlers` | mint the credential an import needs |
-| `start-datapack-export` | `exportHandlers` | the actual export |
-| `list-datapack-export-items` | `exportHandlers` | what an export would contain |
+| `start-datapack-export` | `exportHandlers` | the actual export — **BLOCKED, do not expose** |
+| `list-datapack-export-items` | `exportHandlers` | what an export would contain — exposable |
 
 `OPERATION_MODE` is defined as `import | export | delete | validate` and is currently used only
 to describe and filter READS — the type says the write surface was always intended.
@@ -76,6 +78,51 @@ of these handlers push their result through `context.sendMessage` and return a b
 cannot fail and carries no answer. Read each handler before assuming it qualifies; the fix is
 usually to return the payload it already computed, which is a change to the handler, not the tool.
 
+## The export half is blocked (added 2026-08-23)
+
+`start-datapack-export` cannot be a useful tool today, and the reason is not in this repo.
+
+Measured live 2026-08-14 (`docs/systems/data-installer.md` §6b): `process-datapack` with
+`operation_mode: 'export'` fetches correctly and then 500s on the store step with *"Failed to
+store exported data: MongoDB connection URI required. Provide MONGO_URI in params or environment
+variable."* Nothing is ever created — the failing step IS the write, so a failed export leaves no
+datapack row behind (404 on every cleanup attempt).
+
+**This is a service code defect, not a missing setting and not something a caller can supply.** In
+the same invocation, the same action writes its request log to Mongo successfully, and
+`add-data-item`, `create-datapack` and `delete-datapack` all write fine (201, 201, 200). The URI is
+deployed; the export storage path is not receiving the params the rest of the action has. A fix in
+`data-installer-api-b2b`.
+
+The error text invites callers to pass `MONGO_URI` "in params". **The extension must never do
+that** — it is the service's own secret, we do not hold it, and a database URI has no place in a
+request body. `buildExportBody` in `dataInstallerWriteClient.ts` carries that as a comment so the
+next reader does not re-derive it. A private database is not a workaround either: the extension
+holds no DB connection by design, and the catalog is shared infrastructure other teams read.
+
+**And the block is indefinite.** Per `.rptc/plans/data-installer/HANDOFF.md`, as of 2026-08-23 the
+service's owner has retired — reachable for questions about existing behaviour, no service changes
+coming. Stage 3 (export) is parked, not queued.
+
+Consequences for this item:
+
+- **`start-datapack-export` is out of scope** until the service-side write path is fixed. Exposing
+  it would hand an agent a tool whose every call returns a service failure — a worse version of the
+  disqualifier above: the return carries neither the outcome nor even a dispatch, just a 500 the
+  agent cannot act on.
+- **`list-datapack-export-items` still qualifies.** It is a pure read with no database involved,
+  which is exactly why it kept returning items normally through every failed export probe. It
+  answers "what would an export capture from this instance?" on its own merits — though its value
+  is reduced while nothing can act on the answer, so it is a fair candidate to drop from the first
+  pass rather than a required one.
+- **The remaining seven are unaffected** — the whole import spine (start/validate/status/target/
+  scopes/reset) plus credential provisioning is shipped and verified live end to end. That is where
+  this item's value is, and none of it depends on export.
+- **If the block ever lifts**, `start-datapack-export` needs no new design work beyond this item's
+  day-one rules: the handler already returns the service's verdict rather than a dispatch, and the
+  write client already sends the mandatory `verbose: 'full'` without which a failed export reports
+  no reason at all.
+
 ## Safety — the reason for the original exclusion, unchanged
 
 - The datapack catalog is **shared infrastructure**: 23 shared entries other teams depend on.
@@ -105,10 +152,12 @@ is worth its own item** — the same inflation applies to every other map it rep
 
 > Read `.rptc/plans/ai-surface/overview.md` and `phase-2-response-quality.md` first — phase 2
 > measured every read tool against live data and the optimisations in this item are its findings,
-> not suggestions. Then read the nine handlers named above IN FULL before designing anything: the
-> question that decides whether each can be a tool is whether its return value carries the outcome
-> or only the dispatch. Start with `validate-datapack-import`, which is the safest (a dry run) and
-> establishes the response shape the others follow.
+> not suggestions. Then read the eight in-scope handlers named above IN FULL before designing
+> anything — `start-datapack-export` is excluded and "The export half is blocked" says why, so do
+> not spend the pass re-deriving it. The question that decides whether each of the eight can be a
+> tool is whether its return value carries the outcome or only the dispatch. Start with
+> `validate-datapack-import`, which is the safest (a dry run) and establishes the response shape
+> the others follow.
 
 ---
 

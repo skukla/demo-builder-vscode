@@ -222,7 +222,12 @@ rather than a permanent one. Six datapack READS are exposed and were all optimis
 (`get_datapack_activity` 25,056 → 5,709; `list_installed_datapacks` 16,611 → 4,055). **Zero
 writes are**, though `OPERATION_MODE` has always been typed `import | export | delete |
 validate`. Nine real unexposed handlers, read from the maps: import start/validate/status/
-target/scopes/reset, credential provisioning, export start/list.
+target/scopes/reset, credential provisioning, export start/list. **Scope narrowed 2026-08-23 to
+eight** — `start-datapack-export` is blocked service-side (the export storage path 500s with
+"MONGO_URI required" while the same action's other Mongo writes succeed: a defect in
+`data-installer-api-b2b`, and its owner has retired, so indefinitely). The import spine is
+unaffected and is where this item's value is; `list-datapack-export-items` is a pure read and
+still qualifies.
 
 Two things changed since the exclusion was written. The credential blocker moved — develop
 landed the shared-credential broker (ADR-014) and research established one Commerce credential
