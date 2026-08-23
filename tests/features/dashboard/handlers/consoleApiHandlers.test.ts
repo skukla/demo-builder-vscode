@@ -8,6 +8,7 @@
  * subscribe (a failed code must not poison later reconciles).
  */
 
+import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import {
     handleAddConsoleApis,
     handleListConsoleApis,
@@ -189,7 +190,8 @@ describe('handleAddConsoleApis', () => {
             'localhost:3000',
             ['ExistingSDK', 'FireflyAPISDK']
         );
-        expect(project.additionalConsoleApis).toEqual(['ExistingSDK', 'FireflyAPISDK']);
+        // Step 07 retired the flat write; the keyed map carries the union.
+        expect(resolveDesiredApis(project)).toEqual(['ExistingSDK', 'FireflyAPISDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
     });
 
@@ -242,7 +244,7 @@ describe('handleSetConsoleApis', () => {
             'localhost:3000',
             ['KeepSDK', 'NewSDK']
         );
-        expect(project.additionalConsoleApis).toEqual(['KeepSDK', 'NewSDK']);
+        expect(resolveDesiredApis(project)).toEqual(['KeepSDK', 'NewSDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
     });
 
@@ -306,7 +308,7 @@ describe('handleSetConsoleApis', () => {
             'localhost:3000',
             []
         );
-        expect(project.additionalConsoleApis).toEqual([]);
+        expect(resolveDesiredApis(project)).toEqual([]);
     });
 
     it('rejects a non-array / invalid-code payload', async () => {

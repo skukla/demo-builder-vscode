@@ -44,14 +44,22 @@ describe('buildInitialProject', () => {
         expect(project.created).toBe(created);
     });
 
-    describe('additionalConsoleApis (consumed by Phase 3b subscribe union)', () => {
-        it('carries additionalConsoleApis from the config onto the Project', () => {
+    describe('additionalConsoleApis (retired by attribution step 07)', () => {
+        it('does NOT persist the flat field — componentApiPicks is the one written form', () => {
+            // Phase 3b's subscribe union reads resolveDesiredApis(project),
+            // which derives from the keyed map; the flat wire field is ignored.
             const project = buildInitialProject(
-                config({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] }),
+                config({
+                    additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+                    componentApiPicks: { 'erp-sync': ['AssetComputeSDK', 'CCAPI'] },
+                }),
                 PROJECT_PATH
             );
 
-            expect(project.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+            expect(project.additionalConsoleApis).toBeUndefined();
+            expect(project.componentApiPicks).toEqual({
+                'erp-sync': ['AssetComputeSDK', 'CCAPI'],
+            });
         });
 
         it('leaves additionalConsoleApis undefined when absent from the config', () => {

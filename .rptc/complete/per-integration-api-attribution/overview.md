@@ -1,5 +1,20 @@
 # Plan: Per-integration Adobe API attribution — overview
 
+> ## CLOSED 2026-08-23 — step 07 executed; the campaign is complete
+>
+> The release gate was satisfied long before pickup: the keyed reader
+> (`migrateApiPicks`) shipped in **v1.0.0-beta.127**, twelve releases before
+> today. The flat `additionalConsoleApis` write is retired at all four
+> surfaces (manifest persist, `handleSetConsoleApis`/`handleAddConsoleApis`,
+> the wizard wire + `buildInitialProject`, settings export);
+> `unionConsoleApiPicks` and `nonEmptyArray` died with their only callers.
+> Every READ path keeps its legacy tolerance forever (loader migration,
+> edit-mode fallback, `resolveDesiredApis`' keyed-wins-else-legacy).
+> `apiPicksParity.test.ts` is inverted: it now pins the ABSENCE of flat
+> writes outside the named legacy-read sites. Consequence accepted per the
+> item's own sequence: manifests written from the next release no longer
+> round-trip on builds ≤ beta.126.
+
 **Status (2026-08-06):** Steps 01–05 **SHIPPED** on `develop`. Step 06 **WITHDRAWN** — the
 capability it existed for turned out not to exist (see its row). Step 07 is **release-gated**, not
 code-gated: no shipped build reads `componentApiPicks` yet, so retiring the flat write today would

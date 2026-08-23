@@ -191,16 +191,13 @@ async function reconcileExtras(
                 desiredExtras,
             ),
         );
-        // Both forms until the flat write path is retired (step 07). The keyed
-        // map is authoritative; the flat field is its union, kept so a manifest
-        // written now still loads on an older build.
-        //
         // Reconciled, not replaced. This edits the UNION, and overwriting the map
         // with a single unattributed bucket erased which integration wanted what —
         // harmless only while nothing attributed picks, which stopped being true
-        // when the dashboard Add flow began recording them.
+        // when the dashboard Add flow began recording them. The flat
+        // additionalConsoleApis write was retired with step 07 (2026-08-23);
+        // the keyed map is the one written form.
         project.componentApiPicks = nextPicks ?? applyDesiredApis(project, desiredExtras);
-        project.additionalConsoleApis = desiredExtras;
         await context.stateManager.saveProject(project);
         return { success: true, data: { subscribed } };
     } catch (err) {

@@ -70,10 +70,6 @@ function getComponentInstanceKeys(project: import('@/types').Project): string[] 
 /**
  * Actual project creation logic (extracted for testability)
  */
-/** A defined array only when it has at least one item (else undefined, so the manifest omits it). */
-function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
-    return items && items.length > 0 ? items : undefined;
-}
 
 /**
  * Selected App Builder integration ids for `componentSelections.appBuilder`.
@@ -156,7 +152,6 @@ export function buildInitialProject(
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
-        additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
         componentApiPicks: typedConfig.componentApiPicks,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation

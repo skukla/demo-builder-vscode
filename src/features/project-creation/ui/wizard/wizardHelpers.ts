@@ -573,8 +573,8 @@ const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
 /**
  * The per-integration picks, charset-filtered per key, with keys left empty
- * dropped. This is what PERSISTS — {@link unionConsoleApiPicks} below derives
- * the legacy flat field from it for readers that predate attribution.
+ * dropped. This is what PERSISTS — the derived flat union that used to ride
+ * beside it was retired with attribution step 07 (2026-08-23).
  *
  * `__existing__` stays its own key: those picks have an unrecoverable owner,
  * which is not the same as having none.
@@ -594,24 +594,6 @@ function sanitizeConsoleApiPicks(
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
-/**
- * Sorted, deduped union of all per-integration free Console API picks
- * (including the reserved `__existing__` edit-mode key). Codes outside the
- * SDK charset are dropped at this boundary. Returns undefined when nothing
- * valid is picked so the serialized config omits the field.
- */
-function unionConsoleApiPicks(
-    selectedConsoleApis: Record<string, string[]> | undefined,
-): string[] | undefined {
-    const union = [
-        ...new Set(
-            Object.values(selectedConsoleApis ?? {})
-                .flat()
-                .filter((code) => SDK_CODE_RE.test(code)),
-        ),
-    ].sort();
-    return union.length > 0 ? union : undefined;
-}
 
 /**
  * Build project configuration from wizard state for project creation
@@ -711,9 +693,6 @@ export function buildProjectConfig(
         datapack: wizardState.datapack,
         selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
         appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
-        // Legacy flat field, DERIVED from the keyed record below so both forms
-        // always describe the same set (step 07 retires it).
-        additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis),
         componentApiPicks: sanitizeConsoleApiPicks(wizardState.selectedConsoleApis),
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
