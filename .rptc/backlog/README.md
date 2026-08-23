@@ -262,28 +262,9 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
-#### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
-
-Filed 2026-08-13; **re-measured 2026-08-23 — two of its three gaps have shrunk or closed.**
-**(1) The invisible-download gap is mostly dead:** the premise ("Playwright fetches ~150 MB
-Chromium on first use, nothing in `src/` knows") was measured FALSE on 2026-08-22 — the MCP
-drives the machine's installed Chrome by default, and `src/` now says so in three places
-(the v17 skill correction, `ai-defaults.json`, `constants.ts`). What survives is only the
-runtime pre-check for Chrome-less machines (a Chrome-detection + `ms-playwright` cache stat;
-today only `mcpInspector.ts` even mentions the env var). **(2) Progress is still a label,
-not progress** — `aiHandlers.ts` emits one opaque step and `aiDefaultsInstaller.ts` has zero
-progress wiring (verified with a control). **(3) The skill→tool dependency is DECLARED and
-ENFORCED** — `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts:83` maps exactly the three
-Playwright-driving skills, and `skillsWriter.ts` gates generation on it, so a project
-without the tool no longer receives skills that command it. Remaining live work: the
-opt-out surface itself, the progress fix, and the re-scoped Chrome-less pre-check. Not
-blocked.
-
-
----
-
 ## Recently shipped — 2026-08
 
+- **Third-party AI tooling — visible, optional, coherently gated** — closed 2026-08-23, steps 3–7 in one slice (AI bundle v19): the `demoBuilder.ai.enableThirdPartyTools` opt-out lives INSIDE the shared gate predicate via an injected resolver (all four seams inherit it; dependent skills gate atomically), the AI Capabilities modal states WHY an absent skill is absent, the verifier pre-checks for a drivable browser on Chrome-less machines, npm's own output streams as install progress, and flipping the setting prompts an Apply Now that installs/removes across projects ([`../complete/2026-08-13-third-party-tooling-visible-and-optional.md`](../complete/2026-08-13-third-party-tooling-visible-and-optional.md))
 - **Per-integration API attribution — step 07** — closed 2026-08-23, completing the campaign: the release gate was long satisfied (keyed reader shipped in beta.127, twelve releases prior), so the flat `additionalConsoleApis` write is retired at all four surfaces, its two helper functions died with their only callers, every read path keeps legacy tolerance forever, and the parity test is inverted to pin the ABSENCE of flat writes ([`../complete/per-integration-api-attribution/overview.md`](../complete/per-integration-api-attribution/overview.md))
 - **Content patches have no drift gate** — closed 2026-08-23, same day it was filed, via shape 2: `patchMissTracker` counts consecutive non-applies per patch (apply resets; fail-open; headless callers count too), and at 3 misses the create/reset report escalates to "likely obsolete, retire it from the ledger" in both toast and logs — the toast is now a detector WITH memory ([`../complete/2026-08-23-content-patches-have-no-drift-gate.md`](../complete/2026-08-23-content-patches-have-no-drift-gate.md))
 - **Webview channel typing** — converted to a standing rule 2026-08-23: "type the channel you touch, one per slice" is not finishable work and could never leave a backlog. The rule + slice discipline + worked examples now live in the `webview-command-handler` skill (loaded exactly when someone touches a channel); the cast-cluster leads stay in the archived item ([`../complete/2026-08-21-webview-push-channels-are-untyped.md`](../complete/2026-08-21-webview-push-channels-are-untyped.md))
