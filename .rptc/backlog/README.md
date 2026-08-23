@@ -210,6 +210,8 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 **⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
+### D. Deferred by design (gated on an external condition)
+
 #### The other webview message channels are still untyped ([`2026-08-21-webview-push-channels-are-untyped.md`](2026-08-21-webview-push-channels-are-untyped.md))
 
 **Re-measured 2026-08-23 — mostly done; this entry had lagged its own item.** The push campaign and the request direction BOTH shipped since filing: `webviewPayloads.ts` now declares 44 exports (7 init shapes + ~37 push payloads) and `webviewRequests.ts` covers the request direction; the four named `AddIntegrationFlowAdapter` casts are gone. Still true: the comm manager takes `unknown` (`sendMessage(type, payload?: unknown)`), so nothing FORCES a new channel to declare its shape, and ~45 payload-less action requests remain untyped (the item's own "Remaining tail (LOW priority)"). Standing rule, not a project: declare the payload when you next touch a channel. `as never` count drifted 31 → 36 — watch the ratchet. Filed 2026-08-21.
