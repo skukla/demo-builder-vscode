@@ -28,7 +28,16 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-23** (FOURTH pass — the first FULL re-measure: every
+> **Index last reconciled: 2026-08-23 evening** (FIFTH pass — end-of-day sweep after the
+> largest single-day churn on record: 8 items closed, 2 releases cut. All 24 remaining
+> backlog files verified open/indexed/nested; the mechanical scan is clean both directions.
+> The PLANS tree got the actual moves: `data-installer` (all extension stages shipped;
+> the service-side export blocker lives in the datapack-authoring-loop item) and
+> `config-service-admin-grant` (steps 01–07 all shipped) → `complete/`; the beta.128-era
+> `NEXT-SESSION.md` handoff deleted. `plans/` now holds exactly two live dirs:
+> `ai-surface` (phase 6 open) and `bodea-template` (external steps pending).)
+>
+> Previous: **2026-08-23 morning** (FOURTH pass — the first FULL re-measure: every
 > active item's central claim checked against the code by four parallel read-only agents,
 > each claim paired with the command that would falsify it and a positive control on every
 > absence). Score across 33 items measured: **10 fully current, 5 dead (archived same day:

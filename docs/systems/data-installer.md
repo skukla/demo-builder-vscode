@@ -922,7 +922,7 @@ read only from that drop as a hypothesis needing a live check.
 - [MCP Server](./mcp-server.md) — §9 lists the six read tools
 - [ADR-014](../architecture/adr/014-data-installer-shared-credential.md) — why the
   ACCS pair is served from a shared service, and what one such credential reaches
-- `.rptc/plans/data-installer/overview.md` — the plan and its staging
+- `.rptc/complete/data-installer-plan/overview.md` — the plan and its staging
 - `.rptc/complete/data-installer-credential-broker/overview.md` — the credential
   decision, its steps, and the cross-org question still open
 - `.rptc/research/data-installer/spike-01-live-api.md` — the live-API probe the

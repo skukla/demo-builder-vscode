@@ -1,5 +1,12 @@
 # Data Installer — start here
 
+> **Moved to `.rptc/complete/` 2026-08-23**: every extension-side stage is
+> shipped (1, 2, 4 live-verified; 3's client+handlers built `439c4f0d`). The
+> one open thread — the shared service's export deployment (MONGO_URI /
+> one-registry constraint) — is a SERVICE-side decision tracked in the active
+> [`../../backlog/2026-08-23-datapack-authoring-loop.md`](../../backlog/2026-08-23-datapack-authoring-loop.md),
+> not extension work this plan can carry.
+
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
 **Stages 1, 2 and 4 have SHIPPED and Stage 2 is VERIFIED LIVE end to end**
