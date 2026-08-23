@@ -12,7 +12,7 @@ project.
 - **Platform**: VS Code Extension API
 - **UI**: React + Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~574 suites)
+- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites)
 - **Database**: none
 
 ## Essential Commands
@@ -90,7 +90,7 @@ Project-specific SOPs override the plugin defaults (resolution order:
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes
   the run look hung. Redirect to a file and read it:
   `npx jest --no-coverage 2>&1 > /tmp/jest-output.txt`
-- The full suite takes **~20 seconds** (996 suites / 12,764 tests, measured over 10
+- The full suite takes **~20 seconds** (1,130 suites / ~14,850 tests as of 2026-08-23; measured over 10
   consecutive runs on 16 cores, 2026-08-13). It was 3-5 minutes before the worker and
   transform tuning landed; that figure survived in the docs long after it stopped
   being true, and it teaches you to walk away from a run that is already finished.

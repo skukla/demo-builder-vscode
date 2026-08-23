@@ -30,7 +30,7 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~574 suites; see `tests/README.md`)
+- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites; see `tests/README.md`)
 
 ## Development Workflow
 
