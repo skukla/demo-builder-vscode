@@ -106,23 +106,32 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 
 ## Constraints
 
-- **THE ARCHITECTURE (settled 2026-08-23, final revision — trail below): a
-  TEAM-OPERATED shared deployment on App Builder, storing in App Builder's
-  native Database — no MongoDB anywhere, no per-user infrastructure.** The
-  requirement is a TRUE export to THE service with zero user-side setup.
-  Measured: no production deployment exists (candidate namespaces 404) and
-  the stage health check confirms no database is configured there; its
-  operator will not be changing it. So the demo-system team deploys the
-  service once (precedent: the team already operates the shared
-  accs-discovery service the same way), after migrating its storage from
-  the raw `mongodb` driver to `@adobe/aio-lib-db` — App Builder Database,
-  GA, a documented near drop-in for the MongoDB driver, credentialed by
-  IMS token with NO connection string (the failure class that broke export
-  cannot exist), provisioned automatically with the deploy. Migration is
-  small and measured (~170 call sites, all but 4 plainly supported; verify
-  `startSession` ×2 and `aggregate` ×2) — see
-  `.rptc/research/data-installer-service-docs/research.md`. Every SC's
-  extension points `demoBuilder.dataInstaller.apiBaseUrl` at the one URL.
+- **THE ARCHITECTURE — OPEN, with a binding constraint added 2026-08-23
+  (user): there must be ONE pack registry.** The packs live in the
+  DATABASE, not the deployment — so any new deployment is a second
+  registry, and two registries mean the org's packs diverge (a pack saved
+  through one environment invisible to another). Three coherent shapes,
+  in preference order; the choice is ORGANIZATIONAL, driven by the user:
+  1. **Fix/adopt the existing deployment in place** (zero fragmentation,
+     zero migration): the ask is not "set a variable" but "hand over
+     operation of the workspace" — the author is done with it; adoption
+     preserves the registry every consumer already uses. Exhaust this
+     first.
+  2. **Full cutover**: team deploys the migrated service (App Builder
+     Database — see the research note: near drop-in, IMS-credentialed, no
+     connection string, auto-provisioned; ~170 call sites, 4 to verify),
+     copies the ENTIRE existing registry over (read APIs work), and EVERY
+     consumer org-wide repoints. Only as good as the coordination; a
+     partial cutover is the fragmentation the constraint forbids.
+  3. **Partition**: shared packs stay in (and are read from) the original;
+     user-authored packs live in the new service; the extension routes per
+     pack-source. Nothing diverges (each pack has one home) but the org
+     runs two services forever and the extension grows two-endpoint
+     plumbing.
+  Softener: TODAY nobody can export to the existing service — it is
+  broken for every consumer equally — so divergence is a forward risk,
+  not a current one. Every SC's extension points
+  `demoBuilder.dataInstaller.apiBaseUrl` at whatever the decision yields.
 - **Seeding:** the new registry starts empty; the user's Bodea-loaded
   instance seeds it via the first working export, and pack-item batch-copy
   can migrate any needed packs from the old stage registry (its read +
