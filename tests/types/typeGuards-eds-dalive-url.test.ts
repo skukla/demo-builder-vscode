@@ -22,7 +22,7 @@
  * Non-EDS projects and projects missing org/site resolve to undefined.
  */
 
-import { getEdsDaLiveUrl } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsDaLiveUrl } from '@/types/typeGuards';
 import { Project } from '@/types/base';
 
 const edsProject = {
@@ -121,5 +121,52 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         } as unknown as Project;
 
         expect(getEdsDaLiveUrl(noSite, 'experience-workspace')).toBeUndefined();
+    });
+});
+
+// Repo-name fallback (legacyLookupKey retirement, 2026-08-23): the loader
+// strips `daLiveSite` from the manifest when it equals the repo name, so most
+// projects carry only `githubRepo`. Readers must derive the site from it.
+describe('daLiveSite repo-name fallback', () => {
+    const strippedProject = {
+        selectedStack: 'eds-dalive',
+        componentInstances: {
+            'eds-storefront': {
+                metadata: { daLiveOrg: 'leahrayard', githubRepo: 'leahrayard/leah-b2b-demo' },
+            },
+        },
+    } as unknown as Project;
+
+    it('getEdsDaLiveUrl derives the site from githubRepo when daLiveSite is stripped', () => {
+        expect(getEdsDaLiveUrl(strippedProject, 'da-live-classic')).toBe(
+            'https://da.live/#/leahrayard/leah-b2b-demo'
+        );
+    });
+
+    it('getEdsDaLiveTarget derives the site from githubRepo when daLiveSite is stripped', () => {
+        expect(getEdsDaLiveTarget(strippedProject)).toEqual({
+            org: 'leahrayard',
+            site: 'leah-b2b-demo',
+        });
+    });
+
+    it('an explicit daLiveSite (unmigrated legacy project) still wins over the repo name', () => {
+        const legacy = {
+            selectedStack: 'eds-dalive',
+            componentInstances: {
+                'eds-storefront': {
+                    metadata: {
+                        daLiveOrg: 'skukla',
+                        daLiveSite: 'b2b-boilerplate-content',
+                        githubRepo: 'skukla/b2b-boilerplate',
+                    },
+                },
+            },
+        } as unknown as Project;
+
+        expect(getEdsDaLiveTarget(legacy)).toEqual({
+            org: 'skukla',
+            site: 'b2b-boilerplate-content',
+        });
     });
 });

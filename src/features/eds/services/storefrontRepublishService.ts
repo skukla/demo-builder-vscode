@@ -112,7 +112,11 @@ export function extractRepublishParams(project: Project):
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Legacy-first, repo fallback: `daLiveSite` metadata survives only on
+    // unmigrated projects (the loader strips the redundant equal copy).
+    const daLiveSite =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ??
+        (repoFullName ? repoFullName.split('/')[1] : undefined);
     const componentPath = edsInstance?.path;
 
     if (!repoFullName) {

@@ -325,7 +325,13 @@ export function getEdsDaLiveTarget(
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const org = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const site = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // `daLiveSite` is legacy metadata: present only on unmigrated projects
+    // (where it points at where the DA content actually lives) — everywhere
+    // else the DA site name IS the repo name, and the loader strips the
+    // redundant copy on load.
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+    const site =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ?? githubRepo?.split('/')[1];
     return org && site ? { org, site } : undefined;
 }
 
@@ -486,7 +492,10 @@ export function getEdsDaLiveUrl(
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Legacy-first, repo fallback — see getEdsDaLiveTarget.
+    const daLiveSite =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ??
+        (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[1];
 
     if (!daLiveOrg || !daLiveSite) return undefined;
 

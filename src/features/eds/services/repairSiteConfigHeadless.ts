@@ -106,13 +106,7 @@ export async function repairSiteConfig(
     const { repoOwner, repoName, daLiveOrg, daLiveSite } = extracted;
 
     const overlayUrl = resolveOverlayUrl(daLiveOrg, daLiveSite);
-    const siteParams = buildSiteConfigParams(
-        repoOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        overlayUrl,
-    );
+    const siteParams = buildSiteConfigParams(repoOwner, repoName, daLiveOrg, overlayUrl);
 
     await onProgress?.(`Re-registering ${repoOwner}/${repoName}...`);
 

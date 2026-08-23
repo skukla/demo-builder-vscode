@@ -407,7 +407,11 @@ async function readPromoteBlockContext(projectPath: string): Promise<PromoteBloc
     }
     const metadata = edsInstance?.metadata ?? {};
     const daLiveOrg = metadata.daLiveOrg;
-    const daLiveSite = metadata.daLiveSite;
+    // Legacy-first, repo fallback: daLiveSite metadata survives only on
+    // unmigrated projects; the loader strips the redundant equal copy.
+    const daLiveSite =
+        metadata.daLiveSite ??
+        (typeof metadata.githubRepo === 'string' ? metadata.githubRepo.split('/')[1] : undefined);
     if (typeof daLiveOrg !== 'string' || typeof daLiveSite !== 'string') {
         throw new Error('No DA.live org/site configured for this storefront');
     }

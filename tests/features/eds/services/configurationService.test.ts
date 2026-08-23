@@ -212,15 +212,24 @@ describe('ConfigurationService', () => {
 
     describe('buildSiteConfigParams', () => {
         it('omits contentOverlayUrl when no overlay URL is provided', () => {
-            const params = buildSiteConfigParams('owner', 'repo', 'org', 'site');
+            const params = buildSiteConfigParams('owner', 'repo', 'org');
             expect(params.contentOverlayUrl).toBeUndefined();
         });
 
         it('includes contentOverlayUrl when an overlay URL is provided', () => {
             const params = buildSiteConfigParams(
-                'owner', 'repo', 'org', 'site', 'https://byom.example.com',
+                'owner', 'repo', 'org', 'https://byom.example.com',
             );
             expect(params.contentOverlayUrl).toBe('https://byom.example.com');
+        });
+
+        // legacyLookupKey retired 2026-08-23: reset AND repair both migrate a
+        // mismatched DA site name before registering, so every caller reaches
+        // this function with the DA site name equal to the repo name. The
+        // param is gone — this pins that it stays gone.
+        it('exposes no legacyLookupKey field', () => {
+            const params = buildSiteConfigParams('owner', 'repo', 'org');
+            expect('legacyLookupKey' in params).toBe(false);
         });
 
         // Helix's preview/publish/live operations look up the site config at
@@ -230,42 +239,25 @@ describe('ConfigurationService', () => {
         // operations and every preview/publish silently fails.
         describe('Config Service lookup key (Helix preview/publish contract)', () => {
             it('uses the GitHub owner/repo as the Config Service lookup key', () => {
-                const params = buildSiteConfigParams(
-                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
-                );
+                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
 
                 expect(params.org).toBe('my-owner');
                 expect(params.site).toBe('my-repo');
             });
 
             it('keeps codeOwner/codeRepo identical to the lookup key (Helix code source)', () => {
-                const params = buildSiteConfigParams(
-                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
-                );
+                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
 
                 expect(params.codeOwner).toBe('my-owner');
                 expect(params.codeRepo).toBe('my-repo');
             });
 
-            it('still points the content source URL at the DA.live org/site (where content actually lives)', () => {
-                const params = buildSiteConfigParams(
-                    'my-owner', 'my-repo', 'my-dalive-org', 'my-dalive-site',
-                );
+            it('points the content source URL at the DA.live org and the REPO name (the one identifier)', () => {
+                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
 
                 expect(params.contentSourceUrl).toBe(
-                    'https://content.da.live/my-dalive-org/my-dalive-site/',
+                    'https://content.da.live/my-dalive-org/my-repo/',
                 );
-            });
-
-            it('handles the case where the GitHub repo name differs from the DA.live site name', () => {
-                // Real-world example: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
-                const params = buildSiteConfigParams(
-                    'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
-                );
-
-                expect(params.org).toBe('skukla');
-                expect(params.site).toBe('b2b-boilerplate');
-                expect(params.contentSourceUrl).toContain('b2b-boilerplate-content');
             });
         });
     });
@@ -325,31 +317,6 @@ describe('ConfigurationService', () => {
     // ==========================================================
 
 
-    // ==========================================================
-    // buildSiteConfigParams legacy-key population
-    // ==========================================================
-
-    describe('buildSiteConfigParams — legacyLookupKey population', () => {
-        it('sets legacyLookupKey to the DA.live org/site when it differs from the GitHub repo name', () => {
-            // Real-world case: GitHub repo "b2b-boilerplate", DA site "b2b-boilerplate-content"
-            const params = buildSiteConfigParams(
-                'skukla', 'b2b-boilerplate', 'skukla', 'b2b-boilerplate-content',
-            );
-
-            expect(params.legacyLookupKey).toEqual({
-                org: 'skukla',
-                site: 'b2b-boilerplate-content',
-            });
-        });
-
-        it('omits legacyLookupKey when the GitHub repo name and DA site name match', () => {
-            const params = buildSiteConfigParams(
-                'skukla', 'matching-name', 'skukla', 'matching-name',
-            );
-
-            expect(params.legacyLookupKey).toBeUndefined();
-        });
-    });
 
     // ==========================================================
     // Authentication

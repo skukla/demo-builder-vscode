@@ -35,7 +35,10 @@ jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
 }));
 
-import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
+import {
+    extractRepublishParams,
+    republishStorefrontConfig,
+} from '@/features/eds/services/storefrontRepublishService';
 import type { Logger } from '@/types/logger';
 
 const logger = {
@@ -116,5 +119,30 @@ describe('republishStorefrontConfig — persisting the cleared flag', () => {
 
         expect(project).not.toHaveProperty('edsStorefrontStatusSummary', 'published');
         expect(persist).not.toHaveBeenCalled();
+    });
+});
+
+// Repo-name fallback (legacyLookupKey retirement, 2026-08-23): the loader
+// strips `daLiveSite` from the manifest when it equals the repo name, so the
+// extractor must derive it from `githubRepo` rather than erroring.
+describe('extractRepublishParams — daLiveSite fallback', () => {
+    it('derives daLiveSite from the repo name when the manifest carries none', () => {
+        const project = edsProject({ daLiveSite: undefined });
+
+        const result = extractRepublishParams(project);
+
+        expect(result).toEqual(
+            expect.objectContaining({ success: true, daLiveSite: 'shop' })
+        );
+    });
+
+    it('an explicit daLiveSite (unmigrated legacy project) still wins over the repo name', () => {
+        const project = edsProject({ daLiveSite: 'shop-content' });
+
+        const result = extractRepublishParams(project);
+
+        expect(result).toEqual(
+            expect.objectContaining({ success: true, daLiveSite: 'shop-content' })
+        );
     });
 });

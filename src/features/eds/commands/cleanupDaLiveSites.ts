@@ -91,8 +91,11 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
                     if (stateManager) {
                         const edsProjects = await getLinkedEdsProjects(stateManager);
                         for (const project of edsProjects) {
-                            if (project.metadata.daLiveOrg === orgName && project.metadata.daLiveSite) {
-                                const key = `${orgName}/${project.metadata.daLiveSite}`;
+                            const linkedSite =
+                                (project.metadata.daLiveSite as string | undefined) ??
+                                (project.metadata.githubRepo as string | undefined)?.split('/')[1];
+                            if (project.metadata.daLiveOrg === orgName && linkedSite) {
+                                const key = `${orgName}/${linkedSite}`;
                                 linkedSiteKeys.add(key);
                                 logger.debug(`[DA.live Manage] Found linked project for ${key}`);
                             }

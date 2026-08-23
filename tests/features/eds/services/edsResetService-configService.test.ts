@@ -27,9 +27,11 @@ jest.mock('@/features/eds/services/configurationService', () => ({
         registerSite: mockRegisterSite,
         updateSiteConfig: mockUpdateSiteConfig,
     })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
+    // Mirrors the real 4-arg shape (legacyLookupKey retired 2026-08-23):
+    // lookup key AND content source both use the GitHub owner/repo.
+    buildSiteConfigParams: (owner: string, repo: string, daLiveOrg: string, overlayUrl?: string) => ({
+        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+        contentSourceUrl: `https://content.da.live/${daLiveOrg}/${repo}/`,
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     }),
 }));

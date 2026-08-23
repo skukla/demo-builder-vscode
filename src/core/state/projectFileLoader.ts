@@ -195,6 +195,16 @@ export class ProjectFileLoader {
                 project.componentSelections?.backend,
             );
 
+            // Legacy `daLiveSite` metadata: since the DA/repo name unification
+            // the field duplicates the repo name, and readers fall back to it —
+            // so an EQUAL value is dead weight and is dropped on load. An
+            // UNEQUAL value is preserved deliberately: it is both the pointer
+            // to where the DA content actually lives on an unmigrated legacy
+            // project AND the name-migration net's detection signal — a blanket
+            // strip would blind that net. Read-side only; the on-disk manifest
+            // is untouched until the next write.
+            stripRedundantDaLiveSite(project);
+
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);
 
@@ -344,5 +354,28 @@ export class ProjectFileLoader {
                 );
             }
         }
+    }
+}
+
+/**
+ * Drop a `daLiveSite` metadata value that merely duplicates the repo name.
+ *
+ * Exported for its own test. The unequal case is preserved on purpose — see
+ * the call-site comment: on an unmigrated legacy project the value points at
+ * where the DA content actually lives, and it is the storefront-name
+ * migration's detection signal.
+ *
+ * @param project - the freshly loaded project (mutated in place)
+ */
+export function stripRedundantDaLiveSite(project: Project): void {
+    const edsInstance = project.componentInstances?.['eds-storefront'];
+    const metadata = edsInstance?.metadata;
+    if (!metadata) return;
+    const daLiveSite = metadata.daLiveSite as string | undefined;
+    const githubRepo = metadata.githubRepo as string | undefined;
+    if (!daLiveSite || !githubRepo) return;
+    const repoName = githubRepo.split('/')[1];
+    if (daLiveSite === repoName) {
+        delete metadata.daLiveSite;
     }
 }
