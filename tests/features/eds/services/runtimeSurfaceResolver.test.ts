@@ -30,13 +30,11 @@ describe('mergeRuntimeSurfaces', () => {
             spreadsheets: ['/placeholders'],
             fragments: ['/nav'],
             authPages: [{ path: '/customer/login', blockClass: 'commerce-login' }],
-            placeholderSheets: ['placeholders/global'],
         };
         const generated: GeneratedRuntimeSurfaces = {
             derived: {
                 fragments: ['/customer/sidebar-fragment'],
                 navFooter: ['/nav', '/footer'],
-                placeholderSheets: ['placeholders/global', 'placeholders/company'],
                 customerPages: ['/customer/account'],
             },
             residual: { spreadsheets: ['/metadata'] },
@@ -44,7 +42,6 @@ describe('mergeRuntimeSurfaces', () => {
         const merged = mergeRuntimeSurfaces(generated, base);
         expect(merged.fragments.sort()).toEqual(['/customer/sidebar-fragment', '/footer', '/nav'].sort());
         expect(merged.spreadsheets.sort()).toEqual(['/metadata', '/placeholders'].sort());
-        expect(merged.placeholderSheets.sort()).toEqual(['placeholders/company', 'placeholders/global'].sort());
     });
 
     it('is a strict floor — never drops a base entry, even if generated omits it', () => {
@@ -52,7 +49,6 @@ describe('mergeRuntimeSurfaces', () => {
             spreadsheets: ['/placeholders', '/sitemap'],
             fragments: ['/nav', '/footer'],
             authPages: [{ path: '/customer/account', blockClass: 'commerce-account' }],
-            placeholderSheets: ['placeholders/global'],
         };
         const merged = mergeRuntimeSurfaces({ derived: { fragments: [] }, residual: { spreadsheets: [] } }, base);
         expect(merged.spreadsheets).toEqual(expect.arrayContaining(base.spreadsheets));
@@ -61,7 +57,7 @@ describe('mergeRuntimeSurfaces', () => {
     });
 
     it('does not synthesize authPages from customerPages (blockClass is human-owned)', () => {
-        const base = { spreadsheets: [], fragments: [], authPages: [], placeholderSheets: [] };
+        const base = { spreadsheets: [], fragments: [], authPages: [] };
         const merged = mergeRuntimeSurfaces({ derived: { customerPages: ['/customer/orders'] } }, base);
         expect(merged.authPages).toEqual([]);
     });
@@ -77,11 +73,23 @@ describe('getRuntimeSurfaces', () => {
 
     it('merges the generated surfaces when the fetch succeeds', async () => {
         const fetcher = jest.fn().mockResolvedValue({
-            derived: { placeholderSheets: ['placeholders/brand-new'] },
+            derived: { fragments: ['/brand-new-fragment'] },
         } as GeneratedRuntimeSurfaces);
         const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher as never });
-        expect(result.placeholderSheets).toContain('placeholders/brand-new');
+        expect(result.fragments).toContain('/brand-new-fragment');
         // floor preserved
+        expect(result.fragments).toEqual(expect.arrayContaining(RUNTIME_SURFACES.fragments));
+    });
+
+    it('ignores a ledger still shipping the retired placeholderSheets field (lenient parsing)', async () => {
+        // Sheets are content since 2026-08-23; a generated runtime-surfaces.json
+        // that still carries the field must be read without error and without
+        // resurrecting the surface.
+        const fetcher = jest.fn().mockResolvedValue({
+            derived: { placeholderSheets: ['placeholders/ghost'] },
+        } as GeneratedRuntimeSurfaces);
+        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher as never });
+        expect('placeholderSheets' in result).toBe(false);
         expect(result.fragments).toEqual(expect.arrayContaining(RUNTIME_SURFACES.fragments));
     });
 

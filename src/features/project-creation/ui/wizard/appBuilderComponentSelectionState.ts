@@ -42,21 +42,6 @@ export function withSelectedAppBuilderComponent(
 }
 
 /**
- * Compute the effective selection: user toggles UNIONed with required ids
- * (required appBuilderComponents are always present even if never toggled).
- *
- * @param selected - The user-toggled selection (undefined treated as empty)
- * @param requiredIds - Ids the package marks required (auto-included)
- * @returns The deduped union of selected + required ids
- */
-export function computeSelectedAppBuilderComponents(
-    selected: readonly string[] | undefined,
-    requiredIds: readonly string[],
-): string[] {
-    return [...new Set([...requiredIds, ...(selected ?? EMPTY_STRING_ARRAY)])];
-}
-
-/**
  * Map a mesh catalog appBuilderComponent id to its mesh component id(s).
  *
  * Now an identity check rather than a translation table. Mesh catalog entries are

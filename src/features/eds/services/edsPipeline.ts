@@ -190,11 +190,14 @@ async function pipelineApplyBrandAssets(
 ): Promise<void> {
     if (!brandAssets) return;
     const result = await publishBrandAssets(
-        brandAssets, githubFileOps, repoOwner, repoName, logger,
+        brandAssets,
+        githubFileOps,
+        repoOwner,
+        repoName,
+        logger,
     );
     if (!result.success) {
-        const failed = failedTargets(result)
-            .map((r) => `${r.path} (${r.reason ?? 'unknown'})`);
+        const failed = failedTargets(result).map((r) => `${r.path} (${r.reason ?? 'unknown'})`);
         logger.warn(
             `[EdsPipeline] Brand assets incomplete — storefront may be unbranded: ${failed.join(', ')}`,
         );
@@ -290,9 +293,15 @@ async function pipelineClearContent(
                 webPaths,
             );
             if (unpublished.liveFailed > 0) {
+                // previewFailed rides the same warn: stale preview pages
+                // (*.aem.page) are the same class of leftover, just not public.
+                const previewNote =
+                    unpublished.previewFailed > 0
+                        ? ` (${unpublished.previewFailed} preview page${unpublished.previewFailed === 1 ? '' : 's'} also failed)`
+                        : '';
                 logger.warn(
                     `[EdsPipeline] ${unpublished.liveFailed}/${unpublished.total} pages could not ` +
-                        'be unpublished from the CDN — they will keep serving their old content. ' +
+                        `be unpublished from the CDN — they will keep serving their old content${previewNote}. ` +
                         'A refused DA.live session is the usual cause; sign in again and reset to clear them.',
                 );
                 onProgress?.({
@@ -688,7 +697,11 @@ export async function executeEdsPipeline(
         // reach this point through the shared pipeline, so the two paths stay
         // behavior-identical. Skipped silently when the package declares none.
         await pipelineApplyBrandAssets(
-            githubFileOps, repoOwner, repoName, params.brandAssets, logger,
+            githubFileOps,
+            repoOwner,
+            repoName,
+            params.brandAssets,
+            logger,
         );
 
         // Step 3: EDS Settings
@@ -737,13 +750,7 @@ export async function executeEdsPipeline(
                 const { publishLibraryPaths, verifyLibraryPreviewed } = await import(
                     '../handlers/edsHelpers'
                 );
-                await publishLibraryPaths(
-                    helixService,
-                    repoOwner,
-                    repoName,
-                    libraryPaths,
-                    logger,
-                );
+                await publishLibraryPaths(helixService, repoOwner, repoName, libraryPaths, logger);
                 // Say it landed only if it landed. The bulk job reports success
                 // for paths that matched nothing, which is how a library that
                 // could not preview a single block logged "published".
@@ -756,9 +763,7 @@ export async function executeEdsPipeline(
                 if (previewed) {
                     logger.info('[EdsPipeline] Block library published');
                 } else {
-                    logger.info(
-                        '[EdsPipeline] Block library published, but it is not previewable',
-                    );
+                    logger.info('[EdsPipeline] Block library published, but it is not previewable');
                     // The site config is the state nobody can inspect after the
                     // fact, and it is the leading suspect when publishing reports
                     // success and the CDN still 404s. Print it here, once, where

@@ -46,7 +46,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     showDaLiveAuthQuickPick: jest.fn(),
     resolveByomOverlayConfig: jest.fn(
         (fromConfigUrl: string | undefined, org: string, site: string) =>
-            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined,
+            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
 
@@ -74,23 +74,30 @@ jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
     ensureProjectOrgContext: (...args: unknown[]) => mockEnsureProjectOrgContext(...args),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
-            return callback({ report: jest.fn() });
-        }),
-    },
-    ProgressLocation: { Notification: 15 },
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            showWarningMessage: jest.fn(),
+            showInformationMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+            withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
+                return callback({ report: jest.fn() });
+            }),
+        },
+        ProgressLocation: { Notification: 15 },
+        env: { openExternal: jest.fn() },
+        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
     }),
     initializeLogger: jest.fn(),
 }));
@@ -106,9 +113,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 jest.mock('@/types/typeGuards', () => ({
     getMeshComponentInstance: jest.fn((project: any) => {
         if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find(
-            (c: any) => c.subType === 'mesh'
-        );
+        return Object.values(project.componentInstances).find((c: any) => c.subType === 'mesh');
     }),
     hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
 }));
@@ -260,6 +265,21 @@ describe('resetEdsProjectWithUI — sample data', () => {
         expect(mockedRemove).not.toHaveBeenCalled();
     });
 
+    it('hands the DA.live guard the target org, so its server probe can run', async () => {
+        // The locally-valid-but-server-refused gap: without the org, the guard
+        // falls back to the local expiry check that let the 2026-08-16 run
+        // start a three-minute pipeline on a refused token.
+        answers(RESET);
+
+        await run(createProject());
+
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.any(String),
+            'test-org'
+        );
+    });
+
     it('asks, and names the pack, when one was recorded', async () => {
         answers(RESET, undefined);
 
@@ -308,7 +328,7 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(mockedRemove.mock.invocationCallOrder[0]).toBeLessThan(
-            mockedReset.mock.invocationCallOrder[0],
+            mockedReset.mock.invocationCallOrder[0]
         );
     });
 
@@ -337,7 +357,7 @@ describe('resetEdsProjectWithUI — sample data', () => {
         mockedRemove.mockRejectedValue(new Error('unexpected'));
 
         await expect(run(createProject({ name: 'bodea', version: 'main' }))).resolves.toMatchObject(
-            { success: true },
+            { success: true }
         );
     });
 });
@@ -367,7 +387,10 @@ describe('resetEdsProjectWithUI — sample data', () => {
  */
 describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
     it('does not ask when the project has no usable Commerce credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' } as never);
+        mockedCredentials.mockResolvedValue({
+            ok: false,
+            reason: 'needs-accs-credentials',
+        } as never);
         answers(RESET);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
@@ -405,7 +428,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(mockedCredentials).toHaveBeenCalledWith(
-            expect.objectContaining({ broker: expect.any(Function) }),
+            expect.objectContaining({ broker: expect.any(Function) })
         );
     });
 
@@ -439,9 +462,11 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
             expect.objectContaining({
                 project: expect.objectContaining({
                     stackBackend: 'adobe-commerce-accs',
-                    componentConfigs: expect.objectContaining({ 'adobe-commerce-accs': expect.anything() }),
+                    componentConfigs: expect.objectContaining({
+                        'adobe-commerce-accs': expect.anything(),
+                    }),
                 }),
-            }),
+            })
         );
     });
 
@@ -459,7 +484,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         await run(project);
 
         expect(mockedCredentials).toHaveBeenCalledWith(
-            expect.objectContaining({ project: expect.objectContaining({ stackBackend: '' }) }),
+            expect.objectContaining({ project: expect.objectContaining({ stackBackend: '' }) })
         );
     });
 

@@ -31,13 +31,13 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import type { AddAppBuilderComponentRequestPayload, DestinationRef, SetProjectDestinationRequestPayload } from '@/types/webviewRequests';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { WizardState } from '@/types/webview';
+import type { AddAppBuilderComponentRequestPayload, DestinationRef, SetProjectDestinationRequestPayload } from '@/types/webviewRequests';
 
 export interface AddIntegrationFlowAdapterProps {
     isOpen: boolean;

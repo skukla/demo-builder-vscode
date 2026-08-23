@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from './daAuthHelperToken';
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { getLogger } from '@/core/logging';
 
 // ==========================================================
@@ -185,6 +186,39 @@ export class DaLiveAuthService {
     async getAccessToken(): Promise<string | null> {
         const tokenInfo = await this.getStoredToken();
         return tokenInfo?.accessToken ?? null;
+    }
+
+    /**
+     * Ask the DA.live admin plane whether it accepts the stored token RIGHT NOW.
+     *
+     * `isAuthenticated()` is a local expiry check and cannot see a
+     * server-refused token — the 2026-08-16 evidence run passed it and then
+     * failed 52 authenticated calls, each 403 misread as a missing permission.
+     * One `HEAD /list/{org}/` settles it before a pipeline starts.
+     *
+     * Verdict mapping: 401 → `refused` (the CREDENTIAL was rejected — the only
+     * status that indicts the token); 403 → `accepted` (the ORG refused access
+     * to a credential the server honoured — a permission fact, not an auth
+     * one); anything else that returns → `accepted`; a transport failure →
+     * `unknown`, because a flaky network must never read as a refusal.
+     */
+    async isServerAccepted(orgName: string): Promise<'accepted' | 'refused' | 'unknown'> {
+        const token = await this.getAccessToken();
+        if (!token) {
+            return 'refused';
+        }
+        try {
+            const response = await fetch(
+                `${DA_LIVE_BASE_URL}/list/${encodeURIComponent(orgName)}/`,
+                {
+                    method: 'HEAD',
+                    headers: { Authorization: `Bearer ${token}` },
+                },
+            );
+            return response.status === 401 ? 'refused' : 'accepted';
+        } catch {
+            return 'unknown';
+        }
     }
 
     /**

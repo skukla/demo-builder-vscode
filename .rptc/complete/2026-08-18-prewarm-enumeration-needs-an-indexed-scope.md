@@ -1,5 +1,50 @@
 # Catalog prewarm fails on a store view with no Catalog Service index
 
+> ## CLOSED 2026-08-23 — all three decisions made; guidance shipped
+>
+> **Decision 3 (ordering) was already answered in code — the premise went
+> stale.** Creation imports the datapack (phase 5c) BEFORE prewarming (5d,
+> `executor.ts`, with a comment explaining the reset/create asymmetry), and
+> the creation-time pipeline deliberately passes NO project to step 8
+> (`storefrontSetupPhases` — `projectTargetsStorefront` yields undefined on
+> create, guarding against prewarming a DIFFERENT project's catalog). The
+> ordering this item asked to verify shipped between filing and pickup.
+>
+> **Decision 1: an unindexed scope is a SUPPORTED state with a DOCUMENTED,
+> non-self-serve remedy** — not a user error, and NOT (as a first draft of
+> this closure said) "usually transient". A retried internal search settled
+> the mechanism, corroborated by Live Search's public **"Catalog data
+> retention policy"** (Live Search overview): an environment whose catalog
+> stays EMPTY for 45 days — or a testing environment unqueried for 90 — is
+> HIBERNATED, and (per the search team, paraphrased) syncing products does
+> NOT by itself recreate the index; each store view has its own. That is
+> exactly the demo-instance story: sit empty → hibernate → import a pack →
+> "No index was found", indefinitely. A field-reported first try (unverified,
+> ACCS case 2026-08-23): edit any product attribute — a metadata update can
+> force index creation. The documented remedy is an Adobe support request
+> titled "Reactivate Live Search" with the environment id (restored within a
+> couple of hours). Both clauses of the policy were verified to apply to ACCS
+> (2026-08-23): the 45-day empty-catalog clause hits production AND testing
+> environments; the 90-day unqueried clause hits testing only. The warn now carries all of that, plus what still works
+> (runtime smart-404 publishes each PDP on first visit — prewarm is an
+> optimization) and the retry. Republish did NOT prewarm when this
+> closed; decided AND implemented the same day: `republishStorefrontContent`
+> (the spine both the dashboard button and MCP `sync_content` ride) now
+> prewarms after its content publish — the lightweight retry once a
+> hibernated index is reactivated, and it refreshes previously-prewarmed
+> PDPs, which the content publish never reaches. Reset remains the
+> heavyweight path.
+> Branch-discriminated from generic enumeration failures, both pinned by
+> test.
+>
+> **Decision 2: no `products(skus:)` fallback.** It needs a SKU list, only
+> helps in the narrow synced-but-unindexed state, that state is brief once
+> the ordering is right, and the runtime smart-404 already covers every SKU.
+> Complexity for a vanishing window.
+>
+> Related: the tabled instance-hygiene design treats this same probe as its
+> "waiting-external" readiness state — this closure's framing feeds it.
+
 **Filed:** 2026-08-18, from a colleague's storefront creation on the shared
 sandbox. Distinct from `pdp-prewarm-401-after-admin-pinning` (that one is the
 prewarm POST being refused; this one is the ENUMERATION that precedes it).

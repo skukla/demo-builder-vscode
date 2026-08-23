@@ -13,16 +13,15 @@ import { installBlockCollections } from './blockCollectionHelpers';
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import type { CodePatchResult } from './codePatchRegistry';
 import { generateConfigJson, buildConfigGeneratorParams } from './configGenerator';
-import { assertValidGitHubSlug, type EdsResetParams } from './edsResetParams';
+import { type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from './fstabGenerator';
 import type { GitHubFileOperations } from './githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from './inspectorHelpers';
 import { readLkgSha } from './lkgReader';
 import { installSmart404Handler } from './pdp404HandlerPublisher';
+import { addPlaceholderStubOverrides } from './placeholderStubs';
 import { installQuickEdit } from './quickEditPublisher';
-import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceResolver';
 import type { GitHubTreeInput } from './types';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     getBlockLibrarySource,
     getBlockLibraryContentSource,
@@ -37,77 +36,6 @@ import type { Logger } from '@/types/logger';
 // ==========================================================
 // Helpers
 // ==========================================================
-
-/** Fetch placeholder JSON files from template source into file overrides map. */
-async function fetchPlaceholderFiles(
-    fileOverrides: Map<string, string>,
-    templateOwner: string,
-    templateRepo: string,
-    logger: Logger,
-    surfaceSource?: RuntimeSurfaceSource,
-): Promise<void> {
-    assertValidGitHubSlug(templateOwner, 'templateOwner');
-    assertValidGitHubSlug(templateRepo, 'templateRepo');
-
-    // Static hand list, with the ledger's generated runtime-surfaces.json merged in
-    // when reachable (ADR-008 consumer). Best-effort; falls back to the static list.
-    const inventory = await getRuntimeSurfaces(surfaceSource, logger);
-    const placeholderPaths = inventory.placeholderSheets;
-
-    // A non-ok response used to be dropped on the floor — no log, no counter.
-    // On 2026-08-15 that meant SEVENTEEN consecutive 404s produced zero output,
-    // because the template repo has no live site at all: every sheet 404s at
-    // source and the reset said nothing. The gap only surfaced as nine console
-    // 404s per page load in a browser, days later. Count the outcomes and say
-    // so once.
-    const sourceHost = `https://main--${templateRepo}--${templateOwner}.aem.live`;
-    let added = 0;
-    const missing: string[] = [];
-    const failed: string[] = [];
-
-    await Promise.allSettled(
-        placeholderPaths.map(async (placeholderPath) => {
-            try {
-                const response = await fetch(`${sourceHost}/${placeholderPath}.json`, {
-                    signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-                });
-                if (response.ok) {
-                    fileOverrides.set(`${placeholderPath}.json`, await response.text());
-                    added += 1;
-                    logger.debug(`[EdsReset] Added ${placeholderPath}.json to code files`);
-                    return;
-                }
-                missing.push(`${placeholderPath} (${response.status})`);
-            } catch (error) {
-                failed.push(`${placeholderPath} (${(error as Error).message})`);
-            }
-        }),
-    );
-
-    const attempted = placeholderPaths.length;
-    if (added === attempted) {
-        logger.info(`[EdsReset] Added ${added} placeholder sheet(s) to code files`);
-        return;
-    }
-
-    // NONE landing is the signature of a source that serves nothing — a
-    // template repo with no live site, say — not of individually absent sheets.
-    if (added === 0) {
-        logger.warn(
-            `[EdsReset] No placeholder sheets available from ${sourceHost} ` +
-                `(${attempted} attempted). Dropin UI labels fall back to their built-in ` +
-                `defaults; the storefront still renders. This is expected for a template ` +
-                `with no published site.`,
-        );
-    } else {
-        logger.warn(
-            `[EdsReset] Added ${added}/${attempted} placeholder sheet(s); ` +
-                `the rest are unavailable at ${sourceHost}`,
-        );
-    }
-    if (missing.length) logger.debug(`[EdsReset] Placeholder sheets not found: ${missing.join(', ')}`);
-    if (failed.length) logger.debug(`[EdsReset] Placeholder fetch errors: ${failed.join(', ')}`);
-}
 
 /**
  * Build the combined list of block library sources (built-in + custom) for a project.
@@ -315,7 +243,6 @@ export async function resetRepoToTemplate(
         templateOwner,
         templateRepo,
         project,
-        includeBlockLibrary = false,
         codePatches,
         codePatchSource,
     } = params;
@@ -339,15 +266,16 @@ export async function resetRepoToTemplate(
         );
     }
 
-    if (includeBlockLibrary) {
-        await fetchPlaceholderFiles(
-            fileOverrides,
-            templateOwner,
-            templateRepo,
-            context.logger,
-            codePatchSource,
-        );
-    }
+    // Placeholder sheets are deliberately NOT fetched here (fetch deleted
+    // 2026-08-23). They are UI-label dictionaries and belong to CONTENT: the
+    // DA.live copy's full-tree walk carries any /placeholders sheets a source
+    // authors (sheets are .xlsx on DA.live — see daLiveContentCopy), verified
+    // live on isle5. Dropins ship English defaults compiled in. What DOES go
+    // in are static sentinel STUBS — the boilerplate requests these 16 sheets
+    // per page load and the browser prints every 404 to the console, which no
+    // JS can suppress; the stubs answer 200 and are shadowed by real DA
+    // content the moment a brand authors sheets (content-over-code).
+    addPlaceholderStubOverrides(fileOverrides);
 
     // Determine the template ref to reset against. Thin-layer storefronts
     // (codePatchSource configured) pin to the verified canonical LKG SHA;

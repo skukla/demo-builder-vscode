@@ -30,7 +30,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     showDaLiveAuthQuickPick: jest.fn(),
     resolveByomOverlayConfig: jest.fn(
         (fromConfigUrl: string | undefined, org: string, site: string) =>
-            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined,
+            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
 
@@ -58,23 +58,30 @@ jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
     ensureProjectOrgContext: (...args: unknown[]) => mockEnsureProjectOrgContext(...args),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
-            return callback({ report: jest.fn() });
-        }),
-    },
-    ProgressLocation: { Notification: 15 },
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            showWarningMessage: jest.fn(),
+            showInformationMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+            withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
+                return callback({ report: jest.fn() });
+            }),
+        },
+        ProgressLocation: { Notification: 15 },
+        env: { openExternal: jest.fn() },
+        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
     }),
     initializeLogger: jest.fn(),
 }));
@@ -90,9 +97,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 jest.mock('@/types/typeGuards', () => ({
     getMeshComponentInstance: jest.fn((project: any) => {
         if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find(
-            (c: any) => c.subType === 'mesh'
-        );
+        return Object.values(project.componentInstances).find((c: any) => c.subType === 'mesh');
     }),
     hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
 }));
@@ -133,16 +138,22 @@ import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
-const testPackages = [{
-    id: 'citisignal',
-    storefronts: {
-        'eds-paas': {
-            templateOwner: 'test-owner',
-            templateRepo: 'test-template',
-            contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+const testPackages = [
+    {
+        id: 'citisignal',
+        storefronts: {
+            'eds-paas': {
+                templateOwner: 'test-owner',
+                templateRepo: 'test-template',
+                contentSource: {
+                    org: 'content-org',
+                    site: 'content-site',
+                    indexPath: 'index.json',
+                },
+            },
         },
     },
-}];
+];
 
 // =============================================================================
 // Helpers
@@ -200,10 +211,16 @@ function createMockContext(): HandlerContext {
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
         logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
         } as unknown as HandlerContext['logger'],
         debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
         } as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
@@ -235,10 +252,12 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         // When: resetEdsProjectWithUI is called
         const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
 
-        // Then: ensureDaLiveAuth should have been called with context
+        // Then: ensureDaLiveAuth should have been called with context AND the
+        // storefront's DA.live org, which arms the guard's server probe.
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
             context,
             expect.any(String), // logPrefix
+            'test-org'
         );
 
         // And: Reset should proceed (not fail with auth error)
@@ -331,7 +350,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
                     workspace: 'ws-789',
                 }),
                 warningMessage: expect.stringContaining('Adobe I/O session has expired'),
-            }),
+            })
         );
 
         // And: Reset should proceed
@@ -451,13 +470,18 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        await resetEdsProjectWithUI({ project, context, logPrefix: '[Dashboard]', packages: testPackages });
+        await resetEdsProjectWithUI({
+            project,
+            context,
+            logPrefix: '[Dashboard]',
+            packages: testPackages,
+        });
 
         // Then: logPrefix should be forwarded
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
             expect.objectContaining({
                 logPrefix: '[Dashboard]',
-            }),
+            })
         );
     });
 });

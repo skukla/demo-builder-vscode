@@ -92,6 +92,13 @@ export async function refreshBlockLibraryHeadless(
         onProgress?.(info.message);
     };
 
+    // Deliberately NOT withDaLiveAuthRetry (daLiveAuthRetry.ts), examined
+    // 2026-08-22: that wrapper THROWS on a failed re-auth, collapsing "user
+    // cancelled" and "re-auth failed" into one Error whose message a caller
+    // would have to parse. This headless service's contract is result objects
+    // with a typed `cancelled` flag (the MCP tool surfaces it), so the loop
+    // stays local. The retry SEMANTICS match the wrapper's on purpose: only
+    // DaLiveAuthError retries, bounded attempts, re-auth via ensureDaLiveAuth.
     let attempt = 0;
     while (true) {
         try {

@@ -13,7 +13,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(),
     resolveByomOverlayConfig: jest.fn(
         (fromConfigUrl: string | undefined, org: string, site: string) =>
-            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined,
+            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
 jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
@@ -52,11 +52,13 @@ const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const getMeshComponentInstanceMock = getMeshComponentInstance as unknown as jest.Mock;
 
 function fakeServer() {
-
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
     return {
-
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            _def: unknown,
+            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
+        ) {
             tools.set(name, handler);
         },
         async call(args?: unknown): Promise<any> {
@@ -70,11 +72,24 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: {},
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: {
+            info: jest.fn(),
+            debug: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            trace: jest.fn(),
+        },
     }) as unknown as HandlerContext;
 
 const PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
-const PARAMS = { repoOwner: 'me', repoName: 'shop', daLiveOrg: 'acme', daLiveSite: 'shop', templateOwner: 't', templateRepo: 'tpl' };
+const PARAMS = {
+    repoOwner: 'me',
+    repoName: 'shop',
+    daLiveOrg: 'acme',
+    daLiveSite: 'shop',
+    templateOwner: 't',
+    templateRepo: 'tpl',
+};
 
 describe('reset_eds_project', () => {
     beforeEach(() => {
@@ -82,15 +97,24 @@ describe('reset_eds_project', () => {
         getCurrentProject.mockResolvedValue(PROJECT);
         isEdsProjectMock.mockReturnValue(true);
         extractResetParamsMock.mockReturnValue({ success: true, params: PARAMS });
-        getGitHubServicesMock.mockReturnValue({ tokenService: { validateToken: jest.fn(async () => ({ valid: true })) } });
+        getGitHubServicesMock.mockReturnValue({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        });
         getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
         getMeshComponentInstanceMock.mockReturnValue(undefined);
         mockInspectToken.mockResolvedValue({ valid: true });
-        executeEdsResetMock.mockImplementation(async (_p: unknown, _c: unknown, _tp: unknown, onProgress?: (x: { step: number; totalSteps: number; message: string }) => void) => {
-            onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
-            onProgress?.({ step: 2, totalSteps: 2, message: 'Publishing' });
-            return { success: true, filesReset: 12, contentCopied: 5, meshRedeployed: false };
-        });
+        executeEdsResetMock.mockImplementation(
+            async (
+                _p: unknown,
+                _c: unknown,
+                _tp: unknown,
+                onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
+            ) => {
+                onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
+                onProgress?.({ step: 2, totalSteps: 2, message: 'Publishing' });
+                return { success: true, filesReset: 12, contentCopied: 5, meshRedeployed: false };
+            }
+        );
     });
 
     it('requires confirm:true (destructive) and never runs the reset', async () => {
@@ -101,24 +125,64 @@ describe('reset_eds_project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
+    it('names the project it would reset in the confirm-gate refusal', async () => {
+        // The wrong-window item: the agent must get a chance to notice the
+        // target is wrong BEFORE confirming — an anonymous refusal gives none.
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        const res = await s.call({});
+        expect(res.error).toContain('eds-proj');
+        expect(res).toMatchObject({ project: 'eds-proj' });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses with "no current project" when unconfirmed and nothing is open', async () => {
+        // Project resolution now precedes the gate — there is nothing to
+        // confirm resetting when no project is open.
+        getCurrentProject.mockResolvedValue(null);
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        const res = await s.call({});
+        expect(res).toMatchObject({ error: expect.stringMatching(/No current project/) });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('names the project in the success payload', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        const res = await s.call({ confirm: true });
+        expect(res).toMatchObject({ reset: true, project: 'eds-proj' });
+    });
+
     it('errors for a non-EDS project', async () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
-        expect(await s.call({ confirm: true })).toMatchObject({ error: expect.stringMatching(/only to EDS/) });
+        expect(await s.call({ confirm: true })).toMatchObject({
+            error: expect.stringMatching(/only to EDS/),
+        });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
     it('surfaces a param-extraction failure with its code', async () => {
-        extractResetParamsMock.mockReturnValueOnce({ success: false, error: 'Template configuration missing', code: 'CONFIG_INVALID' });
+        extractResetParamsMock.mockReturnValueOnce({
+            success: false,
+            error: 'Template configuration missing',
+            code: 'CONFIG_INVALID',
+        });
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
-        expect(await s.call({ confirm: true })).toMatchObject({ error: /Template/, code: 'CONFIG_INVALID' });
+        expect(await s.call({ confirm: true })).toMatchObject({
+            error: /Template/,
+            code: 'CONFIG_INVALID',
+        });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
     it('hands off to GitHub auth when not signed in', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({ tokenService: { validateToken: jest.fn(async () => ({ valid: false })) } });
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
+        });
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'github' });
@@ -126,7 +190,9 @@ describe('reset_eds_project', () => {
     });
 
     it('hands off to DA.live auth when GitHub ok but DA.live not', async () => {
-        getDaLiveAuthServiceMock.mockReturnValueOnce({ isAuthenticated: jest.fn(async () => false) });
+        getDaLiveAuthServiceMock.mockReturnValueOnce({
+            isAuthenticated: jest.fn(async () => false),
+        });
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'dalive' });
@@ -147,16 +213,26 @@ describe('reset_eds_project', () => {
         registerEdsResetTool(s, ctxFactory);
         const res = await s.call({ confirm: true, includeBlockLibrary: true });
 
-        expect(res).toMatchObject({ reset: true, filesReset: 12, contentCopied: 5, meshRedeployed: false });
+        expect(res).toMatchObject({
+            reset: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+        });
         expect(res.phases).toEqual([
             { step: 1, totalSteps: 2, message: 'Resetting repo' },
             { step: 2, totalSteps: 2, message: 'Publishing' },
         ]);
         expect(executeEdsResetMock).toHaveBeenCalledWith(
-            expect.objectContaining({ repoOwner: 'me', includeBlockLibrary: true, verifyCdn: false, redeployMesh: false }),
+            expect.objectContaining({
+                repoOwner: 'me',
+                includeBlockLibrary: true,
+                verifyCdn: false,
+                redeployMesh: false,
+            }),
             expect.anything(),
             expect.anything(),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -168,14 +244,26 @@ describe('reset_eds_project', () => {
     });
 
     it('returns a re-runnable failure when the reset reports failure', async () => {
-        executeEdsResetMock.mockImplementationOnce(async (_p: unknown, _c: unknown, _tp: unknown, onProgress?: (x: { step: number; totalSteps: number; message: string }) => void) => {
-            onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
-            return { success: false, error: 'rate limited', errorType: 'GITHUB_RATE_LIMIT' };
-        });
+        executeEdsResetMock.mockImplementationOnce(
+            async (
+                _p: unknown,
+                _c: unknown,
+                _tp: unknown,
+                onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
+            ) => {
+                onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
+                return { success: false, error: 'rate limited', errorType: 'GITHUB_RATE_LIMIT' };
+            }
+        );
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
-        expect(res).toMatchObject({ reset: false, stage: 'eds-reset', error: 'rate limited', rerunSafe: true });
+        expect(res).toMatchObject({
+            reset: false,
+            stage: 'eds-reset',
+            error: 'rate limited',
+            rerunSafe: true,
+        });
         expect(res.phases.length).toBe(1);
     });
 

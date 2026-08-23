@@ -31,13 +31,40 @@ const MOCK_WEBSITES = [
 
 const MOCK_STORE_GROUPS = [
     { id: 1, code: 'main', name: 'Main Store', website_id: 1, root_category_id: 2 },
-    { id: 2, code: 'citisignal_store', name: 'CitiSignal Store', website_id: 2, root_category_id: 3 },
+    {
+        id: 2,
+        code: 'citisignal_store',
+        name: 'CitiSignal Store',
+        website_id: 2,
+        root_category_id: 3,
+    },
 ];
 
 const MOCK_STORE_VIEWS = [
-    { id: 1, code: 'default', name: 'Default Store View', store_group_id: 1, website_id: 1, is_active: true },
-    { id: 2, code: 'citisignal_us', name: 'CitiSignal US', store_group_id: 2, website_id: 2, is_active: true },
-    { id: 3, code: 'citisignal_de', name: 'CitiSignal DE', store_group_id: 2, website_id: 2, is_active: true },
+    {
+        id: 1,
+        code: 'default',
+        name: 'Default Store View',
+        store_group_id: 1,
+        website_id: 1,
+        is_active: true,
+    },
+    {
+        id: 2,
+        code: 'citisignal_us',
+        name: 'CitiSignal US',
+        store_group_id: 2,
+        website_id: 2,
+        is_active: true,
+    },
+    {
+        id: 3,
+        code: 'citisignal_de',
+        name: 'CitiSignal DE',
+        store_group_id: 2,
+        website_id: 2,
+        is_active: true,
+    },
 ];
 
 // ==========================================================
@@ -76,7 +103,7 @@ describe('commerceStoreDiscovery', () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: 'admin', password: 'admin123' }),
-                }),
+                })
             );
         });
 
@@ -87,9 +114,9 @@ describe('commerceStoreDiscovery', () => {
                 statusText: 'Unauthorized',
             });
 
-            await expect(
-                getAdminToken('https://magento.test', 'wrong', 'wrong'),
-            ).rejects.toThrow('Invalid admin credentials');
+            await expect(getAdminToken('https://magento.test', 'wrong', 'wrong')).rejects.toThrow(
+                'Invalid admin credentials'
+            );
         });
 
         it('should throw on other HTTP errors', async () => {
@@ -99,9 +126,9 @@ describe('commerceStoreDiscovery', () => {
                 statusText: 'Internal Server Error',
             });
 
-            await expect(
-                getAdminToken('https://magento.test', 'admin', 'pass'),
-            ).rejects.toThrow('Admin token request failed: 500 Internal Server Error');
+            await expect(getAdminToken('https://magento.test', 'admin', 'pass')).rejects.toThrow(
+                'Admin token request failed: 500 Internal Server Error'
+            );
         });
 
         it('should throw on unexpected token format', async () => {
@@ -110,9 +137,9 @@ describe('commerceStoreDiscovery', () => {
                 json: () => Promise.resolve(12345), // number instead of string
             });
 
-            await expect(
-                getAdminToken('https://magento.test', 'admin', 'pass'),
-            ).rejects.toThrow('Unexpected token format');
+            await expect(getAdminToken('https://magento.test', 'admin', 'pass')).rejects.toThrow(
+                'Unexpected token format'
+            );
         });
 
         it('should strip trailing slash from base URL', async () => {
@@ -125,7 +152,7 @@ describe('commerceStoreDiscovery', () => {
 
             expect(fetchSpy).toHaveBeenCalledWith(
                 'https://magento.test/rest/V1/integration/admin/token',
-                expect.anything(),
+                expect.anything()
             );
         });
     });
@@ -153,32 +180,37 @@ describe('commerceStoreDiscovery', () => {
                 'https://magento.test/rest/V1/store/websites',
                 expect.objectContaining({
                     headers: expect.objectContaining({
-                        'Authorization': `Bearer ${MOCK_ADMIN_TOKEN}`,
+                        Authorization: `Bearer ${MOCK_ADMIN_TOKEN}`,
                     }),
-                }),
+                })
             );
         });
 
         it('should throw on 403 (access denied)', async () => {
-            fetchSpy.mockResolvedValueOnce({
+            // Promise.all fires THREE fetches — mock every call, not just the
+            // first. A mockResolvedValueOnce here let calls 2 and 3 fall
+            // through to the REAL fetch, whose in-flight DNS + TLS handles
+            // outlived the worker (the "failed to exit gracefully" warning).
+            fetchSpy.mockResolvedValue({
                 ok: false,
                 status: 403,
                 statusText: 'Forbidden',
             });
 
             await expect(
-                fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN),
+                fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN)
             ).rejects.toThrow('Access denied');
         });
 
         it('should throw on non-array response', async () => {
-            fetchSpy.mockResolvedValueOnce({
+            // All three parallel calls mocked — see the 403 test above.
+            fetchSpy.mockResolvedValue({
                 ok: true,
                 json: () => Promise.resolve({ message: 'error object instead of array' }),
             });
 
             await expect(
-                fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN),
+                fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN)
             ).rejects.toThrow('Unexpected response format');
         });
 
@@ -247,7 +279,9 @@ describe('commerceStoreDiscovery', () => {
 
             expect(result.success).toBe(false);
             if (!result.success) {
-                expect(result.error).toContain('Discovery service not configured or IMS token missing');
+                expect(result.error).toContain(
+                    'Discovery service not configured or IMS token missing'
+                );
             }
         });
 
@@ -255,14 +289,15 @@ describe('commerceStoreDiscovery', () => {
             // Mock discovery service response (single fetch call)
             fetchSpy.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve({
-                    success: true,
-                    data: {
-                        websites: MOCK_WEBSITES,
-                        storeGroups: MOCK_STORE_GROUPS,
-                        storeViews: MOCK_STORE_VIEWS,
-                    },
-                }),
+                json: () =>
+                    Promise.resolve({
+                        success: true,
+                        data: {
+                            websites: MOCK_WEBSITES,
+                            storeGroups: MOCK_STORE_GROUPS,
+                            storeViews: MOCK_STORE_VIEWS,
+                        },
+                    }),
             });
 
             const result = await discoverStoreStructure({
@@ -293,20 +328,33 @@ describe('commerceStoreDiscovery', () => {
         it('strips the id-0 admin scope from the ACCS result', async () => {
             fetchSpy.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve({
-                    success: true,
-                    data: {
-                        websites: [{ id: 0, code: 'admin', name: 'Admin' }, ...MOCK_WEBSITES],
-                        storeGroups: [
-                            { id: 0, code: 'default', name: 'Default', website_id: 0, root_category_id: 0 },
-                            ...MOCK_STORE_GROUPS,
-                        ],
-                        storeViews: [
-                            { id: 0, code: 'admin', name: 'Admin', website_id: 0, store_group_id: 0 },
-                            ...MOCK_STORE_VIEWS,
-                        ],
-                    },
-                }),
+                json: () =>
+                    Promise.resolve({
+                        success: true,
+                        data: {
+                            websites: [{ id: 0, code: 'admin', name: 'Admin' }, ...MOCK_WEBSITES],
+                            storeGroups: [
+                                {
+                                    id: 0,
+                                    code: 'default',
+                                    name: 'Default',
+                                    website_id: 0,
+                                    root_category_id: 0,
+                                },
+                                ...MOCK_STORE_GROUPS,
+                            ],
+                            storeViews: [
+                                {
+                                    id: 0,
+                                    code: 'admin',
+                                    name: 'Admin',
+                                    website_id: 0,
+                                    store_group_id: 0,
+                                },
+                                ...MOCK_STORE_VIEWS,
+                            ],
+                        },
+                    }),
             });
 
             const result = await discoverStoreStructure({
@@ -435,7 +483,10 @@ describe('commerceStoreDiscovery', () => {
                 ok: false,
                 status: 504,
                 statusText: 'Gateway Timeout',
-                text: () => Promise.resolve('{"error":"upstream timeout — discovery service rejected after 30s"}'),
+                text: () =>
+                    Promise.resolve(
+                        '{"error":"upstream timeout — discovery service rejected after 30s"}'
+                    ),
             });
 
             const result = await discoverStoreStructure({
@@ -451,7 +502,9 @@ describe('commerceStoreDiscovery', () => {
                 expect(result.error).toContain('504');
                 expect(result.error).toContain('Gateway Timeout');
                 // And the rewrite-to-friendly-timeout did NOT fire.
-                expect(result.error).not.toBe('Connection timed out. Check the Commerce URL and try again.');
+                expect(result.error).not.toBe(
+                    'Connection timed out. Check the Commerce URL and try again.'
+                );
             }
         });
 

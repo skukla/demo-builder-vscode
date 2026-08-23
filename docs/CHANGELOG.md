@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.137] - 2026-08-23
+
+### Fixed
+
+- **A refused DA.live credential is no longer misreported as a missing
+  permission.** Before a storefront pipeline starts, the extension probes the
+  DA.live admin server: a 401 indicts the credential (sign in again — with
+  prompt copy that says so), while a 403 is a genuine permission fact.
+  Previously a refused credential surfaced as a permission problem that no
+  permission grant could fix.
+- **A package that requires an API Mesh can no longer be built without one.**
+  The required mesh row in the wizard is locked (no Remove action, a
+  "Required by this package" subline), the toggle refuses, and Continue holds
+  until the mesh is selected. Closes the silent failure where a
+  mesh-requiring storefront was created meshless and rendered empty product
+  blocks.
+- **Two VS Code windows no longer silently trade the AI's connection.** The
+  in-extension MCP server uses first-window-wins socket binding: a window
+  that finds another already serving leaves it in place and says so, instead
+  of silently taking the socket. `reset_eds_project` also names its target
+  project in the confirmation gate and every result.
+- **"No index was found" now comes with its real remedy — and Republish can
+  retry pre-warming.** Catalog pre-warming on a demo instance often fails
+  because Live Search hibernates search data (documented policy: 45 days with
+  an empty catalog, or 90 unqueried for testing environments) and importing
+  products does not wake it. The log now says exactly that and names the fix —
+  a cheap first try (edit any product attribute in the Admin, which can
+  trigger index creation) and, failing that, an Adobe support request titled
+  "Reactivate Live Search" with the environment ID — instead of a bare
+  failure line. And once the index is back,
+  the dashboard's Republish (and the AI's `sync_content`) now re-runs
+  pre-warming, so the heavyweight Reset is no longer the only retry; Republish
+  also refreshes previously pre-warmed product pages, which the content
+  publish alone never touched.
+- **The storefront's placeholder console errors are gone.** Every page load
+  requested 16 optional UI-label sheets that don't exist, and the browser
+  prints each failed request in red — harmless (labels fall back to built-in
+  defaults) but it reads as breakage whenever devtools are open in a demo.
+  Two-part fix: the reset-time code fetch that tried (and, for the b2b
+  template, always failed — its source host doesn't exist) to download the
+  sheets was deleted — label overrides are DA.live content and the content
+  copy already carries them; and both creation and reset now commit tiny
+  self-documenting stub sheets so every request answers 200 quietly. A brand
+  that later authors real label sheets in DA.live automatically overrides the
+  stubs.
+
+- **The scraping skills warned about a Chromium download that never happens.**
+  Measured: the Playwright MCP drives the machine's installed Google Chrome by
+  default (verified on both shipped versions with the bundled-browser store
+  empty), so machines with Chrome download nothing. The skills and config now
+  say so, and name the real case — Chrome-less machines need a one-time ~150 MB
+  install via the server's `install-browser` subcommand. AI bundle version
+  16 → 17. Research context: Playwright stays bundled — Claude in Chrome
+  cannot replace it (Claude-only, no headless mode, approval prompts), and two
+  of the three agents that consume the generated `.mcp.json` (Cursor, Codex)
+  could not use it at all.
+
 ## [1.0.0-beta.136] - 2026-08-22
 
 A wide release: three campaigns land together — every extension↔webview message

@@ -463,62 +463,59 @@ DA.live's source API (`POST /source/{org}/{site}/{path}`) has no spreadsheet-spe
 - When authors edit a Google Sheet, DA.live syncs it and serves as JSON
 - The `/source/` API is for **storing files**, not creating spreadsheets
 
-### The Solution: GitHub Code Files
+### The distinction that resolves it: CREATING sheets fails; COPYING them works
 
-Since DA.live can't programmatically create spreadsheets, we commit JSON files directly to GitHub:
+The failed attempts above are all about *creating* a spreadsheet from
+constructed data. Copying an EXISTING sheet's `.xlsx` source blob between
+DA.live sites works — the content copy does exactly that (`daLiveContentCopy`:
+sheets are "served as `.json` on CDN, stored as `.xlsx` on DA.live"), proven by
+`/redirects` and `/metadata` riding every reset, and verified live on isle5,
+whose `/placeholders/global.json` serves from DA content that exists in no
+GitHub repo.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     EDS Reset Flow                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Source CDN                    GitHub Repo                       │
-│  (demo-system-stores)          (user's repo)                     │
-│                                                                  │
-│  placeholders/global.json  →   placeholders/global.json          │
-│  placeholders/auth.json    →   placeholders/auth.json            │
-│  placeholders/cart.json    →   placeholders/cart.json            │
-│                                                                  │
-│  Committed as CODE files, not uploaded to DA.live                │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+**So label sheets are CONTENT, carried by the content copy.** A package wanting
+non-default UI labels authors `/placeholders/*` sheets in its DA.live source;
+the copy's full-tree walk enumerates and carries them with no code involved.
+Dropins ship English label defaults compiled in, so a package authoring no
+sheets renders correctly with none.
 
-**Implementation** (fetch in `src/features/eds/services/edsResetRepoHelper.ts`; the path list is derived in `src/features/eds/services/runtimeSurfaceInventory.ts`):
-```typescript
-const placeholderPaths = [
-    'placeholders/global',
-    'placeholders/auth',
-    'placeholders/cart',
-    'placeholders/recommendations',
-    'placeholders/wishlist',
-];
+> **Historical note (removed 2026-08-23):** a reset-time code path
+> (`fetchPlaceholderFiles` in `edsResetRepoHelper`) used to fetch placeholder
+> JSON from the TEMPLATE's live site and commit it as GitHub code files, driven
+> by a `placeholderSheets` list in `runtimeSurfaceInventory`. Both were
+> deleted: the b2b template has no live site (17 silent 404s per reset), the
+> defaults make the sheets optional, and where the fetch could succeed it
+> committed a code snapshot shadowing live-editable content.
+>
+> **Follow-up (same day): sentinel STUBS.** Missing sheets still 404 in the
+> browser console (the boilerplate requests all 16 per page load, and a
+> browser logs every failed request — no JS can suppress it), which reads as
+> breakage during any demo with devtools open. `placeholderStubs.ts` commits a
+> static one-row sentinel sheet per requested path — creation (one bulk
+> commit in phase 2) and reset (inside the bulk override commit) both wire it.
+> The row's key (`_stub`) is looked up by nothing; an EMPTY sheet would not
+> do (the fetch code warns "No placeholder data found" on `data.length === 0`).
+> Real DA.live sheets shadow the stubs via content-over-code — self-retiring.
 
-for (const placeholderPath of placeholderPaths) {
-    const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
-    const response = await fetch(sourceUrl);
-    const jsonContent = await response.text();
-    fileOverrides.set(`${placeholderPath}.json`, jsonContent);
-}
-```
-
-### Why This Works: Helix Content > Code Precedence
+### Why author-later works: Helix Content > Code Precedence
 
 Helix has a **Content overrides Code** rule:
 - If both DA.live content AND GitHub code exist at the same path, **content wins**
-- This means authors can later create DA.live spreadsheets to override the GitHub defaults
+- So even a repo that still carries committed placeholder JSON (from the
+  removed fetch) is harmlessly shadowed the moment a DA.live sheet exists
 
 **The authoring experience**:
-1. **Day 1**: Site works immediately (JSON served from GitHub)
-2. **Day N**: Author creates spreadsheet in DA.live → automatically overrides GitHub version
-3. **No migration needed**: Just create the DA.live spreadsheet when ready
+1. **Day 1**: Site works immediately (dropin-compiled English label defaults)
+2. **Day N**: Author creates `/placeholders/*` sheets in DA.live → labels
+   override the defaults; the content copy carries them to derived sites
+3. **No migration needed**: authoring the sheet is the whole change
 
 ### File Types Summary
 
 | Path Pattern | Stored In | Served As | Notes |
 |--------------|-----------|-----------|-------|
 | `/*.html` | DA.live | HTML page | Content pages |
-| `/placeholders/*.json` | GitHub | JSON | Code files (workaround for DA.live limitation) |
+| `/placeholders/*` | DA.live (optional) | JSON | Label sheets — content; dropin defaults apply when absent |
 | `/config.json` | GitHub | JSON | Commerce config (nested object, not spreadsheet) |
 | `/demo-config.json` | GitHub | JSON | Brand/theming config |
 | `/media/*` | DA.live | Binary | Images, videos |

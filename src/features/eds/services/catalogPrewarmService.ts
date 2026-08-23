@@ -268,10 +268,40 @@ export async function prewarmCatalog(
             storeCode: params.storeCode,
             storeViewCode: params.storeViewCode,
         });
-        logger.warn(
-            `[Catalog Prewarm] Catalog enumeration failed for scope ${scope}: ${reason}`
-                + ' — falling back to runtime smart-404 only',
-        );
+        // The no-index case gets its own guidance. The index is per store view
+        // and separate from the catalog, so this fails identically for 0 or
+        // 30,000 products (measured 2026-08-18 against a populated backend).
+        // The usual demo-instance cause is Live Search's public "Catalog data
+        // retention policy" (Live Search overview): an environment whose
+        // catalog stays EMPTY for 45 days — or a testing environment unqueried
+        // for 90 — is hibernated, and importing products does NOT by itself
+        // wake it; a product-attribute edit is a field-reported (unverified)
+        // way to force index creation, and the documented remedy is an Adobe
+        // support request. Prewarm is an
+        // optimization either way: the runtime smart-404 publishes each PDP on
+        // first visit regardless.
+        if (/no index was found/i.test(reason)) {
+            logger.warn(
+                `[Catalog Prewarm] No Catalog Service search index exists for scope ${scope}. ` +
+                    `Live Search hibernates an environment's search data when its catalog stays ` +
+                    `empty for 45 days, or a testing environment goes unqueried for 90 (see ` +
+                    `"Catalog data retention policy" in the Live Search overview) — and importing ` +
+                    `products does not by itself wake it. Cheap first try: edit any product ` +
+                    `attribute in the Admin — a metadata update can trigger index creation ` +
+                    `(field-reported, not in the public docs) — and retry after ~15 minutes. ` +
+                    `If search still fails, an ` +
+                    `Adobe support request titled "Reactivate Live Search" (include the environment ` +
+                    `id) restores it within a couple of hours. A brand-new scope may instead still ` +
+                    `be indexing — retry later. Product pages still work meanwhile: the runtime ` +
+                    `smart-404 publishes each PDP on first visit, and Republish (or Reset) ` +
+                    `re-runs pre-warming.`,
+            );
+        } else {
+            logger.warn(
+                `[Catalog Prewarm] Catalog enumeration failed for scope ${scope}: ${reason}` +
+                    ' — falling back to runtime smart-404 only',
+            );
+        }
         return makeSkipped(`enumeration failed: ${reason}`);
     }
 

@@ -10,11 +10,13 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type * as vscode from 'vscode';
+import { resolveByomOverlayConfig } from '../handlers/byomOverlay';
 import {
     applyDaLiveOrgConfigSettings,
     configureDaLivePermissions,
     resolveProjectAuthoringExperience,
 } from '../handlers/edsHelpers';
+import { prewarmCatalog } from './catalogPrewarmService';
 import { generateConfigJson, buildConfigGeneratorParams } from './configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
 import type { DaLiveAuthService } from './daLiveAuthService';
@@ -38,7 +40,6 @@ import type { Logger } from '@/types/logger';
  * Parameters for republishing storefront config.json
  */
 export interface RepublishParams {
-
     /** Project to republish config for */
     project: Project;
     /** VS Code secret storage for GitHub token */
@@ -413,7 +414,39 @@ export async function republishStorefrontContent(
             (info) => report(info.message),
         );
 
-        // Step 5: Verify config.json on the CDN (best-effort).
+        // Step 5: Pre-warm the catalog's PDP pages (self-gating: ACCS + BYOM
+        // only; non-fatal). Decided 2026-08-23: Republish is the lightweight
+        // retry for a prewarm that failed at creation — e.g. a hibernated
+        // Live Search index since reactivated via the "Reactivate Live
+        // Search" support request — and it also refreshes previously-prewarmed
+        // PDPs, which Step 4's content publish never reaches (they are
+        // synthetic pages, not DA content). Reset remains the heavyweight path.
+        try {
+            const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
+            if (overlayUrl) {
+                report('Pre-warming product pages...');
+                const prewarm = await prewarmCatalog(
+                    project,
+                    overlayUrl,
+                    daLiveOrg,
+                    daLiveSite,
+                    helixService,
+                    logger,
+                    (p) => report(p.message),
+                );
+                if (!prewarm.skipped) {
+                    logger.info(
+                        `[Republish] Catalog pre-warming: ${prewarm.succeeded}/${prewarm.attempted} SKUs pre-published`,
+                    );
+                }
+            }
+        } catch (prewarmError) {
+            logger.warn(
+                `[Republish] Catalog pre-warming failed (non-fatal): ${(prewarmError as Error).message}`,
+            );
+        }
+
+        // Step 6: Verify config.json on the CDN (best-effort).
         report('Verifying CDN...');
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
         return { success: true, cdnVerified };

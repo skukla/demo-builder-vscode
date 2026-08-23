@@ -333,8 +333,10 @@ async function grantSiteAdmin(
  * enforces the verb. Poll this after any recovery attempt instead of trusting
  * that the attempt worked.
  *
- * @returns `granted` on 200, `refused` on 401/403, `unknown` for anything else
- *   (a transport failure must never read as success)
+ * @returns `granted` on 200, `unauthenticated` on 401 (the session was
+ *   refused — says nothing about the role), `refused` on 403 (the role is
+ *   missing), `unknown` for anything else (a transport failure must never
+ *   read as success)
  */
 export async function probeConfigWriteAccess(
     tokenProvider: TokenProvider,

@@ -10,7 +10,6 @@
 
 import {
     withSelectedAppBuilderComponent,
-    computeSelectedAppBuilderComponents,
     meshAppBuilderComponentToComponentIds,
 } from '@/features/project-creation/ui/wizard/appBuilderComponentSelectionState';
 import { hasMeshInDependencies } from '@/core/constants';
@@ -44,31 +43,11 @@ describe('withSelectedAppBuilderComponent', () => {
     });
 });
 
-describe('computeSelectedAppBuilderComponents (required auto-included)', () => {
-    const requiredIds = ['req-mesh'];
-
-    it('always includes required ids even when the user never toggled them', () => {
-        const result = computeSelectedAppBuilderComponents([], requiredIds);
-        expect(result).toContain('req-mesh');
-    });
-
-    it('keeps user-toggled optional ids alongside required ids', () => {
-        const result = computeSelectedAppBuilderComponents(['opt-1'], requiredIds);
-        expect(result).toEqual(expect.arrayContaining(['req-mesh', 'opt-1']));
-    });
-
-    it('does not duplicate an id that is both selected and required', () => {
-        const result = computeSelectedAppBuilderComponents(['req-mesh', 'opt-1'], requiredIds);
-        expect(result.filter((id) => id === 'req-mesh')).toHaveLength(1);
-    });
-
-    it('toggling an optional off leaves required + other optionals', () => {
-        const afterToggle = withSelectedAppBuilderComponent(['opt-1', 'opt-2'], 'opt-1', false);
-        const result = computeSelectedAppBuilderComponents(afterToggle, requiredIds);
-        expect(result).toEqual(expect.arrayContaining(['req-mesh', 'opt-2']));
-        expect(result).not.toContain('opt-1');
-    });
-});
+// computeSelectedAppBuilderComponents (required union) was deleted 2026-08-23:
+// its only reference in the whole tree was this suite — no production caller
+// ever existed, even the orphaned AppBuilderComponentsStepContent never used
+// it. Required-mesh auto-include ships through onStackSelect's dependency
+// seeding, and required-mesh REMOVAL is refused by the toggle guard.
 
 describe('meshAppBuilderComponentToComponentIds (mesh dual-flow backward-compat)', () => {
     // Mesh catalog entries are derived from the registry now, so a mesh

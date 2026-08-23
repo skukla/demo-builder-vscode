@@ -27,7 +27,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
-import { listToolsOverSocket, makeLogger } from './inExtensionMcpServer.testUtils';
+import {
+    listToolsOverSocket,
+    makeLogger,
+    serverInfoOverSocket,
+} from './inExtensionMcpServer.testUtils';
 
 // Hoisted above the imports by ts-jest; the `mock` prefix is what lets the
 // factory below reference them. The gate makes ONE `stat` of the shared socket
@@ -128,6 +132,50 @@ describe('InExtensionMcpServer socket ownership', () => {
         expect(fs.existsSync(socketPath)).toBe(true);
         const names = await listToolsOverSocket(socketPath);
         expect(names.length).toBeGreaterThan(0);
+    });
+
+    it('does not take the shared name from a LIVE server — first window wins', async () => {
+        // The mcp-window-and-project-binding item: every window at the projects
+        // root computes the same socket name, and the second window's rename
+        // silently rebound every NEW client to itself while existing
+        // connections stayed on the first — two windows serving one name, no
+        // log. First window wins instead: a bind that finds a LIVE listener
+        // leaves it in place and says so.
+        const first = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            buildLabel: 'first-window',
+        });
+        servers.push(first);
+        await first.start();
+
+        const second = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            buildLabel: 'second-window',
+        });
+        servers.push(second);
+        await second.start(); // must not throw, must not steal the name
+
+        const info = await serverInfoOverSocket(socketPath);
+        expect(info?.version).toBe('first-window');
+    });
+
+    it('still takes over a DEAD socket file (disposed listener, file left behind)', async () => {
+        // The takeover path must survive the first-wins guard: a file with no
+        // listener refuses the probe, and the next window binds as before.
+        const first = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            buildLabel: 'first-window',
+        });
+        servers.push(first);
+        await first.start();
+        first.dispose();
+        await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+        const second = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            buildLabel: 'second-window',
+        });
+        servers.push(second);
+        await second.start();
+
+        const info = await serverInfoOverSocket(socketPath);
+        expect(info?.version).toBe('second-window');
     });
 
     it('leaves its socket file behind on dispose, even as the only instance', async () => {

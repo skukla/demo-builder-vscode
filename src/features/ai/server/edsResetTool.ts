@@ -15,7 +15,11 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
-import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
+import {
+    getDaLiveAuthService,
+    getGitHubServices,
+    resolveByomOverlayConfig,
+} from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
@@ -24,7 +28,8 @@ import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
 /** Silent Adobe IMS auth pre-flight. */
 async function adobeAuthed(): Promise<boolean> {
     try {
-        return (await ServiceLocator.getAuthenticationService().getTokenManager().inspectToken()).valid;
+        return (await ServiceLocator.getAuthenticationService().getTokenManager().inspectToken())
+            .valid;
     } catch {
         return false;
     }
@@ -44,29 +49,51 @@ export function registerEdsResetTool(
     server.registerTool(
         'reset_eds_project',
         {
-            description: 'Reset an EDS storefront to its template (repo + DA.live content + config). Requires confirm:true.',
+            description:
+                'Reset an EDS storefront to its template (repo + DA.live content + config). Requires confirm:true.',
             inputSchema: {
-                includeBlockLibrary: z.boolean().optional().describe('Also reset the installed block library'),
-                verifyCdn: z.boolean().optional().describe('Verify config.json on the CDN after reset'),
-                confirm: z.boolean().optional().describe('Must be true — reset rewrites the storefront to its template'),
+                includeBlockLibrary: z
+                    .boolean()
+                    .optional()
+                    .describe('Also reset the installed block library'),
+                verifyCdn: z
+                    .boolean()
+                    .optional()
+                    .describe('Verify config.json on the CDN after reset'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Must be true — reset rewrites the storefront to its template'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            if (args?.confirm !== true) {
-                return asText({
-                    error: 'reset_eds_project rewrites the storefront repo and DA.live content to the template. Call again with confirm:true.',
-                    destructive: true,
-                });
-            }
-
+            // Resolve the target BEFORE the confirm gate, so the refusal can
+            // name the project this call would reset. The pointer is re-read
+            // from disk per call, but which project it names can still surprise
+            // an agent (another window, another conversation, changed it) — an
+            // anonymous "call again with confirm:true" gives the agent no
+            // chance to notice, and the success payload was equally anonymous.
             const ctx = ctxFactory();
             const project = await ctx.stateManager.getCurrentProject();
             if (!project) {
                 return asText({ error: 'No current project is open' });
             }
             if (!isEdsProject(project)) {
-                return asText({ error: 'reset_eds_project applies only to EDS storefront projects' });
+                return asText({
+                    error: 'reset_eds_project applies only to EDS storefront projects',
+                });
+            }
+
+            if (args?.confirm !== true) {
+                return asText({
+                    error:
+                        `reset_eds_project rewrites the storefront repo and DA.live content of ` +
+                        `"${project.name}" (${project.path}) to the template. Verify this is the ` +
+                        `intended project, then call again with confirm:true.`,
+                    project: project.name,
+                    destructive: true,
+                });
             }
 
             const paramsResult = extractResetParams(project);
@@ -130,12 +157,18 @@ export function registerEdsResetTool(
                         },
                         ctx,
                         tokenProvider,
-                        (p) => phases.push({ step: p.step, totalSteps: p.totalSteps, message: p.message }),
+                        (p) =>
+                            phases.push({
+                                step: p.step,
+                                totalSteps: p.totalSteps,
+                                message: p.message,
+                            }),
                     ),
                 );
                 if (!result.success) {
                     return asText({
                         reset: false,
+                        project: project.name,
                         stage: 'eds-reset',
                         error: result.error,
                         errorType: result.errorType,
@@ -145,6 +178,7 @@ export function registerEdsResetTool(
                 }
                 return asText({
                     reset: true,
+                    project: project.name,
                     filesReset: result.filesReset,
                     contentCopied: result.contentCopied,
                     meshRedeployed: result.meshRedeployed,

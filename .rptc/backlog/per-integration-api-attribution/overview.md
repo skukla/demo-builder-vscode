@@ -27,7 +27,7 @@ them:
 
 - `src/types/webview.ts:64` — `selectedConsoleApis?: Record<string, string[]>`, commented
   "Free Console API picks (sdk codes) **per integration id**".
-- `src/features/project-creation/ui/wizard/wizardHelpers.ts:731` —
+- `src/features/project-creation/ui/wizard/wizardHelpers.ts:716` —
   `additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis)`. The keyed record is
   collapsed into a flat `string[]` at the persist boundary.
 - `src/types/base.ts:156-161` — `project.additionalConsoleApis?: string[]`, described as "ad-hoc
@@ -191,7 +191,7 @@ the workspace is the **state**. Both existing per-component stores were evaluate
 |---|---|---|---|
 | 00 | RPTC re-init | Re-invoke the originating command; baseline GREEN | — |
 | 01 ✅ | Keyed persistence + migration | `project.componentApiPicks: Record<componentId, string[]>` (see **Store choice** below); `resolveDesiredApis(project)` unions at READ time; one-time migration of flat `additionalConsoleApis` → `{ __existing__: [...] }`. Legacy field still readable. | Silent loss of existing picks on migration; manifest round-trip (`projectConfigWriter.ts:128-132` + `projectFileLoader.ts:128`) |
-| 02 ✅ | Wizard persists keyed | `wizardHelpers.ts:731` stops calling `unionConsoleApiPicks`; writes the keyed record through. `__existing__` maps to the unattributed bucket. | Wizard round-trip regression; `RESERVED_EXISTING_KEY` double-counting in the union |
+| 02 ✅ | Wizard persists keyed | `wizardHelpers.ts:716` stops calling `unionConsoleApiPicks`; writes the keyed record through. `__existing__` maps to the unattributed bucket. | Wizard round-trip regression; `RESERVED_EXISTING_KEY` double-counting in the union |
 | 03 ✅ | Four-state row resolver | Pure `resolveApiRows(project, componentId)` → rows tagged `mine-required` / `mine-optional` / `other-required` (+ owner names) / `baseline` | Mis-scoped "other" set silently unlocking a shared code — 100% branch coverage required |
 | 04 ✅ | Per-integration handlers — BOTH surfaces | `dashboard/handlers/consoleApiHandlers.ts` (`listConsoleApis`/`setConsoleApis`) AND `project-creation/handlers/consoleApiHandlers.ts` (`list-org-console-apis`) take a `componentId`; list returns resolver rows + attribution, set writes that component's `componentApiPicks[id]` entry only | Two handler files drifting on attribution; count-pinned handler-map tests; the wizard picker already passes componentIds — do not regress it |
 | 05 ✅ | Per-integration Adobe APIs section | **Host: `ManageApisModal`, NOT Configure.** The plan recommended Configure and said to retire `EditIntegrationModal`'s project-scoped picker — that component has ZERO git history and never existed. The real picker is `ManageApisModal`, and it was ALREADY per-card (opened via `setManageApisId(model.id)`, naming the integration in its copy) while editing the project-wide union. Choosing Configure would have built a SECOND per-integration surface and left this one project-scoped. Shipped `bd870588`: it takes a `componentId`, and `ApiAccessPicker` gained the reason slot (`Required by ERP Sync`). | — |

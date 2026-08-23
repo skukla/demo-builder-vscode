@@ -79,6 +79,65 @@ describe('DaLiveAuthService', () => {
         return `${header}.${payloadBase64}.${signature}`;
     };
 
+    describe('isServerAccepted', () => {
+        // The locally-valid-but-server-refused gap (2026-08-16): expiry says
+        // nothing about whether the DA.live admin plane will honour the token.
+        // One HEAD against /list/{org}/ answers it. 401 = the CREDENTIAL was
+        // refused; 403 = the ORG refused access to a credential it honoured;
+        // network trouble is not evidence either way.
+        const realFetch = global.fetch;
+
+        beforeEach(() => {
+            globalStateStore.set('daLive.accessToken', 'live-token');
+            globalStateStore.set('daLive.tokenExpiration', Date.now() + 60 * 60 * 1000);
+        });
+
+        afterEach(() => {
+            global.fetch = realFetch;
+        });
+
+        it('sends one HEAD with the stored Bearer token to the org listing', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ status: 200 });
+
+            await service.isServerAccepted('acme');
+
+            expect(global.fetch).toHaveBeenCalledWith(
+                'https://admin.da.live/list/acme/',
+                expect.objectContaining({
+                    method: 'HEAD',
+                    headers: { Authorization: 'Bearer live-token' },
+                })
+            );
+        });
+
+        it('returns accepted on 200', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ status: 200 });
+            expect(await service.isServerAccepted('acme')).toBe('accepted');
+        });
+
+        it('returns refused on 401 — the credential itself was rejected', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ status: 401 });
+            expect(await service.isServerAccepted('acme')).toBe('refused');
+        });
+
+        it('returns accepted on 403 — the org refused a credential it honoured', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ status: 403 });
+            expect(await service.isServerAccepted('acme')).toBe('accepted');
+        });
+
+        it('returns unknown on network failure (fail open, never block on a flaky probe)', async () => {
+            global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET'));
+            expect(await service.isServerAccepted('acme')).toBe('unknown');
+        });
+
+        it('returns refused when no token is stored — nothing to accept', async () => {
+            globalStateStore.clear();
+            global.fetch = jest.fn();
+            expect(await service.isServerAccepted('acme')).toBe('refused');
+            expect(global.fetch).not.toHaveBeenCalled();
+        });
+    });
+
     describe('isAuthenticated', () => {
         it('should return false when no token stored', async () => {
             // Given: Empty globalState (no token)

@@ -74,7 +74,7 @@ export function meshComponentForStack(
     const pkg = packages.find((p) => p.id === state.selectedPackage);
     const stack = stacks.find((s) => s.id === state.selectedStack);
     if (!pkg || !stack) return undefined;
-    return getSelectableAppBuilderComponents(pkg, stack.backend, stack.frontend).find(
+    return getSelectableAppBuilderComponents(pkg, stack.backend, stack.frontend, stack.id).find(
         (c) => c.kind === 'mesh',
     );
 }
@@ -128,19 +128,26 @@ export function anyDeployableSelected(state: WizardState): boolean {
  *  - nothing deployable selected → true (integrations are optional);
  *  - a deployable selected → require Adobe sign-in AND a project AND a workspace.
  *
- * Signature keeps `(state, packages, stacks)` for call-site parity; the catalog
- * arguments are unused now that the gate is selection-driven.
+ * Plus the required-mesh backstop: a package whose resolved requirement is
+ * `requiresMesh: true` (storefront override honoured) cannot leave the area
+ * without its mesh in the selection. Without this the failure is silent and
+ * deferred — config generation falls back to the bare Commerce endpoint and
+ * the demo renders 200s with empty product blocks.
  *
  * @param state - Wizard state
- * @param _packages - Demo-package catalog (unused; kept for call-site parity)
- * @param _stacks - Stack catalog (unused; kept for call-site parity)
+ * @param packages - Demo-package catalog (resolves the required mesh)
+ * @param stacks - Stack catalog (resolves the required mesh)
  * @returns true when the Integrations area imposes no outstanding requirement
  */
 export function isIntegrationsComplete(
     state: WizardState,
-    _packages: DemoPackage[],
-    _stacks: Stack[],
+    packages: DemoPackage[],
+    stacks: Stack[],
 ): boolean {
+    const mesh = meshComponentForStack(state, packages, stacks);
+    if (mesh?.requirement === 'required' && !isMeshSelected(state, mesh.id)) {
+        return false;
+    }
     if (!anyDeployableSelected(state)) return true; // Integrations optional.
     return (
         isAdobeSignedIn(state) &&

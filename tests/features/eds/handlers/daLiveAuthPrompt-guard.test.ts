@@ -92,6 +92,7 @@ jest.mock('@/core/logging', () => ({
 // Mock DaLiveAuthService - used by both ensureDaLiveAuth (isAuthenticated)
 // and showDaLiveAuthQuickPick (getOrgName, storeToken)
 const mockIsAuthenticated = jest.fn().mockResolvedValue(false);
+const mockIsServerAccepted = jest.fn().mockResolvedValue('accepted');
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 // A pinned namespace, so these tests exercise the expiry path: the org step is
 // skipped and the flow goes straight to the token.
@@ -103,6 +104,7 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
             isAuthenticated: mockIsAuthenticated,
+            isServerAccepted: mockIsServerAccepted,
             storeToken: mockStoreToken,
             getOrgName: mockGetOrgName,
             dispose: mockDispose,
@@ -379,5 +381,65 @@ describe('ensureDaLiveAuth', () => {
             'Open DA.live',
             'I have my token'
         );
+    });
+});
+
+// =============================================================================
+// Server probe (probeOrg) — the locally-valid-but-server-refused gap.
+//
+// The 2026-08-16 evidence: a token can pass the local expiry check and still be
+// refused by the DA.live admin plane, and every downstream 403 then reads as a
+// missing PERMISSION. With a probeOrg, the guard asks the server one cheap
+// question before letting a pipeline start.
+// =============================================================================
+
+describe('ensureDaLiveAuth — server probe', () => {
+    let mockContext: HandlerContext;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        clearServiceCache();
+        resetMockState();
+        mockContext = createMockContext();
+        mockIsAuthenticated.mockResolvedValue(true);
+    });
+
+    it('prompts re-auth when the server refuses a locally-valid token', async () => {
+        mockIsServerAccepted.mockResolvedValue('refused');
+        showWarningMessageResponse = undefined; // user dismisses the prompt
+
+        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+
+        expect(mockIsServerAccepted).toHaveBeenCalledWith('acme');
+        expect(result).toMatchObject({ authenticated: false, cancelled: true });
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            expect.stringContaining('refused'),
+            'Sign In'
+        );
+    });
+
+    it('passes without any UI when the server accepts the token', async () => {
+        mockIsServerAccepted.mockResolvedValue('accepted');
+
+        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+
+        expect(result).toEqual({ authenticated: true });
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('fails open when the probe cannot answer (network trouble is not a refusal)', async () => {
+        mockIsServerAccepted.mockResolvedValue('unknown');
+
+        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+
+        expect(result).toEqual({ authenticated: true });
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('does not probe at all when no probeOrg is given (existing callers unchanged)', async () => {
+        const result = await ensureDaLiveAuth(mockContext, '[Test]');
+
+        expect(mockIsServerAccepted).not.toHaveBeenCalled();
+        expect(result).toEqual({ authenticated: true });
     });
 });

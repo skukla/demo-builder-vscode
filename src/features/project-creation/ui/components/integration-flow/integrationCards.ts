@@ -41,15 +41,25 @@ export function isApiEditable(kind: IntegrationRow['kind']): boolean {
 /**
  * The card's kebab items.
  *
- * Remove is universal — every row can be dropped from the build. Nothing else
- * applies before a deploy: there is no Deploy verb (the wizard's Continue builds
- * everything at once), no Open (no URL exists), and no Retry (nothing has run).
+ * Remove is near-universal — every row can be dropped from the build EXCEPT a
+ * required mesh: the package's resolved `requiresMesh` locks it in, because
+ * dropping it produced a storefront pointed at the bare Commerce endpoint,
+ * rendering 200s with empty product blocks. A required mesh row therefore
+ * carries NO verbs at all (mesh is never api-editable), which hides the kebab
+ * (`IntegrationActionsMenu` returns null on an empty list); the subline says
+ * why. Nothing else applies before a deploy: there is no Deploy verb (the
+ * wizard's Continue builds everything at once), no Open (no URL exists), and
+ * no Retry (nothing has run).
  *
- * @param kind - the row's integration kind
+ * @param row - the resolved row (kind + required)
  * @returns the menu actions, in display order
  */
-function menuActionsFor(kind: IntegrationRow['kind']): CardAction[] {
-    return isApiEditable(kind) ? ['manage-apis', 'remove'] : ['remove'];
+function menuActionsFor(row: IntegrationRow): CardAction[] {
+    const actions: CardAction[] = isApiEditable(row.kind) ? ['manage-apis'] : [];
+    if (!row.required) {
+        actions.push('remove');
+    }
+    return actions;
 }
 
 /**
@@ -95,7 +105,8 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
         dotVariant: 'neutral',
         urlLabel: 'App URL',
         apis: row.apis,
-        menuActions: menuActionsFor(row.kind),
+        menuActions: menuActionsFor(row),
+        required: row.required === true,
         canRename: row.renamable === true,
     }));
 }
@@ -120,6 +131,9 @@ export function sublineFor(card: IntegrationCardModel): string {
     const segments = [
         card.sourceLine,
         count > 0 ? `${count} ${count === 1 ? 'API' : 'APIs'}` : undefined,
+        // A required card has no kebab (no Remove to offer) — the subline is
+        // where the missing affordance gets its explanation.
+        card.required ? 'Required by this package' : undefined,
     ];
     return segments.filter(Boolean).join(' · ');
 }

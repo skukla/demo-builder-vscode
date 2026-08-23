@@ -44,8 +44,15 @@ describe('AI_CONTEXT_VERSION', () => {
     // (caret on a 0.0.x version allows nothing newer), now ~0.0.79. Without
     // the bump, existing projects never install the dropins server and stay
     // frozen on Playwright 0.0.75.
-    it('is 16 (dropins MCP + un-frozen Playwright range)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(16);
+    // v16: ai-defaults gains the dropins MCP and un-freezes the Playwright
+    // range (^0.0.75 was an exact pin on 0.0.x).
+    // v17: the scraping skills claimed first Playwright use downloads ~150 MB
+    // of Chromium. Measured false — the MCP uses installed Chrome by default;
+    // only Chrome-less machines need the install-browser download. Without the
+    // bump, existing projects keep skills that warn about a download that
+    // never happens.
+    it('is 17 (Playwright uses installed Chrome — download claim corrected)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(17);
     });
 });
 

@@ -417,9 +417,11 @@ A past migration revealed that tests using outdated mock structures can pass whi
 2. Verify `jest.config.js` React project `testMatch` includes file
 3. Check test imports `@testing-library/react` correctly
 
-### Why `--forceExit`?
+### Why `--forceExit`? And the worker "failed to exit gracefully" warning
 
-The `test`, `test:fast`, `test:safe`, and `test:force` scripts in `package.json` all pass `--forceExit` to Jest. See [`docs/testing/jest-force-exit.md`](../docs/testing/jest-force-exit.md) for the rationale — `tests/unit/prerequisites/parallelExecution.test.ts` uses real `setTimeout` to measure timing, which occasionally prevents Jest workers from exiting cleanly.
+The `test`, `test:fast`, `test:safe`, and `test:force` scripts in `package.json` all pass `--forceExit` to Jest so the main process never hangs after a run.
+
+Separately, full runs intermittently (~44%, machine-state-sensitive) print `A worker process has failed to exit gracefully and has been force exited`. **Diagnosed 2026-08-23: not a test leak** — jest-worker's hardcoded 500ms end-of-run deadline racing twelve simultaneous worker teardowns. All 1130 suites were audited for leaked handles; the two real leaks found (tests making live network calls) are fixed. Do not hunt a leak on sight of the warning — see [`docs/testing/jest-force-exit.md`](../docs/testing/jest-force-exit.md) for the diagnosis and the one-run audit recipe that settles whether a new leak exists.
 
 ## Additional Resources
 

@@ -1,5 +1,31 @@
 # MCP: which window serves, and which project it acts on
 
+> ## SHIPPED 2026-08-23 — race 1 closed (first window wins), target named
+>
+> Race 2 (stale pointer) had already been fixed 2026-08-16: `getCurrentProject`
+> re-reads the on-disk pointer per call, with its own cross-window suite. This
+> pass closed the rest:
+>
+> - **First window wins.** `bindSocket` now probes the shared name for a LIVE
+>   listener (`probeSocket`, the house pattern from the 2026-08-10 client-side
+>   fix, which never covered the server bind) and refuses the takeover with a
+>   loud warn instead of renaming over it. A dead socket file still hands over
+>   as before. Pinned in `inExtensionMcpServer.socketOwnership.test.ts`.
+> - **`reset_eds_project` names its target.** Project resolution moved ahead of
+>   the confirm gate, so the refusal says which project a confirm would reset,
+>   and every result payload carries `project` — the agent can catch a wrong
+>   pointer before confirming. (`delete_project`'s confirmName precedent,
+>   adapted to a pointer-resolved tool.)
+> - First-wins also restores `adobeTargetStore`'s one-window-per-process
+>   premise: with a single live server holding the name, an agent's `select_*`
+>   and its later reset land on the same host.
+>
+> **Accepted limitation, recorded in the bind's docstring:** when the serving
+> window closes, an already-running second window does NOT retry the bind —
+> reload any window to rebind (the dead file refuses the probe). Also accepted:
+> two windows starting in the same instant can both pass the probe (narrow
+> TOCTOU). Neither has a reproduction; reopen only with one.
+
 **Filed:** 2026-08-14, from a `/rptc:research` pass on MCP scoping.
 **Status:** race 2 FIXED on the agent surface (2026-08-16). Race 1 is reproduced
 and still open — the remedy needs a decision.

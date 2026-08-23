@@ -19,6 +19,7 @@ import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { probeSocket } from './mcpSocketDiscovery';
 import { mcpSocketDir } from './mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
@@ -178,6 +179,30 @@ export class InExtensionMcpServer {
         // Same directory, so the rename cannot cross filesystems, and short —
         // the hashed basename exists to stay under the ~104-char UDS path limit
         // and this suffix has to fit inside it too.
+        // First window wins. Every window homed at the projects root computes
+        // the SAME shared name, and the rename below is unconditional — so the
+        // last window to start silently took the name from a live server:
+        // existing connections stayed on the old window while every new client
+        // landed on this one, splitting one socket name across two hosts with
+        // different builds and different module-level Adobe targets
+        // (adobeTargetStore). Probe first: a LIVE listener keeps the name, and
+        // this window says so instead of binding. A dead file (no listener)
+        // refuses the probe and is taken over exactly as before. Two windows
+        // starting in the same instant can still both pass the probe — that
+        // narrow TOCTOU is accepted; the common case is a window opened onto an
+        // already-running one. Known limitation, also logged below: if the
+        // serving window closes later, this one does NOT retry the bind — a
+        // reload of any window picks the name up (the dead file refuses the
+        // probe).
+        if (await probeSocket(socketPath)) {
+            this.logger.warn(
+                `[MCP] another window is already serving ${socketPath} — leaving it in place ` +
+                    `(first window wins). MCP calls will be answered by that window; if it ` +
+                    `closes, reload a window to rebind.`,
+            );
+            return;
+        }
+
         const privateName = `${socketPath}.${process.pid.toString(36)}`;
         await fsPromises.rm(privateName, { force: true });
 

@@ -142,17 +142,42 @@ export interface DaLiveGuardResult {
 export async function ensureDaLiveAuth(
     context: DaLiveAuthContext,
     logPrefix = '[Auth]',
+    probeOrg?: string,
 ): Promise<DaLiveGuardResult> {
     const daLiveAuthService = getDaLiveAuthService(context.context);
 
+    // A server refusal and a local expiry get different prompt copy — telling
+    // a user their session "expired" when the server just refused a live-dated
+    // token sends them to check the wrong thing.
+    let refusedByServer = false;
+
     if (await daLiveAuthService.isAuthenticated()) {
-        return { authenticated: true };
+        // Local pass. When the caller told us which org the coming operation
+        // targets, ask the SERVER too — the local check reads the token's own
+        // expiry and cannot see a server-refused credential (the 2026-08-16
+        // evidence run passed it and then failed 52 authenticated calls, each
+        // 403 misread as a missing permission). One HEAD; `unknown` (network
+        // trouble) fails open — a flaky probe must never block a pipeline the
+        // credential could serve.
+        if (!probeOrg) {
+            return { authenticated: true };
+        }
+        const verdict = await daLiveAuthService.isServerAccepted(probeOrg);
+        if (verdict !== 'refused') {
+            return { authenticated: true };
+        }
+        refusedByServer = true;
+        context.logger.warn(
+            `${logPrefix} DA.live token is locally valid but the server refused it — re-authentication required`,
+        );
+    } else {
+        context.logger.warn(`${logPrefix} DA.live token expired or missing`);
     }
 
-    context.logger.warn(`${logPrefix} DA.live token expired or missing`);
-
     const selection = await vscode.window.showWarningMessage(
-        'Your DA.live session has expired. Please sign in to continue.',
+        refusedByServer
+            ? 'Your DA.live session was refused by the server. Please sign in again to continue.'
+            : 'Your DA.live session has expired. Please sign in to continue.',
         'Sign In',
     );
 

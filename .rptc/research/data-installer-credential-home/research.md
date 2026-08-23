@@ -4,7 +4,7 @@
 **Question:** A project that declares a datapack needs an OAuth S2S pair, which exists only
 inside an Adobe I/O project workspace. A package selecting no App Builder components never
 gets one. Which shape fixes that?
-**Backlog item:** `.rptc/backlog/2026-08-16-data-installer-requires-adobe-io-project.md`
+**Backlog item:** `.rptc/complete/2026-08-16-data-installer-requires-adobe-io-project.md`
 
 > **Redaction.** This repo is PUBLIC and `.rptc/` is tracked. Commerce tenant ids appear as
 > `<instance-A>` / `<instance-B>`, and the Data Installer endpoint is not quoted. No

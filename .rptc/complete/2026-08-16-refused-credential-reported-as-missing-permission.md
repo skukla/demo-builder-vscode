@@ -1,5 +1,37 @@
 # A refused credential is reported as a missing permission
 
+> ## CLOSED 2026-08-23 — the probe shape shipped; one product note stays open
+>
+> The decision this item existed to make is made: **probe before acting**
+> (option 1 below), with the classify shape kept where it already ran.
+>
+> - `DaLiveAuthService.isServerAccepted(org)` — one `HEAD /list/{org}/` against
+>   the admin plane that refused the evidence run. 401 → `refused` (the only
+>   status that indicts the credential); 403 → `accepted` (an org-access fact,
+>   not an auth one); transport failure → `unknown`, failing OPEN.
+> - `ensureDaLiveAuth` gained an optional `probeOrg`; when the local expiry
+>   check passes and the caller names the target org, the probe runs, and a
+>   refusal prompts "Your DA.live session was refused by the server" — distinct
+>   copy from the expiry prompt, because they send the user to different fixes.
+> - Wired at the two pipeline PRE-FLIGHTS (EDS reset, storefront setup) — the
+>   run-1 path — with the org asserted as a mock ARGUMENT in both caller
+>   suites. The recovery-path callers (`withDaLiveAuthRetry`, block-library
+>   refresh) deliberately do not probe: they fire after the server has already
+>   spoken. The refresh's hand-rolled loop was examined against the shared
+>   wrapper and ruled a VARIANT (result-object contract with a typed
+>   `cancelled` flag the throwing wrapper cannot express) — recorded at the
+>   loop.
+> - The `configurationService` 403 wording stays strict BY the item's own
+>   design ("wording is downstream of the shape choice"): with refused
+>   credentials caught at entry, a mid-run Config Service 403 is a genuine role
+>   fact. `previewFailed`, produced and read by nobody, now rides the unpublish
+>   warn.
+>
+> **Open product note (no code change made):** whether a failed unpublish
+> should abort a reset. Kept non-fatal — the reset republishes over the top and
+> the warn now carries both counts; revisit only if stale-page complaints
+> arrive from the field.
+>
 > ## PARTLY FIXED 2026-08-16 — `dcac1475`, `e79cca3c`
 >
 > **Done.** Helix 403s at the preview/publish/code sites now throw

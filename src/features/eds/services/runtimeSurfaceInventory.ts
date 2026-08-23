@@ -47,9 +47,15 @@ export interface RuntimeSurfaceInventory {
     fragments: string[];
     /** Dropin-rendered customer auth pages (not indexed); entry points for the flows. */
     authPages: AuthPageSurface[];
-    /** Storefront placeholder `.json` sheets fetched as repo code overrides on reset. */
-    placeholderSheets: string[];
 }
+
+// `placeholderSheets` (16 per-sheet code-override paths) was deleted 2026-08-23:
+// placeholder sheets are UI-label dictionaries and belong to CONTENT — the
+// spreadsheets list above already declares `/placeholders` for the content-copy
+// backfill, and the DA.live full-tree walk carries authored sheets (verified
+// live on isle5). The reset-time code fetch that consumed this list targeted
+// the template's live SITE (nonexistent for the b2b template — 17 silent 404s
+// per reset) and is gone with it (edsResetRepoHelper).
 
 /**
  * The single declared inventory. The base set mirrors the previously-inlined
@@ -60,7 +66,8 @@ export interface RuntimeSurfaceInventory {
 export const RUNTIME_SURFACES: RuntimeSurfaceInventory = {
     spreadsheets: ['/placeholders', '/redirects', '/metadata', '/sitemap'],
     fragments: [
-        '/nav', '/footer',
+        '/nav',
+        '/footer',
         // Code-loaded fragment: `commerce-account-sidebar.js` calls
         // `loadFragment('/customer/sidebar-fragment')`. Nothing in content links to
         // it, so discovery can't reach it (unlike `/customer/nav`, embedded by the
@@ -72,14 +79,5 @@ export const RUNTIME_SURFACES: RuntimeSurfaceInventory = {
         { path: '/customer/login', blockClass: 'commerce-login' },
         { path: '/customer/account', blockClass: 'commerce-account' },
         { path: '/customer/create-account', blockClass: 'commerce-create-account' },
-    ],
-    placeholderSheets: [
-        'placeholders/global', 'placeholders/auth', 'placeholders/cart',
-        'placeholders/checkout', 'placeholders/order', 'placeholders/account',
-        'placeholders/payment-services', 'placeholders/recommendations', 'placeholders/wishlist',
-        // B2B sheets fetched by dropin code, never linked from content. Derived (ADR-008).
-        'placeholders/company', 'placeholders/pdp', 'placeholders/purchase-order',
-        'placeholders/quick-order', 'placeholders/quote-management',
-        'placeholders/requisition-list', 'placeholders/search',
     ],
 };

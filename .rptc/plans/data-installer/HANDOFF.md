@@ -7,6 +7,13 @@ Read this, then [`overview.md`](overview.md) for the design and the verified API
 `develop` as `a3c07420`. **Stage 3 (export) is BLOCKED on the service**, not on
 us: `docs/systems/data-installer.md` §6b.
 
+> **2026-08-23: the service is effectively LOCKED.** Its owner has retired —
+> reachable for questions about existing behaviour, but no service changes are
+> coming. A stage blocked on a service-side fix is therefore blocked
+> INDEFINITELY, not "until they get to it": treat Stage 3 as parked unless
+> service ownership resumes, and re-decide its disposition (park explicitly or
+> close) rather than waiting.
+
 ## Where the work is
 
 ```
