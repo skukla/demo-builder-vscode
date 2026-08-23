@@ -193,8 +193,9 @@ any of them because each shared the wrong scope:
 
 - grepped `src/features/components/config/`; the catalog is in `project-creation/config/`
   → "that plan is unmerged", wrong
-- grepped `.claude/skills/`; the App Builder skills are global in `~/.claude/skills/`
-  → "12 of 13 facts are in no skill", wrong
+- grepped `.claude/skills/`; the App Builder skills were global in `~/.claude/skills/` at
+  the time (family deleted 2026-08-23; those facts live in
+  `.rptc/research/appbuilder-deployable-model/`) → "12 of 13 facts are in no skill", wrong
 - `${PIPESTATUS[0]}` is bash and this shell is zsh (`$pipestatus`, 1-indexed), so the
   exit code came back **empty** and blank output read as "passed" — as are `${!arr[@]}`,
   `declare -A` and `local -n`. Run bash-array snippets through `bash -c` or rewrite them;
