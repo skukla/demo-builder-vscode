@@ -1,14 +1,41 @@
 ---
 id: 2026-06-09-pdp-graceful-empty-state
 title: Drop-in detects empty Commerce data → redirect to /404 (storefront's native 404)
-status: backlog
+status: shipped
 created: 2026-06-09
-updated: 2026-06-09 (reframed: native 404, not custom messaging)
+updated: 2026-08-23 (CLOSED — warm-path guard shipped and proven live)
 priority: low-medium
 related: BYOM PDP routing (Phase 1 ship 2026-06-09)
 ---
 
 # Drop-in: detect empty Commerce data → redirect to native /404
+
+> ## CLOSED 2026-08-23 — shipped as the `pdp-empty-data-redirect` code patch, proven live
+>
+> The investigate-first gate resolved the cheap way: no dropin empty-state
+> callback exists and none is needed. `fetchProductData(sku)` is declared
+> `Promise<ProductModel | null>` and the shipped bundle returns null for an
+> unknown SKU (`if(!t||t.length===0)return null` — verified in the vendored
+> api.js); the boilerplate initializer (`scripts/initializers/pdp.js`) holds
+> that null right before mounting and already imports `loadErrorPage` (=
+> `window.location.replace('/notfound')`, this item's decided UX) and `IS_UE`.
+> The whole fix is a 3-line guard after the fetch — no DOM polling, no dropin
+> modification.
+>
+> Shipped as code patch `pdp-empty-data-redirect` in `eds-demo-patches`
+> (`b2b` + `citisignal-b2b` ledgers, LKG gate verified against canonical),
+> referenced by all 6 `codePatches` arrays in `demo-packages.json`.
+>
+> Proven live on the bodea demo 2026-08-23: published a PDP for a fake SKU
+> (RED: 200 from the content bus, empty product block), synced the guard
+> (`kukla-bodea@9a62e26`), same URL then redirected to the native 404 (GREEN);
+> throwaway page deleted, path 404s again. One propagation note: browsers with
+> a cached `pdp.js` keep the old behavior until script cache expiry — ordinary
+> EDS code-deploy propagation.
+>
+> The COLD path (URL 404s at the CDN) was already covered by the smart-404
+> snippet before this item was picked up; this closes the WARM path, the last
+> open half.
 
 ## Provenance
 
