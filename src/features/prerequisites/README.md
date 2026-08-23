@@ -132,7 +132,7 @@ The feature is driven by `config/prerequisites.json`:
 ### Used By
 - `src/features/project-creation` - Prerequisite checking during project creation
 - `src/webviews/components/wizard/steps/PrerequisitesStep.tsx` - Prerequisites UI
-- `src/commands/createProjectWebview.ts` - Wizard prerequisite step
+- `src/features/prerequisites/ui/steps/PrerequisitesStep.tsx` - Wizard prerequisite step
 
 ## Usage Examples
 

@@ -183,7 +183,6 @@ Some test directories contain only `README.md` files with no test files. These a
 **Previous Structure (Removed):**
 - `tests/utils/` - Legacy location for core infrastructure tests (migrated to `tests/core/`)
 - `tests/commands/handlers/` - Legacy location for handlers (migrated to `tests/features/*/handlers/`)
-- `tests/webviews/` - Legacy atomic design structure (migrated to `tests/webview-ui/`)
 
 **Migration Plan:** See `.rptc/plans/reorganize-tests-to-match-code-structure/` for full migration details.
 
@@ -240,7 +239,7 @@ npm run validate:test-file-sizes
 - **Rule:** Mirror the source file's location in `src/`
 - **Example:**
   - Source: `src/features/authentication/services/authenticationService.ts`
-  - Test: `tests/features/authentication/services/authenticationService.test.ts`
+  - Tests: `tests/features/authentication/services/authenticationService-*.test.ts` (split suite + shared `.testUtils`)
 
 ### Test Structure (AAA Pattern)
 ```typescript

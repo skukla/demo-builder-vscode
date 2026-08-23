@@ -1,5 +1,34 @@
 # DX follow-through: verification pipeline + guidance freshness
 
+> ## CLOSED 2026-08-23 — all four items shipped or found shipped
+>
+> 1. **Secret-file guard — BUILT** as `.claude/hooks/rules/20-secret-files.rule`
+>    (the hook infra had evolved to router+rules since filing). Hard-stop, not
+>    once-per-session: blocks Write/Edit of `.env*` under the repo and content
+>    carrying high-confidence secret shapes (private-key blocks, GitHub/Slack/
+>    AWS/OpenAI-style tokens, credentialed mongodb URIs); the fake-test
+>    convention and out-of-repo targets (scratchpad, ~/.demo-builder) pass.
+>    Required extending the router to parse Write `content` / Edit `new_string`
+>    as a fourth rule argument. 10 new pins in `tests/hooks/router.test.ts`
+>    (RED-first), all 63 hook tests green.
+> 2. **Gate evidence + adversarial review — already shipped in substance**: the
+>    `gate` skill demands the extracted `Tests:`/`Test Suites:` lines plus the
+>    non-empty-file check (2026-08-16), and fresh-context review runs via
+>    RPTC's automatic verification-agent mode; `/code-review ultra` stays
+>    user-triggered by design (billed).
+> 3. **Guidance freshness — BUILT** as a PATH-drift section in
+>    `.claude/hooks/doc-drift.sh` (continuous Stop hook — strictly stronger
+>    than the proposed monthly manual pass). Same deterministic split as the
+>    symbol check: missing path + git history = real drift; no history =
+>    illustrative; gitignored and historically-framed mentions skipped. First
+>    run found 25 real stale references (including one introduced THAT DAY by
+>    a backlog archive move — the detector's natural positive control); 23
+>    fixed in the same turn, 2 deliberately left standing (they flag the dead
+>    service-resolution pattern, escalated separately).
+> 4. **Webpack devDependencies — shipped** `4bb0197b6` (2026-08-23): all four
+>    removed, lockfile regenerated, six comments corrected.
+
+
 **Source**: DX audit 2026-07-03 (`.rptc/research/dx-audit/research.md`). These are the
 items deliberately deferred from the remediation pass.
 

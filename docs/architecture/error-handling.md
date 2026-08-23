@@ -457,7 +457,7 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 **Components (accept code prop):**
 - `src/features/authentication/ui/steps/AdobeAuthStep.tsx`
 - `src/features/authentication/ui/steps/components/AuthErrorState.tsx`
-- `src/features/authentication/ui/components/SelectionStepContent.tsx`
+- `src/features/authentication/ui/components/AdobeEntityFields.tsx`
 
 **String checks to replace:**
 - `authData.error === 'timeout'` → `response.code === ErrorCode.TIMEOUT`

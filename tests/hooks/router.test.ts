@@ -74,8 +74,14 @@ function psSnapshot(lines: string[]): string {
 }
 
 const bash = (command: string) => ({ tool_name: 'Bash', tool_input: { command } });
-const write = (file_path: string) => ({ tool_name: 'Write', tool_input: { file_path } });
-const edit = (file_path: string) => ({ tool_name: 'Edit', tool_input: { file_path } });
+const write = (file_path: string, content?: string) => ({
+    tool_name: 'Write',
+    tool_input: content === undefined ? { file_path } : { file_path, content },
+});
+const edit = (file_path: string, new_string?: string) => ({
+    tool_name: 'Edit',
+    tool_input: new_string === undefined ? { file_path } : { file_path, new_string },
+});
 const mcp = (tool_name: string) => ({ tool_name, tool_input: {} });
 
 /** Unique session per test so markers never leak between them. */
@@ -329,5 +335,93 @@ describe('rules do not bleed into each other', () => {
         expect(run(bash('npx jest --no-coverage | tail -5'), fresh()).stderr).not.toMatch(
             /reuse-first|webview-test-authoring/
         );
+    });
+});
+
+describe('secret-files rule — public repo defense-in-depth', () => {
+    // The repo is PUBLIC and GitGuardian only scans PR diffs (non-required on
+    // develop). This rule is the local layer: no .env files in the repo tree,
+    // no high-confidence secret material in Write/Edit content bound for it.
+    const REPO = path.resolve(__dirname, '../..');
+    const inRepo = { CLAUDE_PROJECT_DIR: REPO };
+
+    it('blocks writing a .env file inside the project', () => {
+        const r = run(write(path.join(REPO, '.env')), fresh(), inRepo);
+        expect(r.code).toBe(2);
+        expect(r.stderr).toMatch(/public/i);
+    });
+
+    it('blocks editing .env.local inside the project', () => {
+        const r = run(edit(path.join(REPO, 'some/dir/.env.local'), 'X=1'), fresh(), inRepo);
+        expect(r.code).toBe(2);
+    });
+
+    it('allows .env writes OUTSIDE the project (extension test dirs are legitimate)', () => {
+        const r = run(write('/Users/dev/.demo-builder/projects/demo/.env'), fresh(), inRepo);
+        expect(r.code).toBe(0);
+    });
+
+    it('is a hard stop, not once-per-session', () => {
+        const session = fresh();
+        expect(run(write(path.join(REPO, '.env')), session, inRepo).code).toBe(2);
+        expect(run(write(path.join(REPO, '.env')), session, inRepo).code).toBe(2);
+    });
+
+    it('blocks a GitHub token pattern in content bound for the repo', () => {
+        const token = 'ghp_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8';
+        const r = run(
+            write(path.join(REPO, 'src/x.ts'), `const t = '${token}';`),
+            fresh(),
+            inRepo
+        );
+        expect(r.code).toBe(2);
+        expect(r.stderr).toMatch(/secret/i);
+    });
+
+    it('blocks a private-key block in content bound for the repo', () => {
+        const r = run(
+            edit(
+                path.join(REPO, 'docs/notes.md'),
+                '-----BEGIN RSA PRIVATE KEY-----\nMIIE...'
+            ),
+            fresh(),
+            inRepo
+        );
+        expect(r.code).toBe(2);
+    });
+
+    it('blocks a credentialed mongodb URI in content bound for the repo', () => {
+        const r = run(
+            write(
+                path.join(REPO, 'scripts/probe.mjs'),
+                "const uri = 'mongodb+srv://svc-user:hunter2pass@cluster0.example.net/db';"
+            ),
+            fresh(),
+            inRepo
+        );
+        expect(r.code).toBe(2);
+    });
+
+    it('allows the fake-test-password convention', () => {
+        const r = run(
+            write(
+                path.join(REPO, 'tests/x.test.ts'),
+                "const pw = 'fake-test-pw-not-a-secret';"
+            ),
+            fresh(),
+            inRepo
+        );
+        expect(r.code).toBe(0);
+    });
+
+    it('allows secret-looking content OUTSIDE the project (scratchpad captures)', () => {
+        const token = 'ghp_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8';
+        const r = run(write('/tmp/scratch/capture.json', `{"t":"${token}"}`), fresh(), inRepo);
+        expect(r.code).toBe(0);
+    });
+
+    it('fails open when CLAUDE_PROJECT_DIR is unset', () => {
+        const r = run(write('/somewhere/.env'), fresh(), { CLAUDE_PROJECT_DIR: '' });
+        expect(r.code).toBe(0);
     });
 });

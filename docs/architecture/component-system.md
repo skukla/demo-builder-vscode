@@ -313,7 +313,7 @@ Components integrate with the auto-update system introduced in v1.6.0.
 - **Verification**: Check package.json validity after extraction
 - **Concurrent Lock**: Prevent multiple updates to same component
 
-See `src/utils/componentUpdater.ts` for implementation details.
+See `src/features/updates/services/componentUpdater.ts` for implementation details.
 
 ## Future Enhancements
 

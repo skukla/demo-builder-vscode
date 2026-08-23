@@ -447,7 +447,7 @@ Two operational facts learned the hard way:
     `list-datapack-import-scopes`, which uses the extension's OWN
     `discoverStoreStructure` — NOT `get-websites-and-stores`, which needs the
     credential pair the wizard does not have yet and returns no store groups.
-    See `.rptc/plans/datapack-import-targeting/`.
+    See `.rptc/complete/datapack-import-targeting/`.
   - **Observed live 2026-08-14**: a 5-type bodea import put all 56 products on
     website 1 (`base`) — pack said `[3]`, REST readback said `[1]` — and no
     phantom website appeared. The substitution is real on the deployed service.
@@ -462,7 +462,7 @@ Two operational facts learned the hard way:
   Commerce Admin step (or another tool's job). Landing everything on `base` is
   what happens when you skip the targeting, not the intended path for a pack
   that wants its own website. This is the precondition the targeting UI must
-  state — see `.rptc/plans/datapack-import-targeting/`.
+  state — see `.rptc/complete/datapack-import-targeting/`.
 
 Two more import facts from the same run (2026-08-14):
 

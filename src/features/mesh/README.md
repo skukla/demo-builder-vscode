@@ -232,7 +232,7 @@ If hasChanges: Show "Redeploy Mesh" prompt
 - `@/services/serviceLocator` - ServiceLocator for CommandExecutor access
 
 ### Used By
-- `src/commands/deployMesh.ts` - Manual mesh deployment command
+- `src/features/mesh/commands/deployMesh.ts` - Manual mesh deployment command
 - `src/features/dashboard` - Mesh status display and redeploy prompts
 - `src/features/project-creation` - Mesh deployment during project creation
 - `src/webviews/components/configure/ConfigureView.tsx` - Configuration change detection

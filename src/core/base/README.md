@@ -634,7 +634,7 @@ class MyCommand extends BaseCommand {
   - Webview guide: `../../src/webviews/CLAUDE.md`
 
 - **Usage Examples**:
-  - `src/commands/createProjectWebview.ts`
+  - `src/features/project-creation/commands/createProject.ts`
   - `src/features/dashboard/commands/showDashboard.ts`
   - `src/features/lifecycle/commands/startDemo.ts`
   - `src/features/mesh/commands/deployMesh.ts`
