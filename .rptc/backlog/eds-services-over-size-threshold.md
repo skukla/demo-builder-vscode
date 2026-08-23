@@ -1,5 +1,19 @@
 # Files over the god-file threshold
 
+> **2026-08-23 — the worst offender is CUT.** `executor.ts` (1716 lines, 22
+> non-type imports, ~53 functions — the top of the coupling ranking) is now a
+> 493-line orchestrator plus seven single-responsibility phase modules
+> (`executorMeshPhase` 290, `executorEdsPhase` 350, `executorEditMode` 222,
+> `executorComponentLoading` 180, `executorAppBuilderPhase` 138,
+> `executorSampleDataPhase` 100, `executorPreflight` 74). Public API preserved
+> via re-exports from `./executor`, so ALL 144 project-creation suites (2,198
+> tests) passed with ZERO test edits — the behavior-preservation proof. Madge:
+> cycle count unchanged. Remaining candidates by the same measurement (fresh
+> 2026-08-23): `helixService.ts` 1845 (next cut needs the auth-header provider
+> DESIGNED — `pollJobCompletion` binds to `this`), `mcp-server.ts` 1794 (48
+> functions), `adobeEntityFetcher.ts` 1769 (35 methods — the facade split
+> pattern already exists beside it). Re-measure again before the next cut.
+
 > **The title used to say "Two EDS services". It was wrong** — see the
 > re-measurement at the bottom, which is the current answer. The two files this
 > item was opened on are the two smallest candidates in the repo; three files
