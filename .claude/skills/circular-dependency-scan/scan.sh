@@ -4,9 +4,12 @@
 # circular chain (a -> b -> c -> a) it finds across .ts/.tsx modules, or reports
 # "No circular dependency found".
 #
-# Signal only, not a verdict: madge follows static import edges regardless of whether
-# the cycle is type-only (low risk) or a runtime value cycle (fragile init order).
-# Inspect each cycle per SKILL.md before deciding how to break it.
+# Reports RUNTIME value cycles only: the repo's .madgerc sets skipTypeImports, so
+# `import type` edges (erased at compile — no init-order hazard) do not count.
+# Calibrated 2026-08-23: the unfiltered scan showed 20 cycles of which 19 were
+# type-only noise hiding the ONE real one (ProjectCreationHandlerRegistry
+# importing the './' barrel that re-exports it). A planted value cycle is the
+# control that proved the filter still detects the hazard class.
 #
 # Usage: bash scan.sh [ROOT=src]
 

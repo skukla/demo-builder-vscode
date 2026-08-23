@@ -589,11 +589,311 @@ async function copyLibraryDocPages(
 // ==========================================================
 
 /**
+ * The mutable state the steps share — the result in progress. Steps write the
+ * fields later steps (and the final result) read; making it an explicit object
+ * rather than closure locals is what lets the orchestrator be a loop.
+ */
+interface PipelineContext {
+    contentFilesCopied: number;
+    libraryPaths: string[];
+    patchReport: PatchReport;
+}
+
+/** Params with every gating flag resolved to a concrete boolean. */
+type ResolvedPipelineParams = EdsPipelineParams & {
+    clearExistingContent: boolean;
+    skipContent: boolean;
+    skipPublish: boolean;
+    includeBlockLibrary: boolean;
+    purgeCache: boolean;
+};
+
+/** Everything a step can see. */
+interface PipelineStepEnv {
+    params: ResolvedPipelineParams;
+    services: EdsPipelineServices;
+    ctx: PipelineContext;
+    onProgress?: EdsPipelineProgressCallback;
+}
+
+/**
+ * One pipeline step, declaratively.
+ *
+ * - `when` gates the step; absent means always. Gating lives HERE, in data —
+ *   this is what collapsed `executeEdsPipeline` from complexity 27 to a loop.
+ * - `onError: 'continue'` marks a deliberately non-fatal step (the loop warns
+ *   with `failureLog` and moves on). The default is abort: the throw reaches
+ *   the orchestrator's single catch, which keeps the one special case —
+ *   `DaLiveAuthError` re-thrown so callers can offer re-authentication.
+ * - `skipLog` preserves the exact "skipped" log lines the old orchestrator
+ *   printed for the two steps that had them.
+ */
+interface PipelineStep {
+    name: string;
+    when?: (env: PipelineStepEnv) => boolean;
+    skipLog?: string;
+    onError?: 'continue';
+    failureLog?: string;
+    run: (env: PipelineStepEnv) => Promise<void>;
+}
+
+const PIPELINE_STEPS: PipelineStep[] = [
+    // Step 0: Clear Existing Content (if requested)
+    {
+        name: 'clear-content',
+        when: ({ params }) => params.clearExistingContent,
+        run: ({ params, services, onProgress }) =>
+            pipelineClearContent(
+                services,
+                {
+                    daLiveOrg: params.daLiveOrg,
+                    daLiveSite: params.daLiveSite,
+                    repoOwner: params.repoOwner,
+                    repoName: params.repoName,
+                },
+                onProgress,
+            ),
+    },
+    // Step 1: Content Copy
+    {
+        name: 'copy-content',
+        when: ({ params }) => !params.skipContent,
+        skipLog: 'Skipping content copy (skipContent=true)',
+        run: async ({ params, services, ctx, onProgress }) => {
+            if (!params.contentSource) {
+                throw new Error('Content source is required when skipContent is false');
+            }
+            ctx.contentFilesCopied = await pipelineCopyContent(
+                services.daLiveContentOps,
+                params.contentSource,
+                params.daLiveOrg,
+                params.daLiveSite,
+                params.contentPatches,
+                params.contentPatchSource,
+                ctx.patchReport,
+                services.logger,
+                onProgress,
+                params.accountContentSource,
+                // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
+                // (codePatchSource carries owner/repo/path = the patches-repo ledger).
+                params.codePatchSource,
+            );
+        },
+    },
+    // Step 2: Block Library
+    {
+        name: 'block-library',
+        when: ({ params }) => params.includeBlockLibrary,
+        run: async (env) => {
+            env.ctx.libraryPaths = await pipelineConfigureBlockLibrary(
+                env.services,
+                env.params,
+                env.onProgress,
+            );
+        },
+    },
+    // Step 2.5: Block-targeting code patches (post-install).
+    // Canonical-file patches were applied earlier in `resetRepoToTemplate` via
+    // `applyCanonicalCodePatches`. The block-targeting subset of the same ledger
+    // runs here, AFTER block install, so installed library blocks are present in
+    // the repo to be patched. Phase routing is by target prefix (`blocks/...` →
+    // here; everything else → canonical). Non-fatal per ADR-006 D1: results go
+    // to `patchReport`; the caller surfaces unapplied patches via the one-toast
+    // helper.
+    {
+        name: 'block-code-patches',
+        run: ({ params, services, ctx }) =>
+            pipelineApplyBlockCodePatches(
+                services.githubFileOps,
+                params.repoOwner,
+                params.repoName,
+                params.codePatches,
+                params.codePatchSource,
+                ctx.patchReport,
+                services.logger,
+            ),
+    },
+    // Step 2.6: Brand assets (additive brand files + head.html snippet).
+    // After block install for the same reason as block-targeting patches:
+    // installed blocks are present to be referenced. Both create and reset reach
+    // this point through the shared pipeline, so the two paths stay
+    // behavior-identical. Skipped silently when the package declares none.
+    {
+        name: 'brand-assets',
+        run: ({ params, services }) =>
+            pipelineApplyBrandAssets(
+                services.githubFileOps,
+                params.repoOwner,
+                params.repoName,
+                params.brandAssets,
+                services.logger,
+            ),
+    },
+    // Step 3: EDS Settings
+    {
+        name: 'eds-settings',
+        run: async ({ params, services, onProgress }) => {
+            onProgress?.({
+                operation: 'eds-settings',
+                message: 'Applying EDS configuration...',
+            });
+            const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
+            await applyDaLiveOrgConfigSettings(
+                services.daLiveContentOps,
+                params.daLiveOrg,
+                params.daLiveSite,
+                services.logger,
+            );
+        },
+    },
+    // Step 4: Cache Purge
+    {
+        name: 'cache-purge',
+        when: ({ params }) => params.purgeCache,
+        run: async ({ params, services, onProgress }) => {
+            onProgress?.({
+                operation: 'cache-purge',
+                message: 'Purging stale cache...',
+            });
+            await services.helixService.purgeCacheAll(params.repoOwner, params.repoName, 'main');
+            services.logger.info('[EdsPipeline] Stale cache purged');
+        },
+    },
+    // Step 5: Content Publish
+    {
+        name: 'content-publish',
+        when: ({ params }) => !params.skipPublish,
+        skipLog: 'Skipping content publish (skipPublish=true)',
+        run: ({ params, services, onProgress }) =>
+            pipelinePublishContent(
+                services.helixService,
+                params.repoOwner,
+                params.repoName,
+                params.daLiveOrg,
+                params.daLiveSite,
+                services.logger,
+                onProgress,
+            ),
+    },
+    // Step 6: Library Publish — non-fatal: library config was created,
+    // publishing can be retried.
+    {
+        name: 'library-publish',
+        when: ({ ctx }) => ctx.libraryPaths.length > 0,
+        onError: 'continue',
+        failureLog: 'Block library publish failed',
+        run: pipelinePublishLibrary,
+    },
+    // (Smart 404 plumbing lives entirely in storefront code now:
+    //  - scripts/delayed.js — cold-path action call + Loading state
+    //  - head.html — eager mixed-case → lowercase redirect on 200s
+    //  - 404.html — same eager redirect for Helix-served 404s
+    //  All three are installed by installSmart404Handler from
+    //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper (reset). The
+    //  DA.live /404 page publish path that briefly lived here didn't help —
+    //  Helix uses the static 404.html file, not authored content, on 404s.)
+    //
+    // Step 8: Catalog pre-warming (v1 ACCS only). Enumerate the storefront's
+    // Commerce catalog and pre-publish every product path so first-visit cold
+    // paths never fire during demos. Non-fatal: failures fall through to the
+    // smart-404 fallback, which still handles unknown SKUs at runtime. Gated on:
+    //  - params.project — caller opts in by passing the project
+    //  - params.byomOverlayUrl — same gate as smart-404 install
+    //  - !skipPublish — refresh-block-library and similar narrow paths skip it
+    {
+        name: 'catalog-prewarm',
+        when: ({ params }) => !params.skipPublish && !!params.byomOverlayUrl && !!params.project,
+        onError: 'continue',
+        // Defense in depth — prewarmCatalog is already non-fatal internally, but
+        // a thrown exception must not abort the pipeline.
+        failureLog: 'Catalog pre-warming threw unexpectedly',
+        run: pipelinePrewarmCatalog,
+    },
+];
+
+/**
+ * Step 6 body: publish the installed library paths, then verify they actually
+ * previewed. Say it landed only if it landed — the bulk job reports success for
+ * paths that matched nothing, which is how a library that could not preview a
+ * single block logged "published".
+ */
+async function pipelinePublishLibrary({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    const { helixService, daLiveContentOps, logger } = services;
+    // The subMessage slot is carried end-to-end (pipeline callback →
+    // storefront-setup-progress → the wizard's progress view) but this step
+    // never filled it — a 2-minute spinner with a static hint (user-asked
+    // 2026-08-23). Say what is actually happening: how much, then which half.
+    onProgress?.({
+        operation: 'library-publish',
+        message: 'Publishing block library...',
+        subMessage: `Publishing ${ctx.libraryPaths.length} library ${
+            ctx.libraryPaths.length === 1 ? 'path' : 'paths'
+        }...`,
+    });
+
+    const { publishLibraryPaths, verifyLibraryPreviewed } = await import('../handlers/edsHelpers');
+    await publishLibraryPaths(
+        helixService,
+        params.repoOwner,
+        params.repoName,
+        ctx.libraryPaths,
+        logger,
+    );
+    onProgress?.({
+        operation: 'library-publish',
+        message: 'Publishing block library...',
+        subMessage: 'Verifying the library previewed...',
+    });
+    const previewed = await verifyLibraryPreviewed(
+        params.repoOwner,
+        params.repoName,
+        logger,
+        helixService,
+    );
+    if (previewed) {
+        logger.info('[EdsPipeline] Block library published');
+    } else {
+        logger.info('[EdsPipeline] Block library published, but it is not previewable');
+        // The site config is the state nobody can inspect after the fact, and it
+        // is the leading suspect when publishing reports success and the CDN
+        // still 404s. Print it here, once, where the user is already being told
+        // something is wrong.
+        const siteConfig = await daLiveContentOps.readSiteConfigForDiagnostics(
+            params.daLiveOrg,
+            params.daLiveSite,
+        );
+        logger.warn(
+            `[EdsPipeline] Site config for ${params.daLiveOrg}/${params.daLiveSite}: ` +
+                (siteConfig ? JSON.stringify(siteConfig) : '(could not be read)'),
+        );
+    }
+}
+
+/** Step 8 body: pre-warm the catalog; reporting only, all gating is in the descriptor. */
+async function pipelinePrewarmCatalog({ params, services, onProgress }: PipelineStepEnv) {
+    const result = await prewarmCatalog(
+        params.project as Project,
+        params.byomOverlayUrl as string,
+        params.daLiveOrg,
+        params.daLiveSite,
+        services.helixService,
+        services.logger,
+        onProgress,
+    );
+    if (!result.skipped) {
+        services.logger.info(
+            `[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`,
+        );
+    }
+}
+
+/**
  * Execute the shared EDS content pipeline.
  *
- * Orchestrates content copy, block library creation, EDS settings,
- * cache purge, and content publishing. Both setup and reset flows
- * call this after their own setup-specific work.
+ * The spine of create, reset AND refresh-block-library: orchestrates content
+ * copy, block library creation, EDS settings, cache purge, and content
+ * publishing. All step gating and error semantics live in
+ * {@link PIPELINE_STEPS}; this function is the loop that runs them.
  *
  * @param params - Pipeline parameters
  * @param services - Pre-built service instances
@@ -605,236 +905,49 @@ export async function executeEdsPipeline(
     services: EdsPipelineServices,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<EdsPipelineResult> {
-    const { daLiveContentOps, githubFileOps, helixService, logger } = services;
-    const {
-        repoOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        clearExistingContent = false,
-        skipContent = false,
-        skipPublish = skipContent,
-        contentSource,
-        accountContentSource,
-        contentPatches,
-        contentPatchSource,
-        codePatches,
-        codePatchSource,
-        includeBlockLibrary = false,
-        purgeCache = false,
-    } = params;
+    const resolved: ResolvedPipelineParams = {
+        ...params,
+        clearExistingContent: params.clearExistingContent ?? false,
+        skipContent: params.skipContent ?? false,
+        skipPublish: params.skipPublish ?? params.skipContent ?? false,
+        includeBlockLibrary: params.includeBlockLibrary ?? false,
+        purgeCache: params.purgeCache ?? false,
+    };
 
-    // Patch report: reuse caller's report when threaded through (so canonical-
-    // phase results from `resetRepoToTemplate` survive into the final result),
-    // else start fresh. Both `addContentResult` and `addCodeResult` mutate
-    // through the same reference, so the final pipeline result always carries
-    // the full report.
-    const patchReport = params.patchReport ?? createPatchReport();
-
-    let contentFilesCopied = 0;
-    let libraryPaths: string[] = [];
+    const ctx: PipelineContext = {
+        contentFilesCopied: 0,
+        libraryPaths: [],
+        // Reuse the caller's report when threaded through (so canonical-phase
+        // results from `resetRepoToTemplate` survive into the final result),
+        // else start fresh. Both `addContentResult` and `addCodeResult` mutate
+        // through the same reference, so the final pipeline result always
+        // carries the full report.
+        patchReport: params.patchReport ?? createPatchReport(),
+    };
+    const env: PipelineStepEnv = { params: resolved, services, ctx, onProgress };
+    const { logger } = services;
 
     try {
-        // Step 0: Clear Existing Content (if requested)
-        if (clearExistingContent) {
-            await pipelineClearContent(
-                services,
-                { daLiveOrg, daLiveSite, repoOwner, repoName },
-                onProgress,
-            );
-        }
-
-        // Step 1: Content Copy
-        if (!skipContent) {
-            if (!contentSource) {
-                throw new Error('Content source is required when skipContent is false');
+        for (const step of PIPELINE_STEPS) {
+            if (step.when && !step.when(env)) {
+                if (step.skipLog) logger.info(`[EdsPipeline] ${step.skipLog}`);
+                continue;
             }
-            contentFilesCopied = await pipelineCopyContent(
-                daLiveContentOps,
-                contentSource,
-                daLiveOrg,
-                daLiveSite,
-                contentPatches,
-                contentPatchSource,
-                patchReport,
-                logger,
-                onProgress,
-                accountContentSource,
-                // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
-                // (codePatchSource carries owner/repo/path = the patches-repo ledger).
-                codePatchSource,
-            );
-        } else {
-            logger.info('[EdsPipeline] Skipping content copy (skipContent=true)');
-        }
-
-        // Step 2: Block Library
-        if (includeBlockLibrary) {
-            libraryPaths = await pipelineConfigureBlockLibrary(services, params, onProgress);
-        }
-
-        // Step 2.5: Block-targeting code patches (post-install).
-        // Canonical-file patches were applied earlier in `resetRepoToTemplate`
-        // via `applyCanonicalCodePatches`. The block-targeting subset of the
-        // same ledger runs here, AFTER block install, so installed library
-        // blocks are present in the repo to be patched. Phase routing is by
-        // target prefix (`blocks/...` → here; everything else → canonical).
-        // Non-fatal per ADR-006 D1: results go to `patchReport`; the caller
-        // surfaces unapplied patches via the one-toast helper.
-        await pipelineApplyBlockCodePatches(
-            githubFileOps,
-            repoOwner,
-            repoName,
-            codePatches,
-            codePatchSource,
-            patchReport,
-            logger,
-        );
-
-        // Step 2.6: Brand assets (additive brand files + head.html snippet).
-        // After block install for the same reason as block-targeting patches:
-        // installed blocks are present to be referenced. Both create and reset
-        // reach this point through the shared pipeline, so the two paths stay
-        // behavior-identical. Skipped silently when the package declares none.
-        await pipelineApplyBrandAssets(
-            githubFileOps,
-            repoOwner,
-            repoName,
-            params.brandAssets,
-            logger,
-        );
-
-        // Step 3: EDS Settings
-        onProgress?.({
-            operation: 'eds-settings',
-            message: 'Applying EDS configuration...',
-        });
-
-        const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
-        await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, logger);
-
-        // Step 4: Cache Purge
-        if (purgeCache) {
-            onProgress?.({
-                operation: 'cache-purge',
-                message: 'Purging stale cache...',
-            });
-
-            await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-            logger.info('[EdsPipeline] Stale cache purged');
-        }
-
-        // Step 5: Content Publish
-        if (!skipPublish) {
-            await pipelinePublishContent(
-                helixService,
-                repoOwner,
-                repoName,
-                daLiveOrg,
-                daLiveSite,
-                logger,
-                onProgress,
-            );
-        } else {
-            logger.info('[EdsPipeline] Skipping content publish (skipPublish=true)');
-        }
-
-        // Step 6: Library Publish
-        if (libraryPaths.length > 0) {
-            onProgress?.({
-                operation: 'library-publish',
-                message: 'Publishing block library...',
-            });
-
             try {
-                const { publishLibraryPaths, verifyLibraryPreviewed } = await import(
-                    '../handlers/edsHelpers'
-                );
-                await publishLibraryPaths(helixService, repoOwner, repoName, libraryPaths, logger);
-                // Say it landed only if it landed. The bulk job reports success
-                // for paths that matched nothing, which is how a library that
-                // could not preview a single block logged "published".
-                const previewed = await verifyLibraryPreviewed(
-                    repoOwner,
-                    repoName,
-                    logger,
-                    helixService,
-                );
-                if (previewed) {
-                    logger.info('[EdsPipeline] Block library published');
-                } else {
-                    logger.info('[EdsPipeline] Block library published, but it is not previewable');
-                    // The site config is the state nobody can inspect after the
-                    // fact, and it is the leading suspect when publishing reports
-                    // success and the CDN still 404s. Print it here, once, where
-                    // the user is already being told something is wrong.
-                    const siteConfig = await daLiveContentOps.readSiteConfigForDiagnostics(
-                        daLiveOrg,
-                        daLiveSite,
-                    );
-                    logger.warn(
-                        `[EdsPipeline] Site config for ${daLiveOrg}/${daLiveSite}: ` +
-                            (siteConfig ? JSON.stringify(siteConfig) : '(could not be read)'),
-                    );
-                }
-            } catch (libPublishError) {
-                // Non-fatal -- library config was created, publishing can be retried
+                await step.run(env);
+            } catch (error) {
+                if (step.onError !== 'continue') throw error;
                 logger.warn(
-                    `[EdsPipeline] Block library publish failed: ${(libPublishError as Error).message}`,
-                );
-            }
-        }
-
-        // (Smart 404 plumbing lives entirely in storefront code now:
-        //  - scripts/delayed.js — cold-path action call + Loading state
-        //  - head.html — eager mixed-case → lowercase redirect on 200s
-        //  - 404.html — same eager redirect for Helix-served 404s
-        //  All three are installed by installSmart404Handler from
-        //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper
-        //  (reset). The DA.live /404 page publish path that briefly
-        //  lived here didn't help — Helix uses the static 404.html
-        //  file, not authored content, on 404 responses.)
-
-        // Step 8: Catalog pre-warming (v1 ACCS only). Enumerate the
-        // storefront's Commerce catalog and pre-publish every product
-        // path so first-visit cold paths never fire during demos.
-        // Non-fatal: failures fall through to the smart-404 fallback,
-        // which still handles unknown SKUs at runtime. Gated on:
-        //  - params.project — caller opts in by passing the project
-        //  - params.byomOverlayUrl — same gate as smart-404 install
-        //  - !skipPublish — refresh-block-library and similar narrow
-        //    paths skip pre-warming
-        if (!skipPublish && params.byomOverlayUrl && params.project) {
-            try {
-                const result = await prewarmCatalog(
-                    params.project,
-                    params.byomOverlayUrl,
-                    daLiveOrg,
-                    daLiveSite,
-                    helixService,
-                    logger,
-                    onProgress,
-                );
-                if (!result.skipped) {
-                    logger.info(
-                        `[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`,
-                    );
-                }
-            } catch (prewarmError) {
-                // Defense in depth — prewarmCatalog is already non-fatal
-                // internally, but a thrown exception here must not abort
-                // the pipeline. Smart-404 fallback handles uncovered SKUs.
-                logger.warn(
-                    `[EdsPipeline] Catalog pre-warming threw unexpectedly: ${(prewarmError as Error).message}`,
+                    `[EdsPipeline] ${step.failureLog ?? `${step.name} failed`}: ${(error as Error).message}`,
                 );
             }
         }
 
         return {
             success: true,
-            contentFilesCopied,
-            libraryPaths,
-            patchReport,
+            contentFilesCopied: ctx.contentFilesCopied,
+            libraryPaths: ctx.libraryPaths,
+            patchReport: ctx.patchReport,
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication
@@ -844,9 +957,9 @@ export async function executeEdsPipeline(
         logger.error(`[EdsPipeline] Failed: ${errorMessage}`);
         return {
             success: false,
-            contentFilesCopied,
-            libraryPaths,
-            patchReport,
+            contentFilesCopied: ctx.contentFilesCopied,
+            libraryPaths: ctx.libraryPaths,
+            patchReport: ctx.patchReport,
             error: errorMessage,
         };
     }

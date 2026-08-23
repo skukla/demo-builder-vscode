@@ -9,7 +9,12 @@
 // first, so a barrel-first load would evaluate this map before the barrel's own
 // re-exports exist — capturing `undefined`.
 import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
-import * as creation from './';
+// Direct module imports, NOT the './' barrel: index.ts re-exports THIS
+// registry, so importing the barrel here was a genuine runtime cycle
+// (registry -> index -> registry) that worked on evaluation-order luck.
+import { checkGitHubApp } from './checkGitHubAppHandler';
+import { handleCreateProject } from './createHandler';
+import { handleValidate } from './validateHandler';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 import {
@@ -88,7 +93,7 @@ export const projectCreationHandlers = defineHandlers({
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,
-    'check-github-app': creation.checkGitHubApp,
+    'check-github-app': checkGitHubApp,
     'check-repo-readiness': eds.handleCheckRepoReadiness,
     'create-github-repo': eds.handleCreateGitHubRepo,
     'github-oauth': eds.handleGitHubOAuth,
@@ -113,6 +118,6 @@ export const projectCreationHandlers = defineHandlers({
     'storefront-setup-cancel': eds.handleCancelStorefrontSetup,
 
     // Project creation handlers
-    validate: creation.handleValidate,
-    'create-project': creation.handleCreateProject,
+    validate: handleValidate,
+    'create-project': handleCreateProject,
 });

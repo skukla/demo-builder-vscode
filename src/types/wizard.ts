@@ -6,7 +6,7 @@
  */
 
 import type { SettingsFile } from './settingsFile';
-import { WizardState, WizardStep } from './webview';
+import type { WizardState, WizardStep } from './webview';
 
 /**
  * Base props shared by all wizard step components.

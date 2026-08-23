@@ -112,10 +112,14 @@ export function extractEdsMetadata(project: Project): EdsProjectMetadata | null 
     // Metadata is stored as Record<string, unknown> on the component instance
     const metadata = edsInstance.metadata as Record<string, unknown> | undefined;
 
+    const githubRepo = metadata?.githubRepo as string | undefined;
     return {
-        githubRepo: metadata?.githubRepo as string | undefined,
+        githubRepo,
         daLiveOrg: metadata?.daLiveOrg as string | undefined,
-        daLiveSite: metadata?.daLiveSite as string | undefined,
+        // Legacy-first, repo fallback (the loader strips the equal copy) —
+        // without it, deleting a migrated project skipped the DA site cleanup.
+        daLiveSite:
+            (metadata?.daLiveSite as string | undefined) ?? githubRepo?.split('/')[1],
         backendType: metadata?.backendType as 'commerce' | 'aco' | undefined,
     };
 }

@@ -166,7 +166,10 @@ const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 const RESET = 'Reset Project';
-const REMOVE = 'Remove Datapack';
+// The datapack prompt uses MessageItem buttons (its Keep Data button replaces
+// the modal's automatic Cancel — user-reported ambiguity, 2026-08-23), so the
+// mock resolves the shape VS Code resolves: the item, not a string.
+const REMOVE = { title: 'Remove Datapack' };
 
 const testPackages = [
     {
@@ -219,7 +222,7 @@ function createContext(): HandlerContext {
 }
 
 /** The confirm answers, in order: the reset, then the sample-data prompt. */
-function answers(...values: Array<string | undefined>): void {
+function answers(...values: Array<string | { title: string } | undefined>): void {
     const mock = vscode.window.showWarningMessage as jest.Mock;
     mock.mockReset();
     for (const value of values) {

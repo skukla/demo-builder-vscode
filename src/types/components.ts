@@ -5,7 +5,7 @@
  * Replaces `any` types with specific component interfaces.
  */
 
-import { FieldHelp } from './webview';
+import type { FieldHelp } from './webview';
 
 /**
  * EnvVarDefinition - Environment variable definition from registry

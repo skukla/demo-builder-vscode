@@ -227,7 +227,14 @@ export function extractResetParams(
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
     const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Legacy-first, repo fallback: the loader strips a daLiveSite that equals
+    // the repo name (the normal state since the name unification), so the
+    // field survives only on unmigrated projects. Caught live 2026-08-23:
+    // without the fallback, reset AND refresh-block-library refused every
+    // migrated project with "DA.live configuration missing".
+    const daLiveSite =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ??
+        (repoFullName ? repoFullName.split('/')[1] : undefined);
 
     // Derive template config from brand+stack (source of truth)
     const {

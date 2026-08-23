@@ -40,6 +40,30 @@ describe('validateManifestShape', () => {
         expect(issues.join('\n')).toContain('/name');
     });
 
+    it('accepts integer is_active on store views — the shape Commerce actually sends', () => {
+        // Commerce's REST API returns 1/0, not true/false. The boolean-only
+        // declaration (written from expectation, not a real response) had
+        // every load of a discovered-structure project warning three times
+        // per store view. Copied from a real bodea manifest, 2026-08-23.
+        const issues = validateManifestShape({
+            commerceStoreStructure: {
+                websites: [],
+                storeGroups: [],
+                storeViews: [
+                    {
+                        id: 3,
+                        code: 'citisignal_us',
+                        name: 'CitiSignal US',
+                        store_group_id: 2,
+                        website_id: 2,
+                        is_active: 1,
+                    },
+                ],
+            },
+        });
+        expect(issues).toEqual([]);
+    });
+
     it('reports nested drift inside a known structure', () => {
         const issues = validateManifestShape({ componentConfigs: 'not-an-object' });
         expect(issues.join('\n')).toContain('/componentConfigs');

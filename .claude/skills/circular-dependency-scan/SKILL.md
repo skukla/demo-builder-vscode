@@ -60,9 +60,13 @@ other). This does NOT overlap `/sop-scan` (God files, complexity) — cross-refe
 - Break: extract shared <X> to leaf <new-file>.ts  |  invert edge b→a via param  |  import type
 ```
 
-## Worked example (this repo)
-madge flags a 3-module runtime cycle in `src/features/app-builder/services/`:
-`allowedDomain.ts ↔ ensureMeshApiSubscribed.ts ↔ appBuilderComponentRunnerDeps.ts`. The
-three form a value cycle through their mutual imports. The fix is to lift the shared piece
-each side reaches for into a leaf module (or inject it via `appBuilderComponentRunnerDeps`)
-so the back-edge disappears — then re-run to confirm the chain is gone.
+## Worked example (this repo, fixed 2026-08-23)
+The unfiltered scan showed 20 cycles; classifying every edge found 19 were type-only
+(an `import type` back-edge erases at compile — no runtime cycle exists) and exactly ONE
+was real: `ProjectCreationHandlerRegistry.ts` did `import * as creation from './'` while
+`index.ts` re-exports the registry — registry → barrel → registry, working on
+evaluation-order luck. The fix was importing the three needed modules directly. The repo's
+`.madgerc` now sets `skipTypeImports` so the scan reports only the runtime hazard class;
+the calibration control (a planted two-file value cycle) proved the filter still detects
+what matters. The old example here (`allowedDomain ↔ ensureMeshApiSubscribed`) was one of
+the 19 — its back-edges are `import type`, so it was never a runtime cycle.

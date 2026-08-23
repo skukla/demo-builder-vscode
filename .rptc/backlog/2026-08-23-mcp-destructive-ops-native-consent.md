@@ -74,3 +74,31 @@ When picked up, design the native-consent dialog and the traversability fixes
 together — a dialog that fires per-operation on an agent loop recreates
 exactly the friction this half exists to remove (the batch/pipeline-scope
 consent in the trade-offs section is the reconciliation).
+
+## The third leg (added same day): long agent-triggered operations must be VISIBLE
+
+Found during the pipeline rewrite's live validation: `refresh_block_library`
+invoked via MCP ran for ~2 minutes against the live site — DA.live copies,
+CDN publish — with **zero VS Code surface**. The user watched the extension
+and saw nothing; the probe client had timed out; the only evidence the
+operation ran (and succeeded) was the CDN's `last-modified` header.
+
+The dashboard button for the SAME operation shows a `withProgress`
+notification. The MCP path runs fully headless — and this repo has already
+recorded why that is wrong: `deployAppHeadless` was retired with the note
+that being UI-free "turned out to be the wrong goal for an agent-triggered
+deploy, which is precisely when the user needs telling"
+(`src/features/CLAUDE.md`, app-builder section).
+
+Fix shape: the MCP handlers for long-running mutating tools
+(`refresh_block_library`, `sync_storefront`, `republish`, `sync_content`,
+`reset_eds_project`, datapack import/export) raise the same
+`vscode.window.withProgress` notification their button counterparts show, in
+the window that owns the socket. Derive the list the same way as the consent
+gate above (non-read-only names); a completed operation's outcome belongs in
+the notification too, since the agent's own report may never reach the user
+(disconnected client, long-gone chat).
+
+Together the three legs are one design: **sign-in needs a human, destructive
+ops need consent, long operations need to be seen.** Design them as one
+surface when this item is picked up.

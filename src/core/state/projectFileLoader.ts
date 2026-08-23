@@ -76,6 +76,18 @@ export interface ProjectManifest {
 }
 
 export class ProjectFileLoader {
+    /**
+     * Shape issues already warned about, keyed `path|issue`. A project is
+     * loaded ~6 times during activation alone, and the warn loop used to
+     * re-print every issue on every load — a single drifted field on one
+     * manifest produced an 18-line wall (seen live 2026-08-23 with
+     * `is_active`), which buries rather than surfaces the defect. One line
+     * per (file, issue) per session says the same thing legibly. A FIXED
+     * manifest is not re-announced either — the warn is a pointer, not a
+     * status feed.
+     */
+    private readonly warnedShapeIssues = new Set<string>();
+
     private logger: Logger;
 
     constructor(logger: Logger) {
@@ -112,6 +124,9 @@ export class ProjectFileLoader {
             // symptom. NEVER blocks the load: a manifest from any extension
             // version loads best-effort exactly as it always has.
             for (const issue of validateManifestShape(manifest)) {
+                const key = `${manifestPath}|${issue}`;
+                if (this.warnedShapeIssues.has(key)) continue;
+                this.warnedShapeIssues.add(key);
                 this.logger.warn(`[Project Load] manifest shape: ${issue} (${manifestPath})`);
             }
 

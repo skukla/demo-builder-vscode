@@ -97,3 +97,32 @@ describe('extractResetParams - brandAssets extraction', () => {
         expect(result.params).not.toHaveProperty('brandAssets');
     });
 });
+
+describe('extractResetParams - daLiveSite repo-name fallback (caught live 2026-08-23)', () => {
+    // The loader strips a daLiveSite that equals the repo name (the normal
+    // state since the DA/repo name unification), so most manifests carry only
+    // githubRepo. Without the fallback, reset and refresh-block-library
+    // refused every migrated project with "DA.live configuration missing" —
+    // found by the pipeline rewrite's live run, one build after the strip
+    // shipped.
+    it('derives daLiveSite from the repo name when the manifest carries none', () => {
+        const project = createProject('eds-paas');
+        const metadata = (project.componentInstances!['eds-storefront']! as { metadata: Record<string, unknown> })
+            .metadata;
+        delete metadata.daLiveSite;
+
+        const result = extractResetParams(project, mockPackages);
+
+        expect(result.success).toBe(true);
+        if (!result.success) return;
+        expect(result.params.daLiveSite).toBe('test-repo');
+    });
+
+    it('an explicit daLiveSite (unmigrated legacy project) still wins', () => {
+        const result = extractResetParams(createProject('eds-paas'), mockPackages);
+
+        expect(result.success).toBe(true);
+        if (!result.success) return;
+        expect(result.params.daLiveSite).toBe('da-site');
+    });
+});
