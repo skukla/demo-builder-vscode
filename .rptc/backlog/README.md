@@ -208,6 +208,20 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 ### D. Deferred by design (gated on an external condition)
 
+#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
+
+Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
+
 #### Rebuild BuildRight on the thin-layer model ([`2026-06-10-buildright-eds-disposition.md`](2026-06-10-buildright-eds-disposition.md))
 
 Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
@@ -247,20 +261,6 @@ Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag
 Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.
 
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
-
-#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
-
-Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
-Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
-36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
-sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
-AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
-var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
-and the two scrape-flow skills route typography through the shipped scale. **Now gated on
-field feedback:** the failure was inferred, never observed — the measure step is checking the
-next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
-recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
-tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
 
 #### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
 
