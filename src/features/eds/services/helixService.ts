@@ -291,7 +291,7 @@ export class HelixService {
      * auth are both blocked by this restriction when a content source is configured
      * via fstab.yaml.
      *
-     * Discovered via diagnostic testing (scripts/test-fstab-codesync-timing.ts):
+     * Discovered via diagnostic testing (the since-retired scripts/test-fstab-codesync-timing.ts; ADR-002 holds the record):
      * - DELETE /live + GitHub token (x-auth-token) → 403 "source exists"
      * - DELETE /live + API key (Authorization: token) → 403 "source exists"
      * - DELETE /live + DA.live Bearer (Authorization: Bearer) → 204 SUCCESS

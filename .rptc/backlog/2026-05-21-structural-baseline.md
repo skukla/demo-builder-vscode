@@ -4,7 +4,7 @@
 
 Deferred 2026-05-21. After ~1 year of AI-assisted development, the maintainer raised a paranoia signal about codebase size and growing complexity. Symptoms cited:
 
-- 30 real soft-deprecation items inventoried in the parallel deferred doc ([`2026-05-21-legacy-soft-deprecation.md`](2026-05-21-legacy-soft-deprecation.md)), suggesting consistent additive growth without compensating deletion
+- 30 real soft-deprecation items inventoried in the parallel deferred doc ([`../complete/2026-05-21-legacy-soft-deprecation.md`](../complete/2026-05-21-legacy-soft-deprecation.md) — closed 2026-08-23), suggesting consistent additive growth without compensating deletion
 - Wizard step type carrying 8 "legacy" variants alongside 8 current ones (incomplete refactor)
 - v2.0 → v3.0 component registry migration only partially completed
 - Cross-feature `Kept for backward compatibility` re-exports — feature isolation leaking
@@ -69,7 +69,7 @@ For each feature under `src/features/*`:
 
 - Total count of `@deprecated`
 - Total count of `backward compat` / `backwards compat`
-- Total count of `legacy` (excluding the legitimate-use list from `2026-05-21-legacy-soft-deprecation.md`)
+- Total count of `legacy` (excluding the legitimate-use list from `../complete/2026-05-21-legacy-soft-deprecation.md`)
 - Total count of `TODO` / `FIXME` / `XXX` comments
 - Total count of `eslint-disable` comments
 

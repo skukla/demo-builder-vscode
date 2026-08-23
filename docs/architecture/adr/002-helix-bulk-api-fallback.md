@@ -173,7 +173,7 @@ async previewAllContent(
 
 ### Testing
 
-**Diagnostic Script**: `scripts/test-bulk-helix-api.ts`
+**Diagnostic Script**: `scripts/test-bulk-helix-api.ts` *(retired 2026-08-23 with the other ad-hoc probes — they compared against nothing; the maintained contract check is `npm run eds:drift`, `scripts/edsDrift.js`. This section stays as the investigation record.)*
 
 ```bash
 npx ts-node scripts/test-bulk-helix-api.ts <github-token> <org> <repo> [ims-token]
@@ -260,7 +260,7 @@ The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "sou
 
 - **Adobe Documentation**: [Publishing from Authoring](https://www.aem.live/docs/publishing-from-authoring)
 - **Helix Admin API**: [admin.hlx.page docs](https://www.aem.live/docs/admin.html)
-- **Auth Diagnostic Script**: `scripts/test-fstab-codesync-timing.ts`
+- **Auth Diagnostic Script**: `scripts/test-fstab-codesync-timing.ts` *(retired 2026-08-23 — see the note above)*
 - **Implementation**: `src/features/eds/services/helixService.ts`
 - **Commit**: `b10456d9` - "feat: add Helix bulk API integration with page-by-page fallback"
 
