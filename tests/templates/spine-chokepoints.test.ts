@@ -155,9 +155,19 @@ describe('spine choke-points', () => {
         // stateManager writes the GLOBAL state file and settingsTransfer
         // writes EXPORT files — they name the manifest without writing it,
         // which is why this check requires both patterns in one file.
+        //
+        // 2026-08-23: the MCP door moved with the mcp-server.ts decomposition —
+        // the update_project_config handler now lives in mcp/projectToolHandlers.
+        // mcp/blockAuthoring trips the mention+write heuristic without being a
+        // manifest door: it READS the manifest (installed libraries, promote
+        // context) and its writeFile targets component-definition.json only.
         const namesManifest = /\.demo-builder\.json/;
         const writes = /writeFileAtomic\(|writeFile\(/;
-        const spine = ['core/state/projectConfigWriter.ts', 'mcp-server.ts'];
+        const spine = [
+            'core/state/projectConfigWriter.ts',
+            'mcp/projectToolHandlers.ts',
+            'mcp/blockAuthoring.ts',
+        ];
 
         const hits = filesTouchingBoth(namesManifest, writes);
 
@@ -187,7 +197,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingBoth(settingsContext, primitive).filter((f) =>
             // Only files that actually pair getConfiguration with .update —
             // reads alone (getConfiguration().get) are everywhere and fine.
-            /\.update\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')),
+            /\.update\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8'))
         );
 
         expect(hits).toEqual(expect.arrayContaining(spine));
@@ -231,7 +241,8 @@ describe('spine choke-points', () => {
         // out of scope: a second reader is drift-tolerant, a second WRITER is
         // not.
         const genericTemplate = /\$\{HELIX_ADMIN_URL\}\/\$\{partition\}/;
-        const verbLiteral = /\$\{HELIX_ADMIN_URL\}\/(preview|live|code|cache)\/|admin\.hlx\.page\/(preview|live|code|cache)\/\$\{/;
+        const verbLiteral =
+            /\$\{HELIX_ADMIN_URL\}\/(preview|live|code|cache)\/|admin\.hlx\.page\/(preview|live|code|cache)\/\$\{/;
         const hostLiteral = /['"`]https:\/\/admin\.hlx\.page/;
         const spine = ['features/eds/services/helixApiClient.ts'];
 
