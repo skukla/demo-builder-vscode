@@ -17,6 +17,10 @@ rule_match() {
 rule_message() {
     cat <<'MSG'
 Blocked: never pipe jest through tail/head/grep — output buffering makes the run look hung.
-Instead redirect to a file and read it: npx jest --no-coverage <pattern> > /tmp/jest-output.txt 2>&1
+Instead redirect to a file and read it:
+  npx jest --no-coverage <pattern> > "$SCRATCH/jest-output.txt" 2>&1
+
+Order matters: `> file 2>&1`, never `2>&1 > file` (that leaves the file empty).
+Use your session scratchpad rather than /tmp.
 MSG
 }

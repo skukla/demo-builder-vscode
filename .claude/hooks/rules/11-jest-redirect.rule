@@ -1,0 +1,45 @@
+# Blocks `jest … 2>&1 > file` — the redirect order that produces an EMPTY file.
+#
+# NOT once-per-session. Like 10-jest-pipe and 14-commit-backtick this is a hard
+# stop on a mechanical mistake, not a nudge toward a skill; making it spendable by
+# doing it twice would defeat it.
+#
+# Why: jest writes its results to STDERR. The shell applies redirections left to
+# right, so `2>&1 > file` first points stderr at wherever stdout currently goes
+# (the terminal), THEN moves stdout to the file. Results go to the terminal and
+# the file lands empty — and `grep -c FAIL` on an empty file returns 0, which
+# reads exactly like a green run.
+#
+# The correct order is `> file 2>&1`: stdout to the file first, then stderr to
+# the same place.
+#
+# Prevalence when this rule was written (2026-08-24, six sessions mined): 10 wrong-
+# order jest invocations across 4 of 6 sessions, against 603 correct ones. The
+# cause was documentation — `.rptc/CLAUDE.md` showed the broken form in two places,
+# so sessions copied it. Those lines are fixed; this rule is what stops the form
+# coming back from memory.
+rule_id=jest-redirect
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    # A `git commit` never RUNS jest, but its message may well describe this very
+    # mistake — the commit that introduced this rule was blocked by it. Matching
+    # on prose is a false positive, so exclude commits outright.
+    case "$2" in *"git commit"*) return 1 ;; esac
+    # jest … 2>&1 > <target>, where target is not `&` (so `2>&1 >&2` is left alone).
+    printf '%s' "$2" \
+        | grep -qE '(^|[[:space:]/])jest[[:space:]][^|;]*2>&1[[:space:]]*>[[:space:]]*[^&[:space:]]'
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: `2>&1 > file` sends jest's results to the TERMINAL and leaves the file empty —
+a later `grep -c FAIL` on it returns 0, which looks exactly like a passing run.
+
+Redirections apply left to right. Put stdout on the file FIRST:
+  npx jest --no-coverage <pattern> > "$SCRATCH/jest-output.txt" 2>&1
+
+Use your session scratchpad rather than /tmp.
+MSG
+}

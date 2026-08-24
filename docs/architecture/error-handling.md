@@ -456,8 +456,11 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Components (accept code prop):**
 - `src/features/authentication/ui/steps/AdobeAuthStep.tsx`
-- `src/features/authentication/ui/steps/components/AuthErrorState.tsx`
 - `src/features/authentication/ui/components/AdobeEntityFields.tsx`
+
+> `AuthErrorState.tsx` used to be listed here. It was deleted as a dead file in
+> `44f74d2d7` (the beta.141 orphan pass) with no replacement — nothing rendered
+> it. The other three paths above were re-verified 2026-08-24.
 
 **String checks to replace:**
 - `authData.error === 'timeout'` → `response.code === ErrorCode.TIMEOUT`
