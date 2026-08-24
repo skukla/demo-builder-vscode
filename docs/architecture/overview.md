@@ -371,10 +371,9 @@ npm run package
 Prefer adding to `src/features/<feature>/services/` or `src/core/utils/` rather than the legacy `src/utils/` directory (being phased out).
 
 1. Create utility file in the relevant feature or core module
-2. Export from the feature's `index.ts`
-3. Add TypeScript types
-4. Document in the feature's CLAUDE.md or README
-5. Add unit tests
+2. Add TypeScript types
+3. Document in the feature's CLAUDE.md or README
+4. Add unit tests
 
 ## File Organization
 

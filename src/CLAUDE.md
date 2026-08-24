@@ -64,7 +64,6 @@ The codebase uses a **feature-based architecture** (also called "vertical slice 
 **Feature Structure:**
 ```
 features/authentication/
-├── index.ts              # Public API exports
 ├── handlers/             # Webview message handlers
 ├── services/             # Business logic (authenticationService.ts, ...)
 ├── ui/                   # React UI for this feature

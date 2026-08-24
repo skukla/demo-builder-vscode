@@ -22,7 +22,6 @@ features/
 ├── ai/                  # AI context verification + in-extension MCP server
 ├── app-builder/         # App Builder app attach/deploy (→ README.md)
 ├── authentication/       # Adobe authentication & SDK
-│   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
 │   └── README.md        # Feature documentation
 ├── components/          # Component management
@@ -43,7 +42,6 @@ Each feature follows this consistent structure:
 
 ```
 features/my-feature/
-├── index.ts              # Public API (what other modules can import)
 ├── services/            # Business logic & services
 │   ├── myFeatureService.ts
 │   ├── myHelper.ts
@@ -71,6 +69,12 @@ features/my-feature/
 - Any feature (commands orchestrate features)
 - `@/core/*`
 - `@/types`
+
+**Deep imports are the convention.** Import the module that defines a symbol
+(`@/features/authentication/services/authenticationService`), not a feature
+`index.ts`. Feature barrels were deleted 2026-08-24 — the structural baseline
+measured zero importers for every one of them — so do not add an `index.ts`
+"public API" file to a feature; it will be dead on arrival.
 
 ## Feature Descriptions
 
@@ -403,8 +407,7 @@ multi-workspace.
 ## Adding a New Feature
 
 1. **Create feature directory**: `features/my-feature/`
-2. **Create index.ts**: Export public API
-3. **Add services/**: Business logic goes here
+2. **Add services/**: Business logic goes here
 4. **Add types.ts**: Feature-specific types
 5. **Update this documentation**: Add feature description
 6. **Follow import rules**: Only import from `@/core/*` and `@/types`

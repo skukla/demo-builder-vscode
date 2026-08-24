@@ -70,7 +70,7 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         // Recorded rather than omitted, so the coverage check still runs over it.
         name: 'sidebar',
         entry: 'features/sidebar/ui/index.tsx',
-        command: 'features/sidebar/handlers/index.ts',
+        command: 'features/sidebar/handlers/sidebarHandlers.ts',
         noRequests: true,
     },
 ];
