@@ -108,10 +108,55 @@ describe('createAgentConsentGate', () => {
 
         expect(verdict).toEqual({ allowed: true });
         const [message, opts] = mockShowWarningMessage.mock.calls[0];
-        expect(String(message)).toContain('Delete page');
+        // The ACTION leads. It used to arrive mid-sentence behind two clauses of
+        // preamble, so the one thing being decided came last.
+        expect(String(message)).toBe('Demo Builder: Delete page?');
         expect(opts).toEqual(
             expect.objectContaining({ modal: true, detail: expect.stringContaining('/products/x') })
         );
+        expect(String((opts as { detail?: string }).detail)).toContain(
+            'An AI agent asked Demo Builder to run this.'
+        );
+    });
+
+    it('expands acronyms in the title — snake_case hides them', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('reset_eds_project', { confirm: true });
+
+        // "Reset eds project?" reads as a typo in a dialog asking for approval.
+        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+            'Demo Builder: Reset EDS project?'
+        );
+    });
+
+    it('says so plainly when a tool takes no parameters', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        const [, opts] = mockShowWarningMessage.mock.calls[0];
+        expect(String((opts as { detail?: string }).detail)).toBe(
+            'An AI agent asked Demo Builder to run this. It takes no parameters.'
+        );
+    });
+
+    it('labels the proof-of-intent echo as a Name, not confirmName', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('start_demo', { confirm: true, confirmName: 'bodea' });
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('Name: bodea');
+        expect(detail).not.toContain('confirmName');
     });
 
     it('answers a ready refusal envelope when the dialog is dismissed or declined', async () => {
@@ -144,9 +189,13 @@ describe('createAgentConsentGate', () => {
 
         const [, opts] = mockShowWarningMessage.mock.calls[0];
         const detail = String((opts as { detail?: string }).detail);
-        expect(detail).toContain('blockId: hero');
+        // Labels, not schema field names — a producer approving this should not
+        // have to decode `blockId`. Masking still keys off the RAW name, so a
+        // friendlier label must never widen what is shown.
+        expect(detail).toContain('Block id: hero');
+        expect(detail).not.toContain('blockId:');
         expect(detail).not.toContain('confirm');
-        expect(detail).toContain('githubToken: ***');
+        expect(detail).toContain('Github token: ***');
         expect(detail).not.toContain('ghp_secret_value');
         expect(detail).not.toContain('x'.repeat(100));
         expect(detail).not.toContain('not: shown');

@@ -24,10 +24,38 @@
  */
 export const SERVER_DISPLAY_NAME = 'Demo Builder';
 
-/** `snake_case_tool` → "Snake case tool". */
+/**
+ * Words that must not be sentence-cased. Tool names are snake_case, so an
+ * acronym arrives indistinguishable from a word — "reset_eds_project" became
+ * "Reset eds project", which reads as a typo in a dialog a producer is being
+ * asked to approve.
+ */
+const ACRONYMS: Record<string, string> = {
+    eds: 'EDS',
+    ai: 'AI',
+    mcp: 'MCP',
+    api: 'API',
+    apis: 'APIs',
+    url: 'URL',
+    urls: 'URLs',
+    accs: 'ACCS',
+    io: 'I/O',
+    cdn: 'CDN',
+    github: 'GitHub',
+    dalive: 'DA.live',
+    sku: 'SKU',
+    pdp: 'PDP',
+};
+
+/** `reset_eds_project` → "Reset EDS project". */
 export function humanize(toolName: string): string {
-    const words = toolName.replace(/_/g, ' ');
-    return words.charAt(0).toUpperCase() + words.slice(1);
+    const words = toolName.split('_').map((w) => ACRONYMS[w] ?? w);
+    const [first, ...rest] = words;
+    if (first === undefined) return '';
+    const head = ACRONYMS[toolName.split('_')[0]]
+        ? first
+        : first.charAt(0).toUpperCase() + first.slice(1);
+    return [head, ...rest].join(' ');
 }
 
 /**

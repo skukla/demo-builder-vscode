@@ -36,6 +36,30 @@ import type { Logger } from '@/types/logger';
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;
 
+/**
+ * Friendlier labels for argument keys a producer would not recognise.
+ *
+ * `confirmName` is the surface's proof-of-intent echo — the agent repeats the
+ * target's name to show it means this one. As a dialog line it read
+ * "confirmName: bodea", which is a field name from our schema leaking into a
+ * question we are asking a human.
+ */
+const CONSENT_KEY_LABELS: Record<string, string> = {
+    confirmName: 'Name',
+    projectName: 'Project',
+};
+
+/** `blockId` / `block_id` → "Block id". A label, not an identifier. */
+function humanizeKey(key: string): string {
+    const labelled = CONSENT_KEY_LABELS[key];
+    if (labelled) return labelled;
+    const spaced = key
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .toLowerCase();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 /** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
 const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
 
@@ -53,19 +77,19 @@ function renderArgsForConsent(args: unknown): string {
     for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
         if (key === 'confirm') continue;
         if (SECRET_KEY_RE.test(key)) {
-            lines.push(`${key}: ***`);
+            lines.push(`${humanizeKey(key)}: ***`);
             continue;
         }
         if (typeof value === 'string') {
             lines.push(
-                `${key}: ${
+                `${humanizeKey(key)}: ${
                     value.length > CONSENT_DETAIL_VALUE_MAX
                         ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
                         : value
                 }`,
             );
         } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${key}: ${value}`);
+            lines.push(`${humanizeKey(key)}: ${value}`);
         }
     }
     return lines.join('\n');
@@ -101,13 +125,18 @@ export function createAgentConsentGate(
             return { allowed: true };
         }
 
-        const detail = renderArgsForConsent(args);
+        // Lead with the ACTION. The previous wording buried it mid-sentence
+        // behind two clauses of preamble ("Demo Builder — an AI agent requests:
+        // Start demo. Allow it?"), so the one thing being decided arrived last.
+        // VS Code renders `message` prominently and `detail` beneath it, which
+        // is the natural split between "what" and "who/with what".
+        const params = renderArgsForConsent(args);
+        const detail = params
+            ? `An AI agent asked Demo Builder to run this.\n\n${params}`
+            : 'An AI agent asked Demo Builder to run this. It takes no parameters.';
         const choice = await vscode.window.showWarningMessage(
-            `Demo Builder — an AI agent requests: ${humanize(toolName)}. Allow it?`,
-            {
-                modal: true,
-                detail: detail || 'No parameters beyond the confirmation itself.',
-            },
+            `Demo Builder: ${humanize(toolName)}?`,
+            { modal: true, detail },
             'Allow',
         );
 
