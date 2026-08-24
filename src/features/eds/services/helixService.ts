@@ -22,13 +22,15 @@ import {
     buildPublishHeaders,
     normalizeWebPath as normalizeHelixPath,
 } from './helixApiClient';
+import {
+    parseBulkJobResponse,
+    pollJobCompletion,
+    type BulkJobDeps,
+    type BulkProgressCallback,
+} from './helixBulkJobs';
 import * as keyStore from './helixKeyStore';
 import { DaLiveAuthError } from './types';
-import {
-    getCacheTTLWithJitter,
-    isExpired,
-    createCacheEntry,
-} from '@/core/cache/cacheUtils';
+import { getCacheTTLWithJitter, isExpired, createCacheEntry } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
@@ -38,8 +40,6 @@ import type { Logger } from '@/types/logger';
 // ==========================================================
 // Constants
 // ==========================================================
-
-/** Helix Admin API base URL */
 
 /**
  * What a 401 from the Helix Admin API actually means.
@@ -78,61 +78,6 @@ const HELIX_DELETE_BATCH_SIZE = 5;
 /** Max retry attempts for 429 Too Many Requests responses */
 const HELIX_RATE_LIMIT_MAX_RETRIES = 3;
 
-/**
- * Response from bulk preview/publish operations (202 Accepted)
- * @see https://www.aem.live/docs/admin.html
- */
-interface BulkJobResponse {
-    /** Job information for async operations (nested format) */
-    job?: {
-        /** Job name for status tracking */
-        name: string;
-        /** Topic (preview or live) */
-        topic: string;
-        /** Current job state */
-        state: 'created' | 'running' | 'stopped';
-    };
-    /** Message ID for the bulk operation */
-    messageId?: string;
-    /** Job name (flat format - alternative to job.name) */
-    name?: string;
-    /** Topic (flat format - alternative to job.topic) */
-    topic?: string;
-}
-
-/**
- * Response from job status endpoint
- */
-interface JobStatusResponse {
-    /** Current job state */
-    state: 'created' | 'running' | 'stopped' | 'finished';
-    /** Alternative status field (some API versions use 'status' instead of 'state') */
-    status?: string;
-    /** Progress information (nested format) */
-    progress?: {
-        /** Number of items processed */
-        processed: number;
-        /** Total number of items */
-        total: number;
-    };
-    /** Number of items processed (flat format) */
-    processed?: number;
-    /** Total number of items (flat format) */
-    total?: number;
-    /** Error information if job failed */
-    error?: string;
-    /** Result data when job completes */
-    data?: {
-        resources?: Array<{
-            path: string;
-            status: number;
-        }>;
-    };
-}
-
-/** Progress callback for bulk operations */
-type BulkProgressCallback = (processed: number, total: number) => void;
-
 // ==========================================================
 // Persistent API Key Storage
 // ==========================================================
@@ -142,16 +87,6 @@ type BulkProgressCallback = (processed: number, total: number) => void;
  */
 export interface DaLiveTokenProvider {
     getAccessToken: () => Promise<string | null>;
-}
-
-/** Job name from a bulk-job response (nested `job.name` preferred, flat `name` fallback). */
-function getJobName(jobInfo?: BulkJobResponse): string | undefined {
-    return jobInfo?.job?.name || jobInfo?.name;
-}
-
-/** Job topic from a bulk-job response, falling back to a caller default. */
-function getJobTopic(jobInfo: BulkJobResponse | undefined, defaultTopic: string): string {
-    return jobInfo?.job?.topic || jobInfo?.topic || defaultTopic;
 }
 
 /** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
@@ -377,23 +312,6 @@ export class HelixService {
         return parts.length ? parts.join(' — ') : `${response.status} ${response.statusText}`;
     }
 
-    /** Parse 202 bulk job response. */
-    private async parseBulkJobResponse(
-        response: Response,
-        defaultTopic: string,
-    ): Promise<{ jobName?: string; jobTopic: string }> {
-        let jobInfo: BulkJobResponse | undefined;
-        try {
-            jobInfo = await response.json();
-        } catch {
-            this.logger.warn('[Helix] Could not parse job info from 202 response');
-        }
-        return {
-            jobName: getJobName(jobInfo),
-            jobTopic: getJobTopic(jobInfo, defaultTopic),
-        };
-    }
-
     // ==========================================================
     // Token Management
     // ==========================================================
@@ -448,166 +366,26 @@ export class HelixService {
     }
 
     // ==========================================================
-    // Bulk Job Polling
+    // Bulk Job Polling (protocol lives in ./helixBulkJobs)
     // ==========================================================
 
-    /** Maximum time to wait for a bulk job to complete (5 minutes) */
-    private static readonly JOB_TIMEOUT_MS = 5 * 60 * 1000;
-
-    /** Polling interval for job status checks (2 seconds) */
-    private static readonly JOB_POLL_INTERVAL_MS = 2000;
-
     /**
-     * Poll for bulk job completion
-     *
-     * Bulk operations (preview/publish) return 202 with job info.
-     * This method polls the job status endpoint until the job completes.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name
-     * @param jobName - Job name from 202 response
-     * @param topic - Job topic (preview, live, preview-remove, live-remove)
-     * @param onProgress - Optional callback for progress updates
-     * @param apiKey - Optional Admin API Key (used for unpublish jobs created with API key auth)
-     * @throws Error if job fails or times out
+     * The bulk-job protocol's view of this service: the logger plus the
+     * job-status auth — the DA.live admin Bearer when a session exists, and
+     * the GitHub token, the same identity that created the job. This is the
+     * injection seam that let the protocol leave the class (it used to bind
+     * to `this.tryAdminBearer()` / `this.getGitHubToken()` directly).
      */
-    /**
-     * Walk `status.data.resources` after a bulk job completes and surface any
-     * per-path failures. The Helix bulk API marks the job `finished` even when
-     * every path inside it failed with 4xx/5xx — those statuses live only in
-     * `data.resources[]`. Without this check the storefront-setup pipeline
-     * silently claims success while the live site 404s.
-     *
-     * Backward-compatible: completes cleanly when `data.resources` is absent or
-     * empty (older API responses that don't include the array).
-     */
-    private assertBulkResourcesSucceeded(status: JobStatusResponse, topic: string): void {
-        const resources = status.data?.resources ?? [];
-        const failed = resources.filter((r) => r.status >= 400);
-        if (failed.length > 0) {
-            const sample = failed
-                .slice(0, 10)
-                .map((r) => `${r.path} → ${r.status}`)
-                .join(', ');
-            const truncated = failed.length > 10 ? ', ...' : '';
-            this.logger.error(
-                `[Helix] Bulk ${topic} job finished but ${failed.length}/${resources.length} paths failed: ${sample}${truncated}`,
-            );
-            throw new Error(
-                `Bulk ${topic}: ${failed.length}/${resources.length} paths failed (first: ${failed[0].path} → ${failed[0].status})`,
-            );
-        }
-        // Helix's preview/publish bulk endpoints don't always populate
-        // `data.resources` even on successful jobs — for those, the only
-        // truth is `progress.processed`. Report the count Helix actually
-        // returned: prefer `resources.length`, fall back to processed.
-        const processed = status.progress?.processed ?? status.processed ?? 0;
-        const count = resources.length > 0 ? resources.length : processed;
-
-        // A job that finished having touched NOTHING is not a success, and it
-        // read as one: no resource carried a failing status because no resource
-        // came back at all. That is exactly how the block library published
-        // "fine" while none of it previewed — measured 2026-08-18 on a live site,
-        // two runs of ~78 paths each, zero previewed and zero complaints. Print
-        // the whole payload: the caller cannot ask Helix a follow-up question
-        // after the job is gone, and this is a user-pasteable log.
-        if (count === 0) {
-            this.logger.warn(
-                `[Helix] Bulk ${topic} job finished having processed NOTHING. ` +
-                    'The paths were accepted and none was acted on. Raw job status: ' +
-                    JSON.stringify(status),
-            );
-            return;
-        }
-
-        this.logger.debug(`[Helix] Bulk ${topic} job completed: ${count} paths processed`);
+    private bulkJobDeps(): BulkJobDeps {
+        return {
+            logger: this.logger,
+            getJobStatusHeaders: async () => ({
+                ...(await this.tryAdminBearer()),
+                'x-auth-token': await this.getGitHubToken(),
+            }),
+        };
     }
 
-    private async pollJobCompletion(
-        org: string,
-        site: string,
-        branch: string,
-        jobName: string,
-        topic: string,
-        onProgress?: BulkProgressCallback,
-        apiKey?: string,
-    ): Promise<void> {
-        // Use API key auth when provided (unpublish jobs), otherwise GitHub token
-        const authHeaders: Record<string, string> = apiKey
-            ? { Authorization: `token ${apiKey}` }
-            : { ...(await this.tryAdminBearer()), 'x-auth-token': await this.getGitHubToken() };
-        // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
-        const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
-        const startTime = Date.now();
-
-        this.logger.debug(`[Helix] Polling job status: ${url}`);
-
-        while (true) {
-            // Check timeout
-            if (Date.now() - startTime > HelixService.JOB_TIMEOUT_MS) {
-                throw new Error(
-                    `Bulk ${topic} job timed out after ${HelixService.JOB_TIMEOUT_MS / 1000} seconds`,
-                );
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: authHeaders,
-                    signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-                });
-
-                if (!response.ok) {
-                    // Job endpoint may not exist immediately, retry
-                    if (response.status === 404) {
-                        this.logger.debug(`[Helix] Job not found yet, retrying...`);
-                        await sleep(HelixService.JOB_POLL_INTERVAL_MS);
-                        continue;
-                    }
-                    throw new Error(
-                        `Job status check failed: ${response.status} ${response.statusText}`,
-                    );
-                }
-
-                const status: JobStatusResponse = await response.json();
-
-                // Report progress if available
-                if (status.progress && onProgress) {
-                    onProgress(status.progress.processed, status.progress.total);
-                }
-
-                // Check job state - handle both 'stopped' and 'finished' states
-                if (
-                    status.state === 'stopped' ||
-                    status.state === 'finished' ||
-                    status.status === 'finished'
-                ) {
-                    // Job-level failure (e.g. job machinery never dispatched)
-                    if (status.error) {
-                        throw new Error(`Bulk ${topic} job failed: ${status.error}`);
-                    }
-                    this.assertBulkResourcesSucceeded(status, topic);
-                    return;
-                }
-
-                // Job still running, wait and poll again
-                this.logger.debug(
-                    `[Helix] Job state: ${status.state || status.status}, progress: ${status.progress?.processed ?? status.processed ?? '?'}/${status.progress?.total ?? status.total ?? '?'}`,
-                );
-                await sleep(HelixService.JOB_POLL_INTERVAL_MS);
-            } catch (error) {
-                const errorMessage = (error as Error).message;
-                // Timeout errors should be retried
-                if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-                    this.logger.debug(`[Helix] Job status request timed out, retrying...`);
-                    await sleep(HelixService.JOB_POLL_INTERVAL_MS);
-                    continue;
-                }
-                throw error;
-            }
-        }
-    }
 
     // ==========================================================
     // Preview/Publish Operations
@@ -849,7 +627,10 @@ export class HelixService {
                     const serverExpiry = data.expiration
                         ? new Date(data.expiration).getTime()
                         : Infinity;
-                    const persistExpiry = Math.min(Date.now() + keyStore.PERSIST_TTL_MS, serverExpiry);
+                    const persistExpiry = Math.min(
+                        Date.now() + keyStore.PERSIST_TTL_MS,
+                        serverExpiry,
+                    );
                     await keyStore.setPersistedKey(cacheKey, {
                         value: keyValue,
                         id: keyId,
@@ -1238,10 +1019,18 @@ export class HelixService {
         if (response.status === 202) {
             this.logger.debug('[Helix] Bulk preview job created, polling for completion...');
 
-            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'preview');
+            const { jobName, jobTopic } = await parseBulkJobResponse(
+                response,
+                'preview',
+                this.logger,
+            );
 
             if (jobName) {
-                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, onProgress);
+                await pollJobCompletion(
+                    this.bulkJobDeps(),
+                    { org, site, branch, jobName, topic: jobTopic },
+                    onProgress,
+                );
             } else {
                 // No job info, wait a reasonable time for the operation
                 this.logger.warn('[Helix] No job info in response, assuming operation completed');
@@ -1344,10 +1133,18 @@ export class HelixService {
         if (response.status === 202) {
             this.logger.debug('[Helix] Bulk publish job created, polling for completion...');
 
-            const { jobName, jobTopic } = await this.parseBulkJobResponse(response, 'live');
+            const { jobName, jobTopic } = await parseBulkJobResponse(
+                response,
+                'live',
+                this.logger,
+            );
 
             if (jobName) {
-                await this.pollJobCompletion(org, site, branch, jobName, jobTopic, onProgress);
+                await pollJobCompletion(
+                    this.bulkJobDeps(),
+                    { org, site, branch, jobName, topic: jobTopic },
+                    onProgress,
+                );
             } else {
                 // No job info, assume operation completed
                 this.logger.warn('[Helix] No job info in response, assuming operation completed');

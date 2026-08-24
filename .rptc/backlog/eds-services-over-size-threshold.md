@@ -146,6 +146,23 @@ The pattern is that this item tracks files somebody happened to touch, not files
 measurement condemns. Anyone picking work off it should re-measure first; the
 table above is the current answer.
 
+## `helixService.ts` cut 2 — bulk-job protocol extracted (2026-08-23)
+
+**Done, on `feature/d3-dual-flow-removal`:** `helixBulkJobs.ts` (~270 lines) now
+owns the 202-and-poll protocol — `parseBulkJobResponse`, `pollJobCompletion`,
+the private `assertBulkResourcesSucceeded`, both job interfaces, the two
+timing constants. The auth-header provider the previous entry called for is
+`BulkJobDeps.getJobStatusHeaders()`: the module never sees a token; the
+service injects the DA.live admin Bearer + GitHub `x-auth-token` from a
+private `bulkJobDeps()` builder. `pollJobCompletion`'s `apiKey` parameter was
+dropped with the move — verified zero callers in its lifetime.
+
+Cleared the bar: **all 179 EDS suites (2,308 tests) passed with ZERO edits to
+existing tests**; 12 new unit tests pin the protocol at the module seam.
+Madge: no cycles. `helixService.ts` is now 1642 lines (was 1845). Remaining
+candidates unchanged (page-operations split = collaborating objects, still a
+design decision; `mcp-server.ts` 1794; `adobeEntityFetcher.ts` 1769).
+
 ## `helixService.ts` — one cut taken, the rest is not free
 
 **Done:** `helixKeyStore.ts` (168 lines) now owns Admin API key persistence —
