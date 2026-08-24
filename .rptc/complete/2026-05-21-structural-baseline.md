@@ -11,6 +11,20 @@
 > fn-length); 60 cross-feature edges with 15 mutual-import pairs; 37 orphans
 > (mostly dead barrels); trim-cycle proposals delivered in-session, not in the
 > report.
+>
+> **Trim-cycle outcome (2026-08-24, same day):** all five proposed cycles were
+> executed. Dead barrels deleted (25 + the two tests pinning the convention);
+> 9 dead production files removed after orphan verification; feature cycles
+> **15 → 1** across four batches (symbol moves to their real layer, the
+> catalog move to features/components, runner-deps composition to
+> project-creation, two constants to core). The survivor, ai <-> dashboard,
+> is adjudicated LEAVE: ai/server is the extension's MCP composition surface
+> (descriptor tables importing handler maps — the documented
+> `mcp-tool-authoring` pattern), and dashboard's two importing files consume
+> genuine ai services. Breaking it means converting the descriptor modules to
+> injected factories, churning the tool-authoring pattern every future tool
+> pays — do that only with a concrete driver, not for the metric. Re-measure
+> any time with `scripts/measure-structure.mjs`.
 
 ## Provenance
 
