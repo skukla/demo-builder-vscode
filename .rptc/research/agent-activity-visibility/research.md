@@ -79,8 +79,11 @@ Then type: `Call the run_probe tool.`
 `--strict-mcp-config` loads ONLY the probe server, so the usual servers stay out
 of the way and the tool is easy to spot.
 
-**Watch the chat WHILE the call runs** — the tool sends its three messages and
-returns immediately, so the window is brief.
+**Watch the chat WHILE the call runs.** The tool deliberately takes ~6 seconds,
+pausing 2s before each message. The first version fired all three inside a few
+milliseconds, which would have shown a flash even on a client that renders them
+properly — and the test would have been recorded as a negative. A visual question
+needs a call you can actually watch.
 
 | What you see | What it means |
 |---|---|
