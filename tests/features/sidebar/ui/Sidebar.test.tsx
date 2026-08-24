@@ -74,10 +74,10 @@ describe('Sidebar', () => {
             expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
         });
 
-        it('omits the New tile when no onNewAiChat callback is given', () => {
-            // The tile is ADDITIVE. Gating the zone on the new callback made the
-            // whole AiZone vanish for every existing caller, since they all pass
-            // exactly two callbacks — this pins that it cannot happen again.
+        it('keeps Chat a plain button when no onNewAiChat callback is given', () => {
+            // ADDITIVE. Gating the zone on the new callback made the whole AiZone
+            // vanish for every existing caller, since they all pass exactly two
+            // callbacks — this pins that it cannot happen again.
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
@@ -89,11 +89,37 @@ describe('Sidebar', () => {
             );
 
             expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /new chat/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('menuitem', { name: /new chat/i })).not.toBeInTheDocument();
         });
 
-        it('renders and dispatches the New tile when onNewAiChat is given', () => {
+        it('offers Continue and New chat from the Chat menu when onNewAiChat is given', () => {
+            // Chat becomes a MenuTrigger rather than gaining a sibling tile —
+            // the projects toolbar's `New` button pattern. The repo's Spectrum
+            // mock renders menu content eagerly, so no open-click is needed.
+            const onOpenAiChat = jest.fn();
             const onNewAiChat = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={onNewAiChat}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('menuitem', { name: /new chat/i }));
+            expect(onNewAiChat).toHaveBeenCalledTimes(1);
+            expect(onOpenAiChat).not.toHaveBeenCalled();
+
+            fireEvent.click(screen.getByRole('menuitem', { name: /continue chat/i }));
+            expect(onOpenAiChat).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not add a third tile — the AI zone stays at two', () => {
+            // The density problem that sent us to a menu: a third flat tile
+            // pushed the stack past the panel at editor zoom.
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
@@ -101,14 +127,14 @@ describe('Sidebar', () => {
                     onCreateProject={jest.fn()}
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={jest.fn()}
-                    onNewAiChat={onNewAiChat}
+                    onNewAiChat={jest.fn()}
                 />
             );
 
-            const newChat = screen.getByRole('button', { name: /new chat/i });
-            expect(newChat).toBeInTheDocument();
-            fireEvent.click(newChat);
-            expect(onNewAiChat).toHaveBeenCalledTimes(1);
+            const aiTiles = screen
+                .getAllByRole('button')
+                .filter((b) => /^(chat|prompts)$/i.test(b.getAttribute('aria-label') ?? ''));
+            expect(aiTiles).toHaveLength(2);
         });
 
         it('dispatches onOpenAiChat when Chat is clicked', () => {

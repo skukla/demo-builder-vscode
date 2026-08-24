@@ -5,19 +5,18 @@
  * stacked vertically. Visual language mirrors the project dashboard's labeled
  * zones (PRIMARY / STOREFRONT / BUILD).
  *
- * Order is Chat, New Chat, Prompts: the two chat actions sit adjacent because
- * New Chat is a VARIANT of Chat (same destination, fresh conversation) rather
- * than a peer of Prompts.
+ * The Chat tile is a MENU, not a plain button, following the projects toolbar's
+ * `New ⌄` button (`ProjectsDashboard.tsx` — `MenuTrigger` + `Button`): one
+ * affordance for a family of related actions rather than a tile per variant.
+ * Unlike that button it shows no chevron — see `chatTile` below for why. Continuing and starting fresh are two ways to do the same
+ * thing, so they belong behind one tile; a third flat tile made them read as
+ * three separate features and pushed the stack past the viewport at zoom.
  *
- * All three are flat tiles rather than Chat carrying a menu. This sidebar has no
- * menu anywhere — it is a flat launcher of 64x64 tiles, and the UtilityBar
- * already gives rarely-used actions (Logs, Settings) the same weight as common
- * ones. A kebab would be the only hidden affordance here, and there is nowhere
- * to put the glyph in a 64px box that already holds an icon and a wrapped label.
+ * When no `onNewAiChat` is supplied the tile stays a plain button, so callers
+ * that predate the menu are unaffected.
  */
 
-import { ActionButton, Flex, Text } from '@adobe/react-spectrum';
-import Add from '@spectrum-icons/workflow/Add';
+import { ActionButton, Flex, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
 import Chat from '@spectrum-icons/workflow/Chat';
 import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import React from 'react';
@@ -28,60 +27,83 @@ export interface AiZoneProps {
     /** Called when the Prompts tile is pressed — shows the prompt picker. */
     onShowPrompts: () => void;
     /**
-     * Called when the New tile is pressed — starts a FRESH conversation.
+     * Called to start a FRESH conversation.
      *
-     * OPTIONAL, and the tile renders only when it is supplied. Making it
-     * required would have gated the whole zone on it: every existing caller
-     * passes two callbacks, so the AI zone silently disappeared for all of them.
-     *
-     * Every other entry point resumes via `claude --continue`, and a resumed
-     * conversation never re-reads `AGENTS.md`, so it keeps whatever guidance it
-     * was born with however many bundle versions ago. This is the only way to
-     * get a conversation onto the current bundle.
+     * OPTIONAL, and it is what turns the Chat tile into a menu. Every launch
+     * otherwise resumes via `claude --continue`, and a resumed conversation
+     * never re-reads `AGENTS.md` — so it keeps whatever guidance it was born
+     * with, however many bundle versions ago. This is the only way onto the
+     * current bundle.
      */
     onNewAiChat?: () => void;
 }
+
+/** Menu keys for the Chat tile. */
+const CONTINUE = 'continue';
+const NEW = 'new';
 
 /**
  * AiZone — labeled zone with Chat and Prompts tiles stacked vertically.
  */
 export const AiZone: React.FC<AiZoneProps> = ({ onOpenAiChat, onShowPrompts, onNewAiChat }) => {
+    // The caret is a CHARACTER in the label's text run, not a `<ChevronDown>`.
+    // Spectrum slots any icon inside a button into the button's icon slot, so
+    // five attempts to place an icon here were all overruled by Spectrum's own
+    // layout — see `.sidebar-tile-caret`. A glyph inside the text cannot be
+    // slotted or reflowed away from the word it follows.
+    const chatTile = (
+        <ActionButton isQuiet aria-label="Chat" UNSAFE_className="sidebar-action-tile">
+            <MagicWand />
+            <Text UNSAFE_className="icon-label">
+                Chat
+                {onNewAiChat ? <span className="sidebar-tile-caret">&#9662;</span> : null}
+            </Text>
+        </ActionButton>
+    );
+
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
             <Text UNSAFE_className="dashboard-zone-label">AI</Text>
 
-            <ActionButton
-                isQuiet
-                onPress={onOpenAiChat}
-                aria-label="Chat"
-                UNSAFE_className="sidebar-action-tile"
-            >
-                <MagicWand />
-                <Text UNSAFE_className="icon-label">Chat</Text>
-            </ActionButton>
+            <div className="sidebar-tile-grid">
+                {onNewAiChat ? (
+                    <MenuTrigger>
+                        {chatTile}
+                        <Menu
+                            onAction={(key) => {
+                                if (key === CONTINUE) {
+                                    onOpenAiChat();
+                                } else if (key === NEW) {
+                                    onNewAiChat();
+                                }
+                            }}
+                        >
+                            <Item key={CONTINUE}>Continue chat</Item>
+                            <Item key={NEW}>New chat</Item>
+                        </Menu>
+                    </MenuTrigger>
+                ) : (
+                    <ActionButton
+                        isQuiet
+                        onPress={onOpenAiChat}
+                        aria-label="Chat"
+                        UNSAFE_className="sidebar-action-tile"
+                    >
+                        <MagicWand />
+                        <Text UNSAFE_className="icon-label">Chat</Text>
+                    </ActionButton>
+                )}
 
-            {onNewAiChat && (
                 <ActionButton
                     isQuiet
-                    onPress={onNewAiChat}
-                    aria-label="New Chat"
+                    onPress={onShowPrompts}
+                    aria-label="Prompts"
                     UNSAFE_className="sidebar-action-tile"
                 >
-                    <Add />
-                    <Text UNSAFE_className="icon-label">New Chat</Text>
+                    <Chat />
+                    <Text UNSAFE_className="icon-label">Prompts</Text>
                 </ActionButton>
-            )}
-
-            <ActionButton
-                isQuiet
-                onPress={onShowPrompts}
-                aria-label="Prompts"
-                UNSAFE_className="sidebar-action-tile"
-            >
-                <Chat />
-                <Text UNSAFE_className="icon-label">Prompts</Text>
-            </ActionButton>
-
+            </div>
         </Flex>
     );
 };
