@@ -9,8 +9,19 @@
 > move `currentProject`. **Rollback floor: v1.0.0-beta.127** — the keyed
 > writer shipped in `9059eee29` (2026-07-15), first release tag beta.127, so
 > any plausible rollback target reads a rewritten manifest.
-> **Phase 2 remains** — see below; earliest at two releases after the next
-> cut carries phase 1.
+> **Phase 2 remains** — see below. **Gate COMPRESSED 2026-08-24** (user
+> decision): the two-release wait was a proxy for "every machine has run a
+> phase-1 build once." The beta user group is small and enumerable, so the
+> gate is now CONFIRMATION, not calendar: (1) beta.141 ships the sweep,
+> (2) users are asked to update + reload once (NOT reset — the sweep
+> migrates every project at startup automatically), (3) the maintainer
+> confirms each user is on ≥ beta.141, (4) phase 2 ships in the following
+> cut. **Safeguard, agreed:** phase 2 deletes the legacy branches from the
+> ACCESSORS (the guard-allowlist cleanup) but the converter function
+> survives quarantined INSIDE the sweep only — so a dormant machine that
+> jumps straight past phase 1 still migrates safely at startup, and no
+> update-ordering accident can lose a deploy record. Done for phase 2 =
+> allowlist empty except the sweep's own load path.
 
 **Filed:** 2026-08-24 (from the trim-cycle 4 legacy sweep — the sweep kept these
 layers because they are compatibility with DATA on disk, not with code; this
