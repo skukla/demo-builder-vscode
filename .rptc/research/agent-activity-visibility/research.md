@@ -61,10 +61,35 @@ human-readable sub-steps to the client while it works. That is exactly the
 but headless mode is not the chat window, and absence there says nothing about
 the terminal UI.
 
-This is cheap for the user to settle and expensive to guess at (see the sidebar
-work the same day, where four blind guesses at an unseeable surface cost hours).
-**Do not design around an assumed answer.** Run the probe server against an
-interactive `claude` session and watch whether the three messages appear.
+This is cheap to settle and expensive to guess at (see the sidebar work the same
+day, where four blind guesses at an unseeable surface cost hours). **Do not design
+around an assumed answer.**
+
+### How to settle it
+
+From the repo root:
+
+```bash
+claude --mcp-config .rptc/research/agent-activity-visibility/probe-mcp.json \
+       --strict-mcp-config
+```
+
+Then type: `Call the run_probe tool.`
+
+`--strict-mcp-config` loads ONLY the probe server, so the usual servers stay out
+of the way and the tool is easy to spot.
+
+**Watch the chat WHILE the call runs** — the tool sends its three messages and
+returns immediately, so the window is brief.
+
+| What you see | What it means |
+|---|---|
+| "Cloning repository…", "Subscribing Adobe APIs…", "Deploying to Runtime…" appear as the call runs | The TUI renders progress. Build it — the phases already exist for the VS Code progress bar. |
+| Only the final JSON result, no intermediate lines | The client accepts progress but does not display it. Nothing to build here; the answer is the VS Code notifier or a different surface entirely. |
+
+The returned JSON says whether Claude asked for progress at all
+(`progressTokenPresent`). It was `true` when measured; if a future version
+returns `false`, the mechanism is gone and this whole avenue closes.
 
 ## What is NOT controllable from here
 
@@ -93,6 +118,41 @@ destination.
 
 That symmetry is the point: the phases exist, they are already computed, and they
 currently reach only the window the user is not looking at.
+
+## The other answer: own the renderer (tech-case-studio)
+
+`app-builder/tech-case-studio` solves the same problem from the other end, and it
+is worth knowing before investing here.
+
+It drives the agent through the **Claude Agent SDK** in a Node sidecar, streams
+NDJSON to a React frontend, and renders its own chat. So it does not ask what the
+client will display — it *is* the client. `src/tool-call.ts` maps a raw `tool_use`
+to `{ icon, label, target, body }`: Bash becomes "Ran command" with a terminal
+line, Edit becomes "Edited" with a diff.
+
+**But note where MCP tools land.** That mapping is a `switch` over built-in tool
+names, and everything else falls to:
+
+```ts
+default:
+  return { icon: "tools", label: name, body: prettyJson(input), bodyLang: "json" };
+```
+
+So `mcp__demo-builder__create_project` renders as its raw name plus a JSON dump —
+exactly the unclear display this research started from. The studio has not solved
+it either; the difference is that it *could*, in one file, because it owns the
+renderer.
+
+Two conclusions:
+
+1. **A friendly MCP label is a small win available to the studio today** — teach
+   that `switch` to split `mcp__<server>__<tool>` into a server badge and a
+   humanised tool name. It needs nothing from this repo.
+2. **For Demo Builder in Claude Code's terminal, we do not own the renderer.** We
+   can only supply better data (name, `title`, progress messages) and hope it is
+   shown. If presentation ever becomes important enough to control, the studio's
+   architecture is the proven route — and it is already de-risked, per its Phase 0
+   spike.
 
 ## Relationship to Evaluation Mode
 

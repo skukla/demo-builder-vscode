@@ -1,7 +1,18 @@
-// Minimal MCP server: reports what Claude Code sends, and tries to send progress back.
-import { McpServer } from '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js';
-import { StdioServerTransport } from '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js';
-import { z } from '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/node_modules/zod/index.js';
+/**
+ * Minimal MCP server that answers ONE question: does Claude Code accept live
+ * progress messages from a tool while it runs?
+ *
+ * It reports whether the caller supplied a progress token, then emits three
+ * messages. Run it against an INTERACTIVE claude session and watch whether the
+ * three lines appear in the chat while the call is in flight — that is the half
+ * a headless run cannot show. See research.md.
+ *
+ * Paths are relative to this file (repo root is three levels up); this repo is
+ * public, so no absolute home paths.
+ */
+import { McpServer } from '../../../node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js';
+import { StdioServerTransport } from '../../../node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js';
+import { z } from '../../../node_modules/zod/index.js';
 
 const server = new McpServer({ name: 'probe-srv', version: '0.0.0' });
 
