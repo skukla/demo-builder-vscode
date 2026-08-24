@@ -488,7 +488,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         expect(cleaned).toContain('href="/sale"');
     });
 
-    it('description string mirrors sync-changes.md phrasing so capabilityStatements regression stays green', () => {
+    it('description string mirrors sync-changes.md phrasing', () => {
         // The tool's MCP description registration is exercised when the
         // standalone server starts (NODE_ENV !== 'test'). We assert the
         // load-bearing text directly from the source via the un-mocked fs
@@ -499,10 +499,9 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         const srcPath = realPath.resolve(__dirname, '../../../src/mcp-server.ts');
         const src = realFs.readFileSync(srcPath, 'utf-8');
         expect(src).toContain('promote_block_to_library');
-        // Must mention "Block changes to push back to source library" — this is
-        // the canonical phrasing in sync-changes.md:18 and the regex the
-        // capabilityStatements test depends on (`promote_block_to_library`
-        // backticked token).
+        // Must mention "Block changes to push back to source library" — the
+        // canonical phrasing in the generated sync-changes.md skill, so the
+        // tool description and the skill doc describe the operation the same way.
         expect(src).toMatch(/Block changes to push back to source library/);
     });
 });
