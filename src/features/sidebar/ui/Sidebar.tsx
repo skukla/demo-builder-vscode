@@ -40,6 +40,7 @@ export interface SidebarProps {
     onOpenAiChat?: () => void;
     /** Callback to show the prompt picker — Prompts button in AiZone. */
     onShowPrompts?: () => void;
+    onNewAiChat?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -66,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenLogs,
     onOpenAiChat,
     onShowPrompts,
+    onNewAiChat,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
@@ -76,17 +78,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return (
         <Flex
             direction="column"
-            height="100%"
-            justifyContent="start"
+            // minHeight, not height: the box fills the panel so the content can
+            // centre inside it, but is free to grow past it rather than clipping
+            // the last tile off the bottom the way `height: 100%` did.
+            // `.sidebar-provider` scrolls whatever overflows.
+            minHeight="100%"
+            // Centred rather than top-padded — `.sidebar-view` refines this to
+            // `safe center` so a too-short panel degrades to top-aligned instead
+            // of pushing the first tile out of reach above the scroll origin.
+            justifyContent="center"
             alignItems="center"
             gap="size-300"
             UNSAFE_className="sidebar-view"
-            UNSAFE_style={{ paddingTop: '80px' }}
         >
             {showAiZone && (
                 <AiZone
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={onShowPrompts}
+                    onNewAiChat={onNewAiChat}
                 />
             )}
             <UtilityBar

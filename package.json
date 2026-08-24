@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.142",
+  "version": "1.0.0-beta.143",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -95,6 +95,11 @@
       {
         "command": "demoBuilder.openAi",
         "title": "Manage AI Prompts",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.newAiChat",
+        "title": "New AI Chat",
         "category": "Demo Builder"
       },
       {

@@ -87,21 +87,74 @@ Main container component that renders context-specific content.
 
 ### AiZone
 
-Labeled sidebar zone with two single-purpose AI actions.
+Labeled sidebar zone with two tiles: a Chat menu and Prompts.
 
 **Props:**
-- `onOpenAiChat: () => void` — invokes the Chat button. Routes to
-  `demoBuilder.openAiExperience` (opens or focuses the Claude terminal).
-- `onShowPrompts: () => void` — invokes the Prompts button. Routes to
+- `onOpenAiChat: () => void` — "Continue chat". Routes to
+  `demoBuilder.openAiExperience` (opens or focuses the Claude terminal,
+  resuming via `claude --continue`).
+- `onShowPrompts: () => void` — invokes the Prompts tile. Routes to
   `demoBuilder.showPromptsPicker` (shows the prompt QuickPick).
+- `onNewAiChat?: () => void` — OPTIONAL "New chat". Routes to
+  `demoBuilder.newAiChat`, which starts a FRESH conversation. Supplying it is
+  what turns the Chat tile into a menu; without it the tile stays a plain
+  button, so callers predating the menu are unaffected.
 
 **Rendering:**
-- Zone label "AI" (small caps via `sidebar-zone-label`).
-- Chat button (`MagicWand` icon + label).
-- Prompts button (`Chat` icon + label).
+- Zone label "AI" (small caps via `dashboard-zone-label`).
+- Chat tile (`MagicWand` icon + label) — a `MenuTrigger` offering
+  **Continue chat** / **New chat**. NO chevron: tried twice and reverted
+  2026-08-24. The tile is a 64px `flex-direction: column` box holding an 18px
+  icon and an 11px label, with no room for a second element on either line. As a
+  third child the chevron became its own row; inline beside the label it squeezed
+  the text until `overflow-wrap: anywhere` broke it to one character per line.
+- Prompts tile (`Chat` icon + label).
 
-The zone replaces the prior state-aware wand icon in `UtilityBar`. Each
-button is single-purpose — no state branching, no hidden second click.
+**Why Chat is a menu, not a third tile.** Continuing and starting fresh are two
+ways to do one thing, so they live behind one affordance — the same shape as the
+projects toolbar's `New ⌄` button (`ProjectsDashboard.tsx`). A third flat tile
+read as a third feature and pushed the six-tile stack past the panel at editor
+zoom.
+
+**Why New chat exists at all.** Every launch otherwise resumes, and a resumed
+conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance
+it was born with, however many `AI_CONTEXT_VERSION` bumps ago. This is the only
+route onto the current bundle.
+
+**Top offset.** `.sidebar-view` carries `padding-top: 80px` (moved out of an
+inline `UNSAFE_style`), collapsing to 16px at the same `max-height: 560px`
+breakpoint as the tile wrap — so the roomy layout keeps its original spacing and
+the dense one does not spend the headroom it just gained on an empty gap.
+
+**Layout — one column, wrapping 2-up only when short.** Tiles live in
+`.sidebar-tile-grid`, a plain div (not a Spectrum `Flex` — width gotcha). Default
+is one per row, the original look. Under `@media (max-height: 600px)` they wrap
+two per row: stacked, each tile costs 72px, so the roomy layout needs 572px for
+six tiles and Logs was being clipped on a zoomed panel; wrapped, six take ~356px, and a
+seventh fills the slot beside the sixth without adding a row at all.
+
+**The 600px threshold is DERIVED, not eyeballed** — it must exceed the height the
+roomy layout actually needs, or the last tile is clipped in the gap between the
+two modes (at 560px it was, by ~12px). Adding tiles means recomputing it, ~72px
+per tile:
+
+```
+content = 32 (padding) + per zone: 18 (label) + 8 + rows*64 + (rows-1)*8, + 24 between zones
+6 tiles -> 1-up 524px | 2-up 308px      8 tiles -> 1-up 668px | 2-up 380px
+```
+
+Centring does not remove the need for the breakpoint: it balances the space that
+exists, while the wrap is what makes the stack FIT in the first place.
+
+**Sizing — fixed px, deliberately.** Tiles are a fixed 64px and must NOT be made
+viewport-relative. `clamp(40px, 7.5vh, 64px)` was tried and reverted on
+2026-08-24: `vh` measures the panel in CSS px, and editor zoom makes a CSS px
+physically larger, so the viewport measured in them shrinks as you zoom IN. The
+tiles shrank while every px-sized neighbour grew, and labels began wrapping
+("Prompt / s") beside full-size project cards. Fixed px is what holds them in
+proportion, because the rest of the UI is px too. Where the stack exceeds a short
+panel at heavy zoom, `.sidebar-provider` scrolls — the correct degradation, and
+strictly better than the clipping it used to do.
 
 ### UtilityBar
 

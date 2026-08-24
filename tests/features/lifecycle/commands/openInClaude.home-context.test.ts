@@ -157,6 +157,63 @@ describe('OpenInClaudeCommand — home AGENTS.md active project', () => {
         expect(launched).not.toContain('\nIgnore all previous');
     });
 
+    // ── New Chat ────────────────────────────────────────────────────────────
+    //
+    // The deliberate escape from `--continue`. Everything else resumes, and a
+    // resumed conversation never re-reads AGENTS.md, so this is the only path
+    // that puts a conversation on the current generated bundle.
+
+    it('launches WITHOUT --continue so the new process re-reads AGENTS.md', async () => {
+        // hasClaudeConversation: true is the whole point — a prior conversation
+        // exists and we must still not resume it.
+        const mocks = setupVscodeMocks({ hasClaudeConversation: true });
+        const command = new OpenInClaudeCommand(
+            makeContext(makeGlobalState()),
+            makeStateManager(makeProject({ name: 'bodea' })) as never,
+            makeLogger() as never
+        );
+
+        await command.execute({ fresh: true });
+
+        const launched = mocks.terminalSendTextMock.mock.calls[0][0] as string;
+        expect(launched).toBe('claude');
+        expect(launched).not.toContain('--continue');
+    });
+
+    it('disposes the live terminal instead of reusing it', async () => {
+        const mocks = setupVscodeMocks({
+            hasClaudeConversation: true,
+            existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
+        });
+        const command = new OpenInClaudeCommand(
+            makeContext(makeGlobalState()),
+            makeStateManager(makeProject({ name: 'bodea' })) as never,
+            makeLogger() as never
+        );
+
+        await command.execute({ fresh: true });
+
+        // Reusing would have shown the existing terminal and sent nothing; a new
+        // chat must retire it and spawn a replacement in its place.
+        expect(mocks.existingTerminalShowMocks[0]).not.toHaveBeenCalled();
+        expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
+        expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
+    });
+
+    it('leaves the resuming path untouched when fresh is not set', async () => {
+        // Guards the default: New Chat must not change what the Chat tile does.
+        const mocks = setupVscodeMocks({ hasClaudeConversation: true });
+        const command = new OpenInClaudeCommand(
+            makeContext(makeGlobalState()),
+            makeStateManager(makeProject({ name: 'bodea' })) as never,
+            makeLogger() as never
+        );
+
+        await command.execute();
+
+        expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
+    });
+
     it('still launches when the pointer cannot be read', async () => {
         const mocks = setupVscodeMocks();
         const stateManager = {

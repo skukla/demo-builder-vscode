@@ -780,6 +780,20 @@ button[class*="spectrum-Button"][disabled],
    hover/focus target (the entire tile is one button). Visually echoes the
    dashboard's `.dashboard-action-button` but smaller for the narrow
    sidebar geometry. */
+/* Fixed px, deliberately — do NOT make these viewport-relative.
+ *
+ * Tried and reverted 2026-08-24: `clamp(40px, 7.5vh, 64px)`. `vh` is the panel
+ * height measured in CSS px, and editor zoom makes a CSS px physically bigger,
+ * so the viewport measured in them SHRINKS as you zoom in. The tiles therefore
+ * got smaller exactly when the user was zooming to make things bigger, while
+ * every neighbouring element — sized in px — grew. Labels started wrapping
+ * ("Prompt / s") beside full-size project cards.
+ *
+ * Fixed px is what keeps these in proportion with the rest of the UI at every
+ * zoom level, because everything else is px too. The cost is that at heavy zoom
+ * the stack can exceed a short panel; that is what `.sidebar-provider`'s
+ * overflow handles, and a scrollbar is the correct degradation — out-of-scale
+ * controls are not. */
 .sidebar-action-tile {
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 6px !important;
@@ -789,6 +803,7 @@ button[class*="spectrum-Button"][disabled],
 
     width: 64px !important;
     height: 64px !important;
+    flex-shrink: 0 !important;
     box-sizing: border-box !important;
 
     display: flex !important;
@@ -802,6 +817,30 @@ button[class*="spectrum-Button"][disabled],
 .sidebar-action-tile svg {
     width: 18px !important;
     height: 18px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Menu caret on a tile — a TEXT GLYPH, not a Spectrum icon.
+ *
+ * Five attempts with `<ChevronDown>` failed on 2026-08-24, and they all share one
+ * cause: Spectrum's ActionButton slots any icon in its subtree into the button's
+ * icon slot, so the chevron's placement was never the stylesheet's to decide. It
+ * became its own row as a bare child (the tile is a column), and escaped to the
+ * tile's left edge when wrapped in a span. Pinning the label to `nowrap` and
+ * widening the tiles both missed for the same reason.
+ *
+ * A character in the label's own text run cannot be slotted, moved, or reflowed
+ * away from the word it follows — it IS the text. Matches the projects toolbar's
+ * `New ⌄` button, which is the pattern this is meant to echo. */
+.sidebar-tile-caret {
+    /* Larger than the label, not smaller. At 0.85em/0.55 opacity it was legible
+     * in a mockup and invisible on screen — a 9px glyph at half opacity against
+     * a dark tile is nothing. It has to read as an affordance from a glance, so
+     * it is sized UP against the 11px label and kept near full strength. */
+    font-size: 1.15em !important;
+    line-height: 1 !important;
+    opacity: 0.9 !important;
+    margin-left: 3px !important;
 }
 
 .sidebar-action-tile .icon-label {
@@ -2565,10 +2604,86 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
+/* The sidebar's scroll container.
+ *
+ * `min-height: 100vh` alone painted the background for exactly one viewport, so
+ * as soon as the tile stack grew taller than the panel (a third tile, or any
+ * editor zoom level) the page scrolled and the background simply STOPPED
+ * partway down the column while tiles carried on past it.
+ *
+ * Owning the height and scrolling inside fixes both halves: the painted box is
+ * always exactly the panel, and overflow scrolls rather than clipping the last
+ * tile off the bottom. */
 .sidebar-provider {
     background: var(--spectrum-global-color-gray-75) !important;
-    min-height: 100vh !important;
+    height: 100% !important;
+    /* Safety net only. With the tiles clamped below, the stack should FIT; this
+     * exists so an extreme panel size degrades to a scrollbar rather than
+     * silently clipping a tile off the bottom, which is what it used to do. */
+    overflow-y: auto !important;
 }
+
+/* Centered, not top-padded.
+ *
+ * This replaced a hardcoded `padding-top: 80px` (itself lifted out of an inline
+ * UNSAFE_style). The fixed offset had to be re-derived every time the tile count
+ * changed, and it was only ever an approximation of "sit in the middle" — so
+ * centering is both simpler and self-adjusting: add or remove a tile and the
+ * spacing above and below rebalances on its own, at any zoom.
+ *
+ * `safe center` matters. Plain `center` overflows a too-short panel in BOTH
+ * directions, pushing the first tile above the scroll origin where it cannot be
+ * reached at all. `safe` falls back to start-aligned exactly when that would
+ * happen, so the degradation is "scrolls from the top", not "the top is gone".
+ * The padding is then breathing room for that fallback, not layout. */
+.sidebar-view {
+    justify-content: safe center !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+/* One tile per row — the default, and what the sidebar looks like whenever there
+ * is room for it.
+ *
+ * A plain div rather than a Spectrum `Flex`, per the repo's width gotcha. */
+.sidebar-tile-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+}
+
+/* Short panel → tiles wrap 2-up.
+ *
+ * Stacked one per row, every tile costs 72px of column, so six of them need
+ * ~508px and the last (Logs) was cut off on a zoomed panel — worse with each
+ * tile added. Wrapping halves it: six tiles take three rows (~292px), and a
+ * seventh fills the empty slot beside the sixth without adding a row at all.
+ *
+ * Height, not width, and NOT applied to the tiles themselves. Editor zoom makes
+ * a CSS px physically bigger, so the panel measured in them shrinks — which is
+ * exactly the "less room available" signal this should react to. (Sizing the
+ * TILES off `vh` was tried and reverted the same day: it shrank them while every
+ * px-sized neighbour grew. Switching LAYOUT on available height is the correct
+ * use of the same measurement; scaling controls by it is not.)
+ *
+ * Threshold: 600px, and it is DERIVED, not chosen by eye. The roomy layout
+ * (one per row, 80px top padding) measures 572px for six tiles, so the switch
+ * has to happen above that or the last tile is clipped in the gap between the
+ * two modes — at 560px it was, by ~12px. 600 gives 572 a little slack.
+ *
+ * ADDING TILES MEANS RECOMPUTING IT: ~72px per tile in the roomy layout. The
+ * arithmetic is in the sidebar feature doc. */
+@media (max-height: 600px) {
+    .sidebar-tile-grid {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+    }
+}
+
 
 /* Sidebar welcome container - vertically centered */
 .sidebar-welcome {

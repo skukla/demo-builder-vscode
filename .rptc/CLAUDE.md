@@ -23,8 +23,12 @@ npm run compile          # Full production build
 npm run lint             # eslint over ALL of src/ + tests/ (matches CI)
 npx tsc --noEmit         # Typecheck src/ (tsconfig.json excludes tests)
 npm run typecheck:tests  # Typecheck tests/ (tsconfig.test.json) — CI gates on both
-npx jest --no-coverage 2>&1 > /tmp/jest-output.txt   # Full suite (~20s, see below)
+npx jest --no-coverage > "$SCRATCH/jest-output.txt" 2>&1   # Full suite (~20s, see below)
 ```
+
+`$SCRATCH` is your session scratchpad directory (the harness names it at session
+start). The redirect order and the destination are both load-bearing — see
+Test-Command Gotchas below.
 
 ## Where RPTC Artifacts Live
 
@@ -89,7 +93,17 @@ Project-specific SOPs override the plugin defaults (resolution order:
 
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes
   the run look hung. Redirect to a file and read it:
-  `npx jest --no-coverage 2>&1 > /tmp/jest-output.txt`
+  `npx jest --no-coverage > "$SCRATCH/jest-output.txt" 2>&1`
+- **The redirect order is load-bearing: `> file 2>&1`, never `2>&1 > file`.**
+  Jest writes its results to STDERR. `cmd 2>&1 > file` points stderr at the
+  terminal *first*, then sends stdout to the file — so the file lands EMPTY and
+  a `grep -c FAIL` on it returns a clean-looking `0`. These two lines carried the
+  broken order for months, and 4 of 6 sessions measured on 2026-08-24 copied it
+  from here. A PreToolUse rule (`.claude/hooks/rules/11-jest-redirect.rule`) now
+  blocks it.
+- **Write to the session scratchpad, not `/tmp`.** The scratchpad is per-session
+  and cleaned up; `/tmp` is neither. This file used to say `/tmp`, which is why
+  every measured session used it.
 - The full suite takes **~20 seconds** (1,130 suites / ~14,850 tests as of 2026-08-23; measured over 10
   consecutive runs on 16 cores, 2026-08-13). It was 3-5 minutes before the worker and
   transform tuning landed; that figure survived in the docs long after it stopped

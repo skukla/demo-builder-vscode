@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.143] - 2026-08-24
+
+### Added
+
+- **New Chat — the only way off a resumed conversation.** The AI zone's Chat tile
+  is a `MenuTrigger` offering **Continue chat** / **New chat**; also
+  `demoBuilder.newAiChat` in the palette. Every launch previously passed
+  `claude --continue` (true as soon as the projects root holds one transcript),
+  and a resumed conversation never re-reads `AGENTS.md` — so it kept whatever
+  generated guidance it was born with, however many `AI_CONTEXT_VERSION` bumps
+  ago. New Chat disposes the live terminal and spawns a replacement in the same
+  editor group without `--continue`; the old conversation stays reachable via
+  `claude --resume`.
+
+### Changed
+
+- **The re-home preamble states the active project instead of ordering a lookup.**
+  It carried the same self-inflicted `get_current_project` instruction as
+  `AGENTS.md`, on the path that actually runs. Rebuilt from the pointer on every
+  launch, so it has no staleness window. Verified end to end in a real New Chat
+  conversation: the agent opened with "Working on bodea…" before any tool call,
+  then routed `ToolSearch → get_project` — against `ToolSearch →
+  get_current_project → get_project_urls` for the same shape beforehand.
+- **Sidebar layout.** Tiles wrap 2-up below 600px of panel height (stacked, six
+  tiles need ~524px and Logs was clipped at zoom; wrapped, ~308px); content is
+  centred via `justify-content: safe center` rather than a hardcoded 80px offset;
+  `.sidebar-provider` owns its height instead of `min-height: 100vh`, which
+  painted the background for exactly one viewport.
+- **Documentation fixes with teeth.** `.rptc/CLAUDE.md` documented the jest
+  redirect order that leaves the results file EMPTY (`2>&1 > file`), so a
+  `grep -c FAIL` on it returns a clean-looking zero — 4 of 6 measured sessions
+  copied it. Corrected, and `rules/11-jest-redirect.rule` now blocks the form.
+  `docs/architecture/error-handling.md` named a component deleted in `44f74d2d7`.
+
 ## [1.0.0-beta.142] - 2026-08-24
 
 ### Added
