@@ -199,7 +199,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'deploy_integration',
         description:
-            'Deploy (or redeploy — idempotent) one App Builder integration on the current ' +
+            'Deploy (or redeploy) one App Builder integration on the current ' +
             'project by its id (from get_project). Runs the guard chain and deploys under the ' +
             "project's Adobe org context. For the API Mesh, use deploy_mesh instead.",
         map: dashboardHandlers,
@@ -324,7 +324,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'deploy_mesh',
         description:
-            "Deploy (or redeploy — idempotent) the current project's API Mesh. Runs the guard " +
+            "Deploy (or redeploy) the current project's API Mesh. Runs the guard " +
             "chain (auth, org, developer permission) and deploys under the project's Adobe org " +
             'context, then persists the mesh endpoint. Use this rather than deploy_integration ' +
             'for the mesh.',

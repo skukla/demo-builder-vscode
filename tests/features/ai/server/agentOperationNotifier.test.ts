@@ -155,6 +155,32 @@ describe('createAgentConsentGate', () => {
         expect(detail).not.toContain('Requires confirm:true');
     });
 
+    it('drops agent-only asides but KEEPS "(irreversible)"', async () => {
+        // 29 of 60 write-tool descriptions open with a parenthetical, and they
+        // are two different things wearing the same punctuation. A blanket strip
+        // would delete the one word that decides the answer on a delete dialog.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate(
+            'add_console_apis',
+            { confirm: true },
+            'Subscribe Adobe APIs (sdk codes from list_console_apis) on this workspace. More.'
+        );
+        await gate(
+            'delete_github_repo',
+            { confirm: true },
+            'Permanently delete a GitHub repository (irreversible). Requires confirm:true.'
+        );
+
+        const detailOf = (i: number) =>
+            String((mockShowWarningMessage.mock.calls[i][1] as { detail?: string }).detail);
+        expect(detailOf(0)).toContain('Subscribe Adobe APIs on this workspace.');
+        expect(detailOf(0)).not.toContain('list_console_apis');
+        expect(detailOf(1)).toContain('(irreversible)');
+    });
+
     it('falls back to boilerplate when a tool has no description', async () => {
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');

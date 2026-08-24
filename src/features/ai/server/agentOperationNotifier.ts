@@ -62,7 +62,30 @@ function firstSentence(text: string | undefined): string | undefined {
     if (!trimmed) return undefined;
     const end = trimmed.search(/\.\s|\.$/);
     const sentence = end === -1 ? trimmed : trimmed.slice(0, end + 1);
-    return sentence.endsWith('.') ? sentence : `${sentence}.`;
+    const cleaned = dropAgentAsides(sentence).trim();
+    return cleaned.endsWith('.') ? cleaned : `${cleaned}.`;
+}
+
+/**
+ * Remove parentheticals written for the AGENT, keep the ones written for a human.
+ *
+ * 29 of 60 write-tool descriptions open with a parenthetical, and they are two
+ * different things wearing the same punctuation:
+ *
+ *   agent-only   (sdk codes from list_console_apis)  (select_org first)
+ *                (with confirm:true)
+ *   human-facing (irreversible)
+ *
+ * So a blanket strip is WRONG — it would delete "(irreversible)" from precisely
+ * the dialogs where it decides the answer. The rule is therefore narrow: drop an
+ * aside only when it names a tool (`snake_case`) or a protocol token
+ * (`confirm:`), which is what makes it agent-shaped. Anything in plain words
+ * survives untouched.
+ */
+function dropAgentAsides(sentence: string): string {
+    return sentence
+        .replace(/\s*\([^)]*(?:[a-z]+_[a-z_]+|confirm:)[^)]*\)/g, '')
+        .replace(/\s{2,}/g, ' ');
 }
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */
