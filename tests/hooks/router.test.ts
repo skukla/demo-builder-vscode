@@ -133,6 +133,67 @@ describe('jest-pipe rule — blocks EVERY time, no session marker', () => {
     });
 });
 
+describe('commit-backtick rule — the shell eats a backticked word', () => {
+    // Inside DOUBLE quotes bash treats a backtick pair as command substitution,
+    // so a commit body written with markdown code spans runs the word and
+    // DELETES it from the message. The commit SUCCEEDS, so nothing fails and the
+    // damage shows up only on re-reading. Hit repeatedly; on 2026-08-24 it lost a
+    // word from a commit already pushed to develop, where the fix would cost a
+    // force-push.
+    //
+    // Built from a char code so this file does not contain the pattern it
+    // guards — the rule fires on any Bash call carrying all three tokens, so a
+    // test written with literal backticks blocks its own edit (observed twice
+    // while writing this).
+    const BT = String.fromCharCode(96);
+
+    it('blocks a backtick inside a double-quoted -m', () => {
+        const r = run(bash(`git commit -m "the ${BT}why${BT} field states the basis"`), fresh());
+        expect(r.code).toBe(2);
+        // Match within one line: the message wraps, so a two-word phrase can
+        // land either side of a newline.
+        expect(r.stderr).toMatch(/DELETES it from the message/i);
+        // The refusal must route somewhere, not just say no.
+        expect(r.stderr).toMatch(/heredoc/i);
+    });
+
+    it('blocks it in a later -m and inside a command chain', () => {
+        expect(
+            run(bash(`git commit -q -m "subject" -m "body ${BT}code${BT} span"`), fresh()).code
+        ).toBe(2);
+        expect(
+            run(bash(`git add -A && git commit -m "wires ${BT}foo${BT} in" && git push`), fresh())
+                .code
+        ).toBe(2);
+    });
+
+    it('blocks AGAIN in the same session — a mechanical mistake is not spendable', () => {
+        const s = fresh();
+        expect(run(bash(`git commit -m "a ${BT}b${BT}"`), s).code).toBe(2);
+        expect(run(bash(`git commit -m "a ${BT}b${BT}"`), s).code).toBe(2);
+    });
+
+    it('allows the forms that are actually safe', () => {
+        // Quoted heredoc — the fix the message recommends. No expansion at all.
+        expect(
+            run(bash(`git commit -F - <<'MSG'\nbody with ${BT}backticks${BT}\nMSG`), fresh()).code
+        ).toBe(0);
+        // Single quotes do not expand.
+        expect(
+            run(bash(`git commit -m 'single quoted ${BT}backticks${BT} are safe'`), fresh()).code
+        ).toBe(0);
+        expect(run(bash('git commit -m "plain message"'), fresh()).code).toBe(0);
+    });
+
+    it('does not fire on backticks outside a commit message', () => {
+        expect(run(bash(`echo "has ${BT}backticks${BT} but is not a commit"`), fresh()).code).toBe(
+            0
+        );
+        // git + backtick but no -m: nothing to damage.
+        expect(run(bash(`git log --format="%s" | grep ${BT}foo${BT}`), fresh()).code).toBe(0);
+    });
+});
+
 describe('jest-concurrent rule — blocks a run while another is in flight', () => {
     // Measured 2026-08-13: two overlapping full suites failed 4-6 suites on every
     // one of 6 trials; a solo run failed none in 10. The rule exists so a gate
@@ -369,21 +430,14 @@ describe('secret-files rule — public repo defense-in-depth', () => {
 
     it('blocks a GitHub token pattern in content bound for the repo', () => {
         const token = 'ghp_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8';
-        const r = run(
-            write(path.join(REPO, 'src/x.ts'), `const t = '${token}';`),
-            fresh(),
-            inRepo
-        );
+        const r = run(write(path.join(REPO, 'src/x.ts'), `const t = '${token}';`), fresh(), inRepo);
         expect(r.code).toBe(2);
         expect(r.stderr).toMatch(/secret/i);
     });
 
     it('blocks a private-key block in content bound for the repo', () => {
         const r = run(
-            edit(
-                path.join(REPO, 'docs/notes.md'),
-                '-----BEGIN RSA PRIVATE KEY-----\nMIIE...'
-            ),
+            edit(path.join(REPO, 'docs/notes.md'), '-----BEGIN RSA PRIVATE KEY-----\nMIIE...'),
             fresh(),
             inRepo
         );
@@ -404,10 +458,7 @@ describe('secret-files rule — public repo defense-in-depth', () => {
 
     it('allows the fake-test-password convention', () => {
         const r = run(
-            write(
-                path.join(REPO, 'tests/x.test.ts'),
-                "const pw = 'fake-test-pw-not-a-secret';"
-            ),
+            write(path.join(REPO, 'tests/x.test.ts'), "const pw = 'fake-test-pw-not-a-secret';"),
             fresh(),
             inRepo
         );
