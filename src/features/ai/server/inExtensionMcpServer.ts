@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { probeSocket } from './mcpSocketDiscovery';
+import { progressLabel } from './toolDisplayName';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
@@ -117,6 +118,45 @@ function strictifyWriteSchema(name: string, schema: unknown): unknown {
     return schema;
 }
 
+/**
+ * Tell the CHAT what is running, while it runs.
+ *
+ * The extension already surfaces agent activity — `agentOperationNotifier` puts a
+ * progress notification, a status-bar message and a failure toast in the VS Code
+ * window. None of that reaches a user who is reading the chat, which is where
+ * they are looking while an agent works. This is the same fact, delivered to the
+ * window they are actually in.
+ *
+ * Measured 2026-08-24 before building: Claude Code supplies a `progressToken` on
+ * MCP tool calls, and its interactive terminal RENDERS the `message` field live
+ * (probe kept at `.rptc/research/agent-activity-visibility/`). Both halves were
+ * verified rather than assumed, because the protocol explicitly says a receiver
+ * "is not obligated to provide these notifications".
+ *
+ * Attributed via `progressLabel` because a chat can have several MCP servers
+ * connected — an unattributed "Deploying to Runtime…" is ambiguous the moment
+ * there is a second one.
+ *
+ * BEST EFFORT, always. A tool must never fail because a status line could not be
+ * sent, and a client that supplies no token simply gets nothing.
+ */
+async function announceToolStart(
+    name: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra: any,
+): Promise<void> {
+    const progressToken = extra?._meta?.progressToken;
+    if (progressToken === undefined || typeof extra?.sendNotification !== 'function') return;
+    try {
+        await extra.sendNotification({
+            method: 'notifications/progress',
+            params: { progressToken, progress: 0, message: progressLabel(name) },
+        });
+    } catch {
+        // Visibility is a courtesy; losing it must not cost the user the call.
+    }
+}
+
 function withToolLogging(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
@@ -129,39 +169,51 @@ function withToolLogging(
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            server.registerTool(name, strictifyWriteSchema(name, schema), async (args: any) => {
-                const started = Date.now();
-                const argKeys =
-                    args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
-                logger.info(`[MCP] tool: ${name}`);
-                logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                // Consent FIRST, notifier second: a declined operation never
-                // ran, so no progress notification may claim it did. The gate
-                // decides only when the call carries the destructive marker.
-                if (consentGate && callRequestsConsent(args)) {
-                    const verdict = await consentGate(name, args);
-                    if (!verdict.allowed) {
-                        logger.info(`[MCP] ${name} declined by user consent dialog`);
-                        return verdict.refusal;
+             
+            server.registerTool(
+                name,
+                strictifyWriteSchema(name, schema),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                async (args: any, extra: any) => {
+                    const started = Date.now();
+                    const argKeys =
+                        args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
+                    logger.info(`[MCP] tool: ${name}`);
+                    logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
+                    // Consent FIRST, notifier second: a declined operation never
+                    // ran, so no progress notification may claim it did. The gate
+                    // decides only when the call carries the destructive marker.
+                    if (consentGate && callRequestsConsent(args)) {
+                        const verdict = await consentGate(name, args);
+                        if (!verdict.allowed) {
+                            logger.info(`[MCP] ${name} declined by user consent dialog`);
+                            return verdict.refusal;
+                        }
                     }
-                }
-                const invoke =
-                    notifier && !isReadOnlyToolName(name)
-                        ? () => notifier(name, () => handler(args))
-                        : () => handler(args);
-                try {
-                    const result = await invoke();
-                    logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
-                    return result;
-                } catch (err) {
-                    logger.error(
-                        `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
-                        err instanceof Error ? err : undefined,
-                    );
-                    throw err;
-                }
-            });
+                    // AFTER consent, never before: announcing "Deploying mesh…" and
+                    // then raising a dialog the user declines would narrate work that
+                    // never happened. Reads are skipped — they return promptly and a
+                    // line per query is noise, not information.
+                    if (!isReadOnlyToolName(name)) {
+                        await announceToolStart(name, extra);
+                    }
+                    const invoke =
+                        notifier && !isReadOnlyToolName(name)
+                            ? () => notifier(name, () => handler(args))
+                            : () => handler(args);
+                    try {
+                        const result = await invoke();
+                        logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
+                        return result;
+                    } catch (err) {
+                        logger.error(
+                            `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
+                            err instanceof Error ? err : undefined,
+                        );
+                        throw err;
+                    }
+                },
+            );
         },
     };
 }

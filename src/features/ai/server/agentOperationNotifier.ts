@@ -29,14 +29,9 @@
 import * as vscode from 'vscode';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
+import { humanize } from './toolDisplayName';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-
-/** `snake_case_tool` → "Snake case tool", for notification copy. */
-function humanize(toolName: string): string {
-    const words = toolName.replace(/_/g, ' ');
-    return words.charAt(0).toUpperCase() + words.slice(1);
-}
 
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;
