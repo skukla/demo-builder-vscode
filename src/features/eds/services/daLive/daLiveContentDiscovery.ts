@@ -9,7 +9,7 @@
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
  *
- * @module features/eds/services/daLiveContentDiscovery
+ * @module features/eds/services/daLive/daLiveContentDiscovery
  */
 
 import { DaLiveSourceOperations } from './daLiveSourceOperations';

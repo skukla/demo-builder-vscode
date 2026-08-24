@@ -34,7 +34,7 @@ import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetecto
 import {
     applicableMcpPackages,
     readInstalledMcpPackages,
-} from '@/features/project-creation/services/aiDefaultsInstaller';
+} from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';

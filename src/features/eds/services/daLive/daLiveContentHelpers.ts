@@ -8,7 +8,7 @@
  * Keep this module `vscode`-free (the MCP server constructs the content
  * operations in a separate Node process).
  *
- * @module features/eds/services/daLiveContentHelpers
+ * @module features/eds/services/daLive/daLiveContentHelpers
  */
 
 import { normalizePath } from './daLiveConstants';

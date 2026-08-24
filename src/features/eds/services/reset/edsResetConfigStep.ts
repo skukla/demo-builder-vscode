@@ -5,7 +5,7 @@
  * carries most of the reset's error nuance, and all of it is load-bearing —
  * see the comments inline.
  *
- * @module features/eds/services/edsResetConfigStep
+ * @module features/eds/services/reset/edsResetConfigStep
  */
 
 import {

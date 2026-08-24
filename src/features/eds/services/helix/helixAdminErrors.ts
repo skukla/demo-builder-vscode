@@ -10,7 +10,7 @@
  * Extracted from `helixService.ts` (god-file cut 3, 2026-08-23). Pure
  * functions over `Response` — no tokens, no state.
  *
- * @module features/eds/services/helixAdminErrors
+ * @module features/eds/services/helix/helixAdminErrors
  */
 
 import { DaLiveAuthError } from '../types';

@@ -62,7 +62,7 @@ import {
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
-} from '@/features/eds/services/storefrontNameMigrationForProject';
+} from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 import type { HandlerContext } from '@/types/handlers';
 
 /**

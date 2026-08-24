@@ -256,7 +256,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
             return status(404); // /customer/nav.plain.html → 404 (genuinely missing)
         });
 
-        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patchReportHelper');
+        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
         await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
 
@@ -285,7 +285,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
             return status(404); // both references 404 on the brand source
         });
 
-        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patchReportHelper');
+        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
         report.deferredReferencePrefixes = ['/customer/'];
         await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);

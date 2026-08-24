@@ -16,7 +16,7 @@
  * - Proper permission row structure (path, groups, actions)
  *
  * @see https://github.com/adobe/storefront-tools for reference implementation
- * @module features/eds/services/daLiveConfigService
+ * @module features/eds/services/daLive/daLiveConfigService
  */
 
 import { DaLiveApiClient } from './daLiveApiClient';

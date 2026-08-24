@@ -36,7 +36,7 @@ export {
     refreshMcpConfigs,
     refreshContextAndSkills,
     type AiBundleRefreshResult,
-} from './aiBundleService';
+} from './aiBundle/aiBundleService';
 
 export { ensureEdsContent } from './edsContentSetup';
 
@@ -46,6 +46,6 @@ export {
     readInstalledMcpPackages,
     applicableMcpPackages,
     type InstallAiDefaultsResult,
-} from './aiDefaultsInstaller';
+} from './aiBundle/aiDefaultsInstaller';
 
-export { projectNeedsAppBuilderTooling, aiDefaultsEntryApplies } from './aiToolingGate';
+export { projectNeedsAppBuilderTooling, aiDefaultsEntryApplies } from './aiBundle/aiToolingGate';

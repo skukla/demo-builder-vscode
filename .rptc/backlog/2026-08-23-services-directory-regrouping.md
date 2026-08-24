@@ -1,5 +1,19 @@
 # Regroup crowded service directories into subfolders — where measurement says so
 
+> **✅ ROUND 2 EXECUTED same day (systematic pass, cost no object — user
+> directive):** `eds/services` again (`patches/` 9 — incl. the lkg pair,
+> `pdp/` 3, `storefront/` 8 → **39 top-level**, from the original 95);
+> `project-creation/services` (`aiBundle/` 13 — the whole generated-AI-bundle
+> subsystem → 15 top-level, from 28); `eds/handlers` (`storefrontSetup/` 8,
+> `daLive/` 5 → 13 top-level, from 26). 46 more src files + 58 test mirrors;
+> `@module` headers and living docs repointed both rounds; two dated research
+> citations that went GONE converted to symbol form. Full suite 1137/1137,
+> lint + typechecks + blindspots clean, madge no cycles, hygiene scan clean.
+> Still deferred: the configService family (live-branch conflict, unchanged).
+> Remaining directories keep their recorded leave-verdicts (`ai/server`
+> suffix convention, `core/ui` kind-grouping, `core/utils` grab-bag);
+> `authentication/services` re-measures AFTER the facade-split dust settles.
+
 > **✅ EXECUTED for `eds/services` 2026-08-24** (`refactor/eds-services-regroup`):
 > 36 files moved into `daLive/` (15), `helix/` (8), `github/` (7), `reset/` (6);
 > 95 → 59 top-level files + 4 family dirs. Full suite 1137/1137 green, lint +

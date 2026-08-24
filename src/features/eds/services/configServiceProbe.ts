@@ -35,7 +35,7 @@
 import { readOrgAdmins } from './configServiceAccess';
 import { DA_LIVE_BASE_URL } from './daLive/daLiveConstants';
 import { HELIX_ADMIN_URL } from './helix/helixApiClient';
-import { deriveRegisterKeyUrl } from './pdp404Snippet';
+import { deriveRegisterKeyUrl } from './pdp/pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';

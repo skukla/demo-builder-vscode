@@ -15,8 +15,8 @@ import { type CredentialServiceProbeResult } from '@/features/data-installer/ser
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
-import { describeScope } from '@/features/eds/services/servedStorefrontConfig';
-import type { StorefrontProbeResult } from '@/features/eds/services/storefrontProbe';
+import { describeScope } from '@/features/eds/services/storefront/servedStorefrontConfig';
+import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
 
 // Diagnostic Type Definitions
 export interface SystemInfo {

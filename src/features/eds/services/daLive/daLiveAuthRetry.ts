@@ -22,7 +22,7 @@
  * callers must agree on when a refusal is retryable, and a divergence there is
  * invisible until a pipeline fails in the field.
  *
- * @module features/eds/services/daLiveAuthRetry
+ * @module features/eds/services/daLive/daLiveAuthRetry
  */
 
 import { ensureDaLiveAuth } from '../../handlers/edsHelpers';

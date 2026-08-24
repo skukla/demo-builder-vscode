@@ -21,7 +21,7 @@
  * Diagnostics command calls and renders, so the logic stays testable outside
  * the VS Code command shell.
  *
- * @module features/eds/services/githubCredentialProbe
+ * @module features/eds/services/github/githubCredentialProbe
  */
 
 import { describeTokenType } from './githubAppService';

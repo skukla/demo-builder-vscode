@@ -84,7 +84,7 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
 
-jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
 }));
 

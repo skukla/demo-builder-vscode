@@ -36,7 +36,7 @@ import {
     PushRejectedError,
     syncAndPublish,
     type SyncAndPublishResult,
-} from '@/features/eds/services/storefrontSyncService';
+} from '@/features/eds/services/storefront/storefrontSyncService';
 import type { Project } from '@/types/base';
 
 const execFile = promisify(childProcess.execFile);

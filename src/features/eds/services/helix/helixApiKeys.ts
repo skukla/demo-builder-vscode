@@ -8,7 +8,7 @@
  *
  * Extracted from `helixService.ts` (god-file cut 3, 2026-08-23).
  *
- * @module features/eds/services/helixApiKeys
+ * @module features/eds/services/helix/helixApiKeys
  */
 
 import { HELIX_ADMIN_URL } from './helixApiClient';

@@ -7,22 +7,22 @@
  * - Aggregates errors when one or more writers fail
  */
 
-import { generateAIContextFiles } from '@/features/project-creation/services/aiBundleService';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
-import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
-import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
-import { writeSkillFiles } from '@/features/project-creation/services/skillsWriter';
+import { writeAgentsMd } from '@/features/project-creation/services/aiBundle/aiContextWriter';
+import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
+import { writeSkillFiles } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import type { Project } from '@/types/base';
 
-jest.mock('@/features/project-creation/services/aiContextWriter', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiContextWriter', () => ({
     writeAgentsMd: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@/features/project-creation/services/mcpConfigWriter', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/mcpConfigWriter', () => ({
     writeMcpConfigs: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@/features/project-creation/services/skillsWriter', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/skillsWriter', () => ({
     writeSkillFiles: jest.fn().mockResolvedValue({ written: [] }),
 }));
 

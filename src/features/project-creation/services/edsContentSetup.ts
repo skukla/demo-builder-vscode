@@ -18,7 +18,7 @@ import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
-import { createPatchReport, reportUnapplied } from '@/features/eds/services/patchReportHelper';
+import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
 interface EdsContentConfig {

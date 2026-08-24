@@ -18,7 +18,7 @@
  * 11. Purge cache + publish content
  * 12. (Optional) Redeploy API Mesh
  *
- * @module features/eds/services/edsResetService
+ * @module features/eds/services/reset/edsResetService
  */
 
 import {
@@ -46,9 +46,9 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { lostGrantsMessage } from '../lostGrantsMessage';
-import { createPatchReport, addCodeResult, reportUnapplied } from '../patchReportHelper';
-import { migrateStorefrontNamingIfNeeded } from '../storefrontNameMigration';
-import { updateStorefrontState } from '../storefrontStalenessDetector';
+import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
+import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
+import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -155,7 +155,7 @@ async function runContentPipeline(
     repoResetResult: {
         blockCollectionIds?: string[];
         libraryContentSources: Array<{ org: string; site: string }>;
-        canonicalCodePatchResults?: import('../codePatchRegistry').CodePatchResult[];
+        canonicalCodePatchResults?: import('../patches/codePatchRegistry').CodePatchResult[];
     },
     daLiveContentOps: DaLiveContentOperations,
     githubFileOps: GitHubFileOperations,

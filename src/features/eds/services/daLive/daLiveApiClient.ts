@@ -9,7 +9,7 @@
  * Keep this module `vscode`-free (the MCP server constructs it in a separate
  * Node process).
  *
- * @module features/eds/services/daLiveApiClient
+ * @module features/eds/services/daLive/daLiveApiClient
  */
 
 import { MAX_RETRY_ATTEMPTS, RETRYABLE_STATUS_CODES, getRetryDelay } from './daLiveConstants';

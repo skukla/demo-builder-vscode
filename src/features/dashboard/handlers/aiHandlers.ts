@@ -31,7 +31,7 @@ import {
     readInstalledMcpPackages,
     projectNeedsAppBuilderTooling,
 } from '@/features/project-creation/services';
-import { gatedSkillReasons } from '@/features/project-creation/services/aiToolingGate';
+import { gatedSkillReasons } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

@@ -26,7 +26,7 @@ import { GitHubFileOperations } from './github/githubFileOperations';
 import { GitHubTokenService } from './github/githubTokenService';
 import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
-import { republishStorefrontConfig } from './storefrontRepublishService';
+import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AuthoringExperience, Project } from '@/types';
 import type { Logger } from '@/types/logger';

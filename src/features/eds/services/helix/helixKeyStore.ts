@@ -16,7 +16,7 @@
  * State is module-level and shared process-wide, exactly as the statics it
  * replaced were: one extension host, one keychain, one cache.
  *
- * @module features/eds/services/helixKeyStore
+ * @module features/eds/services/helix/helixKeyStore
  */
 
 import * as vscode from 'vscode';

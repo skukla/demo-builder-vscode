@@ -137,7 +137,7 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
 }));
 

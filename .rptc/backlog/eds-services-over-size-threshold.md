@@ -10,7 +10,7 @@
 > |---|---|---|---|
 > | 916 | `dashboard/commands/configure.ts` | **32 non-type imports** | The strongest candidate. Commands import widely by design, but 32 is double the signal threshold. |
 > | 838 | `authentication/services/authenticationService.ts` | **~42 public methods** | Read before cutting: it is the facade over the entity services, and a facade is method-wide by design. Thin delegations → pattern, not god file; logic hiding among them → candidate. |
-> | 859 | `eds/services/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
+> | 859 | `eds/services/github/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
 > | 981 | `projects-dashboard/handlers/dashboardHandlers.ts` | handler file ~2× its 500 threshold | Check for helpers hiding in the map that belong in services (helper-extraction pattern). |
 >
 > Big but coupling-clean or already adjudicated — leave alone:
@@ -97,7 +97,7 @@ were already over it before the branch that filed this item:
 | File | at `develop` | after the branch | net |
 |---|---|---|---|
 | `src/features/eds/services/configurationService.ts` | 444 | 532 | +88 |
-| `src/features/eds/services/edsResetService.ts` | 430 | 463 | +33 |
+| `src/features/eds/services/reset/edsResetService.ts` | 430 | 463 | +33 |
 
 The branch's own additions were extracted back out before shipping, and the
 extractions are the model for the rest:
@@ -193,12 +193,12 @@ uses, not line count:
 | File | code lines | non-type imports | public methods | filed here before? |
 |---|---|---|---|---|
 | `project-creation/handlers/executor.ts` | 1403 | **23** | **33** | no |
-| `eds/services/helixService.ts` | 1313 | 8 | **16** | no |
+| `eds/services/helix/helixService.ts` | 1313 | 8 | **16** | no |
 | `authentication/services/adobeEntityFetcher.ts` | 1232 | 9 | **21** | no |
 | `mcp-server.ts` | 1291 | 11 | — | no |
-| `eds/services/daLiveContentCopy.ts` | 811 | 13 | — | no |
+| `eds/services/daLive/daLiveContentCopy.ts` | 811 | 13 | — | no |
 | `eds/services/configurationService.ts` | 532 | 2 | 7 | yes |
-| `eds/services/edsResetService.ts` | 343 | **16** | 2 | yes |
+| `eds/services/reset/edsResetService.ts` | 343 | **16** | 2 | yes |
 
 Signals over threshold in **bold** (>15 non-type imports, >10 public methods).
 

@@ -50,7 +50,7 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 }));
 
 const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 

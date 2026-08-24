@@ -7,7 +7,7 @@
  *
  * Separated from edsResetService to keep the service file under 500 lines.
  *
- * @module features/eds/services/edsResetParams
+ * @module features/eds/services/reset/edsResetParams
  */
 
 import { COMPONENT_IDS } from '@/core/constants';

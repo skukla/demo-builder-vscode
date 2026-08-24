@@ -10,7 +10,7 @@
  *
  * Extracted from `helixService.ts` (god-file cut 3, 2026-08-23).
  *
- * @module features/eds/services/helixAdminAuth
+ * @module features/eds/services/helix/helixAdminAuth
  */
 
 import type { GitHubTokenService } from '../github/githubTokenService';

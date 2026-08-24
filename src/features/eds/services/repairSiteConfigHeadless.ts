@@ -33,7 +33,7 @@ import { pinSiteAdmin } from './configAccessRecovery';
 import { buildCodeSyncSetupUrl } from './configServiceAccess';
 import { buildSiteConfigParams, type ConfigurationService } from './configurationService';
 import { registerSiteConfig } from './siteConfigRegistrar';
-import { extractRepublishParams } from './storefrontRepublishService';
+import { extractRepublishParams } from './storefront/storefrontRepublishService';
 import { DaLiveAuthError } from './types';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';

@@ -23,7 +23,7 @@ import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { ComponentManager } from '@/features/components/services/componentManager';
-import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
     calculateMeshSourceHash,

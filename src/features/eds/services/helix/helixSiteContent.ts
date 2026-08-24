@@ -12,7 +12,7 @@
  * preview-and-publish used by the fallback is injected as a callback by the
  * facade, keeping this class free of the page-op half.
  *
- * @module features/eds/services/helixSiteContent
+ * @module features/eds/services/helix/helixSiteContent
  */
 
 import type { DaLiveContentOperations } from '../daLive/daLiveContentOperations';

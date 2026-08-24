@@ -46,7 +46,7 @@ import {
     createDaLiveServiceTokenProvider,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
-import { aemLiveBaseUrl } from '@/features/eds/services/storefrontProbe';
+import { aemLiveBaseUrl } from '@/features/eds/services/storefront/storefrontProbe';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
 import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';

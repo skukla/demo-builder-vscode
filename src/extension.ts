@@ -58,11 +58,11 @@ import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
-import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
-import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';
-import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
-import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
-import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/thirdPartyToolingSettingListener';
+import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
+import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
+import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
+import { ensureHomeAiContext } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';

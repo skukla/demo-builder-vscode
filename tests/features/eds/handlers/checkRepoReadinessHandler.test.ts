@@ -9,7 +9,7 @@
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 
 const classify = jest.fn();
-jest.mock('@/features/eds/services/repoStorefrontReadiness', () => ({
+jest.mock('@/features/eds/services/storefront/repoStorefrontReadiness', () => ({
     classifyRepoForStorefront: (...args: unknown[]) => classify(...args),
 }));
 

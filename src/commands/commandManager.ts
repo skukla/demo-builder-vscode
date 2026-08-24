@@ -30,7 +30,7 @@ import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefr
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { registerGlobalMcp } from '@/features/project-creation/services/globalMcpRegistration';
+import { registerGlobalMcp } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types';

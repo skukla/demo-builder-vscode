@@ -31,7 +31,7 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-jest.mock('@/features/eds/services/pdp404HandlerPublisher', () => ({
+jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
     installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
 }));
 
@@ -39,11 +39,11 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
     installQuickEdit: jest.fn().mockResolvedValue({ installed: true }),
 }));
 
-jest.mock('@/features/eds/services/lkgReader', () => ({
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     readLkgSha: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock('@/features/eds/services/codePatchPipelineHelpers', () => ({
+jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
     applyCanonicalCodePatches: jest.fn().mockResolvedValue([]),
 }));
 

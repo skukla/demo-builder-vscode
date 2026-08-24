@@ -31,14 +31,14 @@ jest.mock('@/features/eds/services/configSyncService', () => ({
     syncConfigToRemote: (...a: unknown[]) => mockSync(...a),
     verifyConfigOnCdn: jest.fn(async () => true),
 }));
-jest.mock('@/features/eds/services/storefrontStalenessDetector', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     updateStorefrontState: jest.fn(),
 }));
 
 import {
     extractRepublishParams,
     republishStorefrontConfig,
-} from '@/features/eds/services/storefrontRepublishService';
+} from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Logger } from '@/types/logger';
 
 const logger = {

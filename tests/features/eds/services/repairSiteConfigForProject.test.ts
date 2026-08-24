@@ -33,7 +33,7 @@ jest.mock('@/features/eds/services/repairSiteConfigHeadless', () => ({
     repairSiteConfig: (...args: unknown[]) => mockRepairSiteConfig(...args),
 }));
 
-jest.mock('@/features/eds/services/storefrontNameMigrationForProject');
+jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject');
 
 jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: (...args: unknown[]) => mockResolveStorefrontConfig(...args),
@@ -64,7 +64,7 @@ const persistFn = jest.fn().mockResolvedValue(undefined);
 const {
     findStorefrontNameMismatch: mockFindMismatch,
     migrateStorefrontNameForProject: mockMigrateForProject,
-} = jest.requireMock('@/features/eds/services/storefrontNameMigrationForProject');
+} = jest.requireMock('@/features/eds/services/storefront/storefrontNameMigrationForProject');
 
 beforeEach(() => {
     jest.clearAllMocks();

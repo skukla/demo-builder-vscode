@@ -35,7 +35,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 
 // Mock storefrontSyncService — captures commit/push.
 const mockSyncAndPublish = jest.fn();
-jest.mock('@/features/eds/services/storefrontSyncService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontSyncService', () => ({
     syncAndPublish: (...args: unknown[]) => mockSyncAndPublish(...args),
     PushRejectedError: class PushRejectedError extends Error {
         constructor(message: string) { super(message); this.name = 'PushRejectedError'; }

@@ -57,7 +57,7 @@ import { GitHubTokenService } from '@/features/eds/services/github/githubTokenSe
 import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
-} from '@/features/eds/services/storefrontProbe';
+} from '@/features/eds/services/storefront/storefrontProbe';
 import { getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';

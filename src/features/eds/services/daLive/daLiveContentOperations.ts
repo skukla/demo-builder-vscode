@@ -32,7 +32,7 @@ import { DaLiveConfigOperations, type SiteConfigWriteResult } from './daLiveConf
 import { DaLiveContentCopy } from './daLiveContentCopy';
 import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
-import { type PatchReport } from '../patchReportHelper';
+import { type PatchReport } from '../patches/patchReportHelper';
 import { type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
 import {
     type DaLiveEntry,

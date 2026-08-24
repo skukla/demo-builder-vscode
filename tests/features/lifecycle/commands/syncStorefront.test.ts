@@ -629,7 +629,7 @@ describe('SyncStorefrontCommand', () => {
 
         const path = require('path') as typeof import('path');
         const source = fs.readFileSync(
-            path.join(__dirname, '../../../../src/features/eds/services/storefrontSyncService.ts'),
+            path.join(__dirname, '../../../../src/features/eds/services/storefront/storefrontSyncService.ts'),
             'utf-8'
         );
         expect(source).not.toMatch(/from\s+['"]vscode['"]/);

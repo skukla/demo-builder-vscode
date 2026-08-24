@@ -124,7 +124,7 @@ async function fetchTemplateCommitSha(
     // Thin-layer path: read LKG from patches repo. Fall back to template
     // HEAD on LKG fetch failure (warn already logged inside readLkgSha).
     if (codePatchSource) {
-        const { readLkgSha } = await import('@/features/eds/services/lkgReader');
+        const { readLkgSha } = await import('@/features/eds/services/patches/lkgReader');
         const lkg = await readLkgSha(
             {
                 owner: codePatchSource.owner,
@@ -227,7 +227,7 @@ export async function syncEdsConfigToRemote(
     );
 
     const { updateStorefrontState } = await import(
-        '@/features/eds/services/storefrontStalenessDetector'
+        '@/features/eds/services/storefront/storefrontStalenessDetector'
     );
     // NOTE: passes the project's CURRENT configs, not a snapshot from when
     // config.json was generated earlier in this run. Same latent pattern the

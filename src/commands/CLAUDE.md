@@ -234,7 +234,7 @@ decisive: `push: true` alongside an AEM 401 rules out scope and permission
 problems and leaves the credential itself, which is the branch that previously
 could not be distinguished from a missing AEM Code Sync install.
 
-Probe logic lives in `@/features/eds/services/githubCredentialProbe` (mirroring
+Probe logic lives in `@/features/eds/services/github/githubCredentialProbe` (mirroring
 the `checkMcp` → `probeInExtensionMcpTools` split) so it stays testable outside
 the command shell; `diagnostics.ts` only calls and renders it. The command takes
 `vscode.SecretStorage` in its constructor for this — `CommandManager` supplies it.

@@ -20,7 +20,7 @@
  * `apiKey` parameter — "for unpublish jobs", which never poll — was dropped
  * with the move: zero callers ever passed it.
  *
- * @module features/eds/services/helixBulkJobs
+ * @module features/eds/services/helix/helixBulkJobs
  */
 
 import { HELIX_ADMIN_URL } from './helixApiClient';

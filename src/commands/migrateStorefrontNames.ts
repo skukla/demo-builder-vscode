@@ -34,7 +34,7 @@ import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
     type StorefrontNameMismatch,
-} from '@/features/eds/services/storefrontNameMigrationForProject';
+} from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 
 const LOG_PREFIX = '[MigrateStorefrontNames]';
 

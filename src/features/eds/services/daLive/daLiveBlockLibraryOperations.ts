@@ -12,7 +12,7 @@
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
  *
- * @module features/eds/services/daLiveBlockLibraryOperations
+ * @module features/eds/services/daLive/daLiveBlockLibraryOperations
  */
 
 import { DaLiveApiClient } from './daLiveApiClient';

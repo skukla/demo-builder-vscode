@@ -42,7 +42,7 @@ export async function executeCatalogPrewarmPhase(
     const logger = context.logger;
     try {
         const { extractRepublishParams } = await import(
-            '@/features/eds/services/storefrontRepublishService'
+            '@/features/eds/services/storefront/storefrontRepublishService'
         );
         const params = extractRepublishParams(project);
         if (!params.success) {

@@ -30,8 +30,8 @@ import {
     byomRegistrationFailureMessage,
     surfaceOverlayRegistrationFailure,
 } from './edsHelpers';
-import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
-import type { RepoInfo, SetupServices } from './storefrontSetupTypes';
+import type { StorefrontSetupStartPayload } from './storefrontSetup/storefrontSetupHandlers';
+import type { RepoInfo, SetupServices } from './storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';

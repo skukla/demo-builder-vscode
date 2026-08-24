@@ -12,7 +12,7 @@
 import {
     classifyRepoForStorefront,
     type RepoReadiness,
-} from '../services/repoStorefrontReadiness';
+} from '../services/storefront/repoStorefrontReadiness';
 import { getGitHubServices } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

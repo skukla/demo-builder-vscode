@@ -320,7 +320,7 @@ When code under test reads a config "leaf" (a bundled JSON like
   separated block.
 
 Reference seams: `src/features/project-creation/services/demoPackageLoader.ts`
-and `src/features/eds/services/edsResetParams.ts`. Example test split:
+and `src/features/eds/services/reset/edsResetParams.ts`. Example test split:
 `tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`
 (injected-fixture logic vs. shipped-config integrity).
 

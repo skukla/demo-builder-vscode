@@ -61,7 +61,7 @@ Properties:
 - Relies on Catalog Service SKU **case-insensitivity** (an assumption the prior
   lowercasing already depended on; verified — see Evidence).
 
-Implementation: `src/features/eds/services/pdpUrlEncoding.ts` (used by the catalog
+Implementation: `src/features/eds/services/pdp/pdpUrlEncoding.ts` (used by the catalog
 prewarm path builder) and byte-identical `encodeSkuForUrl`/`decodeSkuFromUrl`
 patches in `skukla/eds-demo-patches` (`citisignal/`, `b2b/`) applied to the
 storefront's `scripts/commerce.js`.
@@ -151,7 +151,7 @@ accepted trade-off for the performance win.
 ### Cross-repo encoder coupling
 
 `encodeSkuForUrl`/`decodeSkuFromUrl` exist twice — in
-`src/features/eds/services/pdpUrlEncoding.ts` (extension, builds prewarm/publish
+`src/features/eds/services/pdp/pdpUrlEncoding.ts` (extension, builds prewarm/publish
 paths) and in the `eds-demo-patches` commerce.js patches (storefront, builds
 links). They cannot share code across repos, so they must stay byte-for-byte
 identical; a published path must match the link the browser requests. The test

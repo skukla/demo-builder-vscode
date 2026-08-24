@@ -13,7 +13,7 @@
  *
  * Extracted from edsResetService.ts for file size management.
  *
- * @module features/eds/services/edsResetUI
+ * @module features/eds/services/reset/edsResetUI
  */
 
 import {

@@ -44,7 +44,7 @@ import {
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
-} from '@/features/eds/services/storefrontNameMigrationForProject';
+} from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 

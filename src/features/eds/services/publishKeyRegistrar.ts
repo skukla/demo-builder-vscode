@@ -28,7 +28,7 @@
  */
 
 import { HelixService } from './helix/helixService';
-import { deriveRegisterKeyUrl } from './pdp404Snippet';
+import { deriveRegisterKeyUrl } from './pdp/pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';

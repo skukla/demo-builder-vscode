@@ -121,7 +121,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
 
                 progress.report({ message: 'Republishing content...' });
                 const { republishStorefrontContent } = await import(
-                    '@/features/eds/services/storefrontRepublishService'
+                    '@/features/eds/services/storefront/storefrontRepublishService'
                 );
                 const contentResult = await republishStorefrontContent({
                     project,

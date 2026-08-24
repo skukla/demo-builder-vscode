@@ -10,7 +10,7 @@
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
  *
- * @module features/eds/services/daLiveContentCopy
+ * @module features/eds/services/daLive/daLiveContentCopy
  */
 
 import { DaLiveApiClient } from './daLiveApiClient';
@@ -30,7 +30,7 @@ import {
     addReferenceResult,
     isDeferredReference,
     type PatchReport,
-} from '../patchReportHelper';
+} from '../patches/patchReportHelper';
 import { RUNTIME_SURFACES } from '../runtimeSurfaceInventory';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
 import {
@@ -266,7 +266,7 @@ export class DaLiveContentCopy {
         }
 
         if (contentPatchIds && contentPatchIds.length > 0) {
-            const { applyContentPatches } = await import('../contentPatchRegistry');
+            const { applyContentPatches } = await import('../patches/contentPatchRegistry');
             const { html: patchedHtml, results } = await applyContentPatches(
                 htmlText,
                 sourcePath,

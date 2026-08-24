@@ -7,7 +7,7 @@ extension already uses for storefront create/reset.
 - **LKG SHA:** `760601940fa7264ea900c9d4b6bf735a5e78f46b`
 - **Source of truth:** the `last-known-good` file in the external patches
   repo (`skukla/eds-demo-patches`), read at runtime by
-  `src/features/eds/services/lkgReader.ts`.
+  `src/features/eds/services/patches/lkgReader.ts`.
 
 ## `aem-boilerplate-commerce-scripts.js`
 

@@ -22,7 +22,7 @@ jest.mock('@/core/logging', () => ({
     initializeLogger: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/storefrontNameMigration', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: jest.fn(),
 }));
 
@@ -67,7 +67,7 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
 // ---------------------------------------------------------------------------
 
 import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
-import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefrontNameMigration';
+import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import type { StateManager } from '@/core/state';

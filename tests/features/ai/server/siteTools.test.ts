@@ -34,7 +34,7 @@ jest.mock('@/features/eds/services/repairSiteConfigForProject', () => ({
 const mockFindStorefrontNameMismatch = jest.fn();
 const mockMigrateStorefrontNameForProject = jest.fn();
 
-jest.mock('@/features/eds/services/storefrontNameMigrationForProject', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject', () => ({
     findStorefrontNameMismatch: (...a: unknown[]) => mockFindStorefrontNameMismatch(...a),
     migrateStorefrontNameForProject: (...a: unknown[]) =>
         mockMigrateStorefrontNameForProject(...a),

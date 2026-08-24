@@ -6,19 +6,19 @@
  *
  * Separated from edsResetService to keep the service file under 500 lines.
  *
- * @module features/eds/services/edsResetRepoHelper
+ * @module features/eds/services/reset/edsResetRepoHelper
  */
 
 import { installBlockCollections } from '../blockCollectionHelpers';
-import { applyCanonicalCodePatches } from '../codePatchPipelineHelpers';
-import type { CodePatchResult } from '../codePatchRegistry';
+import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
+import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
 import { type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
-import { readLkgSha } from '../lkgReader';
-import { installSmart404Handler } from '../pdp404HandlerPublisher';
+import { readLkgSha } from '../patches/lkgReader';
+import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
 import type { GitHubTreeInput } from '../types';

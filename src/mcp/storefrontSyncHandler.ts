@@ -21,7 +21,7 @@ import {
     syncAndPublish,
     type SyncAndPublishInput,
     type SyncAndPublishResult,
-} from '@/features/eds/services/storefrontSyncService';
+} from '@/features/eds/services/storefront/storefrontSyncService';
 
 /**
  * Read the project manifest and extract the storefront's GitHub repo (owner, repo, branch).

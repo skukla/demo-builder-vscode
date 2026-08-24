@@ -14,7 +14,7 @@
  * Keep this module `vscode`-free (the MCP server constructs it in a separate
  * Node process).
  *
- * @module features/eds/services/daLiveConfigOperations
+ * @module features/eds/services/daLive/daLiveConfigOperations
  */
 
 import { DaLiveApiClient } from './daLiveApiClient';

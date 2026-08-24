@@ -23,7 +23,7 @@ import {
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
-} from './edsDaLiveHandlers';
+} from './daLive/edsDaLiveHandlers';
 import {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
@@ -32,7 +32,7 @@ import {
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler';
-import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetupHandlers';
+import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetup/storefrontSetupHandlers';
 import { handleGetStoreStructure } from './storeStructureHandler';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { validateURL } from '@/core/validation';

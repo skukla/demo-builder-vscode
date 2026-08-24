@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
-import type { PatchReport } from '@/features/eds/services/patchReportHelper';
+import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();

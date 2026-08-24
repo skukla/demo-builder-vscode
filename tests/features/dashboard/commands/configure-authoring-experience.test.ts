@@ -46,7 +46,7 @@ jest.mock('@/features/eds', () => ({
 // The config.json regen now runs through the shared authoringExperienceFlip
 // service, which imports republishStorefrontConfig directly from its module
 // (not the feature index). Mock that path so the same spy observes the call.
-jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 

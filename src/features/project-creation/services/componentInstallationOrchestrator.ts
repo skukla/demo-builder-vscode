@@ -9,8 +9,8 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
-import { installAiDefaultsMcpTools } from './aiDefaultsInstaller';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';

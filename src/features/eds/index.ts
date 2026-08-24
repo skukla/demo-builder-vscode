@@ -64,19 +64,19 @@ export {
     updateStorefrontState,
     getCurrentStorefrontState,
     getStorefrontEnvVars,
-} from './services/storefrontStalenessDetector';
+} from './services/storefront/storefrontStalenessDetector';
 
 // EDS Project Detection (single source of truth from typeGuards)
 export { isEdsProject } from '@/types/typeGuards';
-export type { StorefrontState, StorefrontChanges } from './services/storefrontStalenessDetector';
+export type { StorefrontState, StorefrontChanges } from './services/storefront/storefrontStalenessDetector';
 
 // Storefront Republish Service
 export {
     republishStorefrontConfig,
     extractRepublishParams,
     needsStorefrontRepublish,
-} from './services/storefrontRepublishService';
-export type { RepublishParams, RepublishResult } from './services/storefrontRepublishService';
+} from './services/storefront/storefrontRepublishService';
+export type { RepublishParams, RepublishResult } from './services/storefront/storefrontRepublishService';
 
 // Authoring-experience flip side-effects (shared by Configure + EW settings listener)
 export {

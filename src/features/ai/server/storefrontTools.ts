@@ -25,7 +25,7 @@ import { describeCdnPropagation } from '@/features/eds/services/configSyncServic
 import {
     republishStorefrontConfig,
     republishStorefrontContent,
-} from '@/features/eds/services/storefrontRepublishService';
+} from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';

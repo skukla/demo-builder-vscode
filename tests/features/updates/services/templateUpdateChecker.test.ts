@@ -32,11 +32,11 @@ const mockGetLatestBranchCommit = getLatestBranchCommit as jest.Mock;
 const mockCompareCommits = compareCommits as jest.Mock;
 
 // Mock the LKG reader (path-dependent dynamic import inside checker)
-jest.mock('@/features/eds/services/lkgReader', () => ({
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     readLkgSha: jest.fn(),
 }));
 
-import { readLkgSha } from '@/features/eds/services/lkgReader';
+import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 const mockReadLkgSha = readLkgSha as jest.Mock;
 
 const mockLogger: Logger = {

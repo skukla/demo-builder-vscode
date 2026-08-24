@@ -5,7 +5,7 @@
  * Handles Adobe I/O auth re-validation and API Mesh deployment as the final
  * optional step (step 12) of the EDS reset pipeline.
  *
- * @module features/eds/services/edsResetMeshHelper
+ * @module features/eds/services/reset/edsResetMeshHelper
  */
 
 import type { EdsResetResult } from './edsResetParams';

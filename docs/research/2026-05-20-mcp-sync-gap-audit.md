@@ -75,7 +75,7 @@ Key code paths:
 - `src/features/eds/services/github/githubRepoOperations.ts` (`cloneRepository` — only called by template creation, not project restore)
 - `src/features/eds/services/storefrontRepublishService.ts` (config.json + Helix publish chain)
 - `src/features/eds/services/helixService.ts` (`previewAndPublishPage`) — publish chain
-- `src/features/project-creation/services/mcpConfigWriter.ts:217,226-253` — PostToolUse hook (with fragility)
+- `src/features/project-creation/services/aiBundle/mcpConfigWriter.ts` (PostToolUse hook build — with fragility)
 
 ---
 
@@ -85,7 +85,7 @@ Key code paths:
 |---|---|---|---|---|
 | **G1** | Helix preview/publish not triggered after AI pushes to storefront | `mcp-server.ts:286`, `mcpConfigWriter.ts:251` | **Critical** | Cycle B Step 6e |
 | **G2** | `sync_storefront` uses ambient git creds, not `GitHubTokenService` | `mcp-server.ts:286` | **Critical** | Cycle B Step 6f |
-| **G3** | PostToolUse hook silently disabled by spaces in project path | `mcpConfigWriter.ts:217,226-230` | **Critical** | Cycle B Step 6g |
+| **G3** | PostToolUse hook silently disabled by spaces in project path | `mcpConfigWriter.ts` (PostToolUse hook build) | **Critical** | Cycle B Step 6g |
 | **G4** | `$CLAUDE_TOOL_INPUT` parsing unverified; failures invisible | `mcpConfigWriter.ts:235-247` | **Critical** | Cycle B Step 6g |
 | **G5** | Block library "update" doesn't actually update files | `updateExecutor.ts:287-330` | **High** | Cycle B Step 6h |
 | **G6** | No reverse promote path despite AGENTS.md claiming there is one | `aiContextWriter.ts:254` vs no implementation | **Medium** | Cycle A.2 follow-up (drop the false promise) |
