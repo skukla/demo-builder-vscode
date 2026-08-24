@@ -478,129 +478,88 @@ the knowledge tools land, since a cheaper flow may not need orchestration at all
 
 **Do not add agents to save tokens. Add them when a role or an order genuinely needs an owner.**
 
-## Execution plan — full coverage, one layer at a time
+## RE-SCOPED 2026-08-24 — the design axis is what is left
 
-Four phases, strictly sequential: **tools → skills → agents → hooks.** Each phase completes
-only when EVERY item in it has a row in its table. Partial coverage is what lets a gap survive
-an audit, so "we looked at the interesting ones" does not count as done.
+The original four-phase plan (tools → skills → agents → hooks, all 52 tools scored)
+is **retired**: phases 1–4 of the ai-surface program executed that work. Tools went
+52 → 103, responses were reshaped against a measured ceiling table, the skill layer
+was scored and corrected, agents were decided against with evidence, and the hook
+layer got its first entry. What that program could not close is the axis its own
+measurement cannot see, and it is the axis the Bodea redesign needs.
 
-Each phase produces the same three artifacts: an **inventory** (what exists), a **scored table**
-(one row per item), and a **ranked work list** (what to change, in order).
+### First, a correction to this item's headline
 
----
+"Zero tools for design" was true when filed and is **not true now**. A visual
+iteration loop ships today: `refine-visual-match` drives rounds of
+render-compare-adjust against reference screenshots using the Playwright MCP the
+extension installs, capped at 3 rounds with honest reporting of what still differs.
+`commerce-block-mapper` models what is actually themeable versus immutable inside a
+dropin. `get_block_authoring_shape` answers block structure in ~200 tokens.
 
-### Phase 1 — Tools: response analysis, all 52
+So the gap is not "an agent cannot see anything". It is narrower and worth stating
+exactly:
 
-**Why first:** tools are the capability floor, and their responses are what every other layer
-spends tokens on. Reshaping is also the cheapest change with the largest measured effect (73%
-on the one tool sampled).
+> **Every visual capability we ship assumes a REFERENCE to match. None supports
+> open-ended design — "make this look right for this brand" with nothing to
+> copy.** That is precisely the Bodea case: there is no reference site, the design
+> is being invented, and the agent has no oracle telling it when it is done.
 
-**Step 1.1 — Ground-truth inventory.** `probeInExtensionMcpTools` already does `initialize` +
-`tools/list` over the UDS socket and is the authority on what the agent actually sees (vs. what
-the source appears to register). Use it, not a grep, so the list cannot drift from reality.
+### Why open-ended design is the hard case, stated precisely
 
-**Step 1.2 — Classify by safety, because it decides the method.**
+Reference-matching has a termination condition: the screenshots converge, and
+`refine-visual-match` can honestly say "3 rounds, here is what still differs".
+Open-ended design has none. Without an oracle an agent iterates without a stopping
+rule, which is the same failure the type-scale finding recorded — agents picked font
+sizes by eye, users said "fonts are too small", and iteration never converged.
 
-| Class | Method | Why |
-|---|---|---|
-| Read-only (`list_*`, `get_*`, `check_*`) | **Live capture** against the test project | Real payloads, real sizes |
-| Mutating (`deploy_*`, `sync_*`, `republish`) | Live capture where a throwaway target exists; otherwise static | Safe on a scratch project only |
-| Destructive (`delete_*`, `cleanup_*`, `reset_*`) | **Static derivation** from the handler's return type | Never call to measure |
+**The fix that worked there is the pattern to build on, and it was not feedback.**
+Nothing showed the agent the page. The generated guidance was changed to say: the
+boilerplate ships 36 `--type-*` custom properties, read them and use
+`font: var(--type-…)`, never invent a size. That converted an unbounded visual
+search into a small set of valid choices.
 
-**Step 1.3 — Build the capture harness.** Extend the `mcpToolProbe` pattern with `tools/call`.
-It is ~40 lines on top of proven code: same socket, same JSON-RPC framing, dump
-`{tool, args, response, bytes}` to a file. Read-only tools only, by an allowlist — not a
-denylist, so a newly added destructive tool is excluded by default.
+> **The principle for this whole axis: when you cannot give the model feedback,
+> give it constraints.** Fewer ways to be wrong beats more ways to check. Build the
+> constraint layer first; only then ask whether a feedback loop is still needed.
 
-**Step 1.4 — Score every tool on fixed criteria.** One row each, so the table is comparable:
+### The work, in order
 
-| Criterion | Question |
-|---|---|
-| Size | bytes, and approximate tokens |
-| Join required | does the payload carry ids the LLM must correlate itself? |
-| UI-only fields | display strings, icons, panel ids, unread timestamps |
-| Answer vs record | does it return the answer, or a dump the model must parse? |
-| Error quality | is a failure terse and actionable? |
-| Shape present | does it override `defaultShape`? (today: none do) |
+**1. Theme tokens as a knowledge tool — generalize the type-scale fix.**
+The type scale is one family of custom properties; colour, spacing, radius and
+weight have the same problem and no equivalent guidance. A tool that reads the
+storefront's ACTUAL custom properties (from its `styles/styles.css` plus any
+vendored brand theme) and returns them lets an agent style with what exists instead
+of inventing hex values that drift from the brand. Same shape as
+`get_block_authoring_shape`: the answer already exists on disk; the cost today is
+that finding it means reading CSS.
+*Note the standing rule this must respect: never ship a hardcoded token list. The
+scale belongs to `aem-boilerplate-commerce` and a copied list rots — read the
+properties.*
 
-**Step 1.5 — Rank by impact = size × call frequency.** Size is measured in 1.4. Frequency needs
-instrumentation: log `{tool, bytes}` per call in the server, run representative sessions
-(create a project, author content, reset), and count. **Do not rank on size alone** — a large
-response called once matters less than a small one called forty times.
+**2. Close the theme write-through trap — this blocks everything else.**
+`styles/bodea-theme.css` is vendored by `brandAssets` from `skukla/bodea-source`, so
+**every theme edit made inside a generated project is destroyed on the next reset,
+silently**. Any design tooling that writes theme changes into the project is
+building on sand. Either the tool writes through to the brand source repo, or it
+states plainly that the change is throwaway. No existing skill knows `brandAssets`
+exists. Decide this before shipping a single theming affordance.
 
-**Step 1.6 — Reshape, highest impact first**, applying the rules already recorded above (resolve
-joins server-side, drop UI-only fields, prefer the answer over the record). Each reshape gets a
-test pinning the projected shape, so it cannot silently regress to the raw payload.
+**3. A design skill that terminates.**
+Deferred out of ai-surface phase 5 as `2026-08-17-open-ended-design-skill.md` and
+still open. The re-scoped requirement is narrower than "a skill for design": it must
+carry a **stopping rule**. `refine-visual-match`'s 3-round cap with honest delta
+reporting is the shape to copy — the value is not the iteration, it is admitting
+when iteration stopped paying.
 
-**Done when:** all 52 tools have a scored row, and the ranked list exists. Reshaping can then
-proceed incrementally against that list without re-deriving it.
+**4. Only then: does open-ended design need its own feedback loop?**
+Do not start here. Playwright can already render and screenshot; what is missing is
+something to compare against when there is no reference. Answer 1–3 first, then ask
+whether agents still get design wrong once they can look up the constraints. This is
+the same deferral logic the item already applied to `write_page` markup validation.
 
----
+### What "done" looks like
 
-### Phase 2 — Skills: coverage against the same feature spine
+Not a tool count. An agent can be asked to restyle a storefront for a brand and
+(a) uses tokens that exist rather than inventing values, (b) makes changes that
+survive a reset, and (c) stops, reporting what it did and what it could not judge.
 
-**Method:** the `ai-coverage-scan` output is the denominator. For every feature an agent CAN
-reach (post-Phase-1), ask whether a skill teaches the sequence and the traps.
-
-Score each existing skill on: does it name its preconditions; does it state its failure modes;
-is it reachable (does anything route to it); and is it enforceable (does a hook back it, or is
-it advisory).
-
-**Known inputs already gathered:** 14 task-shaped EDS skills, 7 role-shaped App Builder skills,
-zero open-ended design skill, and five traps this session hit that no skill records.
-
-**Done when:** every reachable feature maps to a skill or an explicit "needs none".
-
----
-
-### Phase 3 — Agents: only where a role or an order needs an owner
-
-**Method:** from the Phase-2 table, find flows spanning three or more skills with a required
-order. Those are agent candidates; nothing else is.
-
-**Guard rail, from this session's measurement:** do NOT add agents to reduce tokens. The whole
-tool surface costs ~1,175 tokens, and this session's ~121k derivation was performed BY a
-subagent. Isolation moves where cost is paid; it does not reduce it.
-
-**Done when:** each candidate flow has a decision — agent, or skill with better sequencing —
-with the reason recorded.
-
----
-
-### Phase 4 — Hooks: enforcement for what the earlier phases could not guarantee
-
-**Method:** collect every trap surfaced in Phases 1–3, then filter to the mechanically
-detectable. A hook needs a decidable predicate on a tool call; anything needing judgement stays
-a skill.
-
-**Also in scope:** the ONE hook a generated project already ships (`PostToolUse` auto-commit-
-and-push on `Write|Edit`), whose per-edit granularity should be re-evaluated once tools give the
-agent an explicit publish.
-
-**Done when:** every mechanically-detectable trap has a hook or a recorded decision not to.
-
----
-
-### Sequencing rule
-
-**Do not start a phase before the previous one has full coverage.** Each phase's output is the
-next phase's denominator: skills are scored against the tool surface, agents against the skill
-map, hooks against the traps the first three surfaced. Starting late-phase work early means
-guessing at a denominator that is about to change.
-
-## Still open
-
-1. Whether tools should be scoped/filtered per task so a design session does not carry the
-   ~20-tool provisioning surface in context.
-2. Whether an open-ended design skill should exist, or design should always route through a
-   reference site.
-3. Whether `write_page` should validate block markup against `component-definition.json` — the
-   structured-authoring question, deferred until knowledge tools show whether agents actually get
-   markup wrong once they can look the shape up.
-
-## Kickoff prompt
-
-> Read `.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md`. Design the content-authoring
-> and design-support additions to the Demo Builder MCP surface, using the operations table as the
-> requirements list. Follow `.claude/skills/mcp-tool-authoring/` for how a tool is added
-> (headless-safe handler + descriptor row, count-pinned tests, `mcp-server.md` sync).
