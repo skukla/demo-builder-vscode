@@ -185,7 +185,19 @@ export function emptyAggregate() {
     return {
         toolCalls: new Map(),
         argKeys: new Map(),
-        mcpCalls: new Map(),
+        /** tool name -> { sizes: number[], errors: number }, joined via call id. */
+        toolBytes: new Map(),
+        /** in-flight `tool_use.id` -> tool name; drained as results arrive. */
+        callOwner: new Map(),
+        /**
+         * `attributionMcpTool` counts TURNS attributed to an MCP tool, not
+         * calls — a single call carries several (the thinking turn before it,
+         * the turn that makes it, the turn that reads the answer). Measured on a
+         * real session: 49 attributed turns against 13 actual calls, a 3.8x
+         * inflation. Kept as a secondary signal and labelled as turns; the call
+         * count comes from `mcp__`-prefixed tool_use names instead.
+         */
+        mcpTurns: new Map(),
         lines: 0,
         malformed: 0,
         bytesRead: 0,
@@ -214,6 +226,12 @@ function recordBlocks(task, rec, agg) {
             task.toolPath.push(name);
             task.toolCounts.set(name, (task.toolCounts.get(name) ?? 0) + 1);
             agg.toolCalls.set(name, (agg.toolCalls.get(name) ?? 0) + 1);
+            // Remember which tool a call id belongs to, so the RESULT that comes
+            // back later can be attributed to it. `tool_use.id` ↔
+            // `tool_result.tool_use_id` is the only join that gives per-tool
+            // response size — which is the "bytes" half of the bytes × frequency
+            // work list, and the thing no fixture can tell you.
+            if (block.id) agg.callOwner.set(block.id, name);
             // Argument KEYS only — values can carry secrets.
             const keys = agg.argKeys.get(name) ?? new Set();
             for (const k of Object.keys(block.input ?? {})) keys.add(k);
@@ -221,13 +239,23 @@ function recordBlocks(task, rec, agg) {
         } else if (block.type === 'tool_result') {
             task.results++;
             const body = block.content;
-            task.resultBytes.push(
-                Buffer.byteLength(
-                    typeof body === 'string' ? body : JSON.stringify(body ?? ''),
-                    'utf8'
-                )
+            const size = Buffer.byteLength(
+                typeof body === 'string' ? body : JSON.stringify(body ?? ''),
+                'utf8'
             );
+            task.resultBytes.push(size);
             if (block.is_error) task.errors++;
+
+            const owner = block.tool_use_id ? agg.callOwner.get(block.tool_use_id) : undefined;
+            if (owner) {
+                const stat = agg.toolBytes.get(owner) ?? { sizes: [], errors: 0 };
+                stat.sizes.push(size);
+                if (block.is_error) stat.errors++;
+                agg.toolBytes.set(owner, stat);
+                // The id is consumed; a transcript can be long and this map
+                // would otherwise grow for the whole file.
+                agg.callOwner.delete(block.tool_use_id);
+            }
         }
     }
 }
@@ -271,13 +299,12 @@ export async function parseTranscript(filePath, agg) {
         recordUsage(current, rec);
         recordBlocks(current, rec, agg);
 
-        // `attributionMcpTool` names which MCP tool served a call — the join
-        // that yields real-world call frequency per tool, across every session
-        // already on disk. This is the "bytes × frequency" ranking the
-        // 2026-08-16 backlog item specified and never built.
+        // Secondary signal: which MCP a TURN was attributed to. See the note on
+        // `mcpTurns` — this is turns, not calls, and must not be labelled as
+        // call frequency.
         if (rec.attributionMcpTool) {
             const key = `${rec.attributionMcpServer ?? '?'}/${rec.attributionMcpTool}`;
-            agg.mcpCalls.set(key, (agg.mcpCalls.get(key) ?? 0) + 1);
+            agg.mcpTurns.set(key, (agg.mcpTurns.get(key) ?? 0) + 1);
         }
     }
 

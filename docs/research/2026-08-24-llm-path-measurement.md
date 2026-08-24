@@ -85,16 +85,46 @@ spanning many projects. That stability is the useful result: 30k tokens per task
 is a real baseline to measure future changes against, not an artefact of one
 session.
 
-## What this cannot yet tell us, and it is the important limit
+## Reading 3 — the bytes × frequency work list, on real demo-builder traffic
 
-**No demo-builder MCP tool appears in any of it.** The MCP frequency table —
-the *bytes × frequency* ranking the backlog asked for — works, and lists 107
-distinct tools across other MCP servers. It shows zero demo-builder calls
-because these sessions were spent building the extension, not using it.
+The sessions above spent their time *building* the extension, so they contain no
+demo-builder calls. But agent-driven sessions run **inside a demo project**, and
+those transcripts already exist. One of them carries 13 real calls:
 
-So the instrument is proven and the data it most needs does not exist yet. It
-will appear the moment anyone drives the extension through an agent. Nothing
-further needs building for that to start working.
+```
+   calls   err     total B    median B       max B  tool
+       3     0       6,935       1,786       3,650  demo-builder/get_project
+       1     0       1,378       1,378       1,378  demo-builder/list_adobe_projects
+       1     0         498         498         498  demo-builder/list_projects
+       3     0         413         139         141  demo-builder/get_current_project
+       2     0         256         128         128  demo-builder/sign_in
+       3     0         159          53          53  demo-builder/update_project_config
+```
+
+Small, but it is the thing the 2026-08-16 item specified and never built, and it
+is measured rather than derived. Note the corroboration: `get_project` peaked at
+3,650 bytes against its recorded 12,000-byte ceiling, and `list_projects` at 498
+against 8,000. The ceilings are generous, which is what a regression alarm should
+be — and now there is live evidence for it rather than an assumption.
+
+**Two labelling errors this reading caught**, both of which would have produced
+confidently wrong numbers:
+
+1. `attributionMcpTool` counts **turns**, not calls — the thinking turn before a
+   call, the turn that makes it, the turn that reads the answer. It read 49
+   against 13 real calls, a 3.8× inflation. Call counts now come from the
+   `mcp__server__tool` tool_use names; attribution is reported separately and
+   labelled as turns.
+2. The list had no bytes in it at all. Per-tool response size needs a join from
+   `tool_use.id` to `tool_result.tool_use_id`; without it the "bytes × frequency"
+   table was frequency only.
+
+## Getting more of this data
+
+Nothing further needs building. Agent sessions run inside a demo project, so
+their transcripts live under that project's encoded directory, not this repo's —
+which is why `--latest` (this repo) will not find them. Use `--all`, or name the
+file.
 
 A second limit worth stating: with a generic toolset (Bash/Read/Edit), a repeat
 count says little — repetition *is* the working style. Repeats become a real

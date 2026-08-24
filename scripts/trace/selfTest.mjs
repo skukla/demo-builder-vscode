@@ -52,14 +52,20 @@ function fixtureLines() {
                     cache_creation_input_tokens: 7,
                     output_tokens_details: { thinking_tokens: 3 },
                 },
-                content: [{ type: 'tool_use', name: 'Read', input: { file_path: SECRET_ARG } }],
+                content: [
+                    { type: 'tool_use', id: 'call_1', name: 'Read', input: { file_path: SECRET_ARG } },
+                ],
             },
         }),
         // Error result, then a retry of the same tool.
         rec({
             type: 'user',
             timestamp: '2026-01-01T00:00:03Z',
-            message: { content: [{ type: 'tool_result', is_error: true, content: SECRET_BODY }] },
+            message: {
+                content: [
+                    { type: 'tool_result', tool_use_id: 'call_1', is_error: true, content: SECRET_BODY },
+                ],
+            },
         }),
         rec({
             type: 'assistant',
@@ -119,7 +125,8 @@ export function retainedText({ tasks, agg }) {
             ...agg,
             toolCalls: [...agg.toolCalls],
             argKeys: [...agg.argKeys].map(([k, v]) => [k, [...v]]),
-            mcpCalls: [...agg.mcpCalls],
+            mcpTurns: [...agg.mcpTurns],
+            toolBytes: [...agg.toolBytes],
         },
     });
 }
@@ -182,8 +189,13 @@ export function checksFor({ tasks, agg }) {
         ],
         ['error result counted', t1.errors === 1],
         ['malformed line counted, not fatal', agg.malformed === 1],
-        ['attributionMcpTool joined', agg.mcpCalls.get('demo-builder/list_projects') === 1],
+        ['attributionMcpTool counted as TURNS, not calls', agg.mcpTurns.get('demo-builder/list_projects') === 1],
         ['arg KEYS captured', [...(agg.argKeys.get('Read') ?? [])].join() === 'file_path'],
+        [
+            'per-tool bytes joined via tool_use id',
+            (agg.toolBytes.get('Read')?.sizes ?? []).length === 1 &&
+                agg.toolBytes.get('Read').errors === 1,
+        ],
         ['PRIVACY: no argument VALUE retained', !retained.includes(SECRET_ARG)],
         ['PRIVACY: no result BODY retained', !retained.includes(SECRET_BODY)],
     ];
