@@ -252,13 +252,11 @@ Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag
 
 Measured 2026-08-23: `features/eds/services` holds **95 direct files** in clear name families (15 `daLive*`, 8 `helix*`, 7 `github*`, 7 `eds*`/reset, 6 `storefront*`, 6 `config*`) — the one strong regrouping candidate in the repo. Everything else 38 files or under with a working naming convention; the item records the full table and why each is left alone (`ai/server`'s suffix convention, `core/ui`'s kind-grouping, `core/utils`' by-design grab-bag). Subfolders under `services/` are existing house practice (`prerequisites/services/installation/`, `dashboard/services/onOpenChecks/`). Cost measured for eds/services alone: ~700 alias imports, 232 sibling imports, **308 literal `jest.mock` path strings tsc can't check**, a 117-file test-mirror move, 13+ citing docs. Execute right after a release cut with no EDS branch in flight; full gate + `rptc-hygiene-scan` after. Discoverability only — no coupling changes. Filed 2026-08-23.
 
-#### Structural baseline ([`../complete/2026-05-21-structural-baseline.md`](../complete/2026-05-21-structural-baseline.md)) — ✅ EXECUTED 2026-08-24
-
-Report at `docs/research/2026-08-24-structural-baseline.md`; reproducible via `scripts/measure-structure.mjs`. Run after the decomposition/regroup wave so the numbers are the clean "after" snapshot. Trim-cycle candidates proposed from the data (feature-cycle break, dead-barrel deletion, legacy-mention sweep, in-place long-function work) await the maintainer's read of the report — filing them as items is the next step, deliberately not done unilaterally.
-
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
 ## Recently shipped — 2026-08
+
+- **Structural baseline + all five trim cycles** — 2026-08-24, measured then executed same day. Report `docs/research/2026-08-24-structural-baseline.md` (the "before" snapshot; re-measure with `scripts/measure-structure.mjs`). Executed: 25 dead barrels + 9 dead production files deleted; feature-level import cycles **15 → 1** (catalog config moved to `features/components`, runner-deps composition to `project-creation`, symbol moves to core; the ai↔dashboard survivor adjudicated LEAVE — MCP composition surface); the four longest functions extracted in place (545/368/218/213 → all under 300); the 177-`legacy`-mention sweep deleted the dead paste-token chain, fixed two false "Legacy field" comments, and retired the HandlerContext re-export shim. ([`../complete/2026-05-21-structural-baseline.md`](../complete/2026-05-21-structural-baseline.md))
 
 #### Native consent for destructive MCP operations ([`../complete/2026-08-23-mcp-destructive-ops-native-consent.md`](../complete/2026-08-23-mcp-destructive-ops-native-consent.md))
 
