@@ -24,12 +24,12 @@
  * bug (a 500 on the update reported as "not authorized" with a Code Sync deep
  * link), so it lives in exactly one function.
  *
- * @module features/eds/services/siteConfigRegistrar
+ * @module features/eds/services/configService/siteConfigRegistrar
  */
 
 import type { buildSiteConfigParams, ConfigurationService } from './configurationService';
-import { registerPublishKey, type PublishKeyTokenProvider } from './publishKeyRegistrar';
-import { DaLiveAuthError } from './types';
+import { registerPublishKey, type PublishKeyTokenProvider } from '../pdp/publishKeyRegistrar';
+import { DaLiveAuthError } from '../types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

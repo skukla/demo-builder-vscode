@@ -39,7 +39,7 @@ import {
     getDaLiveAuthService,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
-import { ConfigurationService } from '@/features/eds/services/configurationService';
+import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
@@ -48,7 +48,7 @@ import {
     resolveStorefrontConfig,
     type StorefrontConfigSource,
 } from '@/features/eds/services/reset/edsResetParams';
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import {
     migrateStorefrontNamingIfNeeded,
     type StorefrontMigrationContext,

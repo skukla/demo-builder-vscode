@@ -44,11 +44,11 @@
  *
  * Full API record: `.rptc/plans/config-service-admin-grant/`.
  *
- * @module features/eds/services/configServiceAccess
+ * @module features/eds/services/configService/configServiceAccess
  */
 
-import type { TokenProvider } from './daLive/daLiveContentOperations';
-import { HELIX_ADMIN_URL } from './helix/helixApiClient';
+import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

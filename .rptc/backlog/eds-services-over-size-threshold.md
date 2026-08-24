@@ -96,7 +96,7 @@ were already over it before the branch that filed this item:
 
 | File | at `develop` | after the branch | net |
 |---|---|---|---|
-| `src/features/eds/services/configurationService.ts` | 444 | 532 | +88 |
+| `src/features/eds/services/configService/configurationService.ts` | 444 | 532 | +88 |
 | `src/features/eds/services/reset/edsResetService.ts` | 430 | 463 | +33 |
 
 The branch's own additions were extracted back out before shipping, and the
@@ -197,7 +197,7 @@ uses, not line count:
 | `authentication/services/adobeEntityFetcher.ts` | 1232 | 9 | **21** | no |
 | `mcp-server.ts` | 1291 | 11 | — | no |
 | `eds/services/daLive/daLiveContentCopy.ts` | 811 | 13 | — | no |
-| `eds/services/configurationService.ts` | 532 | 2 | 7 | yes |
+| `eds/services/configService/configurationService.ts` | 532 | 2 | 7 | yes |
 | `eds/services/reset/edsResetService.ts` | 343 | **16** | 2 | yes |
 
 Signals over threshold in **bold** (>15 non-type imports, >10 public methods).

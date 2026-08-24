@@ -14,15 +14,15 @@
  * refreshed — two requests, at most once every 30 days per project.
  */
 
-jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+jest.mock('@/features/eds/services/pdp/publishKeyRegistrar', () => ({
     registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
 }));
 
 import {
     renewPublishKeys,
     PUBLISH_KEY_RENEWAL_INTERVAL_MS,
-} from '@/features/eds/services/publishKeyRenewalSweep';
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
+} from '@/features/eds/services/pdp/publishKeyRenewalSweep';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

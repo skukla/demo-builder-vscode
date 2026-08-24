@@ -20,7 +20,7 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
     ),
 }));
 
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 
 const OVERLAY =
     'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=a&site=b';

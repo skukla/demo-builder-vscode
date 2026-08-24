@@ -53,12 +53,12 @@ import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
 import { AGENT_PAGE_SIZE } from './projectors';
-import { repairSiteConfigForProject } from '@/features/eds/services/repairSiteConfigForProject';
+import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import {
     addSiteAdmin,
     listSiteAccess,
     removeSiteAdmin,
-} from '@/features/eds/services/siteAccessManagerHeadless';
+} from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,

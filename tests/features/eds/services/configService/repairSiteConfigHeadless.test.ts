@@ -12,7 +12,7 @@
  * - The admin pin runs only after a successful write, and merges.
  */
 
-import { repairSiteConfig } from '@/features/eds/services/repairSiteConfigHeadless';
+import { repairSiteConfig } from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -20,10 +20,10 @@ import type { Logger } from '@/types/logger';
 const mockRegisterSiteConfig = jest.fn();
 const mockPinSiteAdmin = jest.fn();
 
-jest.mock('@/features/eds/services/siteConfigRegistrar', () => ({
+jest.mock('@/features/eds/services/configService/siteConfigRegistrar', () => ({
     registerSiteConfig: (...args: unknown[]) => mockRegisterSiteConfig(...args),
 }));
-jest.mock('@/features/eds/services/configAccessRecovery', () => ({
+jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
     pinSiteAdmin: (...args: unknown[]) => mockPinSiteAdmin(...args),
 }));
 

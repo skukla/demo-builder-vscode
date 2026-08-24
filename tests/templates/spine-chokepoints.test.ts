@@ -279,9 +279,9 @@ describe('spine choke-points', () => {
         // never write it.
         const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
         const spine = [
-            'features/eds/services/configServiceAccess.ts',
-            'features/eds/services/configServiceProbe.ts',
-            'features/eds/services/configurationService.ts',
+            'features/eds/services/configService/configServiceAccess.ts',
+            'features/eds/services/configService/configServiceProbe.ts',
+            'features/eds/services/configService/configurationService.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);

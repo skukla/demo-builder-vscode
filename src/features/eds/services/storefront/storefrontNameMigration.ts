@@ -30,7 +30,7 @@
  * @module features/eds/services/storefront/storefrontNameMigration
  */
 
-import { buildSiteConfigParams, ConfigurationService } from '../configurationService';
+import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';

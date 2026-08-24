@@ -229,9 +229,9 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 |---|---|
 | Overlay URL resolution + stamping | `src/features/eds/handlers/byomOverlay.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
 | Overlay registration failure surfacing | `src/features/eds/handlers/byomOverlay.ts` (`surfaceOverlayRegistrationFailure`), wired from `handlers/configServiceRegistration.ts` (create/edit, toast — the 403 toast carries Manage Site Access / Repair Site Configuration buttons) and `edsResetService.ts` (reset, `report()` — headless-safe) |
-| Site-registration protocol (409→update, 401→re-auth, 403→propagation retry) | `src/features/eds/services/siteConfigRegistrar.ts` (`registerSiteConfig`), shared by the wizard, the reset path and the repair command |
-| Standalone retry after a refused registration | `src/features/eds/services/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
-| Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
+| Site-registration protocol (409→update, 401→re-auth, 403→propagation retry) | `src/features/eds/services/configService/siteConfigRegistrar.ts` (`registerSiteConfig`), shared by the wizard, the reset path and the repair command |
+| Standalone retry after a refused registration | `src/features/eds/services/configService/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
+| Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configService/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
 | Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp/pdp404HandlerPublisher.ts` |
 | **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
 | Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |

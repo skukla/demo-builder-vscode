@@ -12,8 +12,8 @@
  * they cannot be handed back.
  */
 
-import { ConfigurationService } from '@/features/eds/services/configurationService';
-import type { SiteRegistrationParams } from '@/features/eds/services/configurationService';
+import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
+import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
 
 const mockLogger = {
     debug: jest.fn(),

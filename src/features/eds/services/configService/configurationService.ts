@@ -17,11 +17,11 @@
  * (2026-05-18). CitiSignal storefronts route /products/{sku} via client-side
  * routing; future SEO-sensitive PDPs should use the BYOM overlay pattern.
  *
- * @module features/eds/services/configurationService
+ * @module features/eds/services/configService/configurationService
  */
 
-import type { TokenProvider } from './daLive/daLiveContentOperations';
-import { HELIX_ADMIN_URL } from './helix/helixApiClient';
+import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { captureSiteGrants, restoreCapturedGrants } from './siteGrantPreservation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

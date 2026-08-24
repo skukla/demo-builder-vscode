@@ -47,7 +47,7 @@ import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {
     probeConfigService,
     type ConfigServiceProbeResult,
-} from '@/features/eds/services/configServiceProbe';
+} from '@/features/eds/services/configService/configServiceProbe';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     probeGitHubCredential,

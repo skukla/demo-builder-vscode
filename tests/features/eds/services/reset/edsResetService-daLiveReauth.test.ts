@@ -92,7 +92,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),

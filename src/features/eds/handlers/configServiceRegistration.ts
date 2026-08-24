@@ -11,18 +11,18 @@
  * PDP caveats a storefront must carry when its overlay could not be registered.
  *
  * The 409→update / 401→re-auth / 403→propagation-retry protocol itself lives in
- * `services/siteConfigRegistrar`, shared with the repair command so the rules —
+ * `services/configService/siteConfigRegistrar`, shared with the repair command so the rules —
  * particularly "the status carried out is the UPDATE's own" — exist once.
  *
  * @module features/eds/handlers/configServiceRegistration
  */
 
 import * as vscode from 'vscode';
-import { announceConfigAccess, pinSiteAdmin } from '../services/configAccessRecovery';
-import { buildCodeSyncSetupUrl } from '../services/configServiceAccess';
-import { buildSiteConfigParams } from '../services/configurationService';
-import { lostGrantsMessage } from '../services/lostGrantsMessage';
-import { registerSiteConfig } from '../services/siteConfigRegistrar';
+import { announceConfigAccess, pinSiteAdmin } from '../services/configService/configAccessRecovery';
+import { buildCodeSyncSetupUrl } from '../services/configService/configServiceAccess';
+import { buildSiteConfigParams } from '../services/configService/configurationService';
+import { lostGrantsMessage } from '../services/configService/lostGrantsMessage';
+import { registerSiteConfig } from '../services/configService/siteConfigRegistrar';
 import { DaLiveAuthError } from '../services/types';
 import {
     addPdpCaveat,

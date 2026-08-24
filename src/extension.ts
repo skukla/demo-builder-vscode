@@ -57,7 +57,7 @@ import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthServ
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
-import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
+import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';

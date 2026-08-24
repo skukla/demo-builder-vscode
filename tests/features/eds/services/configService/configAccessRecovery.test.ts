@@ -11,11 +11,11 @@ import {
     announceConfigAccess,
     logConfigAccessState,
     waitForConfigAccess,
-} from '@/features/eds/services/configAccessRecovery';
+} from '@/features/eds/services/configService/configAccessRecovery';
 import type { Logger } from '@/types/logger';
 
-jest.mock('@/features/eds/services/configServiceAccess', () => ({
-    ...jest.requireActual('@/features/eds/services/configServiceAccess'),
+jest.mock('@/features/eds/services/configService/configServiceAccess', () => ({
+    ...jest.requireActual('@/features/eds/services/configService/configServiceAccess'),
     probeConfigWriteAccess: jest.fn(),
     readOrgAdmins: jest.fn(),
 }));
@@ -25,7 +25,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 import {
     probeConfigWriteAccess,
     readOrgAdmins,
-} from '@/features/eds/services/configServiceAccess';
+} from '@/features/eds/services/configService/configServiceAccess';
 
 const mockProbe = probeConfigWriteAccess as jest.Mock;
 const mockReadOrgAdmins = readOrgAdmins as jest.Mock;

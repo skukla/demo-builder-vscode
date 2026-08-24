@@ -16,7 +16,7 @@
  * Addresses arrive ALREADY MASKED from `updateSiteConfig`; this never masks, so a
  * caller cannot accidentally pass raw ones and have them silently pass through.
  *
- * @module features/eds/services/lostGrantsMessage
+ * @module features/eds/services/configService/lostGrantsMessage
  */
 
 /**

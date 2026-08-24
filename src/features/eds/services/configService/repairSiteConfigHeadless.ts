@@ -26,15 +26,15 @@
  * and a live overlay are different claims, and only the second one means product
  * pages will load.
  *
- * @module features/eds/services/repairSiteConfigHeadless
+ * @module features/eds/services/configService/repairSiteConfigHeadless
  */
 
 import { pinSiteAdmin } from './configAccessRecovery';
 import { buildCodeSyncSetupUrl } from './configServiceAccess';
 import { buildSiteConfigParams, type ConfigurationService } from './configurationService';
 import { registerSiteConfig } from './siteConfigRegistrar';
-import { extractRepublishParams } from './storefront/storefrontRepublishService';
-import { DaLiveAuthError } from './types';
+import { extractRepublishParams } from '../storefront/storefrontRepublishService';
+import { DaLiveAuthError } from '../types';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 

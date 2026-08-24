@@ -17,7 +17,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/configServiceAccess', () => ({
+jest.mock('@/features/eds/services/configService/configServiceAccess', () => ({
     readSiteAccess: jest.fn(),
     readOrgAdmins: jest.fn(),
     ensureSiteAdmin: jest.fn(),
@@ -29,14 +29,14 @@ import {
     addSiteAdmin,
     listSiteAccess,
     removeSiteAdmin,
-} from '@/features/eds/services/siteAccessManagerHeadless';
+} from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import {
     ensureSiteAdmin,
     probeConfigWriteAccess,
     readOrgAdmins,
     readSiteAccess,
     revokeSiteAdmin,
-} from '@/features/eds/services/configServiceAccess';
+} from '@/features/eds/services/configService/configServiceAccess';
 import type { Project } from '@/types/base';
 
 const mockReadSiteAccess = readSiteAccess as jest.Mock;

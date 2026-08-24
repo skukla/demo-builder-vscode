@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ConfigurationService } from '../../services/configurationService';
+import { ConfigurationService } from '../../services/configService/configurationService';
 import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../../services/daLive/daLiveAuthRetry';
 import {
     createDaLiveServiceTokenProvider,

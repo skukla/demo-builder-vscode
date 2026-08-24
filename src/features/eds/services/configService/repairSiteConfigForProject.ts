@@ -29,18 +29,18 @@
  * notifications, so the command can render `withProgress` and a tool can drop
  * the messages on the floor.
  *
- * @module features/eds/services/repairSiteConfigForProject
+ * @module features/eds/services/configService/repairSiteConfigForProject
  */
 
 import type * as vscode from 'vscode';
 import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
-import { ConfigurationService } from '@/features/eds/services/configurationService';
+import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     repairSiteConfig,
     type RepairSiteConfigResult,
-} from '@/features/eds/services/repairSiteConfigHeadless';
+} from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,

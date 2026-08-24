@@ -31,7 +31,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn(),
 }));
 
@@ -39,7 +39,7 @@ jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: (...a: unknown[]) => mockMigrate(...a),
 }));
 
-jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+jest.mock('@/features/eds/services/pdp/publishKeyRegistrar', () => ({
     registerPublishKey: (...a: unknown[]) => mockRegisterPublishKey(...a),
 }));
 

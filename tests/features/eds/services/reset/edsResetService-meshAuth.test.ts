@@ -141,7 +141,7 @@ jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () =
     updateStorefrontState: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
     })),

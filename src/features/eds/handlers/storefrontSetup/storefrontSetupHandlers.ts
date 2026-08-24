@@ -14,7 +14,7 @@
 
 import * as vscode from 'vscode';
 import { CleanupService } from '../../services/cleanupService';
-import { ConfigurationService } from '../../services/configurationService';
+import { ConfigurationService } from '../../services/configService/configurationService';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,

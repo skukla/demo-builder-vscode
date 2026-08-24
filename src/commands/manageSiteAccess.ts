@@ -29,13 +29,13 @@ import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { waitForConfigAccess } from '@/features/eds/services/configAccessRecovery';
+import { waitForConfigAccess } from '@/features/eds/services/configService/configAccessRecovery';
 import {
     buildCodeSyncSetupUrl,
     type CodeSyncSetupParams,
     type ConfigWriteAccess,
-} from '@/features/eds/services/configServiceAccess';
-import { buildContentSourceUrl } from '@/features/eds/services/configurationService';
+} from '@/features/eds/services/configService/configServiceAccess';
+import { buildContentSourceUrl } from '@/features/eds/services/configService/configurationService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     addSiteAdmin,
@@ -44,7 +44,7 @@ import {
     removeSiteAdmin,
     type SiteAccessListing,
     type SiteAccessMutation,
-} from '@/features/eds/services/siteAccessManagerHeadless';
+} from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import type { Project } from '@/types/base';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
 

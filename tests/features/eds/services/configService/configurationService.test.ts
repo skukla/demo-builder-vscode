@@ -12,8 +12,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configurationService';
-import type { SiteRegistrationParams } from '@/features/eds/services/configurationService';
+import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configService/configurationService';
+import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
 
 // Test fixtures
 const mockLogger = {

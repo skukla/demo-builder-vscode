@@ -18,7 +18,7 @@
  * this sweep may refresh a key some other path just replaced — cheap, and it
  * fails safe in the direction of the key existing.
  *
- * @module features/eds/services/publishKeyRenewalSweep
+ * @module features/eds/services/pdp/publishKeyRenewalSweep
  */
 
 import { registerPublishKey, type PublishKeyTokenProvider } from './publishKeyRegistrar';

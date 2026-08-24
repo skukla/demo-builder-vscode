@@ -12,14 +12,14 @@ import {
     surfaceOverlayRegistrationFailure,
     byomRegistrationFailureMessage,
 } from '../../handlers/edsHelpers';
-import { logConfigAccessState } from '../configAccessRecovery';
-import { buildSiteConfigParams, ConfigurationService } from '../configurationService';
+import { logConfigAccessState } from '../configService/configAccessRecovery';
+import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import type { EdsResetParams } from './edsResetParams';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
-import { lostGrantsMessage } from '../lostGrantsMessage';
-import { registerSiteConfig } from '../siteConfigRegistrar';
+import { lostGrantsMessage } from '../configService/lostGrantsMessage';
+import { registerSiteConfig } from '../configService/siteConfigRegistrar';
 import { DaLiveAuthError } from '../types';
 import type { Logger } from '@/types/logger';
 

@@ -24,7 +24,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayUrl: jest.fn(() => undefined),
 }));
 
-import { probeConfigService } from '@/features/eds/services/configServiceProbe';
+import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 
 const mockResolveOverlayUrl = resolveByomOverlayUrl as jest.MockedFunction<

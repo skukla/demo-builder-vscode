@@ -19,15 +19,15 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 // The site config write DESTROYS the site's publish key (`apiKeys` lives inside
 // the site config document), so re-minting is part of completing the write.
 // Mocked here; its own behaviour is pinned in publishKeyRegistrar.test.ts.
-jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+jest.mock('@/features/eds/services/pdp/publishKeyRegistrar', () => ({
     registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
 }));
 
 import {
     registerSiteConfig,
     CONFIG_SERVICE_PROPAGATION_DELAYS_MS,
-} from '@/features/eds/services/siteConfigRegistrar';
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
+} from '@/features/eds/services/configService/siteConfigRegistrar';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 

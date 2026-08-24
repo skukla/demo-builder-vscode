@@ -66,7 +66,7 @@ jest.mock(
 
 // Mock remaining imports
 jest.mock('@/features/eds/services/cleanupService');
-jest.mock('@/features/eds/services/configurationService');
+jest.mock('@/features/eds/services/configService/configurationService');
 jest.mock('@/features/eds/services/daLive/daLiveAuthService');
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveTokenProvider: jest.fn(),

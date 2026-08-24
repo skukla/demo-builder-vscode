@@ -22,7 +22,7 @@ jest.setTimeout(5000);
 const mockUpdateSiteConfig = jest.fn();
 const mockRegisterSite = jest.fn();
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: mockRegisterSite,
         updateSiteConfig: mockUpdateSiteConfig,

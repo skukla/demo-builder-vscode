@@ -53,7 +53,7 @@ Multisite needs a map keyed by environment (or locale):
 
 #### 2. `buildSiteConfigParams` — takes one org/site
 
-**File**: `src/features/eds/services/configurationService.ts` (line 65)
+**File**: `src/features/eds/services/configService/configurationService.ts` (line 65)
 
 ```typescript
 export function buildSiteConfigParams(
@@ -62,7 +62,7 @@ export function buildSiteConfigParams(
 ): SiteRegistrationParams
 ```
 
-Each call produces a single Config Service registration body. Setup (`handlers/configServiceRegistration.ts`, invoked from `storefrontSetupPhase3.ts`) and reset (`edsResetService.ts`) each call it once per project — both now via the shared `services/siteConfigRegistrar.ts`.
+Each call produces a single Config Service registration body. Setup (`handlers/configServiceRegistration.ts`, invoked from `storefrontSetupPhase3.ts`) and reset (`edsResetService.ts`) each call it once per project — both now via the shared `services/configService/siteConfigRegistrar.ts`.
 
 Multisite needs either:
 
@@ -259,7 +259,7 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 - **Adobe pattern**: [Repoless multisite manager](https://www.aem.live/developer/repoless-multisite-manager)
 - **Single-env code locations**:
   - `src/features/eds/services/reset/edsResetParams.ts` (project state shape)
-  - `src/features/eds/services/configurationService.ts` (`buildSiteConfigParams`)
+  - `src/features/eds/services/configService/configurationService.ts` (`buildSiteConfigParams`)
   - `src/features/mesh/services/meshDeployment.ts` (`deployMeshComponent`)
   - `src/features/eds/config/config-template.json` (template URL substitution)
 

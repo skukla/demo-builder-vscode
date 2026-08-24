@@ -23,7 +23,7 @@ const mockRegisterSite = jest.fn();
 const mockUpdateSiteConfig = jest.fn();
 const mockDeleteSiteConfig = jest.fn();
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: mockRegisterSite,
         updateSiteConfig: mockUpdateSiteConfig,

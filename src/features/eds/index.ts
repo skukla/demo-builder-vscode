@@ -39,7 +39,7 @@ export {
     ConfigurationService,
     type SiteRegistrationParams,
     type ConfigServiceResult,
-} from './services/configurationService';
+} from './services/configService/configurationService';
 
 // Config Generator (for EDS Reset)
 export { generateConfigJson, extractConfigParams } from './services/configGenerator';

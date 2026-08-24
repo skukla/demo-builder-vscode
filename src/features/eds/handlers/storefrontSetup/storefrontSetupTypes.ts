@@ -7,7 +7,7 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupTypes
  */
 
-import type { ConfigurationService } from '../../services/configurationService';
+import type { ConfigurationService } from '../../services/configService/configurationService';
 import type { DaLiveAuthService } from '../../services/daLive/daLiveAuthService';
 import type { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import type { GitHubAppService } from '../../services/github/githubAppService';

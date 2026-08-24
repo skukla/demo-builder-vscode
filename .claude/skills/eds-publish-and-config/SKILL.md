@@ -15,7 +15,7 @@ Dropin loading, `__dropins__` vendoring, import maps, or `config.json` flag inje
    - **Helix/AEM Config Service** (`admin.hlx.page/config/...`) — what preview/publish/live consult.
    - **DA.live config** (`admin.da.live/config/{org}` and `/config/{org}/{site}`) — what the da.live editor and Library read.
    - The storefront's generated `config.json` — owned by the generator (sibling skill's territory).
-2. **Helix Config Service lookup key = GitHub owner/repo, NEVER the DA.live site name.** Helix looks up `/config/{owner}/sites/{repo}.json` to match its `/preview/{owner}/{repo}/main/...` operations. `contentSourceUrl` (the DA.live location) goes inside the config *body*, not the lookup key. Anchor: `buildSiteConfigParams` in `src/features/eds/services/configurationService.ts`.
+2. **Helix Config Service lookup key = GitHub owner/repo, NEVER the DA.live site name.** Helix looks up `/config/{owner}/sites/{repo}.json` to match its `/preview/{owner}/{repo}/main/...` operations. `contentSourceUrl` (the DA.live location) goes inside the config *body*, not the lookup key. Anchor: `buildSiteConfigParams` in `src/features/eds/services/configService/configurationService.ts`.
 3. **DA.live config scope — write at the level that reads it:**
    - `aem.repositoryId` (AEM Assets binding) → **site** config `/config/{org}/{site}` via `applySiteConfig`.
    - `editor.path` (UE punch-out mapping) → **org** config via `applyOrgConfig`.

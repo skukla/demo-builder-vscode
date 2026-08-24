@@ -29,13 +29,13 @@
  * Pattern: mirrors `probeGitHubCredential` — self-contained, returns structured
  * legs plus a one-line verdict, so Diagnostics renders rather than reasons.
  *
- * @module features/eds/services/configServiceProbe
+ * @module features/eds/services/configService/configServiceProbe
  */
 
 import { readOrgAdmins } from './configServiceAccess';
-import { DA_LIVE_BASE_URL } from './daLive/daLiveConstants';
-import { HELIX_ADMIN_URL } from './helix/helixApiClient';
-import { deriveRegisterKeyUrl } from './pdp/pdp404Snippet';
+import { DA_LIVE_BASE_URL } from '../daLive/daLiveConstants';
+import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
+import { deriveRegisterKeyUrl } from '../pdp/pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';

@@ -27,7 +27,7 @@ import {
     getDaLiveAuthService,
 } from '../../handlers/edsHelpers';
 import { verifyCdnResources } from '../configSyncService';
-import { ConfigurationService } from '../configurationService';
+import { ConfigurationService } from '../configService/configurationService';
 import { withDaLiveAuthRetry } from '../daLive/daLiveAuthRetry';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
@@ -45,7 +45,7 @@ import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
-import { lostGrantsMessage } from '../lostGrantsMessage';
+import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';

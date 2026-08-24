@@ -1,5 +1,22 @@
 # Regroup crowded service directories into subfolders — where measurement says so
 
+> **✅ ROUND 3 EXECUTED same day — the configService deferral OVERRIDDEN by
+> user decision** ("just do it; the datapack branch pays the rebase"). The
+> `configService/` family (10: configurationService, configServiceAccess,
+> configServiceProbe, configAccessRecovery, siteConfigRegistrar,
+> siteAccessManagerHeadless, siteGrantPreservation, repairSiteConfig ×2,
+> lostGrantsMessage) is in; the publishKey pair went to `pdp/` after a
+> domain read — their WHY is the smart-404 runtime's key, not the Config
+> Service (the registrar header says so). `configGenerator` +
+> `configSyncService` stay top-level deliberately: they are the storefront
+> config.json GENERATION pair, name-similar but a different domain — the
+> membership-by-name trap the item warns about, caught by reading headers.
+> eds/services final shape: **27 top-level + 8 families** (from 95 flat).
+> Full gate green again (1137/1137, no cycles, hygiene clean). The live
+> `claude/datapack-authoring-loop` branch now rebases across renames of the
+> three files it touches — git rename detection should carry it; its owner
+> was the accepted cost.
+
 > **✅ ROUND 2 EXECUTED same day (systematic pass, cost no object — user
 > directive):** `eds/services` again (`patches/` 9 — incl. the lkg pair,
 > `pdp/` 3, `storefront/` 8 → **39 top-level**, from the original 95);

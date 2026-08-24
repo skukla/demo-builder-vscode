@@ -91,7 +91,7 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: jest.fn().mockResolvedValue({ success: true }),
         updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),

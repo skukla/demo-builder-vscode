@@ -25,9 +25,9 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
-import { repairSiteConfigForProject } from '@/features/eds/services/repairSiteConfigForProject';
-import type { RepairSiteConfigResult } from '@/features/eds/services/repairSiteConfigHeadless';
+import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
+import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
+import type { RepairSiteConfigResult } from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types/base';
 

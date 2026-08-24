@@ -22,7 +22,7 @@
  * success would hand the user back a storefront that still cannot serve a PDP,
  * which is the exact failure mode this whole batch exists to remove.
  *
- * @module features/eds/services/configAccessRecovery
+ * @module features/eds/services/configService/configAccessRecovery
  */
 
 import {
@@ -32,7 +32,7 @@ import {
     type CodeSyncSetupParams,
     type ConfigWriteAccess,
 } from './configServiceAccess';
-import type { TokenProvider } from './daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveContentOperations';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

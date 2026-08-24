@@ -24,11 +24,11 @@
  * Extracted from `configurationService` to keep that file to its job — the REST
  * client — while this protocol, which has its own test file, sits on its own.
  *
- * @module features/eds/services/siteGrantPreservation
+ * @module features/eds/services/configService/siteGrantPreservation
  */
 
 import { readSiteAccess, restoreSiteRoles } from './configServiceAccess';
-import type { TokenProvider } from './daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveContentOperations';
 import { lostGrantsMessage } from './lostGrantsMessage';
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { Logger } from '@/types/logger';

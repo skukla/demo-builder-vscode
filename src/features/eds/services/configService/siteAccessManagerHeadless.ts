@@ -18,7 +18,7 @@
  * an "Add user" affordance that is guaranteed to 403 is worse than saying up
  * front that this identity cannot manage access.
  *
- * @module features/eds/services/siteAccessManagerHeadless
+ * @module features/eds/services/configService/siteAccessManagerHeadless
  */
 
 import type * as vscode from 'vscode';
@@ -30,7 +30,7 @@ import {
     readOrgAdmins,
     readSiteAccess,
     revokeSiteAdmin,
-} from '@/features/eds/services/configServiceAccess';
+} from '@/features/eds/services/configService/configServiceAccess';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

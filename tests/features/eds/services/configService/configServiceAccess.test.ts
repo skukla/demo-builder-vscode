@@ -18,7 +18,7 @@ import {
     probeConfigWriteAccess,
     readOrgAdmins,
     readSiteAccess,
-} from '@/features/eds/services/configServiceAccess';
+} from '@/features/eds/services/configService/configServiceAccess';
 import type { Logger } from '@/types/logger';
 
 const logger: Logger = {
