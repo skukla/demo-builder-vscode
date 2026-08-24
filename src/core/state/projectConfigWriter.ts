@@ -88,6 +88,23 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     }
 }
 
+/**
+ * Manifest FORMAT version, stamped by every save.
+ *
+ * Not the never-bumped `version: '1.0.0'` display field below — this one is
+ * the migration gate. A manifest without it (or with a lower number) predates
+ * the write-back migration sweep and may still carry legacy shapes
+ * (`meshState`/`appState`, flat `additionalConsoleApis`, redundant
+ * `daLiveSite` metadata); the loader converts those on read, and the
+ * activation sweep (`manifestFormatSweep`) load+saves any unstamped manifest
+ * so the file on disk is forward-format. Bump this ONLY when a new load-time
+ * conversion is added whose write-back the sweep must force.
+ *
+ * 2 = first stamped version (2026-08-24): keyed appBuilderComponents,
+ * attributed componentApiPicks, no redundant daLiveSite.
+ */
+export const MANIFEST_FORMAT_VERSION = 2;
+
 export class ProjectConfigWriter {
     private logger: Logger;
 
@@ -160,6 +177,7 @@ export class ProjectConfigWriter {
                 // to every legacy manifest on first save for no gain.
                 ...(project.title ? { title: project.title } : {}),
                 version: '1.0.0',
+                formatVersion: MANIFEST_FORMAT_VERSION,
                 // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
                 created: (project.created instanceof Date
                     ? project.created

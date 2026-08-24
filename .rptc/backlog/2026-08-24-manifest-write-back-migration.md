@@ -1,5 +1,17 @@
 # Manifest write-back migration — retire the legacy-format read layer
 
+> **Phase 1 SHIPPED 2026-08-24** (`feature/manifest-write-back-migration` →
+> develop): `MANIFEST_FORMAT_VERSION = 2` stamped by every save
+> (`projectConfigWriter`), `sweepManifestFormat` (core/state, DI + UI-free,
+> 6 tests incl. a real loader+writer round trip proving the rewrite is
+> lossless) joined LAST in the sequenced activation chain, glue uses
+> `persistAfterLoad: false` + `saveProjectConfigOnly` so migration does not
+> move `currentProject`. **Rollback floor: v1.0.0-beta.127** — the keyed
+> writer shipped in `9059eee29` (2026-07-15), first release tag beta.127, so
+> any plausible rollback target reads a rewritten manifest.
+> **Phase 2 remains** — see below; earliest at two releases after the next
+> cut carries phase 1.
+
 **Filed:** 2026-08-24 (from the trim-cycle 4 legacy sweep — the sweep kept these
 layers because they are compatibility with DATA on disk, not with code; this
 item is the plan to remove that dependency at its source.)
@@ -34,11 +46,11 @@ The gap is purely that loading never triggers a save.
    a concurrent writer silently drops the others' fields (the documented
    reason the chain is sequential). A format rewrite is the most
    whole-manifest write of all.
-3. **Pin the rollback floor.** The updates system supports rollback, so a
-   rewritten manifest must load on the version a user rolls back to. The keyed
-   deploy-record format has been the written format since the ADR-011 D3 steps
-   (2026-08); during implementation, name the oldest version that reads it and
-   record it here. Do not assume.
+3. **Pin the rollback floor.** ✅ DONE — measured, not assumed:
+   `git log -S appBuilderComponents -- projectConfigWriter.ts` names
+   `9059eee29` (D3 steps 1–6, 2026-07-15) as the first keyed-writer commit;
+   `git tag --contains` puts it first in **v1.0.0-beta.127**. A manifest
+   rewritten by the sweep loads on beta.127 and later.
 
 **Phase 2 — delete (two releases later, after auto-update has swept the beta
 channel):**
