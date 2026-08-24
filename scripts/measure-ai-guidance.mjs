@@ -111,6 +111,17 @@ const descriptorTools = new Set();
 for (const f of walk(path.join(ROOT, 'src/features/ai/server'), (p) => p.endsWith('Descriptors.ts'))) {
     for (const m of read(f).matchAll(/tool:\s*['"]([a-z0-9_]+)['"]/g)) descriptorTools.add(m[1]);
 }
+// A recorded ceiling is not an exercised one. The table's own header says the
+// numbers are "asserted where the tool is already driven by a test" — if no test
+// produces a response, nothing compares anything to the number. Measured
+// 2026-08-24: 54 ceilings recorded, 21 actually asserted.
+const asserted = new Set();
+for (const f of walk(path.join(ROOT, 'tests'), (p) => p.endsWith('.ts'))) {
+    for (const m of read(f).matchAll(/expectWithinCeiling\(\s*['"]([a-z0-9_]+)['"]/g)) {
+        asserted.add(m[1]);
+    }
+}
+
 const directTools = [...toolNames].filter((t) => !descriptorTools.has(t));
 const covered = (t) => ceilingByTool.has(t) || exempt.has(t);
 const unbounded = [...toolNames].filter((t) => !covered(t)).sort();
@@ -171,11 +182,13 @@ console.log('## ON-DEMAND — paid only when used\n');
 console.log(`  skill bodies               ~${num(bodyTok)} tok total, load on invocation`);
 console.log(`  heaviest skill             ~${num(skills[0].body)} tok  (${skills[0].name})\n`);
 
-console.log('## BOUNDEDNESS — is what comes back capped?\n');
+console.log('## WATCHED — is what comes back checked? (NOT a runtime cap: ceilings are\n##           test-time regression alarms; RESPONSE_CEILINGS is imported in tests/ only)\n');
 const coveredCount = toolNames.size - unbounded.length;
 const pct = Math.round((coveredCount / toolNames.size) * 100);
-console.log(`  covered (ceiling or explicit exemption)  ${coveredCount} of ${toolNames.size}  (${pct}%)`);
-console.log(`    ├─ measured ceiling                    ${ceilingByTool.size}`);
+const assertedCount = [...asserted].filter((t) => ceilingByTool.has(t)).length;
+console.log(`  watched (ceiling or explicit exemption)  ${coveredCount} of ${toolNames.size}  (${pct}%)`);
+console.log(`    ├─ ceiling ASSERTED against a payload  ${assertedCount}   <- the only tier that BREAKS a build`);
+console.log(`    ├─ ceiling recorded, never exercised   ${ceilingByTool.size - assertedCount}   (documentation, not a guard)`);
 console.log(`    └─ exempt by construction              ${exempt.size}`);
 console.log(`  NEITHER                                  ${unbounded.length}`);
 console.log(`\n  by registration path — this is where the enforcement gap lives:`);
