@@ -10,10 +10,12 @@
  * under the same guard chain as every App Builder mutation (auth →
  * org-mismatch → Developer/System-Admin role).
  *
- * Persistence: runtime-added codes go to `Project.additionalConsoleApis`,
- * which every reconcile call site unions in — the Console subscribe PUTs the
- * full list, so an unpersisted ad-hoc API would be stripped by the next
- * component add/remove.
+ * Persistence: runtime-added codes go to the keyed
+ * `Project.componentApiPicks` (attributed per integration; unowned adds land
+ * under the `__existing__` key), and `resolveDesiredApis` unions them at every
+ * reconcile call site — the Console subscribe PUTs the full list, so an
+ * unpersisted ad-hoc API would be stripped by the next component add/remove.
+ * The flat `additionalConsoleApis` is legacy-read-only (step 07, 2026-08-23).
  *
  * Scope: plain free-service subscriptions. Services needing a product profile
  * (licenseConfigs) fail with the subscriber's error; the tool reports it and
