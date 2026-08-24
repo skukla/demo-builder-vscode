@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import type { Project } from '@/types/base';
 
 /**
@@ -98,6 +99,17 @@ export class OpenInClaudeCommand extends BaseCommand {
 
         this.logger.info(`[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'}`);
 
+        // State the active project in the home AGENTS.md before claude reads it.
+        // A cold Chat then knows which project it is on without spending a round
+        // trip on `get_current_project` — measured as the single most common
+        // self-inflicted call (5 of 6 driven runs).
+        //
+        // Launch is the ONLY safe moment to write this: the pointer changes
+        // freely, and the activation-time write cannot know a name that will
+        // still be true. Resumed conversations do not re-read the file at all,
+        // which is what REHOME_PROMPT_PREFIX below exists to handle.
+        await this.stateActiveProjectInHomeContext(cwd);
+
         try {
             await this.launchTerminal(cwd, prompt);
         } catch (error) {
@@ -108,6 +120,29 @@ export class OpenInClaudeCommand extends BaseCommand {
                 `Failed to open Claude Code: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
         }
+    }
+
+    /**
+     * Read the current-project pointer and write it into the home `AGENTS.md`.
+     *
+     * Never blocks the launch: a project that cannot be resolved (no pointer, or
+     * a read that throws) falls through to `undefined`, and the document then
+     * carries its original "call `get_current_project` first" directive. Getting
+     * the name is an optimisation; getting it WRONG would not be, so an
+     * unreadable pointer must produce no claim rather than a stale one.
+     */
+    private async stateActiveProjectInHomeContext(cwd: string): Promise<void> {
+        let currentProjectName: string | undefined;
+        try {
+            currentProjectName = (await this.stateManager.getCurrentProject())?.name;
+        } catch (error) {
+            this.logger.debug(
+                `[Open in Claude] could not resolve current project: ${
+                    error instanceof Error ? error.message : String(error)
+                }`,
+            );
+        }
+        await refreshHomeAgentsMd(cwd, currentProjectName);
     }
 
     /**

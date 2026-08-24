@@ -64,8 +64,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // Without the bump, existing projects never receive it (the activation
     // sweep is driven by this stamp) and keep the surface where an agent can
     // desync the org selection the extension no longer uses.
-    it('is 21 (PreToolUse aio-global guard ships in the bundle)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(21);
+    // v22: the home AGENTS.md states the active project instead of ordering a
+    // `get_current_project` call to discover it — the round trip 5 of 6 measured
+    // runs spent because the document told them to. Home-only, so delivery does
+    // not actually depend on this stamp (the home context is rewritten on every
+    // activation); bumped to keep the bundle changelog complete and honest.
+    it('is 22 (home AGENTS.md states the active project)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(22);
     });
 });
 

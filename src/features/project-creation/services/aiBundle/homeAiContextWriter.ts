@@ -32,6 +32,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { escapeMarkdown, sanitizeTemplateValue } from '../sanitization';
 import { generateHomeClaudeSettings } from './claudeSettingsWriter';
 import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
@@ -102,6 +103,8 @@ export async function ensureHomeAiContext(
             ),
             fsPromises.writeFile(
                 path.join(projectsRoot, 'AGENTS.md'),
+                // No name here on purpose: activation runs once and the pointer
+                // changes freely afterwards. See buildActiveProjectDirective.
                 buildHomeAgentsMd(),
                 'utf-8',
             ),
@@ -118,6 +121,53 @@ export async function ensureHomeAiContext(
         // dependency. Log and swallow so activation is never affected.
         process.stderr.write(
             `[Demo Builder] WARNING: Could not write home AI context at ${projectsRoot}. Error: ` +
+                `${err instanceof Error ? err.message : String(err)}\n`,
+        );
+    }
+}
+
+/**
+ * Rewrite ONLY the home `AGENTS.md`, stating `currentProjectName` as the active
+ * project.
+ *
+ * Called immediately before a Chat is launched, which is the one moment the
+ * current-project pointer can be read and handed to an agent while it is still
+ * true. `ensureHomeAiContext` cannot do this job: it runs once per activation,
+ * and any name it wrote would be stale the moment the user selected a different
+ * project.
+ *
+ * Deliberately narrow — the MCP config, settings and skills written by
+ * `ensureHomeAiContext` do not depend on the active project, so a launch does
+ * not rewrite them.
+ *
+ * Best-effort: never throws. A failure leaves the previously written document
+ * in place, whose directive is at worst the pre-change "call the tool" wording.
+ *
+ * @param projectsRoot       Absolute path of the Demo Builder projects root.
+ * @param currentProjectName Name the pointer resolves to now, or undefined when
+ *                           no project is selected (the document then tells the
+ *                           agent to resolve it and to ask if there is none).
+ */
+export async function refreshHomeAgentsMd(
+    projectsRoot: string,
+    currentProjectName?: string,
+): Promise<void> {
+    try {
+        await fsPromises.writeFile(
+            path.join(projectsRoot, 'AGENTS.md'),
+            buildHomeAgentsMd(currentProjectName),
+            'utf-8',
+        );
+    } catch (err) {
+        // A missing projects root is not a fault worth reporting: it means no
+        // home context has been written yet, and activation's
+        // `ensureHomeAiContext` creates the directory. Anything else (a
+        // permissions problem, a full disk) is worth saying out loud.
+        if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
+            return;
+        }
+        process.stderr.write(
+            `[Demo Builder] WARNING: Could not refresh home AGENTS.md at ${projectsRoot}. Error: ` +
                 `${err instanceof Error ? err.message : String(err)}\n`,
         );
     }
@@ -148,17 +198,20 @@ const HOME_GENERATED_NOTICE =
     'Edits to this file will be overwritten — it is not a place for your own notes. -->';
 
 /**
- * The home `AGENTS.md`. A short, static document — no user-supplied values, so
- * no sanitization is needed. Frames this directory as the Demo Builder home for
- * the single home Chat and reuses the `## Reporting Back to the User`
- * convention from `aiContextWriter`.
+ * The home `AGENTS.md`. Frames this directory as the Demo Builder home for the
+ * single home Chat and reuses the `## Reporting Back to the User` convention
+ * from `aiContextWriter`.
+ *
+ * Every value is static EXCEPT the current project name, which is user-supplied
+ * and therefore sanitized like every other interpolated project value (see
+ * `../sanitization`).
  */
-function buildHomeAgentsMd(): string {
+function buildHomeAgentsMd(currentProjectName?: string): string {
     return [
         HOME_GENERATED_NOTICE,
         buildHomeHeader(),
         buildHomeWhatYouCanDo(),
-        buildHomeWorkingOnProjects(),
+        buildHomeWorkingOnProjects(currentProjectName),
         buildHomeReportingStyle(),
     ].join('\n\n');
 }
@@ -189,7 +242,7 @@ function buildHomeWhatYouCanDo(): string {
     ].join('\n');
 }
 
-function buildHomeWorkingOnProjects(): string {
+function buildHomeWorkingOnProjects(currentProjectName?: string): string {
     return [
         '## Working on Projects',
         "You can **read and edit any project's files directly** — every project is a",
@@ -198,16 +251,60 @@ function buildHomeWorkingOnProjects(): string {
         '`create_project`, `get_project`, `sync_storefront`, `promote_block_to_library`,',
         '`deploy_mesh`, etc.).',
         '',
-        '**Before starting any project task, call the `get_current_project` MCP tool and',
-        'state which project you are working on (e.g. "Working on <project-name>…") before',
-        "taking any action — substitute the actual `name` from the tool's response; do NOT",
-        'parrot the placeholder. If `get_current_project` returns null, ask the user which',
-        'project they mean rather than guessing. The other tools resolve the same active',
-        'project automatically, but naming it up front confirms you and the user are on',
-        'the same project.**',
+        buildActiveProjectDirective(currentProjectName),
         '',
         'Storefront edits are **auto-committed and pushed** by a hook as you make them.',
         '`sync_storefront` (see the `sync-changes` skill) remains available for an explicit push.',
+    ].join('\n');
+}
+
+/**
+ * Which project the agent should consider active, and how it should find out.
+ *
+ * Two forms, and the difference is whether the CALLER could read the pointer at
+ * a moment close enough to the agent reading this file for the answer to still
+ * be true:
+ *
+ * - **Name supplied** (Chat launch): state it, and say plainly that no call is
+ *   needed to confirm it. This is the whole point of the parameter — five of
+ *   six measured agent runs spent a round trip on `get_current_project` because
+ *   this document ordered them to, and a round trip is the unit of cost (2 calls
+ *   and 4 calls both measured ~47k tokens; see
+ *   `docs/research/2026-08-24-llm-path-measurement.md`).
+ * - **Name omitted** (extension activation): keep the original instruction
+ *   verbatim. Activation happens once and the pointer changes freely afterwards,
+ *   so a name written here would be stale by the time any agent read it —
+ *   exactly the "right data, wrong project" failure that made
+ *   `StateManager.getCurrentProject()` re-read the pointer from disk on every
+ *   call. When we cannot know, we must not claim.
+ *
+ * The supplied form still yields to reality: a tool result or the user naming a
+ * different project outranks this line, because a resumed conversation never
+ * re-reads this file (see `REHOME_PROMPT_PREFIX` in `openInClaude.ts`).
+ */
+function buildActiveProjectDirective(currentProjectName?: string): string {
+    if (!currentProjectName) {
+        return [
+            '**Before starting any project task, call the `get_current_project` MCP tool and',
+            'state which project you are working on (e.g. "Working on <project-name>…") before',
+            "taking any action — substitute the actual `name` from the tool's response; do NOT",
+            'parrot the placeholder. If `get_current_project` returns null, ask the user which',
+            'project they mean rather than guessing. The other tools resolve the same active',
+            'project automatically, but naming it up front confirms you and the user are on',
+            'the same project.**',
+        ].join('\n');
+    }
+
+    const name = escapeMarkdown(sanitizeTemplateValue(currentProjectName));
+    return [
+        `**The active project is \`${name}\`.** Say so before your first action (e.g.`,
+        `"Working on ${name}…"), so you and the user agree on the target. Every other`,
+        'tool resolves this same active project on its own, so do **not** spend a call on',
+        '`get_current_project` to confirm what this line already tells you.',
+        '',
+        'This line was written when the Chat was launched. If the user names a different',
+        'project, or a tool reports one, believe that instead — and call',
+        '`get_current_project` if you need to re-resolve the pointer.',
     ].join('\n');
 }
 

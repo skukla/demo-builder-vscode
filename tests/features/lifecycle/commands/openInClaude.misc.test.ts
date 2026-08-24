@@ -9,7 +9,12 @@ jest.mock('@/commands/claudeSessionStore', () => ({
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
-    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
+    setupVscodeMocks,
+    makeLogger,
+    makeStateManager,
+    makeGlobalState,
+    makeContext,
+    makeProject,
 } from './openInClaude.testkit';
 
 // The home Chat always launches at the projects root. Pin the root so the
@@ -48,15 +53,14 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(project) as never,
-                logger as never,
+                logger as never
             );
 
             await command.execute(project as Project);
 
-            const allLogs = [
-                ...logger.info.mock.calls,
-                ...logger.debug.mock.calls,
-            ].flat().join(' ');
+            const allLogs = [...logger.info.mock.calls, ...logger.debug.mock.calls]
+                .flat()
+                .join(' ');
             expect(allLogs).toContain(PROJECTS_ROOT);
         });
 
@@ -66,7 +70,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                logger as never,
+                logger as never
             );
 
             await command.execute(makeProject() as Project);
@@ -84,7 +88,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                logger as never,
+                logger as never
             );
 
             await command.execute(makeProject() as Project);
@@ -109,7 +113,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                logger as never,
+                logger as never
             );
 
             await command.execute(makeProject() as Project);
@@ -136,16 +140,21 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 stateManager as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute();
 
-            // The current-project pointer is irrelevant to the launch cwd.
-            expect(stateManager.getCurrentProject).not.toHaveBeenCalled();
+            // The pointer IS read now — its name is stated in the home
+            // AGENTS.md so a cold Chat need not spend a round trip on
+            // `get_current_project`. What must never happen is the pointer
+            // influencing WHERE the Chat opens: the project sits at /p/state and
+            // the terminal still opens at the projects root.
+            expect(stateManager.getCurrentProject).toHaveBeenCalled();
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             const createArg = mocks.createTerminalMock.mock.calls[0][0];
             expect(createArg.cwd).toBe(PROJECTS_ROOT);
+            expect(createArg.cwd).not.toBe(project.path);
         });
     });
 });

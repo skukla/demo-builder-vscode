@@ -156,7 +156,20 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // "don't" — so it is enforced, not advised. Rides
 // projectNeedsAppBuilderTooling (the same predicate as the ai-defaults entry
 // that installs those tools) and ships unconditionally for the home Chat.
-export const AI_CONTEXT_VERSION = 21;
+// v22 (2026-08-24): the home AGENTS.md states the active project instead of
+// ordering a call to discover it. It told agents, in bold, to call
+// `get_current_project` before any project task, and 5 of 6 measured runs did
+// exactly that — a whole round trip, which is the unit of cost (2 calls and 4
+// calls both measured ~47k tokens; docs/research/2026-08-24-llm-path-measurement.md).
+// The name is written at CHAT LAUNCH (`refreshHomeAgentsMd`), not at activation:
+// activation runs once, the current-project pointer changes freely afterwards,
+// and a stale name asserted with confidence is the "right data, wrong project"
+// failure that made StateManager.getCurrentProject() re-read the pointer per
+// call. With no name available the original directive is kept verbatim.
+// Home-only, so delivery does not depend on this stamp (the home context is
+// rewritten every activation regardless); recorded here to keep the bundle
+// changelog complete.
+export const AI_CONTEXT_VERSION = 22;
 
 /**
  * Component IDs for standardized component instance access
