@@ -1,5 +1,19 @@
 # Native consent for destructive MCP operations
 
+> **✅ ALL THREE LEGS SHIPPED — leg 3 (visibility) 2026-08-23, legs 1+2
+> (traversability + consent) 2026-08-24 on `feature/mcp-agent-consent`.**
+> Design record: `.rptc/complete/mcp-agent-consent/overview.md`. The settled
+> trade-offs: the consent dialog fires on any call carrying `confirm: true`
+> (the surface's own destructive marker — not the name-shape list, which
+> classifies visibility; not a hand list), one dialog per confirm-carrying
+> call so pipelines confirm once; `demoBuilder.ai.requireAgentConsent`
+> (default on, read live) is the headless escape hatch; decline answers a
+> prose refusal and the handler never runs. `sign_in(dalive)` now returns
+> immediately with poll-`get_auth_status` instructions (status-bar attention
+> raised; outcome lands when the flow finishes). AGENTS.md v20 front-loads
+> `get_auth_status` and explains the dialog. Docs:
+> `docs/systems/mcp-server.md` §11 "three-leg agent-operation surface".
+
 **Filed:** 2026-08-23
 **Origin:** Live warm-path test on the bodea demo — the user watched the agent
 publish path and said "This is concerning for an AI-only publish path."

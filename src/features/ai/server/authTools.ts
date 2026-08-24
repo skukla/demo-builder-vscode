@@ -11,10 +11,12 @@
  * directly and return structured results instead.
  */
 
+import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
 import { asRawText, asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
     getDaLiveAuthService,
@@ -141,7 +143,9 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
         {
             title: 'Sign In',
             description:
-                'Open an interactive sign-in to refresh an expired session (opens a browser). Requires confirm:true',
+                'Open an interactive sign-in to refresh an expired session (opens a browser). ' +
+                'Requires confirm:true. For provider "dalive" it returns immediately after ' +
+                'opening the prompts — poll get_auth_status until dalive.authenticated is true.',
             inputSchema: {
                 provider: z
                     .enum(['adobe', 'github', 'dalive'])
@@ -182,14 +186,36 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
             // handler can't be used from here — it posts the paste UI to a webview,
             // and the agent's headless context drops sendMessage, so the prompt
             // never appears.
-            const res = await showDaLiveAuthQuickPick(ctx);
+            //
+            // Deliberately NOT awaited: the flow blocks for as long as the human
+            // takes, and awaiting it here meant the agent's client saw only a 60s
+            // timeout while the user saw "nothing happens" (the QuickPick can
+            // also dismiss on focus loss). The tool answers immediately with
+            // instructions; the agent polls get_auth_status for completion, and
+            // the eventual outcome lands in the window (observed live
+            // 2026-08-23 — the item this fixes).
+            vscode.window.setStatusBarMessage(
+                '$(key) Demo Builder: an agent requested DA.live sign-in — complete the prompts in this window',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
+            );
+            void showDaLiveAuthQuickPick(ctx).then(
+                (res) => {
+                    if (res.success) {
+                        vscode.window.setStatusBarMessage(
+                            '$(check) DA.live sign-in complete',
+                            TIMEOUTS.STATUS_BAR_SUCCESS,
+                        );
+                    }
+                },
+                () => undefined,
+            );
             return asText({
                 provider,
-                success: res.success,
-                cancelled: res.cancelled ?? false,
-                note: res.success
-                    ? 'DA.live sign-in complete.'
-                    : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
+                started: true,
+                note:
+                    'DA.live sign-in prompts opened in the VS Code window — the user must ' +
+                    'complete them there (no headless grant exists). Poll get_auth_status ' +
+                    'until dalive.authenticated is true before continuing.',
             });
         },
     );

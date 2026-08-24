@@ -140,7 +140,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // demoBuilder.ai.enableThirdPartyTools setting through the ONE code point in
 // aiToolingGate; dependent skills gate with the tool, and the AI Capabilities
 // modal states why an absent skill is absent.
-export const AI_CONTEXT_VERSION = 19;
+// v20 (2026-08-24): agent-traversability + consent guidance in AGENTS.md's
+// Notes for AI Agents — front-load get_auth_status before multi-step flows
+// (sign-in is the one human step; sign_in(dalive) now returns immediately,
+// poll for completion), and destructive confirm:true tools may raise the
+// native consent dialog (demoBuilder.ai.requireAgentConsent): a "user
+// declined" answer means the operation did not run.
+export const AI_CONTEXT_VERSION = 20;
 
 /**
  * Component IDs for standardized component instance access

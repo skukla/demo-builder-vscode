@@ -373,6 +373,11 @@
             "default": "claude-code",
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
           },
+          "demoBuilder.ai.requireAgentConsent": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
+          },
           "demoBuilder.ai.enableThirdPartyTools": {
             "type": "boolean",
             "default": true,

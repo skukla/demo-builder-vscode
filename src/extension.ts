@@ -17,6 +17,10 @@ import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
+import {
+    createAgentConsentGate,
+    createAgentOperationNotifier,
+} from '@/features/ai/server/agentOperationNotifier';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
@@ -30,9 +34,6 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
-import { createAgentOperationNotifier } from '@/features/ai/server/agentOperationNotifier';
-import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';
-import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/thirdPartyToolingSettingListener';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
@@ -58,8 +59,10 @@ import { registerEwSettingChangeListener } from '@/features/eds/services/ewSetti
 import { HelixService } from '@/features/eds/services/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
+import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
+import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
@@ -529,6 +532,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // report may never reach the user. First slice of the
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
+            consentGate: createAgentConsentGate(logger),
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,

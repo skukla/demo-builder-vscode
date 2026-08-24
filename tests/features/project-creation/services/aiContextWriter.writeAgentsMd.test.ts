@@ -132,6 +132,26 @@ const STACKS: Stack[] = [
 
 describe('aiContextWriter', () => {
     describe('generateAgentsMd', () => {
+        // v20: the traversability + consent guidance (backlog:
+        // mcp-destructive-ops-native-consent). Sign-in is the one human step,
+        // so agents surface it at flow START; and a consent-dialog decline is
+        // an answer the agent must not retry past.
+        describe('agent traversability + consent notes', () => {
+            it('tells agents to front-load get_auth_status and poll after sign_in(dalive)', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('get_auth_status BEFORE any multi-step flow');
+                expect(result).toContain('poll get_auth_status until dalive.authenticated');
+            });
+
+            it('explains the native consent dialog and that a decline means the op did not run', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('demoBuilder.ai.requireAgentConsent');
+                expect(result).toContain('did NOT run');
+            });
+        });
+
         // Every project this extension generates is an Adobe Commerce demo — EDS
         // delivery, storefront drop-ins, da.live authoring, App Builder. Wayfinder
         // is Adobe's own agent router across exactly those properties, so the

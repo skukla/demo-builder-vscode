@@ -11,7 +11,11 @@ import * as fs from 'fs';
 import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
-import { InExtensionMcpServer, isReadOnlyToolName } from '@/features/ai/server/inExtensionMcpServer';
+import {
+    InExtensionMcpServer,
+    callRequestsConsent,
+    isReadOnlyToolName,
+} from '@/features/ai/server/inExtensionMcpServer';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap } from '@/types/handlers';
 import {
@@ -351,5 +355,91 @@ describe('agent-operation visibility (the notifier seam)', () => {
         for (const name of ['sync_storefront', 'republish', 'delete_page', 'brand_new_tool']) {
             expect(isReadOnlyToolName(name)).toBe(false);
         }
+    });
+
+    // The consent leg (backlog: mcp-destructive-ops-native-consent). The gate
+    // fires on the surface's OWN destructive marker — a call carrying
+    // confirm:true — never on the name shape (that classifies visibility, and
+    // a dialog on every cheap mutation is the friction the traversability
+    // half forbids). Decline short-circuits BEFORE the handler and before the
+    // notifier: the refusal is the tool's answer, and no progress
+    // notification must claim an operation that never ran.
+    it('callRequestsConsent: true only for args carrying confirm === true', () => {
+        expect(callRequestsConsent({ confirm: true })).toBe(true);
+        expect(callRequestsConsent({ confirm: true, path: '/x' })).toBe(true);
+        expect(callRequestsConsent({ confirm: false })).toBe(false);
+        expect(callRequestsConsent({ confirm: 'true' })).toBe(false);
+        expect(callRequestsConsent({})).toBe(false);
+        expect(callRequestsConsent(undefined)).toBe(false);
+    });
+
+    it('a declined consent gate answers the refusal without running handler or notifier', async () => {
+        const notified: string[] = [];
+        const refusal = {
+            content: [
+                { type: 'text' as const, text: 'The user declined "promote_block_to_library".' },
+            ],
+        };
+        const consentGate = jest.fn(async () => ({ allowed: false as const, refusal }));
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            longRunningNotifier: async (name, run) => {
+                notified.push(name);
+                return run();
+            },
+            consentGate,
+        });
+        await server.start();
+
+        // promote_block_to_library carries confirm:true → the gate decides.
+        // Its handler would throw on the empty projects dir; the refusal
+        // arriving instead is the proof the handler never ran.
+        const result = await callToolOverSocket(socketPath, 'promote_block_to_library', {
+            projectName: 'nope',
+            blockId: 'hero',
+            title: 'Hero',
+            unsafeHTML: '<div></div>',
+            confirm: true,
+        });
+        expect(result).toBe('The user declined "promote_block_to_library".');
+        expect(consentGate).toHaveBeenCalledWith(
+            'promote_block_to_library',
+            expect.objectContaining({ confirm: true })
+        );
+        expect(notified).toEqual([]);
+    });
+
+    it('an allowed gate proceeds into the notifier; confirm-less calls never consult the gate', async () => {
+        const notified: string[] = [];
+        const consentGate = jest.fn(async () => ({ allowed: true as const }));
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            longRunningNotifier: async (name, run) => {
+                notified.push(name);
+                return run();
+            },
+            consentGate,
+        });
+        await server.start();
+
+        // Allowed → the call flows on into the notifier (and then the handler,
+        // which fails on the empty dir — irrelevant here).
+        await callToolOverSocket(socketPath, 'promote_block_to_library', {
+            projectName: 'nope',
+            blockId: 'hero',
+            title: 'Hero',
+            unsafeHTML: '<div></div>',
+            confirm: true,
+        }).catch(() => undefined);
+        expect(consentGate).toHaveBeenCalledTimes(1);
+        expect(notified).toEqual(['promote_block_to_library']);
+
+        // A mutating call WITHOUT confirm bypasses the gate entirely — the
+        // handler's own prose refusal is the answer, and a dialog for a call
+        // that will be refused anyway is pure fatigue.
+        consentGate.mockClear();
+        await callToolOverSocket(socketPath, 'sync_storefront', {
+            projectName: 'nope',
+            commitMessage: 'x',
+        }).catch(() => undefined);
+        expect(consentGate).not.toHaveBeenCalled();
     });
 });

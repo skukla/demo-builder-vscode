@@ -55,8 +55,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // agents at the boilerplate's --type-* scale instead of letting them
     // invent font sizes. Without the bump, existing projects keep bundles
     // whose agents pick sizes by eye.
-    it('is 19 (third-party tooling opt-out gates ai-defaults entries + their skills)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(19);
+    // v20: AGENTS.md gains the traversability + consent notes (front-load
+    // get_auth_status; sign_in(dalive) returns immediately; the native consent
+    // dialog and its setting). Existing projects need the sweep refresh to
+    // learn agents should poll rather than wait.
+    it('is 20 (agent traversability + native-consent guidance in AGENTS.md)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(20);
     });
 });
 

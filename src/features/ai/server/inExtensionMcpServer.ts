@@ -49,12 +49,33 @@ export function isReadOnlyToolName(name: string): boolean {
     return /^(list|get|read|check|find|verify|inspect|show|describe)_/.test(name);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Whether a tool CALL asks for the destructive path — it carries the
+ * `confirm: true` the surface's own convention gates destructive operations
+ * on (the descriptor registrar plus every direct destructive tool refuse
+ * without it). This is the consent gate's classifier, deliberately NOT the
+ * name-shape allowlist above: that one decides VISIBILITY, and a consent
+ * dialog on every cheap mutation is exactly the per-operation friction the
+ * agent-traversability half of the design forbids. A call WITHOUT confirm
+ * needs no dialog — the handler's own prose refusal is its answer.
+ */
+export function callRequestsConsent(args: unknown): boolean {
+    return (
+        !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true
+    );
+}
+
+/** The injected consent gate's verdict. `refusal` is a ready MCP result. */
+export type ConsentVerdict = { allowed: true } | { allowed: false; refusal: unknown };
+
 function withToolLogging(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     logger: Logger,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     notifier?: (toolName: string, run: () => Promise<any>) => Promise<any>,
+    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +87,16 @@ function withToolLogging(
                     args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                 logger.info(`[MCP] tool: ${name}`);
                 logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
+                // Consent FIRST, notifier second: a declined operation never
+                // ran, so no progress notification may claim it did. The gate
+                // decides only when the call carries the destructive marker.
+                if (consentGate && callRequestsConsent(args)) {
+                    const verdict = await consentGate(name, args);
+                    if (!verdict.allowed) {
+                        logger.info(`[MCP] ${name} declined by user consent dialog`);
+                        return verdict.refusal;
+                    }
+                }
                 const invoke =
                     notifier && !isReadOnlyToolName(name)
                         ? () => notifier(name, () => handler(args))
@@ -107,6 +138,15 @@ export interface InExtensionMcpServerOptions {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     longRunningNotifier?: (toolName: string, run: () => Promise<any>) => Promise<any>;
+    /**
+     * Native consent for destructive calls (injected — this module stays
+     * vscode-free). Consulted BEFORE the notifier for every call that carries
+     * `confirm: true` ({@link callRequestsConsent}); the extension supplies a
+     * modal-dialog implementation whose refusal becomes the tool's answer,
+     * converting the agent-supplied honor-system parameter into consent that
+     * survives a harness-side tool allowlist.
+     */
+    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,
@@ -269,7 +309,12 @@ export class InExtensionMcpServer {
         // Wrap so every tool logs to the extension channels; registerProjectTools
         // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
         // are registered through the same wrapper.
-        const logged = withToolLogging(server, this.logger, this.options.longRunningNotifier);
+        const logged = withToolLogging(
+            server,
+            this.logger,
+            this.options.longRunningNotifier,
+            this.options.consentGate,
+        );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
         this.options.registerExtraTools?.(logged);
 
