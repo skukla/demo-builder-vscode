@@ -122,7 +122,7 @@ describe('spine choke-points', () => {
         // the command string itself lives once (it used to be spelled two
         // ways with independently chosen flags across the three sites).
         const primitive = /['"`]aio api-mesh[:\s]+delete/;
-        const spine = ['features/mesh/services/meshDeleteCommand.ts'];
+        const spine = ['core/shell/meshDeleteCommand.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
 
@@ -213,8 +213,8 @@ describe('spine choke-points', () => {
         // else means a fifth cache nobody rotates.
         const primitive = /[sS]ecret[sS]?(torage)?\.(store|delete)\(/;
         const spine = [
-            'features/eds/services/helixKeyStore.ts',
-            'features/eds/services/githubTokenService.ts',
+            'features/eds/services/helix/helixKeyStore.ts',
+            'features/eds/services/github/githubTokenService.ts',
             'features/dashboard/handlers/appBuilderComponentSecrets.ts',
             'features/components/services/commerceSecretMigration.ts',
         ];
@@ -244,7 +244,7 @@ describe('spine choke-points', () => {
         const verbLiteral =
             /\$\{HELIX_ADMIN_URL\}\/(preview|live|code|cache)\/|admin\.hlx\.page\/(preview|live|code|cache)\/\$\{/;
         const hostLiteral = /['"`]https:\/\/admin\.hlx\.page/;
-        const spine = ['features/eds/services/helixApiClient.ts'];
+        const spine = ['features/eds/services/helix/helixApiClient.ts'];
 
         expect(filesTouchingPrimitive(genericTemplate)).toEqual(spine);
         expect(filesTouchingPrimitive(verbLiteral)).toEqual([]);
@@ -261,7 +261,7 @@ describe('spine choke-points', () => {
         // (different system), the whole-site bulk copy (VERY_LONG timeout,
         // retries would triple it), and the module-level write-access probe.
         const primitive = /['"`]https:\/\/admin\.da\.live/;
-        const spine = ['features/eds/services/daLiveConstants.ts'];
+        const spine = ['features/eds/services/daLive/daLiveConstants.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
 
@@ -279,9 +279,9 @@ describe('spine choke-points', () => {
         // never write it.
         const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
         const spine = [
-            'features/eds/services/configServiceAccess.ts',
-            'features/eds/services/configServiceProbe.ts',
-            'features/eds/services/configurationService.ts',
+            'features/eds/services/configService/configServiceAccess.ts',
+            'features/eds/services/configService/configServiceProbe.ts',
+            'features/eds/services/configService/configurationService.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);
@@ -301,8 +301,8 @@ describe('spine choke-points', () => {
         // which is what the pattern anchors on.
         const primitive = /octokit\.request\(\s*['"`](POST|DELETE|PATCH|PUT) /;
         const spine = [
-            'features/eds/services/githubFileOperations.ts',
-            'features/eds/services/githubRepoOperations.ts',
+            'features/eds/services/github/githubFileOperations.ts',
+            'features/eds/services/github/githubRepoOperations.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);

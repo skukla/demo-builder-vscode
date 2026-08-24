@@ -36,7 +36,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 }));
 
 // Services consumed by useProjectBuilder (real hook runs) + block-lib derivation.
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getAvailableBlockLibraries: jest.fn(() => [
         { id: 'lib-a', name: 'Library A', description: 'Adds A blocks' },
     ]),
@@ -47,7 +47,7 @@ jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
 
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
 

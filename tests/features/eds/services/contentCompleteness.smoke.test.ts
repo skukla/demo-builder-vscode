@@ -18,8 +18,8 @@ import {
     DaLiveContentOperations,
     type DaLiveContentSource,
     type TokenProvider,
-} from '@/features/eds/services/daLiveContentOperations';
-import { createPatchReport, getUnapplied } from '@/features/eds/services/patchReportHelper';
+} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createPatchReport, getUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000, QUICK: 5000 } }));

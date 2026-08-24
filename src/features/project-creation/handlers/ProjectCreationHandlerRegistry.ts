@@ -22,7 +22,7 @@ import {
     handleOpenDataInstallerSettings,
 } from '@/features/data-installer/handlers';
 import * as eds from '@/features/eds/handlers';
-import * as lifecycle from '@/features/lifecycle/handlers';
+import * as lifecycle from './wizardLifecycleHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import { defineHandlers } from '@/types/handlers';
@@ -102,7 +102,6 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - DA.live
     'check-dalive-auth': eds.handleCheckDaLiveAuth,
     'open-dalive-login': eds.handleOpenDaLiveLogin,
-    'store-dalive-token': eds.handleStoreDaLiveToken,
     'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': eds.handleClearDaLiveAuth,
     // EDS handlers - ACCS

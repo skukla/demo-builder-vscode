@@ -10,7 +10,7 @@ import {
     handleGetWorkspaces,
     handleSelectWorkspace
 } from '@/features/authentication/handlers/workspaceHandlers';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import * as securityValidation from '@/core/validation';
 
 // Mock dependencies

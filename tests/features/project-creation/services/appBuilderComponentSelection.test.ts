@@ -14,16 +14,16 @@
  */
 
 import { getSelectableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentSelection';
-import * as catalogLoader from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import * as catalogLoader from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 
 // getAvailableAppBuilderComponents is mockable per-test (scoping tests override it). The
 // default delegates to the REAL loader so the axis + mesh-requirement tests run
 // against the shipped seed catalog.
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => {
     const actual = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     );
     return {
         ...actual,
@@ -176,7 +176,7 @@ describe('getSelectableAppBuilderComponents (package scoping, mocked catalog)', 
 
     const mockGetAvailable = catalogLoader.getAvailableAppBuilderComponents as jest.Mock;
     const realGetAvailable = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     ).getAvailableAppBuilderComponents;
 
     afterEach(() => {

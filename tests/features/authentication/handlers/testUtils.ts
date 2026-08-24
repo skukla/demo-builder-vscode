@@ -6,7 +6,7 @@
 
 import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
-import type { PrerequisitesManager } from '@/features/prerequisites';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';

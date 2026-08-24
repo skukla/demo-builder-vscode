@@ -18,7 +18,7 @@ import {
     getLatestBranchCommit,
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import { readLkgSha } from '@/features/eds/services/lkgReader';
+import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 

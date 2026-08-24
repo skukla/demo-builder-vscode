@@ -9,7 +9,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { StatusSection } from '@/core/ui/components/wizard';
+import { StatusSection } from '@/core/ui/components/wizard/StatusSection';
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {

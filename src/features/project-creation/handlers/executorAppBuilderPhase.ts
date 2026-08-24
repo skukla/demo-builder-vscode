@@ -12,10 +12,10 @@
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
-} from '../services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { withOrgContext } from '@/core/shell';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -117,7 +117,7 @@ export async function executeAppBuilderIntegrationsPhase(
     }
 
     const { buildDefaultRunnerDeps, buildRunnerDepsContext } = await import(
-        '@/features/app-builder/services/appBuilderComponentRunnerDeps'
+        '@/features/project-creation/services/appBuilderComponentRunnerDeps'
     );
     const { addAppBuilderComponent } = await import(
         '@/features/app-builder/services/appBuilderComponentRunner'

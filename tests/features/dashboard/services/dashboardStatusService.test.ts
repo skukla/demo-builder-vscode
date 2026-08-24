@@ -10,10 +10,12 @@ import type { Project } from '@/types';
 // We'll import from the new service location
 import type { MeshStatusInfo } from '@/types/webviewPayloads';
 import {
-    buildStatusPayload,
-    deriveMeshStatus,
     hasMeshDeploymentRecord,
     getMeshEndpoint,
+} from '@/core/state/appBuilderComponentState';
+import {
+    buildStatusPayload,
+    deriveMeshStatus,
 } from '@/features/dashboard/services/dashboardStatusService';
 
 describe('dashboardStatusService', () => {

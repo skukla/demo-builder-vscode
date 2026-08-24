@@ -108,6 +108,23 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
     }
 
     /**
+     * Dispose a specific active webview panel by ID, if open.
+     * The cross-feature way to close another feature's panel — callers pass the
+     * viewType string instead of importing that feature's command class.
+     * @param webviewId The webview ID to dispose
+     */
+    public static disposePanel(webviewId: string): void {
+        const panel = WebviewPanelManager.getActivePanel(webviewId);
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed - this is OK
+            }
+        }
+    }
+
+    /**
      * Override in subclasses to indicate if Welcome should reopen on disposal
      * @returns true if this webview should trigger Welcome reopen when closed
      */

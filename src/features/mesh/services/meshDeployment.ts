@@ -7,7 +7,7 @@ import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell';
 import { buildComponent } from '@/core/shell/buildComponent';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';

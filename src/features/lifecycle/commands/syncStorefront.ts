@@ -30,13 +30,13 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { HelixApiError } from '@/features/eds/services/helixApiClient';
+import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
 import {
     PushRejectedError,
     syncAndPublish,
     type SyncAndPublishResult,
-} from '@/features/eds/services/storefrontSyncService';
+} from '@/features/eds/services/storefront/storefrontSyncService';
 import type { Project } from '@/types/base';
 
 const execFile = promisify(childProcess.execFile);

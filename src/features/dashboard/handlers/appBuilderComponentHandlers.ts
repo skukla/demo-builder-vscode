@@ -36,16 +36,16 @@ import {
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
-} from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+} from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import {
     getAppBuilderComponent,
     listAppBuilderComponents,
     setAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
-} from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

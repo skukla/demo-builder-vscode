@@ -14,7 +14,7 @@
 // ---- catalog loader (entry resolution) -------------------------------------
 const mockGetAppBuilderComponentEntry = jest.fn();
 const mockBuildCustomIntegrationEntry = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
 }));
@@ -28,7 +28,7 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 // ---- runner deps factory + context builder ---------------------------------
 const mockBuildDefaultRunnerDeps = jest.fn(() => ({ _deps: true }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({ _ctx: true }));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));

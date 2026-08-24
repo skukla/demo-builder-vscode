@@ -14,12 +14,12 @@
  * method/path/shape per service platform.
  */
 
+import { BASELINE_API } from '@/core/constants';
 import {
     computeRequiredApis,
     resolveServiceInfos,
     partitionByPlatform,
     subscribeRequiredApis,
-    BASELINE_API,
     type ServiceInfo,
     type ApiSubscriberClient,
     type OrgTarget,

@@ -32,7 +32,7 @@ import type {
     IntegrationCardModel,
 } from '@/core/ui/components/integrations';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
-import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
@@ -44,7 +44,7 @@ import {
 import {
     getAppBuilderComponentEntry,
     isBlankSource,
-} from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';

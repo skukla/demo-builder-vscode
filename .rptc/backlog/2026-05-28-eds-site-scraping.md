@@ -129,7 +129,7 @@ the first Mod Agent invocation.
   session is "in progress") against `/repos/{owner}/{repo}/commits?
   author=<aem-code-sync-bot>`. New commit → VS Code toast with Pull action.
 
-Files to create: `src/features/ai/services/githubAppService.ts`,
+Files to create: `src/features/ai/services/github/githubAppService.ts`,
 `src/features/ai/services/modAgentCommitWatcher.ts`.
 Files to modify: `src/extension.ts` (commit watcher lifecycle),
 `src/features/project-creation/services/projectFinalizationService.ts`

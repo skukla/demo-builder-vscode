@@ -21,20 +21,20 @@ const mockAddSiteAdmin = jest.fn();
 const mockRemoveSiteAdmin = jest.fn();
 const mockRepairSiteConfigForProject = jest.fn();
 
-jest.mock('@/features/eds/services/siteAccessManagerHeadless', () => ({
+jest.mock('@/features/eds/services/configService/siteAccessManagerHeadless', () => ({
     listSiteAccess: (...a: unknown[]) => mockListSiteAccess(...a),
     addSiteAdmin: (...a: unknown[]) => mockAddSiteAdmin(...a),
     removeSiteAdmin: (...a: unknown[]) => mockRemoveSiteAdmin(...a),
 }));
 
-jest.mock('@/features/eds/services/repairSiteConfigForProject', () => ({
+jest.mock('@/features/eds/services/configService/repairSiteConfigForProject', () => ({
     repairSiteConfigForProject: (...a: unknown[]) => mockRepairSiteConfigForProject(...a),
 }));
 
 const mockFindStorefrontNameMismatch = jest.fn();
 const mockMigrateStorefrontNameForProject = jest.fn();
 
-jest.mock('@/features/eds/services/storefrontNameMigrationForProject', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject', () => ({
     findStorefrontNameMismatch: (...a: unknown[]) => mockFindStorefrontNameMismatch(...a),
     migrateStorefrontNameForProject: (...a: unknown[]) =>
         mockMigrateStorefrontNameForProject(...a),

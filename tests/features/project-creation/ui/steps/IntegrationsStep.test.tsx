@@ -54,9 +54,9 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
 
 // Append one integration entry to the real catalog so a catalog-kind integration
 // resolves to a row (mesh resolution reads the SAME loader — never replace it).
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => {
     const actual = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     );
     const reco = {
         id: 'cat-reco',

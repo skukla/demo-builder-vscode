@@ -19,7 +19,6 @@ features/app-builder/
     ├── appBuilderComponentState.ts   # keyed-map accessors (single persisted authority)
     ├── appBuilderDeployOutcome.ts    # recordDeployOutcome — the keyed deploy-record writer
     ├── appBuilderComponentRunner.ts  # keyed runner: clone → install → subscribe → deploy per id
-    ├── appBuilderComponentRunnerDeps.ts # RunnerDepsContext factory (catalog, subscriber, secrets)
     ├── deployAppIsolated.ts          # package-isolated deploy (applyIsolatedPackages + deploy)
     ├── appDeployment.ts              # deployAppComponent — org-agnostic deploy helper
     ├── appConfigPackages.ts          # app.config.yaml package rewrite (isolation)

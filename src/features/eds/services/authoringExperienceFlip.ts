@@ -21,12 +21,12 @@ import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
-} from './daLiveContentOperations';
-import { GitHubFileOperations } from './githubFileOperations';
-import { GitHubTokenService } from './githubTokenService';
-import { HelixService } from './helixService';
+} from './daLive/daLiveContentOperations';
+import { GitHubFileOperations } from './github/githubFileOperations';
+import { GitHubTokenService } from './github/githubTokenService';
+import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
-import { republishStorefrontConfig } from './storefrontRepublishService';
+import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AuthoringExperience, Project } from '@/types';
 import type { Logger } from '@/types/logger';

@@ -6,6 +6,7 @@ import {
     filterComponentConfigsForStackChange,
     buildStackChangeStateReset,
 } from '../helpers/stackHelpers';
+import { buildAreaWalk } from './buildAreaWalk';
 import {
     useWizardState,
     useWizardNavigation,
@@ -20,6 +21,7 @@ import {
     getWizardTitle,
     filterRemovedCustomLibraries,
 } from './wizardHelpers';
+import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
@@ -29,18 +31,10 @@ import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { areaSubSteps } from '@/features/project-creation/ui/steps/areaSubSteps';
-import { buildYourProjectAreas } from '@/features/project-creation/ui/steps/buildYourProjectAreas';
-import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
-import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
-import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
-import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
-import { ComponentSelection, type WizardState } from '@/types/webview';
+import { ComponentSelection } from '@/types/webview';
 import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload } from '@/types/webviewPayloads';
 import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
@@ -293,73 +287,6 @@ export function WizardContainer({
         }));
     };
 
-    const renderStep = () => {
-        const props = {
-            state,
-            updateState,
-            onNext: goNext,
-            onBack: goBack,
-            setCanProceed,
-            componentsData,
-        };
-
-        switch (state.currentStep) {
-            case 'welcome':
-                return (
-                    <WelcomeStep
-                        {...props}
-                        existingProjectNames={existingProjectNames}
-                        initialViewMode={projectsViewMode}
-                        packages={packages}
-                        stacks={stacks}
-                    />
-                );
-            case 'prerequisites':
-                return (
-                    <PrerequisitesStep {...props} currentStep={state.currentStep} />
-                );
-            // Collapsed builder step. The shell routes the active area to the
-            // existing Commerce / Storefront / Integrations bodies and owns the
-            // Continue gate over all required areas.
-            case 'build-your-project':
-                return (
-                    <BuildYourProjectStep
-                        {...props}
-                        packages={packages}
-                        stacks={stacks}
-                        blockLibraryDefaults={blockLibraryDefaults}
-                        customBlockLibraryDefaults={customBlockLibraryDefaults}
-                        onArchitectureChange={handleArchitectureChange}
-                    />
-                );
-            case 'storefront-setup':
-                return <StorefrontSetupStep {...props} />;
-            case 'review':
-                return (
-                    <ReviewStep
-                        state={state}
-                        updateState={updateState}
-                        setCanProceed={setCanProceed}
-                        componentsData={componentsData?.data}
-                        packages={packages}
-                        stacks={stacks}
-                    />
-                );
-            case 'create-project':
-                return (
-                    <ProjectCreationStep
-                        state={state}
-                        updateState={updateState}
-                        onBack={goBack}
-                        importedSettings={importedSettings}
-                        packages={packages}
-                    />
-                );
-            default:
-                return null;
-        }
-    };
-
     // Configuration error check - AFTER all hooks to comply with Rules of Hooks
     if (WIZARD_STEPS.length === 0) {
         return (
@@ -380,86 +307,17 @@ export function WizardContainer({
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
     const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
-    // On `build-your-project`, the visible build areas are walked via the footer
-    // Continue/Back (the linear driver) AND shown as children under the Build step
-    // in the rail — click a REACHED area to jump back. `buildAreas` is the ordered,
-    // visible areas for the current stack.
-    const onBuildStep = state.currentStep === 'build-your-project';
-    const buildAreas = onBuildStep ? buildYourProjectAreas(state, stacks) : [];
-    const activeAreaId = state.activeBuildArea ?? buildAreas[0]?.id;
-    const activeAreaIndex = buildAreas.findIndex((a) => a.id === activeAreaId);
-
-    // Rail children: the areas under the (current) Build step, with per-area status.
-    const buildChildSteps: TimelineStep[] = buildAreas.map((a) => ({ id: a.id, name: a.label }));
-    const buildChildStatusById = Object.fromEntries(buildAreas.map((a) => [a.id, a.status]));
-
-    // The footer Continue/Back is the single LINEAR driver: it walks an area's
-    // SUB-STEPS → AREAS → wizard steps. The active area's sub-step DRIVER (Commerce /
-    // Storefront; null for an area with no sub-steps, e.g. Integrations) generalizes
-    // the walk; its ordered sub-steps + the active one come from state.
-    const activeDriver = onBuildStep ? areaSubSteps(activeAreaId) : null;
-    const subSteps = activeDriver ? activeDriver.subSteps(state) : [];
-    const activeSub = activeDriver ? activeDriver.active(state) : null;
-    const nextSub = activeDriver ? activeDriver.next(state) : null;
-    const prevSub = activeDriver ? activeDriver.prev(state) : null;
-
-    /** When Continue/Back lands on an area, pin its FIRST/LAST sub-step (no-op if none). */
-    const areaEntry = (toAreaId: string | undefined, atEnd: boolean): Partial<WizardState> =>
-        areaSubSteps(toAreaId)?.entry(state, atEnd) ?? {};
-
-    /** Jump to a REACHED rail area (at or before the active one); forward stays gated to Continue. */
-    const handleAreaClick = (areaId: string): void => {
-        const idx = buildAreas.findIndex((a) => a.id === areaId);
-        if (idx < 0 || idx > activeAreaIndex) return;
-        updateState({ activeBuildArea: buildAreas[idx].id, ...areaEntry(areaId, false) });
-    };
-
-    // Continue: next sub-step (within the active area) → next visible area (entering it
-    // at its first sub-step) → next wizard step. Pressing Continue COMMITS the current
-    // sub-step via the driver (Commerce's commit-gated ✓; a no-op for areas without it),
-    // so an auto-detected value never shows ✓ on form validity alone.
-    const handleNext = () => {
-        const commit: Partial<WizardState> =
-            activeDriver && activeSub ? activeDriver.commit(state, activeSub) : {};
-        if (activeDriver && nextSub) {
-            updateState({ ...commit, ...activeDriver.setActive(nextSub) });
-            return;
-        }
-        if (onBuildStep && activeAreaIndex >= 0 && activeAreaIndex < buildAreas.length - 1) {
-            const next = buildAreas[activeAreaIndex + 1];
-            updateState({ ...commit, activeBuildArea: next.id, ...areaEntry(next.id, false) });
-            return;
-        }
-        if (Object.keys(commit).length > 0) {
-            updateState(commit);
-        }
-        void goNext();
-    };
-    // Back: previous sub-step (within the active area) → previous visible area
-    // (entering it at its LAST sub-step) → previous wizard step.
-    const handleBack = () => {
-        if (activeDriver && prevSub) {
-            // Match the main timeline: stepping BACK un-commits the target sub-step and
-            // everything after it (driver no-op when there's no commit-gating).
-            const order = subSteps.map((s) => s.id);
-            updateState({
-                ...activeDriver.setActive(prevSub),
-                ...activeDriver.uncommit(state, order, prevSub),
-            });
-            return;
-        }
-        if (onBuildStep && activeAreaIndex > 0) {
-            const prev = buildAreas[activeAreaIndex - 1];
-            updateState({ activeBuildArea: prev.id, ...areaEntry(prev.id, true) });
-            return;
-        }
-        goBack();
-    };
-
-    // Back is available when there is a previous wizard step, a previous area,
-    // or a previous sub-step within the active area.
-    const canGoBack =
-        currentStepIndex > 0 || (onBuildStep && activeAreaIndex > 0) || Boolean(prevSub);
+    // Build-Your-Project linear driver (Continue/Back over sub-steps -> areas ->
+    // wizard steps) + rail children. Extracted to buildAreaWalk (pure derivation).
+    const {
+        activeAreaId,
+        buildChildSteps,
+        buildChildStatusById,
+        handleAreaClick,
+        handleNext,
+        handleBack,
+        canGoBack,
+    } = buildAreaWalk({ state, stacks, currentStepIndex, updateState, goNext, goBack });
 
     const handleTimelineStepClick = (targetIndex: number) => {
         const targetStep = WIZARD_STEPS[targetIndex];
@@ -532,7 +390,23 @@ export function WizardContainer({
                                 key={state.currentStep}
                                 onError={(error) => log.error('Step error:', error)}
                             >
-                                {renderStep()}
+                                {renderWizardStep({
+                                    state,
+                                    updateState,
+                                    goNext,
+                                    goBack,
+                                    setCanProceed,
+                                    componentsData,
+                                    packages,
+                                    stacks,
+                                    existingProjectNames,
+                                    projectsViewMode,
+                                    importedSettings,
+                                    editProject,
+                                    blockLibraryDefaults,
+                                    customBlockLibraryDefaults,
+                                    onArchitectureChange: handleArchitectureChange,
+                                })}
                             </ErrorBoundary>
                         </div>
 

@@ -36,28 +36,28 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import {
     probeCredentialService,
     type CredentialServiceProbeResult,
-} from '@/features/data-installer/services/credentialServiceProbe';
+} from '@/features/eds/services/credentialServiceProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {
     probeConfigService,
     type ConfigServiceProbeResult,
-} from '@/features/eds/services/configServiceProbe';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+} from '@/features/eds/services/configService/configServiceProbe';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,
-} from '@/features/eds/services/githubCredentialProbe';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+} from '@/features/eds/services/github/githubCredentialProbe';
+import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
-} from '@/features/eds/services/storefrontProbe';
+} from '@/features/eds/services/storefront/storefrontProbe';
 import { getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';

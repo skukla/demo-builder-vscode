@@ -20,8 +20,8 @@ import {
     getGitHubServices,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
 

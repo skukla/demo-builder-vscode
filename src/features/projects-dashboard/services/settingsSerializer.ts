@@ -6,7 +6,7 @@
  */
 
 import { stripSecretValues } from '@/features/components/config/envVarKeys';
-import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 import {
     SETTINGS_FILE_VERSION,

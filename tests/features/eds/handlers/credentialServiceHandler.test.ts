@@ -13,12 +13,12 @@
  *    keys it returns.
  */
 
-jest.mock('@/features/data-installer/services/credentialServiceProbe', () => ({
+jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
     probeCredentialService: jest.fn(),
 }));
 
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
-import { probeCredentialService } from '@/features/data-installer/services/credentialServiceProbe';
+import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
 import type { HandlerContext } from '@/types/handlers';
 
 const mockedProbe = probeCredentialService as jest.MockedFunction<typeof probeCredentialService>;

@@ -18,7 +18,7 @@ import {
     probeSocket,
     resolveProxyTarget,
 } from '@/features/ai/server/mcpSocketDiscovery';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 /** Start a real UDS listener; returns a cleanup fn. */
 async function listen(socketPath: string): Promise<() => Promise<void>> {

@@ -34,7 +34,7 @@ export const mockBuildRunnerDepsContext = jest.fn(async () => ({
     getCachedOrganization: () => undefined,
     secrets: { _secrets: true },
 }));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
@@ -50,7 +50,7 @@ export const mockBuildCustomIntegrationEntry = jest.fn(
         source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },
     }),
 );
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...(a as [never])),
 }));

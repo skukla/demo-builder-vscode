@@ -22,11 +22,11 @@ jest.mock('@/core/logging', () => ({
     initializeLogger: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/storefrontNameMigration', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+jest.mock('@/features/eds/services/pdp/publishKeyRegistrar', () => ({
     registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
 }));
 
@@ -39,16 +39,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: jest.fn((fromConfig?: string) => fromConfig),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: jest.fn(() => ({
         templateOwner: 'template-org',
         templateRepo: 'template-repo',
@@ -67,9 +67,9 @@ jest.mock('@/features/eds/services/edsResetParams', () => ({
 // ---------------------------------------------------------------------------
 
 import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
-import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefrontNameMigration';
+import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';

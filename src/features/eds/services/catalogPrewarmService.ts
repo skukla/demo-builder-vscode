@@ -49,14 +49,14 @@ import {
     generateHeaders,
     type ConfigGeneratorParams,
 } from './configGenerator';
-import { derivePrepublishUrl } from './pdp404HandlerPublisher';
-import { encodeSkuForUrl, sanitizeUrlKey } from './pdpUrlEncoding';
+import { derivePrepublishUrl } from './pdp/pdp404HandlerPublisher';
+import { encodeSkuForUrl, sanitizeUrlKey } from './pdp/pdpUrlEncoding';
 import {
     describeScope,
     fetchServedStorefrontConfig,
     scopesMatch,
     type StoreScope,
-} from './servedStorefrontConfig';
+} from './storefront/servedStorefrontConfig';
 import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

@@ -21,8 +21,8 @@ import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
-import { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */

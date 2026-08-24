@@ -8,7 +8,7 @@ import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell';
 
 // Mock getMeshNodeVersion to return a consistent value
-jest.mock('@/features/mesh/services/meshConfig', () => ({
+jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: jest.fn(() => '20'),
 }));
 

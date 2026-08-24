@@ -6,7 +6,7 @@
  * install dialog with an error screen. Three outcomes, not two.
  */
 
-import { classifySetupResult } from '@/features/eds/handlers/storefrontSetupHandlers';
+import { classifySetupResult } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 
 describe('classifySetupResult', () => {
     it('treats success as complete', () => {

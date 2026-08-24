@@ -13,9 +13,9 @@
  */
 
 import type { PromoteBlockContext } from './blockAuthoring';
-import type { TokenProvider } from '@/features/eds/services/daLiveContentOperations';
-import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helixApiClient';
-import { syncAndPublish } from '@/features/eds/services/storefrontSyncService';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helix/helixApiClient';
+import { syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 
 /**
  * Build a static TokenProvider that returns the given token.

@@ -5,7 +5,7 @@ Line numbers are from research on `develop` — re-locate before editing.
 
 ## 01.1 Bodea package + bodea-blocks library (data + pins)
 
-`src/features/project-creation/config/demo-packages.json` — 5th package, mirroring `custom`'s
+`src/features/components/config/demo-packages.json` — 5th package, mirroring `custom`'s
 thin-layer shape (`demo-packages.json:86-187`):
 
 - id `bodea`, name `Bodea`, `hidden: true`, `featured: false`, `requiresMesh: false`,
@@ -22,7 +22,7 @@ thin-layer shape (`demo-packages.json:86-187`):
   `codePatchSource: { owner: skukla, repo: eds-demo-patches, path: b2b, lkgFile: b2b/last-known-good }`,
   plus the new `brandAssets` field from 01.2.
 
-`src/features/project-creation/config/block-libraries.json` — new entry:
+`src/features/components/config/block-libraries.json` — new entry:
 id `bodea-blocks`, `type: storefront`, `source: { owner: skukla, repo: bodea-source, branch: main }`,
 `nativeForPackages: ["bodea"]`, `onlyForPackages: ["bodea"]`, `stackTypes: ["eds-storefront"]`,
 `contentSource: { org: skukla, site: bodea-source }`.
@@ -33,7 +33,7 @@ RED first (pin suites are the spec):
   lkgFile, templateRepo boilerplate-b2b-template, configFlags b2b pair, accountContentSource).
 - `tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts` — length 4→5 (×2);
   selectable set unchanged + `not.toContain('bodea')` while hidden.
-- `tests/features/project-creation/services/blockLibraryLoader.test.ts` — bodea-blocks native+locked
+- `tests/features/components/services/blockLibraryLoader.test.ts` — bodea-blocks native+locked
   for bodea, absent for all other packages (existing exact-list pins stay green via onlyForPackages).
 - Schema: `demo-packages.schema.json` gains `brandAssets` (01.2). No other schema change.
 

@@ -11,7 +11,7 @@
 
 import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/consoleApiHandlers';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('vscode');
@@ -21,7 +21,7 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
     createApiSubscriberClient: jest.fn(() => ({ getServicesForOrg: mockGetServicesForOrg })),
 }));
 
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: jest.fn(),
 }));
 

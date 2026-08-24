@@ -10,7 +10,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { ConfigurationSummary } from '@/core/ui/components/wizard';
+import { ConfigurationSummary } from '@/core/ui/components/wizard/ConfigurationSummary';
 import { WizardState } from '@/types/webview';
 
 // Helper to render with Spectrum Provider

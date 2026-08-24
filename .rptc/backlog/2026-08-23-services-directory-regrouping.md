@@ -1,5 +1,56 @@
 # Regroup crowded service directories into subfolders — where measurement says so
 
+> **✅ ROUND 3 EXECUTED same day — the configService deferral OVERRIDDEN by
+> user decision** ("just do it; the datapack branch pays the rebase"). The
+> `configService/` family (10: configurationService, configServiceAccess,
+> configServiceProbe, configAccessRecovery, siteConfigRegistrar,
+> siteAccessManagerHeadless, siteGrantPreservation, repairSiteConfig ×2,
+> lostGrantsMessage) is in; the publishKey pair went to `pdp/` after a
+> domain read — their WHY is the smart-404 runtime's key, not the Config
+> Service (the registrar header says so). `configGenerator` +
+> `configSyncService` stay top-level deliberately: they are the storefront
+> config.json GENERATION pair, name-similar but a different domain — the
+> membership-by-name trap the item warns about, caught by reading headers.
+> eds/services final shape: **27 top-level + 8 families** (from 95 flat).
+> Full gate green again (1137/1137, no cycles, hygiene clean). The live
+> `claude/datapack-authoring-loop` branch now rebases across renames of the
+> three files it touches — git rename detection should carry it; its owner
+> was the accepted cost.
+
+> **✅ ROUND 2 EXECUTED same day (systematic pass, cost no object — user
+> directive):** `eds/services` again (`patches/` 9 — incl. the lkg pair,
+> `pdp/` 3, `storefront/` 8 → **39 top-level**, from the original 95);
+> `project-creation/services` (`aiBundle/` 13 — the whole generated-AI-bundle
+> subsystem → 15 top-level, from 28); `eds/handlers` (`storefrontSetup/` 8,
+> `daLive/` 5 → 13 top-level, from 26). 46 more src files + 58 test mirrors;
+> `@module` headers and living docs repointed both rounds; two dated research
+> citations that went GONE converted to symbol form. Full suite 1137/1137,
+> lint + typechecks + blindspots clean, madge no cycles, hygiene scan clean.
+> Still deferred: the configService family (live-branch conflict, unchanged).
+> Remaining directories keep their recorded leave-verdicts (`ai/server`
+> suffix convention, `core/ui` kind-grouping, `core/utils` grab-bag);
+> `authentication/services` re-measures AFTER the facade-split dust settles.
+
+> **✅ EXECUTED for `eds/services` 2026-08-24** (`refactor/eds-services-regroup`):
+> 36 files moved into `daLive/` (15), `helix/` (8), `github/` (7), `reset/` (6);
+> 95 → 59 top-level files + 4 family dirs. Full suite 1137/1137 green, lint +
+> both typechecks + blindspots clean, madge no cycles; test edits were
+> path-only (three HTML fixtures briefly damaged by a too-broad rewrite were
+> caught by their own suites and restored — the lesson: rewrite IMPORT
+> POSITIONS, never all quoted relative strings). Living docs (2 skills, 5
+> architecture docs) repointed; hygiene scan clean.
+>
+> **Deliberately NOT moved: the configService family**
+> (`configServiceAccess`, `configAccessRecovery`, `configServiceProbe`,
+> `configurationService`, `configSyncService`, `siteConfigRegistrar`, …) —
+> the live `claude/datapack-authoring-loop` branch touches exactly those
+> files; moving them would have made that branch a conflict farm. Fold them
+> into a `configService/` dir after that branch lands.
+> `claude/commerce-connect-slice-1-plan` also overlaps but is 1,352 commits
+> behind develop — flagged for deletion rather than treated as a constraint.
+> `project-creation/services` (28) and `eds/handlers` (26) were NOT assessed
+> this pass (the move was not "cheap" — ~200 files churned).
+
 **Filed:** 2026-08-23, from a research pass answering "are directories like
 `lifecycle/services/` crowded enough to subgroup?" The named example was not
 (3 files), but the phenomenon is real in one place above all others. The

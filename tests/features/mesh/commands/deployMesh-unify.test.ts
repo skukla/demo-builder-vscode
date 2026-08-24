@@ -25,7 +25,7 @@ jest.mock('@/features/mesh/utils/errorFormatter', () => ({
     formatAdobeCliError: jest.fn((s: string) => s),
     extractMeshErrorSummary: jest.fn((s: string) => s),
 }));
-jest.mock('@/features/mesh/services/meshConfig', () => ({ getMeshNodeVersion: jest.fn(() => '18') }));
+jest.mock('@/core/utils/meshConfig', () => ({ getMeshNodeVersion: jest.fn(() => '18') }));
 
 // App Builder gate skipped — not under test here.
 jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({

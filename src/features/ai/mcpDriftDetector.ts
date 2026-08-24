@@ -31,7 +31,7 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { resolveMcpToolsDir } from '@/features/project-creation/services/aiDefaultsInstaller';
+import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { parseJSON } from '@/types/typeGuards';
 
 export interface McpDriftResult {

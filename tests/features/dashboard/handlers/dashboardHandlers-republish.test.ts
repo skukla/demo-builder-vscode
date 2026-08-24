@@ -57,7 +57,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 // storefrontRepublishService - the shared pipeline (dynamically imported)
 const mockRepublishStorefrontContent = jest.fn();
-jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontContent: (...args: unknown[]) => mockRepublishStorefrontContent(...args),
 }));
 

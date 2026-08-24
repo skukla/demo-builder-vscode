@@ -18,8 +18,8 @@
  * @module features/eds/services/brandAssetPublisher
  */
 
-import { isStaleShaFailure, type GitHubFileOperations } from './githubFileOperations';
-import { replaceMarkedBlock } from './pdp404Snippet';
+import { isStaleShaFailure, type GitHubFileOperations } from './github/githubFileOperations';
+import { replaceMarkedBlock } from './pdp/pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { BrandAssetsConfig } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';

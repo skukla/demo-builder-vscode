@@ -39,7 +39,7 @@ export {
     type DaLiveGuardResult,
     ensureDaLiveAuth,
     showDaLiveAuthQuickPick,
-} from './daLiveAuthPrompt';
+} from './daLive/daLiveAuthPrompt';
 
 export {
     resolveByomOverlayUrl,
@@ -64,4 +64,4 @@ export {
 
 export { publishLibraryPaths, verifyLibraryPreviewed } from './blockLibraryPublish';
 
-export { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from './daLiveSiteConfig';
+export { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from './daLive/daLiveSiteConfig';

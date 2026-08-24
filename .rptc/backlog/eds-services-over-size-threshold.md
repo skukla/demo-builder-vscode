@@ -1,5 +1,39 @@
 # Files over the god-file threshold
 
+> **ADJUDICATED 2026-08-24 (same day, after reading each candidate): the
+> rolled-over set is LEFT ALONE, deliberately.** The user asked whether
+> cutting them was necessary refactor or motion; the reads said motion:
+>
+> - **`configure.ts` — leave.** The 32-import signal misfires on a COMMAND:
+>   orchestration is its job (the architecture doc licenses commands to
+>   import any feature), and moving the save flow relocates the imports
+>   without reducing coupling — the `edsPipeline` verdict again. Decisive:
+>   four suites pin its PRIVATE seams (`republishStorefront`,
+>   `showPostSaveNotifications` monkey-patch, `initializeMessageHandlers`),
+>   so a cut must either leave delegation shims for every pinned method
+>   (shape kept, bodies moved — cosmetic) or rewrite the tests (losing the
+>   untouched-tests behavior proof). Both are the mark of unnecessary
+>   refactor.
+> - **`authenticationService.ts` — leave for now.** NOT a thin facade (34 of
+>   44 methods carry logic; `login` is 109L), so it is a real candidate —
+>   but the riskiest auth file in the repo, it just received structural
+>   relief from the entity-fetcher split, and a login-flow extraction is a
+>   design change, not a move. Revisit only with a concrete driver.
+> - **`githubFileOperations.ts` — leave.** One domain; `resetRepoToTemplate`
+>   is an orchestrator over its sibling methods (edsPipeline shape).
+> - **`projects-dashboard/dashboardHandlers.ts` — leave.** A handler map
+>   grows linearly by design; no helpers found hiding beyond the map rows.
+> - **`.tsx` tier — leave pending a driver.** Components carry UX-regression
+>   risk with weaker test safety; cut on a concrete bug or feature touch,
+>   not on line count.
+>
+> The distinguishing test, written down so the next pass applies it: the
+> shipped cuts (executor, fetcher, mcp-server, helixService) all had
+> separable domains behind a STABLE PUBLIC API with tests passing through
+> that public surface. A candidate without all three produces shims, not
+> structure. Next input: the structural baseline (section F), not another
+> size table.
+
 > **Re-measured 2026-08-24 — the candidate set has rolled over.** The three
 > files this item spent August on are all cut; what measurement condemns now
 > is a different set. Verdicts per the `decompose-god-file` coupling test
@@ -10,7 +44,7 @@
 > |---|---|---|---|
 > | 916 | `dashboard/commands/configure.ts` | **32 non-type imports** | The strongest candidate. Commands import widely by design, but 32 is double the signal threshold. |
 > | 838 | `authentication/services/authenticationService.ts` | **~42 public methods** | Read before cutting: it is the facade over the entity services, and a facade is method-wide by design. Thin delegations → pattern, not god file; logic hiding among them → candidate. |
-> | 859 | `eds/services/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
+> | 859 | `eds/services/github/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
 > | 981 | `projects-dashboard/handlers/dashboardHandlers.ts` | handler file ~2× its 500 threshold | Check for helpers hiding in the map that belong in services (helper-extraction pattern). |
 >
 > Big but coupling-clean or already adjudicated — leave alone:
@@ -96,8 +130,8 @@ were already over it before the branch that filed this item:
 
 | File | at `develop` | after the branch | net |
 |---|---|---|---|
-| `src/features/eds/services/configurationService.ts` | 444 | 532 | +88 |
-| `src/features/eds/services/edsResetService.ts` | 430 | 463 | +33 |
+| `src/features/eds/services/configService/configurationService.ts` | 444 | 532 | +88 |
+| `src/features/eds/services/reset/edsResetService.ts` | 430 | 463 | +33 |
 
 The branch's own additions were extracted back out before shipping, and the
 extractions are the model for the rest:
@@ -193,12 +227,12 @@ uses, not line count:
 | File | code lines | non-type imports | public methods | filed here before? |
 |---|---|---|---|---|
 | `project-creation/handlers/executor.ts` | 1403 | **23** | **33** | no |
-| `eds/services/helixService.ts` | 1313 | 8 | **16** | no |
+| `eds/services/helix/helixService.ts` | 1313 | 8 | **16** | no |
 | `authentication/services/adobeEntityFetcher.ts` | 1232 | 9 | **21** | no |
 | `mcp-server.ts` | 1291 | 11 | — | no |
-| `eds/services/daLiveContentCopy.ts` | 811 | 13 | — | no |
-| `eds/services/configurationService.ts` | 532 | 2 | 7 | yes |
-| `eds/services/edsResetService.ts` | 343 | **16** | 2 | yes |
+| `eds/services/daLive/daLiveContentCopy.ts` | 811 | 13 | — | no |
+| `eds/services/configService/configurationService.ts` | 532 | 2 | 7 | yes |
+| `eds/services/reset/edsResetService.ts` | 343 | **16** | 2 | yes |
 
 Signals over threshold in **bold** (>15 non-type imports, >10 public methods).
 

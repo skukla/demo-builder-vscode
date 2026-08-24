@@ -42,7 +42,7 @@ export async function executeCatalogPrewarmPhase(
     const logger = context.logger;
     try {
         const { extractRepublishParams } = await import(
-            '@/features/eds/services/storefrontRepublishService'
+            '@/features/eds/services/storefront/storefrontRepublishService'
         );
         const params = extractRepublishParams(project);
         if (!params.success) {
@@ -62,11 +62,11 @@ export async function executeCatalogPrewarmPhase(
         }
 
         const { createDaLiveServiceTokenProvider } = await import(
-            '@/features/eds/services/daLiveContentOperations'
+            '@/features/eds/services/daLive/daLiveContentOperations'
         );
         const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
-        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-        const { HelixService } = await import('@/features/eds/services/helixService');
+        const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
+        const { HelixService } = await import('@/features/eds/services/helix/helixService');
         const { prewarmCatalog } = await import('@/features/eds/services/catalogPrewarmService');
 
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(

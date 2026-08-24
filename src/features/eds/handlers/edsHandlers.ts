@@ -20,10 +20,9 @@ import { handleCheckCredentialService } from './credentialServiceHandler';
 import {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
-} from './edsDaLiveHandlers';
+} from './daLive/edsDaLiveHandlers';
 import {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
@@ -32,7 +31,7 @@ import {
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler';
-import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetupHandlers';
+import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetup/storefrontSetupHandlers';
 import { handleGetStoreStructure } from './storeStructureHandler';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { validateURL } from '@/core/validation';
@@ -298,7 +297,6 @@ export const edsHandlers = defineHandlers({
     // DA.live handlers
     'check-dalive-auth': handleCheckDaLiveAuth,
     'open-dalive-login': handleOpenDaLiveLogin,
-    'store-dalive-token': handleStoreDaLiveToken,
     'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': handleClearDaLiveAuth,
 

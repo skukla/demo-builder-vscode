@@ -128,7 +128,7 @@ import {
     getIdentifiedMeshAppBuilderComponent,
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 
 export function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');

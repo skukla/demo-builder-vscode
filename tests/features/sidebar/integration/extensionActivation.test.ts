@@ -168,14 +168,16 @@ describe('SidebarProvider Registration', () => {
 });
 
 describe('Wizard Step Configuration', () => {
-    it('should have WelcomeStep support in WizardContainer', async () => {
-        // This test verifies WelcomeStep is properly supported
+    it('should have WelcomeStep support in the wizard step router', async () => {
+        // This test verifies WelcomeStep is properly supported (the step switch
+        // moved from WizardContainer to wizardStepRouter in the 2026-08-24
+        // function-length pass)
         const fs = require('fs').promises;
         const path = require('path');
 
         const wizardContainerPath = path.resolve(
             __dirname,
-            '../../../../src/features/project-creation/ui/wizard/WizardContainer.tsx'
+            '../../../../src/features/project-creation/ui/wizard/wizardStepRouter.tsx'
         );
 
         const content = await fs.readFile(wizardContainerPath, 'utf-8');

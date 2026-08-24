@@ -20,17 +20,16 @@ export {
 export {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
-} from './edsDaLiveHandlers';
+} from './daLive/edsDaLiveHandlers';
 export { clearServiceCache } from './edsHandlers';
 
 // Export storefront setup handlers
 export {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
-} from './storefrontSetupHandlers';
+} from './storefrontSetup/storefrontSetupHandlers';
 
 // Note: edsHelpers are internal implementation details
 // They should not be exported from the public API

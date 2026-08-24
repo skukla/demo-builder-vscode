@@ -3,7 +3,7 @@
  *
  * Re-exports from the canonical location at services/demoPackageLoader.ts.
  * UI helpers and other consumers within project-creation should import from here.
- * Cross-feature consumers should import from '@/features/project-creation/services/demoPackageLoader'.
+ * Cross-feature consumers should import from '@/features/components/services/demoPackageLoader'.
  */
 
 export {
@@ -14,9 +14,9 @@ export {
     getAvailableStacksForPackage,
     getAllStorefronts,
     getAddonSource,
-} from '../../services/demoPackageLoader';
+} from '@/features/components/services/demoPackageLoader';
 
-export type { StorefrontWithContext } from '../../services/demoPackageLoader';
+export type { StorefrontWithContext } from '@/features/components/services/demoPackageLoader';
 
 export {
     getAvailableBlockLibraries,
@@ -24,4 +24,4 @@ export {
     getDefaultBlockLibraryIds,
     getBlockLibrarySource,
     getBlockLibraryName,
-} from '../../services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';

@@ -24,7 +24,7 @@ jest.mock('@/features/components/services/componentManager', () => ({
 }));
 
 const mockInstallAiDefaultsMcpTools = jest.fn();
-jest.mock('@/features/project-creation/services/aiDefaultsInstaller', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     installAiDefaultsMcpTools: (...args: unknown[]) => mockInstallAiDefaultsMcpTools(...args),
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));

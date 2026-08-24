@@ -299,9 +299,8 @@ export function registerProjectTools(
         'promote_block_to_library',
         {
             title: 'Promote Block to Library',
-            // Phrasing matches sync-changes.md:18 ("Block changes to push back to source library")
-            // so the capabilityStatements regression test (mcpServer-promoteBlock + capabilityStatements)
-            // stays green.
+            // Phrasing matches sync-changes.md ("Block changes to push back to
+            // source library"); mcpServer-promoteBlock.test.ts pins it.
             description:
                 'Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushing/publishing the storefront. Requires confirm:true.',
             inputSchema: {

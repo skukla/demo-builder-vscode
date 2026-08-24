@@ -28,7 +28,7 @@ jest.mock('@/features/mesh/utils/errorFormatter', () => ({
     formatAdobeCliError: jest.fn((s: string) => s),
     extractMeshErrorSummary: jest.fn((s: string) => s),
 }));
-jest.mock('@/features/mesh/services/meshConfig', () => ({
+jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: jest.fn(() => '18'),
 }));
 

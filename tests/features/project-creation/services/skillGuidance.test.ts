@@ -19,7 +19,7 @@
  * edited in isolation cannot drift from what is delivered.
  */
 
-import { DEMO_BUILDER_SKILLS } from '@/features/project-creation/services/skillsWriter';
+import { DEMO_BUILDER_SKILLS } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 
 function skill(filename: string): string {

@@ -8,7 +8,7 @@
  * 4. Have metadata populated after cloning
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];

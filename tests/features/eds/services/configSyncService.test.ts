@@ -32,20 +32,20 @@ jest.mock('fs', () => ({
     },
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({
         getToken: jest.fn().mockResolvedValue('mock-github-token'),
     })),
 }));
 
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn(),
         createOrUpdateFile: jest.fn(),
     })),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({
         previewCode: jest.fn(),
     })),
@@ -129,7 +129,7 @@ describe('syncConfigToRemote', () => {
             // Mock GitHub operations
             const {
                 GitHubFileOperations,
-            } = require('@/features/eds/services/githubFileOperations');
+            } = require('@/features/eds/services/github/githubFileOperations');
             const mockGitHubFileOps = GitHubFileOperations.mock.results[0]?.value || {
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -137,7 +137,7 @@ describe('syncConfigToRemote', () => {
             GitHubFileOperations.mockImplementation(() => mockGitHubFileOps);
 
             // Mock Helix service
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
             const mockHelixService = HelixService.mock.results[0]?.value || {
                 previewCode: jest.fn().mockResolvedValue(undefined),
             };
@@ -200,7 +200,7 @@ describe('syncConfigToRemote', () => {
 
             const {
                 GitHubFileOperations,
-            } = require('@/features/eds/services/githubFileOperations');
+            } = require('@/features/eds/services/github/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockRejectedValue(new Error('GitHub API error')),
@@ -221,13 +221,13 @@ describe('syncConfigToRemote', () => {
 
             const {
                 GitHubFileOperations,
-            } = require('@/features/eds/services/githubFileOperations');
+            } = require('@/features/eds/services/github/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             }));
 
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
             HelixService.mockImplementation(() => ({
                 previewCode: jest.fn().mockRejectedValue(new Error('CDN API error')),
             }));
@@ -251,13 +251,13 @@ describe('syncConfigToRemote', () => {
 
             const {
                 GitHubFileOperations,
-            } = require('@/features/eds/services/githubFileOperations');
+            } = require('@/features/eds/services/github/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             }));
 
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
             HelixService.mockImplementation(() => ({
                 previewCode: jest.fn().mockResolvedValue(undefined),
             }));
@@ -293,7 +293,7 @@ describe('syncConfigToRemote', () => {
 
             const {
                 GitHubFileOperations,
-            } = require('@/features/eds/services/githubFileOperations');
+            } = require('@/features/eds/services/github/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -302,7 +302,7 @@ describe('syncConfigToRemote', () => {
 
         it('sets cdnVerified to true when config.json is accessible with valid commerce-endpoint', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
             HelixService.mockImplementation(() => ({
                 previewCode: jest.fn().mockResolvedValue(undefined),
             }));
@@ -330,7 +330,7 @@ describe('syncConfigToRemote', () => {
 
         it('builds correct CDN URL from repo owner and name', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
             HelixService.mockImplementation(() => ({
                 previewCode: jest.fn().mockResolvedValue(undefined),
             }));

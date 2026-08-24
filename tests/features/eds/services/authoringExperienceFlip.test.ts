@@ -22,7 +22,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
 }));
@@ -33,24 +33,24 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 }));
 
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
 }));
 
 const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest
         .fn()
         .mockImplementation((...args) => mockGitHubFileOperations(...args)),
 }));
 
 const mockGitHubTokenService = jest.fn().mockImplementation(() => ({}));
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
 }));
 
 const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 

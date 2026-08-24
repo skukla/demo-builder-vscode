@@ -13,7 +13,7 @@
 
 import { buildSummaryLines } from '@/commands/diagnostics';
 import type { DiagnosticsReport } from '@/commands/diagnostics';
-import type { CredentialServiceProbeResult } from '@/features/data-installer/services/credentialServiceProbe';
+import type { CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 
 const ENDPOINT = 'https://285361-somewhere-stage.adobeioruntime.net/api/v1/web/x/get-commerce-credentials';
 

@@ -39,7 +39,7 @@
 import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import * as path from 'path';
-import { mcpSocketDir, resolveMcpSocketPath } from './mcpSocketPath';
+import { mcpSocketDir, resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 /**
  * Per-candidate liveness-probe budget. A dead socket file refuses instantly

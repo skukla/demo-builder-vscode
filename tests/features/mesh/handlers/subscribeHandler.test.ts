@@ -8,7 +8,7 @@
  */
 
 import { handleEnsureMeshApiSubscribed } from '@/features/mesh/handlers/subscribeHandler';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';

@@ -6,7 +6,7 @@ import type { Logger } from '@/types/logger';
 /**
  * EDS stores the GitHub OAuth token under this key as JSON
  * `{ token, tokenType, scopes }` — see
- * src/features/eds/services/githubTokenService.ts:27 and :49-50
+ * src/features/eds/services/github/githubTokenService.ts (`GITHUB_TOKEN_KEY` + the two storage writes)
  * (type at src/features/eds/services/types.ts:11-17).
  * We read it directly (not via the EDS service) to respect the
  * features-import rule (updates must not import from features/eds).

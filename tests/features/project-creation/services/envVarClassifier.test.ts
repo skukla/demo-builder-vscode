@@ -11,7 +11,7 @@
  * case).
  */
 
-import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 

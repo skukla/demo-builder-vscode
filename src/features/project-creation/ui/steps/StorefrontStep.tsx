@@ -31,7 +31,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
-} from '../../services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
 import { requireAreaSubSteps } from './areaSubSteps';
 import { isStorefrontConfigured } from './tileStatus';

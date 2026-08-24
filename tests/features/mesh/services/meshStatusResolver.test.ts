@@ -1,0 +1,540 @@
+/**
+ * Tests for meshStatusResolver
+ *
+ * Focuses on checkMeshConfigCompleteness which reads actual .env files
+ * to detect missing configuration.
+ */
+
+import * as fs from 'fs/promises';
+import {
+    checkMeshConfigCompleteness,
+    determineMeshStatus,
+} from '@/features/mesh/services/meshStatusResolver';
+import { parseEnvFile } from '@/core/utils/envParser';
+import type { ComponentInstance, Project } from '@/types';
+
+// Mock fs/promises
+jest.mock('fs/promises');
+const mockFs = fs as jest.Mocked<typeof fs>;
+
+describe('meshStatusResolver', () => {
+    const mockMeshPath = '/projects/demo/components/commerce-mesh';
+    const mockMeshEndpoint = 'https://mesh.example.com/api/mesh-id/graphql';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('checkMeshConfigCompleteness', () => {
+        it('returns incomplete when meshPath is undefined', async () => {
+            const result = await checkMeshConfigCompleteness(undefined);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields.length).toBeGreaterThan(0);
+        });
+
+        it('returns incomplete when .env file does not exist', async () => {
+            mockFs.readFile.mockRejectedValue(new Error('ENOENT: no such file'));
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
+
+        it('returns incomplete when .env file is empty', async () => {
+            mockFs.readFile.mockResolvedValue('');
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
+
+        it('returns incomplete when required fields are missing', async () => {
+            mockFs.readFile.mockResolvedValue(`
+# Partial config
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+SOME_OTHER_VAR=value
+`);
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).not.toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+            expect(result.missingFields).toContain('ADOBE_CATALOG_SERVICE_ENDPOINT');
+        });
+
+        it('returns incomplete when mesh endpoint from componentConfigs is not provided', async () => {
+            mockFs.readFile.mockResolvedValue(`
+# Complete .env INPUT config (but no endpoint in componentConfigs)
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // No mesh endpoint passed - simulates componentConfigs missing MESH_ENDPOINT
+            const result = await checkMeshConfigCompleteness(mockMeshPath);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).toContain('MESH_ENDPOINT');
+        });
+
+        it('returns complete when all required fields and mesh endpoint from componentConfigs are present', async () => {
+            mockFs.readFile.mockResolvedValue(`
+# Complete mesh INPUT config
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // Pass mesh endpoint (from componentConfigs['frontend']['MESH_ENDPOINT'])
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(true);
+            expect(result.missingFields).toHaveLength(0);
+        });
+
+        it('handles quoted values correctly', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT="https://example.com/graphql"
+ADOBE_CATALOG_SERVICE_ENDPOINT='https://catalog.example.com'
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(true);
+        });
+
+        it('treats empty string values as missing', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
+
+        describe('ACCS mesh', () => {
+            const accsMeshComponentId = 'eds-accs-mesh';
+
+            it('returns complete when all ACCS required fields are present', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
+                );
+
+                expect(result.isComplete).toBe(true);
+                expect(result.missingFields).toHaveLength(0);
+            });
+
+            it('returns incomplete when ACCS fields are missing', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
+                );
+
+                expect(result.isComplete).toBe(false);
+                expect(result.missingFields).toContain('ACCS_WEBSITE_CODE');
+                expect(result.missingFields).toContain('ACCS_STORE_CODE');
+                expect(result.missingFields).toContain('ACCS_STORE_VIEW_CODE');
+            });
+
+            it('does not require PaaS fields for ACCS mesh', async () => {
+                mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+                const result = await checkMeshConfigCompleteness(
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
+                );
+
+                // Should NOT require PaaS-specific vars
+                expect(result.missingFields).not.toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+                expect(result.missingFields).not.toContain('ADOBE_CATALOG_API_KEY');
+                expect(result.isComplete).toBe(true);
+            });
+        });
+    });
+
+    describe('determineMeshStatus', () => {
+        const mockMeshComponent: ComponentInstance = {
+            id: 'commerce-mesh',
+            name: 'Commerce Mesh',
+            type: 'dependency',
+            subType: 'mesh',
+            path: mockMeshPath,
+            status: 'deployed',
+            lastUpdated: new Date(),
+        };
+
+        // Project with mesh endpoint in meshState (single source of truth)
+        const mockProjectWithMeshEndpoint: Project = {
+            name: 'Test Project',
+            path: '/projects/demo',
+            created: new Date(),
+            lastModified: new Date(),
+            status: 'ready',
+            componentInstances: {
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    name: 'Commerce Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    path: mockMeshPath,
+                    status: 'deployed',
+                },
+            },
+            meshState: {
+                envVars: {},
+                sourceHash: null,
+                lastDeployed: '2024-01-01',
+                endpoint: mockMeshEndpoint,
+            },
+        };
+
+        // Project WITHOUT a mesh endpoint (incomplete config)
+        const mockProjectWithoutMeshEndpoint: Project = {
+            name: 'Test Project',
+            path: '/projects/demo',
+            created: new Date(),
+            lastModified: new Date(),
+            status: 'ready',
+            // No meshState.endpoint means no endpoint
+        };
+
+        it('returns config-incomplete when .env file is missing', async () => {
+            mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                mockProjectWithMeshEndpoint
+            );
+
+            expect(result).toBe('config-incomplete');
+        });
+
+        it('returns config-incomplete when no commerce-mesh in componentInstances', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // Project has componentConfigs but no MESH_ENDPOINT
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                mockProjectWithoutMeshEndpoint
+            );
+
+            expect(result).toBe('config-incomplete');
+        });
+
+        it('returns config-incomplete when project has no meshState.endpoint', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // getMeshEndpoint() reads from project.meshState.endpoint (single source of truth);
+            // a project without it is config-incomplete regardless of .env completeness
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                mockProjectWithoutMeshEndpoint // No meshState.endpoint
+            );
+
+            expect(result).toBe('config-incomplete');
+        });
+
+        it('returns deployed when config is complete and no changes', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                mockProjectWithMeshEndpoint // Has endpoint in componentInstances
+            );
+
+            expect(result).toBe('deployed');
+        });
+
+        it('returns config-changed when config is complete but has changes', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const result = await determineMeshStatus(
+                { hasChanges: true },
+                mockMeshComponent,
+                mockProjectWithMeshEndpoint
+            );
+
+            expect(result).toBe('config-changed');
+        });
+
+        // ADR-011 D3 Step 06: decline + endpoint read keyed-first from the
+        // mesh appBuilderComponents entry (meshState fallback preserved).
+        it('returns update-declined when the decline flag lives only on the KEYED mesh entry', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const project = {
+                ...mockProjectWithMeshEndpoint,
+                appBuilderComponents: {
+                    'commerce-mesh': {
+                        kind: 'mesh',
+                        status: 'stale',
+                        source: { owner: '', repo: '' },
+                        endpoint: mockMeshEndpoint,
+                        userDeclinedUpdate: true,
+                        declinedAt: '2026-07-01T00:00:00Z',
+                    },
+                },
+            } as unknown as Project;
+
+            const result = await determineMeshStatus(
+                { hasChanges: true },
+                mockMeshComponent,
+                project
+            );
+
+            expect(result).toBe('update-declined');
+        });
+
+        it('treats config as complete when the endpoint lives only on the KEYED mesh entry (keyed-only project)', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const project = {
+                ...mockProjectWithMeshEndpoint,
+                meshState: undefined, // post-Step-07 world: keyed entry only
+                appBuilderComponents: {
+                    'commerce-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: mockMeshEndpoint,
+                    },
+                },
+            } as unknown as Project;
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                project
+            );
+
+            expect(result).toBe('deployed');
+        });
+
+        it('returns deployed for ACCS mesh when ACCS config is complete', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
+ACCS_WEBSITE_CODE=citisignal
+ACCS_STORE_CODE=citisignal_store
+ACCS_STORE_VIEW_CODE=citisignal_us
+`);
+
+            const accsMeshComponent: ComponentInstance = {
+                id: 'eds-accs-mesh',
+                name: 'EDS ACCS Mesh',
+                type: 'dependency',
+                subType: 'mesh',
+                path: mockMeshPath,
+                status: 'deployed',
+                lastUpdated: new Date(),
+            };
+
+            const projectWithAccsMesh: Project = {
+                name: 'ACCS Test Project',
+                path: '/projects/demo',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
+                componentInstances: {
+                    'eds-accs-mesh': {
+                        id: 'eds-accs-mesh',
+                        name: 'EDS ACCS Mesh',
+                        type: 'dependency',
+                        subType: 'mesh',
+                        path: mockMeshPath,
+                        status: 'deployed',
+                    },
+                },
+                meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2024-01-01',
+                    endpoint: mockMeshEndpoint,
+                },
+            };
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                accsMeshComponent,
+                projectWithAccsMesh
+            );
+
+            expect(result).toBe('deployed');
+        });
+
+        it('returns error when component status is error and config complete', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            const errorComponent = { ...mockMeshComponent, status: 'error' as const };
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                errorComponent,
+                mockProjectWithMeshEndpoint
+            );
+
+            expect(result).toBe('error');
+        });
+    });
+
+    describe('parseEnvFile (shared utility)', () => {
+        it('parses simple key=value pairs', () => {
+            const content = 'KEY=value\nANOTHER=test';
+            const result = parseEnvFile(content);
+
+            expect(result).toEqual({ KEY: 'value', ANOTHER: 'test' });
+        });
+
+        it('skips comments and empty lines', () => {
+            const content = '# Comment\nKEY=value\n\n# Another comment\nKEY2=value2';
+            const result = parseEnvFile(content);
+
+            expect(result).toEqual({ KEY: 'value', KEY2: 'value2' });
+        });
+
+        it('removes double quotes from values', () => {
+            const content = 'KEY="quoted value"';
+            const result = parseEnvFile(content);
+
+            expect(result).toEqual({ KEY: 'quoted value' });
+        });
+
+        it('removes single quotes from values', () => {
+            const content = "KEY='quoted value'";
+            const result = parseEnvFile(content);
+
+            expect(result).toEqual({ KEY: 'quoted value' });
+        });
+
+        it('handles values with equals signs', () => {
+            const content = 'URL=https://example.com?foo=bar';
+            const result = parseEnvFile(content);
+
+            expect(result).toEqual({ URL: 'https://example.com?foo=bar' });
+        });
+
+        it('returns empty object for empty content', () => {
+            const result = parseEnvFile('');
+
+            expect(result).toEqual({});
+        });
+    });
+
+    // ADR-011 D3 Steps 07+09: the quick status update reads the endpoint from the
+    // keyed mesh entry — a keyed-only project (post-Step-07, no meshState) must
+    // report the same deployed status + endpoint.
+});

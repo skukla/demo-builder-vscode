@@ -15,7 +15,7 @@
 
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/meshDeployment');

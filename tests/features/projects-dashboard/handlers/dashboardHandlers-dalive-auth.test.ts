@@ -63,7 +63,7 @@ jest.mock('vscode', () => ({
 // Mock DaLiveAuthService
 const mockIsAuthenticated = jest.fn();
 const mockGetAccessToken = jest.fn();
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         isAuthenticated: mockIsAuthenticated,
         getAccessToken: mockGetAccessToken,
@@ -83,7 +83,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 // Mock HelixService
-jest.mock('@/features/eds/services/helixService');
+jest.mock('@/features/eds/services/helix/helixService');
 
 // Mock stalenessDetector (required by dashboardHandlers module)
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -121,7 +121,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 // Mock DaLiveContentOperations (dynamically imported)
 // Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: jest.fn().mockResolvedValue({
             success: true,
@@ -159,7 +159,7 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
-jest.mock('@/features/eds/services/githubAppService', () => ({
+jest.mock('@/features/eds/services/github/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
         isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
         getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
@@ -192,10 +192,10 @@ global.fetch = jest.fn();
 const mockResetEdsProjectWithUI = jest.fn();
 const mockExtractResetParams = jest.fn();
 const mockExecuteEdsReset = jest.fn();
-jest.mock('@/features/eds/services/edsResetUI', () => ({
+jest.mock('@/features/eds/services/reset/edsResetUI', () => ({
     resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
 }));
-jest.mock('@/features/eds/services/edsResetService', () => ({
+jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
     executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
@@ -208,7 +208,7 @@ import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
 import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
-import { HelixService } from '@/features/eds/services/helixService';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 
 // =============================================================================

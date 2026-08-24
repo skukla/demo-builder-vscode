@@ -10,7 +10,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
@@ -19,8 +19,7 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -466,7 +465,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         await this.createOrRevealPanel();
 
         // Dispose Projects List AFTER our panel is created (prevents flash)
-        ShowProjectsListCommand.disposeActivePanel();
+        BaseWebviewCommand.disposePanel('demoBuilder.projectsList');
 
         if (!this.communicationManager) {
             await this.initializeCommunication();

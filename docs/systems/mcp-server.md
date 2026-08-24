@@ -747,7 +747,7 @@ extension-side in `agentOperationNotifier.ts`:
 
 ## 12. Client discovery & configuration
 
-`src/features/project-creation/services/mcpConfigWriter.ts` writes the client
+`src/features/project-creation/services/aiBundle/mcpConfigWriter.ts` writes the client
 config when a project is created (and on "Regenerate AI files"):
 
 - **`.mcp.json`** (project root) and **`.claude/mcp.json`** — the `demo-builder`
@@ -785,7 +785,7 @@ config when a project is created (and on "Regenerate AI files"):
   machine-specific absolute paths and must not be committed.
 
 Additionally, the **Demo Builder: Register Global MCP** palette command
-(`src/features/project-creation/services/globalMcpRegistration.ts`) upserts a
+(`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
 `demo-builder` entry into the user-scope `~/.claude.json` — same command/args
 but **no** socket env, so the proxy discovers a running window at launch (see
 §5). Explicit opt-in only; it merge-preserves everything else in the file and
@@ -840,7 +840,7 @@ result. The underlying service is mocked; the test asserts the tool's gating
 | `src/mcp/` | The file-tool implementations behind it: security guards, project/sync/block handlers, publish tails (`vscode`-free). |
 | `src/features/ai/server/headlessHandlerContext.ts` | Builds a webview-less `HandlerContext`. |
 | `src/features/ai/server/*Tools.ts`, `*Tool.ts`, `*Descriptors.ts` | The tool implementations and descriptor tables. |
-| `src/features/project-creation/services/mcpConfigWriter.ts` | Writes `.mcp.json` / `.claude/mcp.json` / `.claude/settings.json`. |
+| `src/features/project-creation/services/aiBundle/mcpConfigWriter.ts` | Writes `.mcp.json` / `.claude/mcp.json` / `.claude/settings.json`. |
 | `src/extension.ts` (`startInExtensionMcpServer`) | Lifecycle + injects `registerExtraTools` + `ctxFactory`. |
 
 ---

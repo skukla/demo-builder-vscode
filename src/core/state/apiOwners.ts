@@ -10,7 +10,7 @@
  */
 
 import type { ApiOwner } from './apiRowState';
-import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 
 /**

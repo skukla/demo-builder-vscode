@@ -5,9 +5,9 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
-import { getEndpoint as getEndpointHelper } from '@/features/project-creation/helpers';
+import { getEndpoint as getEndpointHelper } from '../services/meshEndpoint';
 import { ErrorCode } from '@/types/errorCodes';
 import { Logger } from '@/types/logger';
 

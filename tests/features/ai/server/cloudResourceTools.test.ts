@@ -20,10 +20,10 @@ jest.mock('@/core/di', () => ({
         })),
     },
 }));
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
 }));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({

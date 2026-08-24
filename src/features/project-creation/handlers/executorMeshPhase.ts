@@ -17,7 +17,7 @@ import {
     type MeshApiConfig,
 } from '../services';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,

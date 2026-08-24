@@ -81,7 +81,7 @@ describe('SOP: no config-leaf mocks', () => {
 
         it('ignores loader-module and non-config mocks', () => {
             const sample = [
-                "jest.mock('@/features/project-creation/services/demoPackageLoader');",
+                "jest.mock('@/features/components/services/demoPackageLoader');",
                 "jest.mock('@/core/config/ConfigurationLoader');",
                 "jest.mock('fs');",
             ].join('\n');

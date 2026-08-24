@@ -10,14 +10,14 @@ const mockPreviewCode = jest.fn(async () => undefined);
 const mockPurgeCacheAll = jest.fn(async () => undefined);
 const mockPublishAllSiteContent = jest.fn(async () => undefined);
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn(() => ({
         previewCode: mockPreviewCode,
         purgeCacheAll: mockPurgeCacheAll,
         publishAllSiteContent: mockPublishAllSiteContent,
     })),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
@@ -37,7 +37,7 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
     prewarmCatalog: jest.fn(async () => ({ attempted: 2, succeeded: 2, failed: 0, skipped: false })),
 }));
 
-import { republishStorefrontContent } from '@/features/eds/services/storefrontRepublishService';
+import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { verifyConfigOnCdn } from '@/features/eds/services/configSyncService';
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';

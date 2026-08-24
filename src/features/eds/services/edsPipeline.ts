@@ -19,11 +19,11 @@
 
 import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
-import { applyBlockCodePatches } from './codePatchPipelineHelpers';
-import type { DaLiveContentOperations } from './daLiveContentOperations';
-import type { GitHubFileOperations } from './githubFileOperations';
-import type { HelixService } from './helixService';
-import { createPatchReport, addCodeResult, type PatchReport } from './patchReportHelper';
+import { applyBlockCodePatches } from './patches/codePatchPipelineHelpers';
+import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
+import type { HelixService } from './helix/helixService';
+import { createPatchReport, addCodeResult, type PatchReport } from './patches/patchReportHelper';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';

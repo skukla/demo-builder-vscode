@@ -32,8 +32,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import types
-import type { GitHubRepoOperations } from '@/features/eds/services/githubRepoOperations';
-import type { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
+import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
+import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type {
     EdsMetadata,

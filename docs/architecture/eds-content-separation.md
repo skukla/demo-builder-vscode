@@ -107,7 +107,7 @@ When creating an EDS project, Demo Builder performs **two independent operations
 #### 1. Clone CODE Repository
 
 ```typescript
-// src/features/eds/services/githubRepoOperations.ts
+// src/features/eds/services/github/githubRepoOperations.ts
 await createFromTemplate({
   templateOwner: 'demo-system-stores',
   templateRepo: 'accs-citisignal',  // GitHub template
@@ -121,7 +121,7 @@ await createFromTemplate({
 #### 2. Copy CONTENT to DA.live
 
 ```typescript
-// src/features/eds/services/daLiveContentOperations.ts
+// src/features/eds/services/daLive/daLiveContentOperations.ts
 const CITISIGNAL_SOURCE = {
   org: 'demo-system-stores',
   site: 'accs-citisignal'  // DA.live site (NOT GitHub)
@@ -158,7 +158,7 @@ const fstabContent = `mountpoints:
 ### Current Limitation: Hardcoded Content Source
 
 ```typescript
-// src/features/eds/services/daLiveConstants.ts
+// src/features/eds/services/daLive/daLiveConstants.ts
 export const CITISIGNAL_SOURCE = {
     org: 'demo-system-stores',
     site: 'accs-citisignal',  // ← ALWAYS uses this content
@@ -296,7 +296,7 @@ export const ContentSourceStep: React.FC = () => {
 #### 3. Refactor Content Operations
 
 ```typescript
-// src/features/eds/services/daLiveContentOperations.ts
+// src/features/eds/services/daLive/daLiveContentOperations.ts
 
 // Before (hardcoded)
 async copyCitisignalContent(
@@ -522,8 +522,8 @@ Helix has a **Content overrides Code** rule:
 
 ### Related Files
 
-- `src/features/eds/services/edsResetRepoHelper.ts` - GitHub code file approach (placeholder JSON fetch; path list from `runtimeSurfaceInventory.ts`)
-- `src/features/eds/services/daLiveContentOperations.ts` - HTML content copy (spreadsheet copy code removed)
+- `src/features/eds/services/reset/edsResetRepoHelper.ts` - GitHub code file approach (placeholder JSON fetch; path list from `runtimeSurfaceInventory.ts`)
+- `src/features/eds/services/daLive/daLiveContentOperations.ts` - HTML content copy (spreadsheet copy code removed)
 
 ## Comparison with Other Architectures
 

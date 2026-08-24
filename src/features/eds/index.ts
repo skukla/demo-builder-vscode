@@ -11,52 +11,52 @@
  */
 
 // GitHub Services (extracted modules - explicit dependencies, locality of behavior)
-export { GitHubTokenService } from './services/githubTokenService';
-export { GitHubRepoOperations } from './services/githubRepoOperations';
-export { GitHubFileOperations } from './services/githubFileOperations';
-export { GitHubOAuthService } from './services/githubOAuthService';
+export { GitHubTokenService } from './services/github/githubTokenService';
+export { GitHubRepoOperations } from './services/github/githubRepoOperations';
+export { GitHubFileOperations } from './services/github/githubFileOperations';
+export { GitHubOAuthService } from './services/github/githubOAuthService';
 
 // DA.live Services (extracted modules - explicit dependencies, locality of behavior)
-export { DaLiveOrgOperations, type TokenProvider } from './services/daLiveOrgOperations';
+export { DaLiveOrgOperations, type TokenProvider } from './services/daLive/daLiveOrgOperations';
 export {
     DaLiveContentOperations,
     type DaLiveContentSource,
-} from './services/daLiveContentOperations';
-export { DaLiveAuthService } from './services/daLiveAuthService';
+} from './services/daLive/daLiveContentOperations';
+export { DaLiveAuthService } from './services/daLive/daLiveAuthService';
 export {
     DaLiveConfigService,
     type PermissionRow,
     type MultiSheetConfig,
     type GrantAccessResult,
     type HasAccessResult,
-} from './services/daLiveConfigService';
+} from './services/daLive/daLiveConfigService';
 
 // Project Orchestration Services
 export { ToolManager } from './services/toolManager';
-export { HelixService } from './services/helixService';
+export { HelixService } from './services/helix/helixService';
 export { CleanupService } from './services/cleanupService';
 export {
     ConfigurationService,
     type SiteRegistrationParams,
     type ConfigServiceResult,
-} from './services/configurationService';
+} from './services/configService/configurationService';
 
 // Config Generator (for EDS Reset)
 export { generateConfigJson, extractConfigParams } from './services/configGenerator';
 export type { ConfigGeneratorParams, ConfigGeneratorResult } from './services/configGenerator';
 
 // EDS Reset Service (shared by dashboard and projects-dashboard)
-export { executeEdsReset, extractResetParams } from './services/edsResetService';
+export { executeEdsReset, extractResetParams } from './services/reset/edsResetService';
 export type {
     EdsResetParams,
     EdsResetProgress,
     EdsResetResult,
     ExtractParamsResult,
-} from './services/edsResetService';
+} from './services/reset/edsResetService';
 
 // EDS Reset UI (UI orchestration extracted from edsResetService)
-export { resetEdsProjectWithUI } from './services/edsResetUI';
-export type { ResetWithUIOptions } from './services/edsResetUI';
+export { resetEdsProjectWithUI } from './services/reset/edsResetUI';
+export type { ResetWithUIOptions } from './services/reset/edsResetUI';
 
 // Storefront Staleness Detection (config.json republish tracking)
 export {
@@ -64,19 +64,19 @@ export {
     updateStorefrontState,
     getCurrentStorefrontState,
     getStorefrontEnvVars,
-} from './services/storefrontStalenessDetector';
+} from './services/storefront/storefrontStalenessDetector';
 
 // EDS Project Detection (single source of truth from typeGuards)
 export { isEdsProject } from '@/types/typeGuards';
-export type { StorefrontState, StorefrontChanges } from './services/storefrontStalenessDetector';
+export type { StorefrontState, StorefrontChanges } from './services/storefront/storefrontStalenessDetector';
 
 // Storefront Republish Service
 export {
     republishStorefrontConfig,
     extractRepublishParams,
     needsStorefrontRepublish,
-} from './services/storefrontRepublishService';
-export type { RepublishParams, RepublishResult } from './services/storefrontRepublishService';
+} from './services/storefront/storefrontRepublishService';
+export type { RepublishParams, RepublishResult } from './services/storefront/storefrontRepublishService';
 
 // Authoring-experience flip side-effects (shared by Configure + EW settings listener)
 export {
@@ -125,7 +125,6 @@ export {
     handleGitHubOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleDiscoverStoreStructure,
     handleCheckCredentialService,
 } from './handlers';

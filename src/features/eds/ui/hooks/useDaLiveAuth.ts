@@ -50,8 +50,6 @@ interface UseDaLiveAuthReturn {
     verifiedOrg?: string;
     /** Open DA.live for token extraction */
     openDaLive: () => void;
-    /** Store pasted token (legacy - without org verification) */
-    storeToken: (token: string) => void;
     /** Store token and verify org in one step (recommended) */
     storeTokenWithOrg: (token: string, orgName: string) => void;
     /** Check current auth status */
@@ -225,14 +223,6 @@ export function useDaLiveAuth({
     }, []);
 
     /**
-     * Store pasted token (legacy - without org verification)
-     */
-    const storeToken = useCallback((token: string) => {
-        log.debug('Storing DA.live token');
-        webviewClient.postMessage('store-dalive-token', { token });
-    }, []);
-
-    /**
      * Store token and verify org in one step
      */
     const storeTokenWithOrg = useCallback((token: string, orgName: string) => {
@@ -341,7 +331,6 @@ export function useDaLiveAuth({
         setupComplete: setupCompleteRef.current,
         verifiedOrg: edsConfig?.daLiveOrg,
         openDaLive,
-        storeToken,
         storeTokenWithOrg,
         checkAuthStatus,
         resetAuth,

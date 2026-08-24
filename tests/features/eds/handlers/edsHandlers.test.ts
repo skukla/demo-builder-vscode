@@ -37,7 +37,6 @@ describe('edsHandlers', () => {
             // Then: DA.live handlers present
             expect(hasHandler(edsHandlers, 'check-dalive-auth')).toBe(true);
             expect(hasHandler(edsHandlers, 'open-dalive-login')).toBe(true);
-            expect(hasHandler(edsHandlers, 'store-dalive-token')).toBe(true);
             expect(hasHandler(edsHandlers, 'store-dalive-token-with-org')).toBe(true);
             expect(hasHandler(edsHandlers, 'clear-dalive-auth')).toBe(true);
         });
@@ -86,7 +85,7 @@ describe('edsHandlers', () => {
             // History: 20 → 14 when five superseded handlers were removed
             // 2026-08-05; 14 → 15 with get-store-structure; 15 → 16 with
             // check-credential-service.
-            expect(types).toHaveLength(16);
+            expect(types).toHaveLength(15);
         });
 
         it('should have handlers as functions', () => {

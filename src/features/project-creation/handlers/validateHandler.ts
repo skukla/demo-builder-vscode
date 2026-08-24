@@ -4,7 +4,7 @@
  * Handles field validation for project creation form.
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { validateField as validateFieldHelper } from '@/features/project-creation/helpers';
 
 /**

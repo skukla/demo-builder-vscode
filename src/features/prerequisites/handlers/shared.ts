@@ -6,7 +6,7 @@
  */
 
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { ComponentSelection } from '@/types/components';

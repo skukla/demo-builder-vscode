@@ -10,11 +10,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
     getDaLiveAuthService: jest.fn(),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: async () => 'da-token' })),
 }));
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn(),
 }));
 jest.mock('@/types/typeGuards', () => ({
@@ -29,8 +29,8 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helixService';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import { isEdsProject } from '@/types/typeGuards';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';

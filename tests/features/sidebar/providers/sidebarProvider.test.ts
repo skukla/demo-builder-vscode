@@ -6,11 +6,11 @@
 
 import * as vscode from 'vscode';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
-import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
+import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 
 // Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
 // be asserted without touching the real VS Code panel/session state.
-jest.mock('@/features/lifecycle/handlers/lifecycleHandlers', () => ({
+jest.mock('@/features/lifecycle/services/lifecycleService', () => ({
     toggleLogsPanel: jest.fn().mockResolvedValue(true),
 }));
 

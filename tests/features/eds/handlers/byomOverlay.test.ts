@@ -52,12 +52,12 @@ jest.mock('@/core/logging', () => {
 });
 
 // Mock service imports required by byomOverlay module
-jest.mock('@/features/eds/services/githubTokenService');
-jest.mock('@/features/eds/services/githubRepoOperations');
-jest.mock('@/features/eds/services/githubFileOperations');
-jest.mock('@/features/eds/services/githubOAuthService');
-jest.mock('@/features/eds/services/daLiveAuthService');
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService');
+jest.mock('@/features/eds/services/github/githubRepoOperations');
+jest.mock('@/features/eds/services/github/githubFileOperations');
+jest.mock('@/features/eds/services/github/githubOAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
 

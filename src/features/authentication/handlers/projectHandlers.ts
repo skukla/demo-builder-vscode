@@ -18,7 +18,7 @@ import {
 } from '@/features/authentication/services/ensureOrgContext';
 import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
 import type { AdobeProject } from '@/features/authentication/services/types';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext, HandlerResponse } from '@/types/handlers';

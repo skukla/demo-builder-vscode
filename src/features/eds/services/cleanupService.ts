@@ -11,9 +11,9 @@
  * All operations continue even if one fails, with detailed results returned.
  */
 
-import type { ConfigurationService } from './configurationService';
-import type { DaLiveOrgOperations } from './daLiveOrgOperations';
-import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { ConfigurationService } from './configService/configurationService';
+import type { DaLiveOrgOperations } from './daLive/daLiveOrgOperations';
+import type { GitHubRepoOperations } from './github/githubRepoOperations';
 import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,

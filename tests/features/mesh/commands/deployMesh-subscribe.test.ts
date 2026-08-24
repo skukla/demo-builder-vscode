@@ -18,7 +18,7 @@ import type { Project, ComponentInstance } from '@/types/base';
 jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/mesh/services/meshConfig', () => ({ getMeshNodeVersion: jest.fn(() => '18') }));
+jest.mock('@/core/utils/meshConfig', () => ({ getMeshNodeVersion: jest.fn(() => '18') }));
 
 // Preflight + permission gate pass.
 jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({

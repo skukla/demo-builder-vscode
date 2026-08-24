@@ -21,8 +21,8 @@
  * @module features/project-creation/services/appBuilderComponentSelection
  */
 
-import { getAvailableAppBuilderComponents } from './appBuilderComponentCatalogLoader';
-import { getResolvedMeshRequirement } from './demoPackageLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 

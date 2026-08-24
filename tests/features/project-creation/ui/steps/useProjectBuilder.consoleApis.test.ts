@@ -19,12 +19,12 @@ import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
 // Same deterministic service mocks as the sibling useProjectBuilder files.
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
     getPackageById: jest.fn(),
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),

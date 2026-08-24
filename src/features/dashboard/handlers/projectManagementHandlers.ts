@@ -81,7 +81,7 @@ export const handleResetProject: MessageHandler = async (context) => {
     }
 
     if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetUI');
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
             project,
             context,

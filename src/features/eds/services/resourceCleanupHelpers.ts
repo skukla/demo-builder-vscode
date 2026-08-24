@@ -12,7 +12,7 @@
  * - formatCleanupResults: Human-readable cleanup summary
  */
 
-import type { DaLiveContentOperations } from './daLiveContentOperations';
+import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';

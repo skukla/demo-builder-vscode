@@ -10,13 +10,13 @@
  */
 
 import * as vscode from 'vscode';
-import { DaLiveAuthService } from '../services/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
-import { GitHubFileOperations } from '../services/githubFileOperations';
-import { GitHubOAuthService } from '../services/githubOAuthService';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
-import { GitHubTokenService } from '../services/githubTokenService';
-import { HelixService } from '../services/helixService';
+import { DaLiveAuthService } from '../services/daLive/daLiveAuthService';
+import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveContentOperations';
+import { GitHubFileOperations } from '../services/github/githubFileOperations';
+import { GitHubOAuthService } from '../services/github/githubOAuthService';
+import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
+import { GitHubTokenService } from '../services/github/githubTokenService';
+import { HelixService } from '../services/helix/helixService';
 import { getLogger } from '@/core/logging';
 import type { HandlerContext } from '@/types/handlers';
 

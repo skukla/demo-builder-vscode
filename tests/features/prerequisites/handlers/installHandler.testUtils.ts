@@ -25,7 +25,7 @@
  * }));
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { ServiceLocator } from '@/core/di';
 

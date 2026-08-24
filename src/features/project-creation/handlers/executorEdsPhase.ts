@@ -14,7 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ensureEdsContent } from '../services';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
@@ -124,7 +124,7 @@ async function fetchTemplateCommitSha(
     // Thin-layer path: read LKG from patches repo. Fall back to template
     // HEAD on LKG fetch failure (warn already logged inside readLkgSha).
     if (codePatchSource) {
-        const { readLkgSha } = await import('@/features/eds/services/lkgReader');
+        const { readLkgSha } = await import('@/features/eds/services/patches/lkgReader');
         const lkg = await readLkgSha(
             {
                 owner: codePatchSource.owner,
@@ -145,9 +145,9 @@ async function fetchTemplateCommitSha(
     }
 
     try {
-        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+        const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
         const { GitHubFileOperations } = await import(
-            '@/features/eds/services/githubFileOperations'
+            '@/features/eds/services/github/githubFileOperations'
         );
         const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
         const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
@@ -227,7 +227,7 @@ export async function syncEdsConfigToRemote(
     );
 
     const { updateStorefrontState } = await import(
-        '@/features/eds/services/storefrontStalenessDetector'
+        '@/features/eds/services/storefront/storefrontStalenessDetector'
     );
     // NOTE: passes the project's CURRENT configs, not a snapshot from when
     // config.json was generated earlier in this run. Same latent pattern the

@@ -39,7 +39,7 @@ import {
 import type { McpToolCredentials } from './credentials';
 import { assertInsideProject, resolveProjectPath, resolveStorefrontPath } from './projectSecurity';
 import { paginate } from './projectToolHandlers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 
 /** The block tool handlers (spread into `toolHandlers` in mcp-server). */
 export const blockToolHandlers = {

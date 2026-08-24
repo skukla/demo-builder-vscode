@@ -27,7 +27,7 @@ import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/se
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
-} from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+} from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
 import type {

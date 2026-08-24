@@ -55,7 +55,7 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/storefrontSyncService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontSyncService', () => ({
     // Signature mirrors the real class, `reason` included. A mock that dropped
     // it would let a spec construct a rejection the real code could not.
     PushRejectedError: class PushRejectedError extends Error {
@@ -72,11 +72,11 @@ jest.mock('@/features/eds/services/storefrontSyncService', () => ({
     syncAndPublish: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/helixApiClient', () => ({
+jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: jest.fn(),
 }));
 
@@ -90,8 +90,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 // Safe: the mocks above hoist over these imports (same module).
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefrontSyncService';
+import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 
 // Re-exported so specs never import the SUT directly (see the header note).

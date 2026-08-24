@@ -6,7 +6,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { Project } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -91,7 +91,7 @@ export function getBrandStackSummary(project: Project): string | undefined {
 
     // Get package name
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const demoPackagesConfig = require('@/features/project-creation/config/demo-packages.json');
+    const demoPackagesConfig = require('@/features/components/config/demo-packages.json');
     const pkg = demoPackagesConfig.packages?.find(
         (p: { id: string }) => p.id === project.selectedPackage,
     );

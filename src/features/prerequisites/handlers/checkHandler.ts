@@ -7,29 +7,18 @@
  * - Sends status updates to UI with progress tracking
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
-import stacksConfig from '@/features/project-creation/config/stacks.json';
 import { ErrorCode } from '@/types/errorCodes';
-import type { PrerequisiteCheckState } from '@/types/handlers';
+import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
-import type { Stack } from '@/types/stacks';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteCheckSummary, PrerequisiteStatusPayload, PrerequisitesCompletePayload, PrerequisitesLoadedPayload } from '@/types/webviewPayloads';
 import type { CheckPrerequisitesRequestPayload } from '@/types/webviewRequests';
 
-// Import stack config for direct lookup
-
-/**
- * Look up a stack by ID from the stacks configuration
- * This is the source of truth for frontend/backend/dependencies
- */
-function getStackById(stackId: string): Stack | undefined {
-    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
-}
 
 // PrerequisiteSummary moved to @/types/webviewPayloads as PrerequisiteCheckSummary —
 // ONE declaration shared with the prerequisites-complete payload the MCP surface captures.

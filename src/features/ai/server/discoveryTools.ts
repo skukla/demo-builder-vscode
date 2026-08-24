@@ -12,7 +12,7 @@
 
 import { asText } from './mcpToolResult';
 import componentsConfig from '@/features/components/config/components.json';
-import { getSelectablePackages } from '@/features/project-creation/services/demoPackageLoader';
+import { getSelectablePackages } from '@/features/components/services/demoPackageLoader';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
 
 /**

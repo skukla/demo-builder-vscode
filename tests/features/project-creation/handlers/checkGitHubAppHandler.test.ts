@@ -27,7 +27,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
 }));
 
-jest.mock('@/features/eds/services/githubAppService', () => ({
+jest.mock('@/features/eds/services/github/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
         isAppInstalled: mockIsAppInstalled,
         getInstallUrl: jest
@@ -36,7 +36,7 @@ jest.mock('@/features/eds/services/githubAppService', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
 }));
 
@@ -351,7 +351,7 @@ describe('checkGitHubApp handler', () => {
 describe('checkGitHubApp handler — DA.live session wiring', () => {
     it('constructs the service WITH the DA.live token provider', async () => {
         const { GitHubAppService } = jest.requireMock(
-            '@/features/eds/services/githubAppService',
+            '@/features/eds/services/github/githubAppService',
         ) as { GitHubAppService: jest.Mock };
         const { tryCreateDaLiveTokenProvider } = jest.requireMock(
             '@/features/eds/handlers/edsHelpers',

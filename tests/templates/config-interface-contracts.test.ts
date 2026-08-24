@@ -35,18 +35,18 @@ const PAIRS: Array<[dataPath: string, typeName: string, sourceFile: string]> = [
         'src/types/components.ts',
     ],
     [
-        'src/features/project-creation/config/demo-packages.json',
+        'src/features/components/config/demo-packages.json',
         'DemoPackagesConfig',
         'src/types/demoPackages.ts',
     ],
-    ['src/features/project-creation/config/stacks.json', 'StacksConfig', 'src/types/stacks.ts'],
+    ['src/features/components/config/stacks.json', 'StacksConfig', 'src/types/stacks.ts'],
     [
-        'src/features/project-creation/config/app-builder-components.json',
+        'src/features/components/config/app-builder-components.json',
         'AppBuilderComponentsCatalog',
         'src/types/appBuilderComponents.ts',
     ],
     [
-        'src/features/project-creation/config/block-libraries.json',
+        'src/features/components/config/block-libraries.json',
         'BlockLibrariesConfig',
         'src/types/blockLibraries.ts',
     ],

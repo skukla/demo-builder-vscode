@@ -19,15 +19,16 @@
 import { deriveAllowedDomain } from './allowedDomain';
 import {
     subscribeRequiredApis,
+    type OrgTarget,
     type SubscribedApi,
     type SubscribeProgressListener,
 } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
-import { subscriberTarget } from './appBuilderComponentRunnerDeps';
+
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AdobeConfig, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -42,6 +43,15 @@ export interface MeshSubscribeTarget {
     componentInstances?: Project['componentInstances'];
     additionalConsoleApis?: Project['additionalConsoleApis'];
     componentApiPicks?: Project['componentApiPicks'];
+}
+
+/** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
+export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
+    return {
+        orgId: project.adobe?.organization ?? '',
+        projectId: project.adobe?.projectId ?? '',
+        workspaceId: project.adobe?.workspace ?? '',
+    };
 }
 
 export interface EnsureMeshApiSubscribedParams {

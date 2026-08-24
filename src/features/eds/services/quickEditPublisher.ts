@@ -34,7 +34,7 @@
  * @module features/eds/services/quickEditPublisher
  */
 
-import { GitHubFileOperations } from './githubFileOperations';
+import { GitHubFileOperations } from './github/githubFileOperations';
 import type { Logger } from '@/types/logger';
 
 /** Storefront-relative path to the canonical entry script. */

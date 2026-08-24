@@ -184,7 +184,7 @@ describe('Service Logger Injection', () => {
                 getToken: jest.fn().mockResolvedValue('test-token'),
             };
 
-            const { DaLiveOrgOperations } = require('@/features/eds/services/daLiveOrgOperations');
+            const { DaLiveOrgOperations } = require('@/features/eds/services/daLive/daLiveOrgOperations');
 
             // Should work without logger (backward compatible)
             const service1 = new DaLiveOrgOperations(mockTokenProvider);
@@ -205,7 +205,7 @@ describe('Service Logger Injection', () => {
                 delete: jest.fn(),
             };
 
-            const { GitHubTokenService } = require('@/features/eds/services/githubTokenService');
+            const { GitHubTokenService } = require('@/features/eds/services/github/githubTokenService');
 
             // Should work without logger (backward compatible)
             const service1 = new GitHubTokenService(mockSecretStorage);
@@ -235,7 +235,7 @@ describe('Service Logger Injection', () => {
 
     describe('HelixService', () => {
         it('should accept optional logger in constructor', () => {
-            const { HelixService } = require('@/features/eds/services/helixService');
+            const { HelixService } = require('@/features/eds/services/helix/helixService');
 
             // Should work without logger (backward compatible)
             const service1 = new HelixService();

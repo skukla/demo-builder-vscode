@@ -183,6 +183,14 @@ export const MESH_COMPONENT_IDS = [
 export type MeshComponentId = (typeof MESH_COMPONENT_IDS)[number];
 
 /**
+ * Baseline Console API always subscribed for App Builder workspaces (free;
+ * needed for `aio app` operations). Shared by the subscribe spine
+ * (app-builder/services/apiSubscriber) and Adobe project teardown
+ * (authentication) — see the appbuilder-component-authoring skill.
+ */
+export const BASELINE_API = 'AdobeIOManagementAPISDK';
+
+/**
  * Check if a component ID is a mesh component
  */
 export function isMeshComponentId(componentId: string): componentId is MeshComponentId {

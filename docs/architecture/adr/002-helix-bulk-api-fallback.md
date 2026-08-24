@@ -97,7 +97,7 @@ Without this understanding, the fallback behavior appeared mysterious. Developer
 
 ### Code Structure
 
-**File**: `src/features/eds/services/helixService.ts`
+**File**: `src/features/eds/services/helix/helixService.ts`
 
 ```typescript
 async publishAllSiteContent(
@@ -261,7 +261,7 @@ The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "sou
 - **Adobe Documentation**: [Publishing from Authoring](https://www.aem.live/docs/publishing-from-authoring)
 - **Helix Admin API**: [admin.hlx.page docs](https://www.aem.live/docs/admin.html)
 - **Auth Diagnostic Script**: `scripts/test-fstab-codesync-timing.ts` *(retired 2026-08-23 — see the note above)*
-- **Implementation**: `src/features/eds/services/helixService.ts`
+- **Implementation**: `src/features/eds/services/helix/helixService.ts`
 - **Commit**: `b10456d9` - "feat: add Helix bulk API integration with page-by-page fallback"
 
 ---

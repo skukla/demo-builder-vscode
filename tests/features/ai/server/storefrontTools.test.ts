@@ -4,7 +4,7 @@
  * the GitHub auth handoff, and success/failure passthrough.
  */
 
-jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: jest.fn(),
     republishStorefrontContent: jest.fn(),
 }));
@@ -26,7 +26,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import {
     republishStorefrontConfig,
     republishStorefrontContent,
-} from '@/features/eds/services/storefrontRepublishService';
+} from '@/features/eds/services/storefront/storefrontRepublishService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
 import { ErrorCode } from '@/types/errorCodes';

@@ -737,7 +737,7 @@ Every surface touched by the pivot.
 | First-project-completion hook in `executor.ts` triggers the global registration prompt (gated by `globalState`) | New trigger | `src/features/project-creation/handlers/executor.ts` |
 | `sync_storefront` MCP tool extended to chain `previewAndPublishPage` after successful `git push` so AI edits propagate to `.aem.page` preview URLs without manual Republish | Extend existing tool | `src/mcp-server.ts:261-288` + `helixService.ts:910` |
 | `sync_storefront` MCP tool uses `GitHubTokenService.getToken()` for git push auth (no more ambient credential dependency) | Auth wiring | `src/mcp-server.ts` |
-| PostToolUse hook bash command rewritten with `jq` (with python3 + grep/sed fallback chain); permits paths with spaces; logs failures to a project-local file the AI Configuration tab surfaces | Harden existing hook | `src/features/project-creation/services/mcpConfigWriter.ts:217-253` |
+| PostToolUse hook bash command rewritten with `jq` (with python3 + grep/sed fallback chain); permits paths with spaces; logs failures to a project-local file the AI Configuration tab surfaces | Harden existing hook | `src/features/project-creation/services/aiBundle/mcpConfigWriter.ts` (PostToolUse hook build) |
 | `performAddonUpdates` actually re-installs block files when a library update is applied (not just a SHA bump) | Bug fix | `src/features/updates/commands/updateExecutor.ts:287-330` |
 | Remove unimplemented-feature references from `aiContextWriter.ts` ("Promote my hero-cta changes back to the Isle5 library") and the `sync-changes.md` skill template (`sync_content` MCP tool) | Doc cleanup | `aiContextWriter.ts:235-244` + skill template |
 

@@ -19,7 +19,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getProvidedEnvVars } from '@/features/app-builder/services/appBuilderComponentState';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import {
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,
@@ -36,7 +36,7 @@ import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringE
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import type { AuthoringExperience } from '@/types/base';
@@ -52,6 +52,12 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
+
+interface SaveConfigurationData {
+    componentConfigs: ComponentConfigs;
+    newProjectName?: string;
+    authoringExperience?: AuthoringExperience;
+}
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<ConfigureInitialData> {
     /**
@@ -217,212 +223,217 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             });
         }
 
-        // save-configuration stays inline — depends on private notification/deployment
-        // methods that need `this` binding (same mixed pattern as Wizard)
-        comm.onStreaming(
-            'save-configuration',
-            async (data: {
-                componentConfigs: ComponentConfigs;
-                newProjectName?: string;
-                authoringExperience?: AuthoringExperience;
-            }) => {
+        // save-configuration routes to a private method — it depends on private
+        // notification/deployment methods that need `this` binding (same mixed
+        // pattern as Wizard); the body lives in handleSaveConfiguration.
+        comm.onStreaming('save-configuration', async (data: SaveConfigurationData) =>
+            this.handleSaveConfiguration(data),
+        );
+    }
+
+    /** The save-configuration message body (extracted 2026-08-24, function-length pass). */
+    private async handleSaveConfiguration(data: SaveConfigurationData): Promise<unknown> {
+        try {
+            let project = await this.stateManager.getCurrentProject();
+            if (!project) {
+                throw new Error('No project found');
+            }
+
+            // Handle project rename if name changed (re-keys path-keyed secrets)
+            project = await this.renameProjectIfRequested(project, data.newProjectName);
+
+            // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
+            // values out of componentConfigs → VS Code SecretStorage BEFORE any
+            // detection/persistence/.env work. The sanitized configs (no secrets)
+            // are what every downstream path sees; secrets never reach the
+            // manifest, the .env file, or the change-detectors.
+            const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
+                project.componentSelections?.backend ?? '',
+                project.componentSelections?.frontend ?? '',
+            );
+            const split = splitAppBuilderComponentSecrets(
+                data.componentConfigs,
+                appBuilderComponentCatalog,
+            );
+            // Values are all strings here (the Configure payload is text/secret
+            // strings); the split only deletes secret keys, so the narrow local
+            // ComponentConfigs shape is preserved.
+            const appBuilderSanitized = split.sanitizedConfigs as ComponentConfigs;
+            await persistAppBuilderComponentSecrets(
+                split.secrets,
+                project.path,
+                this.context.secrets,
+                this.logger,
+            );
+
+            // Same guarantee for COMPONENT-declared secrets (`secret: true` in
+            // components.json) — the Commerce credentials. Write-through with a
+            // verified read-back: a value only leaves componentConfigs once
+            // SecretStorage is proven to hold it, so it is never in neither place
+            // (`.rptc/complete/component-secret-routing/`, phase 2).
+            const migration = await migrateDeclaredSecrets(
+                appBuilderSanitized,
+                project.path,
+                this.context.secrets,
+                (line) => this.logger.info(`[Configure] ${line}`),
+            );
+            if (migration.retained.length > 0) {
+                // Not fatal, and not silent: the save proceeds with the value
+                // exactly where it was, and the next one tries again.
+                this.logger.warn(
+                    `[Configure] ${migration.retained.length} secret(s) could not be ` +
+                        `moved to SecretStorage and remain in project config: ` +
+                        `${migration.retained.join(', ')}`,
+                );
+            }
+            const sanitizedConfigs = migration.sanitizedConfigs as ComponentConfigs;
+
+            // Detect if mesh configuration changed BEFORE saving.
+            // Org-targeted: with an empty staleness baseline this fetches
+            // the deployed config over the `aio` CLI, and an unwrapped call
+            // queries whatever org the CLI's process-global selection
+            // happens to hold.
+            const meshChanges = await withOrgContext(
+                buildOrgTargetFromProjectAdobe(project.adobe),
+                () => detectMeshChanges(project, sanitizedConfigs),
+            );
+
+            // Detect if storefront configuration changed (EDS projects only)
+            const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
+
+            // Update project state
+            project.componentConfigs = sanitizedConfigs;
+            if (meshChanges.hasChanges) {
+                project.meshStatusSummary = 'stale';
+            }
+            if (storefrontChanges.hasChanges) {
+                project.edsStorefrontStatusSummary = 'stale';
+            }
+
+            // Re-arm the apply prompts for THIS change. Without it, a
+            // single earlier "Later" muted them for the whole session:
+            // the handlers below saw `shouldShow === false`, returned
+            // before prompting, and the save reported success while the
+            // storefront kept serving the previous config.
+            if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
+                await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
+            }
+
+            // Persist the EDS authoring-experience preference (setup-time choice).
+            // Capture whether it changed so we can re-apply the DA editor.path after save.
+            const authoringChanged = this.applyAuthoringExperienceMetadata(
+                project,
+                data.authoringExperience,
+            );
+
+            await this.stateManager.saveProject(project);
+
+            // Push the new Author label + DA URL to an already-open dashboard
+            // immediately (a fast, local postMessage — NOT a network call, so
+            // it stays in the synchronous save path; the deferred DA side-
+            // effects below are the slow network work). Non-fatal: a missing
+            // dashboard or a postMessage failure must never block the save.
+            if (authoringChanged && data.authoringExperience) {
                 try {
-                    let project = await this.stateManager.getCurrentProject();
-                    if (!project) {
-                        throw new Error('No project found');
-                    }
-
-                    // Handle project rename if name changed
-                    const pathBeforeRename = project.path;
-                    if (data.newProjectName && data.newProjectName !== project.name) {
-                        const renameResult = await handleRenameProject(
-                            this.createHandlerContext(),
-                            {
-                                projectPath: project.path,
-                                newName: data.newProjectName,
-                            },
-                        );
-
-                        if (!renameResult.success) {
-                            throw new Error(renameResult.error || 'Failed to rename project');
-                        }
-
-                        // Reload project after rename (path may have changed)
-                        project = await this.stateManager.getCurrentProject();
-                        if (!project) {
-                            throw new Error('Project not found after rename');
-                        }
-
-                        // The SecretStorage key is keyed on the project PATH, so a
-                        // rename orphans it. Follow the path before anything reads a
-                        // credential: an already-migrated secret is no longer in
-                        // componentConfigs, so a missed re-key loses it from both
-                        // places and the Configure field simply reads blank.
-                        await reKeyProjectSecrets(
-                            pathBeforeRename,
-                            project.path,
-                            Object.keys(project.componentConfigs ?? {}),
-                            this.context.secrets,
-                            (line) => this.logger.info(`[Configure] ${line}`),
-                        );
-                    }
-
-                    // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
-                    // values out of componentConfigs → VS Code SecretStorage BEFORE any
-                    // detection/persistence/.env work. The sanitized configs (no secrets)
-                    // are what every downstream path sees; secrets never reach the
-                    // manifest, the .env file, or the change-detectors.
-                    const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
-                        project.componentSelections?.backend ?? '',
-                        project.componentSelections?.frontend ?? '',
-                    );
-                    const split = splitAppBuilderComponentSecrets(
-                        data.componentConfigs,
-                        appBuilderComponentCatalog,
-                    );
-                    // Values are all strings here (the Configure payload is text/secret
-                    // strings); the split only deletes secret keys, so the narrow local
-                    // ComponentConfigs shape is preserved.
-                    const appBuilderSanitized = split.sanitizedConfigs as ComponentConfigs;
-                    await persistAppBuilderComponentSecrets(
-                        split.secrets,
-                        project.path,
-                        this.context.secrets,
-                        this.logger,
-                    );
-
-                    // Same guarantee for COMPONENT-declared secrets (`secret: true` in
-                    // components.json) — the Commerce credentials. Write-through with a
-                    // verified read-back: a value only leaves componentConfigs once
-                    // SecretStorage is proven to hold it, so it is never in neither place
-                    // (`.rptc/complete/component-secret-routing/`, phase 2).
-                    const migration = await migrateDeclaredSecrets(
-                        appBuilderSanitized,
-                        project.path,
-                        this.context.secrets,
-                        (line) => this.logger.info(`[Configure] ${line}`),
-                    );
-                    if (migration.retained.length > 0) {
-                        // Not fatal, and not silent: the save proceeds with the value
-                        // exactly where it was, and the next one tries again.
-                        this.logger.warn(
-                            `[Configure] ${migration.retained.length} secret(s) could not be ` +
-                                `moved to SecretStorage and remain in project config: ` +
-                                `${migration.retained.join(', ')}`,
-                        );
-                    }
-                    const sanitizedConfigs = migration.sanitizedConfigs as ComponentConfigs;
-
-                    // Detect if mesh configuration changed BEFORE saving.
-                    // Org-targeted: with an empty staleness baseline this fetches
-                    // the deployed config over the `aio` CLI, and an unwrapped call
-                    // queries whatever org the CLI's process-global selection
-                    // happens to hold.
-                    const meshChanges = await withOrgContext(
-                        buildOrgTargetFromProjectAdobe(project.adobe),
-                        () => detectMeshChanges(project, sanitizedConfigs),
-                    );
-
-                    // Detect if storefront configuration changed (EDS projects only)
-                    const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
-
-                    // Update project state
-                    project.componentConfigs = sanitizedConfigs;
-                    if (meshChanges.hasChanges) {
-                        project.meshStatusSummary = 'stale';
-                    }
-                    if (storefrontChanges.hasChanges) {
-                        project.edsStorefrontStatusSummary = 'stale';
-                    }
-
-                    // Re-arm the apply prompts for THIS change. Without it, a
-                    // single earlier "Later" muted them for the whole session:
-                    // the handlers below saw `shouldShow === false`, returned
-                    // before prompting, and the save reported success while the
-                    // storefront kept serving the previous config.
-                    if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
-                        await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
-                    }
-
-                    // Persist the EDS authoring-experience preference (setup-time choice).
-                    // Capture whether it changed so we can re-apply the DA editor.path after save.
-                    const authoringChanged = this.applyAuthoringExperienceMetadata(
+                    const edsDaLiveUrl = getEdsDaLiveUrl(
                         project,
                         data.authoringExperience,
+                        getEwCanvasBranch(),
                     );
-
-                    await this.stateManager.saveProject(project);
-
-                    // Push the new Author label + DA URL to an already-open dashboard
-                    // immediately (a fast, local postMessage — NOT a network call, so
-                    // it stays in the synchronous save path; the deferred DA side-
-                    // effects below are the slow network work). Non-fatal: a missing
-                    // dashboard or a postMessage failure must never block the save.
-                    if (authoringChanged && data.authoringExperience) {
-                        try {
-                            const edsDaLiveUrl = getEdsDaLiveUrl(
-                                project,
-                                data.authoringExperience,
-                                getEwCanvasBranch(),
-                            );
-                            await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
-                                edsDaLiveUrl,
-                            );
-                        } catch (error) {
-                            this.logger.warn(
-                                `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
-                            );
-                        }
-                    }
-
-                    // Register programmatic writes BEFORE writing files
-                    await this.registerProgrammaticWrites(project, sanitizedConfigs);
-
-                    // Regenerate .env files
-                    await this.regenerateEnvFiles(project);
-
-                    // Return success immediately so the Save button resets. The
-                    // authoring-experience side-effects below are network-bound (DA
-                    // editor.path, Quick Edit vendoring, Helix code preview), so they
-                    // run AFTER the response behind a progress toast — the button never
-                    // appears to hang. All side-effects are individually non-fatal.
-                    const result = { success: true };
-
-                    if (authoringChanged && data.authoringExperience) {
-                        const experience = data.authoringExperience;
-                        const flippedProject = project;
-                        setImmediate(() => {
-                            void this.applyAuthoringSideEffects(flippedProject, experience);
-                        });
-                    }
-
-                    // Show success notification after returning (non-blocking). When the
-                    // authoring experience changed, its own progress toast is the
-                    // confirmation, so suppress the generic "saved" toast to avoid a
-                    // double notification.
-                    setImmediate(() => {
-                        this.showPostSaveNotifications(
-                            project,
-                            meshChanges,
-                            storefrontChanges,
-                            authoringChanged,
-                        );
-                    });
-
-                    return result;
+                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                        edsDaLiveUrl,
+                    );
                 } catch (error) {
-                    this.logger.error('[Configure] Failed to save configuration:', error as Error);
-                    await vscode.window.showErrorMessage(
-                        `Failed to save configuration: ${(error as Error).message}`,
+                    this.logger.warn(
+                        `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
                     );
-                    return {
-                        success: false,
-                        error: (error as Error).message,
-                        code: ErrorCode.CONFIG_INVALID,
-                    };
                 }
-            },
+            }
+
+            // Register programmatic writes BEFORE writing files
+            await this.registerProgrammaticWrites(project, sanitizedConfigs);
+
+            // Regenerate .env files
+            await this.regenerateEnvFiles(project);
+
+            // Return success immediately so the Save button resets. The
+            // authoring-experience side-effects below are network-bound (DA
+            // editor.path, Quick Edit vendoring, Helix code preview), so they
+            // run AFTER the response behind a progress toast — the button never
+            // appears to hang. All side-effects are individually non-fatal.
+            const result = { success: true };
+
+            if (authoringChanged && data.authoringExperience) {
+                const experience = data.authoringExperience;
+                const flippedProject = project;
+                setImmediate(() => {
+                    void this.applyAuthoringSideEffects(flippedProject, experience);
+                });
+            }
+
+            // Show success notification after returning (non-blocking). When the
+            // authoring experience changed, its own progress toast is the
+            // confirmation, so suppress the generic "saved" toast to avoid a
+            // double notification.
+            setImmediate(() => {
+                this.showPostSaveNotifications(
+                    project,
+                    meshChanges,
+                    storefrontChanges,
+                    authoringChanged,
+                );
+            });
+
+            return result;
+        } catch (error) {
+            this.logger.error('[Configure] Failed to save configuration:', error as Error);
+            await vscode.window.showErrorMessage(
+                `Failed to save configuration: ${(error as Error).message}`,
+            );
+            return {
+                success: false,
+                error: (error as Error).message,
+                code: ErrorCode.CONFIG_INVALID,
+            };
+        }
+    }
+
+    /**
+     * Rename the project when the save carries a new name, then re-key the
+     * path-keyed SecretStorage entries. The SecretStorage key is keyed on the
+     * project PATH, so a rename orphans it — an already-migrated secret is no
+     * longer in componentConfigs, so a missed re-key loses it from both places
+     * and the Configure field simply reads blank. Returns the (re-loaded)
+     * project. (Extracted 2026-08-24, function-length pass — body unchanged.)
+     */
+    private async renameProjectIfRequested(
+        project: Project,
+        newProjectName: string | undefined,
+    ): Promise<Project> {
+        const pathBeforeRename = project.path;
+        if (!newProjectName || newProjectName === project.name) {
+            return project;
+        }
+        const renameResult = await handleRenameProject(this.createHandlerContext(), {
+            projectPath: project.path,
+            newName: newProjectName,
+        });
+        if (!renameResult.success) {
+            throw new Error(renameResult.error || 'Failed to rename project');
+        }
+        // Reload project after rename (path may have changed)
+        const reloaded = await this.stateManager.getCurrentProject();
+        if (!reloaded) {
+            throw new Error('Project not found after rename');
+        }
+        await reKeyProjectSecrets(
+            pathBeforeRename,
+            reloaded.path,
+            Object.keys(reloaded.componentConfigs ?? {}),
+            this.context.secrets,
+            (line) => this.logger.info(`[Configure] ${line}`),
         );
+        return reloaded;
     }
 
     /**

@@ -20,7 +20,7 @@ jest.mock('@/features/eds/services/types', () => {
     return { DaLiveAuthError };
 });
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     extractResetParams: jest.fn(() => ({
         success: true,
         params: {
@@ -43,19 +43,19 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({})),
 }));
 
 import { refreshBlockLibraryHeadless } from '@/features/eds/services/refreshBlockLibraryHeadless';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { extractResetParams } from '@/features/eds/services/edsResetParams';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';

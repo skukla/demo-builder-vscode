@@ -9,8 +9,11 @@ import { handleOpenAdminPanel } from '@/features/projects-dashboard/handlers/das
 import { createMockProject, createMockHandlerContext } from '../testUtils';
 
 // Mock mesh staleness detection (module-eval safety; unused by these tests).
-jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
+jest.mock('@/core/state/appBuilderComponentState', () => ({
+    ...jest.requireActual('@/core/state/appBuilderComponentState'),
     hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
+}));
+jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
     determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
 }));
 

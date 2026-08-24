@@ -29,12 +29,12 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { getLogger } from '@/core/logging';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
-import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
+import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
     type StorefrontNameMismatch,
-} from '@/features/eds/services/storefrontNameMigrationForProject';
+} from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 
 const LOG_PREFIX = '[MigrateStorefrontNames]';
 
