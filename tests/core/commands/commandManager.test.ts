@@ -145,11 +145,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 32 commands (resetAll only in dev mode)', () => {
+        it('should register all 33 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 33 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(33);
+            // Verify registerCommand was called 34 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(34);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -178,6 +178,7 @@ describe('CommandManager', () => {
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
                 'demoBuilder.openAiExperience',
+                'demoBuilder.newAiChat',
                 'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',

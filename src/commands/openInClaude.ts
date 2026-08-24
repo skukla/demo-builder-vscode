@@ -51,7 +51,7 @@ export function isClaudeChatOpen(): boolean {
  * positional `Project` arg for backwards compatibility and the
  * `{ project?, prompt? }` payload.
  */
-export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
+export type OpenInClaudeArg = Project | { project?: Project; prompt?: string; fresh?: boolean };
 
 /**
  * Re-home preamble prepended to a prompt delivered into a CONTINUED conversation
@@ -121,10 +121,12 @@ export class OpenInClaudeCommand extends BaseCommand {
         // Only the prompt matters now — any project arg is ignored. The home Chat
         // always launches at the projects root so one session addresses any
         // project by name via the in-extension MCP tools.
-        const { prompt } = normalizeArg(arg);
+        const { prompt, fresh } = normalizeArg(arg);
         const cwd = resolveProjectsRoot();
 
-        this.logger.info(`[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'}`);
+        this.logger.info(
+            `[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'} fresh=${fresh ? 'yes' : 'no'}`,
+        );
 
         // Resolve the active project ONCE and use it for both deliveries of the
         // same fact: the home AGENTS.md (read only by cold starts) and the
@@ -135,7 +137,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         await refreshHomeAgentsMd(cwd, currentProjectName);
 
         try {
-            await this.launchTerminal(cwd, prompt, currentProjectName);
+            await this.launchTerminal(cwd, prompt, currentProjectName, fresh);
         } catch (error) {
             this.logger.error(
                 `[Open in Claude] failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -190,6 +192,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         cwd: string,
         prompt?: string,
         currentProjectName?: string,
+        fresh = false,
     ): Promise<void> {
         if (!cwd) {
             this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
@@ -206,9 +209,27 @@ export class OpenInClaudeCommand extends BaseCommand {
             this.logger.debug('[Open in Claude] prompt copied to clipboard (silent fallback)');
         }
 
-        const existing = findLiveClaudeTerminal();
-        if (existing) {
-            existing.show();
+        const live = findLiveClaudeTerminal();
+
+        if (fresh) {
+            // New Chat: retire the running conversation's terminal and fall
+            // through to the spawn path below, which starts a NEW process — the
+            // only way AGENTS.md is read again. The tab is recreated immediately
+            // with the same name in the same editor group, so what the user sees
+            // is the Claude Code tab restarting in place.
+            //
+            // Reusing the PROCESS was considered and rejected: `/exit` followed
+            // by a relaunch needs to know when the REPL has gone and the shell is
+            // listening, and there is no signal for that — the same race that
+            // defeated timed sends into this terminal twice before.
+            //
+            // The old conversation is not destroyed; it stays in Claude Code's
+            // session store and `claude --resume` still reaches it. It simply
+            // stops being what `--continue` lands on.
+            live?.dispose();
+            this.logger.info('[Open in Claude] starting a NEW conversation (terminal restarted)');
+        } else if (live) {
+            live.show();
             this.logger.info('[Open in Claude] terminal reused');
             if (prompt) {
                 // Reuse case: claude is already at its REPL (a CONTINUED conversation)
@@ -234,7 +255,11 @@ export class OpenInClaudeCommand extends BaseCommand {
         // continue" and exits, leaving the user with a dead terminal. The
         // session-store probe (`claudeSessionStore.hasConversation`) checks
         // `~/.claude/projects/<encoded-cwd>/` for any `.jsonl` transcript.
-        const useContinue = hasClaudeConversation(cwd);
+        //
+        // `fresh` overrides it outright: a New Chat that resumed would be a new
+        // tab wearing the old conversation's context, which is the one thing it
+        // must not be.
+        const useContinue = !fresh && hasClaudeConversation(cwd);
         const continueFlag = useContinue ? ' --continue' : '';
         // Resuming a conversation (`--continue`) won't re-read AGENTS.md, so carry
         // the re-home preamble. A cold start self-homes from AGENTS.md → no preamble.
@@ -350,13 +375,14 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
 function normalizeArg(arg: OpenInClaudeArg | undefined): {
     project: Project | undefined;
     prompt: string | undefined;
+    fresh: boolean;
 } {
     if (arg === undefined || arg === null) {
-        return { project: undefined, prompt: undefined };
+        return { project: undefined, prompt: undefined, fresh: false };
     }
     if (typeof arg === 'object' && 'path' in arg) {
-        return { project: arg as Project, prompt: undefined };
+        return { project: arg as Project, prompt: undefined, fresh: false };
     }
-    const payload = arg as { project?: Project; prompt?: string };
-    return { project: payload.project, prompt: payload.prompt };
+    const payload = arg as { project?: Project; prompt?: string; fresh?: boolean };
+    return { project: payload.project, prompt: payload.prompt, fresh: payload.fresh === true };
 }

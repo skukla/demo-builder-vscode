@@ -106,6 +106,12 @@ function SidebarApp(): React.ReactElement {
         sendMessage('showPrompts');
     }, []);
 
+    // Handle new chat (New button in AiZone) — starts a fresh conversation
+    // rather than resuming, so it picks up the current generated guidance.
+    const handleNewAiChat = useCallback(() => {
+        sendMessage('newAiChat');
+    }, []);
+
     // Handle start demo
     const handleStartDemo = useCallback(() => {
         sendMessage('startDemo');
@@ -163,6 +169,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenLogs={handleOpenLogs}
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
+                onNewAiChat={handleNewAiChat}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

@@ -268,6 +268,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleShowPrompts();
                 break;
 
+            case 'newAiChat':
+                await this.handleNewAiChat();
+                break;
+
             case 'startDemo':
                 await this.handleStartDemo();
                 break;
@@ -466,6 +470,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 'Open AI chat failed',
                 error instanceof Error ? error : undefined,
             );
+        }
+    }
+
+    /**
+     * Handle new AI chat request — starts a FRESH conversation.
+     * Backs the New button in the sidebar's AiZone.
+     *
+     * Distinct from `handleOpenAiChat`, which resumes. A resumed conversation
+     * never re-reads `AGENTS.md`, so this is the only path that puts a
+     * conversation on the current generated bundle.
+     */
+    private async handleNewAiChat(): Promise<void> {
+        this.logger.info('Sidebar: New AI chat');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.newAiChat');
+        } catch (error) {
+            this.logger.error('New AI chat failed', error instanceof Error ? error : undefined);
         }
     }
 

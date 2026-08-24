@@ -40,6 +40,7 @@ export interface SidebarProps {
     onOpenAiChat?: () => void;
     /** Callback to show the prompt picker — Prompts button in AiZone. */
     onShowPrompts?: () => void;
+    onNewAiChat?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -66,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenLogs,
     onOpenAiChat,
     onShowPrompts,
+    onNewAiChat,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
@@ -87,6 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <AiZone
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={onShowPrompts}
+                    onNewAiChat={onNewAiChat}
                 />
             )}
             <UtilityBar

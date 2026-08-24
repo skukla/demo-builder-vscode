@@ -98,6 +98,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.newAiChat",
+        "title": "New AI Chat",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.openModernizationAgent",
         "title": "Open AEM Modernization Agent",
         "category": "Demo Builder"

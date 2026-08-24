@@ -275,6 +275,14 @@ export class CommandManager {
             await openInClaude.execute();
         });
 
+        // New AI Chat — the deliberate escape from `--continue`. Every other
+        // entry point resumes, which means a long-running conversation never
+        // re-reads AGENTS.md and keeps whatever guidance it was born with; this
+        // is the one way to get a conversation on the current bundle.
+        this.registerCommand('demoBuilder.newAiChat', async () => {
+            await openInClaude.execute({ fresh: true });
+        });
+
         // Show Prompts Picker — single-purpose prompt QuickPick. Replaces the
         // state-aware AiMenuCommand. Always shows the picker; selection inserts
         // via openInClaude or routes to the prompt library.

@@ -6,16 +6,13 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { Sidebar } from '@/features/sidebar/ui/Sidebar';
-import {
-    createProjectsContext,
-    createProjectContext,
-} from '../testUtils';
+import { createProjectsContext, createProjectContext } from '../testUtils';
 
 const renderWithProvider = (ui: React.ReactElement) =>
     render(
         <Provider theme={defaultTheme} colorScheme="light">
             {ui}
-        </Provider>,
+        </Provider>
     );
 
 describe('Sidebar', () => {
@@ -27,7 +24,7 @@ describe('Sidebar', () => {
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
                     onOpenTools={jest.fn()}
-                />,
+                />
             );
 
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
@@ -41,7 +38,7 @@ describe('Sidebar', () => {
                     onCreateProject={jest.fn()}
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={jest.fn()}
-                />,
+                />
             );
 
             expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
@@ -56,7 +53,7 @@ describe('Sidebar', () => {
                     context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />,
+                />
             );
 
             expect(screen.queryByText('My Demo Project')).not.toBeInTheDocument();
@@ -70,11 +67,48 @@ describe('Sidebar', () => {
                     onCreateProject={jest.fn()}
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={jest.fn()}
-                />,
+                />
             );
 
             expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
+        });
+
+        it('omits the New tile when no onNewAiChat callback is given', () => {
+            // The tile is ADDITIVE. Gating the zone on the new callback made the
+            // whole AiZone vanish for every existing caller, since they all pass
+            // exactly two callbacks — this pins that it cannot happen again.
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /new chat/i })).not.toBeInTheDocument();
+        });
+
+        it('renders and dispatches the New tile when onNewAiChat is given', () => {
+            const onNewAiChat = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={onNewAiChat}
+                />
+            );
+
+            const newChat = screen.getByRole('button', { name: /new chat/i });
+            expect(newChat).toBeInTheDocument();
+            fireEvent.click(newChat);
+            expect(onNewAiChat).toHaveBeenCalledTimes(1);
         });
 
         it('dispatches onOpenAiChat when Chat is clicked', () => {
@@ -86,7 +120,7 @@ describe('Sidebar', () => {
                     onCreateProject={jest.fn()}
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={jest.fn()}
-                />,
+                />
             );
 
             fireEvent.click(screen.getByRole('button', { name: /^chat$/i }));
@@ -103,7 +137,7 @@ describe('Sidebar', () => {
                     onCreateProject={jest.fn()}
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={onShowPrompts}
-                />,
+                />
             );
 
             fireEvent.click(screen.getByRole('button', { name: /^prompts$/i }));
@@ -118,7 +152,7 @@ describe('Sidebar', () => {
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
                     onOpenTools={jest.fn()}
-                />,
+                />
             );
 
             expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
@@ -130,7 +164,7 @@ describe('Sidebar', () => {
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
-                />,
+                />
             );
 
             // SidebarNav is gone; nav items never render anywhere.
