@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';

@@ -4,14 +4,7 @@
  * Tests for handler context type exports and usage
  */
 
-import {
-    HandlerContext,
-    SharedState,
-    type MessageHandler,
-    type HandlerResponse,
-    PrerequisiteCheckState,
-    ApiServicesConfig
-} from '@/commands/handlers/HandlerContext';
+import { HandlerContext, SharedState, type MessageHandler, type HandlerResponse, PrerequisiteCheckState, ApiServicesConfig } from '@/types/handlers';
 
 describe('HandlerContext', () => {
     describe('Type Exports', () => {

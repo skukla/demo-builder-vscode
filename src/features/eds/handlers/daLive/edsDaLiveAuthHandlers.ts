@@ -6,7 +6,6 @@
  * Handlers:
  * - `handleCheckDaLiveAuth`: Check DA.live authentication status
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
- * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
  * - `handleStoreDaLiveTokenWithOrg`: Store token and verify org in one operation
  * - `handleClearDaLiveAuth`: Clear stored DA.live authentication
  *
@@ -17,7 +16,7 @@ import * as vscode from 'vscode';
 import { getDaLiveAuthService, validateDaLiveTokenStrict } from '../edsHelpers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenStoredPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
+import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
 
 /** Bookmarklet URL is static — compute once */
 const bookmarkletUrl = getBookmarkletUrl();
@@ -25,13 +24,6 @@ const bookmarkletUrl = getBookmarkletUrl();
 // ==========================================================
 // Payload Types
 // ==========================================================
-
-/**
- * Payload for handleStoreDaLiveToken
- */
-interface StoreDaLiveTokenPayload {
-    token: string;
-}
 
 /**
  * Payload for handleStoreDaLiveTokenWithOrg
@@ -130,81 +122,6 @@ export async function handleOpenDaLiveLogin(
     } catch (error) {
         const errorMessage = (error as Error).message;
         context.logger.error('[EDS] Error opening DA.live:', error as Error);
-        return { success: false, error: errorMessage };
-    }
-}
-
-/**
- * Store a manually pasted DA.live token
- *
- * Validates the token format and stores it for subsequent API calls.
- *
- * @param context - Handler context with logging and messaging
- * @param payload - Contains the pasted token
- * @returns Success with validation result
- */
-export async function handleStoreDaLiveToken(
-    context: HandlerContext,
-    payload?: StoreDaLiveTokenPayload,
-): Promise<HandlerResponse> {
-    const { token } = payload || {};
-
-    if (!token) {
-        context.logger.error('[EDS] handleStoreDaLiveToken missing token');
-        await context.sendMessage('dalive-token-stored', {
-            success: false,
-            error: 'Token is required',
-        } satisfies DaLiveTokenStoredPayload);
-        return { success: false, error: 'Token is required' };
-    }
-
-    try {
-        context.logger.debug('[EDS] Validating and storing DA.live token');
-
-        // Validate token using helper
-        const validation = validateDaLiveTokenStrict(token);
-        if (!validation.valid) {
-            if (validation.error?.includes('expired')) {
-                context.logger.warn('[EDS] DA.live token has expired');
-            } else if (validation.error?.includes('not from DA.live')) {
-                context.logger.warn('[EDS] Token is not from DA.live (wrong client_id)');
-            }
-            await context.sendMessage('dalive-token-stored', {
-                success: false,
-                error: validation.error,
-            } satisfies DaLiveTokenStoredPayload);
-            return { success: false, error: validation.error };
-        }
-
-        // Store token via service (handles expiry, email, and setupComplete)
-        const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
-        const authService = getDaLiveAuthService(context.context);
-        await authService.storeToken(token, {
-            expiresAt: tokenExpiry,
-            email: validation.email,
-        });
-
-        context.logger.info('[EDS] DA.live token stored successfully');
-        await context.sendMessage('dalive-token-stored', {
-            success: true,
-            email: validation.email,
-        } satisfies DaLiveTokenStoredPayload);
-
-        // Also send auth status update
-        await context.sendMessage('dalive-auth-status', {
-            isAuthenticated: true,
-            email: validation.email,
-            setupComplete: true,
-        } satisfies DaLiveAuthStatusPayload);
-
-        return { success: true };
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        context.logger.error('[EDS] Error storing DA.live token:', error as Error);
-        await context.sendMessage('dalive-token-stored', {
-            success: false,
-            error: errorMessage,
-        } satisfies DaLiveTokenStoredPayload);
         return { success: false, error: errorMessage };
     }
 }

@@ -14,7 +14,7 @@
  */
 
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';

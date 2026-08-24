@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
+import { HandlerContext, SharedState } from '@/types/handlers';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';

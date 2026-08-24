@@ -6,7 +6,7 @@
  * - authenticate: Browser-based Adobe login flow
  */
 
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { formatDuration, formatMinutes } from '@/core/utils';
 import type { AdobeOrg } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';

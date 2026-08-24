@@ -7,14 +7,13 @@
  * - Sends status updates to UI with progress tracking
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
-import type { PrerequisiteCheckState } from '@/types/handlers';
+import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteCheckSummary, PrerequisiteStatusPayload, PrerequisitesCompletePayload, PrerequisitesLoadedPayload } from '@/types/webviewPayloads';

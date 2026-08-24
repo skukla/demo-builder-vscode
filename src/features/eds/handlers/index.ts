@@ -20,7 +20,6 @@ export {
 export {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
 } from './daLive/edsDaLiveHandlers';

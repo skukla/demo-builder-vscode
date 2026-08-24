@@ -43,7 +43,7 @@ import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPh
 import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflight';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';

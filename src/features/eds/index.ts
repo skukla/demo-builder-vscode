@@ -125,7 +125,6 @@ export {
     handleGitHubOAuth,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleDiscoverStoreStructure,
     handleCheckCredentialService,
 } from './handlers';

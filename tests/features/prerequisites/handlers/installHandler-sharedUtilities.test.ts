@@ -27,7 +27,7 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import {

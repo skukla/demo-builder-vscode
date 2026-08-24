@@ -9,7 +9,7 @@
 
 import { lifecycleHandlers, handleOpenExternal } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 
 describe('lifecycleHandlers', () => {
     describe('handler registration', () => {

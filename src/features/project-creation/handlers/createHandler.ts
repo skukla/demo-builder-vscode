@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { withTimeout } from '@/core/utils/promiseUtils';

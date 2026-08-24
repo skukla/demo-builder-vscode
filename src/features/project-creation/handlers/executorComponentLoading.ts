@@ -10,7 +10,7 @@
  */
 
 import type { ComponentDefinitionEntry } from '../services';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';

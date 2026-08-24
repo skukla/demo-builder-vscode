@@ -4,7 +4,7 @@
  * Common mocks, factories, and utilities used across lifecycle handler tests.
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 
 // Mock VS Code
 export const mockVSCode = {

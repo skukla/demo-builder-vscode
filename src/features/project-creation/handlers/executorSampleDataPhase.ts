@@ -9,7 +9,7 @@
  */
 
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 
 /**
  * PHASE 5c: SAMPLE DATA

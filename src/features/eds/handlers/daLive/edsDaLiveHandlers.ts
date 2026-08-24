@@ -9,7 +9,6 @@
  * Handlers:
  * - `handleCheckDaLiveAuth`: Check DA.live authentication status
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
- * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
  * - `handleStoreDaLiveTokenWithOrg`: Store token and verify org in one operation
  * - `handleClearDaLiveAuth`: Clear stored DA.live authentication
  *
@@ -25,7 +24,6 @@
 export {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
 } from './edsDaLiveAuthHandlers';

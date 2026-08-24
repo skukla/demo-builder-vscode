@@ -102,7 +102,6 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - DA.live
     'check-dalive-auth': eds.handleCheckDaLiveAuth,
     'open-dalive-login': eds.handleOpenDaLiveLogin,
-    'store-dalive-token': eds.handleStoreDaLiveToken,
     'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': eds.handleClearDaLiveAuth,
     // EDS handlers - ACCS

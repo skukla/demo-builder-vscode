@@ -16,7 +16,7 @@
 
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 
 // Track getComponentById calls to verify fallback is being used
 let getComponentByIdCalls: string[] = [];

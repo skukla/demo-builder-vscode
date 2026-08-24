@@ -12,7 +12,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 
 /**
  * Load existing project state for edit mode, used to preserve the original

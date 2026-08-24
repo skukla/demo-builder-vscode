@@ -5,7 +5,7 @@
  */
 
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import {
     buildOrgTargetFromProjectAdobe,

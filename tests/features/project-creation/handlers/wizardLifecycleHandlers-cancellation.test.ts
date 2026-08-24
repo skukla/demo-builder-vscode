@@ -11,7 +11,7 @@ import {
     handleCancel,
     handleCancelProjectCreation,
 } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
-import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext as _HandlerContext } from '@/types/handlers';
 import { createMockContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues

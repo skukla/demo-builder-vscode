@@ -14,7 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ensureEdsContent } from '../services';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import type { HandlerContext } from '@/types/handlers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';

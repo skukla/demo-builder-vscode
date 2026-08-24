@@ -11,7 +11,7 @@
  * NOT `getCurrentProject()` — the wizard has no current project yet.
  */
 
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import type { SubscribedApi } from '@/features/app-builder/services/apiSubscriber';

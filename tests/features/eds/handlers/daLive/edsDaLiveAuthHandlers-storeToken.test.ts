@@ -1,7 +1,7 @@
 /**
  * edsDaLiveAuthHandlers - token storage tests
  *
- * `handleStoreDaLiveToken` and `handleStoreDaLiveTokenWithOrg` are the webview
+ * `handleStoreDaLiveTokenWithOrg` is the webview
  * half of DA.live sign-in: they take whatever the Spectrum form sent and turn
  * it into a stored credential. Until now nothing tested either of them.
  *
@@ -73,10 +73,7 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
 // Module under test
 // =============================================================================
 
-import {
-    handleStoreDaLiveToken,
-    handleStoreDaLiveTokenWithOrg,
-} from '@/features/eds/handlers/daLive/edsDaLiveAuthHandlers';
+import { handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveAuthHandlers';
 
 // =============================================================================
 // Utilities
@@ -116,10 +113,6 @@ function createMockContext(): HandlerContext {
 // =============================================================================
 
 describe.each([
-    [
-        'handleStoreDaLiveToken',
-        (ctx: HandlerContext, token: string) => handleStoreDaLiveToken(ctx, { token }),
-    ],
     [
         'handleStoreDaLiveTokenWithOrg',
         (ctx: HandlerContext, token: string) =>

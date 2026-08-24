@@ -20,7 +20,6 @@ import { handleCheckCredentialService } from './credentialServiceHandler';
 import {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
-    handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
     handleClearDaLiveAuth,
 } from './daLive/edsDaLiveHandlers';
@@ -298,7 +297,6 @@ export const edsHandlers = defineHandlers({
     // DA.live handlers
     'check-dalive-auth': handleCheckDaLiveAuth,
     'open-dalive-login': handleOpenDaLiveLogin,
-    'store-dalive-token': handleStoreDaLiveToken,
     'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': handleClearDaLiveAuth,
 
