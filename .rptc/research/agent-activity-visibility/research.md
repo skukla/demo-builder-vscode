@@ -54,7 +54,17 @@ notifications sent without error.** So a long-running tool CAN stream
 human-readable sub-steps to the client while it works. That is exactly the
 "now it's adding a runtime" narration the question asks for.
 
-## The one thing this does NOT establish
+## SETTLED 2026-08-24: the interactive terminal DOES render them
+
+The producer ran the probe against an interactive session: **the three messages
+appeared as the call ran.** So a tool can narrate itself live, and the work below
+is worth doing.
+
+What the terminal does NOT give us is control over attribution, ordering or
+styling — and nothing at all over how another MCP server formats its lines. That
+ceiling is what `.rptc/backlog/2026-08-24-own-the-chat-surface.md` records.
+
+The original open question, kept for the method:
 
 **Whether the interactive TUI renders those messages.** No
 `notifications/progress` event appeared in the headless `stream-json` output —

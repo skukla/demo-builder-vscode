@@ -24,18 +24,23 @@ server.registerTool(
     {
         title: 'A Very Distinctive Display Title',
         description:
-            'Takes about 6 seconds and emits three progress messages while it runs. ' +
-            'Reports whether the caller requested progress.',
+            'Takes about 8 seconds and emits four progress messages in different ' +
+            'attribution styles while it runs.',
         inputSchema: { step: z.string().optional() },
     },
     async (_args, extra) => {
         const token = extra?._meta?.progressToken;
         const facts = { progressTokenPresent: token !== undefined, token: token ?? null };
         if (extra?.sendNotification && token !== undefined) {
+            // Four ATTRIBUTION STYLES, not four steps. The client may or may not
+            // already say which server a progress line came from; if it does not,
+            // the message is free-form text we control, so attribution is ours to
+            // add. One run shows both facts at once.
             for (const [n, msg] of [
                 [1, 'Cloning repository…'],
-                [2, 'Subscribing Adobe APIs…'],
-                [3, 'Deploying to Runtime…'],
+                [2, 'Demo Builder · Subscribing Adobe APIs…'],
+                [3, '[Demo Builder] Deploying to Runtime…'],
+                [4, 'Demo Builder → Publishing storefront…'],
             ]) {
                 // PAUSE FIRST, deliberately. The first version fired all three and
                 // returned inside a few milliseconds, so even a client that DOES
@@ -46,7 +51,7 @@ server.registerTool(
                 try {
                     await extra.sendNotification({
                         method: 'notifications/progress',
-                        params: { progressToken: token, progress: n, total: 3, message: msg },
+                        params: { progressToken: token, progress: n, total: 4, message: msg },
                     });
                     facts[`sent_${n}`] = msg;
                 } catch (e) {
