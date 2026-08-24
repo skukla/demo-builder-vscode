@@ -19,6 +19,7 @@ import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
 import { probeSocket } from './mcpSocketDiscovery';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
@@ -60,13 +61,61 @@ export function isReadOnlyToolName(name: string): boolean {
  * needs no dialog — the handler's own prose refusal is its answer.
  */
 export function callRequestsConsent(args: unknown): boolean {
-    return (
-        !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true
-    );
+    return !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true;
 }
 
 /** The injected consent gate's verdict. `refusal` is a ready MCP result. */
 export type ConsentVerdict = { allowed: true } | { allowed: false; refusal: unknown };
+
+/**
+ * Fields every write tool must tolerate even when it declares no arguments.
+ *
+ * The generated guidance tells agents that destructive tools take `confirm:true`
+ * (and a `confirmName` echo on the most destructive), and several write tools
+ * legitimately declare NO arguments — `republish`, `sync_content`. Strictifying
+ * those naively would reject the very call the guidance asks for, turning a
+ * safety affordance into a hard failure. Declared shapes still win: a tool that
+ * describes its own `confirm` keeps its description.
+ */
+const CONSENT_FIELDS = {
+    confirm: z.boolean().optional(),
+    confirmName: z.string().optional(),
+};
+
+/**
+ * Make a WRITE tool's input schema reject unknown arguments instead of silently
+ * dropping them.
+ *
+ * Measured against the real SDK 2026-08-24: a raw-shape `inputSchema` is wrapped
+ * in `z.object(shape)`, which STRIPS. Send `{scope, stroeScope}` and the handler
+ * receives `{scope}` and answers "ok" — the agent believes it asked for something
+ * it did not, and finds out through a wrong result rather than an error. On a
+ * write tool that is the dangerous shape; `mcp-tool-authoring` records the
+ * `{addons, stroeScope}` typo that applied the addons and discarded the rest.
+ * A strict object instead returns `isError: true` naming the offending field.
+ *
+ * Applied HERE rather than per tool because this wrapper is the one seam every
+ * registration passes through (`registerProjectTools` and `registerExtraTools`
+ * both receive it), so a new tool is covered on the day it is written rather
+ * than whenever someone remembers.
+ *
+ * READS are deliberately left permissive — a strict read tool mostly costs
+ * friction, and a dropped argument on a query yields a visibly wrong answer
+ * rather than a silent mutation.
+ */
+function strictifyWriteSchema(name: string, schema: unknown): unknown {
+    if (isReadOnlyToolName(name)) return schema;
+    const shaped = schema as { inputSchema?: unknown } | undefined;
+    const input = shaped?.inputSchema;
+    if (input instanceof z.ZodObject) {
+        return { ...shaped, inputSchema: input.strict() };
+    }
+    if (input && typeof input === 'object') {
+        const shape = { ...CONSENT_FIELDS, ...(input as z.ZodRawShape) };
+        return { ...shaped, inputSchema: z.object(shape).strict() };
+    }
+    return schema;
+}
 
 function withToolLogging(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,7 +130,7 @@ function withToolLogging(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            server.registerTool(name, schema, async (args: any) => {
+            server.registerTool(name, strictifyWriteSchema(name, schema), async (args: any) => {
                 const started = Date.now();
                 const argKeys =
                     args && typeof args === 'object' ? Object.keys(args).join(', ') : '';

@@ -120,33 +120,104 @@ Re-measure on a machine with SEVERAL projects before writing this off: the runs
 above were on a one-project machine, which is exactly the case where naming the
 project up front removes the most searching.
 
-## 3. Catalog preload vs `ToolSearch` — settle with an A/B
+## 3. Catalog preload vs `ToolSearch` — MEASURED AND REJECTED 2026-08-24
 
-All 6 runs opened with `ToolSearch`; two ran it again mid-task.
+All 6 runs opened with `ToolSearch`; two ran it again mid-task. The item asked
+whether paying a round trip to avoid loading a ~2,616-token catalog was a straight
+loss, and proposed an A/B to settle it.
 
-This is **not** a defect: Anthropic documents `search_tools` as deliberate
-progressive disclosure, worth 150,000 → 2,000 tokens for agents with very many
-tools. But **our catalog is ~2,616 tokens**, so paying a round trip to avoid
-loading it may be a straight loss.
+**It was run. Preloading costs ~2.8× more. Do not do this.**
 
-Do not "fix" this by assumption — run the A/B (catalog preloaded vs discovery)
-and let the number decide. This is the one place our measurement can beat general
-guidance, precisely because the guidance targets a different scale.
+`ENABLE_TOOL_SEARCH` is the lever — an env var, opt-in, set in the developer's
+`~/.claude/settings.json`. Override it per-run with
+`--settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}'`; unsetting it in the spawn
+environment does NOT work, because Claude Code re-applies the `env` block from
+settings.json over the inherited environment.
 
-## 4. Unknown arguments are silently dropped on 102 of 103 tools
+Same prompt ("What are the URLs for my demo project?"), same 43-tool read-only
+allowlist, repeated, warm on both arms:
 
-Only `configure_project` uses zod `.strict()` (`configureProjectTool.ts:234`).
-Every other tool passes a raw shape, which the MCP SDK wraps in `.strip()` —
-unknown keys vanish before the handler runs.
+| Arm | Calls | Billable (warm) |
+|---|---|---|
+| `ToolSearch` on — discover as needed | 3 | **~165,000** |
+| `ToolSearch` off — schemas preloaded | 2 | **~463,000** |
 
-`mcp-tool-authoring` already records why that one is strict: a
-`{addons, stroeScope}` typo applied the addons and discarded the typo, silently.
-On a **write** tool that is the dangerous shape — the agent believes it asked for
-something it did not, and finds out through a wrong result rather than an error.
+Three runs of the preload arm landed at 448k–463k; the discovery arm holds near
+165k. The gap is far outside cache noise, and both arms were warm.
 
-Scope to write tools first; a strict read tool mostly costs friction. Separately,
-check whether the SDK exposes Anthropic's API-level `strict: true`, which
-constrains what the model emits and is complementary, not the same thing.
+### Why the premise was wrong
+
+The item reasoned from OUR catalog size. Wrong denominator: `ToolSearch` defers
+**every MCP server the developer has connected** — serena, the Docker set, helix,
+fluffyjaws, Adobe EXL, Chrome, Drive — not just demo-builder's 103 tools.
+Preloading pays for all of them on every task whether or not they are touched.
+Demo Builder is a rounding error inside that number.
+
+So Anthropic's guidance holds here, for a reason we had misidentified: not that
+our surface is large, but that a real developer's total MCP surface is.
+
+### What this retires
+
+The framing that "the round trip is the unit of cost, therefore removing round
+trips is always the lever" — true for candidate 1, false here. A round trip that
+defers 300k tokens of schema is buying more than it costs. **Removing a round trip
+is only a win when what it defers is cheaper than the turn.** Measure the deferred
+payload before treating any remaining `ToolSearch` call as waste.
+
+## 4. Unknown arguments silently dropped on write tools — SHIPPED 2026-08-24
+
+Only `configure_project` used zod `.strict()` (`configureProjectTool.ts`). Every
+other tool passed a raw shape, which the MCP SDK wraps in `.strip()`.
+
+**Confirmed against the real SDK before fixing anything** (probe over
+`InMemoryTransport`, since the stub server most suites use throws the schema
+away and cannot see this):
+
+| Schema style | What the handler received |
+|---|---|
+| raw shape | `{name:'x'}` — the unknown key silently gone, tool answers "ok" |
+| `z.object(...).strict()` | handler NEVER RAN; `isError:true`, message names the field |
+| `inputSchema: {}` | `{}` — unknown key stripped |
+
+### What shipped
+
+`strictifyWriteSchema` in `inExtensionMcpServer.ts`, applied inside
+`withToolLogging.registerTool` — the ONE seam every registration passes through
+(`registerProjectTools` and `registerExtraTools` both receive it), so a new tool
+is covered the day it is written rather than whenever someone remembers.
+
+Reads stay permissive by design: a dropped argument on a query gives a visibly
+wrong answer, while a strict read tool mostly costs friction.
+
+### The trap that would have shipped a regression
+
+Several write tools declare NO arguments (`republish`, `sync_content`), while the
+generated guidance tells agents destructive tools take `confirm:true`. Naive
+strictification rejects exactly the call the guidance asks for — turning a safety
+affordance into a hard failure. `CONSENT_FIELDS` allows `confirm`/`confirmName`
+through on every write tool; declared shapes still win. Two of the five tests
+exist for this case specifically.
+
+### Checked and clear — no bug
+
+Because the consent gate reads args INSIDE the SDK handler (after stripping), a
+tool reading `confirm` without declaring it would have a dead guard. Audited every
+hand-written destructive tool: declarations and reads match 1:1, and descriptor
+rows add `confirm` via `toolDescriptors.ts:182`. Same check for `confirmName`:
+clean. The consent mechanism is intact.
+
+### Side finding, left in place deliberately
+
+`configure_project`'s hand-written unknown-field check is now unreachable —
+`.strict()` rejects first. Kept as the fallback for any registration path that
+bypasses the wrapper, and because its message names the ACCEPTED fields where the
+SDK's names only the offending one. Its unit test calls the handler directly, so
+it exercises the contract rather than the live path; comment added at the code
+so the absence of that message from logs is not a mystery.
+
+Separately proposed and NOT done: checking whether the SDK exposes Anthropic's
+API-level `strict: true`, which constrains what the model emits and is
+complementary rather than the same thing.
 
 ## What NOT to do, and why
 
@@ -155,6 +226,12 @@ constrains what the model emits and is complementary, not the same thing.
 - **Do not chase response size as the primary lever.** Phase 2's reshaping was
   worth doing; the framing that bytes are the main cost is what the measurement
   contradicts.
+- **Do not disable `ToolSearch`.** Measured 2026-08-24: preloading every
+  connected MCP server's schemas costs ~2.8× (see item 3). The round trip it
+  spends is buying far more than it costs.
+- **Do not assume removing a round trip is always a win.** It was for item 1;
+  it is the opposite for item 3. The test is whether the deferred payload is
+  cheaper than the turn — measure the payload, not the call count.
 - **Do not grade agents on the path they take.** Anthropic: "too rigid … overly
   brittle, as agents regularly find valid approaches that eval designers didn't
   anticipate." Grade outcomes; the path is a diagnostic.
