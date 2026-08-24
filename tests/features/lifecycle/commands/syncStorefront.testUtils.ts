@@ -72,11 +72,11 @@ jest.mock('@/features/eds/services/storefrontSyncService', () => ({
     syncAndPublish: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/helixApiClient', () => ({
+jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: jest.fn(),
 }));
 
@@ -90,7 +90,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 // Safe: the mocks above hoist over these imports (same module).
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 

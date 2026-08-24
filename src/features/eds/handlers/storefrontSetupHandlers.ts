@@ -18,10 +18,10 @@ import { ConfigurationService } from '../services/configurationService';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '../services/daLiveContentOperations';
-import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
-import { GitHubTokenService } from '../services/githubTokenService';
+} from '../services/daLive/daLiveContentOperations';
+import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
+import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
+import { GitHubTokenService } from '../services/github/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import {

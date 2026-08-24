@@ -47,8 +47,8 @@
  * @module features/eds/services/configServiceAccess
  */
 
-import type { TokenProvider } from './daLiveContentOperations';
-import { HELIX_ADMIN_URL } from './helixApiClient';
+import type { TokenProvider } from './daLive/daLiveContentOperations';
+import { HELIX_ADMIN_URL } from './helix/helixApiClient';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

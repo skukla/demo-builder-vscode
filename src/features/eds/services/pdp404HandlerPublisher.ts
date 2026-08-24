@@ -9,7 +9,7 @@
  * import path.
  */
 
-import { GitHubFileOperations, isStaleShaFailure } from './githubFileOperations';
+import { GitHubFileOperations, isStaleShaFailure } from './github/githubFileOperations';
 import {
     buildSmart404Snippet,
     derivePrepublishUrl,

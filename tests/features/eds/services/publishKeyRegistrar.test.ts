@@ -13,7 +13,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 const mockCreateAdminApiKey = jest.fn<Promise<string | null>, [string, string]>();
 const mockForgetApiKey = jest.fn<Promise<void>, [string, string]>();
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: Object.assign(
         jest.fn().mockImplementation(() => ({ createAdminApiKey: mockCreateAdminApiKey })),
         { forgetApiKey: (o: string, s: string) => mockForgetApiKey(o, s) }

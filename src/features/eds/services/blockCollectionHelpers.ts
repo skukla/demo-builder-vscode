@@ -19,7 +19,7 @@
  * @module features/eds/services/blockCollectionHelpers
  */
 
-import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
 import type { LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';

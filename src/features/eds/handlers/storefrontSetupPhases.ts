@@ -15,17 +15,17 @@
 
 import * as vscode from 'vscode';
 import { ConfigurationService } from '../services/configurationService';
-import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../services/daLiveAuthRetry';
+import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../services/daLive/daLiveAuthRetry';
 import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
-} from '../services/daLiveContentOperations';
+} from '../services/daLive/daLiveContentOperations';
 import { executeEdsPipeline } from '../services/edsPipeline';
-import { GitHubAppService } from '../services/githubAppService';
-import { GitHubFileOperations } from '../services/githubFileOperations';
-import { GitHubRepoOperations } from '../services/githubRepoOperations';
-import { GitHubTokenService } from '../services/githubTokenService';
-import { HelixService } from '../services/helixService';
+import { GitHubAppService } from '../services/github/githubAppService';
+import { GitHubFileOperations } from '../services/github/githubFileOperations';
+import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
+import { GitHubTokenService } from '../services/github/githubTokenService';
+import { HelixService } from '../services/helix/helixService';
 import {
     createPatchReport,
     reportUnapplied,

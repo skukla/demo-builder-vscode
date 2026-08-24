@@ -18,7 +18,7 @@ import {
     DaLiveContentOperations,
     type DaLiveContentSource,
     type TokenProvider,
-} from '@/features/eds/services/daLiveContentOperations';
+} from '@/features/eds/services/daLive/daLiveContentOperations';
 import { createPatchReport, getUnapplied } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types/logger';
 

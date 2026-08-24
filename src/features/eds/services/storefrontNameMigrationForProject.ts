@@ -43,11 +43,11 @@ import { ConfigurationService } from '@/features/eds/services/configurationServi
 import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
-} from '@/features/eds/services/daLiveContentOperations';
+} from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     resolveStorefrontConfig,
     type StorefrontConfigSource,
-} from '@/features/eds/services/edsResetParams';
+} from '@/features/eds/services/reset/edsResetParams';
 import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import {
     migrateStorefrontNamingIfNeeded,

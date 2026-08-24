@@ -23,7 +23,7 @@
  * @module features/eds/services/repoStorefrontReadiness
  */
 
-import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { Logger } from '@/types/logger';
 
 /**

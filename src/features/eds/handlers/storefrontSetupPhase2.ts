@@ -17,7 +17,7 @@ import {
     type BlockLibraryEntry,
 } from '../services/blockCollectionHelpers';
 import { generateFstabContent } from '../services/fstabGenerator';
-import { GitHubFileOperations } from '../services/githubFileOperations';
+import { GitHubFileOperations } from '../services/github/githubFileOperations';
 import {
     generateInspectorTreeEntries,
     installInspectorTagging,

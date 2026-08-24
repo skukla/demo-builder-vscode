@@ -1,5 +1,25 @@
 # Regroup crowded service directories into subfolders — where measurement says so
 
+> **✅ EXECUTED for `eds/services` 2026-08-24** (`refactor/eds-services-regroup`):
+> 36 files moved into `daLive/` (15), `helix/` (8), `github/` (7), `reset/` (6);
+> 95 → 59 top-level files + 4 family dirs. Full suite 1137/1137 green, lint +
+> both typechecks + blindspots clean, madge no cycles; test edits were
+> path-only (three HTML fixtures briefly damaged by a too-broad rewrite were
+> caught by their own suites and restored — the lesson: rewrite IMPORT
+> POSITIONS, never all quoted relative strings). Living docs (2 skills, 5
+> architecture docs) repointed; hygiene scan clean.
+>
+> **Deliberately NOT moved: the configService family**
+> (`configServiceAccess`, `configAccessRecovery`, `configServiceProbe`,
+> `configurationService`, `configSyncService`, `siteConfigRegistrar`, …) —
+> the live `claude/datapack-authoring-loop` branch touches exactly those
+> files; moving them would have made that branch a conflict farm. Fold them
+> into a `configService/` dir after that branch lands.
+> `claude/commerce-connect-slice-1-plan` also overlaps but is 1,352 commits
+> behind develop — flagged for deletion rather than treated as a constraint.
+> `project-creation/services` (28) and `eds/handlers` (26) were NOT assessed
+> this pass (the move was not "cheap" — ~200 files churned).
+
 **Filed:** 2026-08-23, from a research pass answering "are directories like
 `lifecycle/services/` crowded enough to subgroup?" The named example was not
 (3 files), but the phenomenon is real in one place above all others. The

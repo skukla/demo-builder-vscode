@@ -9,7 +9,7 @@
  */
 
 import * as childProcess from 'child_process';
-import { previewAndPublishPage } from '@/features/eds/services/helixApiClient';
+import { previewAndPublishPage } from '@/features/eds/services/helix/helixApiClient';
 import {
     GitOperationError,
     PushRejectedError,
@@ -21,7 +21,7 @@ jest.mock('child_process', () => ({
     execFile: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/helixApiClient', () => ({
+jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: jest.fn(),
 }));
 

@@ -61,7 +61,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getEwCanvasBranch: jest.fn(() => ''),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
 }));
@@ -76,7 +76,7 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 // HelixService — after vendoring, the flip previews the code ('/*') so the
 // committed Quick Edit change goes live (the EW Layout view). Non-fatal.
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
 }));
 
@@ -84,13 +84,13 @@ jest.mock('@/features/eds/services/helixService', () => ({
 // stubbed so no real Octokit/secrets access occurs; installQuickEdit is mocked
 // so the file ops object is never actually used.
 const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest
         .fn()
         .mockImplementation((...args) => mockGitHubFileOperations(...args)),
 }));
 const mockGitHubTokenService = jest.fn().mockImplementation(() => ({}));
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
 }));
 

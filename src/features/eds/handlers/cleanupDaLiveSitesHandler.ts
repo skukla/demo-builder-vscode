@@ -6,7 +6,7 @@
  * be folders within "citisignal-eds-paas".
  */
 
-import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
+import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
 import type { HandlerContext } from '@/types/handlers';
 
 interface CleanupDaLiveSitesRequest {

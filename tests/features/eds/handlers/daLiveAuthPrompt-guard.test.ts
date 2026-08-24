@@ -98,8 +98,8 @@ const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 // skipped and the flow goes straight to the token.
 const mockGetOrgName = jest.fn().mockReturnValue('my-org');
 const mockDispose = jest.fn();
-jest.mock('@/features/eds/services/daLiveAuthService', () => {
-    const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
+    const actual = jest.requireActual('@/features/eds/services/daLive/daLiveAuthService');
     return {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
@@ -113,13 +113,13 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
 });
 
 // Mock remaining service imports required by daLiveAuthPrompt to load
-jest.mock('@/features/eds/services/githubTokenService');
-jest.mock('@/features/eds/services/githubRepoOperations');
-jest.mock('@/features/eds/services/githubFileOperations');
-jest.mock('@/features/eds/services/githubOAuthService');
-jest.mock('@/features/eds/services/daLiveOrgOperations');
-jest.mock('@/features/eds/services/daLiveContentOperations');
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService');
+jest.mock('@/features/eds/services/github/githubRepoOperations');
+jest.mock('@/features/eds/services/github/githubFileOperations');
+jest.mock('@/features/eds/services/github/githubOAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: { initKeyStore: jest.fn() },
 }));
 jest.mock('@/core/utils/oneTimeTip', () => ({

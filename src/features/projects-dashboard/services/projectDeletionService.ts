@@ -14,9 +14,9 @@ import * as vscode from 'vscode';
 import { TIMEOUTS, showOneTimeTip } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helixService';
+import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
+import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import {
     isEdsProject,
     extractEdsMetadata,
@@ -457,7 +457,7 @@ async function performDaLiveCleanup(
         });
 
         // Clean up stale site-specific permission rows from org config
-        const { DaLiveConfigService } = await import('@/features/eds/services/daLiveConfigService');
+        const { DaLiveConfigService } = await import('@/features/eds/services/daLive/daLiveConfigService');
         const configService = new DaLiveConfigService(daLiveTokenProvider, context.logger);
 
         const permResult = await configService.removeSitePermissions(

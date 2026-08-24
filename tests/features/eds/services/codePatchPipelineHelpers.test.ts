@@ -23,7 +23,7 @@ import {
     applyBlockCodePatches,
 } from '@/features/eds/services/codePatchPipelineHelpers';
 import { _clearCodePatchCacheForTests } from '@/features/eds/services/codePatchRegistry';
-import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
 

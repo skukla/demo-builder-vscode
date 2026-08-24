@@ -71,9 +71,9 @@ The most significant gap chain runs from "AI edits a file" through "Helix publis
 But: **`git push` is where the chain ends for storefront content.** Helix only sees changes on the `.aem.page` preview URL when the user explicitly runs Republish or Helix's GitHub webhook fires. There's no automatic preview/publish trigger after AI pushes. The `configSyncService` path already wires `previewPage()` + `publishPage()` for `config.json` — the equivalent isn't done for storefront edits.
 
 Key code paths:
-- `src/features/eds/services/githubRepoOperations.ts:75-118` — `createFromTemplate`
-- `src/features/eds/services/githubRepoOperations.ts:422-458` — `cloneRepository` (only called by template creation, not project restore)
-- `src/features/eds/services/storefrontRepublishService.ts:198-215` — config.json + Helix publish chain
+- `src/features/eds/services/github/githubRepoOperations.ts` (`createFromTemplate`)
+- `src/features/eds/services/github/githubRepoOperations.ts` (`cloneRepository` — only called by template creation, not project restore)
+- `src/features/eds/services/storefrontRepublishService.ts` (config.json + Helix publish chain)
 - `src/features/eds/services/helixService.ts` (`previewAndPublishPage`) — publish chain
 - `src/features/project-creation/services/mcpConfigWriter.ts:217,226-253` — PostToolUse hook (with fragility)
 

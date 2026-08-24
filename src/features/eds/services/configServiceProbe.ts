@@ -33,8 +33,8 @@
  */
 
 import { readOrgAdmins } from './configServiceAccess';
-import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import { HELIX_ADMIN_URL } from './helixApiClient';
+import { DA_LIVE_BASE_URL } from './daLive/daLiveConstants';
+import { HELIX_ADMIN_URL } from './helix/helixApiClient';
 import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

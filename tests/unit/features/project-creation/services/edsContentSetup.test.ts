@@ -12,7 +12,7 @@ import type { PatchReport } from '@/features/eds/services/patchReportHelper';
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: mockCopyContentFromSource,
         createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
@@ -27,21 +27,21 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
 const mockPublishAllSiteContent = jest.fn();
 const mockPurgeCacheAll = jest.fn();
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({
         publishAllSiteContent: mockPublishAllSiteContent,
         purgeCacheAll: mockPurgeCacheAll,
     })),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
 }));
 
 const mockGetUserEmail = jest.fn();
 const mockGetAccessToken = jest.fn();
 
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         getUserEmail: mockGetUserEmail,
         getAccessToken: mockGetAccessToken,
@@ -50,7 +50,7 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
 
 const mockGetFileContent = jest.fn();
 
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: mockGetFileContent,
     })),

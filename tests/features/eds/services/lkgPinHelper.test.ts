@@ -8,7 +8,7 @@
 import { pinRepoToLkg } from '@/features/eds/services/lkgPinHelper';
 import { createPatchReport, type PatchReport } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types/logger';
-import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 
 // Mock the LKG reader + canonical patcher dependencies the helper composes.
 jest.mock('@/features/eds/services/lkgReader', () => ({

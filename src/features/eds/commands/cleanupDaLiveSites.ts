@@ -12,10 +12,10 @@
  */
 
 import * as vscode from 'vscode';
-import { DaLiveConfigService } from '../services/daLiveConfigService';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
-import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
-import { GitHubTokenService } from '../services/githubTokenService';
+import { DaLiveConfigService } from '../services/daLive/daLiveConfigService';
+import { DaLiveContentOperations } from '../services/daLive/daLiveContentOperations';
+import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
+import { GitHubTokenService } from '../services/github/githubTokenService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';

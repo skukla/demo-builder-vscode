@@ -33,44 +33,44 @@ jest.mock('@/features/eds/services/fstabGenerator', () => ({
     generateFstabContent: jest.fn().mockReturnValue('mock-fstab-content'),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
     })),
 }));
 
-jest.mock('@/features/eds/services/githubRepoOperations', () => ({
+jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn().mockResolvedValue({ fullName: 'owner/repo', htmlUrl: 'https://github.com/owner/repo' }),
         waitForContent: jest.fn().mockResolvedValue(undefined),
     })),
 }));
 
-jest.mock('@/features/eds/services/githubAppService', () => ({
+jest.mock('@/features/eds/services/github/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
         isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
         getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
     createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({
         previewCode: jest.fn().mockResolvedValue(undefined),
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         getAccessToken: jest.fn().mockResolvedValue('token'),
         getUserEmail: jest.fn().mockResolvedValue('test@example.com'),

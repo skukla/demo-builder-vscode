@@ -38,7 +38,7 @@
  */
 
 import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
-import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import { readLkgSha } from './lkgReader';
 import { addCodeResult, type PatchReport } from './patchReportHelper';
 import type { CodePatchSource } from '@/types/demoPackages';

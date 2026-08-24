@@ -234,7 +234,7 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
 | Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp404HandlerPublisher.ts` |
 | **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
-| Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/edsResetRepoHelper.ts` (reset) |
+| Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---

@@ -55,20 +55,20 @@ jest.mock('@/core/logging', () => ({
 }));
 
 // Service imports required by the daLiveSiteConfig module to load.
-jest.mock('@/features/eds/services/githubTokenService');
-jest.mock('@/features/eds/services/githubRepoOperations');
-jest.mock('@/features/eds/services/githubFileOperations');
-jest.mock('@/features/eds/services/githubOAuthService');
-jest.mock('@/features/eds/services/daLiveAuthService');
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService');
+jest.mock('@/features/eds/services/github/githubRepoOperations');
+jest.mock('@/features/eds/services/github/githubFileOperations');
+jest.mock('@/features/eds/services/github/githubOAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
 }));
 
 import { applyDaLiveOrgConfigSettings } from '@/features/eds/handlers/daLiveSiteConfig';
-import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
 const AEM_AUTHOR_URL = 'author-p158081-e1683323.adobeaemcloud.com';

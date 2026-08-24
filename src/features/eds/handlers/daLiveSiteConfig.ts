@@ -10,9 +10,9 @@
  */
 
 import * as vscode from 'vscode';
-import { DaLiveConfigService } from '../services/daLiveConfigService';
-import { DaLiveContentOperations } from '../services/daLiveContentOperations';
-import { type TokenProvider } from '../services/daLiveOrgOperations';
+import { DaLiveConfigService } from '../services/daLive/daLiveConfigService';
+import { DaLiveContentOperations } from '../services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '../services/daLive/daLiveOrgOperations';
 import { getEwCanvasBranch } from './authoringExperience';
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { AuthoringExperience } from '@/types';

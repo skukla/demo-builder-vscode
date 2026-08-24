@@ -96,7 +96,7 @@ jest.mock(
     { virtual: true }
 );
 
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getAccessToken: jest.fn().mockResolvedValue('mock-token'),
@@ -104,7 +104,7 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveTokenProvider: jest.fn().mockReturnValue({
         getAccessToken: jest.fn().mockResolvedValue('mock-token'),
@@ -114,31 +114,31 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/githubRepoOperations', () => ({
+jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
         waitForContent: jest.fn(),
     })),
 }));
 
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
     })),
 }));
 
-jest.mock('@/features/eds/services/githubAppService', () => ({
+jest.mock('@/features/eds/services/github/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
         isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
     })),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({
         previewCode: jest.fn().mockResolvedValue(undefined),
     })),

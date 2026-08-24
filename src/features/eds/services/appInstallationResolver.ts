@@ -13,7 +13,7 @@
  */
 
 import type { RepoInfo } from '../handlers/storefrontSetupTypes';
-import type { GitHubAppService } from './githubAppService';
+import type { GitHubAppService } from './github/githubAppService';
 import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
 

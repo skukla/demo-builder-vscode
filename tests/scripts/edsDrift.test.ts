@@ -34,7 +34,7 @@ describe('constants match the extension source', () => {
     // honest — if the source constant moves, this fails and names the pair.
     it('HELIX_ADMIN_URL matches helixApiClient.ts', () => {
         const source = require('fs').readFileSync(
-            require('path').join(__dirname, '../../src/features/eds/services/helixApiClient.ts'),
+            require('path').join(__dirname, '../../src/features/eds/services/helix/helixApiClient.ts'),
             'utf8'
         );
         expect(source).toContain(`HELIX_ADMIN_URL = '${HELIX_ADMIN_URL}'`);
@@ -42,7 +42,7 @@ describe('constants match the extension source', () => {
 
     it('DA_LIVE_BASE_URL matches daLiveConstants.ts', () => {
         const source = require('fs').readFileSync(
-            require('path').join(__dirname, '../../src/features/eds/services/daLiveConstants.ts'),
+            require('path').join(__dirname, '../../src/features/eds/services/daLive/daLiveConstants.ts'),
             'utf8'
         );
         expect(source).toContain(`DA_LIVE_BASE_URL = '${DA_LIVE_BASE_URL}'`);

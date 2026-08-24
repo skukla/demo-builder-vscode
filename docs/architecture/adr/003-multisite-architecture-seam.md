@@ -29,7 +29,7 @@ Three reasons:
 
 #### 1. Project state — one DA.live org/site per project
 
-**File**: `src/features/eds/services/edsResetParams.ts` (lines 123-124, 168-179, 197-198)
+**File**: `src/features/eds/services/reset/edsResetParams.ts` (lines 123-124, 168-179, 197-198)
 
 Each Demo Builder project stores **one** `daLiveOrg` and **one** `daLiveSite` in `componentInstances[EDS_STOREFRONT].metadata`. The reset and setup flows read these scalar fields directly:
 
@@ -258,7 +258,7 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 - **Roadmap**: [Production-Readiness Roadmap, item C1](../../research/2026-05-18-production-readiness-roadmap.md#tier-c--multisite-ready-architecture-decisions-not-implementation)
 - **Adobe pattern**: [Repoless multisite manager](https://www.aem.live/developer/repoless-multisite-manager)
 - **Single-env code locations**:
-  - `src/features/eds/services/edsResetParams.ts` (project state shape)
+  - `src/features/eds/services/reset/edsResetParams.ts` (project state shape)
   - `src/features/eds/services/configurationService.ts` (`buildSiteConfigParams`)
   - `src/features/mesh/services/meshDeployment.ts` (`deployMeshComponent`)
   - `src/features/eds/config/config-template.json` (template URL substitution)

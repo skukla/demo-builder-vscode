@@ -40,12 +40,12 @@ import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLiveContentHelpers';
+import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helixService';
+} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import { aemLiveBaseUrl } from '@/features/eds/services/storefrontProbe';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';

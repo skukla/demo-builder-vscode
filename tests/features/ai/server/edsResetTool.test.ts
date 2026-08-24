@@ -4,7 +4,7 @@
  * failure contract. The EDS service layer + auth are mocked.
  */
 
-jest.mock('@/features/eds/services/edsResetService', () => ({
+jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
     extractResetParams: jest.fn(),
 }));
@@ -16,7 +16,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 jest.mock('@/types/typeGuards', () => ({
@@ -39,7 +39,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
+import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
 import type { HandlerContext } from '@/types/handlers';

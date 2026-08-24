@@ -39,7 +39,7 @@
  */
 
 import { applyCodePatches, getCodePatches, type CodePatchResult } from './codePatchRegistry';
-import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';

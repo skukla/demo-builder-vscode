@@ -48,12 +48,12 @@ import {
     probeConfigService,
     type ConfigServiceProbeResult,
 } from '@/features/eds/services/configServiceProbe';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,
-} from '@/features/eds/services/githubCredentialProbe';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+} from '@/features/eds/services/github/githubCredentialProbe';
+import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,

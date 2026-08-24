@@ -6,7 +6,7 @@
  * hoisting is per test file) — each suite declares it in its own preamble.
  */
 
-import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { BrandAssetsConfig } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 

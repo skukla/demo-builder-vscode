@@ -48,7 +48,7 @@ jest.mock('@/core/di', () => ({
 }));
 
 // Mock HelixService
-jest.mock('@/features/eds/services/helixService');
+jest.mock('@/features/eds/services/helix/helixService');
 
 // Mock stalenessDetector (required by dashboardHandlers module)
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -80,7 +80,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Mock DaLiveContentOperations (dynamically imported)
 // The mock must return success result by default
 // Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: jest.fn().mockResolvedValue({
             success: true,
@@ -93,7 +93,7 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
 
 // Mock DaLiveAuthService - default to authenticated
 // This allows existing EDS tests to pass without being blocked by auth pre-check
-jest.mock('@/features/eds/services/daLiveAuthService', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
@@ -121,7 +121,7 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
-jest.mock('@/features/eds/services/githubAppService', () => ({
+jest.mock('@/features/eds/services/github/githubAppService', () => ({
     GitHubAppService: jest.fn().mockImplementation(() => ({
         isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
         getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
@@ -146,10 +146,10 @@ global.fetch = jest.fn();
 const mockResetEdsProjectWithUI = jest.fn();
 const mockExtractResetParams = jest.fn();
 const mockExecuteEdsReset = jest.fn();
-jest.mock('@/features/eds/services/edsResetUI', () => ({
+jest.mock('@/features/eds/services/reset/edsResetUI', () => ({
     resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
 }));
-jest.mock('@/features/eds/services/edsResetService', () => ({
+jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
     executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
@@ -161,7 +161,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ServiceLocator } from '@/core/di';
-import { HelixService } from '@/features/eds/services/helixService';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 
 // =============================================================================

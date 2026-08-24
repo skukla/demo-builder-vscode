@@ -32,7 +32,7 @@ import {
     type CodeSyncSetupParams,
     type ConfigWriteAccess,
 } from './configServiceAccess';
-import type { TokenProvider } from './daLiveContentOperations';
+import type { TokenProvider } from './daLive/daLiveContentOperations';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

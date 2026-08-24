@@ -12,7 +12,7 @@
  * real network I/O.
  */
 
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     fsProm,
     toolHandlers,
@@ -25,7 +25,7 @@ import {
 // Mock DaLiveContentOperations so we can assert on the teardown call.
 const mockRemoveBlockFromLibrary = jest.fn();
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         removeBlockFromLibrary: mockRemoveBlockFromLibrary,
     })),
@@ -45,7 +45,7 @@ jest.mock('@/features/eds/services/storefrontSyncService', () => ({
 // Mock helixApiClient — captures unpublish.
 const mockUnpublishPage = jest.fn();
 const mockPreviewAndPublishPage = jest.fn();
-jest.mock('@/features/eds/services/helixApiClient', () => ({
+jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: (...args: unknown[]) => mockPreviewAndPublishPage(...args),
     unpublishPage: (...args: unknown[]) => mockUnpublishPage(...args),
 }));

@@ -26,7 +26,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...a: unknown[]) => mockResolveByomOverlayConfig(...a),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
     DaLiveContentOperations: jest.fn(),
 }));
@@ -43,7 +43,7 @@ jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
     registerPublishKey: (...a: unknown[]) => mockRegisterPublishKey(...a),
 }));
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: (...a: unknown[]) => mockResolveStorefrontConfig(...a),
 }));
 

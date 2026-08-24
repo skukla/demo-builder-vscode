@@ -12,8 +12,8 @@
  */
 
 import type { ConfigurationService } from './configurationService';
-import type { DaLiveOrgOperations } from './daLiveOrgOperations';
-import type { GitHubRepoOperations } from './githubRepoOperations';
+import type { DaLiveOrgOperations } from './daLive/daLiveOrgOperations';
+import type { GitHubRepoOperations } from './github/githubRepoOperations';
 import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,

@@ -31,7 +31,7 @@ jest.mock('@/features/eds/services/types', () => {
     return { DaLiveAuthError };
 });
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     extractResetParams: jest.fn(() => ({
         success: true,
         params: {
@@ -60,16 +60,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
 }));
 

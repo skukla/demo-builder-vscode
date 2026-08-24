@@ -23,7 +23,7 @@
  * @module features/eds/services/inspectorHelpers
  */
 
-import type { GitHubFileOperations } from './githubFileOperations';
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
 import inspectorOverrides from '@/features/project-creation/config/inspector-rules.json';
 import type { Logger } from '@/types/logger';

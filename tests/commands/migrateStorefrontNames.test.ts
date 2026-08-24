@@ -39,7 +39,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: jest.fn((fromConfig?: string) => fromConfig),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
@@ -48,7 +48,7 @@ jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: jest.fn(() => ({
         templateOwner: 'template-org',
         templateRepo: 'template-repo',

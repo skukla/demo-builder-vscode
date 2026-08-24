@@ -145,9 +145,9 @@ async function fetchTemplateCommitSha(
     }
 
     try {
-        const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
+        const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
         const { GitHubFileOperations } = await import(
-            '@/features/eds/services/githubFileOperations'
+            '@/features/eds/services/github/githubFileOperations'
         );
         const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
         const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);

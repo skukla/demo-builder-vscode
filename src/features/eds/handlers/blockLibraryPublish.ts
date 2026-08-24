@@ -9,7 +9,7 @@
  * @module features/eds/handlers/blockLibraryPublish
  */
 
-import { HelixService } from '../services/helixService';
+import { HelixService } from '../services/helix/helixService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

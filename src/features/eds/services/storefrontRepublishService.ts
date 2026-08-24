@@ -19,13 +19,13 @@ import {
 import { prewarmCatalog } from './catalogPrewarmService';
 import { generateConfigJson, buildConfigGeneratorParams } from './configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from './configSyncService';
-import type { DaLiveAuthService } from './daLiveAuthService';
+import type { DaLiveAuthService } from './daLive/daLiveAuthService';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
-} from './daLiveContentOperations';
-import type { GitHubTokenService } from './githubTokenService';
-import { HelixService } from './helixService';
+} from './daLive/daLiveContentOperations';
+import type { GitHubTokenService } from './github/githubTokenService';
+import { HelixService } from './helix/helixService';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import type { PhaseProgressCallback } from './types';
 import { COMPONENT_IDS } from '@/core/constants';

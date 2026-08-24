@@ -31,7 +31,7 @@
  */
 
 import { buildSiteConfigParams, ConfigurationService } from './configurationService';
-import { DaLiveContentOperations } from './daLiveContentOperations';
+import { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

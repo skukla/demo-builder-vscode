@@ -8,12 +8,12 @@
  */
 
 import type { ConfigurationService } from '../services/configurationService';
-import type { DaLiveAuthService } from '../services/daLiveAuthService';
-import type { DaLiveContentOperations } from '../services/daLiveContentOperations';
-import type { GitHubAppService } from '../services/githubAppService';
-import type { GitHubFileOperations } from '../services/githubFileOperations';
-import type { GitHubRepoOperations } from '../services/githubRepoOperations';
-import type { HelixService } from '../services/helixService';
+import type { DaLiveAuthService } from '../services/daLive/daLiveAuthService';
+import type { DaLiveContentOperations } from '../services/daLive/daLiveContentOperations';
+import type { GitHubAppService } from '../services/github/githubAppService';
+import type { GitHubFileOperations } from '../services/github/githubFileOperations';
+import type { GitHubRepoOperations } from '../services/github/githubRepoOperations';
+import type { HelixService } from '../services/helix/helixService';
 
 /**
  * Result of storefront setup phase execution

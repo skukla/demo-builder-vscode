@@ -53,10 +53,10 @@ import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromp
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
-import { HelixService } from '@/features/eds/services/helixService';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';

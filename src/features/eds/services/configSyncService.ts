@@ -13,9 +13,9 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
-import { GitHubFileOperations } from './githubFileOperations';
-import { GitHubTokenService } from './githubTokenService';
-import { HelixService } from './helixService';
+import { GitHubFileOperations } from './github/githubFileOperations';
+import { GitHubTokenService } from './github/githubTokenService';
+import { HelixService } from './helix/helixService';
 import type { PhaseProgressCallback } from './types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

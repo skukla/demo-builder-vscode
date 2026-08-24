@@ -17,7 +17,7 @@
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLiveConstants';
+import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
@@ -80,7 +80,7 @@ export async function ensureEdsContent(
     // Create DA.live services upfront — all DA.live API calls require the DA.live token
     // (separate IMS auth from Adobe Console, see storefrontSetupHandlers.ts:440)
     const { DaLiveContentOperations, createDaLiveServiceTokenProvider } = await import(
-        '@/features/eds/services/daLiveContentOperations'
+        '@/features/eds/services/daLive/daLiveContentOperations'
     );
     const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
 
@@ -155,8 +155,8 @@ export async function ensureEdsContent(
     }
 
     // Service dependencies for remaining operations (daLiveAuthService + daLiveTokenProvider created above)
-    const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-    const { HelixService } = await import('@/features/eds/services/helixService');
+    const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
+    const { HelixService } = await import('@/features/eds/services/helix/helixService');
     const {
         configureDaLivePermissions,
         applyDaLiveOrgConfigSettings,
@@ -186,7 +186,7 @@ export async function ensureEdsContent(
     if (config.templateOwner && config.templateRepo) {
         onProgress?.('Configuring block library...', 'Setting up block library from template');
         try {
-            const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+            const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
             const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
                 config.daLiveOrg,

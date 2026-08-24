@@ -27,7 +27,7 @@
  * Backlog: `.rptc/backlog/pdp-prewarm-401-after-admin-pinning.md`
  */
 
-import { HelixService } from './helixService';
+import { HelixService } from './helix/helixService';
 import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';

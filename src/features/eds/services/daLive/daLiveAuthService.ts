@@ -1,0 +1,412 @@
+/**
+ * DA.live Authentication Service
+ *
+ * Token storage wrapper for DA.live authentication.
+ * Tokens are obtained externally via the wizard's bookmarklet/token-paste flow
+ * or the dashboard's QuickPick authentication flow.
+ *
+ * Note: The OAuth PKCE flow was removed as it requires the app to be hosted
+ * on the da.live domain for OAuth callbacks, which VS Code extensions cannot do.
+ */
+
+import * as vscode from 'vscode';
+import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
+import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import { getLogger } from '@/core/logging';
+
+// ==========================================================
+// Constants
+// ==========================================================
+
+/** State storage keys for DA.live token data */
+const STATE_KEYS = {
+    accessToken: 'daLive.accessToken',
+    tokenExpiration: 'daLive.tokenExpiration',
+    userEmail: 'daLive.userEmail',
+    orgName: 'daLive.orgName',
+    setupComplete: 'daLive.setupComplete',
+};
+
+// ==========================================================
+// Types
+// ==========================================================
+
+export interface DaLiveTokenInfo {
+    accessToken: string;
+    expiresAt: number;
+    email?: string;
+}
+
+// ==========================================================
+// JWT Utilities
+// ==========================================================
+
+/**
+ * Parse a JWT token's payload section (base64-decode + JSON.parse).
+ *
+ * Returns the decoded payload as a plain object, or null if the token
+ * cannot be parsed (too few parts, invalid base64, or invalid JSON).
+ *
+ * Shared by storeToken (to extract email/expiry) and
+ * validateDaLiveToken in daLiveAuthPrompt (to validate client_id/expiry).
+ *
+ * @param token - JWT token string
+ * @returns Decoded payload or null on failure
+ */
+export function parseJwtPayload(token: string): Record<string, unknown> | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) {
+            return null;
+        }
+        return JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    } catch {
+        return null;
+    }
+}
+
+// ==========================================================
+// DA.live Authentication Service
+// ==========================================================
+
+export class DaLiveAuthService {
+    private logger = getLogger();
+    private context: vscode.ExtensionContext;
+
+    private readonly signInEmitter = new vscode.EventEmitter<void>();
+
+    /**
+     * Fires once a token has been stored — the one moment a DA.live session is
+     * known to be good.
+     *
+     * Exists because work that NEEDS a session cannot reliably hang off
+     * activation. Measured 2026-08-15: the stored token was already expired at
+     * activation and was only refreshed 54 seconds later when the user began a
+     * reset, so the publish-key renewal sweep found no session and skipped every
+     * cold start.
+     */
+    readonly onDidSignIn = this.signInEmitter.event;
+
+    constructor(context: vscode.ExtensionContext) {
+        this.context = context;
+    }
+
+    /**
+     * Check if user is authenticated with DA.live
+     *
+     * Returns true if a valid, non-expired token exists.
+     * Uses a 5-minute buffer to prevent mid-operation token expiration.
+     */
+    async isAuthenticated(): Promise<boolean> {
+        const tokenInfo = await this.getStoredToken();
+        return tokenInfo !== null && tokenInfo.expiresAt > Date.now();
+    }
+
+    /**
+     * Get stored access token if valid
+     *
+     * Returns null if no token exists or if the token is expired/expiring soon.
+     * The 5-minute expiration buffer prevents tokens from expiring mid-operation.
+     */
+    async getStoredToken(): Promise<DaLiveTokenInfo | null> {
+        const fromState = this.readValidStateToken();
+        if (fromState) {
+            return fromState;
+        }
+        // Fallback: a token the agent obtained via the `da-auth` skill (cached by
+        // da-auth-helper at ~/.aem/da-token.json) — the same admin.da.live IMS
+        // credential, just a different front door. Hydrate it into globalState so
+        // the rest of the extension and our MCP tools recognize the same sign-in.
+        return this.hydrateFromDaAuthHelper();
+    }
+
+    /** Read a still-valid token from globalState (with the 5-minute buffer), or null. */
+    private readValidStateToken(): DaLiveTokenInfo | null {
+        const accessToken = this.context.globalState.get<string>(STATE_KEYS.accessToken);
+        const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
+        const email = this.context.globalState.get<string>(STATE_KEYS.userEmail);
+
+        if (!accessToken || !expiresAt) {
+            return null;
+        }
+
+        // Check if token is expired (with 5-minute buffer)
+        if (expiresAt < Date.now() + 5 * 60 * 1000) {
+            return null;
+        }
+
+        return { accessToken, expiresAt, email };
+    }
+
+    /**
+     * Adopt a still-valid token from the da-auth-helper cache (`~/.aem/da-token.json`)
+     * when globalState has none. Caches it into globalState (best-effort) so
+     * subsequent reads are fast and the extension's own flows see the same token.
+     * Returns null when there is no usable cached token.
+     */
+    private async hydrateFromDaAuthHelper(): Promise<DaLiveTokenInfo | null> {
+        const helperToken = readDaAuthHelperToken();
+        if (!helperToken) {
+            return null;
+        }
+        // Apply the same 5-minute expiry buffer as state tokens.
+        if (helperToken.expiresAt < Date.now() + 5 * 60 * 1000) {
+            return null;
+        }
+
+        try {
+            await this.storeToken(helperToken.accessToken, {
+                expiresAt: helperToken.expiresAt,
+                email: helperToken.email,
+            });
+            this.logger.info(
+                '[DA.live Auth] Adopted token from da-auth-helper cache (~/.aem/da-token.json)',
+            );
+        } catch (error) {
+            // Caching is best-effort; the token is still usable for this call.
+            this.logger.warn(
+                `[DA.live Auth] Could not cache da-auth-helper token: ${(error as Error).message}`,
+            );
+        }
+
+        return {
+            accessToken: helperToken.accessToken,
+            expiresAt: helperToken.expiresAt,
+            email: helperToken.email,
+        };
+    }
+
+    /**
+     * Get access token if available
+     *
+     * Returns the stored token if valid, or null if no valid token exists.
+     * Does not trigger any authentication flow - use the wizard or dashboard
+     * QuickPick flow to obtain a new token if needed.
+     */
+    async getAccessToken(): Promise<string | null> {
+        const tokenInfo = await this.getStoredToken();
+        return tokenInfo?.accessToken ?? null;
+    }
+
+    /**
+     * Ask the DA.live admin plane whether it accepts the stored token RIGHT NOW.
+     *
+     * `isAuthenticated()` is a local expiry check and cannot see a
+     * server-refused token — the 2026-08-16 evidence run passed it and then
+     * failed 52 authenticated calls, each 403 misread as a missing permission.
+     * One `HEAD /list/{org}/` settles it before a pipeline starts.
+     *
+     * Verdict mapping: 401 → `refused` (the CREDENTIAL was rejected — the only
+     * status that indicts the token); 403 → `accepted` (the ORG refused access
+     * to a credential the server honoured — a permission fact, not an auth
+     * one); anything else that returns → `accepted`; a transport failure →
+     * `unknown`, because a flaky network must never read as a refusal.
+     */
+    async isServerAccepted(orgName: string): Promise<'accepted' | 'refused' | 'unknown'> {
+        const token = await this.getAccessToken();
+        if (!token) {
+            return 'refused';
+        }
+        try {
+            const response = await fetch(
+                `${DA_LIVE_BASE_URL}/list/${encodeURIComponent(orgName)}/`,
+                {
+                    method: 'HEAD',
+                    headers: { Authorization: `Bearer ${token}` },
+                },
+            );
+            return response.status === 401 ? 'refused' : 'accepted';
+        } catch {
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Fetch user email from Adobe IMS profile API
+     *
+     * The DA.live token is an Adobe IMS token. The user's email is not reliably
+     * in the JWT claims, so we fetch it from the IMS profile endpoint.
+     *
+     * @param token - Optional token to use (defaults to stored token)
+     * @returns User email or null if fetch fails
+     */
+    async fetchUserEmail(token?: string): Promise<string | null> {
+        const accessToken = token || (await this.getAccessToken());
+        if (!accessToken) {
+            return null;
+        }
+
+        try {
+            const IMS_PROFILE_URL = 'https://ims-na1.adobelogin.com/ims/profile/v1';
+            const response = await fetch(IMS_PROFILE_URL, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            if (response.ok) {
+                const profile = await response.json();
+                const email = profile.email;
+                if (email) {
+                    // Cache the email for future use
+                    await this.context.globalState.update(STATE_KEYS.userEmail, email);
+                    this.logger.debug(
+                        `[DA.live Auth] Fetched user email from IMS profile: ${email}`,
+                    );
+                    return email;
+                }
+            } else {
+                this.logger.warn(`[DA.live Auth] IMS profile fetch failed: ${response.status}`);
+            }
+        } catch (error) {
+            this.logger.warn(
+                `[DA.live Auth] Failed to fetch user email from IMS: ${(error as Error).message}`,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Get user email, fetching from IMS if not cached
+     *
+     * First checks cached email, then fetches from IMS profile API if needed.
+     *
+     * @returns User email or null if unavailable
+     */
+    async getUserEmail(): Promise<string | null> {
+        // Try cached email first
+        const cachedEmail = this.context.globalState.get<string>(STATE_KEYS.userEmail);
+        if (cachedEmail) {
+            return cachedEmail;
+        }
+
+        // Fetch from IMS profile API
+        return this.fetchUserEmail();
+    }
+
+    /**
+     * Store a manually-provided token (from bookmarklet/QuickPick flow)
+     *
+     * Used when token is obtained via DA.live bookmarklet and pasted by user.
+     * Stores token with expiration info extracted from JWT payload.
+     *
+     * @param token - JWT token string to store (should be pre-validated)
+     * @param opts - Optional pre-validated data to store alongside the token
+     */
+    async storeToken(
+        token: string,
+        opts?: { expiresAt?: number; email?: string; orgName?: string },
+    ): Promise<void> {
+        // Store the token
+        await this.context.globalState.update(STATE_KEYS.accessToken, token);
+
+        // Use pre-validated data if provided, otherwise extract from JWT
+        if (opts?.expiresAt) {
+            await this.context.globalState.update(STATE_KEYS.tokenExpiration, opts.expiresAt);
+        }
+        if (opts?.email) {
+            await this.context.globalState.update(STATE_KEYS.userEmail, opts.email);
+        }
+
+        // Extract from JWT payload if not provided via opts
+        if (!opts?.expiresAt || !opts?.email) {
+            const payload = parseJwtPayload(token);
+            if (payload) {
+                if (!opts?.expiresAt && payload.created_at && payload.expires_in) {
+                    const createdAt = parseInt(String(payload.created_at), 10);
+                    const expiresIn = parseInt(String(payload.expires_in), 10);
+                    const expiresAt = createdAt + expiresIn;
+                    await this.context.globalState.update(STATE_KEYS.tokenExpiration, expiresAt);
+                }
+
+                if (!opts?.email) {
+                    const email = payload.email || payload.preferred_username;
+                    if (email) {
+                        await this.context.globalState.update(STATE_KEYS.userEmail, String(email));
+                    }
+                }
+            } else if (!opts?.expiresAt && !opts?.email) {
+                this.logger.warn(
+                    '[DA.live Auth] Could not parse token payload for expiration/email',
+                );
+            }
+        }
+
+        // Store org name if provided
+        if (opts?.orgName) {
+            await this.context.globalState.update(STATE_KEYS.orgName, opts.orgName);
+        }
+
+        // Mark setup as complete
+        await this.context.globalState.update(STATE_KEYS.setupComplete, true);
+
+        this.logger.info('[DA.live Auth] Token stored successfully');
+
+        this.mirrorToDaAuthHelper(token);
+
+        // Last, and deliberately after the mirror: listeners run work that needs
+        // a live session, and firing earlier would race the state they read.
+        this.signInEmitter.fire();
+    }
+
+    /**
+     * Mirror the just-stored token into the da-auth-helper cache so a sign-in
+     * done through the extension is recognized by the agent's `da-auth` skill
+     * too (the reverse of the read fallback). Best-effort, merge-preserving, and
+     * freshness-guarded — see writeDaAuthHelperToken.
+     */
+    private mirrorToDaAuthHelper(token: string): void {
+        const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
+        if (!expiresAt) {
+            return;
+        }
+        if (writeDaAuthHelperToken({ accessToken: token, expiresAt })) {
+            this.logger.debug(
+                '[DA.live Auth] Mirrored token to da-auth-helper cache (~/.aem/da-token.json)',
+            );
+        }
+    }
+
+    /**
+     * Log out and clear stored tokens
+     *
+     * Clears all stored token data from globalState.
+     * Preserves `setupComplete` so user doesn't have to re-learn the bookmarklet flow.
+     * Token revocation is not performed as tokens expire naturally.
+     */
+    async logout(): Promise<void> {
+        await this.context.globalState.update(STATE_KEYS.accessToken, undefined);
+        await this.context.globalState.update(STATE_KEYS.tokenExpiration, undefined);
+        await this.context.globalState.update(STATE_KEYS.userEmail, undefined);
+        await this.context.globalState.update(STATE_KEYS.orgName, undefined);
+        // Note: setupComplete is preserved so user doesn't have to re-learn the bookmarklet flow
+
+        this.logger.info('[DA.live Auth] Logged out');
+    }
+
+    /**
+     * Full reset — clears everything including setupComplete
+     *
+     * Used by the dev-only ResetAllCommand to restore first-time experience.
+     */
+    async resetAll(): Promise<void> {
+        await this.logout();
+        await this.context.globalState.update(STATE_KEYS.setupComplete, undefined);
+
+        this.logger.info('[DA.live Auth] Full reset complete');
+    }
+
+    /** Get stored org name */
+    getOrgName(): string | undefined {
+        return this.context.globalState.get<string>(STATE_KEYS.orgName);
+    }
+
+    /** Check if bookmarklet setup has been completed before */
+    isSetupComplete(): boolean {
+        return this.context.globalState.get<boolean>(STATE_KEYS.setupComplete) || false;
+    }
+
+    /** Dispose resources. */
+    dispose(): void {
+        this.signInEmitter.dispose();
+    }
+}

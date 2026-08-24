@@ -20,42 +20,42 @@ import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
 
 // Mock the extracted service classes
-jest.mock('@/features/eds/services/githubTokenService', () => ({
+jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((secrets) => ({
         secrets,
         mockType: 'GitHubTokenService',
     })),
 }));
 
-jest.mock('@/features/eds/services/githubRepoOperations', () => ({
+jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation((tokenService) => ({
         tokenService,
         mockType: 'GitHubRepoOperations',
     })),
 }));
 
-jest.mock('@/features/eds/services/githubFileOperations', () => ({
+jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation((tokenService) => ({
         tokenService,
         mockType: 'GitHubFileOperations',
     })),
 }));
 
-jest.mock('@/features/eds/services/githubOAuthService', () => ({
+jest.mock('@/features/eds/services/github/githubOAuthService', () => ({
     GitHubOAuthService: jest.fn().mockImplementation((secrets) => ({
         secrets,
         mockType: 'GitHubOAuthService',
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn().mockImplementation((tokenProvider) => ({
         tokenProvider,
         mockType: 'DaLiveOrgOperations',
     })),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation((tokenProvider) => ({
         tokenProvider,
         mockType: 'DaLiveContentOperations',
@@ -65,8 +65,8 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/daLiveAuthService', () => {
-    const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
+    const actual = jest.requireActual('@/features/eds/services/daLive/daLiveAuthService');
     return {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation((context) => ({

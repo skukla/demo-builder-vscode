@@ -36,7 +36,7 @@ import {
     type ConfigWriteAccess,
 } from '@/features/eds/services/configServiceAccess';
 import { buildContentSourceUrl } from '@/features/eds/services/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     addSiteAdmin,
     listSiteAccess,

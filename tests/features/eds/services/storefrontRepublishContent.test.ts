@@ -10,14 +10,14 @@ const mockPreviewCode = jest.fn(async () => undefined);
 const mockPurgeCacheAll = jest.fn(async () => undefined);
 const mockPublishAllSiteContent = jest.fn(async () => undefined);
 
-jest.mock('@/features/eds/services/helixService', () => ({
+jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: jest.fn(() => ({
         previewCode: mockPreviewCode,
         purgeCacheAll: mockPurgeCacheAll,
         publishAllSiteContent: mockPublishAllSiteContent,
     })),
 }));
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));

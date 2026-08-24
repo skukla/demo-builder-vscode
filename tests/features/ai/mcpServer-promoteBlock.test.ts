@@ -11,7 +11,7 @@
  * real network I/O.
  */
 
-import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     fsProm,
     toolHandlers,
@@ -25,7 +25,7 @@ import {
 const mockAppendBlockToLibrary = jest.fn();
 const mockUpsertBlockDocPage = jest.fn();
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         appendBlockToLibrary: mockAppendBlockToLibrary,
         upsertBlockDocPage: mockUpsertBlockDocPage,
@@ -48,7 +48,7 @@ jest.mock('@/features/eds/services/storefrontSyncService', () => ({
 
 // Mock helixApiClient.previewAndPublishPage.
 const mockPreviewAndPublishPage = jest.fn();
-jest.mock('@/features/eds/services/helixApiClient', () => ({
+jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: (...args: unknown[]) => mockPreviewAndPublishPage(...args),
 }));
 

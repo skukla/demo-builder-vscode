@@ -16,7 +16,7 @@ import {
     installBlockCollections,
 } from '@/features/eds/services/blockCollectionHelpers';
 import type { Logger } from '@/types/logger';
-import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
 import {
     createComponentDef,

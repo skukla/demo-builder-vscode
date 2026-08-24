@@ -13,7 +13,7 @@
  */
 
 import * as vscode from 'vscode';
-import { GitHubTokenService } from '../services/githubTokenService';
+import { GitHubTokenService } from '../services/github/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

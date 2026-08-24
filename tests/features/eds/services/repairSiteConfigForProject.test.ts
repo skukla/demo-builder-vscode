@@ -25,7 +25,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...args: unknown[]) => mockResolveByomOverlayConfig(...args),
 }));
 
-jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
 
@@ -35,12 +35,12 @@ jest.mock('@/features/eds/services/repairSiteConfigHeadless', () => ({
 
 jest.mock('@/features/eds/services/storefrontNameMigrationForProject');
 
-jest.mock('@/features/eds/services/edsResetParams', () => ({
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: (...args: unknown[]) => mockResolveStorefrontConfig(...args),
 }));
 
 import { ConfigurationService } from '@/features/eds/services/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { repairSiteConfigForProject } from '@/features/eds/services/repairSiteConfigForProject';
 import type * as vscode from 'vscode';
 import type { Project } from '@/types/base';

@@ -106,8 +106,8 @@ const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 // after an explicit logout); a string = the org survived the token's expiry,
 // which is the case the flow must not re-ask about.
 const mockGetOrgName = jest.fn<string | undefined, []>();
-jest.mock('@/features/eds/services/daLiveAuthService', () => {
-    const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
+    const actual = jest.requireActual('@/features/eds/services/daLive/daLiveAuthService');
     return {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
@@ -119,12 +119,12 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
 });
 
 // Mock GitHub services (required by daLiveAuthPrompt to load)
-jest.mock('@/features/eds/services/githubTokenService');
-jest.mock('@/features/eds/services/githubRepoOperations');
-jest.mock('@/features/eds/services/githubFileOperations');
-jest.mock('@/features/eds/services/githubOAuthService');
-jest.mock('@/features/eds/services/daLiveOrgOperations');
-jest.mock('@/features/eds/services/daLiveContentOperations');
+jest.mock('@/features/eds/services/github/githubTokenService');
+jest.mock('@/features/eds/services/github/githubRepoOperations');
+jest.mock('@/features/eds/services/github/githubFileOperations');
+jest.mock('@/features/eds/services/github/githubOAuthService');
+jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
 
 // =============================================================================
 // Now import the modules under test (after all mocks are set up)

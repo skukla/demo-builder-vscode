@@ -19,7 +19,7 @@
 
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
-import { HelixService } from '@/features/eds/services/helixService';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 interface CheckGitHubAppRequest {
@@ -102,7 +102,7 @@ interface CheckGitHubAppResponse {
 async function triggerCodeSync(
     owner: string,
     repo: string,
-    tokenService: import('@/features/eds/services/githubTokenService').GitHubTokenService,
+    tokenService: import('@/features/eds/services/github/githubTokenService').GitHubTokenService,
     logger: import('@/types/logger').Logger,
 ): Promise<boolean> {
     logger.info(`[GitHub App Check] Triggering code sync for ${owner}/${repo}`);
@@ -151,7 +151,7 @@ export async function checkGitHubApp(
         const { tokenService } = getGitHubServices(context);
 
         // Lazy-load GitHubAppService
-        const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
+        const { GitHubAppService } = await import('@/features/eds/services/github/githubAppService');
         // Pass the DA.live session. Without it this check 401s on any site
         // carrying an `access.admin` role — which storefront setup now pins on
         // every project — and reports "installed=false, codeStatus=none", which

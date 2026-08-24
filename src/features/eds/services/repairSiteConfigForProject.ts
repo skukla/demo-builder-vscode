@@ -35,8 +35,8 @@
 import type * as vscode from 'vscode';
 import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
-import { resolveStorefrontConfig } from '@/features/eds/services/edsResetParams';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     repairSiteConfig,
     type RepairSiteConfigResult,

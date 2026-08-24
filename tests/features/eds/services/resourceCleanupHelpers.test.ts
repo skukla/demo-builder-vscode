@@ -6,7 +6,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Project, ComponentInstance } from '@/types';
 import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
-import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
+import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     isEdsProject,
     extractEdsMetadata,

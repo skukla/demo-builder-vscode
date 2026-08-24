@@ -894,7 +894,7 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     const { isEdsProject } = await import('@/types/typeGuards');
 
     if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetUI');
+        const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
             project,
             context,

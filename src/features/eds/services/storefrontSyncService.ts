@@ -25,8 +25,8 @@
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
 import { isRulesetRejection } from './errorFormatters';
-import { injectTokenIntoUrl } from './githubHelpers';
-import { previewAndPublishPage } from './helixApiClient';
+import { injectTokenIntoUrl } from './github/githubHelpers';
+import { previewAndPublishPage } from './helix/helixApiClient';
 
 const execFile = promisify(childProcess.execFile);
 
