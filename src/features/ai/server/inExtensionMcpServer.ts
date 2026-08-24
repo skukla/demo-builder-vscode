@@ -163,7 +163,11 @@ function withToolLogging(
     logger: Logger,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     notifier?: (toolName: string, run: () => Promise<any>) => Promise<any>,
-    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>,
+    consentGate?: (
+        toolName: string,
+        args: unknown,
+        description?: string,
+    ) => Promise<ConsentVerdict>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
@@ -184,7 +188,15 @@ function withToolLogging(
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
                     if (consentGate && callRequestsConsent(args)) {
-                        const verdict = await consentGate(name, args);
+                        // The tool's own description goes to the dialog. Reading all
+                    // 60 write tools showed the NAMES are mostly fine but several
+                    // are ambiguous alone — "Republish" (what?), "Sync content"
+                    // vs "Sync storefront" (CDN publish vs git push). Each one
+                    // already carries a description written to explain exactly
+                    // that, and the dialog was showing boilerplate instead.
+                    const description = (schema as { description?: string } | undefined)
+                        ?.description;
+                    const verdict = await consentGate(name, args, description);
                         if (!verdict.allowed) {
                             logger.info(`[MCP] ${name} declined by user consent dialog`);
                             return verdict.refusal;
@@ -247,7 +259,11 @@ export interface InExtensionMcpServerOptions {
      * converting the agent-supplied honor-system parameter into consent that
      * survives a harness-side tool allowlist.
      */
-    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>;
+    consentGate?: (
+        toolName: string,
+        args: unknown,
+        description?: string,
+    ) => Promise<ConsentVerdict>;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,

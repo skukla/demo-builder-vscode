@@ -46,7 +46,14 @@ import type { HandlerContext } from '@/types/handlers';
 
 type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
-const project = { name: 'demo', path: '/projects/demo' };
+// `selectedStack` is load-bearing, not decoration: site configuration is an EDS
+// concept (a Configuration Service entry keyed by the storefront's GitHub
+// owner/repo), and these tools now refuse a project that is not one. The fixture
+// previously carried only name+path, which describes a project with NO stack —
+// a shape these tools were never meant to answer for.
+const project = { name: 'demo', path: '/projects/demo', selectedStack: 'eds-accs' };
+/** A project these tools do not apply to. */
+const headlessProject = { name: 'headless', path: '/projects/headless', selectedStack: 'headless-accs' };
 const extensionContext = { secrets: {} };
 const logger = { warn: jest.fn() };
 
@@ -307,6 +314,36 @@ const candidate = {
     daLiveOrg: 'someone',
     daLiveSite: 'citisignal-one',
 };
+
+describe('project shape', () => {
+    // These tools answer questions about a Configuration Service site entry,
+    // which only EDS storefront projects have. `storefrontTools` already refused
+    // a non-EDS project ("republish applies only to EDS storefront projects");
+    // these did not, so `repair_site_configuration` on a headless project passed
+    // its confirm gate and called straight into the repair path with nothing to
+    // repair. Found by a sweep 2026-08-24, after the same class shipped in the
+    // demo lifecycle tools.
+    const headless = () => buildHarness(headlessProject);
+
+    it.each([
+        ['get_site_access', {}],
+        ['set_site_admin', { email: 'a@b.com', admin: true, confirm: true }],
+        ['repair_site_configuration', { confirm: true }],
+    ])('refuses %s on a project that is not an EDS storefront', async (tool, args) => {
+        const out = await headless().call(tool, args);
+
+        expect(String(out.error)).toContain('applies only to EDS storefront projects');
+    });
+
+    it('still answers for an EDS project', async () => {
+        // The guard must not cost the tools their actual job.
+        mockListSiteAccess.mockResolvedValue({ admins: [] });
+
+        const out = await harness().call('get_site_access', {});
+
+        expect(out.error).toBeUndefined();
+    });
+});
 
 describe('find_storefront_name_mismatches', () => {
     it('reports each mismatched project with where it moves from and to', async () => {

@@ -401,9 +401,13 @@ describe('agent-operation visibility (the notifier seam)', () => {
             confirm: true,
         });
         expect(result).toBe('The user declined "promote_block_to_library".');
+        // Third argument is the tool's own DESCRIPTION, forwarded so the consent
+        // dialog can say what the tool does rather than boilerplate — several
+        // tool names are ambiguous alone ("Republish" republishes what?).
         expect(consentGate).toHaveBeenCalledWith(
             'promote_block_to_library',
-            expect.objectContaining({ confirm: true })
+            expect.objectContaining({ confirm: true }),
+            expect.stringContaining('DA.live authoring library')
         );
         expect(notified).toEqual([]);
     });

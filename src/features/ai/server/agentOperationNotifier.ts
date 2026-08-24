@@ -49,6 +49,22 @@ const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
 };
 
+/**
+ * The first sentence of a tool description, for the dialog's detail line.
+ *
+ * Descriptions are written for an AGENT and often carry several sentences of
+ * guidance — "Requires confirm:true", "Ask the user first", pointers to sibling
+ * tools. A human deciding yes-or-no needs the first one, which is always what the
+ * tool does.
+ */
+function firstSentence(text: string | undefined): string | undefined {
+    const trimmed = text?.trim();
+    if (!trimmed) return undefined;
+    const end = trimmed.search(/\.\s|\.$/);
+    const sentence = end === -1 ? trimmed : trimmed.slice(0, end + 1);
+    return sentence.endsWith('.') ? sentence : `${sentence}.`;
+}
+
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */
 function humanizeKey(key: string): string {
     const labelled = CONSENT_KEY_LABELS[key];
@@ -116,8 +132,8 @@ function renderArgsForConsent(args: unknown): string {
  */
 export function createAgentConsentGate(
     logger: Logger,
-): (toolName: string, args: unknown) => Promise<ConsentVerdict> {
-    return async (toolName, args) => {
+): (toolName: string, args: unknown, description?: string) => Promise<ConsentVerdict> {
+    return async (toolName, args, description) => {
         const required = vscode.workspace
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.requireAgentConsent', true);
@@ -130,10 +146,15 @@ export function createAgentConsentGate(
         // Start demo. Allow it?"), so the one thing being decided arrived last.
         // VS Code renders `message` prominently and `detail` beneath it, which
         // is the natural split between "what" and "who/with what".
+        // Prefer the tool's OWN description over boilerplate. Several names are
+        // ambiguous on their own — "Republish", "Sync content" vs "Sync
+        // storefront" — and the description is the sentence already written to
+        // disambiguate them. Trimmed to one sentence: the dialog is a decision,
+        // not documentation, and some descriptions run to several lines of agent
+        // guidance ("Ask the user first", cross-references to other tools).
+        const what = firstSentence(description) ?? 'An AI agent asked Demo Builder to run this.';
         const params = renderArgsForConsent(args);
-        const detail = params
-            ? `An AI agent asked Demo Builder to run this.\n\n${params}`
-            : 'An AI agent asked Demo Builder to run this. It takes no parameters.';
+        const detail = params ? `${what}\n\n${params}` : what;
         const choice = await vscode.window.showWarningMessage(
             `Demo Builder: ${humanize(toolName)}?`,
             { modal: true, detail },

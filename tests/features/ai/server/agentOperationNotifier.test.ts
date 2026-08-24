@@ -132,6 +132,41 @@ describe('createAgentConsentGate', () => {
         );
     });
 
+    it("shows the tool's own description, trimmed to one sentence", async () => {
+        // Several tool NAMES are ambiguous alone — "Republish" republishes what?
+        // The description already answers that and was being shown to nobody.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate(
+            'republish',
+            { confirm: true },
+            'Regenerate and republish the EDS storefront config.json to GitHub and the CDN. ' +
+                'Requires confirm:true. Ask the user first.'
+        );
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('Regenerate and republish the EDS storefront config.json');
+        // Agent-facing guidance is not a decision aid for a human.
+        expect(detail).not.toContain('Ask the user first');
+        expect(detail).not.toContain('Requires confirm:true');
+    });
+
+    it('falls back to boilerplate when a tool has no description', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        expect(
+            String((mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail)
+        ).toBe('An AI agent asked Demo Builder to run this.');
+    });
+
     it('says so plainly when a tool takes no parameters', async () => {
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
@@ -141,7 +176,7 @@ describe('createAgentConsentGate', () => {
 
         const [, opts] = mockShowWarningMessage.mock.calls[0];
         expect(String((opts as { detail?: string }).detail)).toBe(
-            'An AI agent asked Demo Builder to run this. It takes no parameters.'
+            'An AI agent asked Demo Builder to run this.'
         );
     });
 

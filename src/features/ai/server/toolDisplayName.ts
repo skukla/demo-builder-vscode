@@ -31,6 +31,11 @@ export const SERVER_DISPLAY_NAME = 'Demo Builder';
  * asked to approve.
  */
 const ACRONYMS: Record<string, string> = {
+    // Proper nouns belong here too — snake_case lowercases them exactly like an
+    // acronym. "Create adobe project" was shipping in a consent dialog because
+    // this map was written from imagination rather than from the tool list; a
+    // sweep of all 103 names found it. Re-run that sweep when adding tools.
+    adobe: 'Adobe',
     eds: 'EDS',
     ai: 'AI',
     mcp: 'MCP',
