@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.142] - 2026-08-24
+
+### Added
+
+- **PreToolUse `aio`-global guard in the generated bundle.** App Builder-adjacent
+  projects ship a hook blocking the Commerce extensibility MCP's
+  `aio-configure-global` / `aio-app-use` / `aio-where`. Those read and write the
+  `aio` CLI's process-global org selection, which the extension deliberately
+  stopped using in favour of per-operation `withOrgContext` targeting; one
+  unwrapped write once deployed a mesh into a deleted project for two days.
+  Enforced rather than advised, because we install the tool that causes it.
+  `AI_CONTEXT_VERSION` 21.
+
+### Changed
+
+- **The home Chat is told which project is active instead of asking.** The
+  generated instructions ordered an agent to call `get_current_project` before
+  any project task, and it obeyed on nearly every run — a full model turn spent
+  learning something the extension already knew. The active project is now stated
+  at chat launch, in both the home `AGENTS.md` (read by cold starts) and the
+  re-home preamble (read by resumed conversations, which is almost all of them).
+  Resolved fresh on every launch, so it cannot go stale across a project switch;
+  with no project selected the original "ask first" wording is kept.
+  Measured A/B against a live server: the lookup occurred in 3 of 5 control runs
+  and 0 of 5 after, zero errors either arm. `AI_CONTEXT_VERSION` 22.
+
 ## [1.0.0-beta.141] - 2026-08-24
 
 ### Changed
