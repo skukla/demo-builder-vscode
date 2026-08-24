@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -161,11 +162,16 @@ export async function activate(context: vscode.ExtensionContext) {
         void (async () => {
             await refreshAiBundlesOnActivation(context.extensionPath, logger);
             await sweepPublishKeyRenewals(context);
-            // Last in the chain, and the ordering buys nothing structural: each
-            // sweep re-loads from disk independently, and the two before it write
-            // manifests as well. Kept last only so the newest one is the easiest to
-            // drop if the upkeep chain ever needs shortening.
+            // The ordering buys nothing structural: each sweep re-loads from disk
+            // independently, and the ones before it write manifests as well. The
+            // newest sweeps sit last so they are the easiest to drop if the upkeep
+            // chain ever needs shortening.
             await sweepCommerceSecretStorage(context);
+            // Manifest write-back migration: load+save any manifest not stamped
+            // with MANIFEST_FORMAT_VERSION, so legacy shapes are rewritten on
+            // disk instead of converted on every read forever. Must stay IN this
+            // sequential chain — it saves whole manifests, same as the others.
+            await sweepManifestFormats();
         })().catch((error) => {
             logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
         });
@@ -655,6 +661,30 @@ async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promis
         });
     } catch (error) {
         logger.debug(`[PublishKey] Renewal sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Glue for the manifest write-back migration (see manifestFormatSweep.ts).
+ *
+ * persistAfterLoad: false — the sweep saves via saveProjectConfigOnly itself;
+ * the default save path would also move currentProject and the recents list
+ * for every migrated project.
+ */
+async function sweepManifestFormats(): Promise<void> {
+    try {
+        const summaries = await stateManager.getAllProjects();
+        await sweepManifestFormat({
+            projectPaths: summaries.map((s) => s.path),
+            loadProject: (projectPath) =>
+                stateManager.loadProjectFromPath(projectPath, undefined, {
+                    persistAfterLoad: false,
+                }),
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            log: (line) => logger.info(`[ManifestFormat] ${line}`),
+        });
+    } catch (error) {
+        logger.debug(`[ManifestFormat] Sweep skipped: ${(error as Error).message}`);
     }
 }
 
