@@ -7,7 +7,7 @@
  * `application`/`dx-excshell-1`. This seam rewrites the app's `app.config.yaml`
  * to the derived package ({@link applyIsolatedPackages}) and THEN runs the
  * deploy tail. Every deploy routes through it via the keyed runner deps wiring
- * ({@link import('./appBuilderComponentRunnerDeps').buildDefaultRunnerDeps}),
+ * (buildDefaultRunnerDeps in project-creation/services/appBuilderComponentRunnerDeps),
  * so no un-isolated `aio app deploy` path survives. The singular headless
  * deploy was the other route until it was retired on 2026-08-04.
  *

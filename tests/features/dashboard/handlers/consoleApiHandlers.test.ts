@@ -42,7 +42,7 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
         ]),
     })),
 }));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     subscriberTarget: jest.fn(() => ({ orgId: 'org-1', projectId: 'p-1', workspaceId: 'w-1' })),
 }));
 jest.mock('@/features/app-builder/services/allowedDomain', () => ({

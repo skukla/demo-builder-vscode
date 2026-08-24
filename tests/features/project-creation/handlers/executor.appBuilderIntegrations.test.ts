@@ -28,7 +28,7 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 // ---- runner deps factory + context builder ---------------------------------
 const mockBuildDefaultRunnerDeps = jest.fn(() => ({ _deps: true }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({ _ctx: true }));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));

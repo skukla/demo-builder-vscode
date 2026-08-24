@@ -19,7 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
-import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
+import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';

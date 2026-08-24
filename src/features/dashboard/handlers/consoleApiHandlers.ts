@@ -36,7 +36,7 @@ import {
     type SubscribedApi,
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { subscriberTarget } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';

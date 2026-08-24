@@ -17,7 +17,7 @@ import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
-import { MESH_DELETE_COMMAND } from '@/features/mesh/services/meshDeleteCommand';
+import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.

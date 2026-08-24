@@ -122,7 +122,7 @@ describe('spine choke-points', () => {
         // the command string itself lives once (it used to be spelled two
         // ways with independently chosen flags across the three sites).
         const primitive = /['"`]aio api-mesh[:\s]+delete/;
-        const spine = ['features/mesh/services/meshDeleteCommand.ts'];
+        const spine = ['core/shell/meshDeleteCommand.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
 

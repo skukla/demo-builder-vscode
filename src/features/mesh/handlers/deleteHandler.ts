@@ -4,7 +4,7 @@
  * Handles deleting API Mesh instances.
  */
 
-import { MESH_DELETE_COMMAND } from '../services/meshDeleteCommand';
+import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import {

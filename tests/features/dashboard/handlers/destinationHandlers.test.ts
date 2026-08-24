@@ -46,7 +46,7 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     postDestination: (...a: unknown[]) => mockPostDestination(...(a as [])),
     postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
 }));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));

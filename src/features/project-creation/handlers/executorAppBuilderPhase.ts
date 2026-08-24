@@ -117,7 +117,7 @@ export async function executeAppBuilderIntegrationsPhase(
     }
 
     const { buildDefaultRunnerDeps, buildRunnerDepsContext } = await import(
-        '@/features/app-builder/services/appBuilderComponentRunnerDeps'
+        '@/features/project-creation/services/appBuilderComponentRunnerDeps'
     );
     const { addAppBuilderComponent } = await import(
         '@/features/app-builder/services/appBuilderComponentRunner'

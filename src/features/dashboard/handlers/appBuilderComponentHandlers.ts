@@ -36,7 +36,7 @@ import {
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
-} from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+} from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import {
     getAppBuilderComponent,
     listAppBuilderComponents,

@@ -15,7 +15,7 @@
  * after their own confirmation (or as cleanup of something this session
  * created), so the CLI prompt would only hang a non-interactive execution.
  *
- * @module features/mesh/services/meshDeleteCommand
+ * @module core/shell/meshDeleteCommand
  */
 
 export const MESH_DELETE_COMMAND = 'aio api-mesh:delete --autoConfirmAction';
