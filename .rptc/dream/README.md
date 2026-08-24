@@ -4,7 +4,12 @@ Out-of-band curation passes over memory, skills, and CLAUDE.md (the `dream` skil
 One file per run: `<YYYY-MM-DD>.md`, holding accepted AND rejected proposals — the
 rejection record is what stops a later run re-litigating settled items.
 
-Last dream run: 2026-08-18 (at the v1.0.0-beta.133 cut).
+Last dream run: 2026-08-24 (at the v1.0.0-beta.142 cut).
+`.rptc/CLAUDE.md` documents the BROKEN jest redirect order (`2>&1 > file`) in two places, which is
+why 4 of 6 sessions used it; proposed fixing the docs, extending the jest hook to block it, and
+settling the `/tmp`-vs-scratchpad contradiction that 6 of 6 sessions resolve against the guidance.
+
+Previous: 2026-08-18 (at the v1.0.0-beta.133 cut).
 `spectrum-webview-ui` §Verify rewritten around "you cannot see this UI" after 16 screenshot-bearing
 user turns in 3/4 sessions; 9 shipped plans moved out of `.rptc/plans/`; quote-your-globs; the
 `project_appbuilder_app_family` memory pruned ~45 lines -> ~30 after every branch-state claim in it

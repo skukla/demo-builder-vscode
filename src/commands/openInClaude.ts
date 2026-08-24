@@ -3,6 +3,7 @@ import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';
 import type { Project } from '@/types/base';
 
 /**
@@ -53,18 +54,44 @@ export function isClaudeChatOpen(): boolean {
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
 
 /**
- * Re-home preamble prepended to a prompt when it's delivered into a CONTINUED
- * conversation (terminal reuse, or a spawn that resumes via `--continue`). A
- * resumed conversation doesn't re-read the home `AGENTS.md`, so it can keep stale
- * "current project" context. This makes the agent re-resolve the active project
- * via the MCP tool before acting — preserving the always-root home model (the
- * Chat never cd's into a project; the current-project pointer is the source of
- * truth). A cold spawn reads `AGENTS.md` and self-homes, so it gets no preamble.
+ * Re-home preamble prepended to a prompt delivered into a CONTINUED conversation
+ * (terminal reuse, or a spawn that resumes via `--continue`). A resumed
+ * conversation doesn't re-read the home `AGENTS.md`, so it can keep stale
+ * "current project" context.
+ *
+ * **This is the path that actually runs.** `hasClaudeConversation` is true as soon
+ * as the projects root has ONE transcript, so after a user's first ever chat every
+ * launch resumes — which means the `AGENTS.md` statement written by
+ * `refreshHomeAgentsMd` reaches only cold starts and headless `claude -p` runs.
+ * Removing the orientation round trip for real users has to happen HERE.
+ *
+ * So state the project rather than ordering a call to discover it, for the same
+ * reason the home `AGENTS.md` does. The staleness objection that forces
+ * `AGENTS.md` to stay silent at activation does not apply: this string is rebuilt
+ * on every single launch from a pointer read moments earlier, so it cannot go
+ * stale in the way a once-per-activation file can.
+ *
+ * With no resolvable project the original wording is kept verbatim — the agent is
+ * told to resolve the project itself, which is correct when we do not know it.
  */
-export const REHOME_PROMPT_PREFIX =
-    'Before responding, call the get_current_project tool to re-confirm the active demo ' +
-    'project (it may have changed since this conversation started), then address the ' +
-    'request below.\n\n';
+export function buildRehomePrefix(currentProjectName?: string): string {
+    if (!currentProjectName) {
+        return (
+            'Before responding, call the get_current_project tool to re-confirm the active demo ' +
+            'project (it may have changed since this conversation started), then address the ' +
+            'request below.\n\n'
+        );
+    }
+    // Strip characters that would break out of the single line we are prepending
+    // to the user's prompt; the same helper every other interpolated project value
+    // goes through.
+    const name = sanitizeTemplateValue(currentProjectName);
+    return (
+        `The active demo project is now "${name}" — it may have changed since this ` +
+        'conversation started, so use that and do NOT call get_current_project to ' +
+        'confirm it. Address the request below.\n\n'
+    );
+}
 
 /**
  * OpenInClaudeCommand — opens Claude Code (`claude --continue`) in a VS Code
@@ -99,19 +126,16 @@ export class OpenInClaudeCommand extends BaseCommand {
 
         this.logger.info(`[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'}`);
 
-        // State the active project in the home AGENTS.md before claude reads it.
-        // A cold Chat then knows which project it is on without spending a round
-        // trip on `get_current_project` — measured as the single most common
-        // self-inflicted call (5 of 6 driven runs).
-        //
-        // Launch is the ONLY safe moment to write this: the pointer changes
-        // freely, and the activation-time write cannot know a name that will
-        // still be true. Resumed conversations do not re-read the file at all,
-        // which is what REHOME_PROMPT_PREFIX below exists to handle.
-        await this.stateActiveProjectInHomeContext(cwd);
+        // Resolve the active project ONCE and use it for both deliveries of the
+        // same fact: the home AGENTS.md (read only by cold starts) and the
+        // re-home preamble (read by every resumed conversation, which after a
+        // user's first ever chat is all of them). Either way the agent is told
+        // which project it is on instead of spending a round trip asking.
+        const currentProjectName = await this.resolveCurrentProjectName();
+        await refreshHomeAgentsMd(cwd, currentProjectName);
 
         try {
-            await this.launchTerminal(cwd, prompt);
+            await this.launchTerminal(cwd, prompt, currentProjectName);
         } catch (error) {
             this.logger.error(
                 `[Open in Claude] failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -123,26 +147,25 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * Read the current-project pointer and write it into the home `AGENTS.md`.
+     * The current-project pointer's name, or `undefined` when it cannot be read.
      *
-     * Never blocks the launch: a project that cannot be resolved (no pointer, or
-     * a read that throws) falls through to `undefined`, and the document then
-     * carries its original "call `get_current_project` first" directive. Getting
-     * the name is an optimisation; getting it WRONG would not be, so an
-     * unreadable pointer must produce no claim rather than a stale one.
+     * Never blocks the launch: no pointer, or a read that throws, falls through
+     * to `undefined`, and both consumers then keep their original "resolve it
+     * yourself" wording. Naming the project is an optimisation; naming the WRONG
+     * one would not be, so an unreadable pointer must produce no claim rather
+     * than a stale one.
      */
-    private async stateActiveProjectInHomeContext(cwd: string): Promise<void> {
-        let currentProjectName: string | undefined;
+    private async resolveCurrentProjectName(): Promise<string | undefined> {
         try {
-            currentProjectName = (await this.stateManager.getCurrentProject())?.name;
+            return (await this.stateManager.getCurrentProject())?.name;
         } catch (error) {
             this.logger.debug(
                 `[Open in Claude] could not resolve current project: ${
                     error instanceof Error ? error.message : String(error)
                 }`,
             );
+            return undefined;
         }
-        await refreshHomeAgentsMd(cwd, currentProjectName);
     }
 
     /**
@@ -163,7 +186,11 @@ export class OpenInClaudeCommand extends BaseCommand {
      * editor group (`{ viewColumn: ViewColumn.Active }`) — next to Project
      * Dashboard — not a split.
      */
-    private async launchTerminal(cwd: string, prompt?: string): Promise<void> {
+    private async launchTerminal(
+        cwd: string,
+        prompt?: string,
+        currentProjectName?: string,
+    ): Promise<void> {
         if (!cwd) {
             this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
             await vscode.window.showErrorMessage(
@@ -186,7 +213,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             if (prompt) {
                 // Reuse case: claude is already at its REPL (a CONTINUED conversation)
                 // — re-home it to the active project, then inject the prompt.
-                this.injectPromptViaBracketedPaste(REHOME_PROMPT_PREFIX + prompt);
+                this.injectPromptViaBracketedPaste(buildRehomePrefix(currentProjectName) + prompt);
                 this.maybeShowClipboardFallbackTip();
             }
             return;
@@ -211,7 +238,8 @@ export class OpenInClaudeCommand extends BaseCommand {
         const continueFlag = useContinue ? ' --continue' : '';
         // Resuming a conversation (`--continue`) won't re-read AGENTS.md, so carry
         // the re-home preamble. A cold start self-homes from AGENTS.md → no preamble.
-        const effectivePrompt = prompt && useContinue ? REHOME_PROMPT_PREFIX + prompt : prompt;
+        const effectivePrompt =
+            prompt && useContinue ? buildRehomePrefix(currentProjectName) + prompt : prompt;
         const launchCommand = effectivePrompt
             ? `claude${continueFlag} -- ${this.quotePromptForShell(effectivePrompt)}`
             : `claude${continueFlag}`;

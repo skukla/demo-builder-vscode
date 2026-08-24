@@ -280,7 +280,8 @@ function buildHomeWorkingOnProjects(currentProjectName?: string): string {
  *
  * The supplied form still yields to reality: a tool result or the user naming a
  * different project outranks this line, because a resumed conversation never
- * re-reads this file (see `REHOME_PROMPT_PREFIX` in `openInClaude.ts`).
+ * re-reads this file (see `buildRehomePrefix` in `openInClaude.ts`, which states
+ * the same fact on the resumed path — the one most launches actually take).
  */
 function buildActiveProjectDirective(currentProjectName?: string): string {
     if (!currentProjectName) {
