@@ -15,26 +15,25 @@
 import * as vscode from 'vscode';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubTokenService } from './githubTokenService';
+import { HelixAdminAuth } from './helixAdminAuth';
 import {
-    HELIX_ADMIN_URL,
-    buildDeleteHeaders,
+    ADMIN_API_401_MESSAGE,
+    captureErrorDetail,
+    throwCredentialRefused,
+} from './helixAdminErrors';
+import {
     buildPartitionUrl,
     buildPublishHeaders,
     normalizeWebPath as normalizeHelixPath,
 } from './helixApiClient';
-import {
-    parseBulkJobResponse,
-    pollJobCompletion,
-    type BulkJobDeps,
-    type BulkProgressCallback,
-} from './helixBulkJobs';
+import { HelixApiKeys } from './helixApiKeys';
+import type { BulkProgressCallback } from './helixBulkJobs';
 import * as keyStore from './helixKeyStore';
-import { DaLiveAuthError } from './types';
-import { getCacheTTLWithJitter, isExpired, createCacheEntry } from '@/core/cache/cacheUtils';
+import { HelixSiteContent, SITE_PUBLISH_PHASES, type SitePublishProgress } from './helixSiteContent';
 import { getLogger } from '@/core/logging';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
-import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -52,10 +51,6 @@ import type { Logger } from '@/types/logger';
  * grant and 401 immediately after, then 202 again once the DA.live IMS Bearer
  * was attached.
  */
-const ADMIN_API_401_MESSAGE =
-    'Adobe rejected the request (401). If this site has site-access admins configured, ' +
-    'it needs a signed-in DA.live session — run "Demo Builder: Manage Site Access" to ' +
-    'check. Otherwise, confirm you have write access to the repository.';
 
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
@@ -89,11 +84,6 @@ export interface DaLiveTokenProvider {
     getAccessToken: () => Promise<string | null>;
 }
 
-/** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
-function getPathsOrDefault(paths?: string[]): string[] {
-    return paths && paths.length > 0 ? paths : ['/'];
-}
-
 /**
  * Helix Service for admin operations
  */
@@ -102,6 +92,9 @@ export class HelixService {
     private githubTokenService?: GitHubTokenService;
     private daLiveOps: DaLiveContentOperations;
     private daLiveTokenProvider?: DaLiveTokenProvider;
+    private auth: HelixAdminAuth;
+    private apiKeys: HelixApiKeys;
+    private siteContent: HelixSiteContent;
 
     /** Clear all cached API keys */
     static clearApiKeyCache(): void {
@@ -208,201 +201,63 @@ export class HelixService {
                 this.logger,
             );
         }
-    }
 
-    // ==========================================================
-    // Path & Auth Helpers
-    // ==========================================================
-
-    /** Normalize web path: ensure leading slash, remove trailing slash (except for root). */
-    // normalizeWebPath lives in helixApiClient — ONE path-spelling rule
-    // (this class used to carry its own copy).
-
-    /**
-     * Build auth headers for DELETE operations (unpublish/delete preview).
-     *
-     * Uses `Authorization: Bearer ${daLiveToken}` which bypasses the Helix Admin API's
-     * "delete not allowed while source exists" restriction. GitHub token and API key
-     * auth are both blocked by this restriction when a content source is configured
-     * via fstab.yaml.
-     *
-     * Discovered via diagnostic testing (the since-retired scripts/test-fstab-codesync-timing.ts; ADR-002 holds the record):
-     * - DELETE /live + GitHub token (x-auth-token) → 403 "source exists"
-     * - DELETE /live + API key (Authorization: token) → 403 "source exists"
-     * - DELETE /live + DA.live Bearer (Authorization: Bearer) → 204 SUCCESS
-     */
-    private async getDeleteAuthHeaders(): Promise<Record<string, string>> {
-        // Token discovery here; the credential SPELLING is the client's
-        // buildDeleteHeaders — one definition instead of the old hand-kept
-        // "matches exactly" mirror.
-        return buildDeleteHeaders({ daLiveToken: await this.getDaLiveToken() });
-    }
-
-    /**
-     * The DA.live IMS Bearer as an `Authorization` header, or `{}` when no
-     * DA.live session exists.
-     *
-     * Deliberately swallows the failure. Operations that never needed a DA.live
-     * token before must keep working without one on an UNPROTECTED site; only a
-     * protected site actually requires it, and there the 401 message says so.
-     */
-    private async tryAdminBearer(): Promise<Record<string, string>> {
-        try {
-            return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
-        } catch {
-            return {};
-        }
-    }
-
-    /** Capture error response body for diagnostics (403, 401, 5xx). */
-    private async captureErrorBody(response: Response): Promise<string | null> {
-        try {
-            const text = await response.text();
-            if (!text || text.length > 500) return text ? text.slice(0, 500) + '...' : null;
-            return text;
-        } catch {
-            return null;
-        }
-    }
-
-    /** AEM returns error details in x-error header; body is often empty for 403. */
-    private getXError(response: Response): string | null {
-        return response?.headers?.get?.('x-error') ?? null;
-    }
-
-    /**
-     * Raise a 403 as a CREDENTIAL refusal, not a permissions verdict.
-     *
-     * Helix answers `403 [admin] not authorized` both when an identity genuinely
-     * lacks a role AND when a perfectly authorized identity presents a token the
-     * server will no longer accept. These threw a plain `Error` saying "you do
-     * not have permission", which is a claim about the USER that the response
-     * does not support.
-     *
-     * Measured 2026-08-16: one reset failed with 52 of these plus a fatal
-     * "you do not have permission to preview", told the user at three surfaces
-     * that they held no admin role, and succeeded forty minutes later — same
-     * identity, same project, after nothing but a DA.live re-auth.
-     *
-     * Throwing `DaLiveAuthError` lets `withDaLiveAuthRetry` prompt and resume
-     * instead. The classification cannot separate "expired token" from "genuinely
-     * unauthorized identity" — Helix gives the same `x-error` for both — and it
-     * does not need to: re-authenticating as an identity that really lacks the
-     * role fails the retry and surfaces the original error after
-     * MAX_REAUTH_ATTEMPTS. The cost of being wrong is one prompt; the cost of not
-     * trying was a three-minute pipeline failing 52 times.
-     *
-     * NOT used for the DELETE /live 403, which is the documented
-     * "while source exists" restriction — a real constraint, not a credential
-     * problem, and on a different method (see `getDeleteAuthHeaders`).
-     */
-    private async throwCredentialRefused(response: Response, what: string): Promise<never> {
-        const detail = await this.captureErrorDetail(response);
-        throw new DaLiveAuthError(
-            `Access denied while trying to ${what} (403: ${detail}). ` +
-                'This may be an expired session rather than a missing role.',
+        // Collaborators (god-file cut 3): auth is the shared seam; keys and
+        // site-content take it by injection rather than reaching into this class.
+        this.auth = new HelixAdminAuth(
+            daLiveTokenProvider,
+            () => HelixService.defaultDaLiveTokenProvider,
+            githubTokenService,
         );
-    }
-
-    /** Build diagnostic string from body and x-error for 403/401. */
-    private async captureErrorDetail(response: Response): Promise<string> {
-        const body = await this.captureErrorBody(response);
-        const xError = this.getXError(response);
-        const parts = [xError, body].filter(Boolean);
-        return parts.length ? parts.join(' — ') : `${response.status} ${response.statusText}`;
-    }
-
-    // ==========================================================
-    // Token Management
-    // ==========================================================
-
-    /**
-     * Get DA.live IMS token for content source authorization
-     *
-     * IMPORTANT: DA.live uses a SEPARATE IMS authentication from Adobe Console.
-     * The x-content-source-authorization header MUST use the DA.live IMS token,
-     * NOT the Adobe Console IMS token - they are different authentication systems.
-     *
-     * Using the wrong token (Adobe IMS instead of DA.live IMS) causes the Admin API
-     * to fail silently when downloading images, resulting in `about:error` in img src.
-     *
-     * @throws Error if DA.live token provider not configured or token expired
-     */
-    private async getDaLiveToken(): Promise<string> {
-        // Explicit provider wins; otherwise the one registered at activation.
-        const provider = this.daLiveTokenProvider ?? HelixService.defaultDaLiveTokenProvider;
-        if (!provider) {
-            throw new Error(
-                'DA.live token provider not configured. ' +
-                    'HelixService requires a DA.live token provider for content source operations.',
-            );
-        }
-
-        const token = await provider.getAccessToken();
-        if (!token) {
-            throw new Error('DA.live session expired. Please sign in to DA.live.');
-        }
-        return token;
-    }
-
-    /**
-     * Get GitHub token for Helix Admin API authentication
-     * The Helix Admin API uses GitHub-based auth to verify repo write access.
-     * @throws Error if GitHub token not available
-     */
-    private async getGitHubToken(): Promise<string> {
-        if (!this.githubTokenService) {
-            throw new Error(
-                'GitHub authentication required for Helix Admin API. Please log in to GitHub.',
-            );
-        }
-
-        const tokenData = await this.githubTokenService.getToken();
-        if (!tokenData) {
-            throw new Error('GitHub token not found. Please log in to GitHub.');
-        }
-
-        return tokenData.token;
-    }
-
-    // ==========================================================
-    // Bulk Job Polling (protocol lives in ./helixBulkJobs)
-    // ==========================================================
-
-    /**
-     * The bulk-job protocol's view of this service: the logger plus the
-     * job-status auth — the DA.live admin Bearer when a session exists, and
-     * the GitHub token, the same identity that created the job. This is the
-     * injection seam that let the protocol leave the class (it used to bind
-     * to `this.tryAdminBearer()` / `this.getGitHubToken()` directly).
-     */
-    private bulkJobDeps(): BulkJobDeps {
-        return {
+        this.apiKeys = new HelixApiKeys({
             logger: this.logger,
-            getJobStatusHeaders: async () => ({
-                ...(await this.tryAdminBearer()),
-                'x-auth-token': await this.getGitHubToken(),
-            }),
-        };
+            getDaLiveToken: () => this.auth.getDaLiveToken(),
+        });
+        this.siteContent = new HelixSiteContent({
+            logger: this.logger,
+            daLiveOps: this.daLiveOps,
+            auth: this.auth,
+            previewAndPublishPage: (org, site, path, branch) =>
+                this.previewAndPublishPage(org, site, path, branch),
+        });
     }
 
 
     // ==========================================================
-    // Preview/Publish Operations
+    // Path & Auth Helpers (implementations live in helixAdminAuth /
+    // helixAdminErrors — these thin privates keep the page ops readable)
     // ==========================================================
 
-    /**
-     * Preview a page (sync content from DA.live to preview CDN)
-     *
-     * This triggers the Helix Admin to fetch content from DA.live
-     * and make it available at the .aem.page preview URL.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param path - Content path (e.g., '/' for homepage, '/products')
-     * @param branch - Branch name (default: main)
-     * @throws Error on access denied (403) or network error
-     */
+    /** DELETE auth headers — the DA.live Bearer (ADR-002). See {@link HelixAdminAuth}. */
+    private getDeleteAuthHeaders(): Promise<Record<string, string>> {
+        return this.auth.getDeleteAuthHeaders();
+    }
+
+    /** The optional admin Bearer. See {@link HelixAdminAuth.tryAdminBearer}. */
+    private tryAdminBearer(): Promise<Record<string, string>> {
+        return this.auth.tryAdminBearer();
+    }
+
+    /** 403-as-credential-refusal. See {@link helixAdminErrors.throwCredentialRefused}. */
+    private throwCredentialRefused(response: Response, what: string): Promise<never> {
+        return throwCredentialRefused(response, what);
+    }
+
+    /** Diagnostic string from body + x-error. See {@link helixAdminErrors.captureErrorDetail}. */
+    private captureErrorDetail(response: Response): Promise<string> {
+        return captureErrorDetail(response);
+    }
+
+    /** The DA.live IMS token. See {@link HelixAdminAuth.getDaLiveToken}. */
+    private getDaLiveToken(): Promise<string> {
+        return this.auth.getDaLiveToken();
+    }
+
+    /** The GitHub token. See {@link HelixAdminAuth.getGitHubToken}. */
+    private getGitHubToken(): Promise<string> {
+        return this.auth.getGitHubToken();
+    }
+
     /**
      * What Helix holds for one path: the preview and live status it reports.
      *
@@ -551,192 +406,21 @@ export class HelixService {
 
     /**
      * Get or create an Admin API Key with publish role for a site.
-     *
-     * Returns a cached key if one exists and hasn't expired (CACHE_TTL.LONG).
-     * On cache miss, checks the persistent store (survives restarts).
-     * Otherwise creates a new key via the Config Service API using the
-     * DA.live IMS token, deleting any previously persisted key first.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @returns The API key value, or null if creation failed
+     * Delegates to {@link HelixApiKeys}.
      */
     async createAdminApiKey(org: string, site: string): Promise<string | null> {
-        const cacheKey = `${org}/${site}`;
-
-        // 1. Check in-memory cache (fast path)
-        const cached = keyStore.getApiKeyCache().get(cacheKey);
-        if (cached && !isExpired(cached)) {
-            this.logger.debug(`[Helix] Reusing cached Admin API Key for ${cacheKey}`);
-            return cached.value;
-        }
-
-        // 2. Check persistent store (survives restarts)
-        const persisted = await keyStore.getPersistedKey(cacheKey);
-        if (persisted) {
-            this.logger.debug(`[Helix] Restoring persisted Admin API Key for ${cacheKey}`);
-            const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
-            keyStore.getApiKeyCache().set(cacheKey, createCacheEntry(persisted.value, jitteredTtl));
-            return persisted.value;
-        }
-
-        // 3. Delete old key before creating new one (best-effort)
-        await this.deleteOldApiKey(org, site, cacheKey);
-
-        // 4. Create new key via API
-        const imsToken = await this.getDaLiveToken();
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys.json`;
-
-        this.logger.debug(`[Helix] Creating Admin API Key for ${cacheKey}`);
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${imsToken}`,
-                    'content-type': 'application/json',
-                },
-                body: JSON.stringify({
-                    // Shown in the site's apiKeys listing, so name what it can
-                    // actually do. Unpublish is NOT in scope: DELETE /live
-                    // authenticates with the DA.live bearer, not this key.
-                    description: 'Demo Builder publish key',
-                    roles: ['publish'],
-                }),
-                signal: AbortSignal.timeout(TIMEOUTS.LONG),
-            });
-
-            if (!response.ok) {
-                this.logger.warn(`[Helix] Admin API Key creation failed: ${response.status}`);
-                return null;
-            }
-
-            const data = await response.json();
-            const keyValue = data.value as string | undefined;
-            const keyId = data.id as string | undefined;
-
-            if (keyValue) {
-                this.logger.info(
-                    `[Helix] Admin API Key created (id=${keyId}, expires=${data.expiration})`,
-                );
-                const jitteredTtl = getCacheTTLWithJitter(CACHE_TTL.LONG);
-                keyStore.getApiKeyCache().set(cacheKey, createCacheEntry(keyValue, jitteredTtl));
-
-                // Persist for restart resilience (7 days or server expiry, whichever is shorter)
-                if (keyId) {
-                    const serverExpiry = data.expiration
-                        ? new Date(data.expiration).getTime()
-                        : Infinity;
-                    const persistExpiry = Math.min(
-                        Date.now() + keyStore.PERSIST_TTL_MS,
-                        serverExpiry,
-                    );
-                    await keyStore.setPersistedKey(cacheKey, {
-                        value: keyValue,
-                        id: keyId,
-                        expiresAt: persistExpiry,
-                    });
-                }
-            }
-
-            return keyValue || null;
-        } catch (error) {
-            this.logger.warn(`[Helix] Admin API Key creation error: ${(error as Error).message}`);
-            return null;
-        }
+        return this.apiKeys.createAdminApiKey(org, site);
     }
 
     /**
-     * Delete the Admin API Key for a site (public).
-     *
-     * Use this when a site is being permanently deleted — it removes
-     * the server-side key to prevent orphaned keys accumulating.
-     * Clears both in-memory cache and persistent store.
-     * Best-effort: catches all errors and returns a result object.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @returns Result with success status
+     * Delete the Admin API Key for a site (site deletion cleanup).
+     * Delegates to {@link HelixApiKeys}.
      */
     async deleteAdminApiKey(
         org: string,
         site: string,
     ): Promise<{ success: boolean; error?: string }> {
-        const cacheKey = `${org}/${site}`;
-
-        // Look up persisted key for server-side ID
-        const persisted = await keyStore.getPersistedKeyRaw(cacheKey);
-
-        // Clear both caches regardless
-        keyStore.getApiKeyCache().delete(cacheKey);
-        await keyStore.deletePersistedKey(cacheKey);
-
-        if (!persisted?.id) {
-            this.logger.debug(`[Helix] No persisted API key to delete for ${cacheKey}`);
-            return { success: true };
-        }
-
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${keyStore.toUrlSafeKeyId(persisted.id)}.json`;
-        try {
-            const imsToken = await this.getDaLiveToken();
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${imsToken}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (response.ok || response.status === 404) {
-                this.logger.debug(
-                    `[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${response.status})`,
-                );
-                return { success: true };
-            }
-            this.logger.debug(
-                `[Helix] Admin API key deletion returned ${response.status} for ${cacheKey}`,
-            );
-            return { success: false, error: `DELETE returned ${response.status}` };
-        } catch (error) {
-            const message = (error as Error).message;
-            this.logger.debug(`[Helix] Admin API key deletion failed for ${cacheKey}: ${message}`);
-            return { success: false, error: message };
-        }
-    }
-
-    /**
-     * Best-effort deletion of a previously persisted API key.
-     * Removes from persistent store first, then attempts server-side deletion.
-     * Catches all errors — old key will expire naturally (~1 year).
-     */
-    private async deleteOldApiKey(org: string, site: string, cacheKey: string): Promise<void> {
-        const persisted = await keyStore.getPersistedKeyRaw(cacheKey);
-        if (!persisted?.id) {
-            return;
-        }
-
-        // Remove from persistent store first (even if API call fails)
-        await keyStore.deletePersistedKey(cacheKey);
-
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${keyStore.toUrlSafeKeyId(persisted.id)}.json`;
-        try {
-            const imsToken = await this.getDaLiveToken();
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${imsToken}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (response.ok || response.status === 404) {
-                this.logger.debug(
-                    `[Helix] Old API key deleted (id=${persisted.id}, status=${response.status})`,
-                );
-            } else {
-                this.logger.debug(
-                    `[Helix] Old API key deletion returned ${response.status}, continuing`,
-                );
-            }
-        } catch (error) {
-            this.logger.debug(
-                `[Helix] Old API key deletion failed: ${(error as Error).message}, continuing`,
-            );
-        }
+        return this.apiKeys.deleteAdminApiKey(org, site);
     }
 
     /**
@@ -934,23 +618,14 @@ export class HelixService {
         await this.publishPage(org, site, path, branch);
     }
 
-    /**
-     * Preview all content (bulk operation)
-     * Uses the bulk API endpoint to sync all content from DA.live to preview CDN.
-     * Polls for job completion before returning.
-     *
-     * The bulk API requires:
-     * - Content-Type: application/json header
-     * - JSON body with paths array
-     * - Optional forceUpdate flag
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @param onProgress - Optional callback for progress updates (processed, total)
-     * @param paths - Optional explicit list of paths to preview (if not provided, uses "/" which only processes root)
-     * @see https://www.aem.live/docs/admin.html
-     */
+    // ==========================================================
+    // Whole-site content publication (implementation: helixSiteContent)
+    // ==========================================================
+
+    /** Progress phases for {@link publishAllSiteContent} (re-exposed for callers). */
+    public static readonly PublishPhases = SITE_PUBLISH_PHASES;
+
+    /** Bulk-preview all content. Delegates to {@link HelixSiteContent}. */
     async previewAllContent(
         org: string,
         site: string,
@@ -958,113 +633,10 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
         paths?: string[],
     ): Promise<void> {
-        const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
-        // Bulk API: POST to /preview/{org}/{site}/{ref}/*
-        // The /* in the URL triggers bulk/async processing (returns 202)
-        // The paths array in the body specifies what to process
-        const url = buildPartitionUrl('preview', org, site, branch, '/*');
-
-        // Use explicit paths if provided, otherwise default to root
-        const pathsToProcess = getPathsOrDefault(paths);
-
-        this.logger.debug(
-            `[Helix] Previewing all content (bulk): ${url} - ${pathsToProcess.length} paths`,
-        );
-
-        // Bulk API requires JSON body with paths array
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                // Authorization FIRST: once the site has any `access.admin` role the
-                // admin API closes to callers without an accepted admin identity,
-                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
-                Authorization: `Bearer ${imsToken}`,
-                'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                paths: pathsToProcess,
-                forceUpdate: true,
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 401) {
-            throw new Error(ADMIN_API_401_MESSAGE);
-        }
-
-        if (response.status === 403) {
-            await this.throwCredentialRefused(response, 'preview this content');
-        }
-
-        // 400 = Bad request - log details for debugging
-        if (response.status === 400) {
-            let errorBody: string | undefined;
-            try {
-                errorBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-            this.logger.error(
-                `[Helix] Bulk preview returned 400 Bad Request. Response: ${errorBody || 'empty'}`,
-            );
-            throw new Error(
-                `Failed to preview all content: 400 Bad Request - ${errorBody || 'Invalid request'}`,
-            );
-        }
-
-        // 202 = Bulk preview scheduled (async job created)
-        if (response.status === 202) {
-            this.logger.debug('[Helix] Bulk preview job created, polling for completion...');
-
-            const { jobName, jobTopic } = await parseBulkJobResponse(
-                response,
-                'preview',
-                this.logger,
-            );
-
-            if (jobName) {
-                await pollJobCompletion(
-                    this.bulkJobDeps(),
-                    { org, site, branch, jobName, topic: jobTopic },
-                    onProgress,
-                );
-            } else {
-                // No job info, wait a reasonable time for the operation
-                this.logger.warn('[Helix] No job info in response, assuming operation completed');
-            }
-            return;
-        }
-
-        if (response.ok) {
-            // 200 OK = synchronous success (small path count processed immediately)
-            // The Admin API returns 200 for small batches and 202 for large ones
-            this.logger.debug('[Helix] Bulk preview completed synchronously (200)');
-            return;
-        }
-
-        throw new Error(`Failed to preview all content: ${response.status} ${response.statusText}`);
+        return this.siteContent.previewAllContent(org, site, branch, onProgress, paths);
     }
 
-    /**
-     * Publish all content to live (bulk operation)
-     * Uses the bulk API endpoint to sync all content from preview to live CDN.
-     * Polls for job completion before returning.
-     *
-     * The bulk API requires:
-     * - Content-Type: application/json header
-     * - JSON body with paths array (e.g., ["/*"] for recursive)
-     * - Optional forceUpdate flag
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @param onProgress - Optional callback for progress updates (processed, total)
-     * @param paths - Optional explicit list of paths to publish (if not provided, uses "/" which only processes root)
-     * @see https://www.aem.live/docs/admin.html
-     */
+    /** Bulk-publish all content to live. Delegates to {@link HelixSiteContent}. */
     async publishAllContent(
         org: string,
         site: string,
@@ -1072,411 +644,32 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
         paths?: string[],
     ): Promise<void> {
-        const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
-        // Bulk API: POST to /live/{org}/{site}/{ref}/*
-        // The /* in the URL triggers bulk/async processing (returns 202)
-        // The paths array in the body specifies what to process
-        const url = buildPartitionUrl('live', org, site, branch, '/*');
-
-        // Use explicit paths if provided, otherwise default to root
-        const pathsToProcess = getPathsOrDefault(paths);
-
-        this.logger.debug(
-            `[Helix] Publishing all content (bulk): ${url} - ${pathsToProcess.length} paths`,
-        );
-
-        // Bulk API requires JSON body with paths array
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                // Authorization FIRST: once the site has any `access.admin` role the
-                // admin API closes to callers without an accepted admin identity,
-                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
-                Authorization: `Bearer ${imsToken}`,
-                'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                paths: pathsToProcess,
-                forceUpdate: true,
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 401) {
-            throw new Error(ADMIN_API_401_MESSAGE);
-        }
-
-        if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to publish this content.');
-        }
-
-        // 400 = Bad request - log details for debugging
-        if (response.status === 400) {
-            let errorBody: string | undefined;
-            try {
-                errorBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-            this.logger.error(
-                `[Helix] Bulk publish returned 400 Bad Request. Response: ${errorBody || 'empty'}`,
-            );
-            throw new Error(
-                `Failed to publish all content: 400 Bad Request - ${errorBody || 'Invalid request'}`,
-            );
-        }
-
-        // 202 = Bulk publish scheduled (async job created)
-        if (response.status === 202) {
-            this.logger.debug('[Helix] Bulk publish job created, polling for completion...');
-
-            const { jobName, jobTopic } = await parseBulkJobResponse(
-                response,
-                'live',
-                this.logger,
-            );
-
-            if (jobName) {
-                await pollJobCompletion(
-                    this.bulkJobDeps(),
-                    { org, site, branch, jobName, topic: jobTopic },
-                    onProgress,
-                );
-            } else {
-                // No job info, assume operation completed
-                this.logger.warn('[Helix] No job info in response, assuming operation completed');
-            }
-            return;
-        }
-
-        if (response.ok) {
-            // 200 OK = synchronous success (small path count processed immediately)
-            // The Admin API returns 200 for small batches and 202 for large ones
-            this.logger.debug('[Helix] Bulk publish completed synchronously (200)');
-            return;
-        }
-
-        throw new Error(`Failed to publish all content: ${response.status} ${response.statusText}`);
+        return this.siteContent.publishAllContent(org, site, branch, onProgress, paths);
     }
 
-    /**
-     * File names to exclude from publishing (non-content files)
-     */
-    private static readonly EXCLUDED_NAMES = [
-        'metadata', // metadata.json
-        'redirects', // redirects.json
-        'placeholders', // placeholders.json
-        'query-index', // query-index.json
-        'test-index', // test files
-    ];
-
-    /**
-     * Folder names to exclude from publishing
-     */
-    private static readonly EXCLUDED_FOLDERS = [
-        '.helix',
-        '.milo',
-        'placeholders',
-        'experiments', // A/B test config
-        'enrichment', // PDP enrichment data
-    ];
-
-    /**
-     * Recursively list all publishable pages from DA.live
-     *
-     * DA.live API response structure:
-     * - Files have: { name, path, ext, lastModified }
-     * - Folders have: { name, path } (no ext field)
-     *
-     * @param org - Organization name (DA.live org)
-     * @param site - Site name in DA.live
-     * @param path - Starting path (default: root)
-     * @returns Array of web paths to publish
-     */
+    /** List all publishable pages from DA.live. Delegates to {@link HelixSiteContent}. */
     async listAllPages(org: string, site: string, path: string = '/'): Promise<string[]> {
-        const pages: string[] = [];
-        // DA.live paths include org/site prefix, need to strip it for recursion
-        const pathPrefix = `/${org}/${site}`;
-
-        try {
-            const entries = await this.daLiveOps.listDirectory(org, site, path);
-
-            for (const entry of entries) {
-                // Determine if it's a folder (no ext field) or file (has ext field)
-                const isFolder = !entry.ext;
-
-                if (isFolder) {
-                    // Skip excluded folders
-                    if (HelixService.EXCLUDED_FOLDERS.includes(entry.name)) {
-                        continue;
-                    }
-
-                    // Recursively list subdirectory
-                    // The path in the response is like /org/site/folder, need to strip prefix for recursion
-                    const relativePath = entry.path.replace(pathPrefix, '') || '/';
-                    const subPages = await this.listAllPages(org, site, relativePath);
-                    pages.push(...subPages);
-                } else {
-                    // It's a file - check if it's publishable HTML content
-                    if (entry.ext !== 'html') {
-                        continue;
-                    }
-
-                    // Skip excluded names
-                    if (HelixService.EXCLUDED_NAMES.includes(entry.name)) {
-                        continue;
-                    }
-
-                    // Convert DA.live path to web path
-                    // entry.path is like /org/site/accessories.html
-                    // We need /accessories (strip prefix and .html)
-                    const webPath = this.daLivePathToWebPath(entry.path, pathPrefix);
-                    pages.push(webPath);
-                }
-            }
-        } catch (error) {
-            this.logger.warn(`[Helix] Failed to list ${path}: ${(error as Error).message}`);
-        }
-
-        return pages;
+        return this.siteContent.listAllPages(org, site, path);
     }
 
     /**
-     * Convert a DA.live path to a web path
-     * DA.live path: /org/site/accessories.html -> /accessories
-     * DA.live path: /org/site/products/index.html -> /products
-     */
-    private daLivePathToWebPath(daLivePath: string, pathPrefix: string): string {
-        // Strip the org/site prefix
-        let webPath = daLivePath.replace(pathPrefix, '');
-
-        // Remove .html extension
-        webPath = webPath.replace(/\.html$/i, '');
-
-        // Convert /index to /
-        if (webPath === '/index' || webPath.endsWith('/index')) {
-            webPath = webPath.slice(0, -6) || '/';
-        }
-
-        return webPath || '/';
-    }
-
-    /**
-     * Progress callback for publish operations
-     */
-    public static readonly PublishPhases = {
-        DISCOVERING: 'discovering',
-        PUBLISHING: 'publishing',
-        COMPLETE: 'complete',
-    } as const;
-
-    /**
-     * Preview and publish all content in one operation.
-     * Attempts bulk APIs first for performance, falls back to page-by-page if bulk fails.
-     *
-     * @param repoFullName - Full repository name (owner/repo) for Helix API
-     * @param branch - Branch name (default: main)
-     * @param daLiveOrg - DA.live organization (for listing content, may differ from GitHub owner)
-     * @param daLiveSite - DA.live site name (for listing content, may differ from GitHub repo)
-     * @param onProgress - Optional callback for progress updates
+     * Preview and publish all content in one operation (bulk-first, page-by-page
+     * fallback). Delegates to {@link HelixSiteContent}.
      */
     async publishAllSiteContent(
         repoFullName: string,
         branch: string = DEFAULT_BRANCH,
         daLiveOrg?: string,
         daLiveSite?: string,
-        onProgress?: (info: {
-            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
-            message: string;
-            current?: number;
-            total?: number;
-            currentPath?: string;
-        }) => void,
+        onProgress?: (info: SitePublishProgress) => void,
     ): Promise<void> {
-        const [githubOrg, githubSite] = this.parseRepoFullName(repoFullName);
-
-        // Use provided DA.live org/site, or fall back to GitHub org/site
-        const contentOrg = daLiveOrg || githubOrg;
-        const contentSite = daLiveSite || githubSite;
-
-        this.logger.info(
-            `[Helix] Publishing all content from DA.live: ${contentOrg}/${contentSite}`,
-        );
-        this.logger.info(`[Helix] Target GitHub repo: ${repoFullName}`);
-
-        // Report: Discovering content (still needed to get page count for progress)
-        onProgress?.({
-            phase: HelixService.PublishPhases.DISCOVERING,
-            message: 'Discovering content to publish...',
-        });
-
-        // List all publishable pages from DA.live to get count for progress reporting
-        const pages = await this.listAllPages(contentOrg, contentSite);
-
-        if (pages.length === 0) {
-            this.logger.warn('[Helix] No publishable pages found');
-            throw new Error('No publishable pages found. Ensure the site has content in DA.live.');
-        }
-
-        this.logger.info(`[Helix] Found ${pages.length} pages to publish`);
-
-        // Try bulk APIs first for better performance
-        // If bulk fails (404 = site not configured), fall back to page-by-page
-        try {
-            await this.publishAllSiteContentBulk(githubOrg, githubSite, branch, pages, onProgress);
-        } catch (error) {
-            // Bulk API is a fast path — any failure falls back to reliable page-by-page
-            this.logger.warn(
-                `[Helix] Bulk publish failed: ${(error as Error).message}, falling back to page-by-page`,
-            );
-            await this.publishAllSiteContentPageByPage(
-                githubOrg,
-                githubSite,
-                branch,
-                pages,
-                onProgress,
-            );
-        }
-    }
-
-    /**
-     * Publish all content using bulk APIs (fast path)
-     */
-    private async publishAllSiteContentBulk(
-        githubOrg: string,
-        githubSite: string,
-        branch: string,
-        pages: string[],
-        onProgress?: (info: {
-            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
-            message: string;
-            current?: number;
-            total?: number;
-            currentPath?: string;
-        }) => void,
-    ): Promise<void> {
-        // Phase 1: Bulk preview (sync from DA.live to preview CDN)
-        onProgress?.({
-            phase: HelixService.PublishPhases.PUBLISHING,
-            message: 'Previewing all content...',
-            current: 0,
-            total: pages.length,
-        });
-
-        await this.previewAllContent(
-            githubOrg,
-            githubSite,
+        return this.siteContent.publishAllSiteContent(
+            repoFullName,
             branch,
-            (processed, total) => {
-                onProgress?.({
-                    phase: HelixService.PublishPhases.PUBLISHING,
-                    message: `Previewing content (${processed}/${total})`,
-                    current: Math.floor(processed / 2), // First half of progress
-                    total: pages.length,
-                });
-            },
-            pages, // Pass the discovered pages explicitly
+            daLiveOrg,
+            daLiveSite,
+            onProgress,
         );
-
-        this.logger.info('[Helix] Bulk preview completed');
-
-        // Phase 2: Bulk publish (sync from preview to live CDN)
-        onProgress?.({
-            phase: HelixService.PublishPhases.PUBLISHING,
-            message: 'Publishing to live CDN...',
-            current: Math.floor(pages.length / 2),
-            total: pages.length,
-        });
-
-        await this.publishAllContent(
-            githubOrg,
-            githubSite,
-            branch,
-            (processed, total) => {
-                onProgress?.({
-                    phase: HelixService.PublishPhases.PUBLISHING,
-                    message: `Publishing to CDN (${processed}/${total})`,
-                    current: Math.floor(pages.length / 2) + Math.floor(processed / 2), // Second half
-                    total: pages.length,
-                });
-            },
-            pages, // Pass the discovered pages explicitly
-        );
-
-        this.logger.info(`[Helix] Successfully published ${pages.length} pages using bulk API`);
-
-        // Report completion
-        onProgress?.({
-            phase: HelixService.PublishPhases.COMPLETE,
-            message: `Published ${pages.length} pages to CDN`,
-            current: pages.length,
-            total: pages.length,
-        });
-    }
-
-    /**
-     * Publish all content page-by-page (fallback for sites where bulk API isn't available)
-     */
-    private async publishAllSiteContentPageByPage(
-        githubOrg: string,
-        githubSite: string,
-        branch: string,
-        pages: string[],
-        onProgress?: (info: {
-            phase: (typeof HelixService.PublishPhases)[keyof typeof HelixService.PublishPhases];
-            message: string;
-            current?: number;
-            total?: number;
-            currentPath?: string;
-        }) => void,
-    ): Promise<void> {
-        let publishedCount = 0;
-        let skippedCount = 0;
-
-        for (let i = 0; i < pages.length; i++) {
-            const path = pages[i];
-
-            onProgress?.({
-                phase: HelixService.PublishPhases.PUBLISHING,
-                message: `Publishing to CDN (${i + 1}/${pages.length})`,
-                current: i,
-                total: pages.length,
-                currentPath: path,
-            });
-
-            try {
-                await this.previewAndPublishPage(githubOrg, githubSite, path, branch);
-                publishedCount++;
-                this.logger.debug(`[Helix] Published: ${path}`);
-            } catch (error) {
-                const errorMessage = (error as Error).message;
-
-                // 404 means the page has no content (placeholder) - skip it
-                if (errorMessage.includes('404')) {
-                    skippedCount++;
-                    this.logger.debug(`[Helix] Skipping ${path} - no content (404)`);
-                    continue;
-                }
-
-                // Other errors should propagate
-                throw error;
-            }
-        }
-
-        this.logger.info(
-            `[Helix] Successfully published ${publishedCount}/${pages.length} pages (${skippedCount} skipped)`,
-        );
-
-        // Report completion
-        onProgress?.({
-            phase: HelixService.PublishPhases.COMPLETE,
-            message: `Published ${publishedCount} pages to CDN${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
-            current: pages.length,
-            total: pages.length,
-        });
     }
 
     // ==========================================================
@@ -1627,16 +820,4 @@ export class HelixService {
     // Helpers
     // ==========================================================
 
-    /**
-     * Parse repository full name into org and site
-     * @param fullName - Full repository name (owner/repo)
-     * @returns Tuple of [org, site]
-     */
-    private parseRepoFullName(fullName: string): [string, string] {
-        const parts = fullName.split('/');
-        if (parts.length !== 2) {
-            throw new Error(`Invalid repository name: ${fullName}. Expected format: owner/repo`);
-        }
-        return [parts[0], parts[1]];
-    }
 }
