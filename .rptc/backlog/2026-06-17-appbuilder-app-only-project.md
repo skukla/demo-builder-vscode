@@ -17,12 +17,14 @@ storefront."
 Allow a demo project with a backend + App Builder app(s) but **no storefront frontend** — today every
 project requires a frontend.
 
-**In scope (the four confirmed blockers):**
-1. **Frontend-optional stack** — relax the hard requirement: `stacks.schema.json:74` (frontend +
-   backend required) and the `executor.ts:1101` throw on missing stack/frontend. `executor.ts:1106`
-   already adds frontend conditionally — the schema/type/wizard hard-require it.
-2. **Reconcile the two stack definitions** — `project-creation/config/stacks.json` (runtime truth) AND
-   the embedded `components.json:272-297` block. Any frontend-optional change touches both.
+**In scope (re-measured 2026-08-23 — was four blockers, now three):**
+1. **Frontend-optional stack** — relax the hard requirement: `stacks.schema.json:74` still lists
+   `frontend` in `required` (verified 2026-08-23). The creation-side throw now lives in
+   `executorComponentLoading.ts` (`loadComponentDefinitions`'s missing-stack guard) and is
+   STACK-only; the frontend add there is already conditional — the schema/type/wizard are what
+   hard-require it.
+2. ~~**Reconcile the two stack definitions**~~ — **DEAD (verified 2026-08-23):** `components.json`
+   no longer embeds a `stacks` block; `stacks.json` is the sole definition. Nothing to reconcile.
 3. **Conditional wizard steps** — the `settings` (Connect Commerce) step is unconditional; `welcome`
    requires package + stack. Make the storefront-dependent steps conditional for app-only projects.
 4. **Non-storefront output sink** — `MESH_ENDPOINT` / app URLs have no `.env` sink without a storefront.
@@ -40,8 +42,9 @@ design pass needed.
 
 ## Reuse / refactor-for-reuse
 
-- Reuse the existing step-filtering and the already-conditional frontend add (`executor.ts:1106`) —
-  the work is relaxing schema/type hard-requirements, not new flow.
+- Reuse the existing step-filtering and the already-conditional frontend add
+  (`executorComponentLoading.ts`, `loadComponentDefinitions`) — the work is relaxing schema/type
+  hard-requirements, not new flow.
 - Reuse slice-1's `app-builder` registry category + deploy.
 
 ## Execution plan (high level)
@@ -62,9 +65,8 @@ design pass needed.
 ## Kickoff prompt
 
 `/rptc:feat "Enable app-only / no-storefront demo projects (slice 5). Make frontend optional on a
-stack (relax stacks.schema.json:74 + executor.ts:1101; executor already adds frontend conditionally),
-reconcile BOTH stack definitions (project-creation/config/stacks.json and the embedded
-components.json:272-297 block), make storefront-dependent wizard steps conditional, and define a
+stack (relax stacks.schema.json's required list; the loadComponentDefinitions guard is stack-only
+and the frontend add is already conditional), make storefront-dependent wizard steps conditional, and define a
 non-storefront output sink for mesh/app endpoints. Guard existing storefront paths with tests. See
 .rptc/backlog/2026-06-17-appbuilder-app-only-project.md and
 .rptc/research/adobe-io-deployable-workspace/research.md (§5)."`

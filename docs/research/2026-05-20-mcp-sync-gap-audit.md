@@ -74,7 +74,7 @@ Key code paths:
 - `src/features/eds/services/githubRepoOperations.ts:75-118` — `createFromTemplate`
 - `src/features/eds/services/githubRepoOperations.ts:422-458` — `cloneRepository` (only called by template creation, not project restore)
 - `src/features/eds/services/storefrontRepublishService.ts:198-215` — config.json + Helix publish chain
-- `src/features/eds/services/helixService.ts:910` — `previewAndPublishPage` chain
+- `src/features/eds/services/helixService.ts` (`previewAndPublishPage`) — publish chain
 - `src/features/project-creation/services/mcpConfigWriter.ts:217,226-253` — PostToolUse hook (with fragility)
 
 ---
@@ -101,7 +101,7 @@ Key code paths:
 
 **Problem**: After `sync_storefront` or the PostToolUse hook runs `git push`, the storefront's `.aem.page` preview URL doesn't update until Helix's GitHub webhook fires (unreliable timing) or the user explicitly runs Republish. The "AI edits → user sees the result" loop never closes.
 
-**Fix**: Extend `sync_storefront` to chain `previewAndPublishPage` (from `helixService.ts:910`) after a successful `git push`. Same chain `configSyncService.syncConfigToRemote` already uses. The PostToolUse hook can also call into this path via a Demo Builder CLI helper, or — simpler — rely on `sync_storefront` as the public sync entry point and let the hook auto-commit only.
+**Fix**: Extend `sync_storefront` to chain `previewAndPublishPage` (in `helixService.ts`) after a successful `git push`. Same chain `configSyncService.syncConfigToRemote` already uses. The PostToolUse hook can also call into this path via a Demo Builder CLI helper, or — simpler — rely on `sync_storefront` as the public sync entry point and let the hook auto-commit only.
 
 **Cost**: ~30 lines in `mcp-server.ts` + `helixService` integration. Existing primitives.
 
