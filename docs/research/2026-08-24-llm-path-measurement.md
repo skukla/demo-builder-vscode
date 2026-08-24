@@ -131,6 +131,87 @@ count says little — repetition *is* the working style. Repeats become a real
 signal only for named MCP tools, where calling `list_projects` five times in one
 task genuinely suggests a retry loop.
 
+## Reading 4 — six DRIVEN runs, and the cost is not where we thought
+
+Six headless agent runs against the live extension (`develop@043fa0db6`, 103
+tools), each a plain-English prompt with a 43-tool read-only allowlist so the
+agent could choose freely but not mutate. Reproduce with
+`claude -p "<prompt>" --allowed-tools <read-only set> --permission-mode dontAsk`
+from `~/.demo-builder/projects`, then measure the transcript it writes.
+
+| Task | Calls | Route |
+|---|---|---|
+| status | 5 | ToolSearch → list_projects → get_current_project → get_project → get_project_status |
+| components | 2 | ToolSearch → get_project |
+| urls | 4 | ToolSearch → get_current_project → list_projects → get_project_urls |
+| health | 9 | ToolSearch → get_current_project → list_projects → get_auth_status → **ToolSearch** → get_project → list_stacks → check_prerequisites → get_project_status |
+| datapacks | 5 | ToolSearch → get_current_project → find_datapacks → **ToolSearch** → get_auth_status |
+| auth | 3 | ToolSearch → get_current_project → get_auth_status |
+
+**Zero errors in 28 calls.** The routing works: every run picked sensible tools
+and returned a correct answer. This is not a correctness problem.
+
+### The three findings
+
+**1. The discovery tax is universal.** 6 of 6 runs open with `ToolSearch`, and
+two run it a second time mid-task. The agent never begins knowing what is
+available.
+
+**2. Orientation overhead is near-universal.** 5 of 6 call
+`get_current_project`, 3 also `list_projects`, before doing the actual work — on
+a machine with exactly one project. Those responses are 123 and 127 bytes.
+
+**3. The cost is fixed, and it is not the payloads.**
+
+| Task | Calls | Billable | Cache writes | Output |
+|---|---|---|---|---|
+| components | 2 | 47,550 | 46,807 | 733 |
+| auth | 3 | 47,460 | 46,416 | 1,032 |
+| urls | 4 | 46,807 | 46,228 | 565 |
+| datapacks | 5 | 49,163 | 47,710 | 1,437 |
+| health | 9 | 82,447 | 79,290 | 3,125 |
+
+Two calls and four calls cost the **same**. ~46,000 tokens is the fixed
+cold-start — establishing the cache — and it is roughly 97% of a typical task.
+The work itself is under 1,500 tokens of output.
+
+And the same prompt run twice: **55,236 cold against 8,959 warm**, a 6×
+difference from cache state alone.
+
+### What this corrects
+
+- **A payload-size framing is the wrong lens for round-trip cost.** Phase 2
+  reshaped responses, which was worth doing and is not in question — but
+  `list_projects` returning 127 bytes still costs a full model turn. **The unit
+  of cost is the round trip, not the response.** Any optimisation that shrinks
+  bytes without removing a call is close to free of effect at this scale.
+- **This report's earlier claim that a status question "cost nearly twice a
+  median development task" was the wrong framing.** It cost ~46k of setup plus
+  ~9k of work. The comparison to the 30,090-token median is not like-for-like:
+  that median is measured over long warm sessions, these are cold single-shot
+  runs.
+- **`measure-ai-guidance.mjs` measures ~5,200 tokens of always-on guidance.**
+  The real cold-start is ~46,000, so roughly 40k is tool schemas and system
+  prompt that the audit explicitly excluded. That gap is now the largest
+  single measured target on the AI surface, and it is undecomposed.
+
+### The optimisation candidates the data supports, in order
+
+1. **Decompose and cut the fixed ~46k.** It dwarfs everything else. Nothing
+   should be optimised before this is broken down into system prompt vs the
+   103-tool schema set vs our own guidance.
+2. **Remove the discovery call.** 6/6 is not a sampling artefact; if the agent
+   must search before every task, the catalog is not discoverable at rest.
+3. **Collapse orientation.** Two round trips answering "where am I" before the
+   real question, on a single-project machine.
+
+### The caveat that governs all of it
+
+Same prompt, different path, and 55k vs 9k on cache state alone. Every figure
+here is a single sample. They are worth acting on as *directions*, not as
+values — and any harness built on this must carry repeats and a warm/cold
+distinction from the start, or it will produce confident nonsense.
+
 ## What this changes about the plan
 
 Layer 1 was built first precisely so the next decision could be made on
