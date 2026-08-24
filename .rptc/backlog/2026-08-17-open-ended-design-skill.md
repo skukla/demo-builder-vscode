@@ -1,6 +1,6 @@
 # An open-ended design skill — for a pass that adds design skills, not for phase 5
 
-**Provenance.** Deferred out of phase 5 of `.rptc/plans/ai-surface/` by user decision,
+**Provenance.** Deferred out of phase 5 of `.rptc/complete/ai-surface/` by user decision,
 2026-08-17: this belongs to a pass that ADDS new design skills, not to a pass that
 corrected existing ones. Phase 5's other two findings shipped (`e4efb90f`, `0a94137b`).
 
@@ -52,7 +52,7 @@ a trap in it, not a tool without a mention.
 
 ## Kickoff prompt
 
-> Read `.rptc/plans/ai-surface/phase-5-guidance.md` first — it records how the last pass
+> Read `.rptc/complete/ai-surface/phase-5-guidance.md` first — it records how the last pass
 > measured the skill surface and why "80 tools unmentioned" is the wrong target. Then read
 > all 14 files in `src/features/project-creation/templates/skills/` before forming a view.
 > The question is not "should we add a design skill" but "what does an agent get wrong

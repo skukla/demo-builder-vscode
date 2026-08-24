@@ -132,12 +132,17 @@ describe('ensureHomeAiContext — settings.json', () => {
         expect(command).toContain('rev-parse --show-toplevel');
     });
 
-    it('writes an empty settings.json when the projects root is unsafe (shell metachars)', async () => {
+    it('never writes the unsafe projects root into settings.json, and skips git-sync', async () => {
+        // Asserted `toEqual({})` while git-sync was the only home hook. The
+        // phase-6 aio guard is static (interpolates nothing), so it ships even
+        // here; what must stay true is that the unsafe value never reaches an
+        // executed command and the hook that would have carried it is skipped.
         await ensureHomeAiContext('/home/user/a;b/projects', EXTENSION_DIST, TEST_NODE_PATH);
 
-        const settings = JSON.parse(captureWrite('.claude/settings.json')) as Record<string, unknown>;
-        expect(settings).toEqual({});
-        expect(settings['hooks']).toBeUndefined();
+        const raw = captureWrite('.claude/settings.json');
+        const settings = JSON.parse(raw) as { hooks?: { PostToolUse?: unknown } };
+        expect(raw).not.toContain('a;b');
+        expect(settings.hooks?.PostToolUse).toBeUndefined();
     });
 });
 

@@ -99,10 +99,13 @@ describe('mergeClaudeSettings (edit-preserving)', () => {
         expect(hasGitSync(merged)).toBe(true);
     });
 
-    it('preserves other hook types (e.g. PreToolUse)', () => {
+    it('preserves the user\'s own PreToolUse hooks (ours now rides in that list too)', () => {
+        // Was `toEqual(pre)` when PreToolUse was purely user territory. Since the
+        // aio-global guard (phase 6) the list is co-managed, so the assertion is
+        // the one that always mattered: the user's entry survives verbatim.
         const pre = [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo pre' }] }];
         const merged = mergeClaudeSettings({ hooks: { PreToolUse: pre } }, gitSyncDesired());
-        expect((merged.hooks as { PreToolUse: unknown }).PreToolUse).toEqual(pre);
+        expect((merged.hooks as { PreToolUse: unknown[] }).PreToolUse).toContainEqual(pre[0]);
     });
 
     it('refreshes (does not duplicate) a prior git-sync hook on regen', () => {
@@ -430,15 +433,208 @@ describe('generateHomeClaudeSettings', () => {
         expect(command).toContain('remote get-url origin');
     });
 
-    it('returns {} (no hook) when the projects root is unsafe', () => {
+    /**
+     * These asserted `toEqual({})` while git-sync was the only hook here. Since
+     * the phase-6 aio guard — a STATIC command interpolating nothing — the empty
+     * object is no longer the right proxy. Assert the intent directly instead:
+     * the unsafe value must never reach an executed command, and the hook that
+     * would have carried it is skipped. That is a stricter check than `{}` was.
+     */
+    it('never emits the unsafe projects root, and skips git-sync', () => {
         const settings = generateHomeClaudeSettings('/tmp/a;b', NODE_PATH);
-        expect(settings).toEqual({});
-        expect(settings.hooks).toBeUndefined();
+        expect(JSON.stringify(settings)).not.toContain('/tmp/a;b');
+        expect(hasGitSync(settings as Record<string, unknown>)).toBe(false);
+        expect(settings.hooks?.PostToolUse).toBeUndefined();
     });
 
-    it('returns {} (no hook) when nodePath is unsafe', () => {
+    it('never emits the unsafe nodePath, and skips git-sync', () => {
         const settings = generateHomeClaudeSettings(HOME_ROOT, '/usr/local/bin/node;rm -rf /');
-        expect(settings).toEqual({});
-        expect(settings.hooks).toBeUndefined();
+        expect(JSON.stringify(settings)).not.toContain('rm -rf');
+        expect(hasGitSync(settings as Record<string, unknown>)).toBe(false);
+        expect(settings.hooks?.PostToolUse).toBeUndefined();
+    });
+});
+
+
+// ─── PreToolUse aio-global guard (ai-surface phase 6) ─────────────────────────
+
+/**
+ * The guard blocks the three commerce-extensibility MCP tools that read/write
+ * the `aio` CLI's process-global org selection — state Demo Builder
+ * deliberately stopped using (per-operation `withOrgContext`). A single
+ * unwrapped write once deployed a mesh into a DELETED project for two days.
+ *
+ * Every assertion here EXECUTES something (the command, or the matcher regex
+ * against real tool names). The git-sync hook shipped broken for months
+ * because its tests asserted the command STRING; a containment assertion
+ * cannot tell a working guard from a dead one.
+ */
+describe('PreToolUse aio-global guard', () => {
+    const GUARD_SIGNATURE = 'Demo Builder targets Adobe orgs per-operation';
+
+    type Matcher = { matcher: string; hooks: Array<{ type: string; command: string }> };
+
+    const preToolUse = (settings: { hooks?: { PreToolUse?: Matcher[] } }): Matcher[] =>
+        settings.hooks?.PreToolUse ?? [];
+
+    const guardEntry = (settings: { hooks?: { PreToolUse?: Matcher[] } }): Matcher | undefined =>
+        preToolUse(settings).find((e) => e.hooks.some((h) => h.command.includes(GUARD_SIGNATURE)));
+
+    function makeMeshOnlyProject(): Project {
+        return makeHeadlessProject({
+            componentInstances: {
+                'eds-accs-mesh': {
+                    id: 'eds-accs-mesh',
+                    name: 'API Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                } as ComponentInstance,
+            },
+        });
+    }
+
+    describe('the command, executed', () => {
+        it('EXECUTES: exits 2 (block) and names the alternative on stderr', () => {
+            const command = guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))
+                ?.hooks[0]?.command as string;
+            expect(command).toBeDefined();
+
+            const { execFileSync } = require('child_process');
+            let status: number | undefined;
+            let stderr = '';
+            try {
+                execFileSync('/bin/sh', ['-c', command], { encoding: 'utf8' });
+                status = 0;
+            } catch (err) {
+                const e = err as { status?: number; stderr?: string };
+                status = e.status;
+                stderr = e.stderr ?? '';
+            }
+
+            // Exit 2 is Claude Code's "block the call" contract.
+            expect(status).toBe(2);
+            expect(stderr).toContain(GUARD_SIGNATURE);
+            // The refusal must route the agent somewhere, not just say no.
+            expect(stderr).toContain('deploy_mesh');
+            expect(stderr).toContain('get_project_status');
+        });
+
+        it('is static — no interpolated path and nothing that can silently no-op', () => {
+            // The git-sync hook's failure mode was a conditional whose input was
+            // always empty. This command has no input and no conditional.
+            const command = guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))
+                ?.hooks[0]?.command as string;
+            expect(command).not.toContain(EDS_STOREFRONT_PATH);
+            expect(command).not.toContain('TOOL_FILE');
+            expect(command).not.toContain('if ');
+        });
+    });
+
+    describe('the matcher, executed against real tool names', () => {
+        const matcherOf = (): RegExp =>
+            new RegExp(
+                guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))?.matcher as string
+            );
+
+        it.each([
+            'mcp__commerce-extensibility__aio-configure-global',
+            'mcp__commerce-extensibility__aio-app-use',
+            'mcp__commerce-extensibility__aio-where',
+        ])('blocks %s', (toolName) => {
+            expect(matcherOf().test(toolName)).toBe(true);
+        });
+
+        it.each([
+            // Same MCP, unrelated tools — these must keep working.
+            'mcp__commerce-extensibility__aio-app-deploy',
+            'mcp__commerce-extensibility__aio-login',
+            'mcp__commerce-extensibility__search-commerce-docs',
+            // Our own tools, and a prefix-collision probe.
+            'mcp__demo-builder__deploy_mesh',
+            'mcp__other__aio-where',
+            'Bash',
+        ])('does not block %s', (toolName) => {
+            expect(matcherOf().test(toolName)).toBe(false);
+        });
+    });
+
+    describe('who gets it (the App Builder tooling predicate)', () => {
+        it('ships for an EDS storefront project', () => {
+            expect(guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))).toBeDefined();
+        });
+
+        it('ships for a mesh-only project — no storefront, but the tools are there', () => {
+            const settings = generateClaudeSettings(makeMeshOnlyProject(), NODE_PATH);
+            // The exact case the storefront-path early return used to swallow.
+            expect(guardEntry(settings)).toBeDefined();
+            expect(hasGitSync(settings as Record<string, unknown>)).toBe(false);
+        });
+
+        it('does NOT ship for a bare project that gets no App Builder tooling', () => {
+            expect(
+                guardEntry(generateClaudeSettings(makeHeadlessProject(), NODE_PATH))
+            ).toBeUndefined();
+        });
+
+        it('ships for the home Chat, which can address any project by name', () => {
+            expect(guardEntry(generateHomeClaudeSettings('/projects', NODE_PATH))).toBeDefined();
+        });
+
+        it('still ships for the home Chat when the root is unsafe and git-sync is skipped', () => {
+            const settings = generateHomeClaudeSettings('/pro$jects', NODE_PATH);
+            expect(guardEntry(settings)).toBeDefined();
+            expect(hasGitSync(settings as Record<string, unknown>)).toBe(false);
+        });
+    });
+
+    describe('merge — two managed lists, user content untouched', () => {
+        const desired = () => generateClaudeSettings(makeEdsProject(), NODE_PATH);
+
+        it("preserves the user's own PreToolUse hooks alongside ours", () => {
+            const userHook = {
+                matcher: 'Bash',
+                hooks: [{ type: 'command', command: 'echo mine' }],
+            };
+            const merged = mergeClaudeSettings({ hooks: { PreToolUse: [userHook] } }, desired());
+            const list = (merged.hooks as { PreToolUse: Matcher[] }).PreToolUse;
+            expect(list).toContainEqual(userHook);
+            expect(list.some((e) => e.hooks.some((h) => h.command.includes(GUARD_SIGNATURE)))).toBe(
+                true
+            );
+        });
+
+        it('refreshes (does not duplicate) our guard across regenerates', () => {
+            const once = mergeClaudeSettings({}, desired());
+            const twice = mergeClaudeSettings(once, desired());
+            const list = (twice.hooks as { PreToolUse: Matcher[] }).PreToolUse;
+            expect(
+                list.filter((e) => e.hooks.some((h) => h.command.includes(GUARD_SIGNATURE)))
+            ).toHaveLength(1);
+        });
+
+        it('drops our guard when the project stops qualifying, keeping user hooks', () => {
+            const userHook = {
+                matcher: 'Bash',
+                hooks: [{ type: 'command', command: 'echo mine' }],
+            };
+            const withGuard = mergeClaudeSettings({ hooks: { PreToolUse: [userHook] } }, desired());
+            const after = mergeClaudeSettings(
+                withGuard,
+                generateClaudeSettings(makeHeadlessProject(), NODE_PATH)
+            );
+            const list = (after.hooks as { PreToolUse: Matcher[] }).PreToolUse;
+            expect(list).toEqual([userHook]);
+        });
+
+        it('both lists merge independently — git-sync and guard coexist', () => {
+            const merged = mergeClaudeSettings({}, desired());
+            expect(hasGitSync(merged)).toBe(true);
+            expect(
+                (merged.hooks as { PreToolUse: Matcher[] }).PreToolUse.some((e) =>
+                    e.hooks.some((h) => h.command.includes(GUARD_SIGNATURE))
+                )
+            ).toBe(true);
+        });
     });
 });
