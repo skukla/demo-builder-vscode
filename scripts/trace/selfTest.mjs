@@ -21,6 +21,7 @@ import {
     taskCost,
     isRealPrompt,
     encodeCwd,
+    transcriptDir,
 } from './transcript.mjs';
 
 const SECRET_ARG = '/secret/path.txt';
@@ -167,6 +168,17 @@ function unitChecks() {
             // Omitting the dot rule yields a plausible path that is wrong, so
             // dot-prefixed dirs silently resolve to nothing.
             encodeCwd('/Users/x/.demo-builder/projects/p') === '-Users-x--demo-builder-projects-p',
+        ],
+        [
+            'transcriptDir resolves symlinks before encoding',
+            // macOS resolves /tmp -> /private/tmp and Claude Code encodes what
+            // the path RESOLVES to. Encoding the literal path lands on an empty
+            // directory that reads as "no transcripts" rather than as an error.
+            (() => {
+                const real = fs.realpathSync(os.tmpdir());
+                if (real === os.tmpdir()) return true; // nothing to prove on this platform
+                return transcriptDir(os.tmpdir()).endsWith(encodeCwd(real));
+            })(),
         ],
     ];
 }

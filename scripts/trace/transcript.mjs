@@ -29,8 +29,27 @@ export function encodeCwd(cwd) {
     return cwd.replace(/[/.]/g, '-');
 }
 
+/**
+ * Where Claude Code keeps a directory's transcripts.
+ *
+ * Encodes the **resolved** path, not the one handed in. macOS resolves `/var` to
+ * `/private/var` and `/tmp` to `/private/tmp`, and Claude Code encodes what the
+ * path resolves to — so a caller passing `/var/folders/…` lands on
+ * `-var-folders-…` while the transcripts are under `-private-var-folders-…`.
+ * Found 2026-08-24 by looking for runs that had definitely happened and finding
+ * an empty directory: the same silent-miss shape as the dot rule above, and it
+ * reads as "no transcripts" rather than as an error.
+ */
 export function transcriptDir(cwd) {
-    return path.join(os.homedir(), '.claude', 'projects', encodeCwd(cwd));
+    let resolved = cwd;
+    try {
+        resolved = fs.realpathSync(cwd);
+    } catch {
+        // Path may not exist (a caller asking about a deleted checkout). Fall
+        // back to the literal path rather than throwing — the lookup then simply
+        // finds nothing, which is the correct answer for a directory that is gone.
+    }
+    return path.join(os.homedir(), '.claude', 'projects', encodeCwd(resolved));
 }
 
 /**
