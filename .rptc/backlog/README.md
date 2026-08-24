@@ -252,9 +252,9 @@ Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag
 
 Measured 2026-08-23: `features/eds/services` holds **95 direct files** in clear name families (15 `daLive*`, 8 `helix*`, 7 `github*`, 7 `eds*`/reset, 6 `storefront*`, 6 `config*`) — the one strong regrouping candidate in the repo. Everything else 38 files or under with a working naming convention; the item records the full table and why each is left alone (`ai/server`'s suffix convention, `core/ui`'s kind-grouping, `core/utils`' by-design grab-bag). Subfolders under `services/` are existing house practice (`prerequisites/services/installation/`, `dashboard/services/onOpenChecks/`). Cost measured for eds/services alone: ~700 alias imports, 232 sibling imports, **308 literal `jest.mock` path strings tsc can't check**, a 117-file test-mirror move, 13+ citing docs. Execute right after a release cut with no EDS branch in flight; full gate + `rptc-hygiene-scan` after. Discoverability only — no coupling changes. Filed 2026-08-23.
 
-#### Structural baseline ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
+#### Structural baseline ([`../complete/2026-05-21-structural-baseline.md`](../complete/2026-05-21-structural-baseline.md)) — ✅ EXECUTED 2026-08-24
 
-Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.
+Report at `docs/research/2026-08-24-structural-baseline.md`; reproducible via `scripts/measure-structure.mjs`. Run after the decomposition/regroup wave so the numbers are the clean "after" snapshot. Trim-cycle candidates proposed from the data (feature-cycle break, dead-barrel deletion, legacy-mention sweep, in-place long-function work) await the maintainer's read of the report — filing them as items is the next step, deliberately not done unilaterally.
 
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
 

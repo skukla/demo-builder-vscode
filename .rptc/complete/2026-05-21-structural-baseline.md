@@ -1,5 +1,17 @@
 # Structural Baseline — Codebase Measurement Pass
 
+> **✅ EXECUTED 2026-08-24.** Report: `docs/research/2026-08-24-structural-baseline.md`
+> (numbers only, per this item's contract). Reproducible script:
+> `scripts/measure-structure.mjs` — re-run and diff at any commit. The Cycle D
+> gate was verified satisfied (the AI surface shipped in evolved form: the
+> aiOverview webview, the standalone aiHandlers surface, the global-MCP opt-in).
+> Ran deliberately AFTER the decomposition + regroup wave so these numbers are
+> the clean post-cleanup snapshot. Headlines: 897 prod files / 169,671 LOC /
+> test ratio 1.72; 42% of files trip at least one SOP threshold (dominated by
+> fn-length); 60 cross-feature edges with 15 mutual-import pairs; 37 orphans
+> (mostly dead barrels); trim-cycle proposals delivered in-session, not in the
+> report.
+
 ## Provenance
 
 Deferred 2026-05-21. After ~1 year of AI-assisted development, the maintainer raised a paranoia signal about codebase size and growing complexity. Symptoms cited:
