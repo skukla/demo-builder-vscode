@@ -187,7 +187,10 @@ export function createAgentConsentGate(
  */
 export function createAgentOperationNotifier(
     logger: Logger,
-): (toolName: string, run: () => Promise<unknown>) => Promise<unknown> {
+): (
+    toolName: string,
+    run: (report: (message: string) => void) => Promise<unknown>,
+) => Promise<unknown> {
     return (toolName, run) =>
         Promise.resolve(
             vscode.window.withProgress(
@@ -196,9 +199,13 @@ export function createAgentOperationNotifier(
                     title: `Demo Builder — agent: ${humanize(toolName)}…`,
                     cancellable: false,
                 },
-                async () => {
+                async (progress) => {
                     try {
-                        const result = await run();
+                        // Hand our reporter to the caller so the operation's own
+                        // phase strings reach this notification. Previously `run`
+                        // took nothing, so the notification could only ever show
+                        // the tool's title while the phases went nowhere.
+                        const result = await run((message) => progress.report({ message }));
                         vscode.window.setStatusBarMessage(
                             `$(check) Agent: ${humanize(toolName)} completed`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,

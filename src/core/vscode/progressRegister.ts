@@ -31,6 +31,7 @@
  */
 
 import * as vscode from 'vscode';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 
 /**
  * Build the card's in-flight line: verb + kind.
@@ -101,6 +102,12 @@ export async function withProgressRegister<T>(
             if (pushCardStatus) pushCardStatus(cardLabel ?? '');
             result = await run((message) => {
                 progress.report({ message });
+                // Same step, second destination. When an AGENT triggered this
+                // operation the user is reading the chat, not the VS Code
+                // notification — and every phase string computed here used to
+                // reach only the window they were not looking at. A no-op
+                // outside an agent tool call, so the UI path is unchanged.
+                reportPhase(message);
             });
         },
     );

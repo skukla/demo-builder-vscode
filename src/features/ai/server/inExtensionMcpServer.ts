@@ -21,7 +21,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { probeSocket } from './mcpSocketDiscovery';
-import { progressLabel } from './toolDisplayName';
+import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
+import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
@@ -140,29 +141,55 @@ function strictifyWriteSchema(name: string, schema: unknown): unknown {
  * BEST EFFORT, always. A tool must never fail because a status line could not be
  * sent, and a client that supplies no token simply gets nothing.
  */
-async function announceToolStart(
-    name: string,
+/**
+ * Send one progress line to the client mid-call.
+ *
+ * Shared by the start announcement and every phase. Best effort: a client that
+ * supplied no token gets nothing, and a send that fails must not cost the user
+ * the operation.
+ */
+async function sendProgress(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extra: any,
+    message: string,
 ): Promise<void> {
     const progressToken = extra?._meta?.progressToken;
     if (progressToken === undefined || typeof extra?.sendNotification !== 'function') return;
     try {
         await extra.sendNotification({
             method: 'notifications/progress',
-            params: { progressToken, progress: 0, message: progressLabel(name) },
+            params: { progressToken, progress: 0, message },
         });
     } catch {
         // Visibility is a courtesy; losing it must not cost the user the call.
     }
 }
 
+/** One phase of the operation in flight, as the chat sees it. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function announcePhase(extra: any, message: string): Promise<void> {
+    return sendProgress(extra, `${SERVER_DISPLAY_NAME} · ${message}`);
+}
+
+async function announceToolStart(
+    name: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra: any,
+): Promise<void> {
+    await sendProgress(extra, progressLabel(name));
+}
+
 function withToolLogging(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     logger: Logger,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    notifier?: (toolName: string, run: () => Promise<any>) => Promise<any>,
+     
+    notifier?: (
+        toolName: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        run: (report: PhaseSink) => Promise<any>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) => Promise<any>,
     consentGate?: (
         toolName: string,
         args: unknown,
@@ -209,10 +236,32 @@ function withToolLogging(
                     if (!isReadOnlyToolName(name)) {
                         await announceToolStart(name, extra);
                     }
-                    const invoke =
-                        notifier && !isReadOnlyToolName(name)
-                            ? () => notifier(name, () => handler(args))
-                            : () => handler(args);
+                    // Fan the operation's own phase strings out to BOTH places a
+                    // user might be watching: the chat (MCP progress) and the
+                    // VS Code notification (the notifier's reporter). Previously
+                    // neither got them — the phases were computed and dropped for
+                    // every agent call, so a two-minute create_project announced
+                    // itself once and then went silent everywhere.
+                    const mcpSink: PhaseSink = (message) => {
+                        void announcePhase(extra, message);
+                    };
+                    // Reads get NO sinks at all, matching the opening line they
+                    // also do not get: a query returns promptly, and a line per
+                    // query is noise rather than information. A read tool that
+                    // calls reportPhase therefore narrates to nobody, which is
+                    // the intent — caught by a test that found the first version
+                    // installing sinks for reads too.
+                    let invoke: () => Promise<unknown>;
+                    if (isReadOnlyToolName(name)) {
+                        invoke = () => handler(args);
+                    } else if (notifier) {
+                        invoke = () =>
+                            notifier(name, (report) =>
+                                withPhaseSinks([mcpSink, report], () => handler(args)),
+                            );
+                    } else {
+                        invoke = () => withPhaseSinks([mcpSink], () => handler(args));
+                    }
                     try {
                         const result = await invoke();
                         logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
@@ -249,8 +298,11 @@ export interface InExtensionMcpServerOptions {
      * client, closed chat — both observed live 2026-08-23 around a 2-minute
      * refresh that mutated the live site invisibly).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    longRunningNotifier?: (toolName: string, run: () => Promise<any>) => Promise<any>;
+     
+    longRunningNotifier?: (
+        toolName: string,
+        run: (report: (message: string) => void) => Promise<any>,
+    ) => Promise<any>;
     /**
      * Native consent for destructive calls (injected — this module stays
      * vscode-free). Consulted BEFORE the notifier for every call that carries

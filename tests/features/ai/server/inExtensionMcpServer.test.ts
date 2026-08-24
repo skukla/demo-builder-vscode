@@ -323,10 +323,14 @@ describe('agent-operation visibility (the notifier seam)', () => {
     // (list_/get_/read_/…) never notify.
     it('routes a mutating tool call through the injected notifier; read tools bypass it', async () => {
         const seen: string[] = [];
-        const notifier = jest.fn(async (name: string, run: () => Promise<unknown>) => {
-            seen.push(name);
-            return run();
-        });
+        // `run` now takes the notifier's own progress reporter, so an operation's
+        // phase strings can reach the VS Code notification as well as the chat.
+        const notifier = jest.fn(
+            async (name: string, run: (report: (m: string) => void) => Promise<unknown>) => {
+                seen.push(name);
+                return run(() => {});
+            }
+        );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: notifier,
         });
@@ -384,7 +388,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: async (name, run) => {
                 notified.push(name);
-                return run();
+                return run(() => {});
             },
             consentGate,
         });
@@ -418,7 +422,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: async (name, run) => {
                 notified.push(name);
-                return run();
+                return run(() => {});
             },
             consentGate,
         });
