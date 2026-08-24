@@ -1,11 +1,20 @@
-# App Builder component — remaining persistence gaps (D3 dual-flow removal only)
+# App Builder component — remaining persistence gaps (CLOSED — D3 shipped)
 
+> **CLOSED 2026-08-23**: D3 (the last live scope item) was implemented on
+> `feature/d3-dual-flow-removal` — the mesh ↔ `selectedOptionalDependencies`
+> mirror-write is gone, `WizardState.selectedOptionalDependencies` is deleted,
+> and `selectedAppBuilderComponents` is the single wizard-side mesh authority
+> (serialization derives the wire's `components.dependencies` from its
+> mesh-kind ids; the persisted ADR-011 model is unchanged). Execution record:
+> `.rptc/complete/d3-dual-flow-removal/overview.md`. The lock test flipped to
+> removed-behavior pins in `useProjectBuilder.test.ts`.
+>
 > Date prefix = original deferral snapshot (Slice 2, 2026-06-21). Rewritten 2026-07-09
 > after the slice-3 staleness research; **narrowed again 2026-07-10** after the
 > integrations-flow redesign (`.rptc/plans/integrations-flow-redesign/`) shipped most of
 > the remaining scope; **narrowed a third time 2026-08-23** — the whole-backlog
 > re-measure found scope item 2 already shipped, and item 1 (the ReviewStep bug)
-> was fixed the same day (`9a4f7afc`). Only D3 remains.
+> was fixed the same day (`9a4f7afc`). Only D3 remained.
 
 ## Resolved since (do NOT redo)
 
@@ -39,29 +48,25 @@
    (verified 2026-08-23): `useWizardState.ts` `buildEditModeIntegrationState`
    computes `meshDeps` from `selections.dependencies` and seeds
    `selectedOptionalDependencies` on edit.
-3. **D3 dual-flow removal** (the whole live item now) — **re-verified 2026-08-23
-   at pickup, then deliberately deferred to lead a fresh session** (a
-   cross-boundary contract change per the pipeline item's own
-   reviewer-not-tired rule). What that check established: the prerequisite is
-   NOT yet met — creation still consumes the mesh from
-   `components.dependencies` (`loadComponentDefinitions` reads
-   `typedConfig.components?.dependencies`; `selectedAppBuilderIds` EXCLUDES
-   mesh-kind ids; the mesh instance installs via the dependencies list), and
-   the mirror also feeds the WIRE (`storefrontSetupHandlers.ts:220` gates
-   `needsMesh` on `payload.dependencies` from the webview). So the removal
-   means teaching, in order: buildProjectConfig's serialization, creation's
-   component loading + mesh phase, the storefront-setup payload gate, the
-   wizard step filter (`hasMeshInDependencies`), and reset's rebuild — to
-   derive the mesh from `selectedAppBuilderComponents` — THEN deleting the
-   mirror and flipping `useWizardState-dualFlow` from a lock into a
-   removed-behavior pin.
-   Original statement: the mesh ↔
-   `selectedOptionalDependencies` mirror-write in
-   `appBuilderComponentSelectionState.ts` + `useProjectBuilder`, locked by
-   `useWizardState-dualFlow.test.tsx`. Do NOT remove before creation consumes mesh ids
-   from `selectedAppBuilderComponents`; the auth/IO step gating depends on
-   `hasMeshInDependencies` (now in `src/core/constants.ts`, consumed by
-   `wizardHelpers.ts` step filtering and `storefrontSetupHandlers.ts`).
+3. ~~**D3 dual-flow removal**~~ — **SHIPPED 2026-08-23**
+   (`feature/d3-dual-flow-removal`). The cut that landed kept the WIRE and
+   PERSISTED contracts stable: `buildProjectConfig` and the storefront-setup
+   payload derive `dependencies` from
+   `selectedAppBuilderComponents.filter(isMeshComponentId)`, so creation
+   (`loadComponentDefinitions`, mesh phase, `buildInitialProject`) and reset
+   needed NO change — they transitively consume the mesh from the single
+   authority. `onStackSelect` reconciles mesh ids inside
+   `selectedAppBuilderComponents` (required-mesh seeding + cross-package leak
+   guard); edit mode unions the persisted mesh dep back in; all readers
+   (`isMeshSelected`, `anyDeployableSelected`, review predicates,
+   prerequisites payload, reserved-id domain, dashboard adapter) read the one
+   field. The 2026-08-23 pickup analysis cited a lock test
+   `useWizardState-dualFlow.test.tsx` that no longer existed — the actual
+   lock was `useProjectBuilder.test.ts`'s mirror-write suite, now flipped to
+   removed-behavior pins. Dead code deleted with it:
+   `meshAppBuilderComponentToComponentIds` (identity bridge),
+   `hasMeshComponentSelected` (zero production callers),
+   `onOptionalDependenciesChange` (zero consumers).
 
 ## Constraints
 

@@ -226,10 +226,6 @@ tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-sco
 
 Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
 
-#### App Builder component — D3 dual-flow removal ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
-
-Rewritten 2026-07-09; **re-measured 2026-08-23 and shrunk again**: edit-mode rehydration has SHIPPED (`buildEditModeIntegrationState` in `useWizardState.ts:216` seeds selections, sources, keyed API picks AND the mesh optional-dependency — the item's remaining-scope #2 went with it). **The ReviewStep bug was FIXED the same day** (`resolveReviewIntegrationNames` in `reviewStepHelpers.tsx` — Review now renders integrations through the same resolver the builder summary uses; the dead `components.appBuilder` read is gone and the never-wired `summarizeSelectedAppBuilderComponents` deleted). Remaining: only the **D3 dual-flow removal** (the mirror-write in `appBuilderComponentSelectionState.ts`).
-
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
 
 One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
