@@ -18,7 +18,7 @@
 import type { AuthCacheManager } from './authCacheManager';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 
 /**
  * Clears Adobe CLI console context (token-preserving).

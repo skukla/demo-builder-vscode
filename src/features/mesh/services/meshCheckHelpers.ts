@@ -6,7 +6,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 
 /**

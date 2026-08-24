@@ -30,7 +30,7 @@
  * defaults wire the real functions; unit tests mock them.
  */
 
-import { getProvidedEnvVars } from './appBuilderComponentState';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { isStandaloneApp } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';

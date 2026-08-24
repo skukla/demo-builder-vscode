@@ -24,10 +24,8 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { validateProjectPath, validateURL } from '@/core/validation';
-import {
-    hasMeshDeploymentRecord,
-    determineMeshStatus,
-} from '@/features/dashboard/handlers/meshStatusHelpers';
+import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
+import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,

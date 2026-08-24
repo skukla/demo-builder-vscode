@@ -23,10 +23,9 @@ import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
 } from '@/features/authentication/services/types';
+import { BASELINE_API } from '@/core/constants';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
-/** Baseline API always subscribed (free; needed for `aio app` operations). */
-export const BASELINE_API = 'AdobeIOManagementAPISDK';
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
 const DEFAULT_DOMAIN = 'localhost:3000';
 /** apiKey credential metadata (a formality satisfying `domainMandatory`). */

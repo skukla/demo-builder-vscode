@@ -43,7 +43,7 @@ import {
     getIdentifiedMeshAppBuilderComponent,
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';

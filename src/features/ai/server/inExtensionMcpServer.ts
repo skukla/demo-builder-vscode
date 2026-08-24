@@ -20,7 +20,7 @@ import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { probeSocket } from './mcpSocketDiscovery';
-import { mcpSocketDir } from './mcpSocketPath';
+import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 

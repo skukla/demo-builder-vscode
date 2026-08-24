@@ -8,8 +8,8 @@
 
 import {
     handleOpenProject,
-} from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { createMockContext } from './lifecycleHandlers.testUtils';
+} from '@/features/project-creation/handlers/wizardLifecycleHandlers';
+import { createMockContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -32,10 +32,10 @@ jest.mock('fs/promises', () => ({
     writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
-// Mock ShowProjectsListCommand
-jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => ({
-    ShowProjectsListCommand: {
-        disposeActivePanel: jest.fn(),
+// Mock BaseWebviewCommand (the handler disposes the projects list via viewType)
+jest.mock('@/core/base', () => ({
+    BaseWebviewCommand: {
+        disposePanel: jest.fn(),
     },
 }));
 
@@ -79,7 +79,7 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
 
         it('should close existing Projects List webview', async () => {
-            const { ShowProjectsListCommand } = require('@/features/projects-dashboard/commands/showProjectsList');
+            const { BaseWebviewCommand } = require('@/core/base');
             const context = createMockContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
@@ -88,7 +88,7 @@ describe('lifecycleHandlers - Project Actions', () => {
 
             await handleOpenProject(context as any);
 
-            expect(ShowProjectsListCommand.disposeActivePanel).toHaveBeenCalled();
+            expect(BaseWebviewCommand.disposePanel).toHaveBeenCalledWith('demoBuilder.projectsList');
         });
 
         it('should log error when project is missing', async () => {

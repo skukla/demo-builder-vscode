@@ -11,11 +11,11 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { BaseWebviewCommand } from '@/core/base';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation';
 import { ErrorCode } from '@/types/errorCodes';
-import { defineHandlers } from '@/types/handlers';
+import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -100,8 +100,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
         }
 
         // Close any existing Projects List webview before reopening
-        const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
-        ShowProjectsListCommand.disposeActivePanel();
+        BaseWebviewCommand.disposePanel('demoBuilder.projectsList');
 
         // Dispose the wizard panel — triggers projects list to reopen
         context.panel?.dispose();
@@ -141,8 +140,6 @@ export async function handleLog(
 }
 
 
-// Re-export for the sidebar Logs utility, which toggles the panel via this function
-export { toggleLogsPanel } from '../services/lifecycleService';
 
 /**
  * openExternal - Open a URL in the system browser

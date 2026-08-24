@@ -19,7 +19,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ensureHomeAiContext } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 jest.mock('fs/promises', () => ({
     lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),

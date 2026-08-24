@@ -16,7 +16,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('@/core/logging', () => ({

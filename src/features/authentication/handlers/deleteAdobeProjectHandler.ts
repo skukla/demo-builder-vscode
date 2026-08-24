@@ -15,7 +15,7 @@
 import * as vscode from 'vscode';
 import { resolveOrgContext, sendOrgMismatch } from './projectHandlers';
 import { validateOrgId, validateProjectId } from '@/core/validation';
-import { BASELINE_API } from '@/features/app-builder';
+import { BASELINE_API } from '@/core/constants';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     teardownConsoleProject,

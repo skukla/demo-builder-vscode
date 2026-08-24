@@ -10,7 +10,7 @@
 import { ProgressTracker } from '../handlers/shared';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import {
     ProjectSetupContext,

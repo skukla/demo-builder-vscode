@@ -16,7 +16,7 @@ import {
     getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
     isAppBuilderComponentState,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 
 /** Minimal Project for accessor testing. */

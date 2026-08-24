@@ -11,7 +11,7 @@
  */
 
 import { maskEmail } from '@/core/utils/maskEmail';
-import { type CredentialServiceProbeResult } from '@/features/data-installer/services/credentialServiceProbe';
+import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';

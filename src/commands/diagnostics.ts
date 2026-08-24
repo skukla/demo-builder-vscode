@@ -36,12 +36,12 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import {
     probeCredentialService,
     type CredentialServiceProbeResult,
-} from '@/features/data-installer/services/credentialServiceProbe';
+} from '@/features/eds/services/credentialServiceProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {

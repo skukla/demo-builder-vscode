@@ -9,9 +9,7 @@ import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
-import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -47,8 +45,8 @@ export class ResetAllCommand extends BaseCommand {
 
             // 2. Close all open webview panels (Projects List, Project Dashboard, Create Project wizard)
             try {
-                ShowProjectsListCommand.disposeActivePanel();
-                ProjectDashboardWebviewCommand.disposeActivePanel();
+                BaseWebviewCommand.disposePanel('demoBuilder.projectsList');
+                BaseWebviewCommand.disposePanel('demoBuilder.projectDashboard');
                 BaseWebviewCommand.disposeAllActivePanels();
 
                 this.logger.info('Closed all webview panels');

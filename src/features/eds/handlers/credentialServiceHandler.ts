@@ -20,7 +20,7 @@
  * @module features/eds/handlers/credentialServiceHandler
  */
 
-import { probeCredentialService } from '@/features/data-installer/services/credentialServiceProbe';
+import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** What the wizard needs to decide how to render the credential fields. */

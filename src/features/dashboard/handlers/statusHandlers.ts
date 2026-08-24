@@ -9,12 +9,12 @@
  */
 
 import * as path from 'path';
-import { deriveMeshStatus } from '../services/dashboardStatusService';
-import { buildStatusPayload, getMeshEndpoint } from './meshStatusHelpers';
+import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleForcedOrgSwitch } from '@/features/authentication';

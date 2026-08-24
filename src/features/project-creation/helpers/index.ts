@@ -7,7 +7,6 @@ export { formatGroupName } from './formatters';
 export { generateComponentEnvFile, generateComponentConfigFiles, regenerateProjectEnvFiles, regenerateComponentEnvFile } from './envFileGenerator';
 export type { EnvGenerationConfig } from './envFileGenerator';
 export { ProjectSetupContext } from '../services/ProjectSetupContext';
-export { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 export { deployMeshComponent, MeshDeploymentResult } from '@/features/mesh/services/meshDeployment';
 
 // UI validation function - simple validator for form fields

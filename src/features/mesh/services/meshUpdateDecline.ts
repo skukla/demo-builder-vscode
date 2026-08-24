@@ -10,7 +10,7 @@
  * @module features/mesh/services/meshUpdateDecline
  */
 
-import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { getKeyedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types/base';
 
 /**

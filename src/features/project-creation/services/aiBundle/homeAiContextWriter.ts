@@ -35,7 +35,7 @@ import * as path from 'path';
 import { generateHomeClaudeSettings } from './claudeSettingsWriter';
 import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 interface McpConfig {
     mcpServers: Record<string, McpServerEntry>;

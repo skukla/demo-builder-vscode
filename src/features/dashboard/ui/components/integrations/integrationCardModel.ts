@@ -32,7 +32,7 @@ import type {
     IntegrationCardModel,
 } from '@/core/ui/components/integrations';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
-import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,

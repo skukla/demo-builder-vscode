@@ -28,10 +28,10 @@
 import { asRawText, asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
+import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import {
     buildStatusPayload,
     deriveMeshStatus,
-    getMeshEndpoint,
 } from '@/features/dashboard/services/dashboardStatusService';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 

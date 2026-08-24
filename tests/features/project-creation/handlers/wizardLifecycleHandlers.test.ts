@@ -7,7 +7,7 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
-import { lifecycleHandlers, handleOpenExternal } from '@/features/lifecycle/handlers/lifecycleHandlers';
+import { lifecycleHandlers, handleOpenExternal } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 

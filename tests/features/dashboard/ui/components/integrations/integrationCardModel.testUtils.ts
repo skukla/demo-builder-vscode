@@ -10,7 +10,7 @@
  * jest.mock call below is registered before the model module loads.
  */
 
-import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { StatusDisplay, MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';

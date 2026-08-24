@@ -16,8 +16,11 @@ import {
 import { createMockProject, createMockProjects, createMockHandlerContext } from '../testUtils';
 
 // Mock mesh staleness detection
-jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
+jest.mock('@/core/state/appBuilderComponentState', () => ({
+    ...jest.requireActual('@/core/state/appBuilderComponentState'),
     hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
+}));
+jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
     determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
 }));
 
@@ -172,10 +175,8 @@ describe('dashboardHandlers', () => {
         });
 
         it('should enrich projects with mesh status when mesh is deployed and stale', async () => {
-            const {
-                hasMeshDeploymentRecord,
-                determineMeshStatus,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { hasMeshDeploymentRecord } = require('@/core/state/appBuilderComponentState');
+            const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
             const project = createMockProject({
@@ -201,10 +202,8 @@ describe('dashboardHandlers', () => {
         });
 
         it('should set meshStatusSummary to deployed when no changes detected', async () => {
-            const {
-                hasMeshDeploymentRecord,
-                determineMeshStatus,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { hasMeshDeploymentRecord } = require('@/core/state/appBuilderComponentState');
+            const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
             const project = createMockProject({
@@ -230,7 +229,7 @@ describe('dashboardHandlers', () => {
         it('should set meshStatusSummary to unknown on detection error', async () => {
             const {
                 hasMeshDeploymentRecord,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            } = require('@/core/state/appBuilderComponentState');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
             const project = createMockProject({
@@ -255,7 +254,7 @@ describe('dashboardHandlers', () => {
         it('should set meshStatusSummary to not-deployed when no deployment record', async () => {
             const {
                 hasMeshDeploymentRecord,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            } = require('@/core/state/appBuilderComponentState');
 
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },

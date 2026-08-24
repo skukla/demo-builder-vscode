@@ -16,12 +16,11 @@ import { AuthenticationService } from '@/features/authentication';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers';
+import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
 import {
     formatGroupName as formatGroupNameHelper,
-    getEndpoint as getEndpointHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
@@ -538,7 +537,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
             }
 
             // Dispose Projects List if open (replace it with the wizard)
-            ShowProjectsListCommand.disposeActivePanel();
+            BaseWebviewCommand.disposePanel('demoBuilder.projectsList');
 
             // Create or reveal panel
             await this.createOrRevealPanel();

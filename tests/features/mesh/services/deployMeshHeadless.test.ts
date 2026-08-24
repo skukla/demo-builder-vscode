@@ -43,7 +43,7 @@ import { ServiceLocator } from '@/core/di';
 import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
-import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
+import { listAppBuilderComponents } from '@/core/state/appBuilderComponentState';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
 import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless';

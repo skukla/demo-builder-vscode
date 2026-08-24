@@ -19,7 +19,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getProvidedEnvVars } from '@/features/app-builder/services/appBuilderComponentState';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import {
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,

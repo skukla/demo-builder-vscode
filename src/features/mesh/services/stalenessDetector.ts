@@ -17,7 +17,7 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
-import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { getKeyedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import {
@@ -195,7 +195,7 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
     try {
         const { ServiceLocator } = await import('@/core/di');
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
-        const { getMeshNodeVersion } = await import('@/features/mesh/services/meshConfig');
+        const { getMeshNodeVersion } = await import('@/core/utils/meshConfig');
         const commandManager = ServiceLocator.getCommandExecutor();
 
         logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O...');

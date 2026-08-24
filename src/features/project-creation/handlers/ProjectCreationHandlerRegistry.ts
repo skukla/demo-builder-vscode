@@ -22,7 +22,7 @@ import {
     handleOpenDataInstallerSettings,
 } from '@/features/data-installer/handlers';
 import * as eds from '@/features/eds/handlers';
-import * as lifecycle from '@/features/lifecycle/handlers';
+import * as lifecycle from './wizardLifecycleHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import { defineHandlers } from '@/types/handlers';

@@ -41,7 +41,7 @@ import {
     getAppBuilderComponent,
     listAppBuilderComponents,
     setAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,

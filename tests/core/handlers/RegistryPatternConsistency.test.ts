@@ -16,7 +16,7 @@ import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { meshHandlers } from '@/features/mesh/handlers';
 import { edsHandlers } from '@/features/eds/handlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
-import { lifecycleHandlers } from '@/features/lifecycle/handlers';
+import { lifecycleHandlers } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 
 describe('Handler Map Pattern Consistency', () => {
     const handlerMaps = [

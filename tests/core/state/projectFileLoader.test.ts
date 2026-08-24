@@ -11,7 +11,7 @@ import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
-import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';

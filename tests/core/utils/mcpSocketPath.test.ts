@@ -11,7 +11,7 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { mcpSocketDir, resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { mcpSocketDir, resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 const PROJECTS_DIR = '/Users/dev/.demo-builder/projects';
 const SOCKET_DIR = '/tmp/test-sockets';

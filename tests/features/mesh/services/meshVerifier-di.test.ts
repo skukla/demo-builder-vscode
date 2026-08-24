@@ -20,7 +20,7 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/features/mesh/services/meshConfig', () => ({
+jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: () => '20',
 }));
 

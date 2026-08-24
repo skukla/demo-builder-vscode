@@ -29,8 +29,11 @@ import { handleGetProjects } from '@/features/projects-dashboard/handlers/dashbo
 import { createMockProject, createMockHandlerContext } from '../testUtils';
 
 // Mock mesh staleness detection
-jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
+jest.mock('@/core/state/appBuilderComponentState', () => ({
+    ...jest.requireActual('@/core/state/appBuilderComponentState'),
     hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
+}));
+jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
     determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
 }));
 
@@ -102,10 +105,8 @@ describe('handleGetProjects — org targeting', () => {
         // api-mesh:describe returned code=2 here and code=0 inside the deploy's
         // wrapper, minutes apart, against the same mesh.
         it('runs the staleness read inside withOrgContext', async () => {
-            const {
-                hasMeshDeploymentRecord,
-                determineMeshStatus,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { hasMeshDeploymentRecord } = require('@/core/state/appBuilderComponentState');
+            const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
             const project = createMockProject({
@@ -130,10 +131,8 @@ describe('handleGetProjects — org targeting', () => {
         // target every project at the first one's org — which is worse than no
         // wrapper, because it would confidently query the wrong org.
         it('targets each project at its OWN org, not the first one seen', async () => {
-            const {
-                hasMeshDeploymentRecord,
-                determineMeshStatus,
-            } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const { hasMeshDeploymentRecord } = require('@/core/state/appBuilderComponentState');
+            const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
             const projectA = createMockProject({

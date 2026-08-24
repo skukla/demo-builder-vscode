@@ -24,7 +24,7 @@ import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
 import {
     getProvidedEnvVars,
     getMeshAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentState';
+} from '@/core/state/appBuilderComponentState';
 import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import componentsConfig from '@/features/components/config/components.json';
 import {

@@ -21,7 +21,7 @@ jest.mock('@/features/eds/services/accsDiscoveryConfig', () => ({
     selectCredentialService: jest.fn(),
 }));
 
-import { probeCredentialService } from '@/features/data-installer/services/credentialServiceProbe';
+import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
 import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
 
 const mockedSelect = selectCredentialService as jest.MockedFunction<typeof selectCredentialService>;
