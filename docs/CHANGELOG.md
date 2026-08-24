@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.140] - 2026-08-24
+
+### Added
+
+- **Destructive agent operations now ask you first.** When an AI agent calls a
+  destructive Demo Builder tool (publish, delete, reset — anything invoked
+  with `confirm: true`), VS Code raises a modal consent dialog in the window
+  that owns the agent connection, showing what the agent wants to do and with
+  which arguments (secrets masked). Declining tells the agent the operation
+  did not run. This protects you even when the agent's own tool permissions
+  are allowlisted; the new `demoBuilder.ai.requireAgentConsent` setting
+  (default on) is the escape hatch for unattended use.
+- **Agent-triggered operations are visible.** Every mutating MCP tool call now
+  runs inside a progress notification — the same surface its dashboard button
+  shows — and the outcome lands in the window (status bar on success, warning
+  toast on failure). Previously a two-minute agent-triggered library refresh
+  could mutate the live site with zero VS Code surface.
+- **Third-party AI tooling is now opt-out.** A new
+  `demoBuilder.ai.enableThirdPartyTools` setting (default on) gates the
+  Playwright browser-automation MCP and the skills that drive it — turning it
+  off removes the tool, its config entries, and its dependent skills
+  atomically, and the AI Capabilities modal now states *why* an absent skill
+  is absent. Tool installation shows npm's real progress instead of a guessed
+  duration, and a pre-check warns when no automation-capable browser exists.
+- **Content patches now have a drift signal.** A patch that fails to apply on
+  three consecutive creates/resets is called out as likely obsolete in the
+  report toast and logs, instead of silently sitting in the ledger until
+  someone reads the fine print.
+
+### Changed
+
+- **Agent sign-in no longer stalls the agent.** `sign_in` for DA.live opens
+  the native prompts and returns immediately with instructions to poll auth
+  status — previously the agent's client sat blocked (often to a 60-second
+  timeout) while the prompts waited in a window nobody was watching. A
+  status-bar line now points you at the prompts, and the generated agent
+  guidance (AGENTS.md v20, refreshed automatically) tells agents to check
+  auth up front so the one human step happens at the start of a flow, not the
+  middle.
+- **Large internal restructuring, no behavior change.** The four largest
+  source files (the Adobe entity fetcher, the MCP project-tool module, the
+  Helix service, and the wizard's mesh state handling) were decomposed into
+  single-responsibility modules. Every existing test passed untouched across
+  all four cuts; this is groundwork, not a feature.
+
+### Removed
+
+- **Two stale CitiSignal content patches retired** (a heading reorder and a
+  hardcoded category id, both absorbed upstream by the content source). The
+  patch-report toast also stops promising that the drift gate would have
+  caught them — it wouldn't have (it reads code ledgers only), which is
+  exactly the gap the new consecutive-miss signal closes.
+
 ## [1.0.0-beta.139] - 2026-08-23
 
 **Update promptly if you are on beta.138** — it shipped a regression that
