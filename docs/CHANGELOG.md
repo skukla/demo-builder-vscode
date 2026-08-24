@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.141] - 2026-08-24
+
+### Changed
+
+- **Manifest write-back migration (phase 1).** Project manifests carrying
+  legacy formats are rewritten to the current format once at startup, stamped
+  with `formatVersion`; the activation sweep is idempotent and joins the
+  sequenced upkeep chain. Rollback floor: beta.127. Phase 2 (retiring the
+  old-format readers) follows once the beta group confirms this version.
+- **Structural cleanup wave.** Feature import cycles 15 → 1; product-catalog
+  config moved to `features/components`; dead barrels, orphaned files, and an
+  unreachable paste-token auth chain deleted; the four longest functions
+  decomposed in place; EDS/AI service directories regrouped into per-domain
+  folders. Full suite green and unchanged throughout.
+
+### Removed
+
+- Legacy DA.live paste-token flow (without org verification) — unreachable
+  from any UI; the org-verified flow is untouched.
+
 ## [1.0.0-beta.140] - 2026-08-24
 
 ### Added
