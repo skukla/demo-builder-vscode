@@ -212,3 +212,30 @@ describe('sweepManifestFormat', () => {
         expect(result).toEqual({ scanned: 1, migrated: 0, alreadyCurrent: 0, failed: 1 });
     });
 });
+
+describe('activation chain sequencing (source pin)', () => {
+    it('the sweep runs INSIDE the sequenced upkeep chain, after the other manifest-writers', () => {
+        // The chain is sequential because every sweep saves whole manifests; a
+        // sweep added beside it (a separate `void` call) would race the others
+        // and silently drop their fields. Pin the shape, not line numbers.
+        const realFs = jest.requireActual('fs') as typeof import('fs');
+        const realPath = jest.requireActual('path') as typeof import('path');
+        const src = realFs.readFileSync(
+            realPath.resolve(__dirname, '../../../src/extension.ts'),
+            'utf8',
+        );
+        const chain = src.slice(
+            src.indexOf('void (async () => {'),
+            src.indexOf('})().catch'),
+        );
+        const order = [
+            'refreshAiBundlesOnActivation',
+            'sweepPublishKeyRenewals',
+            'sweepCommerceSecretStorage',
+            'sweepManifestFormats',
+        ].map((name) => chain.indexOf(`await ${name}`));
+        // All four present, in this order, all awaited inside the one chain.
+        expect(order.every((i) => i >= 0)).toBe(true);
+        expect([...order].sort((a, b) => a - b)).toEqual(order);
+    });
+});

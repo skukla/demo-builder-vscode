@@ -38,7 +38,7 @@ core/
 │   └── orgContextEnv.ts, environmentSetup.ts, portChecker.ts, buildComponent.ts
 ├── state/              # State management (→ state/README.md)
 │   ├── stateManager.ts, projectStateSync.ts, projectConfigWriter.ts
-│   ├── projectDirectoryScanner.ts, projectFileLoader.ts
+│   ├── projectDirectoryScanner.ts, projectFileLoader.ts, manifestFormatSweep.ts
 │   └── recentProjectsManager.ts, sessionUIState.ts, transientStateManager.ts
 ├── ui/                 # Shared React UI for webviews
 │   ├── components/     # ui/, forms/, feedback/, navigation/, layout/, selection/
