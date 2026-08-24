@@ -7,7 +7,6 @@
  * - getAdobeStepIndices
  * - computeStateUpdatesForBackwardNav
  * - getNextButtonText
- * - hasMeshComponentSelected
  * - getCompletedStepIndices
  * - getEnabledWizardSteps
  * - getFirstEnabledStep
@@ -20,7 +19,6 @@ import {
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
     getNextButtonText,
-    hasMeshComponentSelected,
     getCompletedStepIndices,
     getEnabledWizardSteps,
     getFirstEnabledStep,
@@ -57,19 +55,39 @@ describe('wizardHelpers - navigation', () => {
 
         it('should return empty array when going to first step', () => {
             const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace'];
-            const result = filterCompletedStepsForBackwardNav(completed, 'adobe-auth', 0, wizardSteps);
+            const result = filterCompletedStepsForBackwardNav(
+                completed,
+                'adobe-auth',
+                0,
+                wizardSteps
+            );
             expect(result).toEqual([]);
         });
 
         it('should remove target step and all steps after it', () => {
-            const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace', 'build-your-project'];
-            const result = filterCompletedStepsForBackwardNav(completed, 'adobe-project', 1, wizardSteps);
+            const completed: WizardStep[] = [
+                'adobe-auth',
+                'adobe-project',
+                'adobe-workspace',
+                'build-your-project',
+            ];
+            const result = filterCompletedStepsForBackwardNav(
+                completed,
+                'adobe-project',
+                1,
+                wizardSteps
+            );
             expect(result).toEqual(['adobe-auth']);
         });
 
         it('should keep steps before target', () => {
             const completed: WizardStep[] = ['adobe-auth', 'adobe-project', 'adobe-workspace'];
-            const result = filterCompletedStepsForBackwardNav(completed, 'adobe-workspace', 2, wizardSteps);
+            const result = filterCompletedStepsForBackwardNav(
+                completed,
+                'adobe-workspace',
+                2,
+                wizardSteps
+            );
             expect(result).toEqual(['adobe-auth', 'adobe-project']);
         });
 
@@ -128,7 +146,12 @@ describe('wizardHelpers - navigation', () => {
 
         it('should not clear anything when going to the build step itself', () => {
             const state = createState();
-            const result = computeStateUpdatesForBackwardNav(state, 'build-your-project', 1, indices);
+            const result = computeStateUpdatesForBackwardNav(
+                state,
+                'build-your-project',
+                1,
+                indices
+            );
             expect(Object.keys(result)).toEqual(['currentStep']);
         });
 
@@ -180,27 +203,8 @@ describe('wizardHelpers - navigation', () => {
         });
     });
 
-    describe('hasMeshComponentSelected', () => {
-        it('should return true when eds-commerce-mesh is in dependencies', () => {
-            expect(hasMeshComponentSelected({ frontend: 'citisignal', dependencies: ['eds-commerce-mesh'] })).toBe(true);
-        });
-
-        it('should return true when headless-commerce-mesh is in dependencies', () => {
-            expect(hasMeshComponentSelected({ frontend: 'citisignal', dependencies: ['headless-commerce-mesh'] })).toBe(true);
-        });
-
-        it('should return false when no mesh component is in dependencies', () => {
-            expect(hasMeshComponentSelected({ frontend: 'citisignal', dependencies: ['other-dep'] })).toBe(false);
-        });
-
-        it('should return false for undefined components', () => {
-            expect(hasMeshComponentSelected(undefined)).toBe(false);
-        });
-
-        it('should return false for empty dependencies', () => {
-            expect(hasMeshComponentSelected({ frontend: 'citisignal', dependencies: [] })).toBe(false);
-        });
-    });
+    // hasMeshComponentSelected was deleted with D3 (2026-08-23): it had zero
+    // production callers — this suite was its only reference.
 
     describe('getCompletedStepIndices', () => {
         const wizardSteps: WizardStepConfig[] = [
@@ -255,7 +259,7 @@ describe('wizardHelpers - navigation', () => {
                 { id: 'step3', name: 'Step 3', enabled: true },
             ];
             const result = getEnabledWizardSteps(steps);
-            expect(result.map(s => s.id)).toEqual(['step1', 'step2', 'step3']);
+            expect(result.map((s) => s.id)).toEqual(['step1', 'step2', 'step3']);
         });
     });
 

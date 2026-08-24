@@ -23,7 +23,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 /**
  * The selected App Builder components that resolve to a DEPLOYABLE integration app
  * (`kind: 'integration'`) — catalog entries or custom-URL entries. Mesh-kind
- * selections are excluded (they dual-flow through the mesh phase). This is the set
+ * selections are excluded (the mesh phase installs them). This is the set
  * that will `aio app deploy`, so it also gates the Runtime pre-flight.
  */
 function deployableAppIntegrationEntries(
@@ -85,7 +85,7 @@ export async function ensureWorkspaceRuntimeReady(
 
 /**
  * PHASE 3b — deploy each selected App Builder "integration" via the SHARED Model B
- * runner ({@link addAppBuilderComponent}). Mesh-kind selections dual-flow through
+ * runner ({@link addAppBuilderComponent}). Mesh-kind selections install through
  * {@link executeMeshPhase} and are excluded here.
  *
  * Resolves each id to a catalog entry, else to a custom-URL entry from

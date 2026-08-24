@@ -10,7 +10,7 @@
  *   - `appBuilderComponentSources` is NOT written (§E, shell instancing Step 8):
  *     edit mode derives sources from the keyed `appBuilderComponents` map
  *   - `componentSelections.appBuilder` records the selected integration ids
- *     (excluding mesh ids that dual-flow through dependencies)
+ *     (excluding mesh ids, which ride dependencies)
  *
  * Written BEFORE the builder exists (strict RED).
  */
@@ -44,14 +44,22 @@ describe('buildInitialProject', () => {
         expect(project.created).toBe(created);
     });
 
-    describe('additionalConsoleApis (consumed by Phase 3b subscribe union)', () => {
-        it('carries additionalConsoleApis from the config onto the Project', () => {
+    describe('additionalConsoleApis (retired by attribution step 07)', () => {
+        it('does NOT persist the flat field — componentApiPicks is the one written form', () => {
+            // Phase 3b's subscribe union reads resolveDesiredApis(project),
+            // which derives from the keyed map; the flat wire field is ignored.
             const project = buildInitialProject(
-                config({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] }),
+                config({
+                    additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+                    componentApiPicks: { 'erp-sync': ['AssetComputeSDK', 'CCAPI'] },
+                }),
                 PROJECT_PATH
             );
 
-            expect(project.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+            expect(project.additionalConsoleApis).toBeUndefined();
+            expect(project.componentApiPicks).toEqual({
+                'erp-sync': ['AssetComputeSDK', 'CCAPI'],
+            });
         });
 
         it('leaves additionalConsoleApis undefined when absent from the config', () => {
@@ -102,8 +110,8 @@ describe('buildInitialProject', () => {
             ]);
         });
 
-        it('excludes mesh ids that dual-flow through components.dependencies (identity mapping)', () => {
-            // headless-commerce-mesh maps to itself in the mesh dual-flow map —
+        it('excludes mesh ids that ride components.dependencies (identity mapping)', () => {
+            // headless-commerce-mesh is its own registry id —
             // the id appears verbatim in dependencies. Real catalog id.
             const project = buildInitialProject(
                 config({
@@ -114,7 +122,7 @@ describe('buildInitialProject', () => {
             );
 
             expect(project.componentSelections?.appBuilder).toEqual(['erp-sync']);
-            // The dual-flowed mesh keeps riding dependencies untouched
+            // The mesh keeps riding dependencies untouched
             expect(project.componentSelections?.dependencies).toEqual(['headless-commerce-mesh']);
         });
 

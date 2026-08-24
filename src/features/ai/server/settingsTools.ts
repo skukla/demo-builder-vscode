@@ -59,6 +59,11 @@ export const SETTING_KEYS = [
     'demoBuilder.blockLibraries.custom',
     'demoBuilder.blockLibraries.syncBehavior',
     'demoBuilder.appBuilderComponents.custom',
+    'demoBuilder.ai.enableThirdPartyTools',
+    // Read-visible so an agent can tell whether destructive calls will raise
+    // the native consent dialog. Writing goes through set_setting's hands-back
+    // handoff like every key here — an agent cannot flip its own gate off.
+    'demoBuilder.ai.requireAgentConsent',
     'demoBuilder.daLive.aemAuthorUrl',
     'demoBuilder.daLive.IMSOrgId',
     'demoBuilder.daLive.authoringExperience',

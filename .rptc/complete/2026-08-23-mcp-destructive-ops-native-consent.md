@@ -1,5 +1,19 @@
 # Native consent for destructive MCP operations
 
+> **✅ ALL THREE LEGS SHIPPED — leg 3 (visibility) 2026-08-23, legs 1+2
+> (traversability + consent) 2026-08-24 on `feature/mcp-agent-consent`.**
+> Design record: `.rptc/complete/mcp-agent-consent/overview.md`. The settled
+> trade-offs: the consent dialog fires on any call carrying `confirm: true`
+> (the surface's own destructive marker — not the name-shape list, which
+> classifies visibility; not a hand list), one dialog per confirm-carrying
+> call so pipelines confirm once; `demoBuilder.ai.requireAgentConsent`
+> (default on, read live) is the headless escape hatch; decline answers a
+> prose refusal and the handler never runs. `sign_in(dalive)` now returns
+> immediately with poll-`get_auth_status` instructions (status-bar attention
+> raised; outcome lands when the flow finishes). AGENTS.md v20 front-loads
+> `get_auth_status` and explains the dialog. Docs:
+> `docs/systems/mcp-server.md` §11 "three-leg agent-operation surface".
+
 **Filed:** 2026-08-23
 **Origin:** Live warm-path test on the bodea demo — the user watched the agent
 publish path and said "This is concerning for an AI-only publish path."
@@ -102,3 +116,24 @@ the notification too, since the agent's own report may never reach the user
 Together the three legs are one design: **sign-in needs a human, destructive
 ops need consent, long operations need to be seen.** Design them as one
 surface when this item is picked up.
+
+**✅ Visibility leg SHIPPED 2026-08-23** (same day): `longRunningNotifier`
+option on `InExtensionMcpServer` — every tool whose name is not read-shaped
+(`isReadOnlyToolName`, allowlist failing closed) runs inside the extension's
+injected `withProgress` notification, with the outcome landed in the window
+(status bar on success, warning toast on failure). Implementation:
+`agentOperationNotifier.ts`; pins in both suites. The consent dialog (leg 2)
+slots into the SAME wrapper — before `run()`, same classification.
+
+Original slice note, for the record: **the visibility leg is independently
+shippable, and is the first slice**
+(explicitly requested 2026-08-23 — the wizard-side sub-messages shipped in
+beta.139, but an MCP-triggered republish/sync/refresh/reset still runs with
+zero VS Code surface). Shape: a wrapper at tool-REGISTRATION level in the
+in-extension server that raises `vscode.window.withProgress` for non-read-only
+tools (same name classification the consent gate will use), streaming the
+handler's onProgress messages into the notification and landing the OUTCOME
+there too — the agent's own report may never reach the user (disconnected
+client, closed chat; both happened live on 2026-08-23). ~1h + pins; give it
+the same live-verification treatment the pipeline rewrite got. The consent
+dialog can then land inside the same wrapper later.

@@ -14,7 +14,7 @@ interface ReviewState {
     adobeOrg?: { id?: string };
     adobeProject?: { id?: string };
     adobeWorkspace?: { id?: string };
-    selectedOptionalDependencies?: string[];
+    selectedAppBuilderComponents?: string[];
 }
 
 /**
@@ -27,9 +27,9 @@ interface ReviewState {
 export function hasRequiredReviewData(state: ReviewState): boolean {
     if (!state.projectName) return false;
 
-    // Adobe I/O selections required when mesh is included
-    const deps = [...(state.selectedOptionalDependencies || [])];
-    if (hasMeshInDependencies(deps)) {
+    // Adobe I/O selections required when mesh is included. The mesh lives in
+    // selectedAppBuilderComponents (D3); non-mesh integrations don't trip this.
+    if (hasMeshInDependencies(state.selectedAppBuilderComponents ?? [])) {
         if (!state.adobeOrg?.id) return false;
         if (!state.adobeProject?.id) return false;
         if (!state.adobeWorkspace?.id) return false;

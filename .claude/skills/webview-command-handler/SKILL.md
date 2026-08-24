@@ -114,3 +114,32 @@ Round-trip the message — do not stop at compilation:
 3. Check the "Demo Builder: Debug Logs" output channel for the dispatch entry and any handler error — absence of a dispatch log for your type means registration (step 4/5) failed, even if nothing errored.
 
 _If this skill was wrong or incomplete, fix it before closing the task._
+
+## Typing the channel you touch (standing rule — was backlog item 2026-08-21)
+
+Every extension↔webview channel except `init` and the push family still crosses
+untyped: sender builds a literal, receiver casts `data as <whatever it hopes
+arrived>`, nothing compares the two. The decided play is **one channel per
+slice, typed when you next touch it** — never a big-bang pass (the init
+refactor surfaced seven divergences beyond the ten predicted; thirty channels
+speculatively is weeks with no attached bug).
+
+When this skill has you adding OR modifying a channel, type it while you are
+there: one interface per channel in `@/types/webviewPayloads` (push) or
+`@/types/webviewRequests` (request), producer return-typed against it,
+consumer derived from it. Worked examples: commits `58763ed2`…`84397e2f`
+(init) and `95bdf0b0` (`StatusPayload`).
+
+Slice rules, each earned in the init pass:
+- Shared types must not import `vscode` (they compile into browser bundles).
+- The payload type states the WIRE truth (`null` stays `null`; required means
+  the sender always includes it); the receiver converts at its edge.
+- Per-field disagreements: the DATA decides (config JSON, a logged payload,
+  the serializer) — cite it in the commit.
+- Expect the declaration to surface bugs; fix each in its own commit,
+  regression test first, before the typing commit.
+- A field in an interface but absent from the sender is a LEAD — `git log -S`
+  for a deleted producer before resurrecting or deleting.
+
+Remaining cast-cluster leads live in the archived item:
+`.rptc/complete/2026-08-21-webview-push-channels-are-untyped.md`.

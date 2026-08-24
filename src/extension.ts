@@ -17,6 +17,10 @@ import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
+import {
+    createAgentConsentGate,
+    createAgentOperationNotifier,
+} from '@/features/ai/server/agentOperationNotifier';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
@@ -55,8 +59,10 @@ import { registerEwSettingChangeListener } from '@/features/eds/services/ewSetti
 import { HelixService } from '@/features/eds/services/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
+import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
+import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
@@ -116,6 +122,15 @@ export async function activate(context: vscode.ExtensionContext) {
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+
+    // Third-party tooling opt-out: the ONE code point for the gate lives in
+    // aiToolingGate (pure); the setting is injected here so every seam —
+    // creation, regenerate, activation sweep — reads the same answer.
+    setThirdPartyToolsResolver(() =>
+        vscode.workspace
+            .getConfiguration('demoBuilder')
+            .get<boolean>('ai.enableThirdPartyTools', true),
+    );
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"
@@ -380,6 +395,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
         context.subscriptions.push(
             registerEwSettingChangeListener({ context, stateManager, logger }),
+            // Step 7 of the third-party-tooling item: re-enabling must install.
+            registerThirdPartyToolingSettingListener(context.extensionPath, logger),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)
@@ -510,6 +527,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
+            // Agent-triggered mutations get the same visible progress their
+            // dashboard buttons show, plus a landed outcome — the agent's own
+            // report may never reach the user. First slice of the
+            // consent/visibility design; see agentOperationNotifier.
+            longRunningNotifier: createAgentOperationNotifier(logger),
+            consentGate: createAgentConsentGate(logger),
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,

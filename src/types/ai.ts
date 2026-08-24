@@ -177,6 +177,18 @@ export interface SessionMcpEntry {
  */
 export interface AiInventory {
     skills: SkillInventoryEntry[];
+    /**
+     * Tool-driving skills this project QUALIFIES for but does not have, with
+     * why ('setting-disabled' = the third-party opt-out; 'tool-missing' =
+     * Regenerate installs it). Rendered by the AI Capabilities modal so an
+     * absence has a stated reason. Computed by `gatedSkillReasons`
+     * (aiToolingGate); absent on inventory paths that lack the project.
+     */
+    gatedSkills?: Array<{
+        file: string;
+        toolId: string;
+        reason: 'setting-disabled' | 'tool-missing';
+    }>;
     /** Set when `skillInspector` rejected; the corresponding `skills` list is empty. */
     skillsError?: string;
     mcps: McpInventoryEntry[];

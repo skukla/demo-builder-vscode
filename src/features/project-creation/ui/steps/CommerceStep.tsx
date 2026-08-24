@@ -12,7 +12,7 @@
  * Backend selection drives the architecture. Choosing a backend resolves it against
  * the brand's allowed stacks ({@link resolveStackForBackend}). A UNIQUE mapping
  * commits the stack via {@link useProjectBuilder.onStackSelect} (preserving the mesh
- * dual-flow reset + eds/addon/block-library seed — never bypassed). An AMBIGUOUS one
+ * reconciliation + eds/addon/block-library seed — never bypassed). An AMBIGUOUS one
  * (>1 frontend, e.g. citisignal + PaaS) persists `selectedBackend` only and shows
  * "Frontend pending" in the summary; the single ConnectStoreStepContent is still
  * driven from a provisional (eds-preferred) stack id so Connection / Business /
@@ -167,8 +167,8 @@ export function CommerceStep({
         (backend: string) => {
             if (!pkg) return;
             const resolution = resolveStackForBackend(stacks, pkg, backend);
-            // Unique mapping → commit the stack (preserves mesh dual-flow reset, which
-            // includes clearing the stale config-validity verdicts).
+            // Unique mapping → commit the stack (preserves the mesh reconciliation,
+            // which includes clearing the stale config-validity verdicts).
             // Ambiguous → defer the stack; config runs off the provisional id. Since
             // onStackSelect (and its stack-change reset) never fires here, clear the
             // stale committed stack + config verdicts ourselves so a prior unique

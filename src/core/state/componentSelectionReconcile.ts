@@ -40,8 +40,8 @@ function ensureListed(list: string[], id: string): boolean {
 /**
  * Fold everything actually installed into `project.componentSelections`, in place.
  *
- * - a component INSTANCE that is a mesh → `dependencies` (where the mesh's
- *   selection has always lived; it dual-flows through the stack's optional deps)
+ * - a component INSTANCE that is a mesh → `dependencies` (where the persisted
+ *   mesh selection has always lived — ADR-011)
  * - a keyed `kind: 'integration'` entry → `appBuilder`
  *
  * @param project - mutated in place, like the other load-time migrations

@@ -209,6 +209,30 @@ describe('wizardHelpers - state & config', () => {
     });
 
     describe('buildProjectConfig', () => {
+        it('derives the mesh dependency from selectedAppBuilderComponents (D3)', () => {
+            const state: WizardState = {
+                ...REVIEW_BASE,
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['eds-accs-mesh', 'erp-sync'],
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.components?.dependencies).toEqual(['eds-accs-mesh']);
+        });
+
+        it('emits no mesh dependency when none is selected', () => {
+            const state: WizardState = {
+                ...REVIEW_BASE,
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['erp-sync'],
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.components?.dependencies).toEqual([]);
+        });
+
         it('should include selectedAddons in the config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
@@ -474,7 +498,9 @@ describe('wizardHelpers - state & config', () => {
             selectedConsoleApis,
         });
 
-        it('should union free API picks across integration ids', () => {
+        it('does NOT emit the flat field — step 07 retired the derived union', () => {
+            // The keyed record below is the one serialized form; Phase 3b and
+            // every reader derive the union via resolveDesiredApis.
             const config = buildProjectConfig(
                 baseState({
                     'erp-sync': ['AssetComputeSDK'],
@@ -482,66 +508,12 @@ describe('wizardHelpers - state & config', () => {
                 })
             );
 
-            expect(config.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
-        });
-
-        it('should dedupe codes picked under multiple integrations', () => {
-            const config = buildProjectConfig(
-                baseState({
-                    'erp-sync': ['CCAPI', 'AssetComputeSDK'],
-                    'owner-custom-app': ['CCAPI'],
-                })
-            );
-
-            expect(config.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
-        });
-
-        it('should sort the union alphabetically', () => {
-            const config = buildProjectConfig(
-                baseState({
-                    'erp-sync': ['ZTargetSDK', 'AssetComputeSDK'],
-                    'owner-custom-app': ['McDataServicesSdk'],
-                })
-            );
-
-            expect(config.additionalConsoleApis).toEqual([
-                'AssetComputeSDK',
-                'McDataServicesSdk',
-                'ZTargetSDK',
-            ]);
-        });
-
-        it('should include the reserved __existing__ key values in the union', () => {
-            const config = buildProjectConfig(
-                baseState({
-                    __existing__: ['CCAPI', 'AdobeIOEventsSDK'],
-                    'erp-sync': ['AssetComputeSDK', 'CCAPI'],
-                })
-            );
-
-            expect(config.additionalConsoleApis).toEqual([
-                'AdobeIOEventsSDK',
-                'AssetComputeSDK',
-                'CCAPI',
-            ]);
-        });
-
-        it('should omit the field when selectedConsoleApis is absent', () => {
-            const config = buildProjectConfig(baseState(undefined));
-
             expect(config.additionalConsoleApis).toBeUndefined();
         });
 
-        it('should omit the field when selectedConsoleApis is an empty object', () => {
-            const config = buildProjectConfig(baseState({}));
-
-            expect(config.additionalConsoleApis).toBeUndefined();
-        });
-
-        // ---- attribution carried through (step 02) ----
-        // The union above is now DERIVED for legacy readers; the keyed record is
-        // what actually persists. Flattening at this boundary is what threw the
-        // attribution away in the first place.
+        // ---- attribution carried through (step 02; flat union retired step 07) ----
+        // The keyed record is the ONE serialized form. Flattening at this
+        // boundary is what threw the attribution away in the first place.
 
         it('carries the keyed picks through, not just their union', () => {
             const config = buildProjectConfig(
@@ -589,15 +561,6 @@ describe('wizardHelpers - state & config', () => {
 
         // The legacy union must stay EXACTLY the union of the keyed record, or a
         // project written now and read by an older build would see a different set.
-        it('the legacy union equals the union of the keyed record', () => {
-            const config = buildProjectConfig(
-                baseState({ __existing__: ['CCAPI'], 'erp-sync': ['AssetComputeSDK', 'CCAPI'] })
-            );
-
-            const fromKeyed = [...new Set(Object.values(config.componentApiPicks ?? {}).flat())];
-            expect(fromKeyed.sort()).toEqual([...(config.additionalConsoleApis ?? [])].sort());
-        });
-
         it('should omit the field when every integration has an empty picks array', () => {
             const config = buildProjectConfig(
                 baseState({ 'erp-sync': [], 'owner-custom-app': [] })
@@ -614,7 +577,10 @@ describe('wizardHelpers - state & config', () => {
                 })
             );
 
-            expect(config.additionalConsoleApis).toEqual(['AnalyticsSDK', 'CampaignSDK']);
+            expect(config.componentApiPicks).toEqual({
+                'erp-sync': ['AnalyticsSDK'],
+                __existing__: ['CampaignSDK'],
+            });
         });
 
         it('should omit the field when all codes are invalid', () => {

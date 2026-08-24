@@ -6,8 +6,10 @@
       "package": "@adobe-commerce/commerce-extensibility-tools",
       "version": "^3.4.0",
       "command": "node",
-      "args": ["node_modules/@adobe-commerce/commerce-extensibility-tools/index.js"],
-      "description": "Adobe App Builder MCP — aio-app-deploy, commerce-event-subscribe, search-commerce-docs, aio-app-dev, aio-app-use, aio-configure-global, aio-dev-invoke, aio-login, aio-where, onboard, upload-chat-history",
+      "args": [
+        "node_modules/@adobe-commerce/commerce-extensibility-tools/index.js"
+      ],
+      "description": "Adobe App Builder MCP \u2014 aio-app-deploy, commerce-event-subscribe, search-commerce-docs, aio-app-dev, aio-app-use, aio-configure-global, aio-dev-invoke, aio-login, aio-where, onboard, upload-chat-history",
       "requires": "app-builder-tooling"
     },
     {
@@ -15,17 +17,22 @@
       "package": "@playwright/mcp",
       "version": "~0.0.79",
       "command": "node",
-      "args": ["node_modules/@playwright/mcp/cli.js"],
-      "description": "Playwright browser-automation MCP — drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). Uses the machine's installed Google Chrome by default (verified 2026-08-22 on 0.0.75 and 0.0.79: works with the bundled-browser store empty; UA matches installed Chrome) — no download when Chrome is present. Chrome-less machines need a one-time ~150 MB Chromium install via the server's install-browser subcommand. Tilde range, not caret: for 0.0.x versions a caret is an exact pin (^0.0.75 froze installs at 0.0.75), while ~0.0.x tracks patch releases.",
-      "requires": "eds-storefront"
+      "args": [
+        "node_modules/@playwright/mcp/cli.js"
+      ],
+      "description": "Playwright browser-automation MCP \u2014 drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). Uses the machine's installed Google Chrome by default (verified 2026-08-22 on 0.0.75 and 0.0.79: works with the bundled-browser store empty; UA matches installed Chrome) \u2014 no download when Chrome is present. Chrome-less machines need a one-time ~150 MB Chromium install via the server's install-browser subcommand. Tilde range, not caret: for 0.0.x versions a caret is an exact pin (^0.0.75 froze installs at 0.0.75), while ~0.0.x tracks patch releases.",
+      "requires": "eds-storefront",
+      "thirdParty": true
     },
     {
       "id": "dropins",
       "package": "@dropins/mcp",
       "version": "^1.1.2",
       "command": "node",
-      "args": ["node_modules/@dropins/mcp/dist/index.js"],
-      "description": "Adobe Commerce dropins MCP — 21 tools for the boilerplate storefront's drop-in components: registry discovery (list_slots, list_events, list_containers, list_api_functions, list_design_tokens, list_graphql_queries), scaffolding (scaffold_block, scaffold_slot, scaffold_extension), health (analyze_project, check_config, check_block_health, get_upgrade_diff), and docs search. Project-touching tools take a required projectDir argument — pass the EDS storefront component path, not the project root.",
+      "args": [
+        "node_modules/@dropins/mcp/dist/index.js"
+      ],
+      "description": "Adobe Commerce dropins MCP \u2014 21 tools for the boilerplate storefront's drop-in components: registry discovery (list_slots, list_events, list_containers, list_api_functions, list_design_tokens, list_graphql_queries), scaffolding (scaffold_block, scaffold_slot, scaffold_extension), health (analyze_project, check_config, check_block_health, get_upgrade_diff), and docs search. Project-touching tools take a required projectDir argument \u2014 pass the EDS storefront component path, not the project root.",
       "requires": "eds-storefront"
     }
   ]

@@ -37,7 +37,11 @@ import { buildReservedIds } from '@/features/project-creation/ui/components/inte
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { WizardState } from '@/types/webview';
-import type { AddAppBuilderComponentRequestPayload, DestinationRef, SetProjectDestinationRequestPayload } from '@/types/webviewRequests';
+import type {
+    AddAppBuilderComponentRequestPayload,
+    DestinationRef,
+    SetProjectDestinationRequestPayload,
+} from '@/types/webviewRequests';
 
 export interface AddIntegrationFlowAdapterProps {
     isOpen: boolean;
@@ -131,7 +135,10 @@ export function AddIntegrationFlowAdapter({
             // destination did nothing at all (found live 2026-08-07).
             const { project, workspace } = destinationRef.current;
             if (mode === 'destination' && updates.adobeWorkspace && project && workspace) {
-                webviewClient.postMessage('setProjectDestination', { project, workspace } satisfies SetProjectDestinationRequestPayload);
+                webviewClient.postMessage('setProjectDestination', {
+                    project,
+                    workspace,
+                } satisfies SetProjectDestinationRequestPayload);
             }
 
             setOverrides((current) => ({ ...current, ...updates }));
@@ -175,18 +182,10 @@ export function AddIntegrationFlowAdapter({
                 ? { id: adobeWorkspaceId, title: adobeWorkspaceTitle }
                 : undefined,
             // ALL keyed ids, mesh included: this drives the custom-source duplicate
-            // guard, the "mesh already added" rule, AND `hasIntegrations` (something
-            // references the destination), which gates the collapse.
+            // guard, the "mesh already added" rule (`isMeshSelected` reads these —
+            // mesh catalog ids ARE the keyed component ids), AND `hasIntegrations`
+            // (something references the destination), which gates the collapse.
             selectedAppBuilderComponents: allComponentIds,
-            // The SAME ids again, under the legacy key — this is what makes the
-            // "mesh already added" rule fire, and without it the rule never did.
-            // The two sides name a mesh differently: a project keys it by its
-            // COMPONENT id (`eds-accs-mesh`), while the rule tests the CATALOG id
-            // (`commerce-eds-mesh`). `isMeshSelected` bridges them by mapping the
-            // catalog id to its component ids and looking THEM up here — so with
-            // this key empty the lookup always missed, meshSelected stayed false,
-            // and a project with a mesh kept being offered another one.
-            selectedOptionalDependencies: allComponentIds,
             // Everything the modal session has written — caches the pickers read
             // back, API picks, a changed destination — layered on top.
             ...overrides,
@@ -209,7 +208,6 @@ export function AddIntegrationFlowAdapter({
                 sourceIds: integrationIds,
                 catalogIds: catalog.map((entry) => entry.id),
                 selectedAddons: [],
-                selectedOptionalDependencies: [],
             }),
         [integrationIds, catalog],
     );

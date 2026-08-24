@@ -13,7 +13,7 @@ import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';
-import type { EditProjectConfig, ImportedSettings , WizardStepDefinition } from '@/types/wizard';
+import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 const log = webviewLogger('useWizardState');
 
@@ -195,15 +195,15 @@ function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
 /**
  * Seed the wizard's App Builder integration state from a project's extracted
  * settings so integration rows survive an edit rebuild:
- * - `selections.appBuilder` → `selectedAppBuilderComponents` (the row ids)
- * - `selections.dependencies` (mesh ids ONLY) → `selectedOptionalDependencies`
- *   — the mesh dual-flow: the executor deliberately excludes mesh-kind from
- *   `appBuilder` and persists the mesh as a legacy dep id, so `isMeshSelected`
- *   (which reads selectedAppBuilderComponents OR selectedOptionalDependencies)
- *   needs this seed or the mesh row vanishes in edit mode AND an edit Finish
- *   (which rebuilds dependencies from stack deps + selectedOptionalDependencies)
- *   silently drops the mesh. Non-mesh base deps are filtered — seeding them
- *   would falsely trip anyDeployableSelected and force the destination gate.
+ * - `selections.appBuilder` ∪ mesh ids from `selections.dependencies` →
+ *   `selectedAppBuilderComponents` (the row ids). The executor deliberately
+ *   excludes mesh-kind from `appBuilder` and persists the mesh as a dep id
+ *   (ADR-011), while the wizard's single mesh authority is
+ *   `selectedAppBuilderComponents` (D3) — without the union the mesh row
+ *   vanishes in edit mode AND an edit Finish (which derives the wire's
+ *   dependencies from the mesh ids in selectedAppBuilderComponents) silently
+ *   drops the mesh. Non-mesh base deps are filtered — seeding them would
+ *   falsely trip anyDeployableSelected and force the destination gate.
  * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
  * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
  *   the attributed form, and the only one that survives step 07. Seeding from the
@@ -218,9 +218,11 @@ function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<
     const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
     const existingApis = editSettings.additionalConsoleApis;
     const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
+    const appBuilderWithMesh = [
+        ...new Set([...(editSettings.selections?.appBuilder ?? []), ...(meshDeps ?? [])]),
+    ];
     return {
-        selectedAppBuilderComponents: editSettings.selections?.appBuilder,
-        selectedOptionalDependencies: meshDeps?.length ? meshDeps : undefined,
+        selectedAppBuilderComponents: appBuilderWithMesh.length ? appBuilderWithMesh : undefined,
         appBuilderComponentSources: editSettings.appBuilderComponentSources,
         selectedConsoleApis: hasKeyedPicks
             ? keyedPicks

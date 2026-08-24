@@ -67,6 +67,12 @@ export interface AiCapabilitiesModalProps {
      * "Edited — kept your version" note. Nothing renders when empty.
      */
     editedFiles?: string[];
+    /** Tool-driving skills the project qualifies for but lacks, with why. */
+    gatedSkills?: Array<{
+        file: string;
+        toolId: string;
+        reason: 'setting-disabled' | 'tool-missing';
+    }>;
     /**
      * Error from the last regenerate (forwarded from the hook's
      * `aiRegenError`) — the handler's failure message or a rejected request.
@@ -90,6 +96,7 @@ export function AiCapabilitiesModal({
     isBusy = false,
     progress,
     editedFiles,
+    gatedSkills,
     errorMessage,
 }: AiCapabilitiesModalProps): React.ReactElement {
     const editedNonSkillFiles = (editedFiles ?? []).filter((f) => !f.startsWith(SKILLS_PREFIX));
@@ -210,6 +217,7 @@ export function AiCapabilitiesModal({
                                 hasError={hasSkillsError}
                                 isLoading={isLoading}
                                 editedFiles={editedFiles}
+                                gatedSkills={gatedSkills}
                             />
                         </div>
                     </div>

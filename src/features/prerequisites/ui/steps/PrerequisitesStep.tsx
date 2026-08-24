@@ -1,11 +1,5 @@
-import {
-    View,
-    Flex,
-    Text,
-    Button,
-    ProgressBar,
-} from '@adobe/react-spectrum';
-import React, { useRef, useCallback } from 'react';
+import { View, Flex, Text, Button, ProgressBar } from '@adobe/react-spectrum';
+import React, { useRef, useCallback, useMemo } from 'react';
 import {
     usePrerequisiteState,
     usePrerequisiteAutoScroll,
@@ -16,6 +10,7 @@ import {
     getProgressValue,
     renderPrerequisiteMessage,
 } from './hooks';
+import { isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
 import { WizardState } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
@@ -40,6 +35,14 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
         }
     }, []);
 
+    // The check payload's optional-dep picks are the selected mesh ids — the
+    // mesh rides selectedAppBuilderComponents (D3). Memoized so the hook's
+    // effect deps get a stable array.
+    const selectedMeshDeps = useMemo(
+        () => (state.selectedAppBuilderComponents ?? []).filter(isMeshComponentId),
+        [state.selectedAppBuilderComponents],
+    );
+
     // State management hook
     const {
         checks,
@@ -48,13 +51,14 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
         checkInProgressRef,
         checkPrerequisites,
         installPrerequisite,
-    } = usePrerequisiteState(scrollToTop, state.selectedStack, state.selectedOptionalDependencies);
+    } = usePrerequisiteState(scrollToTop, state.selectedStack, selectedMeshDeps);
 
     // Auto-scroll hook with actual checks (pass the shared ref)
-    const {
-        itemRefs,
-        resetAutoScroll,
-    } = usePrerequisiteAutoScroll(checks, setCanProceed, scrollContainerRef);
+    const { itemRefs, resetAutoScroll } = usePrerequisiteAutoScroll(
+        checks,
+        setCanProceed,
+        scrollContainerRef,
+    );
 
     // Navigation effects (recheck on step change)
     usePrerequisiteNavigation(
@@ -72,20 +76,22 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
 
-            <div
-                ref={scrollContainerRef}
-                className="prerequisites-container">
+            <div ref={scrollContainerRef} className="prerequisites-container">
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
-                            ref={el => { itemRefs.current[index] = el; }}
-                            className={cn('prerequisite-item', 'prerequisite-item-grid', index !== checks.length - 1 && 'prerequisite-item-spacing')}
+                            ref={(el) => {
+                                itemRefs.current[index] = el;
+                            }}
+                            className={cn(
+                                'prerequisite-item',
+                                'prerequisite-item-grid',
+                                index !== checks.length - 1 && 'prerequisite-item-spacing',
+                            )}
                         >
                             {/* Icon - spans both rows, centered vertically in the entire item */}
-                            <div className="prerequisite-icon">
-                                {getStatusIcon(check.status)}
-                            </div>
+                            <div className="prerequisite-icon">{getStatusIcon(check.status)}</div>
 
                             {/* Header content - row 1 */}
                             <div className="prerequisite-header">
@@ -93,8 +99,15 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                     <div>
                                         <div className="prerequisite-title">
                                             {check.name}
-                                            {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
-                                            {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
+                                            {check.isOptional && (
+                                                <span className="text-muted-label">
+                                                    {' '}
+                                                    (Optional)
+                                                </span>
+                                            )}
+                                            {check.status === 'pending' && (
+                                                <span className="text-muted-label"> (Waiting)</span>
+                                            )}
                                         </div>
                                         <div className="prerequisite-description">
                                             {check.description}
@@ -119,11 +132,11 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                 {check.status === 'checking' && check.unifiedProgress && (
                                     <View marginTop="size-100" UNSAFE_className="animate-fade-in">
                                         <ProgressBar
-                                            label={
-                                                `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
-                                                    check.unifiedProgress.command?.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
-                                                }`
-                                            }
+                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
+                                                check.unifiedProgress.command?.detail
+                                                    ? ` - ${check.unifiedProgress.command.detail}`
+                                                    : ''
+                                            }`}
                                             value={getProgressValue(check.unifiedProgress)}
                                             maxValue={100}
                                             size="S"
@@ -131,46 +144,87 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                                         />
                                     </View>
                                 )}
-                                {check.plugins && check.plugins.length > 0 &&
-                                    shouldShowPluginDetails(check.status, check.nodeVersionStatus) && (
-                                    <View marginTop={check.nodeVersionStatus ? 'size-50' : 'size-100'} UNSAFE_className="animate-fade-in">
-                                        {(() => {
-                                            if (check.nodeVersionStatus && check.plugins.length === 1) {
-                                                const plugin = check.plugins[0];
-                                                const versions = check.nodeVersionStatus
-                                                    .filter(v => v.installed)
-                                                    .map(v => v.version)
-                                                    .join(', ');
-                                                return (
-                                                    <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                        <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
-                                                            {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
-                                                            {versions ? ` (${versions})` : ''}
-                                                        </Text>
-                                                        {renderPluginStatusIcon(check.status, plugin.installed)}
-                                                    </Flex>
-                                                );
+                                {check.plugins &&
+                                    check.plugins.length > 0 &&
+                                    shouldShowPluginDetails(
+                                        check.status,
+                                        check.nodeVersionStatus,
+                                    ) && (
+                                        <View
+                                            marginTop={
+                                                check.nodeVersionStatus ? 'size-50' : 'size-100'
                                             }
-                                            return (
-                                                <>
-                                                    {check.plugins.map(plugin => (
-                                                        <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                            <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
-                                                                {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
+                                            UNSAFE_className="animate-fade-in"
+                                        >
+                                            {(() => {
+                                                if (
+                                                    check.nodeVersionStatus &&
+                                                    check.plugins.length === 1
+                                                ) {
+                                                    const plugin = check.plugins[0];
+                                                    const versions = check.nodeVersionStatus
+                                                        .filter((v) => v.installed)
+                                                        .map((v) => v.version)
+                                                        .join(', ');
+                                                    return (
+                                                        <Flex
+                                                            key={plugin.id}
+                                                            alignItems="center"
+                                                            marginBottom="size-50"
+                                                        >
+                                                            <Text
+                                                                UNSAFE_className={cn(
+                                                                    check.status === 'success'
+                                                                        ? 'text-sm'
+                                                                        : 'prerequisite-plugin-item',
+                                                                )}
+                                                            >
+                                                                {plugin.name
+                                                                    .replace(/\s*✓\s*$/, '')
+                                                                    .replace(/\s*✗\s*$/, '')}
+                                                                {versions ? ` (${versions})` : ''}
                                                             </Text>
-                                                            {renderPluginStatusIcon(check.status, plugin.installed)}
+                                                            {renderPluginStatusIcon(
+                                                                check.status,
+                                                                plugin.installed,
+                                                            )}
                                                         </Flex>
-                                                    ))}
-                                                </>
-                                            );
-                                        })()}
-                                    </View>
-                                )}
+                                                    );
+                                                }
+                                                return (
+                                                    <>
+                                                        {check.plugins.map((plugin) => (
+                                                            <Flex
+                                                                key={plugin.id}
+                                                                alignItems="center"
+                                                                marginBottom="size-50"
+                                                            >
+                                                                <Text
+                                                                    UNSAFE_className={cn(
+                                                                        check.status === 'success'
+                                                                            ? 'text-sm'
+                                                                            : 'prerequisite-plugin-item',
+                                                                    )}
+                                                                >
+                                                                    {plugin.name
+                                                                        .replace(/\s*✓\s*$/, '')
+                                                                        .replace(/\s*✗\s*$/, '')}
+                                                                </Text>
+                                                                {renderPluginStatusIcon(
+                                                                    check.status,
+                                                                    plugin.installed,
+                                                                )}
+                                                            </Flex>
+                                                        ))}
+                                                    </>
+                                                );
+                                            })()}
+                                        </View>
+                                    )}
                             </div>
                         </div>
                     ))}
                 </Flex>
-
             </div>
 
             <Flex gap="size-150" marginTop="size-200">

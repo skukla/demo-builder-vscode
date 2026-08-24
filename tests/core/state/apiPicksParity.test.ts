@@ -29,10 +29,19 @@ const SRC = path.resolve(__dirname, '../../../src');
  * Each is a legacy READ, which step 07 explicitly keeps: a manifest written by an
  * older build has only the flat field, and dropping the read would strand it.
  */
-const READ_ONLY_SITES = new Set([
+/**
+ * Sites allowed to NAME additionalConsoleApis in write-shaped syntax: the
+ * legacy READ paths (migration, loader intake, type declarations). Everything
+ * else writing the flat field is a regression against step 07's retirement.
+ */
+const LEGACY_READ_SITES = new Set([
     'core/state/componentApiPicks.ts', // the migration itself — reads flat, writes keyed
+    'core/state/projectFileLoader.ts', // manifest intake of legacy files
     'types/base.ts', // the field's own declaration + its supersession note
     'types/webview.ts', // wizard draft docs
+    'types/settingsFile.ts', // legacy settings-file shape (old exports still import)
+    'types/webviewRequests.ts', // legacy wire shape
+    'core/state/projectConfigWriter.ts', // the retirement comment names the field
 ]);
 
 function walk(dir: string): string[] {
@@ -43,20 +52,23 @@ function walk(dir: string): string[] {
     });
 }
 
-describe('SOP: API picks travel in BOTH forms until step 07 retires the flat one', () => {
-    it('has no surface carrying the flat field alone', () => {
+describe('SOP: step 07 retired the flat write — componentApiPicks is the one written form', () => {
+    // Until 2026-08-23 this test enforced dual-writes (both forms everywhere).
+    // The keyed reader shipped in beta.127; after twelve releases of
+    // propagation the flat write path was deleted, and this now pins the
+    // ABSENCE: no production surface may write additionalConsoleApis at all.
+    // Legacy READS stay forever (migrateApiPicks, edit-mode fallback).
+    it('no production surface writes the flat field', () => {
         const offenders: string[] = [];
 
         for (const file of walk(SRC)) {
             const rel = path.relative(SRC, file);
-            if (READ_ONLY_SITES.has(rel)) continue;
+            if (LEGACY_READ_SITES.has(rel)) continue;
 
             const body = fs.readFileSync(file, 'utf-8');
             // Only assignments/object-literal keys count — a bare mention in prose
             // or a type import is not a write.
-            const writesFlat = /additionalConsoleApis\s*[:=]/.test(body);
-            if (!writesFlat) continue;
-            if (!body.includes('componentApiPicks')) {
+            if (/additionalConsoleApis\s*[:=]/.test(body)) {
                 offenders.push(rel);
             }
         }
@@ -66,9 +78,8 @@ describe('SOP: API picks travel in BOTH forms until step 07 retires the flat one
 
     it('still recognises the shape it is meant to catch', () => {
         // Without this the check above passes vacuously if the regex rots.
-        const flatOnly = 'const x = { additionalConsoleApis: project.additionalConsoleApis };';
-        expect(/additionalConsoleApis\s*[:=]/.test(flatOnly)).toBe(true);
-        expect(flatOnly.includes('componentApiPicks')).toBe(false);
+        const flatWrite = 'const x = { additionalConsoleApis: project.additionalConsoleApis };';
+        expect(/additionalConsoleApis\s*[:=]/.test(flatWrite)).toBe(true);
     });
 
     it('does not flag a file that merely NAMES the field in prose', () => {

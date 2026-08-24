@@ -89,6 +89,12 @@ export interface VerifyAiSetupResponse {
         mcpsError?: string;
         /** ADR-013: bundle files whose disk hash differs from the recorded one ("kept your version"). */
         editedFiles?: string[];
+        /** Tool-driving skills the project qualifies for but lacks, with why. */
+        gatedSkills?: Array<{
+            file: string;
+            toolId: string;
+            reason: 'setting-disabled' | 'tool-missing';
+        }>;
     };
 }
 
@@ -165,6 +171,12 @@ export interface UseDashboardStatusReturn {
     aiMcpsError: boolean;
     /** ADR-013: user-edited bundle files (relative posix paths) — the modal's "kept your version" flags. */
     aiEditedFiles: string[];
+    /** Tool-driving skills the project qualifies for but lacks, with why (modal "Not available" rows). */
+    aiGatedSkills: Array<{
+        file: string;
+        toolId: string;
+        reason: 'setting-disabled' | 'tool-missing';
+    }>;
     /** The AI verify has not produced a result yet (nor failed) — inventory is unknown, not empty. */
     aiInventoryLoading: boolean;
     /** True while an AI verify/regenerate operation is in flight */

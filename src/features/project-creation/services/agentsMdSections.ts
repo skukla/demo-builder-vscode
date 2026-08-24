@@ -484,6 +484,14 @@ export function buildNotesForAgents(project: Project): string {
         '- Component .env files hold all mutable configuration',
         '- Do not edit .demo-builder.json directly — use the update_project_config MCP tool',
         '- Sync operations are available as MCP tools via .claude/mcp.json',
+        '- Run get_auth_status BEFORE any multi-step flow (publish, reset, library refresh):' +
+            ' sign-in is the one step that needs the user, so surface it at the start,' +
+            ' never as a mid-pipeline stall. sign_in(provider:"dalive") returns immediately' +
+            ' after opening the prompts — poll get_auth_status until dalive.authenticated is true',
+        '- Destructive tools (the ones taking confirm:true) may also raise a native VS Code' +
+            ' consent dialog before running (the demoBuilder.ai.requireAgentConsent setting).' +
+            ' A prose "user declined" answer means the operation did NOT run — report it back' +
+            ' and ask how to proceed; do not retry without new instructions',
     ];
 
     if (isEdsProject(project) && localPath) {

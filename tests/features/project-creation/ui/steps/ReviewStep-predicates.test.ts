@@ -42,7 +42,7 @@ describe('hasRequiredReviewData', () => {
     it('returns false when mesh included but no org', () => {
         const state = {
             projectName: 'test',
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeProject: { id: '2' },
             adobeWorkspace: { id: '3' },
         };
@@ -52,7 +52,7 @@ describe('hasRequiredReviewData', () => {
     it('returns false when mesh included but no project', () => {
         const state = {
             projectName: 'test',
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeOrg: { id: '1' },
             adobeWorkspace: { id: '3' },
         };
@@ -62,7 +62,7 @@ describe('hasRequiredReviewData', () => {
     it('returns false when mesh included but no workspace', () => {
         const state = {
             projectName: 'test',
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeOrg: { id: '1' },
             adobeProject: { id: '2' },
         };
@@ -72,7 +72,7 @@ describe('hasRequiredReviewData', () => {
     it('returns true when mesh included and all Adobe I/O data present', () => {
         const state = {
             projectName: 'test',
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeOrg: { id: '1' },
             adobeProject: { id: '2' },
             adobeWorkspace: { id: '3' },

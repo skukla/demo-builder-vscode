@@ -19,6 +19,14 @@
  *     headless contexts (MCP tools, AI reset) that have no `vscode`.
  */
 
+// The tracker is unit-tested in its own suite; mocked here so the helper's
+// tests neither touch the real ~/.demo-builder store nor depend on its state.
+const mockTrackPatchMisses: jest.Mock<Promise<Record<string, number>>, []> = jest.fn(async () => ({}));
+jest.mock('@/features/eds/services/patchMissTracker', () => ({
+    OBSOLETE_MISS_THRESHOLD: 3,
+    trackPatchMisses: () => mockTrackPatchMisses(),
+}));
+
 import {
     createPatchReport,
     addContentResult,
@@ -48,14 +56,14 @@ beforeEach(() => {
 // ==========================================================================
 
 describe('createPatchReport', () => {
-    it('returns an empty report', () => {
+    it('returns an empty report', async () => {
         const r = createPatchReport();
         expect(r).toEqual({ results: [] });
     });
 });
 
 describe('addContentResult', () => {
-    it('normalizes content patch result (pagePath → target)', () => {
+    it('normalizes content patch result (pagePath → target)', async () => {
         const r = createPatchReport();
         addContentResult(r, {
             patchId: 'index-product-teaser-sku',
@@ -74,7 +82,7 @@ describe('addContentResult', () => {
         ]);
     });
 
-    it('preserves applied:true results (success path is still recorded for diagnostics)', () => {
+    it('preserves applied:true results (success path is still recorded for diagnostics)', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'p', pagePath: '/x', applied: true });
         expect(r.results[0].applied).toBe(true);
@@ -83,7 +91,7 @@ describe('addContentResult', () => {
 });
 
 describe('addCodeResult', () => {
-    it('normalizes code patch result (already uses `target`)', () => {
+    it('normalizes code patch result (already uses `target`)', async () => {
         const r = createPatchReport();
         addCodeResult(r, {
             patchId: 'header-nav-tools-defensive',
@@ -104,7 +112,7 @@ describe('addCodeResult', () => {
 });
 
 describe('aggregation across both domains', () => {
-    it('records content + code entries in insertion order', () => {
+    it('records content + code entries in insertion order', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/', applied: true });
         addCodeResult(r, { patchId: 'k1', target: 'a.js', applied: false, reason: 'X' });
@@ -123,7 +131,7 @@ describe('aggregation across both domains', () => {
 // ==========================================================================
 
 describe('getUnapplied', () => {
-    it('returns only non-applied entries', () => {
+    it('returns only non-applied entries', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/', applied: true });
         addContentResult(r, { patchId: 'c2', pagePath: '/y', applied: false, reason: 'pattern' });
@@ -134,7 +142,7 @@ describe('getUnapplied', () => {
         expect(unapplied.map(e => e.patchId)).toEqual(['c2', 'k2']);
     });
 
-    it('returns empty array for an all-applied report', () => {
+    it('returns empty array for an all-applied report', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/', applied: true });
         addCodeResult(r, { patchId: 'k1', target: 'a.js', applied: true });
@@ -151,7 +159,7 @@ describe('getUnapplied', () => {
 // ==========================================================================
 
 describe('addReferenceResult (completeness audit)', () => {
-    it('records an unapplied reference entry naming the missing document', () => {
+    it('records an unapplied reference entry naming the missing document', async () => {
         const r = createPatchReport();
         addReferenceResult(r, '/customer/nav', 'not found on source');
         expect(getUnapplied(r)).toEqual([
@@ -159,14 +167,14 @@ describe('addReferenceResult (completeness audit)', () => {
         ]);
     });
 
-    it('reads as a dangling-reference warning, not a patch failure, in logs', () => {
+    it('reads as a dangling-reference warning, not a patch failure, in logs', async () => {
         const r = createPatchReport();
         addReferenceResult(r, '/customer/nav', 'not found on source');
         logUnapplied(r, mockLogger);
         expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('referenced document not copied: /customer/nav'));
     });
 
-    it('names missing documents in the toast alongside patches, distinctly', () => {
+    it('names missing documents in the toast alongside patches, distinctly', async () => {
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
         addReferenceResult(r, '/customer/nav', 'missing');
@@ -183,14 +191,14 @@ describe('formatUnappliedToast', () => {
         expect(formatUnappliedToast([])).toBe('');
     });
 
-    it('names every unapplied patch id (single)', () => {
+    it('names every unapplied patch id (single)', async () => {
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'header-nav-tools-defensive', target: 'a.js', applied: false, reason: 'X' });
         const msg = formatUnappliedToast(getUnapplied(r));
         expect(msg).toContain('header-nav-tools-defensive');
     });
 
-    it('names every unapplied patch id (multiple)', () => {
+    it('names every unapplied patch id (multiple)', async () => {
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
         addCodeResult(r, { patchId: 'p2', target: 'b.js', applied: false, reason: 'Y' });
@@ -199,7 +207,7 @@ describe('formatUnappliedToast', () => {
         expect(msg).toContain('p2');
     });
 
-    it('communicates that the demo continues (not blocked) — per D1 contract', () => {
+    it('communicates that the demo continues (not blocked) — per D1 contract', async () => {
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p', target: 'a.js', applied: false, reason: 'X' });
         const msg = formatUnappliedToast(getUnapplied(r));
@@ -215,7 +223,7 @@ describe('formatUnappliedToast', () => {
 // ==========================================================================
 
 describe('logUnapplied', () => {
-    it('writes one warn line per unapplied entry, including kind + target + reason', () => {
+    it('writes one warn line per unapplied entry, including kind + target + reason', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/y', applied: false, reason: 'page pattern' });
         addCodeResult(r, { patchId: 'k1', target: 'blocks/header.js', applied: false, reason: 'precondition' });
@@ -229,7 +237,7 @@ describe('logUnapplied', () => {
         expect(calls.some(c => c.includes('k1') && c.includes('blocks/header.js') && c.includes('precondition'))).toBe(true);
     });
 
-    it('does not log anything for an all-applied report', () => {
+    it('does not log anything for an all-applied report', async () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/', applied: true });
         logUnapplied(r, mockLogger);
@@ -242,43 +250,59 @@ describe('logUnapplied', () => {
 // ==========================================================================
 
 describe('reportUnapplied', () => {
-    it('logs + fires toast when there are unapplied patches', () => {
+    it('escalates the copy at the miss threshold — the content-patch drift signal', async () => {
+        mockTrackPatchMisses.mockResolvedValueOnce({ p: 3 });
         const showWarning = jest.fn();
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p', target: 'a.js', applied: false, reason: 'X' });
 
-        reportUnapplied(r, mockLogger, showWarning);
+        await reportUnapplied(r, mockLogger, showWarning);
+
+        expect(showWarning.mock.calls[0][0]).toContain(
+            'p has not applied in 3 consecutive runs — likely obsolete, retire it from the ledger'
+        );
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining("'p' has not applied in 3 consecutive runs")
+        );
+    });
+
+    it('logs + fires toast when there are unapplied patches', async () => {
+        const showWarning = jest.fn();
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p', target: 'a.js', applied: false, reason: 'X' });
+
+        await reportUnapplied(r, mockLogger, showWarning);
 
         expect(mockLogger.warn).toHaveBeenCalled();
         expect(showWarning).toHaveBeenCalledTimes(1);
         expect(showWarning.mock.calls[0][0]).toContain('p');
     });
 
-    it('does not fire toast when everything applied (no false-positive notification)', () => {
+    it('does not fire toast when everything applied (no false-positive notification)', async () => {
         const showWarning = jest.fn();
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p', target: 'a.js', applied: true });
 
-        reportUnapplied(r, mockLogger, showWarning);
+        await reportUnapplied(r, mockLogger, showWarning);
 
         expect(showWarning).not.toHaveBeenCalled();
     });
 
-    it('logs but does not crash when showWarning callback is omitted (headless safety)', () => {
+    it('logs but does not crash when showWarning callback is omitted (headless safety)', async () => {
         const r = createPatchReport();
         addCodeResult(r, { patchId: 'p', target: 'a.js', applied: false, reason: 'X' });
 
-        expect(() => reportUnapplied(r, mockLogger)).not.toThrow();
+        await expect(reportUnapplied(r, mockLogger)).resolves.toBeUndefined();
         expect(mockLogger.warn).toHaveBeenCalled();
     });
 
-    it('aggregates content + code into one toast (single notification per create/reset)', () => {
+    it('aggregates content + code into one toast (single notification per create/reset)', async () => {
         const showWarning = jest.fn();
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c-bad', pagePath: '/', applied: false, reason: 'a' });
         addCodeResult(r, { patchId: 'k-bad', target: 'a.js', applied: false, reason: 'b' });
 
-        reportUnapplied(r, mockLogger, showWarning);
+        await reportUnapplied(r, mockLogger, showWarning);
 
         // Single toast — not one per domain
         expect(showWarning).toHaveBeenCalledTimes(1);

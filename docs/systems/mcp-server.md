@@ -279,6 +279,10 @@ Tools are grouped by the file that registers them. Names are what the agent sees
 
 ### File-based project tools — `src/mcp-server.ts` (`registerProjectTools`)
 These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
+The registration (schemas, confirm gates, envelopes) lives in `mcp-server.ts`;
+the handler implementations live in `src/mcp/` (projectSecurity,
+projectToolHandlers, storefrontSyncHandler, blockAuthoring,
+blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 
 | Tool | Purpose |
 |---|---|
@@ -707,6 +711,38 @@ The agent surface is powerful, so it's deliberately constrained:
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 
+### The three-leg agent-operation surface (consent · visibility · sign-in)
+
+One design, three legs (`.rptc/complete/2026-08-23-mcp-destructive-ops-native-consent.md`),
+all wired at tool-registration level in `inExtensionMcpServer.ts` and implemented
+extension-side in `agentOperationNotifier.ts`:
+
+- **Destructive calls need consent** (2026-08-24). Any call carrying
+  `confirm: true` — the surface's own destructive marker, checked by the
+  descriptor registrar and every direct destructive tool — first raises a
+  MODAL VS Code dialog in the window that owns the socket
+  (`createAgentConsentGate`, injected as `consentGate`). This converts the
+  agent-supplied honor-system parameter into consent that survives a
+  harness-side tool allowlist. A decline answers a prose refusal (the
+  operation never ran); the handler and the progress notification are never
+  reached. `demoBuilder.ai.requireAgentConsent` (default on, read live per
+  call) is the headless escape hatch. The dialog shows scalar argument
+  values — informed consent needs them — with secret-shaped keys masked and
+  long values elided; the keys-only rule remains for logging.
+- **Mutating calls are visible** (2026-08-23). Every tool whose name is not
+  read-shaped (`isReadOnlyToolName`, an allowlist failing closed) runs inside
+  a `withProgress` notification (`createAgentOperationNotifier`, injected as
+  `longRunningNotifier`), and the OUTCOME lands in the window — status bar on
+  success, warning toast on failure — because the agent's own report may
+  never reach the user (disconnected client, closed chat).
+- **Sign-in needs a human, once, at the start.** DA.live has no headless
+  grant; `sign_in(provider:"dalive")` opens the native prompts, raises a
+  status-bar attention line, and returns IMMEDIATELY with instructions to
+  poll `get_auth_status` — an agent client must never sit blocked on a human
+  (observed live 2026-08-23 as a silent 60s timeout). Generated AGENTS.md
+  (v20) tells agents to front-load `get_auth_status` so the one human touch
+  happens at flow start, not as a mid-pipeline stall.
+
 ---
 
 ## 12. Client discovery & configuration
@@ -800,7 +836,8 @@ result. The underlying service is mocked; the test asserts the tool's gating
 | `src/features/ai/server/inExtensionMcpServer.ts` | The UDS server; per-connection `McpServer`; logging shim. |
 | `src/features/ai/server/mcpSocketPath.ts` | Deterministic socket path from the projects root (`vscode`-free). |
 | `src/mcp-proxy.ts` → `dist/mcp-proxy.js` | stdio↔UDS forwarder Claude Code spawns. |
-| `src/mcp-server.ts` | Shared `registerProjectTools` + file-tool helpers (`vscode`-free). Standalone bootstrap retired. |
+| `src/mcp-server.ts` | Shared `registerProjectTools` (`vscode`-free registration facade). Standalone bootstrap retired. |
+| `src/mcp/` | The file-tool implementations behind it: security guards, project/sync/block handlers, publish tails (`vscode`-free). |
 | `src/features/ai/server/headlessHandlerContext.ts` | Builds a webview-less `HandlerContext`. |
 | `src/features/ai/server/*Tools.ts`, `*Tool.ts`, `*Descriptors.ts` | The tool implementations and descriptor tables. |
 | `src/features/project-creation/services/mcpConfigWriter.ts` | Writes `.mcp.json` / `.claude/mcp.json` / `.claude/settings.json`. |

@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.139",
+  "version": "1.0.0-beta.140",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -372,6 +372,16 @@
             ],
             "default": "claude-code",
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+          },
+          "demoBuilder.ai.requireAgentConsent": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
+          },
+          "demoBuilder.ai.enableThirdPartyTools": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it — atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
           }
         }
       },

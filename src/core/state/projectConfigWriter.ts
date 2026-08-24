@@ -53,13 +53,14 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     // Ad-hoc Console API picks beyond requiredApis (§E) — NOT derivable, and the
     // dashboard's full-union subscription PUT reads it: without persistence a
     // post-reload redeploy silently drops the user's picks.
-    if (project.additionalConsoleApis?.length) {
-        manifest.additionalConsoleApis = project.additionalConsoleApis;
-    }
-    // The ATTRIBUTED form of the same picks (per-integration API attribution,
+    // The flat additionalConsoleApis is no longer persisted (attribution
+    // step 07, retired 2026-08-23): componentApiPicks is the one written form.
+    // The read side keeps migrating legacy manifests forever (migrateApiPicks);
+    // builds ≤ beta.126 (pre-keyed-reader) can no longer round-trip manifests
+    // written from here on — twelve releases of propagation stood between.
+    // The ATTRIBUTED form of the picks (per-integration API attribution,
     // step 01). Omitted when empty so legacy manifests keep loading through the
     // read-side migration rather than a persisted empty map.
-    // `additionalConsoleApis` above stays written until the flat path is retired.
     if (project.componentApiPicks && Object.keys(project.componentApiPicks).length > 0) {
         manifest.componentApiPicks = project.componentApiPicks;
     }

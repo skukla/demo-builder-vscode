@@ -163,8 +163,8 @@ describe('deriveStageOrder — add mode', () => {
     });
 
     it('destination committed, a selected mesh references it (no App Builder rows) → collapses', () => {
-        // A mesh holds the shared destination via selectedOptionalDependencies, not
-        // selectedAppBuilderComponents — so selectedIds is empty yet meshSelected is true.
+        // The slice models a mesh reference through meshSelected (isMeshSelected
+        // over selectedAppBuilderComponents) independently of selectedIds.
         // Adding the first App Builder integration should still collapse to the summary,
         // not re-walk the picker (the destination is genuinely referenced).
         expect(

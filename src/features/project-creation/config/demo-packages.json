@@ -261,8 +261,6 @@
           "contentPatches": [
             "index-product-teaser-sku",
             "phones-product-teaser-sku",
-            "phones-heading-reorder",
-            "smart-watches-category-id",
             "smart-watches-url-path"
           ],
           "contentPatchSource": {
@@ -318,9 +316,7 @@
             "site": "boilerplate-b2b"
           },
           "contentPatches": [
-            "index-product-teaser-sku-accs",
-            "phones-heading-reorder",
-            "smart-watches-category-id-accs"
+            "index-product-teaser-sku-accs"
           ],
           "contentPatchSource": {
             "owner": "skukla",

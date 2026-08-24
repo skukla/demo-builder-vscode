@@ -150,14 +150,20 @@ describe('settingsSerializer', () => {
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
 
-        it('should extract additionalConsoleApis when present', () => {
+        it('exports the keyed picks and NOT the flat field (step 07 retired it)', () => {
+            // A real project always holds the keyed map by export time — the
+            // loader migrates legacy flat-only manifests on load.
             const project = createProject({
                 additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+                componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
             const result = extractSettingsFromProject(project, false);
 
-            expect(result.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+            expect(result.additionalConsoleApis).toBeUndefined();
+            expect(result.componentApiPicks).toEqual({
+                __existing__: ['AssetComputeSDK', 'CCAPI'],
+            });
         });
 
         it('should omit additionalConsoleApis when absent', () => {
@@ -225,6 +231,9 @@ describe('settingsSerializer', () => {
                     'acme-widget': CUSTOM_IMPORT_STATE,
                 },
                 additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+                // The keyed map is what exports since step 07; the flat field
+                // above is legacy in-memory state and must NOT round-trip.
+                componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
             const exported = extractSettingsFromProject(project, false);
@@ -247,10 +256,10 @@ describe('settingsSerializer', () => {
                     },
                     'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
                 });
-                expect(parseResult.settings.additionalConsoleApis).toEqual([
-                    'AssetComputeSDK',
-                    'CCAPI',
-                ]);
+                expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
+                expect(parseResult.settings.componentApiPicks).toEqual({
+                    __existing__: ['AssetComputeSDK', 'CCAPI'],
+                });
             }
         });
     });

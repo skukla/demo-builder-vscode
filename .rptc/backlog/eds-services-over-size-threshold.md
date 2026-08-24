@@ -1,5 +1,69 @@
 # Files over the god-file threshold
 
+> **Re-measured 2026-08-24 — the candidate set has rolled over.** The three
+> files this item spent August on are all cut; what measurement condemns now
+> is a different set. Verdicts per the `decompose-god-file` coupling test
+> (>15 non-type imports, >10 public methods, multiple domains — threshold
+> alone is not enough):
+>
+> | Lines | File | Signal | Verdict |
+> |---|---|---|---|
+> | 916 | `dashboard/commands/configure.ts` | **32 non-type imports** | The strongest candidate. Commands import widely by design, but 32 is double the signal threshold. |
+> | 838 | `authentication/services/authenticationService.ts` | **~42 public methods** | Read before cutting: it is the facade over the entity services, and a facade is method-wide by design. Thin delegations → pattern, not god file; logic hiding among them → candidate. |
+> | 859 | `eds/services/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
+> | 981 | `projects-dashboard/handlers/dashboardHandlers.ts` | handler file ~2× its 500 threshold | Check for helpers hiding in the map that belong in services (helper-extraction pattern). |
+>
+> Big but coupling-clean or already adjudicated — leave alone:
+> `daLiveContentCopy.ts` (1104: 13 imports, 8 methods, one job — the
+> `edsPipeline` verdict shape), `edsPipeline.ts` (966: adjudicated below),
+> `helixService.ts` (823: post-cut, page ops + delegation),
+> `daLiveBlockLibraryOperations.ts` (851), `appBuilderComponentHandlers.ts`
+> (806).
+>
+> **New: the `.tsx` tier (threshold 350) has never been examined by this
+> item.** Standouts: `eds/ui/steps/repoSelectionInline.helpers.tsx` **856**,
+> `ImportDatapackModal.tsx` 660, `dashboard/ui/components/ActionGrid.tsx`
+> 660, `StorefrontSetupStep.tsx` 631, `RepoSelectionInline.tsx` 631. Measure
+> their coupling (props count, mixed responsibilities, hook-extraction
+> candidates) before cutting — component thresholds trip on doc-comment
+> weight too.
+
+> **2026-08-23 (second session) — the remaining three candidates are CUT.** All
+> on `feature/d3-dual-flow-removal`, all behavior-preserving (existing suites
+> untouched except one file-path pin; full suite 1137/1137 green; madge: no
+> cycles):
+>
+> - **`adobeEntityFetcher.ts` 1769 → 273-line facade** + five collaborators:
+>   `adobeCliFallback` (236), `adobeEntityReads` (540), `adobeWorkspaceCredentials`
+>   (458), `adobeOrgServices` (255), `adobeConsoleProjectOps` (454). Constructor
+>   and all 23 public signatures unchanged; the token-org fallback routes through
+>   the facade's public `getOrganizationsSdkOnly` so the monolith's
+>   dynamic-dispatch contract (tests spy it) still holds; the project-ops →
+>   workspace-listing edge is a narrow injected function, not the reads object.
+> - **`mcp-server.ts` 1794 → 398-line registration facade** + `src/mcp/`:
+>   `projectSecurity` (181), `projectToolHandlers` (238), `storefrontSyncHandler`
+>   (183), `blockAuthoring` (402), `blockLibraryPublish` (115),
+>   `blockToolHandlers` (417), `credentials` (33). `toolHandlers` is re-composed
+>   by spreading the three domain maps; `resolveProjectPath` /
+>   `validateEnvContent` / the credential types re-export from `mcp-server.ts`,
+>   so its public identity is unchanged. The one test edit in this whole batch:
+>   `spine-chokepoints.test.ts`'s manifest-WRITE pin follows the door to
+>   `mcp/projectToolHandlers.ts` (a file-path pin tracking a file move, not a
+>   behavior change).
+> - **`helixService.ts` 1642 → 823** (cut 3): `helixAdminAuth` (119 — the shared
+>   token/header seam, incl. the bulk-job status headers), `helixAdminErrors`
+>   (90 — pure Response diagnostics + the 403-as-credential-refusal),
+>   `helixApiKeys` (231 — the Admin API key lifecycle), `helixSiteContent`
+>   (614 — whole-site bulk publish + page-by-page fallback, with the single-page
+>   preview+publish injected as a callback). The facade keeps the page ops
+>   (preview/publish/delete/unpublish/status/purge/previewCode) and delegates
+>   the rest; `PublishPhases` re-exposes `SITE_PUBLISH_PHASES`.
+>
+> Remaining over-size but single-responsibility (leave unless coupling appears):
+> `helixService.ts` 823 (page ops + delegation), `helixSiteContent.ts` 614,
+> `adobeEntityReads.ts` 540. No candidate in the repo now shows the coupling
+> signals the skill cuts on — re-measure before believing this at the next cut.
+
 > **2026-08-23 — the worst offender is CUT.** `executor.ts` (1716 lines, 22
 > non-type imports, ~53 functions — the top of the coupling ranking) is now a
 > 493-line orchestrator plus seven single-responsibility phase modules
@@ -145,6 +209,23 @@ filed and is an EDS service at nearly four times its size.
 The pattern is that this item tracks files somebody happened to touch, not files
 measurement condemns. Anyone picking work off it should re-measure first; the
 table above is the current answer.
+
+## `helixService.ts` cut 2 — bulk-job protocol extracted (2026-08-23)
+
+**Done, on `feature/d3-dual-flow-removal`:** `helixBulkJobs.ts` (~270 lines) now
+owns the 202-and-poll protocol — `parseBulkJobResponse`, `pollJobCompletion`,
+the private `assertBulkResourcesSucceeded`, both job interfaces, the two
+timing constants. The auth-header provider the previous entry called for is
+`BulkJobDeps.getJobStatusHeaders()`: the module never sees a token; the
+service injects the DA.live admin Bearer + GitHub `x-auth-token` from a
+private `bulkJobDeps()` builder. `pollJobCompletion`'s `apiKey` parameter was
+dropped with the move — verified zero callers in its lifetime.
+
+Cleared the bar: **all 179 EDS suites (2,308 tests) passed with ZERO edits to
+existing tests**; 12 new unit tests pin the protocol at the module seam.
+Madge: no cycles. `helixService.ts` is now 1642 lines (was 1845). Remaining
+candidates unchanged (page-operations split = collaborating objects, still a
+design decision; `mcp-server.ts` 1794; `adobeEntityFetcher.ts` 1769).
 
 ## `helixService.ts` — one cut taken, the rest is not free
 

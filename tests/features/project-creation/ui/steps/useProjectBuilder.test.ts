@@ -1,11 +1,11 @@
 /**
  * useProjectBuilder Tests (Slice 2 — Step 2)
  *
- * The selection/dual-flow hook for the Project Builder step. Tests the mesh
- * mirror-write invariant (a mesh App Builder component toggle writes BOTH
- * selectedAppBuilderComponents AND the mapped legacy selectedOptionalDependencies),
- * the non-mesh isolation (no optionalDeps churn), the cross-package mesh reset,
- * and the plain field-update handlers (addons, block libraries, custom libs).
+ * The selection hook for the Project Builder step. Tests the single-authority
+ * mesh selection (selectedAppBuilderComponents carries the mesh since D3; the
+ * legacy selectedOptionalDependencies mirror is pinned REMOVED), the
+ * cross-package mesh reconciliation on stack change, and the plain
+ * field-update handlers (addons, block libraries, custom libs).
  *
  * The instance identity group (onAddCustomAppBuilderComponent instances,
  * onRemove/onRenameAppBuilderComponent) lives in the sibling
@@ -19,7 +19,7 @@ import { act } from '@testing-library/react';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { WizardState } from '@/types/webview';
 
-// The mesh dual-flow depends on getResolvedMeshRequirement for the reset path.
+// The mesh seeding depends on getResolvedMeshRequirement for the reset path.
 // Default each test to 'optional' (no auto-include) unless overridden.
 jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
@@ -71,7 +71,11 @@ beforeEach(() => {
     mockGetDefaultBlockLibraryIds.mockReturnValue([]);
 });
 
-describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
+// The mesh dual-flow mirror-write was REMOVED by D3 (2026-08-23):
+// selectedAppBuilderComponents is the single mesh authority, and the toggle
+// never writes the retired selectedOptionalDependencies key. These pins keep
+// the mirror from returning.
+describe('useProjectBuilder — mesh selection (single authority, D3)', () => {
     it('adds the mesh component id to selectedAppBuilderComponents on select', () => {
         const { result, updateState } = setup({ selectedStack: 'headless-paas' });
         act(() => {
@@ -84,23 +88,10 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
         );
     });
 
-    it('mirror-writes the mapped legacy component id to selectedOptionalDependencies on select', () => {
-        const { result, updateState } = setup({ selectedStack: 'headless-paas' });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('headless-commerce-mesh', true);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({
-                selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-            })
-        );
-    });
-
     it('removes the mesh component id from selectedAppBuilderComponents on deselect', () => {
         const { result, updateState } = setup({
             selectedStack: 'headless-paas',
             selectedAppBuilderComponents: ['headless-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
         });
         act(() => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
@@ -110,59 +101,25 @@ describe('useProjectBuilder — mesh dual-flow mirror-write', () => {
         );
     });
 
-    it('removes the mapped legacy component id from selectedOptionalDependencies on deselect', () => {
+    it('never writes the retired legacy dependency key on a mesh select (removed-behavior pin)', () => {
+        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+        act(() => {
+            result.current.onAppBuilderComponentToggle(COMPONENT_IDS.EDS_COMMERCE_MESH, true);
+        });
+        const call = updateState.mock.calls[0][0] as Record<string, unknown>;
+        expect('selectedOptionalDependencies' in call).toBe(false);
+    });
+
+    it('never writes the retired legacy dependency key on a mesh deselect (removed-behavior pin)', () => {
         const { result, updateState } = setup({
             selectedStack: 'headless-paas',
             selectedAppBuilderComponents: ['headless-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
         });
         act(() => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
         });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: [] })
-        );
-    });
-
-    it('does not duplicate the legacy id when an already-present mesh is re-selected', () => {
-        const { result, updateState } = setup({
-            selectedStack: 'headless-paas',
-            selectedAppBuilderComponents: ['headless-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-        });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('headless-commerce-mesh', true);
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toEqual([COMPONENT_IDS.HEADLESS_COMMERCE_MESH]);
-    });
-
-    it('preserves unrelated optional dependencies when toggling a mesh', () => {
-        const { result, updateState } = setup({
-            selectedStack: 'headless-paas',
-            selectedOptionalDependencies: ['some-other-dep'],
-        });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('headless-commerce-mesh', true);
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toEqual(
-            expect.arrayContaining(['some-other-dep', COMPONENT_IDS.HEADLESS_COMMERCE_MESH])
-        );
-    });
-});
-
-describe('useProjectBuilder — non-mesh isolation', () => {
-    it('does NOT touch selectedOptionalDependencies for a non-mesh component select', () => {
-        const { result, updateState } = setup({
-            selectedStack: 'headless-paas',
-            selectedOptionalDependencies: ['existing-dep'],
-        });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('some-non-mesh-component', true);
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toBeUndefined();
+        const call = updateState.mock.calls[0][0] as Record<string, unknown>;
+        expect('selectedOptionalDependencies' in call).toBe(false);
     });
 
     it('still writes selectedAppBuilderComponents for a non-mesh component', () => {
@@ -175,55 +132,6 @@ describe('useProjectBuilder — non-mesh isolation', () => {
                 selectedAppBuilderComponents: ['some-non-mesh-component'],
             })
         );
-    });
-
-    it('does NOT touch selectedOptionalDependencies for a non-mesh component DESELECT', () => {
-        const { result, updateState } = setup({
-            selectedStack: 'headless-paas',
-            selectedAppBuilderComponents: ['some-non-mesh-component'],
-            selectedOptionalDependencies: ['existing-dep'],
-        });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('some-non-mesh-component', false);
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toBeUndefined();
-        expect(call.selectedAppBuilderComponents).toEqual([]);
-    });
-});
-
-describe('useProjectBuilder — mesh mapping coverage', () => {
-    it('mirrors the EDS commerce mesh into the dependency selection', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
-        act(() => {
-            result.current.onAppBuilderComponentToggle(COMPONENT_IDS.EDS_COMMERCE_MESH, true);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({
-                selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
-            })
-        );
-    });
-
-    it('mirrors the EDS ACCS mesh into the dependency selection', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-accs' });
-        act(() => {
-            result.current.onAppBuilderComponentToggle(COMPONENT_IDS.EDS_ACCS_MESH, true);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({
-                selectedOptionalDependencies: [COMPONENT_IDS.EDS_ACCS_MESH],
-            })
-        );
-    });
-
-    it('does not mirror a retired catalog id into the dependency selection', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
-        act(() => {
-            result.current.onAppBuilderComponentToggle('commerce-paas-mesh', true);
-        });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toBeUndefined();
     });
 
     it('preserves a previously-selected non-mesh component when toggling a mesh', () => {
@@ -241,7 +149,7 @@ describe('useProjectBuilder — mesh mapping coverage', () => {
     });
 });
 
-describe('useProjectBuilder — onStackSelect mesh reset (cross-package leak guard)', () => {
+describe('useProjectBuilder — onStackSelect (cross-package leak guard)', () => {
     it('writes the selected stack id', () => {
         const { result, updateState } = setup();
         act(() => {
@@ -252,34 +160,69 @@ describe('useProjectBuilder — onStackSelect mesh reset (cross-package leak gua
         );
     });
 
-    it('resets selectedOptionalDependencies to the stack mesh deps when mesh is required', () => {
+    it('never writes the retired legacy dependency key (removed-behavior pin)', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue(true);
+        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+        act(() => {
+            result.current.onStackSelect('headless-paas');
+        });
+        const call = updateState.mock.calls.at(-1)![0] as Record<string, unknown>;
+        expect('selectedOptionalDependencies' in call).toBe(false);
+    });
+});
+
+describe('useProjectBuilder — onStackSelect seeds the mesh into selectedAppBuilderComponents (D3)', () => {
+    it('adds the stack mesh id on a stack change when the package requires mesh', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue(true);
+        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+        act(() => {
+            result.current.onStackSelect('headless-paas');
+        });
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toEqual([COMPONENT_IDS.HEADLESS_COMMERCE_MESH]);
+    });
+
+    it('strips the old stack mesh id and keeps non-mesh selections on a stack change', () => {
         mockGetResolvedMeshRequirement.mockReturnValue(true);
         const { result, updateState } = setup({
             selectedStack: 'eds-paas',
-            selectedOptionalDependencies: ['stale-leftover-dep'],
+            selectedAppBuilderComponents: [COMPONENT_IDS.EDS_COMMERCE_MESH, 'acme-widget'],
         });
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({
-                selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-            })
-        );
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toEqual([
+            'acme-widget',
+            COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+        ]);
     });
 
-    it('clears selectedOptionalDependencies when mesh is not required for the new stack', () => {
+    it('strips mesh ids when the new stack does not require mesh', () => {
         mockGetResolvedMeshRequirement.mockReturnValue('optional');
         const { result, updateState } = setup({
             selectedStack: 'eds-paas',
-            selectedOptionalDependencies: ['stale-leftover-dep'],
+            selectedAppBuilderComponents: [COMPONENT_IDS.EDS_COMMERCE_MESH, 'acme-widget'],
         });
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: [] })
-        );
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toEqual(['acme-widget']);
+    });
+
+    it('leaves selectedAppBuilderComponents untouched on a same-stack re-select', () => {
+        mockGetResolvedMeshRequirement.mockReturnValue(true);
+        const { result, updateState } = setup({
+            selectedPackage: 'withAddons',
+            selectedStack: 'headless-paas',
+            selectedAppBuilderComponents: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
+        });
+        act(() => {
+            result.current.onStackSelect('headless-paas');
+        });
+        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        expect(call.selectedAppBuilderComponents).toBeUndefined();
     });
 });
 
@@ -350,18 +293,6 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
     });
 });
 
-describe('useProjectBuilder — optional dependencies handler', () => {
-    it('updates selectedOptionalDependencies directly', () => {
-        const { result, updateState } = setup({ selectedStack: 'headless-paas' });
-        act(() => {
-            result.current.onOptionalDependenciesChange(['some-dep']);
-        });
-        expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedOptionalDependencies: ['some-dep'] })
-        );
-    });
-});
-
 describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)', () => {
     it('writes selectedAppBuilderComponents + appBuilderComponentSources for a custom source', () => {
         const { result, updateState } = setup({ selectedStack: 'headless-paas' });
@@ -413,32 +344,6 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)
     });
 });
 
-// Regression (edit-mode defeat path): onStackSelect reset selectedOptionalDependencies on
-// EVERY select — a same-stack backend re-click wiped the edit-seeded mesh dep,
-// re-manifesting "No integrations yet." and the Finish-time mesh drop.
-describe('useProjectBuilder — same-stack re-select preserves the mesh selection', () => {
-    const reselectState = {
-        selectedPackage: 'withAddons',
-        selectedStack: 'headless-paas',
-        selectedOptionalDependencies: ['headless-commerce-mesh'],
-    };
-
-    it('preserves selectedOptionalDependencies on a same-stack re-select', () => {
-        const { result, updateState } = setup(reselectState);
-        act(() => result.current.onStackSelect('headless-paas'));
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
-        expect(call.selectedOptionalDependencies).toEqual(['headless-commerce-mesh']);
-    });
-
-    it('still resets selectedOptionalDependencies on an ACTUAL stack change', () => {
-        const { result, updateState } = setup(reselectState);
-        act(() => result.current.onStackSelect('eds-paas'));
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
-        // meshRequirement 'optional' → no auto-seed → reset to [] on the CHANGE.
-        expect(call.selectedOptionalDependencies).toEqual([]);
-    });
-});
-
 describe('required mesh cannot be toggled off', () => {
     // The mesh-required enforcement's defense-in-depth: the card layer hides
     // Remove on a required mesh, and this guard makes the underlying toggle
@@ -451,7 +356,6 @@ describe('required mesh cannot be toggled off', () => {
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             selectedAppBuilderComponents: ['eds-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
         });
 
         act(() => {
@@ -467,7 +371,6 @@ describe('required mesh cannot be toggled off', () => {
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
             selectedAppBuilderComponents: ['eds-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
         });
 
         act(() => {
@@ -476,7 +379,6 @@ describe('required mesh cannot be toggled off', () => {
 
         const call = updateState.mock.calls[0][0] as Partial<WizardState>;
         expect(call.selectedAppBuilderComponents).toEqual([]);
-        expect(call.selectedOptionalDependencies).toEqual([]);
     });
 
     it('never blocks toggle-ON, required or not', () => {

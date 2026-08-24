@@ -4,6 +4,15 @@
  * touched; Adobe goes through a stub authManager.
  */
 
+const mockSetStatusBarMessage = jest.fn();
+jest.mock(
+    'vscode',
+    () => ({
+        window: { setStatusBarMessage: (...a: unknown[]) => mockSetStatusBarMessage(...a) },
+    }),
+    { virtual: true }
+);
+
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     // Shapes taken from the services, not invented: validateToken returns
     // `{valid, user?}` with a `login` (`types.ts:23-38`), and getUserOrgs returns
@@ -30,19 +39,29 @@ jest.mock('@/features/eds/handlers/edsHandlers', () => ({
 }));
 
 import { registerAuthTools } from '@/features/ai/server/authTools';
-import { clearAdobeTarget, getAdobeTarget, setAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import {
+    clearAdobeTarget,
+    getAdobeTarget,
+    setAdobeTarget,
+} from '@/features/ai/server/adobeTargetStore';
+import {
+    getDaLiveAuthService,
+    getGitHubServices,
+    showDaLiveAuthQuickPick,
+} from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 function fakeServer() {
-     
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
     return {
-         
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            _def: unknown,
+            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
+        ) {
             tools.set(name, handler);
         },
-         
+
         async call(name: string, args?: unknown): Promise<any> {
             const result = await tools.get(name)!(args);
             return JSON.parse(result.content[0].text);
@@ -59,7 +78,10 @@ function makeCtxFactory(adobeAuthed = true): () => HandlerContext {
     return () =>
         ({
             authManager: {
-                getTokenStatus: jest.fn(async () => ({ isAuthenticated: adobeAuthed, expiresInMinutes: 120 })),
+                getTokenStatus: jest.fn(async () => ({
+                    isAuthenticated: adobeAuthed,
+                    expiresInMinutes: 120,
+                })),
                 login,
             },
             context: {},
@@ -125,11 +147,15 @@ describe('registerAuthTools', () => {
     });
 
     it('omits orgName rather than reporting an empty one', async () => {
-        expect((await (() => {
-            const server = fakeServer();
-            registerAuthTools(server, makeCtxFactory(true));
-            return server.call('get_auth_status');
-        })()).dalive).toEqual({ authenticated: false });
+        expect(
+            (
+                await (() => {
+                    const server = fakeServer();
+                    registerAuthTools(server, makeCtxFactory(true));
+                    return server.call('get_auth_status');
+                })()
+            ).dalive
+        ).toEqual({ authenticated: false });
     });
 
     // Orgs are enrichment. Folding their failure into the outer safeStatus would
@@ -214,25 +240,43 @@ describe('registerAuthTools', () => {
         expect(res).toEqual({ provider: 'github', success: true });
     });
 
-    it('sign_in dalive with confirm runs the native quick-pick (not the webview handler)', async () => {
+    // Traversability (backlog: mcp-destructive-ops-native-consent, gap 1):
+    // the dalive branch used to AWAIT the whole native flow — the agent's
+    // client saw only a 60s timeout while the user saw "nothing happens".
+    // Now it starts the flow, raises attention, and returns instructions
+    // immediately; the agent polls get_auth_status for completion.
+    it('sign_in dalive starts the native flow and returns immediately with poll instructions', async () => {
+        // A flow still in progress: the promise never settles within the test.
+        (showDaLiveAuthQuickPick as jest.Mock).mockReturnValueOnce(new Promise(() => undefined));
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(false));
 
         const res = await server.call('sign_in', { provider: 'dalive', confirm: true });
 
-        // Routes to the native showInputBox flow, which works without a webview —
-        // the headless agent context drops sendMessage, so 'open-dalive-login' can't.
+        // The native flow was STARTED (not the webview handler — the headless
+        // agent context drops sendMessage, so 'open-dalive-login' can't work)…
         expect(showDaLiveAuthQuickPick).toHaveBeenCalledTimes(1);
-        expect(res).toEqual({ provider: 'dalive', success: true, cancelled: false, note: expect.any(String) });
+        // …attention was raised in the window…
+        expect(mockSetStatusBarMessage).toHaveBeenCalled();
+        // …and the tool answered without waiting for the user.
+        expect(res.provider).toBe('dalive');
+        expect(res.started).toBe(true);
+        expect(String(res.note)).toContain('get_auth_status');
     });
 
-    it('sign_in dalive reports cancellation when the user dismisses the flow', async () => {
-        (showDaLiveAuthQuickPick as jest.Mock).mockResolvedValueOnce({ success: false, cancelled: true });
+    it('sign_in dalive answers started even when the flow later reports cancellation', async () => {
+        (showDaLiveAuthQuickPick as jest.Mock).mockResolvedValueOnce({
+            success: false,
+            cancelled: true,
+        });
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(false));
 
         const res = await server.call('sign_in', { provider: 'dalive', confirm: true });
-        expect(res.success).toBe(false);
-        expect(res.cancelled).toBe(true);
+        // The refusal/cancel outcome is no longer in the tool's answer — the
+        // flow had not finished when the tool replied. get_auth_status is the
+        // read that reports the eventual state.
+        expect(res.started).toBe(true);
+        expect(res.cancelled).toBeUndefined();
     });
 });

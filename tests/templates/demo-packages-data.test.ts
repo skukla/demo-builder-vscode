@@ -208,8 +208,12 @@ describe('demo-packages.json', () => {
 
             const patches = edsAccs.contentPatches as string[];
             expect(patches).toBeDefined();
-            expect(patches).toContain('phones-heading-reorder');
-            expect(patches).toContain('smart-watches-category-id-accs');
+            // phones-heading-reorder + smart-watches-category-id(-accs) retired
+            // 2026-08-23: the content source absorbed their fixes (heading already
+            // reordered; the category row is gone entirely — resolution is by
+            // urlPath now). Verified against the live created site.
+            expect(patches).not.toContain('phones-heading-reorder');
+            expect(patches).not.toContain('smart-watches-category-id-accs');
 
             expect(patches).not.toContain('index-product-teaser-sku');
             expect(patches).not.toContain('phones-product-teaser-sku');
@@ -228,17 +232,17 @@ describe('demo-packages.json', () => {
             expect(patchSource.path).toBe('citisignal');
         });
 
-        it('should have all 5 content patches for eds-paas storefront', () => {
+        it('should have all 3 content patches for eds-paas storefront', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             const edsPaas = citisignal!.storefronts['eds-paas'] as unknown as Record<string, unknown>;
 
             const patches = edsPaas.contentPatches as string[];
             expect(patches).toBeDefined();
-            expect(patches).toHaveLength(5);
+            expect(patches).toHaveLength(3);
             expect(patches).toContain('index-product-teaser-sku');
             expect(patches).toContain('phones-product-teaser-sku');
-            expect(patches).toContain('phones-heading-reorder');
-            expect(patches).toContain('smart-watches-category-id');
+            expect(patches).not.toContain('phones-heading-reorder');
+            expect(patches).not.toContain('smart-watches-category-id');
             expect(patches).toContain('smart-watches-url-path');
         });
     });

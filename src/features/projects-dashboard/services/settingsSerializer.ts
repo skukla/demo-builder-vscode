@@ -199,7 +199,6 @@ export function extractSettingsFromProject(
         // flat field alone meant a settings file would carry nothing once the flat
         // write is retired, and an edit round-trip collapsed every pick into the
         // unattributed bucket even before then.
-        additionalConsoleApis: project.additionalConsoleApis,
         componentApiPicks: project.componentApiPicks,
     };
 }

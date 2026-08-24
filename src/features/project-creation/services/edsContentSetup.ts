@@ -245,7 +245,7 @@ export async function ensureEdsContent(
 
     // Surface unapplied content patches via the unified toast — same D1 contract
     // as the create/reset pipeline. No-op when nothing failed precondition.
-    reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
+    await reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
 
     return true;
 }

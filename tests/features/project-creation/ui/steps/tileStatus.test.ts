@@ -169,13 +169,15 @@ describe('isMeshSelected', () => {
         ).toBe(true);
     });
 
-    it('is true via the dual-flow when the legacy mesh dep is in selectedOptionalDependencies', () => {
+    // Removed-behavior pin (D3): the retired legacy mirror no longer counts —
+    // selectedAppBuilderComponents is the single mesh authority.
+    it('is false when the mesh id sits only in the retired legacy dependency field', () => {
         expect(
             isMeshSelected(
-                state({ selectedOptionalDependencies: ['eds-commerce-mesh'] }),
+                state({ selectedOptionalDependencies: ['eds-commerce-mesh'] } as never),
                 'eds-commerce-mesh'
             )
-        ).toBe(true);
+        ).toBe(false);
     });
 });
 
@@ -334,11 +336,7 @@ describe('isAdobeSignedIn', () => {
 describe('anyDeployableSelected', () => {
     it('is false when nothing is selected', () => {
         expect(anyDeployableSelected(state({}))).toBe(false);
-        expect(
-            anyDeployableSelected(
-                state({ selectedAppBuilderComponents: [], selectedOptionalDependencies: [] })
-            )
-        ).toBe(false);
+        expect(anyDeployableSelected(state({ selectedAppBuilderComponents: [] }))).toBe(false);
     });
 
     it('is true when a catalog component is selected', () => {
@@ -347,9 +345,12 @@ describe('anyDeployableSelected', () => {
         ).toBe(true);
     });
 
-    it('is true when a mesh dual-flows via selectedOptionalDependencies', () => {
+    // Removed-behavior pin (D3): the retired legacy mirror no longer counts.
+    it('is false when a mesh id sits only in the retired legacy dependency field', () => {
         expect(
-            anyDeployableSelected(state({ selectedOptionalDependencies: ['eds-commerce-mesh'] }))
-        ).toBe(true);
+            anyDeployableSelected(
+                state({ selectedOptionalDependencies: ['eds-commerce-mesh'] } as never)
+            )
+        ).toBe(false);
     });
 });

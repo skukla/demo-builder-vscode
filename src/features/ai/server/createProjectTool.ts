@@ -57,9 +57,10 @@ import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { WizardState } from '@/types/webview';
 
-
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
-function leanOrg(org: WizardState['adobeOrg'] | undefined): { id: string; name?: string } | undefined {
+function leanOrg(
+    org: WizardState['adobeOrg'] | undefined,
+): { id: string; name?: string } | undefined {
     return org?.id ? { id: org.id, name: org.name } : undefined;
 }
 
@@ -69,13 +70,19 @@ function projectsDir(): string {
 
 const NEEDS_ADOBE = {
     needsAuth: 'adobe',
-    message: 'Adobe sign-in required (this project deploys an API Mesh). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
+    message:
+        'Adobe sign-in required (this project deploys an API Mesh). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
 };
 
 /** Resolve current Adobe context, or a structured handoff/precondition error. */
-async function requireAdobeWorkspace(
-    ctx: HandlerContext,
-): Promise<{ org: WizardState['adobeOrg']; project: WizardState['adobeProject']; workspace: WizardState['adobeWorkspace'] } | { error: unknown }> {
+async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
+    | {
+          org: WizardState['adobeOrg'];
+          project: WizardState['adobeProject'];
+          workspace: WizardState['adobeWorkspace'];
+      }
+    | { error: unknown }
+> {
     const mgr = ctx.authManager;
     if (!mgr || !(await mgr.isAuthenticated())) return { error: NEEDS_ADOBE };
 
@@ -138,7 +145,8 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
     if (!githubOk) {
         return {
             needsAuth: 'github',
-            message: 'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
+            message:
+                'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
         };
     }
     let daLiveOk = false;
@@ -150,7 +158,8 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
     if (!daLiveOk) {
         return {
             needsAuth: 'dalive',
-            message: 'DA.live sign-in required for content setup. sign_in(provider:"dalive", confirm:true), paste the token in VS Code, then retry.',
+            message:
+                'DA.live sign-in required for content setup. sign_in(provider:"dalive", confirm:true), paste the token in VS Code, then retry.',
         };
     }
     return null;
@@ -163,7 +172,13 @@ async function createHeadless(
     pkg: DemoPackage,
     packages: DemoPackage[],
 ) {
-    let adobe: { org: WizardState['adobeOrg']; project: WizardState['adobeProject']; workspace: WizardState['adobeWorkspace'] } | undefined;
+    let adobe:
+        | {
+              org: WizardState['adobeOrg'];
+              project: WizardState['adobeProject'];
+              workspace: WizardState['adobeWorkspace'];
+          }
+        | undefined;
     if (getResolvedMeshRequirement(pkg, args.stackId) === true) {
         const resolved = await requireAdobeWorkspace(ctx);
         if ('error' in resolved) return asText(resolved.error);
@@ -174,7 +189,12 @@ async function createHeadless(
         projectName: args.projectName,
         selectedPackage: args.pkgId,
         selectedStack: args.stackId,
-        selectedOptionalDependencies: await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId),
+        // Mesh ids ride selectedAppBuilderComponents (D3) — buildProjectConfig
+        // derives the wire's dependencies list from them.
+        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
+            args.pkgId,
+            args.stackId,
+        ),
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
@@ -204,7 +224,15 @@ async function createHeadless(
 /** EDS creation path: provision the storefront (captured), then create the project. */
 async function createEds(
     ctx: HandlerContext,
-    args: { projectName: string; pkgId: string; stackId: string; repoName?: string; daLiveOrg?: string; daLiveSite?: string; accsEndpoint?: string },
+    args: {
+        projectName: string;
+        pkgId: string;
+        stackId: string;
+        repoName?: string;
+        daLiveOrg?: string;
+        daLiveSite?: string;
+        accsEndpoint?: string;
+    },
     pkg: DemoPackage,
     storefront: Storefront,
     packages: DemoPackage[],
@@ -213,7 +241,9 @@ async function createEds(
         return asText({ error: 'EDS projects require repoName, daLiveOrg, and daLiveSite.' });
     }
     if (args.stackId.endsWith('-accs') && !args.accsEndpoint) {
-        return asText({ error: 'EDS + ACCS projects require accsEndpoint (the Adobe Commerce Cloud GraphQL endpoint).' });
+        return asText({
+            error: 'EDS + ACCS projects require accsEndpoint (the Adobe Commerce Cloud GraphQL endpoint).',
+        });
     }
 
     // Adobe is required only when this package + stack actually deploys a mesh —
@@ -223,7 +253,11 @@ async function createEds(
     // declare they need none, which sends the reader hunting a mesh that is not
     // there. GitHub + DA.live are required for EDS regardless, below.
     let adobe:
-        | { org: WizardState['adobeOrg']; project: WizardState['adobeProject']; workspace: WizardState['adobeWorkspace'] }
+        | {
+              org: WizardState['adobeOrg'];
+              project: WizardState['adobeProject'];
+              workspace: WizardState['adobeWorkspace'];
+          }
         | undefined;
     if (getResolvedMeshRequirement(pkg, args.stackId) === true) {
         const resolved = await requireAdobeWorkspace(ctx);
@@ -280,7 +314,11 @@ async function createEds(
         projectName: args.projectName,
         selectedPackage: args.pkgId,
         selectedStack: args.stackId,
-        selectedOptionalDependencies: await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId),
+        // Mesh ids ride selectedAppBuilderComponents (D3), same as createHeadless.
+        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
+            args.pkgId,
+            args.stackId,
+        ),
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
@@ -333,16 +371,28 @@ export function registerCreateProjectTool(server: any, ctxFactory: () => Handler
         'create_project',
         {
             title: 'Create Project',
-            description: 'Create a new Demo Builder project headlessly from a package + stack. EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true',
+            description:
+                'Create a new Demo Builder project headlessly from a package + stack. EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true',
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z.string().describe('Demo package / brand id (from list_demo_packages)'),
                 stack: z.string().describe('Architecture stack id (from list_stacks)'),
-                repoName: z.string().optional().describe('EDS only: name for the new GitHub storefront repo'),
+                repoName: z
+                    .string()
+                    .optional()
+                    .describe('EDS only: name for the new GitHub storefront repo'),
                 daLiveOrg: z.string().optional().describe('EDS only: DA.live organization'),
                 daLiveSite: z.string().optional().describe('EDS only: DA.live site name'),
-                accsEndpoint: z.string().optional().describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint'),
-                confirm: z.boolean().optional().describe('Must be true — creates a project (clones repos, installs deps; EDS also creates a real GitHub repo + DA.live content)'),
+                accsEndpoint: z
+                    .string()
+                    .optional()
+                    .describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Must be true — creates a project (clones repos, installs deps; EDS also creates a real GitHub repo + DA.live content)',
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -362,7 +412,10 @@ export function registerCreateProjectTool(server: any, ctxFactory: () => Handler
             const packages = await getSelectablePackages();
             const pkg = packages.find((p) => p.id === pkgId);
             if (!pkg) {
-                return asText({ error: `Unknown package: ${pkgId}`, validPackages: packages.map((p) => p.id) });
+                return asText({
+                    error: `Unknown package: ${pkgId}`,
+                    validPackages: packages.map((p) => p.id),
+                });
             }
             const storefront = await getStorefrontForStack(pkgId, stackId);
             if (!storefront) {

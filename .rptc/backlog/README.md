@@ -28,7 +28,16 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-23** (FOURTH pass — the first FULL re-measure: every
+> **Index last reconciled: 2026-08-23 evening** (FIFTH pass — end-of-day sweep after the
+> largest single-day churn on record: 8 items closed, 2 releases cut. All 24 remaining
+> backlog files verified open/indexed/nested; the mechanical scan is clean both directions.
+> The PLANS tree got the actual moves: `data-installer` (all extension stages shipped;
+> the service-side export blocker lives in the datapack-authoring-loop item) and
+> `config-service-admin-grant` (steps 01–07 all shipped) → `complete/`; the beta.128-era
+> `NEXT-SESSION.md` handoff deleted. `plans/` now holds exactly two live dirs:
+> `ai-surface` (phase 6 open) and `bodea-template` (external steps pending).)
+>
+> Previous: **2026-08-23 morning** (FOURTH pass — the first FULL re-measure: every
 > active item's central claim checked against the code by four parallel read-only agents,
 > each claim paired with the command that would falsify it and a positive control on every
 > absence). Score across 33 items measured: **10 fully current, 5 dead (archived same day:
@@ -146,10 +155,6 @@ The `jest worker force-exit` warning (once wrongly listed here as resolved, then
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
-#### Native consent for destructive MCP operations ([`2026-08-23-mcp-destructive-ops-native-consent.md`](2026-08-23-mcp-destructive-ops-native-consent.md))
-
-Filed 2026-08-23 from the user watching the agent publish path live: once a DA.live session exists, the extension-side gate on live-CDN writes (`publish_page`, `sync_storefront`, `delete_page`, …) is the agent-supplied `confirm: true` — an honor system that is all that remains when a user allowlists the MCP tools in their harness. Proposed: the handler raises a native VS Code confirm dialog before executing, converting convention into consent that survives allowlisting. Decisions at pickup: headless escape hatch (setting, default on) vs destructive-only subset; derive the gated list from the read-only-name allowlist (the probe's denylist→allowlist history is the argument); batch ops must not raise N dialogs. Same-day counterweight from walking the path live: the route must stay agent-traversable — one auth touch (IMS has no headless grant), then zero interaction beyond the chosen consent policy; `sign_in(dalive)` currently hangs silently on a VS Code QuickPick instead of returning instructions, and skills should front-load `get_auth_status` so the human touch happens at flow start, not mid-pipeline. Third leg (same day, from the pipeline live runs): a ~2-minute MCP-triggered `refresh_block_library` mutated the live site with ZERO VS Code surface — the dashboard button shows `withProgress`, the MCP path shows nothing, and the repo already recorded why headless-for-agents is wrong (the `deployAppHeadless` retirement note). Long-running mutating MCP tools should raise the same progress notification their buttons do; design all three legs — human sign-in, consent, visibility — as one surface.
-
 #### Datapack authoring loop — export, modify, publish-your-own via project skills ([`2026-08-23-datapack-authoring-loop.md`](2026-08-23-datapack-authoring-loop.md))
 
 Filed 2026-08-23 from user direction: a project's agent should carry the whole loop — export a datapack, modify it for a use case, publish your own version — through skills visible in the skills modal, with the instance as the working copy and export as the atomic commit. More exists than expected (export tools + modal + the `import-datapack` skill's capture guidance are all live), and the one blocker — **the export store-step lacks its database address (`MONGO_URI`) on the shared stage deployment, re-confirmed live 2026-08-23** (root cause in `docs/systems/data-installer.md` §6b). The architecture is unchanged: one shared service, the extension purely its client — the fix is a one-variable config-set + redeploy by whoever OPERATES the service now, and it fixes export for every SC at once. A personal throwaway deployment is recorded in the item as an optional testing stopgap only, explicitly not the design. Own-version publishing is CLOSED as the service's designed workflow (create a private `shared: false` pack, export versions into it, selective per-type filters — service docs distilled in [`../research/data-installer-service-docs/research.md`](../research/data-installer-service-docs/research.md); raw exports gitignored). The Bodea differentiation is the acceptance test — targeting a user-owned private pack, never the shared `bodea`. **The Postman collections (2026-08-23) revealed the full API and a route that works TODAY**: data-item editing (add/update/delete/batch-get, `add-data-item` proven on stage), version PROMOTE (the atomic-commit semantics), pack lifecycle, async+poll — so the pack-first half of the tools/skill is buildable now. The storage architecture is **OPEN with a binding constraint (2026-08-23): ONE pack registry** — the packs live in the database, so any new deployment is a second registry and the org's packs diverge. Three shapes in the item, preference-ordered: adopt/fix the existing deployment in place (exhaust first — the ask is workspace handover, not a variable); full cutover (App Builder Database migration + copy the registry + EVERY consumer repoints); or partition (shared packs read from the original, user packs in the new service, per-source routing). An organizational decision the user drives; the App Builder Database research stands whichever shape wins.
@@ -164,7 +169,7 @@ Filed 2026-08-23 from user direction: a project's agent should carry the whole l
 
 #### Files over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
 
-**2026-08-23: the worst offender is cut** — `executor.ts` (1716 lines, the top of the coupling ranking) is now a 493-line orchestrator + seven phase modules, public API preserved via re-exports, all 144 project-creation suites green with ZERO test edits, madge cycle count unchanged. Remaining (fresh measure): `helixService.ts` 1845 (next cut needs the auth-header provider designed), `mcp-server.ts` 1794, `adobeEntityFetcher.ts` 1769. Earlier history: **re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
+**Re-measured 2026-08-24: the candidate set rolled over.** Everything the item spent August on is cut — `executor.ts` (→ 493-line orchestrator + seven phase modules), `helixService.ts` (1845→823 over two cuts: key store, bulk-job protocol, auth seam, errors, API keys, site content), `mcp-server.ts` (1794→398 registration facade over `src/mcp/`), `adobeEntityFetcher.ts` (1769→273 facade over five services) — every cut behavior-preserving with existing suites untouched. The item's top banner carries the CURRENT table: `configure.ts` (916L, **32 non-type imports**) is the strongest candidate; `authenticationService.ts` (~42 methods) and `githubFileOperations.ts` (17) need a delegation-vs-logic read before a verdict; `projects-dashboard/dashboardHandlers.ts` is ~2× the handler threshold; and the never-examined `.tsx` tier has five components over 600 lines (`repoSelectionInline.helpers.tsx` 856 the standout). Earlier history: **re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -197,30 +202,29 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 **⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
-#### The other webview message channels are still untyped ([`2026-08-21-webview-push-channels-are-untyped.md`](2026-08-21-webview-push-channels-are-untyped.md))
+### D. Deferred by design (gated on an external condition)
 
-**Re-measured 2026-08-23 — mostly done; this entry had lagged its own item.** The push campaign and the request direction BOTH shipped since filing: `webviewPayloads.ts` now declares 44 exports (7 init shapes + ~37 push payloads) and `webviewRequests.ts` covers the request direction; the four named `AddIntegrationFlowAdapter` casts are gone. Still true: the comm manager takes `unknown` (`sendMessage(type, payload?: unknown)`), so nothing FORCES a new channel to declare its shape, and ~45 payload-less action requests remain untyped (the item's own "Remaining tail (LOW priority)"). Standing rule, not a project: declare the payload when you next touch a channel. `as never` count drifted 31 → 36 — watch the ratchet. Filed 2026-08-21.
+#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
+
+Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
 
 #### Rebuild BuildRight on the thin-layer model ([`2026-06-10-buildright-eds-disposition.md`](2026-06-10-buildright-eds-disposition.md))
 
 Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
 
-#### App Builder component — D3 dual-flow removal ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
-
-Rewritten 2026-07-09; **re-measured 2026-08-23 and shrunk again**: edit-mode rehydration has SHIPPED (`buildEditModeIntegrationState` in `useWizardState.ts:216` seeds selections, sources, keyed API picks AND the mesh optional-dependency — the item's remaining-scope #2 went with it). **The ReviewStep bug was FIXED the same day** (`resolveReviewIntegrationNames` in `reviewStepHelpers.tsx` — Review now renders integrations through the same resolver the builder summary uses; the dead `components.appBuilder` read is gone and the never-wired `summarizeSelectedAppBuilderComponents` deleted). Remaining: only the **D3 dual-flow removal** (the mirror-write in `appBuilderComponentSelectionState.ts`).
-
 #### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
 
 One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
-
-#### Per-integration API attribution — step 07 ([`per-integration-api-attribution/`](per-integration-api-attribution/overview.md))
-
-Moved from `plans/` 2026-08-13. Steps 01–05 **shipped**, step 06 **withdrawn** (the capability
-it existed for turned out not to exist). Step 07 is **RELEASE-gated, not code-gated**: no
-shipped build reads `componentApiPicks`, so retiring the flat write today would lose API picks
-for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulation.
-
-### E. Larger / untouched
 
 #### Instance hygiene — wipe + assisted manual steps for demo reuse ([`2026-08-22-instance-wipe-option.md`](2026-08-22-instance-wipe-option.md))
 
@@ -244,48 +248,26 @@ Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag
 
 ### F. Maintenance cycle anchors
 
+#### Regroup crowded service directories ([`2026-08-23-services-directory-regrouping.md`](2026-08-23-services-directory-regrouping.md))
+
+Measured 2026-08-23: `features/eds/services` holds **95 direct files** in clear name families (15 `daLive*`, 8 `helix*`, 7 `github*`, 7 `eds*`/reset, 6 `storefront*`, 6 `config*`) — the one strong regrouping candidate in the repo. Everything else 38 files or under with a working naming convention; the item records the full table and why each is left alone (`ai/server`'s suffix convention, `core/ui`'s kind-grouping, `core/utils`' by-design grab-bag). Subfolders under `services/` are existing house practice (`prerequisites/services/installation/`, `dashboard/services/onOpenChecks/`). Cost measured for eds/services alone: ~700 alias imports, 232 sibling imports, **308 literal `jest.mock` path strings tsc can't check**, a 117-file test-mirror move, 13+ citing docs. Execute right after a release cut with no EDS branch in flight; full gate + `rptc-hygiene-scan` after. Discoverability only — no coupling changes. Filed 2026-08-23.
+
 #### Structural baseline ([`2026-05-21-structural-baseline.md`](2026-05-21-structural-baseline.md))
 
 Numbers-first measurement pass to map the codebase's actual size, complexity, and coupling after ~1 year of AI-assisted development. **Run after Cycle D ships.** Produces a report that informs subsequent trim cycles.
 
 ### G. Instrumentation & guidance gaps (filed 2026-08-13)
 
-#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
-
-Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
-Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
-36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
-sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
-AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
-var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
-and the two scrape-flow skills route typography through the shipped scale. **Now gated on
-field feedback:** the failure was inferred, never observed — the measure step is checking the
-next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
-recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
-tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
-
-#### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
-
-Filed 2026-08-13; **re-measured 2026-08-23 — two of its three gaps have shrunk or closed.**
-**(1) The invisible-download gap is mostly dead:** the premise ("Playwright fetches ~150 MB
-Chromium on first use, nothing in `src/` knows") was measured FALSE on 2026-08-22 — the MCP
-drives the machine's installed Chrome by default, and `src/` now says so in three places
-(the v17 skill correction, `ai-defaults.json`, `constants.ts`). What survives is only the
-runtime pre-check for Chrome-less machines (a Chrome-detection + `ms-playwright` cache stat;
-today only `mcpInspector.ts` even mentions the env var). **(2) Progress is still a label,
-not progress** — `aiHandlers.ts` emits one opaque step and `aiDefaultsInstaller.ts` has zero
-progress wiring (verified with a control). **(3) The skill→tool dependency is DECLARED and
-ENFORCED** — `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts:83` maps exactly the three
-Playwright-driving skills, and `skillsWriter.ts` gates generation on it, so a project
-without the tool no longer receives skills that command it. Remaining live work: the
-opt-out surface itself, the progress fix, and the re-scoped Chrome-less pre-check. Not
-blocked.
-
-
----
-
 ## Recently shipped — 2026-08
 
+#### Native consent for destructive MCP operations ([`../complete/2026-08-23-mcp-destructive-ops-native-consent.md`](../complete/2026-08-23-mcp-destructive-ops-native-consent.md))
+
+All three legs shipped — visibility 2026-08-23 (`agentOperationNotifier`), traversability + consent 2026-08-24: a modal VS Code dialog now gates any agent call carrying `confirm: true` (the surface's own destructive marker), with `demoBuilder.ai.requireAgentConsent` (default on) as the headless escape hatch and a prose refusal on decline; `sign_in(dalive)` returns immediately with poll-`get_auth_status` instructions; AGENTS.md v20 front-loads auth checks. Design record: `.rptc/complete/mcp-agent-consent/overview.md`; docs: `mcp-server.md` §11.
+
+- **Third-party AI tooling — visible, optional, coherently gated** — closed 2026-08-23, steps 3–7 in one slice (AI bundle v19): the `demoBuilder.ai.enableThirdPartyTools` opt-out lives INSIDE the shared gate predicate via an injected resolver (all four seams inherit it; dependent skills gate atomically), the AI Capabilities modal states WHY an absent skill is absent, the verifier pre-checks for a drivable browser on Chrome-less machines, npm's own output streams as install progress, and flipping the setting prompts an Apply Now that installs/removes across projects ([`../complete/2026-08-13-third-party-tooling-visible-and-optional.md`](../complete/2026-08-13-third-party-tooling-visible-and-optional.md))
+- **Per-integration API attribution — step 07** — closed 2026-08-23, completing the campaign: the release gate was long satisfied (keyed reader shipped in beta.127, twelve releases prior), so the flat `additionalConsoleApis` write is retired at all four surfaces, its two helper functions died with their only callers, every read path keeps legacy tolerance forever, and the parity test is inverted to pin the ABSENCE of flat writes ([`../complete/per-integration-api-attribution/overview.md`](../complete/per-integration-api-attribution/overview.md))
+- **Content patches have no drift gate** — closed 2026-08-23, same day it was filed, via shape 2: `patchMissTracker` counts consecutive non-applies per patch (apply resets; fail-open; headless callers count too), and at 3 misses the create/reset report escalates to "likely obsolete, retire it from the ledger" in both toast and logs — the toast is now a detector WITH memory ([`../complete/2026-08-23-content-patches-have-no-drift-gate.md`](../complete/2026-08-23-content-patches-have-no-drift-gate.md))
+- **Webview channel typing** — converted to a standing rule 2026-08-23: "type the channel you touch, one per slice" is not finishable work and could never leave a backlog. The rule + slice discipline + worked examples now live in the `webview-command-handler` skill (loaded exactly when someone touches a channel); the cast-cluster leads stay in the archived item ([`../complete/2026-08-21-webview-push-channels-are-untyped.md`](../complete/2026-08-21-webview-push-channels-are-untyped.md))
 - **`executeEdsPipeline` step-list rewrite** — closed 2026-08-23 exactly as designed: gating in PIPELINE_STEPS data, shared locals as an explicit context, per-step error semantics declared on the descriptors, complexity 27 → a loop (the eslint warning is gone; whole-repo lint now 0 warnings). Live-validated on all three consumer paths (refresh, reset, create) against real resources — and the first live run caught the beta.138 reset-breaking daLiveSite regression, vindicating the item's live-runs bar ([`../complete/2026-08-19-eds-pipeline-orchestrator-complexity.md`](../complete/2026-08-19-eds-pipeline-orchestrator-complexity.md))
 - **Audit: project-level facts stored per-component** — closed 2026-08-23 via the item's own preferred fix (mechanism, not per-key). The one reachable write/read divergence post-reconcile was ORPHANED entries: component removal never deleted `componentConfigs[id]`, and configGenerator's sweep gives mesh entries override priority — so a removed mesh's stale `ADOBE_COMMERCE_URL` could outvote the backend's fresh value (the 2026-08-10 failure shape, open for all 11 non-scope keys). Removal now deletes the entry + `stripOrphanedComponentConfigs` sweeps existing manifests on load; none of the 11 keys needs per-key single-sourcing. ACO keys classified out of reach (no config surface walks addons/tools) ([`../complete/2026-08-11-project-level-facts-stored-per-component.md`](../complete/2026-08-11-project-level-facts-stored-per-component.md))
 - **DX follow-through — verification pipeline + guidance freshness** — closed 2026-08-23, all four items shipped or found shipped: the secret-file guard BUILT as router rule `20-secret-files` (hard-stop; .env* + high-confidence secret content bound for the public repo; router now parses Write/Edit content; 10 RED-first pins); guidance freshness BUILT as a path-drift section in `doc-drift.sh` (continuous, deterministic existed-vs-illustrative split — first run found 25 real stale refs, 23 fixed same turn); gate evidence + fresh-context review found already shipped (gate's extracted-lines discipline + RPTC automatic verify); webpack devDeps shipped `4bb0197b6` ([`../complete/2026-07-03-dx-verification-pipeline.md`](../complete/2026-07-03-dx-verification-pipeline.md))

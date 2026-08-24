@@ -7,7 +7,7 @@ import {
     resolveReviewIntegrationNames,
     resolveServiceNames,
 } from './reviewStepHelpers';
-import { COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -289,13 +289,15 @@ export function ReviewStep({
                 ? {
                       frontend: stack.frontend,
                       backend: stack.backend,
+                      // The mesh rides selectedAppBuilderComponents (D3); only
+                      // mesh-kind ids belong in the dependencies list.
                       dependencies: [
                           ...(stack.dependencies || []),
-                          ...(state.selectedOptionalDependencies || []),
+                          ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
                       ],
                   }
                 : undefined,
-        [stack, state.selectedOptionalDependencies],
+        [stack, state.selectedAppBuilderComponents],
     );
 
     // The configured integrations, resolved to display names through the same

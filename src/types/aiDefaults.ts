@@ -21,6 +21,16 @@ export interface AiDefaultsMcpServer {
     /** Human-readable description shown in the AI Overview screen. */
     description: string;
     /**
+     * True for genuinely third-party tooling (published outside Adobe, e.g.
+     * Playwright). Entries carrying this are additionally gated on the
+     * `demoBuilder.ai.enableThirdPartyTools` setting — the escape hatch for
+     * restricted environments. Skills that DRIVE such a tool
+     * (`SKILL_MCP_TOOL_DEPENDENCIES`) are removed with it, atomically: a
+     * skill instructing an agent to use a tool that is not there is worse
+     * than no skill.
+     */
+    thirdParty?: boolean;
+    /**
      * Which projects this entry applies to:
      * - 'eds-storefront': only projects with an installed EDS storefront
      *   (e.g. Playwright, which drives the EDS site-scraping skills).

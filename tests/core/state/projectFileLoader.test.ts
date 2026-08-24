@@ -370,12 +370,14 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         return JSON.parse(manifestWrite![1] as string) as Record<string, unknown>;
     }
 
-    it('persists additionalConsoleApis in the manifest when non-empty', async () => {
+    it('does NOT persist the flat field — step 07 retired the flat write', async () => {
+        // A legacy in-memory value (loaded from an old manifest) is not
+        // re-persisted; the keyed map is the one written form.
         const written = await writeAndCaptureManifest(
             baseProject({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] })
         );
 
-        expect(written.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
+        expect('additionalConsoleApis' in written).toBe(false);
     });
 
     it('omits the field from the manifest for an empty picks list', async () => {
@@ -412,9 +414,9 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         expect(project!.additionalConsoleApis).toBeUndefined();
     });
 
-    it('round-trips picks through the real writer and loader', async () => {
+    it('round-trips picks through the real writer and loader — via the keyed map', async () => {
         const written = await writeAndCaptureManifest(
-            baseProject({ additionalConsoleApis: ['CCAPI'] })
+            baseProject({ componentApiPicks: { 'erp-sync': ['CCAPI'] } })
         );
 
         mockedFs.readFile.mockResolvedValue(JSON.stringify(written));
@@ -423,14 +425,14 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         const loader = new ProjectFileLoader(makeLogger());
         const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
 
-        expect(reloaded!.additionalConsoleApis).toEqual(['CCAPI']);
+        expect(reloaded!.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
     });
 
-    // ---- per-integration attribution (step 01) ----
-    // The keyed map supersedes the flat field. Both are written until the flat
-    // write path retires, so a manifest written now still loads on an older build.
+    // ---- per-integration attribution (step 01; flat write retired in step 07) ----
+    // The keyed map is the one written form. Legacy manifests carrying only the
+    // flat field still LOAD (migrateApiPicks folds them under __existing__).
 
-    it('persists componentApiPicks alongside the flat field', async () => {
+    it('persists componentApiPicks as the ONLY written form', async () => {
         const written = await writeAndCaptureManifest(
             baseProject({
                 componentApiPicks: { 'erp-sync': ['CCAPI'] },
@@ -439,7 +441,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         );
 
         expect(written.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
-        expect(written.additionalConsoleApis).toEqual(['CCAPI']);
+        expect('additionalConsoleApis' in written).toBe(false);
     });
 
     it('omits componentApiPicks when empty (legacy manifests keep loading via migration)', async () => {
@@ -520,7 +522,9 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
             componentConfigs: {},
             componentVersions: {},
             appBuilderComponents: keyedMap,
-            additionalConsoleApis: ['FireflySDK'],
+            // Keyed picks are what persist since step 07; the loader migrates
+            // legacy flat-only manifests into this shape on load anyway.
+            componentApiPicks: { __existing__: ['FireflySDK'] },
         } as unknown as Project;
 
         const writer = new ProjectConfigWriter(makeLogger());
@@ -545,6 +549,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
                 name: 'Firefly Image Gen',
             },
         });
-        expect(settings.additionalConsoleApis).toEqual(['FireflySDK']);
+        expect(settings.additionalConsoleApis).toBeUndefined();
+        expect(settings.componentApiPicks).toEqual({ __existing__: ['FireflySDK'] });
     });
 });

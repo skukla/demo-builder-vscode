@@ -3,7 +3,7 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
-import { hasMeshInDependencies } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -417,16 +417,6 @@ export function getNextButtonText(
 }
 
 /**
- * Check if any mesh component is selected in wizard state
- *
- * Checks if dependencies include any mesh component ID (EDS or Headless).
- * Uses hasMeshInDependencies for type-safe mesh detection.
- */
-export function hasMeshComponentSelected(components: ComponentSelection | undefined): boolean {
-    return hasMeshInDependencies(components?.dependencies);
-}
-
-/**
  * Get indices of completed steps in the wizard step array
  *
  * Extracts inline array operations (SOP §4):
@@ -573,8 +563,8 @@ const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
 /**
  * The per-integration picks, charset-filtered per key, with keys left empty
- * dropped. This is what PERSISTS — {@link unionConsoleApiPicks} below derives
- * the legacy flat field from it for readers that predate attribution.
+ * dropped. This is what PERSISTS — the derived flat union that used to ride
+ * beside it was retired with attribution step 07 (2026-08-23).
  *
  * `__existing__` stays its own key: those picks have an unrecoverable owner,
  * which is not the same as having none.
@@ -592,25 +582,6 @@ function sanitizeConsoleApiPicks(
         ])
         .filter(([, codes]) => codes.length > 0);
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-}
-
-/**
- * Sorted, deduped union of all per-integration free Console API picks
- * (including the reserved `__existing__` edit-mode key). Codes outside the
- * SDK charset are dropped at this boundary. Returns undefined when nothing
- * valid is picked so the serialized config omits the field.
- */
-function unionConsoleApiPicks(
-    selectedConsoleApis: Record<string, string[]> | undefined,
-): string[] | undefined {
-    const union = [
-        ...new Set(
-            Object.values(selectedConsoleApis ?? {})
-                .flat()
-                .filter((code) => SDK_CODE_RE.test(code)),
-        ),
-    ].sort();
-    return union.length > 0 ? union : undefined;
 }
 
 /**
@@ -635,7 +606,6 @@ export type ProjectConfigSource = Pick<
     | 'adobeWorkspace'
     | 'componentConfigs'
     | 'selectedStack'
-    | 'selectedOptionalDependencies'
     | 'apiMesh'
     | 'storeDiscoveryData'
     | 'selectedPackage'
@@ -689,9 +659,13 @@ export function buildProjectConfig(
             ? {
                   frontend: stack.frontend,
                   backend: stack.backend,
+                  // The mesh's wizard-side home is selectedAppBuilderComponents
+                  // (D3); the WIRE still carries it here in dependencies, which
+                  // is where creation installs it and where the persisted
+                  // componentSelections keep it (ADR-011).
                   dependencies: [
                       ...(stack.dependencies || []),
-                      ...(wizardState.selectedOptionalDependencies || []),
+                      ...(wizardState.selectedAppBuilderComponents || []).filter(isMeshComponentId),
                   ],
                   integrations: [],
                   appBuilder: [],
@@ -711,9 +685,6 @@ export function buildProjectConfig(
         datapack: wizardState.datapack,
         selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
         appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
-        // Legacy flat field, DERIVED from the keyed record below so both forms
-        // always describe the same set (step 07 retires it).
-        additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis),
         componentApiPicks: sanitizeConsoleApiPicks(wizardState.selectedConsoleApis),
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],

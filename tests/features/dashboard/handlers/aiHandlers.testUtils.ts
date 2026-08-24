@@ -53,6 +53,7 @@ jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
     // Default: success — tests can override per-case via mockResolvedValueOnce.
     installAiDefaultsMcpTools: jest.fn().mockResolvedValue({ success: true }),
+    readInstalledMcpPackages: jest.fn().mockResolvedValue([]),
     // Real predicate: pure function over the project record, so the
     // storefront/headless fixtures keep their production meaning.
     projectNeedsAppBuilderTooling: jest.requireActual(

@@ -40,7 +40,7 @@ describe('ReviewStep', () => {
         currentStep: 'review',
         projectName: 'my-demo-project',
         selectedStack: 'headless-paas', // Source of truth for components
-        selectedOptionalDependencies: ['headless-commerce-mesh'], // User opted in to mesh
+        selectedAppBuilderComponents: ['headless-commerce-mesh'], // User opted in to mesh
         adobeAuth: {
             isAuthenticated: true,
             isChecking: false,
@@ -294,7 +294,7 @@ describe('ReviewStep', () => {
             const edsState = {
                 ...completeState,
                 selectedStack: 'eds-paas',
-                selectedOptionalDependencies: ['eds-commerce-mesh'],
+                selectedAppBuilderComponents: ['eds-commerce-mesh'],
             };
 
             render(

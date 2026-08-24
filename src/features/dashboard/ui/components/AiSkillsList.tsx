@@ -44,6 +44,20 @@ export interface AiSkillsListProps {
      * row; non-skill entries are the modal note's job and are ignored here.
      */
     editedFiles?: string[];
+    /**
+     * Tool-driving skills this project qualifies for but does not have, with
+     * why. Rendered as muted rows AFTER the installed groups — an absence with
+     * a stated reason instead of a silent omission (third-party-tooling item,
+     * step 4).
+     */
+    gatedSkills?: Array<{ file: string; toolId: string; reason: 'setting-disabled' | 'tool-missing' }>;
+}
+
+/** Human copy per gated reason. */
+function gatedReasonLabel(reason: 'setting-disabled' | 'tool-missing'): string {
+    return reason === 'setting-disabled'
+        ? 'requires Playwright — disabled by the third-party tooling setting'
+        : 'requires Playwright — tool not installed; Regenerate AI Files installs it';
 }
 
 /**
@@ -105,6 +119,7 @@ export function AiSkillsList({
     hasError = false,
     isLoading = false,
     editedFiles,
+    gatedSkills,
 }: AiSkillsListProps): React.ReactElement {
     const grouped = useMemo(() => {
         const byKey = new Map<
@@ -206,6 +221,27 @@ export function AiSkillsList({
                         </Flex>
                     </div>
                 ))}
+                {gatedSkills && gatedSkills.length > 0 && (
+                    <div>
+                        <div
+                            className="ai-skills-group-header"
+                            data-testid="ai-skills-group-gated"
+                        >
+                            Not available · {gatedSkills.length}
+                        </div>
+                        <Flex direction="column" gap="size-50">
+                            {gatedSkills.map((g) => (
+                                <Text
+                                    key={g.file}
+                                    data-testid="ai-skill-gated-row"
+                                    UNSAFE_className="text-gray-600"
+                                >
+                                    {g.file.replace(/\.md$/, '')} · {gatedReasonLabel(g.reason)}
+                                </Text>
+                            ))}
+                        </Flex>
+                    </div>
+                )}
             </div>
         </Flex>
     );

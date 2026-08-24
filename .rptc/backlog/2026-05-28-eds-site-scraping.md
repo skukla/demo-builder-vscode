@@ -84,9 +84,12 @@ command.
    (project-local entry; command `playwright-mcp`; uses the globally
    installed binary). Optionally add `/content-readonly` MCP server entry
    for projects targeting an existing AEM Cloud Service env.
-3. **Six new Demo Builder skills** in
-   `src/features/project-creation/templates/skills/`, wired into the
-   always-write `Promise.all([...])` in `skillsWriter.ts:80-84`:
+3. **Six new Demo Builder skills** — **✅ this sub-part SHIPPED (verified
+   2026-08-23: all six exist in `src/features/project-creation/templates/skills/`
+   and are in `skillsWriter.ts`'s always-write set — cite the `Promise.all`
+   there by symbol, the line moves).** The item stays deferred on Phase 0
+   (Mod Agent provisioning); the skills landing early does not unblock that.
+   Original spec:
    - `scrape-reference-site.md` — orchestrator. ALWAYS asks the user "Mod
      Agent or Playwright?" and branches. Surfaces trade-offs inline (fidelity
      vs context switch).

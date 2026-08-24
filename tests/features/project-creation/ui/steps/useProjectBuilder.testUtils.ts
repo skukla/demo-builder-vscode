@@ -1,6 +1,6 @@
 /**
  * Shared fixtures + setup for the useProjectBuilder suites
- * (useProjectBuilder.test.ts — mesh dual-flow/stack select;
+ * (useProjectBuilder.test.ts — mesh selection/stack select;
  * useProjectBuilder.instances.test.ts — instance add/remove/rename).
  *
  * NOTE: `jest.mock` calls are per-file and stay in each test file; only the

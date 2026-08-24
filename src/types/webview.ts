@@ -104,8 +104,7 @@ export interface WizardState {
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[]; // Selected addon IDs (e.g., ['adobe-commerce-aco'])
     selectedBlockLibraries?: string[]; // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
-    selectedOptionalDependencies?: string[]; // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
-    selectedAppBuilderComponents?: string[]; // Selected catalog appBuilderComponent IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see appBuilderComponentSelectionState.ts
+    selectedAppBuilderComponents?: string[]; // Selected catalog appBuilderComponent IDs — the SINGLE wizard-side authority for App Builder selections, mesh included (D3; mesh catalog ids ARE registry component ids). Serialization derives the wire's dependencies from the mesh-kind ids in here.
     appBuilderComponentSources?: Record<
         string,
         { owner: string; repo: string; branch?: string; name?: string }

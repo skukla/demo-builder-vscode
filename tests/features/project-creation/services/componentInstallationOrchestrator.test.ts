@@ -63,7 +63,8 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
 
         expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
             '/proj',
-            expect.objectContaining({ path: '/proj' })
+            expect.objectContaining({ path: '/proj' }),
+            expect.any(Function)
         );
     });
 
@@ -77,7 +78,8 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
 
         expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
             '/proj',
-            expect.objectContaining({ path: '/proj' })
+            expect.objectContaining({ path: '/proj' }),
+            expect.any(Function)
         );
     });
 

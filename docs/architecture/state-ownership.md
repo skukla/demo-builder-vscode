@@ -160,23 +160,43 @@ in Step 07).
 
 ---
 
-### additionalConsoleApis
+### componentApiPicks (flat `additionalConsoleApis` is LEGACY-READ-ONLY)
 
 **Purpose**: The extra Adobe Console APIs the user picked beyond each
-integration's required set. Unioned with the always-on set when the workspace
-credential's subscriptions are reconciled.
+integration's required set, keyed by the integration that wanted them
+(`Record<componentId, string[]>`). Attribution is the point: the workspace
+credential subscribes ONE union across N integrations, so without an owner per
+pick nothing can answer "is this API still needed if I remove that
+integration?". Picks whose owner is unrecoverable (pre-attribution manifests,
+adds made from the union view) live under the reserved `__existing__` key —
+recorded as unowned rather than guessed.
+
+**Read**: `resolveDesiredApis` (`src/core/state/componentApiPicks.ts`) computes
+the union every subscription reconcile PUTs; it falls back to the legacy flat
+field only when no keyed map exists.
 
 **Write Authority**:
-- `src/features/project-creation/` wizard creation union (`unionConsoleApiPicks`
-  → `buildInitialProject`)
-- The `add_console_apis` MCP handler
-- The dashboard Manage-APIs reconcile
+- Creation: the wizard's keyed picks (`selectedConsoleApis`) serialize through
+  `sanitizeConsoleApiPicks` (`wizardHelpers.ts`) into the creation config's
+  `componentApiPicks`, persisted by `buildInitialProject` (`executor.ts`)
+- The Manage-APIs reconcile (dashboard UI and the `add_console_apis` /
+  `set_console_apis` MCP tools — same handlers,
+  `src/features/dashboard/handlers/consoleApiHandlers.ts`), which preserves
+  attribution via `applyDesiredApis`
+- `removeAppBuilderComponent` (`appBuilderComponentRunner.ts`) drops the
+  removed integration's key
+- Load-time migration: `projectFileLoader` runs `migrateApiPicks`, folding a
+  legacy flat `additionalConsoleApis` under `__existing__` (read side only;
+  the manifest changes on next save)
 
-**Persistence**: Manifest-persisted since the §E fix (2026-07-16); absent on
-legacy manifests (loads as empty). Unlike integration sources — which are
-DERIVED from the keyed `appBuilderComponents` map — the picked APIs are NOT
-derivable from anything else. Before the fix they lived only in memory, so a
-reload lost them and the next redeploy silently unsubscribed them.
+**Persistence**: Manifest-persisted since the §E fix (2026-07-16, then flat);
+keyed since attribution step 01, and the flat write was retired with step 07
+(2026-08-23) — `projectConfigWriter` writes only `componentApiPicks`, while
+the read side keeps migrating legacy manifests forever. Unlike integration
+sources — which are DERIVED from the keyed `appBuilderComponents` map — the
+picked APIs are NOT derivable from anything else: before the §E fix they lived
+only in memory, so a reload lost them and the next redeploy silently
+unsubscribed them.
 
 ---
 

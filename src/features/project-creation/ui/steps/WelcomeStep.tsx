@@ -114,7 +114,6 @@ export function WelcomeStep({
                     // selection) after switching packages away and back.
                     selectedStack: undefined,
                     selectedBackend: undefined,
-                    selectedOptionalDependencies: [],
                     selectedAppBuilderComponents: [],
                     // API picks are keyed by integration id — orphaned picks would
                     // otherwise serialize into the new project's subscribe union.
@@ -224,11 +223,7 @@ export function WelcomeStep({
                 // Say where it lands, rather than making them type it. The folder
                 // is browsable on disk, so it is worth showing -- silently
                 // deriving a name the user then cannot find is its own bug.
-                description={
-                    state.projectName
-                        ? `Folder: ${state.projectName}`
-                        : undefined
-                }
+                description={state.projectName ? `Folder: ${state.projectName}` : undefined}
                 width="size-6000"
                 isRequired
                 {...selectableDefaultProps}

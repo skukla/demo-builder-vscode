@@ -621,8 +621,8 @@ export async function removeAppBuilderComponent(
         // component". A selected-but-absent mesh is an error state, not a resting
         // one — so the selection goes with the component.
         // Both kinds revoke their selection; they just live in different lists —
-        // the mesh dual-flows through `dependencies`, an integration through
-        // `appBuilder`. Only the mesh half existed until 2026-08-17.
+        // the persisted mesh rides `dependencies`, an integration rides
+        // `appBuilder` (ADR-011). Only the mesh half existed until 2026-08-17.
         componentSelections:
             state.kind === 'mesh'
                 ? withoutMeshDependencies(project)

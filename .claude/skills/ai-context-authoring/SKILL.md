@@ -46,7 +46,11 @@ component). It is applied at:
 4. `aiHandlers.handleRegenerateAiFiles` — the regenerate-path install call
 
 Miss one and creation and regenerate produce different bundles. Each ai-defaults entry
-declares its own gate via `requires` (`'eds-storefront'` = Playwright-style storefront-only;
+declares its own gate via `requires`. The third-party opt-out
+(`demoBuilder.ai.enableThirdPartyTools`, entries flagged `thirdParty`) is deliberately
+NOT a fifth seam: it lives inside `aiDefaultsEntryApplies` via an injected resolver
+(`setThirdPartyToolsResolver`, wired at activation), so every seam inherits it — and
+`registerThirdPartyToolingSettingListener` makes re-enabling install. Each entry (`'eds-storefront'` = Playwright-style storefront-only;
 `'app-builder-tooling'` = the predicate). New entries MUST declare it (schema-required).
 
 ## Who writes what

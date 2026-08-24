@@ -70,16 +70,12 @@ function getComponentInstanceKeys(project: import('@/types').Project): string[] 
 /**
  * Actual project creation logic (extracted for testability)
  */
-/** A defined array only when it has at least one item (else undefined, so the manifest omits it). */
-function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
-    return items && items.length > 0 ? items : undefined;
-}
 
 /**
  * Selected App Builder integration ids for `componentSelections.appBuilder`.
  *
- * Excludes mesh-kind ids (they dual-flow through `components.dependencies` and
- * are installed by the mesh phase) plus anything literally riding dependencies,
+ * Excludes mesh-kind ids (they ride `components.dependencies` and are
+ * installed by the mesh phase) plus anything literally riding dependencies,
  * so reset/edit flows never see the same component under two categories.
  *
  * Exclusion keys on the catalog KIND rather than on membership in dependencies.
@@ -156,7 +152,6 @@ export function buildInitialProject(
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
-        additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
         componentApiPicks: typedConfig.componentApiPicks,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation

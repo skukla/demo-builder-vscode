@@ -5,7 +5,8 @@
  * an empty state when nothing is configured, ONE destination line above the list,
  * one shared `IntegrationCard` per configured integration (resolved from wizard
  * state — including a PACKAGE-SEEDED mesh arriving via
- * selectedOptionalDependencies), and an accent "Add Integration" button hosting
+ * selectedAppBuilderComponents, the single mesh authority since D3), and an
+ * accent "Add Integration" button hosting
  * the AddIntegrationFlowModal journey.
  *
  * Spectrum comes from the repo-wide stub (`tests/__mocks__/@adobe/react-spectrum`),
@@ -91,10 +92,9 @@ const meshStack = {
 } as unknown as Stack;
 const stacks = [meshStack] as Stack[];
 
-/** The stack's mesh catalog entry (real catalog) and its legacy dependency mirror. */
+/** The stack's mesh catalog entry (real catalog). */
 const MESH_ID = 'eds-commerce-mesh';
 const MESH_NAME = 'EDS Commerce API Mesh';
-const MESH_LEGACY_DEP = 'eds-commerce-mesh';
 
 const SIGNED_IN: Partial<WizardState> = {
     adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -212,11 +212,14 @@ describe('IntegrationsStep — result cards from state', () => {
         renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
         expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
-        expect(within(destinationLine()).getByRole('button', { name: 'Set up' })).toBeInTheDocument();
+        expect(
+            within(destinationLine()).getByRole('button', { name: 'Set up' })
+        ).toBeInTheDocument();
     });
 
-    it('renders a PACKAGE-SEEDED mesh (dependency key only) as a card', () => {
-        renderStep(baseState({ selectedOptionalDependencies: [MESH_LEGACY_DEP] }));
+    it('renders a PACKAGE-SEEDED mesh (arriving via selectedAppBuilderComponents) as a card', () => {
+        // onStackSelect seeds a required mesh into selectedAppBuilderComponents (D3).
+        renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
         expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
     });
@@ -317,7 +320,9 @@ describe('IntegrationsStep — result cards from state', () => {
         );
 
         const customMenu = menuOf(row('widget'));
-        expect(within(customMenu).getByRole('menuitem', { name: /Manage APIs/i })).toBeInTheDocument();
+        expect(
+            within(customMenu).getByRole('menuitem', { name: /Manage APIs/i })
+        ).toBeInTheDocument();
 
         const meshMenu = menuOf(row(MESH_NAME));
         expect(within(meshMenu).queryByRole('menuitem', { name: /Manage APIs/i })).toBeNull();
@@ -453,7 +458,9 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
             within(row('Firefly Image Gen')).getByRole('button', { name: /rename/i })
         ).toBeInTheDocument();
         expect(within(row('widget')).queryByRole('button', { name: /rename/i })).toBeNull();
-        expect(within(row('Recommendations')).queryByRole('button', { name: /rename/i })).toBeNull();
+        expect(
+            within(row('Recommendations')).queryByRole('button', { name: /rename/i })
+        ).toBeNull();
         expect(within(row(MESH_NAME)).queryByRole('button', { name: /rename/i })).toBeNull();
     });
 
@@ -523,30 +530,14 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
 });
 
 // Remove moved from a face button to a kebab item with the card. The ROUTING is
-// what these pin, and it is unchanged: a mesh must clear both selection keys.
+// what these pin, and it is unchanged: a mesh clears its selection (the single
+// authority since D3 — no legacy dependency key exists to clear).
 describe('IntegrationsStep — Remove routing', () => {
-    it('mesh Remove routes through the mesh dual-flow toggle (both keys cleared)', () => {
-        const { updateState } = renderStep(
-            baseState({
-                selectedAppBuilderComponents: [MESH_ID],
-                selectedOptionalDependencies: [MESH_LEGACY_DEP],
-            })
-        );
+    it('mesh Remove routes through the component toggle (selection cleared)', () => {
+        const { updateState } = renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         pickMenuItem(row(MESH_NAME), /Remove/i);
         expect(updateState).toHaveBeenCalledWith({
             selectedAppBuilderComponents: [],
-            selectedOptionalDependencies: [],
-        });
-    });
-
-    it('a PACKAGE-SEEDED mesh Remove clears the dependency mirror key', () => {
-        const { updateState } = renderStep(
-            baseState({ selectedOptionalDependencies: [MESH_LEGACY_DEP] })
-        );
-        pickMenuItem(row(MESH_NAME), /Remove/i);
-        expect(updateState).toHaveBeenCalledWith({
-            selectedAppBuilderComponents: [],
-            selectedOptionalDependencies: [],
         });
     });
 

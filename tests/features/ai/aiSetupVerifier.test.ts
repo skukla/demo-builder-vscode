@@ -317,7 +317,10 @@ describe('verifyAiSetup', () => {
             resolveMcps([]);
             const result = await promise;
 
-            expect(result.checks).toHaveLength(4);
+            // 5 since the playwright-browser pre-check (third-party item step
+            // 5); the mocked fs makes the package look installed, so the row
+            // appears with 'ok'.
+            expect(result.checks).toHaveLength(5);
             expect(result.inventory.mcps).toEqual([]);
         });
 

@@ -237,17 +237,19 @@ describe('integrationsSummaryGroup', () => {
         expect(group.rows).toEqual([{ label: 'API Mesh', value: 'Needs setup', done: false }]);
     });
 
-    it('surfaces a PACKAGE-SEEDED mesh (dependency key only) as a needs-setup row', () => {
+    // Removed-behavior pin (D3): the retired legacy dependency key alone no
+    // longer surfaces a mesh — package seeding writes selectedAppBuilderComponents.
+    it('surfaces NO row from the retired legacy dependency key alone', () => {
         const group = integrationsSummaryGroup(
             state({
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-accs',
                 selectedOptionalDependencies: [MESH_LEGACY_DEP],
-            }),
+            } as never),
             packages,
             stacks
         );
-        expect(group.rows).toEqual([{ label: 'API Mesh', value: 'Needs setup', done: false }]);
+        expect(group.rows).toEqual([]);
     });
 
     it('marks a row Ready + done once the shared destination is committed', () => {

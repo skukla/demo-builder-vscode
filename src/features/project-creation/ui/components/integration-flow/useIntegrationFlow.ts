@@ -10,8 +10,8 @@
  *     already-committed project;
  *   - Continue off `dest-workspace` commits `adobeWorkspace`;
  *   - the LAST stage finishes through the UNCHANGED useProjectBuilder handlers
- *     (mesh/catalog toggle — which carries the load-bearing mesh mirror-write —
- *     custom add) plus the keyed `selectedConsoleApis` merge, then closes.
+ *     (mesh/catalog toggle, custom add) plus the keyed `selectedConsoleApis`
+ *     merge, then closes.
  *
  * Cancel is the modal closing without onContinue: draft mutations never touch
  * wizard state, so discarding the draft discards everything. A destination

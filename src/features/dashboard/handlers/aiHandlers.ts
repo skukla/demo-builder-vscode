@@ -28,8 +28,11 @@ import {
     applicableMcpPackages,
     generateAIContextFiles,
     installAiDefaultsMcpTools,
+    readInstalledMcpPackages,
     projectNeedsAppBuilderTooling,
 } from '@/features/project-creation/services';
+import { gatedSkillReasons } from '@/features/project-creation/services/aiToolingGate';
+import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';
@@ -72,9 +75,18 @@ export async function handleVerifyAiSetup(context: HandlerContext): Promise<Hand
     const result = await verifyAiSetup(project.path, extensionDistPath, project.aiFileHashes);
     logAiVerification(context, result);
 
+    // Why a tool-driving skill is absent (opt-out vs missing install) — the
+    // modal states the reason instead of silently omitting the skill.
+    const gatedSkills = gatedSkillReasons(
+        project,
+        await readInstalledMcpPackages(project.path),
+        SKILL_MCP_TOOL_DEPENDENCIES,
+    );
+
     return {
         success: true,
         ...result,
+        inventory: { ...result.inventory, gatedSkills },
     };
 }
 
@@ -204,13 +216,14 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         // Name the ACTUAL packages so the long step says what it downloads
         // (requirement 5 of the tiered-refresh feature).
         const packages = applicableMcpPackages(project);
-        emit(
-            'Downloading AI tool packages',
-            `Fetching ${packages.join(', ')} — can take up to a minute`,
-        );
+        // No duration claim — the first install is minutes, later runs are
+        // seconds, and npm's own streamed lines are the honest signal.
+        emit('Downloading AI tool packages', `Fetching ${packages.join(', ')}…`);
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
-        const installResult = await installAiDefaultsMcpTools(project.path, project);
+        const installResult = await installAiDefaultsMcpTools(project.path, project, (line) =>
+            emit('Downloading AI tool packages', line),
+        );
         if (!installResult.success) {
             return {
                 success: false,
