@@ -59,8 +59,18 @@ describe('AI_CONTEXT_VERSION', () => {
     // get_auth_status; sign_in(dalive) returns immediately; the native consent
     // dialog and its setting). Existing projects need the sweep refresh to
     // learn agents should poll rather than wait.
-    it('is 20 (agent traversability + native-consent guidance in AGENTS.md)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(20);
+    // v21: the bundle's first PreToolUse hook — the aio-global guard blocking
+    // commerce-extensibility's aio-configure-global / aio-app-use / aio-where.
+    // Without the bump, existing projects never receive it (the activation
+    // sweep is driven by this stamp) and keep the surface where an agent can
+    // desync the org selection the extension no longer uses.
+    // v22: the home AGENTS.md states the active project instead of ordering a
+    // `get_current_project` call to discover it — the round trip 5 of 6 measured
+    // runs spent because the document told them to. Home-only, so delivery does
+    // not actually depend on this stamp (the home context is rewritten on every
+    // activation); bumped to keep the bundle changelog complete and honest.
+    it('is 22 (home AGENTS.md states the active project)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(22);
     });
 });
 

@@ -1,0 +1,60 @@
+# Blocks `git commit -m "…`backtick`…"` — the shell eats the backticked word.
+#
+# NOT once-per-session. Like 10-jest-pipe this is a hard stop on a mechanical
+# mistake, not a nudge toward a skill; making it spendable by doing it twice
+# would defeat it.
+#
+# Why: inside DOUBLE quotes bash treats `…` as command substitution. Writing a
+# commit body with markdown code spans — which is the natural way to name a
+# symbol — silently deletes the word and runs it as a command:
+#
+#     git commit -m "the `why` field states the basis"
+#       → stderr: command not found: why
+#       → commit message: "the  field states the basis"
+#
+# The commit still succeeds, so nothing fails and the damage is only visible if
+# you re-read the message afterwards. Observed repeatedly; the 2026-08-24
+# occurrence lost a word from a pushed commit, and amending a pushed develop
+# commit costs a force-push that is not worth one word.
+#
+# Single quotes are safe (no expansion), so this fires only on the double-quoted
+# form. `$(…)` is deliberately NOT matched: unlike a markdown code span it is
+# occasionally intentional in a commit message (a version string), and a guard
+# that cries wolf gets switched off.
+#
+# KNOWN FALSE POSITIVE, accepted: the rule sees a whole Bash command, so it also
+# fires on a command that merely CONTAINS all three tokens without being a commit
+# — a python/bash heredoc that writes ABOUT commit messages, for instance. That
+# happened twice while writing this rule's own tests. The escape is to make such
+# edits with the Write/Edit tools rather than a shell heredoc, which is better
+# practice anyway. Narrowing it to "backtick appears after the -m" is not worth
+# the regex fragility for a case this rare.
+rule_id=commit-backtick
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    # All three must hold: a git commit, a double-quoted -m, and a backtick.
+    printf '%s' "$2" | grep -q 'git commit' || return 1
+    printf '%s' "$2" | grep -q -- '-m[[:space:]]*"' || return 1
+    printf '%s' "$2" | grep -q '`'
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: backticks inside a double-quoted `git commit -m "…"` are command
+substitution. Bash runs the backticked word and DELETES it from the message —
+the commit still succeeds, so the damage is silent.
+
+Use a quoted heredoc instead. The quoted delimiter disables every expansion,
+so backticks, $, and quotes all survive verbatim:
+
+    git commit -F - <<'MSG'
+    feat(scope): subject line
+
+    Body may contain `backticks`, $vars and "quotes" safely.
+    MSG
+
+(Single-quoted -m '…' is also safe, but breaks on apostrophes — prefer the heredoc.)
+MSG
+}

@@ -146,7 +146,30 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // poll for completion), and destructive confirm:true tools may raise the
 // native consent dialog (demoBuilder.ai.requireAgentConsent): a "user
 // declined" answer means the operation did not run.
-export const AI_CONTEXT_VERSION = 20;
+// v21 (2026-08-24): the first PreToolUse hook in the generated bundle — a
+// guard blocking the commerce-extensibility MCP's aio-configure-global /
+// aio-app-use / aio-where. Those write and read the aio CLI's process-global
+// org selection, which Demo Builder deliberately stopped using (per-operation
+// withOrgContext); one unwrapped write once deployed a mesh into a DELETED
+// project for two days. Guidance structurally cannot fix it — we install the
+// tool that causes it, and its description competes with our skill saying
+// "don't" — so it is enforced, not advised. Rides
+// projectNeedsAppBuilderTooling (the same predicate as the ai-defaults entry
+// that installs those tools) and ships unconditionally for the home Chat.
+// v22 (2026-08-24): the home AGENTS.md states the active project instead of
+// ordering a call to discover it. It told agents, in bold, to call
+// `get_current_project` before any project task, and 5 of 6 measured runs did
+// exactly that — a whole round trip, which is the unit of cost (2 calls and 4
+// calls both measured ~47k tokens; docs/research/2026-08-24-llm-path-measurement.md).
+// The name is written at CHAT LAUNCH (`refreshHomeAgentsMd`), not at activation:
+// activation runs once, the current-project pointer changes freely afterwards,
+// and a stale name asserted with confidence is the "right data, wrong project"
+// failure that made StateManager.getCurrentProject() re-read the pointer per
+// call. With no name available the original directive is kept verbatim.
+// Home-only, so delivery does not depend on this stamp (the home context is
+// rewritten every activation regardless); recorded here to keep the bundle
+// changelog complete.
+export const AI_CONTEXT_VERSION = 22;
 
 /**
  * Component IDs for standardized component instance access

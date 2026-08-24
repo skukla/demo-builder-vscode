@@ -70,7 +70,7 @@ through. (An earlier note here said the stale script made that project unusable 
 repricing check — that was too strong. It only holds for inspecting an old project
 without re-running create.)
 
-## Step 05 outcome (2026-08-16)
+## Step 05 outcome (2026-08-16) — SUPERSEDED the next day, see the correction below
 
 **Items 1-3 done. Item 4 (unhide) DEFERRED by the owner; item 5 (merge) follows it.**
 
@@ -90,3 +90,26 @@ Consequences for anyone picking this up:
 - The theme trap matters more now than it did: `styles/bodea-theme.css` is vendored by
   `brandAssets` from `skukla/bodea-source`, so redesign work done in a generated project is
   **destroyed on the next reset**. Durable theme changes land in `bodea-source` and re-vendor.
+
+---
+
+## Correction (2026-08-24): the unhide SHIPPED 2026-08-17
+
+The deferral above held for one day. `6fd76a222` ("feat(bodea): unhide the Bodea
+package", on develop and master) closed items 4 and 5 with all four pre-unhide
+conditions met — store scope read from the live instance (`bodea` /
+`bodea_store` / `bodea_us`, superseding the earlier `base`/`default` reading),
+group-hash portability answered, the configurator keeper settled by the port,
+and VIP nav gating deleted rather than deferred. Both pin tests named in
+`smoke-test.md` section 8 were updated in the same commit and assert the
+unhidden state today.
+
+**But the gate was overridden, not met.** The redesign this deferral was waiting
+on did not happen before the unhide and has still not happened — the owner
+confirmed 2026-08-24 that the storefront design is broken. So the package is
+live and selectable with an unfinished design, which is a deliberate state, not
+an oversight: the redesign is sequenced behind building better AI coverage for
+the extension, because it is meant to be done with tooling rather than by hand
+(`2026-08-16-mcp-surface-for-sc-design-work.md`). This file is left as the
+record of how the gate was reasoned about — and of the fact that shipping
+overtook it.

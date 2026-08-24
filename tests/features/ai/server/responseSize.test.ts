@@ -18,6 +18,8 @@
  * anything. This is the only way this suite can see past a refusal message.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
@@ -360,45 +362,46 @@ describe('rows with no output safety net are classified', () => {
 describe('the ceiling table tracks the tool surface', () => {
     const descriptorTools = ALL.map((d) => d.tool);
 
+    // Exempt: rows whose response is a fixed short status by construction and
+    // which no measurement has ever found large. Listed rather than inferred,
+    // so adding a tool cannot silently join them.
+    const EXEMPT = new Set([
+        'regenerate_ai_files', 'start_demo', 'stop_demo', 'rename_project',
+        // `add_integration` joins its three siblings: its response is
+        // `{added: {id, name, kind}}` — three short strings, bounded by
+        // nothing that scales with project or catalog size.
+        'add_integration',
+        // `rename_integration` returns two short strings. `set_console_apis`
+        // returns `{code, name?}` per subscribed API — the same shape and the
+        // same credential-bounded union `add_console_apis` already returns
+        // exempt. `set_project_destination` returns the destination refs plus a
+        // move summary, bounded by the project's integration COUNT.
+        'rename_integration', 'set_console_apis', 'set_project_destination',
+        'deploy_integration', 'redeploy_integration', 'remove_integration',
+        'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
+        'export_project_settings', 'refresh_block_library', 'add_console_apis',
+        'check_mesh', 'check_datapack_service', 'get_store_structure',
+        'get_project_urls', 'get_datapack', 'list_datapack_data_types',
+        'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
+        'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
+        // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
+        // is a boolean write. `set_current_project` returns ONE project record
+        // — the same shape `get_project` already carries a 12,000-byte ceiling
+        // for, and bounded the same way.
+        'restart_demo', 'set_current_project', 'set_project_pinned',
+        // Group 7. Four short strings on the install branch, two on the
+        // manual one — bounded by nothing that scales with the machine or
+        // the stack.
+        'install_prerequisite',
+        // Group 8's three job-handle writes. Each returns an activation id or
+        // a short per-type outcome list — bounded by the number of DATA TYPES
+        // in one datapack, not by how much data moved.
+        'start_datapack_import', 'reset_datapack', 'start_datapack_export',
+        // A target reference and a status record. Both fixed-shape.
+        'get_datapack_import_target', 'get_datapack_import_status',
+    ]);
+
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {
-        // Exempt: rows whose response is a fixed short status by construction and
-        // which no measurement has ever found large. Listed rather than inferred,
-        // so adding a tool cannot silently join them.
-        const EXEMPT = new Set([
-            'regenerate_ai_files', 'start_demo', 'stop_demo', 'rename_project',
-            // `add_integration` joins its three siblings: its response is
-            // `{added: {id, name, kind}}` — three short strings, bounded by
-            // nothing that scales with project or catalog size.
-            'add_integration',
-            // `rename_integration` returns two short strings. `set_console_apis`
-            // returns `{code, name?}` per subscribed API — the same shape and the
-            // same credential-bounded union `add_console_apis` already returns
-            // exempt. `set_project_destination` returns the destination refs plus a
-            // move summary, bounded by the project's integration COUNT.
-            'rename_integration', 'set_console_apis', 'set_project_destination',
-            'deploy_integration', 'redeploy_integration', 'remove_integration',
-            'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
-            'export_project_settings', 'refresh_block_library', 'add_console_apis',
-            'check_mesh', 'check_datapack_service', 'get_store_structure',
-            'get_project_urls', 'get_datapack', 'list_datapack_data_types',
-            'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
-            'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
-            // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
-            // is a boolean write. `set_current_project` returns ONE project record
-            // — the same shape `get_project` already carries a 12,000-byte ceiling
-            // for, and bounded the same way.
-            'restart_demo', 'set_current_project', 'set_project_pinned',
-            // Group 7. Four short strings on the install branch, two on the
-            // manual one — bounded by nothing that scales with the machine or
-            // the stack.
-            'install_prerequisite',
-            // Group 8's three job-handle writes. Each returns an activation id or
-            // a short per-type outcome list — bounded by the number of DATA TYPES
-            // in one datapack, not by how much data moved.
-            'start_datapack_import', 'reset_datapack', 'start_datapack_export',
-            // A target reference and a status record. Both fixed-shape.
-            'get_datapack_import_target', 'get_datapack_import_status',
-        ]);
         // Rows built but not yet driven against a live extension. Distinct from
         // EXEMPT on purpose: exempt is a decision, this is an IOU. A ceiling is a
         // live measurement, and inventing one from the stub harness would record a
@@ -426,6 +429,72 @@ describe('the ceiling table tracks the tool surface', () => {
         // An IOU that is already paid is rot in the other direction.
         const paid = [...PENDING_LIVE_MEASUREMENT].filter((t) => RESPONSE_CEILINGS[t]);
         expect(paid).toEqual([]);
+    });
+
+    /**
+     * The check above walks DESCRIPTOR rows. Tools registered directly — the
+     * `*Tools.ts` modules and `registerProjectTools` in `src/mcp-server.ts` — never
+     * pass through it, so until 2026-08-24 nothing asserted anything about what
+     * they return. Measured that day: 57 directly-registered tools, 47 carrying a
+     * ceiling anyway and **10 with neither a ceiling nor an exemption**.
+     *
+     * This is the same shape as the bug the response-envelope guard shipped with —
+     * its first version scanned one directory and missed ten tools in
+     * `src/mcp-server.ts`, caught by two reviewers independently. A guard that
+     * covers one of two registration paths reads as full coverage and is not.
+     *
+     * The ten are listed as IOUs rather than given invented ceilings: several
+     * (`create_project`, `reset_eds_project`, `apply_updates`) return
+     * progress/summary payloads whose real size only a live run produces, and a
+     * number guessed from a stub records a size production never emits. Promote
+     * each to a real ceiling — or to EXEMPT, if a live look shows a fixed short
+     * status — as an F5 pass exercises it.
+     */
+    it('records a ceiling, an exemption, or an IOU for every DIRECTLY-registered tool', () => {
+        const registrarSrc = [
+            'src/mcp-server.ts',
+            ...fs
+                .readdirSync(path.join(__dirname, '../../../../src/features/ai/server'))
+                .filter((f) => f.endsWith('.ts'))
+                .map((f) => `src/features/ai/server/${f}`),
+        ];
+        const registered = new Set<string>();
+        for (const rel of registrarSrc) {
+            const src = fs.readFileSync(path.join(__dirname, '../../../../', rel), 'utf-8');
+            for (const m of src.matchAll(/registerTool\(\s*['"]([a-z0-9_]+)/g)) {
+                registered.add(m[1]);
+            }
+        }
+        const directOnly = [...registered].filter((t) => !descriptorTools.includes(t));
+
+        // Control: the direct path must be non-empty, or this test proves nothing.
+        expect(directOnly.length).toBeGreaterThan(20);
+
+        /**
+         * Directly-registered tools awaiting a live measurement (2026-08-24).
+         * Shrinking this list is the work; adding to it silently is the rot.
+         */
+        const DIRECT_PENDING = new Set<string>([
+            'apply_updates',
+            'create_project',
+            'delete_project',
+            'edit_project',
+            'get_settings',
+            'open_url',
+            'open_view',
+            'reset_eds_project',
+            'set_setting',
+            'sign_in',
+        ]);
+
+        const unwatched = directOnly.filter(
+            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !DIRECT_PENDING.has(t),
+        );
+        expect(unwatched).toEqual([]);
+
+        // Same both-directions rule as above: a paid IOU left listed is rot.
+        const paidDirect = [...DIRECT_PENDING].filter((t) => RESPONSE_CEILINGS[t] || EXEMPT.has(t));
+        expect(paidDirect).toEqual([]);
 
         // The exemption list needs the same two-way check as the ceilings, or it
         // rots in the direction nothing notices: an entry that names no descriptor

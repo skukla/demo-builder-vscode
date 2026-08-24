@@ -19,6 +19,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import type { Project } from '@/types/base';
 
 // ─── Claude Settings types ────────────────────────────────────────────────────
@@ -28,18 +29,64 @@ interface HookEntry {
     command: string;
 }
 
-interface PostToolUseHook {
+interface HookMatcher {
     matcher: string;
     hooks: HookEntry[];
 }
 
 export interface ClaudeSettings {
     hooks?: {
-        PostToolUse?: PostToolUseHook[];
+        PreToolUse?: HookMatcher[];
+        PostToolUse?: HookMatcher[];
     };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Stable signature of the Demo-Builder aio-global-selection guard — a fixed
+ * phrase in its refusal message. Same role as GIT_SYNC_SIGNATURE: find and
+ * refresh our own PreToolUse entry among a user's hooks without a marker field.
+ */
+const AIO_GUARD_SIGNATURE = 'Demo Builder targets Adobe orgs per-operation';
+
+/**
+ * Matcher for the three commerce-extensibility MCP tools that read/write the
+ * aio CLI's process-global org selection. The extension deliberately stopped
+ * using that global state (per-operation targeting via withOrgContext); these
+ * tools re-introduce it, and a single unwrapped write once deployed a mesh
+ * into a DELETED project for two days (ai-surface phase 6, measured incident).
+ * Anchored full-match so aio-app-deploy and friends never collide.
+ */
+const AIO_GUARD_MATCHER =
+    '^mcp__commerce-extensibility__(aio-configure-global|aio-app-use|aio-where)$';
+
+/**
+ * The PreToolUse guard entry. Deliberately STATIC — no interpolated paths, no
+ * stdin parsing, no conditional that can silently no-op (the governing lesson
+ * of the git-sync hook: a hook that fails silently is worse than none). Exit 2
+ * blocks the call; stderr tells the agent which Demo Builder tools do the job
+ * without touching the CLI's global selection.
+ */
+function buildAioGlobalGuardHook(): HookMatcher {
+    const message =
+        `${AIO_GUARD_SIGNATURE} (withOrgContext); the aio global selection this ` +
+        'tool touches is not used by Demo Builder and desyncs its deploys. Use the ' +
+        'demo-builder MCP tools instead: get_project_status for org/project context, ' +
+        'deploy_mesh / deploy_integration for deploys.';
+    return {
+        matcher: AIO_GUARD_MATCHER,
+        hooks: [{ type: 'command', command: `echo "${message}" >&2; exit 2` }],
+    };
+}
+
+/** True when a PreToolUse entry is the Demo-Builder aio-global guard. */
+function isAioGuardHook(entry: HookMatcher | undefined): boolean {
+    const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];
+    return hooks.some(
+        (h) => typeof h?.command === 'string' && h.command.includes(AIO_GUARD_SIGNATURE),
+    );
+}
 
 /**
  * Generate .claude/settings.json with PostToolUse git sync hook.
@@ -51,27 +98,31 @@ export interface ClaudeSettings {
  * `mcpConfigWriter`) used by the hook's `node -e` tool-input extractor.
  */
 export function generateClaudeSettings(project: Project, nodePath: string): ClaudeSettings {
+    const hooks: NonNullable<ClaudeSettings['hooks']> = {};
+
     const storefrontPath = resolveStorefrontPath(project);
-    if (!storefrontPath) {
-        return {};
-    }
-
-    const command = buildGitSyncCommand(storefrontPath, nodePath);
-    if (!command) {
-        // Path contained shell metacharacters — skip hook for safety
-        return {};
-    }
-
-    return {
-        hooks: {
-            PostToolUse: [
+    if (storefrontPath) {
+        const command = buildGitSyncCommand(storefrontPath, nodePath);
+        if (command) {
+            hooks.PostToolUse = [
                 {
                     matcher: 'Write|Edit',
                     hooks: [{ type: 'command', command }],
                 },
-            ],
-        },
-    };
+            ];
+        }
+        // else: path contained shell metacharacters — skip git-sync for safety
+    }
+
+    // The aio-global guard rides the same predicate as the ai-defaults entries
+    // that install the commerce-extensibility MCP — the tools it guards exist
+    // exactly when that tooling does. Independent of the storefront path: a
+    // mesh-only project has no storefront but does have the guarded tools.
+    if (projectNeedsAppBuilderTooling(project)) {
+        hooks.PreToolUse = [buildAioGlobalGuardHook()];
+    }
+
+    return Object.keys(hooks).length > 0 ? { hooks } : {};
 }
 
 /**
@@ -83,7 +134,7 @@ export function generateClaudeSettings(project: Project, nodePath: string): Clau
 const GIT_SYNC_SIGNATURE = 'AI: sync files';
 
 /** True when a PostToolUse entry is the Demo-Builder git-sync hook. */
-function isGitSyncHook(entry: PostToolUseHook | undefined): boolean {
+function isGitSyncHook(entry: HookMatcher | undefined): boolean {
     // Guard the shape — this parses a user-authored file; a malformed entry must
     // not throw and abort the whole regenerate.
     const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];
@@ -107,20 +158,12 @@ export function mergeClaudeSettings(
     const merged: Record<string, unknown> = { ...existing };
 
     const existingHooks = { ...((existing.hooks as Record<string, unknown>) ?? {}) };
-    const existingPostToolUse = Array.isArray(existingHooks.PostToolUse)
-        ? (existingHooks.PostToolUse as PostToolUseHook[])
-        : [];
 
-    // Keep the user's own PostToolUse hooks; drop any prior git-sync entry.
-    const userPostToolUse = existingPostToolUse.filter((entry) => !isGitSyncHook(entry));
-    const desiredGitSync = (desired.hooks?.PostToolUse ?? []).filter(isGitSyncHook);
-    const nextPostToolUse = [...userPostToolUse, ...desiredGitSync];
-
-    if (nextPostToolUse.length > 0) {
-        existingHooks.PostToolUse = nextPostToolUse;
-    } else {
-        delete existingHooks.PostToolUse;
-    }
+    // One rule per managed list: keep the user's own entries, drop any prior
+    // Demo-Builder entry (found by its signature), append the desired one — so
+    // ours refreshes rather than duplicates and the user's survive verbatim.
+    mergeHookList(existingHooks, 'PostToolUse', desired.hooks?.PostToolUse, isGitSyncHook);
+    mergeHookList(existingHooks, 'PreToolUse', desired.hooks?.PreToolUse, isAioGuardHook);
 
     if (Object.keys(existingHooks).length > 0) {
         merged.hooks = existingHooks;
@@ -128,6 +171,30 @@ export function mergeClaudeSettings(
         delete merged.hooks;
     }
     return merged;
+}
+
+/**
+ * Merge one hook list in place on `existingHooks`: user entries (per `isOurs`
+ * = false) survive, our prior entry is dropped, the desired our-entries are
+ * appended, and an empty result deletes the key.
+ */
+function mergeHookList(
+    existingHooks: Record<string, unknown>,
+    key: 'PreToolUse' | 'PostToolUse',
+    desiredList: HookMatcher[] | undefined,
+    isOurs: (entry: HookMatcher | undefined) => boolean,
+): void {
+    const existingList = Array.isArray(existingHooks[key])
+        ? (existingHooks[key] as HookMatcher[])
+        : [];
+    const userEntries = existingList.filter((entry) => !isOurs(entry));
+    const ourDesired = (desiredList ?? []).filter(isOurs);
+    const next = [...userEntries, ...ourDesired];
+    if (next.length > 0) {
+        existingHooks[key] = next;
+    } else {
+        delete existingHooks[key];
+    }
 }
 
 /**
@@ -144,22 +211,25 @@ export function mergeClaudeSettings(
  * `mcpConfigWriter`) used by the hook's `node -e` tool-input extractor.
  */
 export function generateHomeClaudeSettings(projectsRoot: string, nodePath: string): ClaudeSettings {
-    const command = buildHomeGitSyncCommand(projectsRoot, nodePath);
-    if (!command) {
-        // Root contained shell metacharacters — skip hook for safety
-        return {};
-    }
-
-    return {
-        hooks: {
-            PostToolUse: [
-                {
-                    matcher: 'Write|Edit',
-                    hooks: [{ type: 'command', command }],
-                },
-            ],
-        },
+    const hooks: NonNullable<ClaudeSettings['hooks']> = {
+        // The home Chat can address ANY project by name, including ones with
+        // App Builder tooling, so the aio-global guard ships unconditionally
+        // (static command — no path interpolation, nothing to guard).
+        PreToolUse: [buildAioGlobalGuardHook()],
     };
+
+    const command = buildHomeGitSyncCommand(projectsRoot, nodePath);
+    if (command) {
+        hooks.PostToolUse = [
+            {
+                matcher: 'Write|Edit',
+                hooks: [{ type: 'command', command }],
+            },
+        ];
+    }
+    // else: root contained shell metacharacters — skip git-sync for safety
+
+    return { hooks };
 }
 
 /**

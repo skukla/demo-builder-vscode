@@ -1,5 +1,29 @@
 # Bodea Demo Package — Plan Overview (v2: thin-layer, ADR-006-conformant)
 
+> **⚠️ IMPLEMENTATION shipped 2026-08-17 — the DESIGN IS NOT DONE.** Archived
+> here because the plan's five *build* steps are complete and merged
+> (`6fd76a222` unhid the package on develop + master, after the four pre-unhide
+> items closed: store scope read live off the instance, group-hash portability
+> answered, the configurator keeper settled by the port, VIP nav gating deleted
+> rather than deferred). **Do not read this as "Bodea is finished."** The owner
+> gated the unhide on a storefront redesign (2026-08-16 note in
+> `step-04-content-and-step-05-release.md`); the unhide shipped the next day
+> anyway, so that gate was OVERRIDDEN, not met. **Confirmed still broken
+> 2026-08-24 by the owner: the storefront design itself is unfinished.**
+>
+> The design work is deliberately sequenced BEHIND better AI coverage for the
+> extension (owner, 2026-08-24) — it is meant to be done with tooling, not by
+> hand. Live threads:
+> `.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md` (the tooling) and
+> `.rptc/backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md` (the
+> catalog-differentiation acceptance milestone).
+>
+> **The theme trap outlives this plan:** `styles/bodea-theme.css` is vendored by
+> `brandAssets` from `skukla/bodea-source`, so redesign work done inside a
+> generated project is DESTROYED on the next reset. Durable changes land in
+> `bodea-source` and re-vendor.
+
+
 ## Step 0: RPTC Re-initialization (ALWAYS FIRST)
 
 If starting fresh (context was cleared), re-invoke the workflow before executing any step:

@@ -781,6 +781,18 @@ config when a project is created (and on "Regenerate AI files"):
   Code never sets, so the hook silently did nothing from beta.109 until the
   AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
   `sync_content` / `sync_storefront`.
+- **`.claude/settings.json`** also carries a `PreToolUse` **aio-global guard**
+  (AI_CONTEXT_VERSION 21) for every project that gets the App Builder tooling
+  (`projectNeedsAppBuilderTooling`) and unconditionally for the home Chat. It
+  blocks the commerce-extensibility MCP's `aio-configure-global`, `aio-app-use`
+  and `aio-where` — the three tools that write/read the `aio` CLI's
+  process-global org selection, which the extension deliberately stopped using
+  in favour of per-operation `withOrgContext` (`orgContextEnv.ts`). An unwrapped
+  path once deployed a mesh into a DELETED project for two days. The command is
+  static (`echo … >&2; exit 2` — no interpolated paths, nothing that can
+  silently no-op) and its refusal names the Demo Builder tools that do the job.
+  Both hook lists merge independently, so a user's own `PreToolUse` and
+  `PostToolUse` entries survive a regenerate.
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
 

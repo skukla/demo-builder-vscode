@@ -1,6 +1,62 @@
 # Phase 6 — Hooks, then agents
 
-**Status:** PLANNED 2026-08-17, not started. Last phase in the program.
+**Status:** ✅ **SHIPPED 2026-08-24.** Last phase in the program — the program is
+now complete.
+
+## Outcome
+
+**Part A shipped one hook. Part B shipped nothing, as designed.**
+
+- **The aio-global guard is live** in `claudeSettingsWriter.ts`: a `PreToolUse`
+  entry matching `^mcp__commerce-extensibility__(aio-configure-global|aio-app-use|aio-where)$`,
+  whose command is `echo "<refusal>" >&2; exit 2`. Blocking, not warning — the
+  open design question, settled the way the phase file recommended, because a
+  nudge is exactly what already failed. The refusal names `get_project_status`
+  and `deploy_mesh` / `deploy_integration` so the agent has somewhere to go.
+- **Static by construction.** No interpolated path, no stdin parse, no
+  conditional. The git-sync hook's failure mode was a conditional whose input
+  was always empty; this command has no input and no conditional, so there is
+  nothing that can silently no-op.
+- **Both premises re-measured before writing code** (the phase file demanded
+  it): the installed `commerce-extensibility` entry still declares those three
+  tools (`ai-defaults.json`), and the extension still never writes the global
+  selection — only `aio config set aio-cli-telemetry.optOut` exists, and
+  `orgContextEnv.ts` still documents the DELETED-project incident.
+- **Merge generalized**, which the phase file correctly called the real cost:
+  `mergeHookList` now handles one managed list per hook type, each keyed by its
+  own signature, so a user's own `PreToolUse` AND `PostToolUse` entries survive
+  a regenerate while ours refresh rather than duplicate.
+- **Gate**: `projectNeedsAppBuilderTooling` — the same predicate as the
+  ai-defaults entry that installs the guarded tools, so the guard exists exactly
+  when its targets do. Notably this catches the **mesh-only** project, which the
+  old storefront-path early return would have skipped. The home Chat gets it
+  unconditionally (it can address any project by name).
+- **`AI_CONTEXT_VERSION` 20 → 21**, so the activation sweep delivers it to
+  existing projects. Regenerate parity is free here: creation, regenerate and
+  the sweep all reach `writeMcpConfigs` → `generateClaudeSettings`.
+- **Tested by EXECUTION**, per the phase's whole lesson: the command is run
+  through `/bin/sh` and asserted to exit 2 with the routing message on stderr;
+  the matcher is compiled to a `RegExp` and run against real tool names —
+  including `aio-app-deploy`, `aio-login` and `mcp__other__aio-where`, which
+  must NOT be blocked. 20 new tests.
+
+**Three pre-existing tests were edited, deliberately** — each asserted a proxy
+that this change invalidates, and each was rewritten to assert the intent the
+proxy stood for. Two home-settings tests asserted `toEqual({})` for an unsafe
+path; they now assert the stronger thing (the unsafe value appears NOWHERE in
+the emitted settings, and git-sync is skipped), because the static guard
+legitimately ships even when a path is unsafe. One asserted `PreToolUse` was
+purely user territory; that list is now co-managed, so it asserts the user's
+entry survives.
+
+**Part B — no agents ship.** The finding stands exactly as scoped: the one flow
+spanning 3+ ordered skills (EDS site-scraping) is already orchestrated by
+`scrape-reference-site`, in the cheaper form. Re-open only on all three
+conditions in the Part B section below.
+
+---
+
+**Originally planned** 2026-08-17.
 
 **Scope, decided before anything else.** "Hooks" here means hooks **shipped into a generated
 demo project**, not this repo's dev-time hooks. The program is about the agent working in a

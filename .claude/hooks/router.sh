@@ -35,6 +35,11 @@ case "$payload" in
     # two-word literal rather than a bare *test* — that would drag in every path
     # with "test" in it, which is most of this repo.
     *"npm test"*|*"npm run test"*) ;;
+    # 14-commit-backtick. NECESSARY condition for that rule: it only fires on a
+    # git commit. Without this token the rule would never run and would look
+    # exactly like a guard that simply never matches — the failure this
+    # pre-filter has already caused once (see the --exclude note below).
+    *"git commit"*) ;;
     # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
     # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
     # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays

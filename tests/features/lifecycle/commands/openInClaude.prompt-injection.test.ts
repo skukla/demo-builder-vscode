@@ -7,11 +7,24 @@ jest.mock('@/commands/claudeSessionStore', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { OpenInClaudeCommand, REHOME_PROMPT_PREFIX } from '@/commands/openInClaude';
+import { OpenInClaudeCommand, buildRehomePrefix } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
-    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
+    setupVscodeMocks,
+    makeLogger,
+    makeStateManager,
+    makeGlobalState,
+    makeContext,
+    makeProject,
 } from './openInClaude.testkit';
+
+/**
+ * The preamble these tests expect. The command resolves it from the
+ * current-project pointer, and the testkit's `makeProject()` is named 'demo' —
+ * so the named form is what a resumed conversation now receives. Built from the
+ * production function rather than pasted, so a wording change fails in one place.
+ */
+const REHOME = buildRehomePrefix('demo');
 
 describe('OpenInClaudeCommand', () => {
     beforeEach(() => {
@@ -28,7 +41,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
@@ -41,14 +54,14 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
             // Find the clipboard-fallback tip — references sending to Claude AND mentions clipboard fallback
-            const tipCall = mocks.showInformationMessageMock.mock.calls.find(c =>
-                /clipboard/i.test(String(c[0])) && /sent to claude/i.test(String(c[0])),
+            const tipCall = mocks.showInformationMessageMock.mock.calls.find(
+                (c) => /clipboard/i.test(String(c[0])) && /sent to claude/i.test(String(c[0]))
             );
             expect(tipCall).toBeDefined();
         });
@@ -58,7 +71,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute(makeProject() as Project);
@@ -80,14 +93,14 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
             // Continued conversation → carries the re-home preamble before the prompt.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
-                `claude --continue -- '${REHOME_PROMPT_PREFIX}do the thing'`,
+                `claude --continue -- '${REHOME}do the thing'`
             );
         });
 
@@ -96,14 +109,14 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
             // Cold start self-homes from AGENTS.md → NO re-home preamble.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude -- 'do the thing'");
-            expect(mocks.terminalSendTextMock.mock.calls[0][0]).not.toContain(REHOME_PROMPT_PREFIX);
+            expect(mocks.terminalSendTextMock.mock.calls[0][0]).not.toContain(REHOME);
         });
 
         it('escapes single quotes in the prompt so the shell receives it intact', async () => {
@@ -111,7 +124,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: "it's a test" });
@@ -119,7 +132,7 @@ describe('OpenInClaudeCommand', () => {
             // POSIX single-quote escaping: ' becomes '\'' (close, escaped quote, reopen).
             // The re-home preamble (no quotes) precedes the prompt inside the same arg.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
-                `claude --continue -- '${REHOME_PROMPT_PREFIX}it'\\''s a test'`,
+                `claude --continue -- '${REHOME}it'\\''s a test'`
             );
         });
 
@@ -129,13 +142,13 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: multiLine });
 
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
-                `claude --continue -- '${REHOME_PROMPT_PREFIX}${multiLine}'`,
+                `claude --continue -- '${REHOME}${multiLine}'`
             );
         });
 
@@ -147,13 +160,13 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'do the thing' });
 
-            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
+            const sendSequenceCall = executeCommandMock.mock.calls.find(
+                (c) => c[0] === 'workbench.action.terminal.sendSequence'
             );
             expect(sendSequenceCall).toBeUndefined();
         });
@@ -163,7 +176,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute(makeProject() as Project);
@@ -176,7 +189,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute(makeProject() as Project);
@@ -206,18 +219,18 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'hello world' });
 
-            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
+            const sendSequenceCall = executeCommandMock.mock.calls.find(
+                (c) => c[0] === 'workbench.action.terminal.sendSequence'
             );
             expect(sendSequenceCall).toBeDefined();
             const payload = sendSequenceCall![1] as { text: string };
             // Reuse = continued session → re-home preamble precedes the prompt.
-            expect(payload.text).toBe(PASTE_START + REHOME_PROMPT_PREFIX + 'hello world' + PASTE_END);
+            expect(payload.text).toBe(PASTE_START + REHOME + 'hello world' + PASTE_END);
             // No spawn — createTerminal not called
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
@@ -233,18 +246,18 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: multiLine });
 
-            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
+            const sendSequenceCall = executeCommandMock.mock.calls.find(
+                (c) => c[0] === 'workbench.action.terminal.sendSequence'
             );
             expect(sendSequenceCall).toBeDefined();
             const payload = sendSequenceCall![1] as { text: string };
             // Whole multi-line block is wrapped — newlines stay inside the brackets
-            expect(payload.text).toBe(PASTE_START + REHOME_PROMPT_PREFIX + multiLine + PASTE_END);
+            expect(payload.text).toBe(PASTE_START + REHOME + multiLine + PASTE_END);
             // Verify newlines were preserved (not stripped)
             expect(payload.text).toContain('\n');
         });
@@ -257,14 +270,14 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(globalState),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute({ project: makeProject() as Project, prompt: 'first' });
 
             // First click — tip shown, flag set
-            const firstTipCalls = mocks.showInformationMessageMock.mock.calls.filter(c =>
-                /sent to claude/i.test(String(c[0])),
+            const firstTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
+                /sent to claude/i.test(String(c[0]))
             );
             expect(firstTipCalls.length).toBe(1);
             expect(globalState.update).toHaveBeenCalledWith(CLIPBOARD_TIP_KEY, true);
@@ -276,8 +289,8 @@ describe('OpenInClaudeCommand', () => {
                 return fallback;
             });
             await command.execute({ project: makeProject() as Project, prompt: 'second' });
-            const secondTipCalls = mocks.showInformationMessageMock.mock.calls.filter(c =>
-                /sent to claude/i.test(String(c[0])),
+            const secondTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
+                /sent to claude/i.test(String(c[0]))
             );
             expect(secondTipCalls.length).toBe(0);
         });
@@ -292,13 +305,13 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
-                makeLogger() as never,
+                makeLogger() as never
             );
 
             await command.execute(makeProject() as Project);
 
-            const sendSequenceCall = executeCommandMock.mock.calls.find(c =>
-                c[0] === 'workbench.action.terminal.sendSequence',
+            const sendSequenceCall = executeCommandMock.mock.calls.find(
+                (c) => c[0] === 'workbench.action.terminal.sendSequence'
             );
             expect(sendSequenceCall).toBeUndefined();
         });

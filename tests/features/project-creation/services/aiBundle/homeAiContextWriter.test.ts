@@ -18,7 +18,10 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { ensureHomeAiContext } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import {
+    ensureHomeAiContext,
+    refreshHomeAgentsMd,
+} from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 jest.mock('fs/promises', () => ({
@@ -64,7 +67,10 @@ describe('ensureHomeAiContext — MCP config', () => {
 
         for (const suffix of ['.mcp.json', '.claude/mcp.json']) {
             const config = JSON.parse(captureWrite(suffix)) as {
-                mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }>;
+                mcpServers: Record<
+                    string,
+                    { command: string; args: string[]; env?: Record<string, string> }
+                >;
             };
             const entry = config.mcpServers['demo-builder'];
             expect(entry).toBeDefined();
@@ -94,7 +100,9 @@ describe('ensureHomeAiContext — MCP config', () => {
     it('does not write any ai-defaults / external MCP entries (home has no storefront)', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
-        const config = JSON.parse(captureWrite('.claude/mcp.json')) as { mcpServers: Record<string, unknown> };
+        const config = JSON.parse(captureWrite('.claude/mcp.json')) as {
+            mcpServers: Record<string, unknown>;
+        };
         expect(Object.keys(config.mcpServers)).toEqual(['demo-builder']);
     });
 });
@@ -110,7 +118,12 @@ describe('ensureHomeAiContext — settings.json', () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
         const settings = JSON.parse(captureWrite('.claude/settings.json')) as {
-            hooks?: { PostToolUse?: Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }> };
+            hooks?: {
+                PostToolUse?: Array<{
+                    matcher: string;
+                    hooks: Array<{ type: string; command: string }>;
+                }>;
+            };
         };
         const hook = settings.hooks?.PostToolUse?.[0];
         expect(hook?.matcher).toBe('Write|Edit');
@@ -132,12 +145,17 @@ describe('ensureHomeAiContext — settings.json', () => {
         expect(command).toContain('rev-parse --show-toplevel');
     });
 
-    it('writes an empty settings.json when the projects root is unsafe (shell metachars)', async () => {
+    it('never writes the unsafe projects root into settings.json, and skips git-sync', async () => {
+        // Asserted `toEqual({})` while git-sync was the only home hook. The
+        // phase-6 aio guard is static (interpolates nothing), so it ships even
+        // here; what must stay true is that the unsafe value never reaches an
+        // executed command and the hook that would have carried it is skipped.
         await ensureHomeAiContext('/home/user/a;b/projects', EXTENSION_DIST, TEST_NODE_PATH);
 
-        const settings = JSON.parse(captureWrite('.claude/settings.json')) as Record<string, unknown>;
-        expect(settings).toEqual({});
-        expect(settings['hooks']).toBeUndefined();
+        const raw = captureWrite('.claude/settings.json');
+        const settings = JSON.parse(raw) as { hooks?: { PostToolUse?: unknown } };
+        expect(raw).not.toContain('a;b');
+        expect(settings.hooks?.PostToolUse).toBeUndefined();
     });
 });
 
@@ -192,6 +210,65 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
     });
 });
 
+// ─── refreshHomeAgentsMd (the launch-time active-project statement) ──────────
+
+describe('refreshHomeAgentsMd — stating the active project', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('states the active project and tells the agent NOT to spend a call confirming it', async () => {
+        await refreshHomeAgentsMd(PROJECTS_ROOT, 'citisignal-b2b');
+
+        const agents = captureWrite('AGENTS.md');
+        expect(agents).toContain('The active project is `citisignal-b2b`');
+        // The whole point: the orientation round trip must be waved off, not
+        // merely made optional. 5 of 6 measured runs called the tool because
+        // this document ordered them to.
+        expect(agents).toContain('do **not** spend a call on');
+        expect(agents).not.toContain('Before starting any project task');
+        // The escape hatch must survive: a resumed conversation never re-reads
+        // this file, so a contradicting tool result or user outranks the line.
+        expect(agents).toContain('believe that instead');
+        expect(agents).toContain('get_current_project');
+    });
+
+    it('keeps the original "call the tool first" directive when no project is selected', async () => {
+        await refreshHomeAgentsMd(PROJECTS_ROOT, undefined);
+
+        const agents = captureWrite('AGENTS.md');
+        // Byte-for-byte the pre-change behaviour: when we cannot know the
+        // project, we must not claim one.
+        expect(agents.toLowerCase()).toContain('before starting any project task');
+        expect(agents).toContain('<project-name>');
+        expect(agents).not.toContain('The active project is');
+    });
+
+    it('writes ONLY AGENTS.md — a launch does not rewrite skills or MCP config', async () => {
+        await refreshHomeAgentsMd(PROJECTS_ROOT, 'citisignal-b2b');
+
+        const writeFileMock = fsPromises.writeFile as jest.Mock;
+        expect(writeFileMock).toHaveBeenCalledTimes(1);
+        expect(wasWritten('AGENTS.md')).toBe(true);
+        expect(wasWritten('.mcp.json')).toBe(false);
+        expect(wasWritten(path.join('.claude', 'settings.json'))).toBe(false);
+    });
+
+    it('sanitizes the project name — a crafted name cannot inject Markdown', async () => {
+        await refreshHomeAgentsMd(PROJECTS_ROOT, 'evil\n# Injected Heading');
+
+        const agents = captureWrite('AGENTS.md');
+        expect(agents).not.toContain('# Injected Heading');
+        expect(agents).toContain('The active project is `evil Injected Heading`');
+    });
+
+    it('never throws when the write fails — the launch must not be blocked', async () => {
+        (fsPromises.writeFile as jest.Mock).mockRejectedValueOnce(new Error('EACCES'));
+
+        await expect(refreshHomeAgentsMd(PROJECTS_ROOT, 'citisignal-b2b')).resolves.toBeUndefined();
+    });
+});
+
 // ─── skills ──────────────────────────────────────────────────────────────────
 
 describe('ensureHomeAiContext — skills', () => {
@@ -241,18 +318,22 @@ describe('ensureHomeAiContext — best-effort', () => {
     });
 
     it('never throws when a write fails', async () => {
-        (fsPromises.writeFile as jest.Mock).mockRejectedValueOnce(new Error('EACCES: permission denied'));
+        (fsPromises.writeFile as jest.Mock).mockRejectedValueOnce(
+            new Error('EACCES: permission denied')
+        );
 
         await expect(
-            ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH),
+            ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH)
         ).resolves.toBeUndefined();
     });
 
     it('never throws when mkdir fails', async () => {
-        (fsPromises.mkdir as jest.Mock).mockRejectedValueOnce(new Error('EACCES: permission denied'));
+        (fsPromises.mkdir as jest.Mock).mockRejectedValueOnce(
+            new Error('EACCES: permission denied')
+        );
 
         await expect(
-            ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH),
+            ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH)
         ).resolves.toBeUndefined();
     });
 });
