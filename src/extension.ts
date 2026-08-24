@@ -97,27 +97,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const debugLogger = initializeLogger(context);
 
     // Check for pending log replay (after Extension Host restart)
-    try {
-        const flagFile = path.join(os.homedir(), '.demo-builder', '.pending-log-replay');
-
-        // Check if flag file exists
-        const flagExists = await fs
-            .access(flagFile)
-            .then(() => true)
-            .catch(() => false);
-        if (flagExists) {
-            // Read log file path from flag
-            const logFilePath = await fs.readFile(flagFile, 'utf8');
-
-            // Replay logs from the saved file (don't auto-show output panel)
-            await debugLogger.replayLogsFromFile(logFilePath.trim());
-
-            // Remove flag file
-            await fs.unlink(flagFile);
-        }
-    } catch {
-        // Silently ignore errors (flag file might not exist, which is fine)
-    }
+    await replayPendingLogs(debugLogger);
 
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
@@ -143,21 +123,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // responds by refusing to add ANY server ("conflicting scopes"). Repairs only
     // what the user already opted into — an absent entry is never created. The
     // common path is a read and two comparisons; only a genuine mismatch writes.
-    try {
-        if (await refreshGlobalMcpIfPresent(path.join(context.extensionPath, 'dist'))) {
-            logger.info('[MCP] refreshed the global ~/.claude.json entry for this version');
-        }
-    } catch (error) {
-        // WARN, not debug. If the repair fails, the drift check keeps reporting
-        // user-scope drift on every dashboard open and the heal cannot clear it —
-        // regenerate rewrites project files, never ~/.claude.json. That is the
-        // dead end this whole change exists to remove, so it must be visible when
-        // it happens rather than buried in a channel nobody reads.
-        logger.warn(
-            `[MCP] could not refresh the global ~/.claude.json entry — Claude Code may report ` +
-                `conflicting scopes until it is fixed by hand: ${(error as Error).message}`,
-        );
-    }
+    await refreshGlobalMcpEntry(context);
 
     try {
         // Initialize state manager FIRST (needed by sidebar)
@@ -350,46 +316,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register runtime toolbar commands BEFORE creating toolbar
         // (VSCode validates commands exist when assigned to status bar items)
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.showLogs', () => {
-                debugLogger.show(false); // Show Logs channel, take focus
-            }),
-            vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
-                debugLogger.showDebug(false); // Show Debug channel, take focus
-            }),
-        );
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                // Small delay to ensure clean stop
-                await sleep(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
-                await vscode.commands.executeCommand('demoBuilder.startDemo');
-            }),
-        );
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
-                const project = await stateManager.getCurrentProject();
-                const port = getProjectFrontendPort(project);
-                if (port) {
-                    const url = `http://localhost:${port}`;
-                    await vscode.env.openExternal(vscode.Uri.parse(url));
-                }
-            }),
-        );
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', () =>
-                cleanupDaLiveSitesCommand(context),
-            ),
-        );
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand('demoBuilder.manageGitHubRepos', () =>
-                manageGitHubReposCommand(context),
-            ),
-        );
+        registerRuntimeCommands(context, debugLogger);
 
         // Republish affected EDS projects when an EW-URL-affecting daLive setting
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
@@ -404,17 +331,7 @@ export async function activate(context: vscode.ExtensionContext) {
         autoUpdater = new AutoUpdater(context, logger);
 
         // Clean up any stale flag files from previous versions
-        // (The workspace folder addition that used this flag was removed in beta.64)
-        try {
-            const flagFile = path.join(
-                os.homedir(),
-                '.demo-builder',
-                '.open-dashboard-after-restart',
-            );
-            await fs.unlink(flagFile).catch(() => {}); // Silently remove if exists
-        } catch {
-            // Ignore errors
-        }
+        await cleanupStaleFlagFiles();
 
         // Note: Projects List auto-opens via tree view visibility handler (line 128-137)
         // when the sidebar becomes visible with no active webview panels.
@@ -458,6 +375,95 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage(
             `Demo Builder activation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
+    }
+}
+
+/** Replay logs saved before an Extension Host restart, then clear the flag. */
+async function replayPendingLogs(debugLogger: ReturnType<typeof initializeLogger>): Promise<void> {
+    try {
+        const flagFile = path.join(os.homedir(), '.demo-builder', '.pending-log-replay');
+        const flagExists = await fs
+            .access(flagFile)
+            .then(() => true)
+            .catch(() => false);
+        if (flagExists) {
+            const logFilePath = await fs.readFile(flagFile, 'utf8');
+            // Replay logs from the saved file (don't auto-show output panel)
+            await debugLogger.replayLogsFromFile(logFilePath.trim());
+            await fs.unlink(flagFile);
+        }
+    } catch {
+        // Silently ignore errors (flag file might not exist, which is fine)
+    }
+}
+
+/**
+ * Correct a global MCP entry left pointing at a previous version (see the
+ * call site in activate() for why this must be visible when it fails).
+ */
+async function refreshGlobalMcpEntry(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        if (await refreshGlobalMcpIfPresent(path.join(context.extensionPath, 'dist'))) {
+            logger.info('[MCP] refreshed the global ~/.claude.json entry for this version');
+        }
+    } catch (error) {
+        // WARN, not debug. If the repair fails, the drift check keeps reporting
+        // user-scope drift on every dashboard open and the heal cannot clear it —
+        // regenerate rewrites project files, never ~/.claude.json. That is the
+        // dead end this whole change exists to remove, so it must be visible when
+        // it happens rather than buried in a channel nobody reads.
+        logger.warn(
+            `[MCP] could not refresh the global ~/.claude.json entry — Claude Code may report ` +
+                `conflicting scopes until it is fixed by hand: ${(error as Error).message}`,
+        );
+    }
+}
+
+/** The small always-on commands the status bar and palette expect to exist. */
+function registerRuntimeCommands(
+    context: vscode.ExtensionContext,
+    debugLogger: ReturnType<typeof initializeLogger>,
+): void {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('demoBuilder.showLogs', () => {
+            debugLogger.show(false); // Show Logs channel, take focus
+        }),
+        vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
+            debugLogger.showDebug(false); // Show Debug channel, take focus
+        }),
+        vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
+            await vscode.commands.executeCommand('demoBuilder.stopDemo');
+            // Small delay to ensure clean stop
+            await sleep(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
+            await vscode.commands.executeCommand('demoBuilder.startDemo');
+        }),
+        vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
+            const project = await stateManager.getCurrentProject();
+            const port = getProjectFrontendPort(project);
+            if (port) {
+                const url = `http://localhost:${port}`;
+                await vscode.env.openExternal(vscode.Uri.parse(url));
+            }
+        }),
+        vscode.commands.registerCommand('demoBuilder.cleanupDaLiveSites', () =>
+            cleanupDaLiveSitesCommand(context),
+        ),
+        vscode.commands.registerCommand('demoBuilder.manageGitHubRepos', () =>
+            manageGitHubReposCommand(context),
+        ),
+    );
+}
+
+/**
+ * Clean up any stale flag files from previous versions.
+ * (The workspace folder addition that used this flag was removed in beta.64.)
+ */
+async function cleanupStaleFlagFiles(): Promise<void> {
+    try {
+        const flagFile = path.join(os.homedir(), '.demo-builder', '.open-dashboard-after-restart');
+        await fs.unlink(flagFile).catch(() => {}); // Silently remove if exists
+    } catch {
+        // Ignore errors
     }
 }
 

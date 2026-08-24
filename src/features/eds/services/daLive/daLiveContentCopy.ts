@@ -871,6 +871,142 @@ export class DaLiveContentCopy {
         };
     }
 
+
+    /**
+     * Copy the enumerated paths in parallel batches (extracted 2026-08-24,
+     * function-length pass — body unchanged). Appends results to
+     * `copiedFiles` / `failedFiles`; internal references found along the way
+     * land in `discoveredPaths`.
+     */
+    private async copyPathsInBatches(
+        source: DaLiveContentSource,
+        dest: { org: string; site: string },
+        contentPaths: string[],
+        copiedFiles: string[],
+        failedFiles: { path: string; error: string }[],
+        discoveredPaths: Set<string>,
+        progressCallback?: DaLiveProgressCallback,
+        contentPatchIds?: string[],
+        contentPatchSource?: ContentPatchSource,
+        patchReport?: PatchReport,
+    ): Promise<void> {
+        const totalFiles = contentPaths.length;
+        const destOrg = dest.org;
+        const destSite = dest.site;
+        const contentStart = Date.now();
+        for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const token = await this.apiClient.getImsToken();
+            const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
+            const batchStart = Date.now();
+
+            // Report progress at batch start
+            if (progressCallback) {
+                progressCallback({
+                    currentFile: batch[0],
+                    processed: i,
+                    total: totalFiles,
+                    percentage: Math.round((i / totalFiles) * 100),
+                });
+            }
+
+            // Copy batch in parallel
+            const results = await Promise.all(
+                batch.map(async (sourcePath) => {
+                    const success = await this.copySingleFile(
+                        token,
+                        { org: source.org, site: source.site },
+                        sourcePath,
+                        { org: destOrg, site: destSite },
+                        sourcePath,
+                        contentPatchIds,
+                        contentPatchSource,
+                        patchReport,
+                        discoveredPaths,
+                    );
+                    return { path: sourcePath, success };
+                }),
+            );
+
+            this.logger.debug(
+                `[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`,
+            );
+
+            // Track results
+            for (const result of results) {
+                if (result.success) {
+                    copiedFiles.push(result.path);
+                } else {
+                    failedFiles.push({ path: result.path, error: 'Copy failed' });
+                }
+            }
+        }
+        this.logger.debug(
+            `[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`,
+        );
+    }
+
+    /**
+     * Create stub pages for auth pages missing on source (extracted 2026-08-24,
+     * function-length pass — body unchanged). Returns how many stubs were
+     * created; created paths are appended to `copiedFiles`.
+     */
+    private async createAuthPageStubs(
+        destOrg: string,
+        destSite: string,
+        missingAuthPages: Array<{ path: string; blockClass: string }>,
+        copiedFiles: string[],
+    ): Promise<number> {
+        let created = 0;
+        // Each stub uses the correct block class so the dropin renders properly.
+        if (missingAuthPages.length > 0) {
+            const token = await this.apiClient.getImsToken();
+            for (const { path: authPath, blockClass } of missingAuthPages) {
+                try {
+                    const daPath = resolveDaPath(authPath, true);
+                    const stubHtml = [
+                        '<body><header></header><main><div>',
+                        `<div class="${blockClass}"><div><div></div></div></div>`,
+                        '</div></main><footer></footer></body>',
+                    ].join('');
+                    const blob = new Blob([stubHtml], { type: 'text/html' });
+
+                    const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
+                    // DA.live write via the shared client (retry + fresh
+                    // FormData per attempt; 429 tolerated per stub).
+                    const response = await this.apiClient.fetchWithRetry(
+                        destUrl,
+                        () => {
+                            const fd = new FormData();
+                            fd.append('data', blob);
+                            return {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                                body: fd,
+                            };
+                        },
+                        { rateLimit: 'return' },
+                    );
+
+                    if (response.ok) {
+                        copiedFiles.push(authPath);
+                        created++;
+                        this.logger.info(`[DA.live] Created stub page for ${authPath}`);
+                    } else {
+                        this.logger.warn(
+                            `[DA.live] Failed to create stub for ${authPath}: ${response.status}`,
+                        );
+                    }
+                } catch (error) {
+                    this.logger.warn(
+                        `[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`,
+                    );
+                }
+            }
+        }
+        return created;
+    }
+
     /**
      * Copy content from source site to destination site
      * @param source - Source content configuration (org, site, indexUrl)
@@ -944,56 +1080,17 @@ export class DaLiveContentCopy {
         const discoveredPaths = new Set<string>();
 
         // Copy files in parallel batches for improved performance (~5x faster)
-        const contentStart = Date.now();
-        for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
-            const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            const token = await this.apiClient.getImsToken();
-            const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
-            const batchStart = Date.now();
-
-            // Report progress at batch start
-            if (progressCallback) {
-                progressCallback({
-                    currentFile: batch[0],
-                    processed: i,
-                    total: totalFiles,
-                    percentage: Math.round((i / totalFiles) * 100),
-                });
-            }
-
-            // Copy batch in parallel
-            const results = await Promise.all(
-                batch.map(async (sourcePath) => {
-                    const success = await this.copySingleFile(
-                        token,
-                        { org: source.org, site: source.site },
-                        sourcePath,
-                        { org: destOrg, site: destSite },
-                        sourcePath,
-                        contentPatchIds,
-                        contentPatchSource,
-                        patchReport,
-                        discoveredPaths,
-                    );
-                    return { path: sourcePath, success };
-                }),
-            );
-
-            this.logger.debug(
-                `[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`,
-            );
-
-            // Track results
-            for (const result of results) {
-                if (result.success) {
-                    copiedFiles.push(result.path);
-                } else {
-                    failedFiles.push({ path: result.path, error: 'Copy failed' });
-                }
-            }
-        }
-        this.logger.debug(
-            `[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`,
+        await this.copyPathsInBatches(
+            source,
+            { org: destOrg, site: destSite },
+            contentPaths,
+            copiedFiles,
+            failedFiles,
+            discoveredPaths,
+            progressCallback,
+            contentPatchIds,
+            contentPatchSource,
+            patchReport,
         );
 
         // Reference-following discovery: copy internal documents referenced by
@@ -1038,52 +1135,7 @@ export class DaLiveContentCopy {
         }
 
         // Create stub pages for auth pages that don't exist on source.
-        // Each stub uses the correct block class so the dropin renders properly.
-        if (missingAuthPages.length > 0) {
-            const token = await this.apiClient.getImsToken();
-            for (const { path: authPath, blockClass } of missingAuthPages) {
-                try {
-                    const daPath = resolveDaPath(authPath, true);
-                    const stubHtml = [
-                        '<body><header></header><main><div>',
-                        `<div class="${blockClass}"><div><div></div></div></div>`,
-                        '</div></main><footer></footer></body>',
-                    ].join('');
-                    const blob = new Blob([stubHtml], { type: 'text/html' });
-
-                    const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
-                    // DA.live write via the shared client (retry + fresh
-                    // FormData per attempt; 429 tolerated per stub).
-                    const response = await this.apiClient.fetchWithRetry(
-                        destUrl,
-                        () => {
-                            const fd = new FormData();
-                            fd.append('data', blob);
-                            return {
-                                method: 'POST',
-                                headers: { Authorization: `Bearer ${token}` },
-                                body: fd,
-                            };
-                        },
-                        { rateLimit: 'return' },
-                    );
-
-                    if (response.ok) {
-                        copiedFiles.push(authPath);
-                        totalFiles++;
-                        this.logger.info(`[DA.live] Created stub page for ${authPath}`);
-                    } else {
-                        this.logger.warn(
-                            `[DA.live] Failed to create stub for ${authPath}: ${response.status}`,
-                        );
-                    }
-                } catch (error) {
-                    this.logger.warn(
-                        `[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`,
-                    );
-                }
-            }
-        }
+        totalFiles += await this.createAuthPageStubs(destOrg, destSite, missingAuthPages, copiedFiles);
 
         // Final progress update
         if (progressCallback) {
