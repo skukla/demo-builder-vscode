@@ -179,6 +179,44 @@ that looks like the others.
 Suggestion mechanism is Anthropic's: hand the trace to Claude and ask; keep a
 held-out set so we do not overfit.
 
+## A bug class the trace should catch: the agent reaching past the UI
+
+Added 2026-08-24 from a live one. A producer asked an agent to start the demo on
+an EDS project. The consent dialog appeared, the tool ran, and it reported
+success — but EDS storefronts have no local server. The dashboard has always said
+so by HIDING the Start/Stop tile (`{!isEds && …}` in `ActionGrid.tsx`), and
+`isEdsProject`'s own docstring states it outright: "EDS projects use static site
+hosting and don't have start/stop functionality."
+
+The MCP surface exposed `start_demo` / `stop_demo` / `restart_demo` to every
+project regardless. So the agent could reach an action the human interface
+deliberately withholds, and a no-op came back dressed as a success. Fixed by
+guarding the handler, which is the seam every caller passes through.
+
+**This is the inverse of what `ai-coverage-scan` measures.** That scan finds
+handlers with NO tool — the agent surface being too small. This is the agent
+surface being too LARGE: a tool that should not apply to this project shape at
+all. Nothing detects it today, and it is invisible to tests, because every layer
+agreed — the tool ran, the command dispatched, the handler returned success.
+
+What would have caught it is a trace read against the outcome: `start_demo`
+returned success and nothing started. That is precisely the "grade outcomes, not
+paths" principle this plan already adopts, applied to a case where the path looked
+perfect.
+
+Two things to build into the recorder rather than bolt on later:
+
+1. **Record the project SHAPE alongside the trace** — stack, components — so a
+   trace can be read as "this tool, on this kind of project" rather than just
+   "this tool". Without it, an inapplicable-tool finding is not expressible.
+2. **Flag success-with-no-effect as a distinct outcome.** A tool that returns
+   success while changing nothing is the shape of this whole class. It is not an
+   error, so nothing currently notices.
+
+Worth stating plainly because it argues for the feature: this bug had shipped, was
+covered by passing tests, survived a consent dialog the user personally approved,
+and was found only because a human happened to know EDS does not work that way.
+
 ## Deliberately not building
 
 A prompt per tool (103) · path grading (research: grade outcomes, the path is a

@@ -64,7 +64,13 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
-import { MessageHandler, defineHandlers } from '@/types/handlers';
+import {
+    MessageHandler,
+    defineHandlers,
+    type HandlerContext,
+    type HandlerResponse,
+} from '@/types/handlers';
+import { isEdsProject } from '@/types/typeGuards';
 
 // Handlers moved to the sibling modules above; re-export so the import sites
 // (tests, MCP descriptors, commands) are unchanged.
@@ -98,9 +104,42 @@ export {
 } from './edsContentHandlers';
 
 /**
+ * There is no local server to start, stop or restart for an EDS storefront —
+ * it is served from the Edge Delivery CDN, and the local checkout is source that
+ * gets published, not something that runs.
+ *
+ * The DASHBOARD has always said this by hiding the control: the Start/Stop tile
+ * renders behind `{!isEds && …}` in `ActionGrid.tsx`. The MCP surface said the
+ * opposite by exposing `start_demo` / `stop_demo` / `restart_demo` to every
+ * project, so an agent could reach an action the human interface deliberately
+ * withholds — and, being a no-op dressed as a success, report that it worked.
+ *
+ * Guarded HERE rather than in the tool descriptors so the rule holds for every
+ * caller by construction. Returns DATA with a reason and the actions that DO
+ * apply, not an error: an error teaches an agent to retry, a reason teaches it
+ * what to do instead.
+ */
+async function refuseLifecycleOnEds(
+    context: HandlerContext,
+    verb: string,
+): Promise<HandlerResponse | undefined> {
+    const project = await context.stateManager?.getCurrentProject();
+    if (!project || !isEdsProject(project)) return undefined;
+    return {
+        success: false,
+        error:
+            `EDS storefronts have no local server to ${verb} — they are served from the ` +
+            'Edge Delivery CDN. Use get_project_urls for the live and preview URLs, ' +
+            'open_url to view the site, or sync_storefront / republish to push changes.',
+    };
+}
+
+/**
  * Handle 'startDemo' message - Start demo server
  */
 export const handleStartDemo: MessageHandler = async (context) => {
+    const refusal = await refuseLifecycleOnEds(context, 'start');
+    if (refusal) return refusal;
     await vscode.commands.executeCommand('demoBuilder.startDemo');
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
@@ -111,6 +150,8 @@ export const handleStartDemo: MessageHandler = async (context) => {
  * Handle 'stopDemo' message - Stop demo server
  */
 export const handleStopDemo: MessageHandler = async (context) => {
+    const refusal = await refuseLifecycleOnEds(context, 'stop');
+    if (refusal) return refusal;
     await vscode.commands.executeCommand('demoBuilder.stopDemo');
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
@@ -129,6 +170,8 @@ export const handleStopDemo: MessageHandler = async (context) => {
  * sequence would drop it and race the stop.
  */
 export const handleRestartDemo: MessageHandler = async (context) => {
+    const refusal = await refuseLifecycleOnEds(context, 'restart');
+    if (refusal) return refusal;
     await vscode.commands.executeCommand('demoBuilder.restartDemo');
     // Update demo status only (don't re-check mesh) — same as start/stop.
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);

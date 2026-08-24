@@ -90,6 +90,51 @@ describe('Dashboard Lifecycle Handlers', () => {
         });
     });
 
+    describe('EDS projects have no local server', () => {
+        // The invariant is documented on `isEdsProject` itself: "EDS projects use
+        // static site hosting and don't have start/stop functionality."
+        // The DASHBOARD honoured it by hiding the tile (`{!isEds && …}` in
+        // ActionGrid); the MCP surface exposed start/stop/restart to every
+        // project, so an agent could reach an action the human UI withholds and
+        // report a no-op as success.
+        const eds = { selectedStack: 'eds-accs' };
+
+        it.each([
+            ['start', handleStartDemo, 'demoBuilder.startDemo'],
+            ['stop', handleStopDemo, 'demoBuilder.stopDemo'],
+            ['restart', handleRestartDemo, 'demoBuilder.restartDemo'],
+        ])('refuses %s and never issues the command', async (verb, handler, command) => {
+            const { mockContext } = setupMocks(eds);
+
+            const result = await handler(mockContext);
+
+            expect(result.success).toBe(false);
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith(command);
+        });
+
+        it('says WHY, and what to do instead', async () => {
+            // A reason teaches the agent what to do next; a bare failure teaches
+            // it to retry. The refusal names the actions that DO apply.
+            const { mockContext } = setupMocks(eds);
+
+            const result = await handleStartDemo(mockContext);
+
+            expect(result.error).toContain('Edge Delivery CDN');
+            expect(result.error).toContain('get_project_urls');
+            expect(result.error).toContain('sync_storefront');
+        });
+
+        it('leaves non-EDS projects alone', async () => {
+            // The guard must not cost every other project its lifecycle.
+            const { mockContext } = setupMocks({ selectedStack: 'headless-accs' });
+
+            const result = await handleStartDemo(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+        });
+    });
+
     describe('handleStopDemo', () => {
         it('should execute stopDemo command', async () => {
             const { mockContext } = setupMocks();
