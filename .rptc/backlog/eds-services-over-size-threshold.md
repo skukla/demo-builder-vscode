@@ -1,5 +1,41 @@
 # Files over the god-file threshold
 
+> **2026-08-23 (second session) — the remaining three candidates are CUT.** All
+> on `feature/d3-dual-flow-removal`, all behavior-preserving (existing suites
+> untouched except one file-path pin; full suite 1137/1137 green; madge: no
+> cycles):
+>
+> - **`adobeEntityFetcher.ts` 1769 → 273-line facade** + five collaborators:
+>   `adobeCliFallback` (236), `adobeEntityReads` (540), `adobeWorkspaceCredentials`
+>   (458), `adobeOrgServices` (255), `adobeConsoleProjectOps` (454). Constructor
+>   and all 23 public signatures unchanged; the token-org fallback routes through
+>   the facade's public `getOrganizationsSdkOnly` so the monolith's
+>   dynamic-dispatch contract (tests spy it) still holds; the project-ops →
+>   workspace-listing edge is a narrow injected function, not the reads object.
+> - **`mcp-server.ts` 1794 → 398-line registration facade** + `src/mcp/`:
+>   `projectSecurity` (181), `projectToolHandlers` (238), `storefrontSyncHandler`
+>   (183), `blockAuthoring` (402), `blockLibraryPublish` (115),
+>   `blockToolHandlers` (417), `credentials` (33). `toolHandlers` is re-composed
+>   by spreading the three domain maps; `resolveProjectPath` /
+>   `validateEnvContent` / the credential types re-export from `mcp-server.ts`,
+>   so its public identity is unchanged. The one test edit in this whole batch:
+>   `spine-chokepoints.test.ts`'s manifest-WRITE pin follows the door to
+>   `mcp/projectToolHandlers.ts` (a file-path pin tracking a file move, not a
+>   behavior change).
+> - **`helixService.ts` 1642 → 823** (cut 3): `helixAdminAuth` (119 — the shared
+>   token/header seam, incl. the bulk-job status headers), `helixAdminErrors`
+>   (90 — pure Response diagnostics + the 403-as-credential-refusal),
+>   `helixApiKeys` (231 — the Admin API key lifecycle), `helixSiteContent`
+>   (614 — whole-site bulk publish + page-by-page fallback, with the single-page
+>   preview+publish injected as a callback). The facade keeps the page ops
+>   (preview/publish/delete/unpublish/status/purge/previewCode) and delegates
+>   the rest; `PublishPhases` re-exposes `SITE_PUBLISH_PHASES`.
+>
+> Remaining over-size but single-responsibility (leave unless coupling appears):
+> `helixService.ts` 823 (page ops + delegation), `helixSiteContent.ts` 614,
+> `adobeEntityReads.ts` 540. No candidate in the repo now shows the coupling
+> signals the skill cuts on — re-measure before believing this at the next cut.
+
 > **2026-08-23 — the worst offender is CUT.** `executor.ts` (1716 lines, 22
 > non-type imports, ~53 functions — the top of the coupling ranking) is now a
 > 493-line orchestrator plus seven single-responsibility phase modules
