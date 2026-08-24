@@ -279,6 +279,10 @@ Tools are grouped by the file that registers them. Names are what the agent sees
 
 ### File-based project tools — `src/mcp-server.ts` (`registerProjectTools`)
 These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
+The registration (schemas, confirm gates, envelopes) lives in `mcp-server.ts`;
+the handler implementations live in `src/mcp/` (projectSecurity,
+projectToolHandlers, storefrontSyncHandler, blockAuthoring,
+blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 
 | Tool | Purpose |
 |---|---|
@@ -800,7 +804,8 @@ result. The underlying service is mocked; the test asserts the tool's gating
 | `src/features/ai/server/inExtensionMcpServer.ts` | The UDS server; per-connection `McpServer`; logging shim. |
 | `src/features/ai/server/mcpSocketPath.ts` | Deterministic socket path from the projects root (`vscode`-free). |
 | `src/mcp-proxy.ts` → `dist/mcp-proxy.js` | stdio↔UDS forwarder Claude Code spawns. |
-| `src/mcp-server.ts` | Shared `registerProjectTools` + file-tool helpers (`vscode`-free). Standalone bootstrap retired. |
+| `src/mcp-server.ts` | Shared `registerProjectTools` (`vscode`-free registration facade). Standalone bootstrap retired. |
+| `src/mcp/` | The file-tool implementations behind it: security guards, project/sync/block handlers, publish tails (`vscode`-free). |
 | `src/features/ai/server/headlessHandlerContext.ts` | Builds a webview-less `HandlerContext`. |
 | `src/features/ai/server/*Tools.ts`, `*Tool.ts`, `*Descriptors.ts` | The tool implementations and descriptor tables. |
 | `src/features/project-creation/services/mcpConfigWriter.ts` | Writes `.mcp.json` / `.claude/mcp.json` / `.claude/settings.json`. |
