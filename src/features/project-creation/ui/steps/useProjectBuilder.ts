@@ -5,19 +5,14 @@
  * directly via `updateState` — no modal-local draft/open/close lifecycle (the
  * step persists selections in place).
  *
- * Two invariants carried here (both predate this hook; `ArchitectureModal` and
- * `useModalState`, which used to hold them, are deleted — git has that history):
+ * One invariant carried here (it predates this hook; `ArchitectureModal` and
+ * `useModalState`, which used to hold it, are deleted — git has that history):
  *
- *  - onAppBuilderComponentToggle carries the MESH DUAL-FLOW INVARIANT. Toggling
- *    a mesh App Builder component mirror-writes selectedOptionalDependencies via
- *    meshAppBuilderComponentToComponentIds, because useWizardState gates the
- *    Adobe-auth/IO steps on hasMeshInDependencies(selectedOptionalDependencies).
- *    A non-mesh toggle never touches selectedOptionalDependencies. Do NOT
- *    redesign this — D3 owns its eventual removal.
- *
- *  - onStackSelect resets selectedOptionalDependencies on stack change via
- *    resolveMeshOptionalDeps (the cross-package leak guard): the stack's mesh
- *    deps when mesh is required, [] otherwise.
+ *  - onStackSelect reconciles the mesh inside selectedAppBuilderComponents on
+ *    stack change via resolveMeshOptionalDeps (the cross-package leak guard):
+ *    mesh ids are stripped and the new stack's mesh is seeded when the package
+ *    requires it. selectedAppBuilderComponents is the SINGLE mesh authority —
+ *    the legacy selectedOptionalDependencies mirror was removed by D3.
  *
  * @module features/project-creation/ui/steps/useProjectBuilder
  */
@@ -30,11 +25,9 @@ import {
     getPackageDefaultBlockLibraryIds,
 } from '../../services/blockLibraryLoader';
 import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
-import {
-    withSelectedAppBuilderComponent,
-    meshAppBuilderComponentToComponentIds,
-} from '../wizard/appBuilderComponentSelectionState';
+import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSelectionState';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
+import { isMeshComponentId } from '@/core/constants';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -95,7 +88,6 @@ export interface UseProjectBuilderReturn {
      * record (catalog / legacy fixed-id blank selections have no name home).
      */
     onRenameAppBuilderComponent: (id: string, name: string) => void;
-    onOptionalDependenciesChange: (deps: string[]) => void;
 }
 
 /**
@@ -219,7 +211,6 @@ export function useProjectBuilder(
     const stateCustomBlockLibraries = state.customBlockLibraries;
     const selectedStack = state.selectedStack;
     const selectedAppBuilderComponents = state.selectedAppBuilderComponents ?? EMPTY_STRING_ARRAY;
-    const selectedOptionalDependencies = state.selectedOptionalDependencies ?? EMPTY_STRING_ARRAY;
 
     const onStackSelect = useCallback(
         (stackId: string) => {
@@ -249,17 +240,26 @@ export function useProjectBuilder(
                 onArchitectureChange?.(selectedStack, stackId);
             }
 
+            // Reconcile the mesh inside selectedAppBuilderComponents on an ACTUAL
+            // stack change: strip mesh ids (the old stack's mesh must not leak) and
+            // seed the new stack's mesh when the package requires it. A same-stack
+            // re-select (the edit walk-through invites re-clicking the already
+            // selected backend card) must preserve the current selection — the
+            // unconditional reset wiped the edit-seeded mesh and silently dropped
+            // it on Finish.
+            const isSameStack = selectedStack === stackId;
+            const meshReconciledComponents = isSameStack
+                ? undefined
+                : [
+                      ...selectedAppBuilderComponents.filter((id) => !isMeshComponentId(id)),
+                      ...(meshDeps ?? []),
+                  ];
+
             updateState({
                 selectedStack: stackId,
-                // Reset the mesh deps only on an ACTUAL stack change. A same-stack
-                // re-select (the edit walk-through invites re-clicking the already
-                // selected backend card) must preserve the current selection — the
-                // unconditional reset wiped the edit-seeded mesh dep and silently
-                // dropped the mesh on Finish.
-                selectedOptionalDependencies:
-                    selectedStack === stackId
-                        ? (state.selectedOptionalDependencies ?? [])
-                        : (meshDeps ?? []),
+                ...(meshReconciledComponents !== undefined
+                    ? { selectedAppBuilderComponents: meshReconciledComponents }
+                    : {}),
                 edsConfig,
                 selectedAddons: addons,
                 selectedBlockLibraries: blockLibraries,
@@ -271,7 +271,7 @@ export function useProjectBuilder(
             packages,
             selectedPackage,
             selectedStack,
-            state.selectedOptionalDependencies,
+            selectedAppBuilderComponents,
             state.edsConfig,
             stateCustomBlockLibraries,
             blockLibraryDefaults,
@@ -328,28 +328,9 @@ export function useProjectBuilder(
                 if (nextApis !== undefined) update.selectedConsoleApis = nextApis;
             }
 
-            const meshComponentIds = meshAppBuilderComponentToComponentIds(id);
-            if (meshComponentIds.length === 0) {
-                updateState(update);
-                return;
-            }
-
-            const nextOptionalDeps = isSelected
-                ? [...new Set([...selectedOptionalDependencies, ...meshComponentIds])]
-                : selectedOptionalDependencies.filter((dep) => !meshComponentIds.includes(dep));
-
-            updateState({
-                ...update,
-                selectedOptionalDependencies: nextOptionalDeps,
-            });
+            updateState(update);
         },
-        [
-            selectedAppBuilderComponents,
-            selectedOptionalDependencies,
-            state.selectedConsoleApis,
-            isRequiredComponent,
-            updateState,
-        ],
+        [selectedAppBuilderComponents, state.selectedConsoleApis, isRequiredComponent, updateState],
     );
 
     const onAddCustomAppBuilderComponent = useCallback(
@@ -439,11 +420,6 @@ export function useProjectBuilder(
         [updateState],
     );
 
-    const onOptionalDependenciesChange = useCallback(
-        (optionalDeps: string[]) => updateState({ selectedOptionalDependencies: optionalDeps }),
-        [updateState],
-    );
-
     return {
         onStackSelect,
         onAddonsChange,
@@ -453,6 +429,5 @@ export function useProjectBuilder(
         onAddCustomAppBuilderComponent,
         onRemoveAppBuilderComponent,
         onRenameAppBuilderComponent,
-        onOptionalDependenciesChange,
     };
 }

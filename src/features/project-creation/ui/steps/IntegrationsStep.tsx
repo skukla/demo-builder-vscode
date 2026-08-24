@@ -4,8 +4,9 @@
  * The center column is the shared {@link IntegrationCard} — the same card the
  * dashboard's integrations page renders — one per configured integration
  * (resolved purely from wizard state by {@link resolveIntegrationRows}, so a
- * PACKAGE-SEEDED mesh, selected via the dependency mirror key only, surfaces
- * automatically), an empty state when nothing is configured, and one accent
+ * PACKAGE-SEEDED mesh, seeded into selectedAppBuilderComponents by
+ * onStackSelect, surfaces automatically), an empty state when nothing is
+ * configured, and one accent
  * "Add Integration" launchpad. There is NO sub-step rail — the Build step's
  * footer owns the Continue gate.
  *
@@ -25,9 +26,9 @@
  * The destination is rendered ONCE above the list rather than on every card —
  * it is one project and one workspace for the whole build.
  *
- * Remove routing: a mesh row routes through the mesh dual-flow toggle
- * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
- * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
+ * Remove routing: a mesh row routes through the component toggle
+ * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing the
+ * selection); every other row routes through `onRemoveAppBuilderComponent` (selection +
  * source + API picks). The modal provisions NOTHING — a mesh commits on the
  * modal's destination step, and every integration's APIs (mesh included) are
  * subscribed at the build, not in-modal — so this step is PURELY VISUAL: a card
@@ -267,8 +268,8 @@ export function IntegrationsStep({
     );
 
     // The blank-naming collision domain: current selections + custom sources +
-    // every stack-compatible catalog id (incl. blank + mesh) + selected addons +
-    // optional deps. Component ids and the '__existing__' key are baked into
+    // every stack-compatible catalog id (incl. blank + mesh) + selected addons.
+    // Component ids (mesh included) and the '__existing__' key are baked into
     // buildReservedIds itself.
     const reservedIds = useMemo(
         () =>
@@ -280,13 +281,11 @@ export function IntegrationsStep({
                     ...(meshComponent ? [meshComponent.id] : []),
                 ],
                 selectedAddons: state.selectedAddons ?? EMPTY_PICKS,
-                selectedOptionalDependencies: state.selectedOptionalDependencies ?? EMPTY_PICKS,
             }),
         [
             state.selectedAppBuilderComponents,
             state.appBuilderComponentSources,
             state.selectedAddons,
-            state.selectedOptionalDependencies,
             availableEntries,
             meshComponent,
         ],
@@ -307,8 +306,8 @@ export function IntegrationsStep({
 
     const onRemoveRow = useCallback(
         (row: IntegrationRow): void => {
-            // Mesh removal MUST route through the dual-flow toggle so the legacy
-            // dependency mirror key clears with the selection.
+            // Mesh removal routes through the toggle so its required-mesh
+            // guard applies (Remove is a second door onto the same lock).
             if (row.kind === 'mesh' && meshComponent) {
                 onAppBuilderComponentToggle(meshComponent.id, false);
                 return;

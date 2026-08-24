@@ -28,6 +28,7 @@ import { Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { isMeshComponentId } from '@/core/constants';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -359,10 +360,12 @@ export function StorefrontSetupStep({
             edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
+            // The mesh rides selectedAppBuilderComponents (D3); the wire's
+            // dependencies list still carries it for the handler's mesh gate.
             dependencies: [
                 ...new Set([
                     ...(state.components?.dependencies || []),
-                    ...(state.selectedOptionalDependencies || []),
+                    ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
                 ]),
             ],
             selectedAddons: state.selectedAddons,
@@ -377,7 +380,7 @@ export function StorefrontSetupStep({
         state.componentConfigs,
         state.components?.backend,
         state.components?.dependencies,
-        state.selectedOptionalDependencies,
+        state.selectedAppBuilderComponents,
         state.selectedAddons,
         state.selectedBlockLibraries,
         state.customBlockLibraries,
@@ -417,7 +420,7 @@ export function StorefrontSetupStep({
         backendComponentId: state.components?.backend,
         dependencies: [
             ...(state.components?.dependencies || []),
-            ...(state.selectedOptionalDependencies || []),
+            ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
         ],
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,

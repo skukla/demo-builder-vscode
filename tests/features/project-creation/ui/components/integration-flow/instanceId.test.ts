@@ -22,7 +22,6 @@ function inputs(overrides: Partial<ReservedIdInputs> = {}): ReservedIdInputs {
         sourceIds: [],
         catalogIds: [],
         selectedAddons: [],
-        selectedOptionalDependencies: [],
         ...overrides,
     };
 }
@@ -94,13 +93,8 @@ describe('buildReservedIds', () => {
         }
     });
 
-    it('includes selected addons and optional dependencies', () => {
-        const reserved = buildReservedIds(
-            inputs({
-                selectedAddons: ['demo-inspector'],
-                selectedOptionalDependencies: ['eds-commerce-mesh'],
-            })
-        );
+    it('includes selected addons (mesh ids are baked in via MESH_COMPONENT_IDS)', () => {
+        const reserved = buildReservedIds(inputs({ selectedAddons: ['demo-inspector'] }));
         expect(reserved.has('demo-inspector')).toBe(true);
         expect(reserved.has('eds-commerce-mesh')).toBe(true);
     });

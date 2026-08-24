@@ -31,8 +31,6 @@ export interface ReservedIdInputs {
     catalogIds: string[];
     /** Selected addon ids. */
     selectedAddons: string[];
-    /** Selected optional dependency ids (mesh binds the destination here). */
-    selectedOptionalDependencies: string[];
 }
 
 /**
@@ -63,7 +61,6 @@ export function buildReservedIds(inputs: ReservedIdInputs): Set<string> {
         ...Object.values(COMPONENT_IDS),
         ...MESH_COMPONENT_IDS,
         ...inputs.selectedAddons,
-        ...inputs.selectedOptionalDependencies,
         RESERVED_EXISTING_KEY,
     ]);
 }

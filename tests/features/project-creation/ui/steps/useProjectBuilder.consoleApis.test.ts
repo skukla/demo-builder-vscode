@@ -6,7 +6,7 @@
  * Covers the integrations-flow cleanup contract: onRemoveAppBuilderComponent
  * and onAppBuilderComponentToggle(id, false) also drop the integration's
  * `selectedConsoleApis[id]` picks, without churning state when no picks exist
- * and without disturbing the load-bearing mesh mirror-write.
+ * and without disturbing the mesh selection handling.
  *
  * @jest-environment jsdom
  */
@@ -175,10 +175,9 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         expect('selectedConsoleApis' in call).toBe(false);
     });
 
-    it('mesh toggle-OFF drops the key AND still clears the mirrored optional dependency', () => {
+    it('mesh toggle-OFF drops the key along with the selection', () => {
         const { result, updateState } = setup({
             selectedAppBuilderComponents: ['headless-commerce-mesh'],
-            selectedOptionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
             selectedConsoleApis: { 'headless-commerce-mesh': ['GraphQLServiceSDK'] },
         });
         act(() => {
@@ -186,7 +185,6 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         });
         const call = updateState.mock.calls[0][0] as Partial<WizardState>;
         expect(call.selectedAppBuilderComponents).toEqual([]);
-        expect(call.selectedOptionalDependencies).toEqual([]);
         expect(call.selectedConsoleApis).toEqual({});
     });
 });

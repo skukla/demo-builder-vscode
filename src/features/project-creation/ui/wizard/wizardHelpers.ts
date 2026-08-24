@@ -3,7 +3,7 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
-import { hasMeshInDependencies } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -417,16 +417,6 @@ export function getNextButtonText(
 }
 
 /**
- * Check if any mesh component is selected in wizard state
- *
- * Checks if dependencies include any mesh component ID (EDS or Headless).
- * Uses hasMeshInDependencies for type-safe mesh detection.
- */
-export function hasMeshComponentSelected(components: ComponentSelection | undefined): boolean {
-    return hasMeshInDependencies(components?.dependencies);
-}
-
-/**
  * Get indices of completed steps in the wizard step array
  *
  * Extracts inline array operations (SOP §4):
@@ -594,7 +584,6 @@ function sanitizeConsoleApiPicks(
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
-
 /**
  * Build project configuration from wizard state for project creation
  *
@@ -617,7 +606,6 @@ export type ProjectConfigSource = Pick<
     | 'adobeWorkspace'
     | 'componentConfigs'
     | 'selectedStack'
-    | 'selectedOptionalDependencies'
     | 'apiMesh'
     | 'storeDiscoveryData'
     | 'selectedPackage'
@@ -671,9 +659,13 @@ export function buildProjectConfig(
             ? {
                   frontend: stack.frontend,
                   backend: stack.backend,
+                  // The mesh's wizard-side home is selectedAppBuilderComponents
+                  // (D3); the WIRE still carries it here in dependencies, which
+                  // is where creation installs it and where the persisted
+                  // componentSelections keep it (ADR-011).
                   dependencies: [
                       ...(stack.dependencies || []),
-                      ...(wizardState.selectedOptionalDependencies || []),
+                      ...(wizardState.selectedAppBuilderComponents || []).filter(isMeshComponentId),
                   ],
                   integrations: [],
                   appBuilder: [],

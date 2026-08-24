@@ -22,7 +22,7 @@ describe('hasRequiredReviewData (existing mesh gating — regression lock)', () 
     it('requires Adobe org/project/workspace when a mesh component is selected', () => {
         const withMesh = {
             projectName: 'demo',
-            selectedOptionalDependencies: ['eds-commerce-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
         };
         expect(hasRequiredReviewData(withMesh)).toBe(false);
 

@@ -52,7 +52,9 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
             selectedOptionalDependencies: z
                 .array(z.string())
                 .optional()
-                .describe('Optional dependency ids the project actually uses, e.g. api-mesh'),
+                .describe(
+                    'Optional dependency ids the project actually uses — mesh component ids, e.g. eds-accs-mesh',
+                ),
             isRecheck: z
                 .boolean()
                 .optional()

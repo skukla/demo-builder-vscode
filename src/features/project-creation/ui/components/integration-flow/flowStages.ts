@@ -131,8 +131,8 @@ export function deriveStageOrder(
     //   - nothing references it: after removing the last integration the shared
     //     destination stays committed but is orphaned, so re-walk the picker (a
     //     clean-slate re-confirm) rather than silently reusing it. A mesh counts as
-    //     a reference-holder — it binds the destination via selectedOptionalDependencies
-    //     (slice.meshSelected), not selectedAppBuilderComponents (slice.selectedIds).
+    //     a reference-holder (slice.meshSelected, resolved via isMeshSelected over
+    //     selectedAppBuilderComponents) alongside the ids in slice.selectedIds.
     const hasIntegrations = slice.selectedIds.length > 0 || slice.meshSelected;
     const dest: FlowStageId[] =
         slice.destinationCommitted &&

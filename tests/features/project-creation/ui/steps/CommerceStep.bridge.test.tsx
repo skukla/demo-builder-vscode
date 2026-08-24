@@ -2,7 +2,7 @@
  * CommerceStep Tests — Backend→stack bridge (Project Builder v7)
  *
  * Backend selection drives the architecture: a UNIQUE backend→stack mapping commits
- * the stack via useProjectBuilder.onStackSelect (preserving the mesh dual-flow reset);
+ * the stack via useProjectBuilder.onStackSelect (preserving the mesh reconciliation);
  * an AMBIGUOUS one (>1 frontend) persists `selectedBackend` only and shows "Frontend
  * pending", while still driving the single ConnectStoreStepContent from a provisional
  * (eds-preferred) stack id.
@@ -26,14 +26,7 @@ import '@testing-library/jest-dom';
 import { isCommerceConfigured } from '@/features/project-creation/ui/steps/tileStatus';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { WizardState } from '@/types/webview';
-import {
-    PAAS,
-    ACCS,
-    setup,
-    stepTab,
-    isLocked,
-    architectureLine,
-} from './commerceStepTestHarness';
+import { PAAS, ACCS, setup, stepTab, isLocked, architectureLine } from './commerceStepTestHarness';
 
 // ---------------------------------------------------------------------------
 // Mocks (jest.mock is hoisted to the top of THIS file, above the harness import,
@@ -105,11 +98,7 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: (props: { setCanProceed: (v: boolean) => void }) => (
         <div data-testid="adobe-auth-panel">
-            <button
-                type="button"
-                data-testid="auth-noop"
-                onClick={() => props.setCanProceed(true)}
-            >
+            <button type="button" data-testid="auth-noop" onClick={() => props.setCanProceed(true)}>
                 ping setCanProceed
             </button>
         </div>
@@ -132,11 +121,11 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             fireEvent.click(stepTab('backend'));
             expect(screen.getByTestId(`backend-card-${ACCS}`)).toHaveAttribute(
                 'data-selected',
-                'true',
+                'true'
             );
             expect(screen.getByTestId(`backend-card-${PAAS}`)).toHaveAttribute(
                 'data-selected',
-                'false',
+                'false'
             );
         });
     });
@@ -146,7 +135,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup();
             fireEvent.click(screen.getByTestId(`backend-card-${ACCS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedStack: 'eds-accs' }),
+                expect.objectContaining({ selectedStack: 'eds-accs' })
             );
         });
 
@@ -154,7 +143,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup({ selectedPackage: 'buildright' });
             fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedStack: 'eds-paas' }),
+                expect.objectContaining({ selectedStack: 'eds-paas' })
             );
         });
 
@@ -162,7 +151,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup({ selectedPackage: 'isle5' });
             fireEvent.click(screen.getByTestId(`backend-card-${ACCS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedStack: 'eds-accs' }),
+                expect.objectContaining({ selectedStack: 'eds-accs' })
             );
         });
 
@@ -170,18 +159,18 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup({ selectedPackage: 'buildright' });
             fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedBackend: PAAS }),
+                expect.objectContaining({ selectedBackend: PAAS })
             );
         });
 
-        it('should reset selectedOptionalDependencies for a non-mesh package on a unique pick', () => {
+        it('should strip a stale mesh selection for a non-mesh package on a unique pick', () => {
             const { updateState } = setup({
                 selectedPackage: 'buildright',
-                selectedOptionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
+                selectedAppBuilderComponents: [COMPONENT_IDS.EDS_COMMERCE_MESH],
             });
             fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedOptionalDependencies: [] }),
+                expect.objectContaining({ selectedAppBuilderComponents: [] })
             );
         });
     });
@@ -191,12 +180,12 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup();
             fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedBackend: PAAS }),
+                expect.objectContaining({ selectedBackend: PAAS })
             );
             // The ambiguous branch may CLEAR selectedStack (defense-in-depth) but must
             // never COMMIT a real stack id while the frontend is still pending.
-            const committedRealStack = updateState.mock.calls.some(
-                ([partial]) => Boolean((partial as Partial<WizardState>).selectedStack),
+            const committedRealStack = updateState.mock.calls.some(([partial]) =>
+                Boolean((partial as Partial<WizardState>).selectedStack)
             );
             expect(committedRealStack).toBe(false);
         });
@@ -205,9 +194,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { rerender } = setup();
             fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
             rerender();
-            expect(architectureLine()).toHaveTextContent(
-                /frontend pending/i,
-            );
+            expect(architectureLine()).toHaveTextContent(/frontend pending/i);
         });
 
         it('should drive ConnectStoreStepContent from the provisional eds-paas stack id', () => {
@@ -217,7 +204,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             fireEvent.click(stepTab('connection'));
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-stack-id',
-                'eds-paas',
+                'eds-paas'
             );
         });
     });
@@ -250,7 +237,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             const { updateState } = setup(committedAccs);
             switchToPaas();
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ selectedStack: undefined }),
+                expect.objectContaining({ selectedStack: undefined })
             );
         });
 
@@ -261,7 +248,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
                 expect.objectContaining({
                     commerceConnectValid: false,
                     commerceStoreViewChosen: false,
-                }),
+                })
             );
         });
 
@@ -287,19 +274,27 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
 
     describe('config steps — validity / locks (footer Continue advances)', () => {
         it('should default the active config step to connection for a committed PaaS stack', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+            });
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'connection',
+                'connection'
             );
         });
 
         it('should NOT render an in-body "Save & continue" CTA on a config step', () => {
             // The footer Continue (WizardContainer) advances the sub-step now; the
             // config body renders only the form, no in-body advance button.
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+            });
             expect(
-                screen.queryByRole('button', { name: /save & continue/i }),
+                screen.queryByRole('button', { name: /save & continue/i })
             ).not.toBeInTheDocument();
         });
 
@@ -315,7 +310,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             });
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'business-structure',
+                'business-structure'
             );
         });
 
@@ -332,7 +327,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
                 expect.objectContaining({
                     commerceConnectValid: true,
                     commerceCatalogValid: true,
-                }),
+                })
             );
         });
 
@@ -348,7 +343,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             expect(stepTab('business-structure')).toHaveAttribute('aria-selected', 'true');
             fireEvent.click(screen.getByTestId('choose-store-view'));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ commerceStoreViewChosen: true }),
+                expect.objectContaining({ commerceStoreViewChosen: true })
             );
         });
 
@@ -363,7 +358,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             expect(isLocked('catalog')).toBe(true);
             expect(stepTab('catalog')).toHaveAttribute(
                 'title',
-                expect.stringMatching(/store view/i),
+                expect.stringMatching(/store view/i)
             );
         });
 
@@ -377,10 +372,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
                 commerceStoreViewChosen: true,
             });
             expect(isLocked('catalog')).toBe(true);
-            expect(stepTab('catalog')).toHaveAttribute(
-                'title',
-                expect.stringMatching(/connect/i),
-            );
+            expect(stepTab('catalog')).toHaveAttribute('title', expect.stringMatching(/connect/i));
         });
 
         it('should unlock the catalog tab once connection is done and a store view is chosen', () => {
@@ -415,7 +407,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             rerender();
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'business-structure',
+                'business-structure'
             );
             // Catalog is now unlocked (reachable) even though we stayed put.
             expect(isLocked('catalog')).toBe(false);

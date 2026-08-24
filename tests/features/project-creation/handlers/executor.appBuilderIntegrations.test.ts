@@ -3,7 +3,7 @@
  *
  * Unit tests for `executeAppBuilderIntegrationsPhase` — the creation-flow phase
  * that deploys each selected App Builder "integration" via the SHARED Model B
- * runner (`addAppBuilderComponent`). Mesh-kind selections dual-flow through the
+ * runner (`addAppBuilderComponent`). Mesh-kind selections install through the
  * mesh phase and MUST be excluded here.
  *
  * Every external boundary is mocked (catalog loader, runner, deps factory,

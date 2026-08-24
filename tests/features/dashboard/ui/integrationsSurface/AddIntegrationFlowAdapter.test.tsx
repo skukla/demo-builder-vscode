@@ -224,16 +224,14 @@ describe('AddIntegrationFlowAdapter', () => {
             expect(captured?.state.selectedAppBuilderComponents).toContain('commerce-paas-mesh');
         });
 
-        // The test above keys the project by the CATALOG id, which a real project
-        // never does — and that is precisely why the bug survived it. A project
-        // keys its mesh by COMPONENT id (`eds-accs-mesh`), and `isMeshSelected`
-        // reaches that id only through `selectedOptionalDependencies`. With that
-        // key unset, meshSelected was false on every real project and the picker
-        // kept offering a second mesh.
+        // A project keys its mesh by COMPONENT id (`eds-accs-mesh`), and since
+        // mesh catalog ids ARE registry component ids, `isMeshSelected` finds it
+        // in selectedAppBuilderComponents — the single mesh authority (D3). The
+        // retired legacy `selectedOptionalDependencies` mirror is gone.
         it('marks the mesh added when the project keys it by COMPONENT id', () => {
             renderAdapter({ 'eds-accs-mesh': { ...INTEGRATION, kind: 'mesh' } });
 
-            expect(captured?.state.selectedOptionalDependencies).toContain('eds-accs-mesh');
+            expect(captured?.state.selectedAppBuilderComponents).toContain('eds-accs-mesh');
         });
 
         it('passes the blank starter for the "build custom" kind', () => {
@@ -328,7 +326,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
                 adobeProjectTitle="My Demo Project"
                 adobeWorkspaceTitle="Stage"
                 adobeOrgId="org-1"
-            />,
+            />
         );
     }
 
@@ -336,10 +334,14 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderInDestinationMode();
 
         act(() => {
-            captured!.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+            captured!.updateState({
+                adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' },
+            });
         });
         act(() => {
-            captured!.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+            captured!.updateState({
+                adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' },
+            });
         });
 
         expect(getClient().postMessage).toHaveBeenCalledWith('setProjectDestination', {
@@ -352,7 +354,9 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderInDestinationMode();
 
         act(() => {
-            captured!.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+            captured!.updateState({
+                adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' },
+            });
         });
 
         expect(getClient().postMessage).not.toHaveBeenCalled();
@@ -362,12 +366,14 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderAdapter();
 
         act(() => {
-            captured!.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+            captured!.updateState({
+                adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' },
+            });
         });
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
             'setProjectDestination',
-            expect.anything(),
+            expect.anything()
         );
     });
 });

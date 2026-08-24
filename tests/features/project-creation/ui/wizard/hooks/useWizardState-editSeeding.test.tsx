@@ -126,52 +126,29 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         expect(state.selectedAppBuilderComponents).toBeUndefined();
         expect(state.appBuilderComponentSources).toBeUndefined();
         expect(state.selectedConsoleApis).toBeUndefined();
-        expect(state.selectedOptionalDependencies).toBeUndefined();
     });
 });
 
 /**
  * Regression: editing a project with a mesh showed "No integrations yet."
  *
- * The mesh travels the DUAL-FLOW: it is deliberately excluded from
- * `componentSelections.appBuilder` (executor filters mesh-kind) and persisted
- * only in `componentSelections.dependencies`. The row gate `isMeshSelected`
- * reads `selectedAppBuilderComponents` OR `selectedOptionalDependencies` —
- * and edit seeding never populated the latter, so BOTH keys were empty in
- * every fresh edit session (and an edit-mode Finish, which rebuilds
- * dependencies from stack deps + selectedOptionalDependencies, silently
- * DROPPED the mesh from the manifest).
+ * The mesh is deliberately excluded from `componentSelections.appBuilder`
+ * (executor filters mesh-kind) and persisted only in
+ * `componentSelections.dependencies` (ADR-011). The row gate `isMeshSelected`
+ * reads `selectedAppBuilderComponents` (the single mesh authority since D3) —
+ * edit seeding must union the persisted mesh dep back into it, or the mesh row
+ * vanishes in every fresh edit session (and an edit-mode Finish, which derives
+ * the wire's dependencies from the mesh ids in selectedAppBuilderComponents,
+ * silently DROPS the mesh from the manifest).
  */
-describe('useWizardState - edit-mode mesh dual-flow seeding', () => {
-    it('seeds selectedOptionalDependencies with the mesh dep from selections.dependencies', () => {
-        const state = renderWizardState(
-            makeEditProject({
-                selections: { dependencies: ['eds-accs-mesh', 'some-base-dep'] },
-            })
-        );
-
-        // Mesh dep seeded; non-mesh base deps FILTERED (they would falsely
-        // trip anyDeployableSelected and force the destination gate).
-        expect(state.selectedOptionalDependencies).toEqual(['eds-accs-mesh']);
-    });
-
-    it('leaves selectedOptionalDependencies unset when dependencies carry no mesh', () => {
-        const state = renderWizardState(
-            makeEditProject({ selections: { dependencies: ['some-base-dep'] } })
-        );
-
-        expect(state.selectedOptionalDependencies ?? []).toEqual([]);
-    });
-
-    it('makes isMeshSelected true for the mapped catalog id (the row-gate inversion)', () => {
+describe('useWizardState - edit-mode mesh seeding (row-gate inversion)', () => {
+    it('makes isMeshSelected true for the persisted mesh dep', () => {
         const state = renderWizardState(
             makeEditProject({
                 selections: { dependencies: ['eds-accs-mesh'] },
             })
         );
 
-        // 'eds-accs-mesh' is the catalog id whose legacy mapping is
-        // 'eds-accs-mesh' — the exact gate integrationRows checks at :94.
         expect(isMeshSelected(state, 'eds-accs-mesh')).toBe(true);
     });
 
@@ -193,6 +170,51 @@ describe('useWizardState - edit-mode mesh dual-flow seeding', () => {
 
         expect(rows).toHaveLength(1);
         expect(rows[0].kind).toBe('mesh');
+    });
+});
+
+describe('useWizardState - edit-mode mesh seeding into selectedAppBuilderComponents (D3)', () => {
+    it('unions the mesh dep from selections.dependencies into selectedAppBuilderComponents', () => {
+        const state = renderWizardState(
+            makeEditProject({
+                selections: { appBuilder: ['erp-sync'], dependencies: ['eds-accs-mesh'] },
+            })
+        );
+
+        expect(state.selectedAppBuilderComponents).toEqual(['erp-sync', 'eds-accs-mesh']);
+    });
+
+    it('seeds only the mesh id when selections carry no appBuilder ids', () => {
+        const state = renderWizardState(
+            makeEditProject({
+                selections: { dependencies: ['headless-commerce-mesh'] },
+            })
+        );
+
+        expect(state.selectedAppBuilderComponents).toEqual(['headless-commerce-mesh']);
+    });
+
+    it('does not duplicate a mesh id already present in selections.appBuilder', () => {
+        const state = renderWizardState(
+            makeEditProject({
+                selections: {
+                    appBuilder: ['eds-accs-mesh'],
+                    dependencies: ['eds-accs-mesh'],
+                },
+            })
+        );
+
+        expect(state.selectedAppBuilderComponents).toEqual(['eds-accs-mesh']);
+    });
+
+    it('does not union non-mesh base deps into selectedAppBuilderComponents', () => {
+        const state = renderWizardState(
+            makeEditProject({
+                selections: { appBuilder: ['erp-sync'], dependencies: ['some-base-dep'] },
+            })
+        );
+
+        expect(state.selectedAppBuilderComponents).toEqual(['erp-sync']);
     });
 });
 

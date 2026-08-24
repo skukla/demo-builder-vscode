@@ -74,8 +74,8 @@ function getComponentInstanceKeys(project: import('@/types').Project): string[] 
 /**
  * Selected App Builder integration ids for `componentSelections.appBuilder`.
  *
- * Excludes mesh-kind ids (they dual-flow through `components.dependencies` and
- * are installed by the mesh phase) plus anything literally riding dependencies,
+ * Excludes mesh-kind ids (they ride `components.dependencies` and are
+ * installed by the mesh phase) plus anything literally riding dependencies,
  * so reset/edit flows never see the same component under two categories.
  *
  * Exclusion keys on the catalog KIND rather than on membership in dependencies.

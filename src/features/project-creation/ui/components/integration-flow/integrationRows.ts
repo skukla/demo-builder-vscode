@@ -2,12 +2,12 @@
  * integrationRows — PURE resolver: wizard state → the center column's result rows.
  *
  * One row per configured integration, in a fixed group order: mesh, then
- * catalog, then custom. The mesh row uses the BOTH-key selection check
- * ({@link isMeshSelected}: catalog id in `selectedAppBuilderComponents` OR a
- * mapped legacy dep in `selectedOptionalDependencies`), so a PACKAGE-SEEDED
- * mesh (selected via dependencies only, no destination yet) surfaces as a row
- * with `needsSetup`. `needsSetup` is shared across all rows — the Adobe
- * project + workspace destination is one shared commitment.
+ * catalog, then custom. The mesh row keys off {@link isMeshSelected}
+ * (`selectedAppBuilderComponents`, the single mesh authority since D3 — a
+ * PACKAGE-SEEDED mesh arrives there via onStackSelect's seeding), surfacing as
+ * a row with `needsSetup` until the destination is committed. `needsSetup` is
+ * shared across all rows — the Adobe project + workspace destination is one
+ * shared commitment.
  *
  * The reserved `selectedConsoleApis['__existing__']` edit-mode key is a
  * serialization-only bucket: it is NEVER surfaced as a row and never counted.

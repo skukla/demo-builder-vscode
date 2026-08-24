@@ -100,7 +100,7 @@ describe('reconcileComponentSelections — a deployed integration is a selected 
     });
 
     it('never lists a MESH entry under appBuilder', () => {
-        // The mesh dual-flows through `dependencies`; putting it in `appBuilder`
+        // The persisted mesh rides `dependencies`; putting it in `appBuilder`
         // too would make reset clone it twice.
         const p = project({
             appBuilderComponents: {

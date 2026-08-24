@@ -22,7 +22,6 @@ import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,
 } from '../../services/appBuilderComponentSelection';
-import { meshAppBuilderComponentToComponentIds } from '../wizard/appBuilderComponentSelectionState';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardSessionState, WizardState } from '@/types/webview';
@@ -82,41 +81,33 @@ export function meshComponentForStack(
 /**
  * Whether the given mesh component is currently selected (the tile's On state).
  *
- * A mesh component is "on" when its catalog id is in `selectedAppBuilderComponents`
- * OR — via the documented mesh dual-flow — any of its mapped legacy mesh component
- * ids are in `selectedOptionalDependencies`. Checking both keeps the tile correct
- * for template-required meshes that flow only through optionalDependencies.
+ * `selectedAppBuilderComponents` is the single mesh authority (D3): required
+ * meshes are seeded into it by `onStackSelect`, edit mode unions the persisted
+ * mesh dep back into it, and mesh catalog ids ARE registry component ids.
  *
  * @param state - Wizard state
  * @param meshComponentId - The mesh catalog component id
  * @returns true when the mesh component is selected
  */
 export function isMeshSelected(state: WizardSessionState, meshComponentId: string): boolean {
-    const selectedComponents = state.selectedAppBuilderComponents ?? [];
-    if (selectedComponents.includes(meshComponentId)) return true;
-    const legacyIds = meshAppBuilderComponentToComponentIds(meshComponentId);
-    const selectedDeps = state.selectedOptionalDependencies ?? [];
-    return legacyIds.some((id) => selectedDeps.includes(id));
+    return (state.selectedAppBuilderComponents ?? []).includes(meshComponentId);
 }
 
 /**
  * Whether the user has any deployable selected (a mesh or an integration).
  *
  * State-only (no catalog needed): a deployable is selected when
- * `selectedAppBuilderComponents` holds any catalog id, or — via the documented mesh
- * dual-flow — `selectedOptionalDependencies` holds a mesh dep. `onStackSelect` resets
- * `selectedOptionalDependencies` on every stack change, so a stale mesh dep can't
- * survive onto a non-mesh stack. Drives the Integrations area's conditional
- * "Deployment target" sub-step (it only matters once something will deploy).
+ * `selectedAppBuilderComponents` holds any id — mesh included, since D3 made it
+ * the single mesh authority (`onStackSelect` reconciles mesh ids on every stack
+ * change, so a stale mesh can't survive onto a non-mesh stack). Drives the
+ * Integrations area's conditional "Deployment target" sub-step (it only matters
+ * once something will deploy).
  *
  * @param state - Wizard state
  * @returns true when at least one deployable is selected
  */
 export function anyDeployableSelected(state: WizardState): boolean {
-    return (
-        (state.selectedAppBuilderComponents?.length ?? 0) > 0 ||
-        (state.selectedOptionalDependencies?.length ?? 0) > 0
-    );
+    return (state.selectedAppBuilderComponents?.length ?? 0) > 0;
 }
 
 /**

@@ -2,9 +2,9 @@
  * integrationRows tests (Integrations flow redesign — Step 8)
  *
  * `resolveIntegrationRows` is the PURE resolver turning wizard state into the
- * center column's result rows: a mesh row via the BOTH-key selection check
- * (catalog id in `selectedAppBuilderComponents` OR legacy dep ids in
- * `selectedOptionalDependencies` — the package-seeded case), catalog rows from
+ * center column's result rows: a mesh row via `isMeshSelected` over
+ * `selectedAppBuilderComponents` (the single mesh authority since D3 — the
+ * retired legacy dependency key is pinned inert), catalog rows from
  * the provided catalog list, custom rows from `appBuilderComponentSources`,
  * shared `needsSetup` (destination not committed), per-row `apis`, and the
  * reserved `__existing__` key never surfacing. Pure — the catalog is an arg,
@@ -30,7 +30,7 @@ const DESTINATION = {
     adobeWorkspace: { id: 'ws-1', name: 'Stage' },
 } as Partial<WizardState>;
 
-describe('resolveIntegrationRows — mesh row (both-key check)', () => {
+describe('resolveIntegrationRows — mesh row (single-authority selection)', () => {
     it('yields a mesh row when selected via selectedAppBuilderComponents', () => {
         const rows = resolveIntegrationRows(
             state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
@@ -46,19 +46,19 @@ describe('resolveIntegrationRows — mesh row (both-key check)', () => {
         });
     });
 
-    it('yields a mesh row via dependencies-only selection (package-seeded) with needsSetup', () => {
-        // 'eds-accs-mesh' maps to the legacy 'eds-accs-mesh' component id.
+    // Removed-behavior pin (D3): the retired legacy dependency key no longer
+    // yields a row — a package-seeded mesh arrives in selectedAppBuilderComponents.
+    it('yields NO mesh row from the retired legacy dependency key alone', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedOptionalDependencies: ['eds-accs-mesh'] }),
+            state({ selectedOptionalDependencies: ['eds-accs-mesh'] } as never),
             MESH_ENTRY,
             CATALOG
         );
 
-        expect(rows).toHaveLength(1);
-        expect(rows[0]).toMatchObject({ kind: 'mesh', needsSetup: true });
+        expect(rows).toEqual([]);
     });
 
-    it('yields no mesh row when mesh is unselected by both keys', () => {
+    it('yields no mesh row when no mesh is selected', () => {
         expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toEqual([]);
     });
 
@@ -103,7 +103,7 @@ describe('resolveIntegrationRows — mesh row (both-key check)', () => {
 
     it('yields no mesh row when the stack has no mesh component (meshComponent undefined)', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedOptionalDependencies: ['eds-accs-mesh'] }),
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
             undefined,
             CATALOG
         );

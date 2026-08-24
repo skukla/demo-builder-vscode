@@ -1,18 +1,15 @@
 /**
  * Wizard AppBuilderComponent-Selection State Tests (D2 Track B — Step 02)
  *
- * The pure state helpers that carry selected appBuilderComponents from the picker
- * (Step 03) through Review and into the created project. Mirrors the existing
- * selectedOptionalDependencies array-of-ids pattern. Includes the mesh
- * backward-compat round-trip: selecting a mesh appBuilderComponent must still drive
- * hasMeshInDependencies (the Adobe-I/O wizard step-filter lock).
+ * The pure state helper that carries selected appBuilderComponents from the
+ * picker (Step 03) through Review and into the created project.
+ * selectedAppBuilderComponents is the single wizard-side authority for App
+ * Builder selections, mesh included (D3): serialization derives the wire's
+ * dependencies from the mesh-kind ids in it via isMeshComponentId.
  */
 
-import {
-    withSelectedAppBuilderComponent,
-    meshAppBuilderComponentToComponentIds,
-} from '@/features/project-creation/ui/wizard/appBuilderComponentSelectionState';
-import { hasMeshInDependencies } from '@/core/constants';
+import { withSelectedAppBuilderComponent } from '@/features/project-creation/ui/wizard/appBuilderComponentSelectionState';
+import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 
 describe('withSelectedAppBuilderComponent', () => {
     it('adds an id immutably when selected', () => {
@@ -46,43 +43,25 @@ describe('withSelectedAppBuilderComponent', () => {
 // computeSelectedAppBuilderComponents (required union) was deleted 2026-08-23:
 // its only reference in the whole tree was this suite — no production caller
 // ever existed, even the orphaned AppBuilderComponentsStepContent never used
-// it. Required-mesh auto-include ships through onStackSelect's dependency
-// seeding, and required-mesh REMOVAL is refused by the toggle guard.
+// it. Required-mesh auto-include ships through onStackSelect's mesh seeding,
+// and required-mesh REMOVAL is refused by the toggle guard.
+//
+// meshAppBuilderComponentToComponentIds (the dual-flow bridge, latterly an
+// identity check) was deleted with D3 — mesh catalog ids ARE registry
+// component ids, so the selection drives the mesh gates directly:
 
-describe('meshAppBuilderComponentToComponentIds (mesh dual-flow backward-compat)', () => {
-    // Mesh catalog entries are derived from the registry now, so a mesh
-    // appBuilderComponent id IS its component id — this is an identity check
-    // rather than the translation table it replaced. The table was correct,
-    // which is how the mismatched source.repo beside it survived unnoticed.
-    it('maps each mesh id to itself', () => {
-        expect(meshAppBuilderComponentToComponentIds('eds-commerce-mesh')).toEqual([
-            'eds-commerce-mesh',
-        ]);
-        expect(meshAppBuilderComponentToComponentIds('eds-accs-mesh')).toEqual(['eds-accs-mesh']);
-        expect(meshAppBuilderComponentToComponentIds('headless-commerce-mesh')).toEqual([
-            'headless-commerce-mesh',
-        ]);
-    });
-
-    it('returns [] for a non-mesh appBuilderComponent id', () => {
-        expect(meshAppBuilderComponentToComponentIds('some-integration')).toEqual([]);
-    });
-
-    it('returns [] for a retired catalog id (no longer a mesh anywhere)', () => {
-        expect(meshAppBuilderComponentToComponentIds('commerce-paas-mesh')).toEqual([]);
-    });
-
-    it('round-trips: a selected mesh appBuilderComponent drives hasMeshInDependencies', () => {
-        // Selecting a mesh appBuilderComponent must yield a mesh component id so
-        // the existing Adobe-I/O step-filter (hasMeshInDependencies) still fires.
+describe('mesh selection drives the mesh gates directly (D3)', () => {
+    it('a selected mesh appBuilderComponent drives hasMeshInDependencies', () => {
         const selected = withSelectedAppBuilderComponent([], 'eds-commerce-mesh', true);
-        const componentIds = selected.flatMap(meshAppBuilderComponentToComponentIds);
-        expect(hasMeshInDependencies(componentIds)).toBe(true);
+        expect(hasMeshInDependencies(selected.filter(isMeshComponentId))).toBe(true);
     });
 
-    it('round-trips negatively: no mesh appBuilderComponent selected → no mesh in deps', () => {
+    it('no mesh appBuilderComponent selected → no mesh in derived deps', () => {
         const selected = withSelectedAppBuilderComponent([], 'some-integration', true);
-        const componentIds = selected.flatMap(meshAppBuilderComponentToComponentIds);
-        expect(hasMeshInDependencies(componentIds)).toBe(false);
+        expect(hasMeshInDependencies(selected.filter(isMeshComponentId))).toBe(false);
+    });
+
+    it('a retired catalog id is not a mesh anywhere', () => {
+        expect(isMeshComponentId('commerce-paas-mesh')).toBe(false);
     });
 });

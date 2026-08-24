@@ -209,6 +209,30 @@ describe('wizardHelpers - state & config', () => {
     });
 
     describe('buildProjectConfig', () => {
+        it('derives the mesh dependency from selectedAppBuilderComponents (D3)', () => {
+            const state: WizardState = {
+                ...REVIEW_BASE,
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['eds-accs-mesh', 'erp-sync'],
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.components?.dependencies).toEqual(['eds-accs-mesh']);
+        });
+
+        it('emits no mesh dependency when none is selected', () => {
+            const state: WizardState = {
+                ...REVIEW_BASE,
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['erp-sync'],
+            };
+
+            const config = buildProjectConfig(state);
+
+            expect(config.components?.dependencies).toEqual([]);
+        });
+
         it('should include selectedAddons in the config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
