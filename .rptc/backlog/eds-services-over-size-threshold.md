@@ -1,5 +1,33 @@
 # Files over the god-file threshold
 
+> **Re-measured 2026-08-24 — the candidate set has rolled over.** The three
+> files this item spent August on are all cut; what measurement condemns now
+> is a different set. Verdicts per the `decompose-god-file` coupling test
+> (>15 non-type imports, >10 public methods, multiple domains — threshold
+> alone is not enough):
+>
+> | Lines | File | Signal | Verdict |
+> |---|---|---|---|
+> | 916 | `dashboard/commands/configure.ts` | **32 non-type imports** | The strongest candidate. Commands import widely by design, but 32 is double the signal threshold. |
+> | 838 | `authentication/services/authenticationService.ts` | **~42 public methods** | Read before cutting: it is the facade over the entity services, and a facade is method-wide by design. Thin delegations → pattern, not god file; logic hiding among them → candidate. |
+> | 859 | `eds/services/githubFileOperations.ts` | 17 public methods | Borderline — one domain; same delegation-vs-logic read. |
+> | 981 | `projects-dashboard/handlers/dashboardHandlers.ts` | handler file ~2× its 500 threshold | Check for helpers hiding in the map that belong in services (helper-extraction pattern). |
+>
+> Big but coupling-clean or already adjudicated — leave alone:
+> `daLiveContentCopy.ts` (1104: 13 imports, 8 methods, one job — the
+> `edsPipeline` verdict shape), `edsPipeline.ts` (966: adjudicated below),
+> `helixService.ts` (823: post-cut, page ops + delegation),
+> `daLiveBlockLibraryOperations.ts` (851), `appBuilderComponentHandlers.ts`
+> (806).
+>
+> **New: the `.tsx` tier (threshold 350) has never been examined by this
+> item.** Standouts: `eds/ui/steps/repoSelectionInline.helpers.tsx` **856**,
+> `ImportDatapackModal.tsx` 660, `dashboard/ui/components/ActionGrid.tsx`
+> 660, `StorefrontSetupStep.tsx` 631, `RepoSelectionInline.tsx` 631. Measure
+> their coupling (props count, mixed responsibilities, hook-extraction
+> candidates) before cutting — component thresholds trip on doc-comment
+> weight too.
+
 > **2026-08-23 (second session) — the remaining three candidates are CUT.** All
 > on `feature/d3-dual-flow-removal`, all behavior-preserving (existing suites
 > untouched except one file-path pin; full suite 1137/1137 green; madge: no
