@@ -2,7 +2,7 @@
 
 **Measured 2026-08-24 on develop @ beta.141.** Reproduce with
 `node scripts/trace-session.mjs --latest` (or `--all --limit N`). Controls:
-`node scripts/trace-session.mjs --self-test` (21 checks), and
+`node scripts/trace-session.mjs --self-test` (22 checks), and
 `tests/scripts/traceSession.test.ts`, which executes the real entry point.
 
 ## Why this exists
@@ -42,7 +42,7 @@ is precisely the error the standing constraint names: *"isolation moves where
 cost is paid; it does not reduce it."*
 
 **Privacy.** The reader emits tool names, argument keys, sizes and counts —
-never argument values, never result bodies, never prompt text. Two of the 21
+never argument values, never result bodies, never prompt text. Two of the 22
 controls assert exactly that, and the jest suite names them so deleting one
 breaks CI. It writes nothing and uploads nothing.
 
