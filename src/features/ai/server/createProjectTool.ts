@@ -48,7 +48,7 @@ import {
     getResolvedMeshRequirement,
     getStorefrontForStack,
     getSelectablePackages,
-} from '@/features/project-creation/services/demoPackageLoader';
+} from '@/features/components/services/demoPackageLoader';
 import {
     buildProjectConfig,
     type ProjectConfigSource,

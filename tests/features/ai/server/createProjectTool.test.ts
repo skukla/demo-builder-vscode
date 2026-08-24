@@ -10,7 +10,7 @@ jest.mock('@/features/project-creation/handlers/executor', () => ({
 jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
     buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
 }));
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getSelectablePackages: jest.fn(async () => [
         { id: 'citisignal', storefronts: { 'headless-paas': {}, 'eds-paas': {} } },
     ]),
@@ -41,7 +41,7 @@ import {
 import {
     getResolvedMeshRequirement,
     getStorefrontForStack,
-} from '@/features/project-creation/services/demoPackageLoader';
+} from '@/features/components/services/demoPackageLoader';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';

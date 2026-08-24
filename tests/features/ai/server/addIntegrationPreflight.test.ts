@@ -42,8 +42,8 @@ const TEXT_ONLY_ENTRY: AppBuilderComponentCatalogEntry = {
 };
 
 const mockGetEntry = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
-    ...jest.requireActual('@/features/project-creation/services/appBuilderComponentCatalogLoader'),
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
+    ...jest.requireActual('@/features/components/services/appBuilderComponentCatalogLoader'),
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetEntry(...a),
 }));
 

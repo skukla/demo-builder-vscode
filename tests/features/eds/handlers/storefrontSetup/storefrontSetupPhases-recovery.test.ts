@@ -107,7 +107,7 @@ jest.mock('@/features/eds/services/fstabGenerator', () => ({
     generateFstabContent: jest.fn().mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
 }));

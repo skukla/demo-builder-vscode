@@ -5,7 +5,7 @@
  * package-level fallback, and the three-state requiresMesh values.
  */
 
-import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
+import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';
 
 describe('getResolvedMeshRequirement', () => {

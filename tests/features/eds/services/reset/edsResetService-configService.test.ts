@@ -71,7 +71,7 @@ jest.mock('@/types/typeGuards', () => ({
     hasEntries: jest.fn((obj: unknown) => obj && Object.keys(obj as object).length > 0),
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn().mockReturnValue(null),

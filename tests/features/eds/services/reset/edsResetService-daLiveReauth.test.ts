@@ -33,7 +33,7 @@ jest.mock('@/core/constants', () => ({
     COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn(),

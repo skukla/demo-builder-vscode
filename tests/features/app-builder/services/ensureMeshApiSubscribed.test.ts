@@ -18,10 +18,10 @@ import type { Logger } from '@/types/logger';
 jest.mock('vscode');
 
 // Catalog loader — control the rows returned per project selection.
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(),
 }));
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
 // withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
 jest.mock('@/core/shell', () => {

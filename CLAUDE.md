@@ -73,9 +73,9 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 6. `src/features/prerequisites/config/prerequisites.json` — prerequisite definitions
 7. `src/features/components/config/components.json` — component registry
 8. `src/features/project-creation/config/wizard-steps.json` — canonical wizard step order
-9. `src/features/project-creation/config/demo-packages.json` — demo packages (storefront configs, addons, content sources)
-10. `src/features/project-creation/config/stacks.json` — stacks (frontend+backend combos, global addon definitions)
-11. `src/features/project-creation/config/block-libraries.json` — EDS block library definitions
+9. `src/features/components/config/demo-packages.json` — demo packages (storefront configs, addons, content sources)
+10. `src/features/components/config/stacks.json` — stacks (frontend+backend combos, global addon definitions)
+11. `src/features/components/config/block-libraries.json` — EDS block library definitions
 
 ## Common Tasks
 
@@ -189,8 +189,9 @@ existed, then confirm your command actually reads there. Five wrong answers on
 2026-08-11 were all a correct command pointed at the wrong place, and no control caught
 any of them because each shared the wrong scope:
 
-- grepped `src/features/components/config/`; the catalog is in `project-creation/config/`
-  → "that plan is unmerged", wrong
+- grepped `src/features/components/config/`; the catalog was then in `project-creation/config/`
+  → "that plan is unmerged", wrong. (The 2026-08-24 catalog move later put it in
+  `components/config/` — the lesson is scope-checking, not the path)
 - grepped `.claude/skills/`; the App Builder skills were global in `~/.claude/skills/` at
   the time (family deleted 2026-08-23; those facts live in
   `.rptc/research/appbuilder-deployable-model/`) → "12 of 13 facts are in no skill", wrong

@@ -29,7 +29,7 @@ jest.mock('@/core/constants', () => ({
     COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn(),
@@ -120,7 +120,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 
 // Cast imported mocks
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;

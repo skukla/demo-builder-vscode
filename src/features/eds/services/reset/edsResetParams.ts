@@ -11,7 +11,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, CodePatchSource } from '@/types/demoPackages';
 import type { HandlerResponse } from '@/types/handlers';

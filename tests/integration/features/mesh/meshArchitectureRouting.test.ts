@@ -23,7 +23,7 @@ const componentsJson = JSON.parse(fs.readFileSync(componentsJsonPath, 'utf-8'));
 
 const stacksJsonPath = path.join(
     __dirname,
-    '../../../../src/features/project-creation/config/stacks.json'
+    '../../../../src/features/components/config/stacks.json'
 );
 const stacksJson = JSON.parse(fs.readFileSync(stacksJsonPath, 'utf-8'));
 

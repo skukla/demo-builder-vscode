@@ -10,7 +10,7 @@
  * @module features/project-creation/ui/steps/buildSummary
  */
 
-import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
 import { resolveIntegrationRows } from '../components/integration-flow';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';

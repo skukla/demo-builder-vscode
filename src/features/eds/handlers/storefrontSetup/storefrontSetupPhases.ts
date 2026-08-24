@@ -38,7 +38,7 @@ import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontS
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
-import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupProgressPayload, StorefrontSetupProgressPhase } from '@/types/webviewPayloads';

@@ -23,7 +23,7 @@
  */
 
 import * as path from 'path';
-import stacksConfig from '../../config/stacks.json';
+import stacksConfig from '@/features/components/config/stacks.json';
 import type { ProgressTracker } from '../../handlers/shared';
 import { writeAgentsMd } from './aiContextWriter';
 import {

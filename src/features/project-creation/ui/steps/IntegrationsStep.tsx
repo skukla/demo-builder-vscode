@@ -40,7 +40,7 @@
 
 import { ActionButton, Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,

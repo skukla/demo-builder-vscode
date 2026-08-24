@@ -23,7 +23,7 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
@@ -125,7 +125,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
 
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/project-creation/services/blockLibraryLoader';
+import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type { HandlerContext } from '@/types/handlers';
 

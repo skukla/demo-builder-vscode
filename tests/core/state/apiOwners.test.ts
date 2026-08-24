@@ -13,7 +13,7 @@
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import type { Project } from '@/types/base';
 
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (id: string) =>
         ({
             'commerce-mesh': {

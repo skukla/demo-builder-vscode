@@ -50,14 +50,14 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getAvailableBlockLibraries: jest.fn(() => []),
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
 
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     // Default: mesh NOT required (non-mesh package) → optional deps reset to [].
     getResolvedMeshRequirement: jest.fn(() => false),
 }));

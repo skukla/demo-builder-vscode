@@ -44,7 +44,7 @@ import {
 import {
     getAppBuilderComponentEntry,
     isBlankSource,
-} from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';

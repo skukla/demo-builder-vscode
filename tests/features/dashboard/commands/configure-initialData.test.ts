@@ -35,7 +35,7 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),
 }));
 jest.mock('@/core/state/appBuilderComponentState', () => ({

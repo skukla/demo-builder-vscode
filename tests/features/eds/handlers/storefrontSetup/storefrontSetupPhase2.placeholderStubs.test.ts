@@ -38,7 +38,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     describeSmart404Skip: jest.fn().mockReturnValue('skip'),
 }));
 
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn(),

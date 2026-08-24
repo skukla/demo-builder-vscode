@@ -19,7 +19,7 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
+import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';

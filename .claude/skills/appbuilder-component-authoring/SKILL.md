@@ -9,7 +9,7 @@ Everything that runs when a catalog component is added, and the contracts that b
 silently if you don't know them. Learned the hard way shipping the blank shell
 (2026-07-09, `.rptc/plans/appbuilder-shell-app/`).
 
-## The catalog (`src/features/project-creation/config/app-builder-components.json`)
+## The catalog (`src/features/components/config/app-builder-components.json`)
 
 - Entry shape: schema in `app-builder-components.schema.json`. `kind: 'mesh' | 'integration'`.
   **No runtime validation** — the loader (`appBuilderComponentCatalogLoader.ts`) is a plain

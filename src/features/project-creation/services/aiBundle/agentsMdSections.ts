@@ -12,7 +12,7 @@
  * injection, Markdown link injection).
  */
 
-import demoPackagesJson from '../../config/demo-packages.json';
+import demoPackagesJson from '@/features/components/config/demo-packages.json';
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import {
     sanitizeTemplateValue,

@@ -9,21 +9,12 @@
  * @module features/project-creation/handlers/executorComponentLoading
  */
 
-import stacksConfig from '../config/stacks.json';
 import type { ComponentDefinitionEntry } from '../services';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
-import type { Stack } from '@/types/stacks';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-
-/**
- * Look up a stack by ID from the stacks configuration
- * This is the source of truth for frontend/backend/dependencies - no derivation needed
- */
-export function getStackById(stackId: string): Stack | undefined {
-    return (stacksConfig.stacks as Stack[]).find((s) => s.id === stackId);
-}
 
 /**
  * Look up a component definition by type from the registry.

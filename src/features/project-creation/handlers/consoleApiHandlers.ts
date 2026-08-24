@@ -14,7 +14,7 @@
  * project to guard; sign-in and org presence are the only preconditions.
  */
 
-import { getAppBuilderComponentEntry } from '../services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { resolveApiRowStates, type ApiOwner } from '@/core/state/apiRowState';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';

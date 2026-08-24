@@ -9,7 +9,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback } from 'react';
-import { getBlockLibraryName } from '../../services/blockLibraryLoader';
+import { getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';

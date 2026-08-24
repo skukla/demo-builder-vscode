@@ -20,7 +20,7 @@ import {
     getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
-} from '@/features/project-creation/services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 import type { Stack } from '@/types/stacks';
 
 /** Helper to create a minimal Stack object for testing */
@@ -430,7 +430,7 @@ describe('blockLibraryLoader', () => {
         );
         const blockLibrariesJson = JSON.parse(
             fs.readFileSync(
-                path.join(projectRoot, 'src/features/project-creation/config/block-libraries.json'),
+                path.join(projectRoot, 'src/features/components/config/block-libraries.json'),
                 'utf-8'
             )
         );

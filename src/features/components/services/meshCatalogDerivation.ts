@@ -25,7 +25,7 @@
  * A derived entry cannot drift that way: the repo comes from the registry url of
  * the very id being derived.
  *
- * @module features/project-creation/services/meshCatalogDerivation
+ * @module features/components/services/meshCatalogDerivation
  */
 
 import stacksConfig from '../config/stacks.json';

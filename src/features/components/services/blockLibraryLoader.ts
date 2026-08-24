@@ -6,7 +6,7 @@
  * for a given stack and package combination, compute defaults,
  * and resolve library sources for installation.
  *
- * @module features/project-creation/services/blockLibraryLoader
+ * @module features/components/services/blockLibraryLoader
  */
 
 import blockLibrariesConfig from '../config/block-libraries.json';

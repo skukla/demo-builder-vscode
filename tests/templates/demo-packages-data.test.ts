@@ -66,9 +66,9 @@ describe('demo-packages.json', () => {
     let stacksConfig: { stacks: Array<{ id: string }> };
 
     beforeAll(() => {
-        const packagesPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.json');
-        const schemaPath = path.join(__dirname, '../../src/features/project-creation/config/demo-packages.schema.json');
-        const stacksPath = path.join(__dirname, '../../src/features/project-creation/config/stacks.json');
+        const packagesPath = path.join(__dirname, '../../src/features/components/config/demo-packages.json');
+        const schemaPath = path.join(__dirname, '../../src/features/components/config/demo-packages.schema.json');
+        const stacksPath = path.join(__dirname, '../../src/features/components/config/stacks.json');
 
         packagesConfig = JSON.parse(fs.readFileSync(packagesPath, 'utf-8'));
         schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));

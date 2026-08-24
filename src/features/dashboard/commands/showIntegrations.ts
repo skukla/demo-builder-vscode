@@ -36,7 +36,7 @@ import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { HandlerContext } from '@/types/handlers';

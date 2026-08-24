@@ -19,14 +19,14 @@ import type { WizardState } from '@/types/webview';
 
 // The mesh seeding depends on getResolvedMeshRequirement for the reset path.
 // Default each test to 'optional' (no auto-include) unless overridden.
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
     getPackageById: jest.fn(),
 }));
 
 // onStackSelect seeds default block libraries (EDS only) via blockLibraryLoader.
 // Mock it so the parity tests are deterministic and independent of config JSON.
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
@@ -37,12 +37,12 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn() },
 }));
 
-import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
+import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
-} from '@/features/project-creation/services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 
 const mockGetResolvedMeshRequirement = getResolvedMeshRequirement as jest.Mock;
 const mockGetNativeBlockLibraries = getNativeBlockLibraries as jest.Mock;

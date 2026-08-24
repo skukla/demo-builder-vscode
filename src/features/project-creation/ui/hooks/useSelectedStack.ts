@@ -12,7 +12,7 @@
  */
 
 import { useMemo } from 'react';
-import stacksConfig from '../../config/stacks.json';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { Stack } from '@/types/stacks';
 
 /**
@@ -24,13 +24,6 @@ import type { Stack } from '@/types/stacks';
 export function useSelectedStack(selectedStackId: string | undefined): Stack | undefined {
     return useMemo(() => {
         if (!selectedStackId) return undefined;
-        return (stacksConfig.stacks as Stack[]).find(s => s.id === selectedStackId);
+        return getStackById(selectedStackId);
     }, [selectedStackId]);
-}
-
-/**
- * Get stack by ID (non-hook version for use outside components)
- */
-export function getStackById(stackId: string): Stack | undefined {
-    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
 }

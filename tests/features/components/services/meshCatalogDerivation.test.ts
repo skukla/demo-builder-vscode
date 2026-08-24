@@ -9,9 +9,9 @@
  * both EDS rows cloned the wrong repository.
  */
 
-import stacksConfig from '@/features/project-creation/config/stacks.json';
+import stacksConfig from '@/features/components/config/stacks.json';
 import componentsConfig from '@/features/components/config/components.json';
-import { deriveMeshCatalogEntries } from '@/features/project-creation/services/meshCatalogDerivation';
+import { deriveMeshCatalogEntries } from '@/features/components/services/meshCatalogDerivation';
 
 /** The registry is the authority on which repo a mesh id lives in. */
 const REGISTRY_MESH = (componentsConfig as { mesh: Record<string, { source: { url: string } }> })

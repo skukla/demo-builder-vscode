@@ -15,7 +15,7 @@ import {
     SERVICE_GROUP_DEFINITIONS,
 } from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
-import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { EnvVarDefinition } from '@/types/components';
 import { ComponentConfigs } from '@/types/webview';
 import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';

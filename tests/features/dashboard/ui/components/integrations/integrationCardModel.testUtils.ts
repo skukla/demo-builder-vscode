@@ -48,7 +48,7 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
     },
 };
 
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: jest.fn((id: string) => FAKE_CATALOG[id]),
     isBlankSource: jest.fn(
         (source: { owner: string; repo: string }) =>

@@ -45,7 +45,7 @@ import {
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
-} from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

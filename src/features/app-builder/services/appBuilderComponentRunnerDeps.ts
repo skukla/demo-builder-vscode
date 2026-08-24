@@ -30,7 +30,7 @@ import {
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ComponentRegistry } from '@/types/components';

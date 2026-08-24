@@ -33,7 +33,7 @@ import {
     getBlockLibraryName,
     getBlockLibrarySource,
     isBlockLibraryAvailableForPackage,
-} from '@/features/project-creation/services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';

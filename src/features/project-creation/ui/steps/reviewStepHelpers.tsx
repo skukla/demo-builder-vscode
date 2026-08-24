@@ -8,7 +8,7 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { resolveIntegrationRows } from '../components/integration-flow';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 import { meshComponentForStack } from './tileStatus';

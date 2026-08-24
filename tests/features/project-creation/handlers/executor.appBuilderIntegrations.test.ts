@@ -14,7 +14,7 @@
 // ---- catalog loader (entry resolution) -------------------------------------
 const mockGetAppBuilderComponentEntry = jest.fn();
 const mockBuildCustomIntegrationEntry = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
 }));

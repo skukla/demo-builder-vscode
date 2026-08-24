@@ -27,7 +27,7 @@ import {
     sendCompletionAndCleanup,
     generateAIContextFiles,
 } from '../services';
-import { getAppBuilderComponentEntry } from '../services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,

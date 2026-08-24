@@ -23,8 +23,8 @@ import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
     getPackageDefaultBlockLibraryIds,
-} from '../../services/blockLibraryLoader';
-import { getResolvedMeshRequirement } from '../../services/demoPackageLoader';
+} from '@/features/components/services/blockLibraryLoader';
+import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSelectionState';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { isMeshComponentId } from '@/core/constants';

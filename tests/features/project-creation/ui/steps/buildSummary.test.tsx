@@ -14,9 +14,9 @@
 // Deterministic catalog for the Integrations group: one mesh (a REAL id so the
 // legacy dependency-mirror mapping applies) + one integration entry, offered
 // only on the ACCS+EDS axis. Mesh resolution reads this same loader.
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => {
     const actual = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     );
     const entries = [
         {

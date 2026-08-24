@@ -49,7 +49,7 @@ Mirror `citisignal-b2b` exactly — it already proves "b2b base + CitiSignal ove
 
 ## Files
 
-- `src/features/project-creation/config/demo-packages.json` (+ block-libraries.json if native map
+- `src/features/components/config/demo-packages.json` (+ block-libraries.json if native map
   changes), package-count tests.
 
 ## Acceptance

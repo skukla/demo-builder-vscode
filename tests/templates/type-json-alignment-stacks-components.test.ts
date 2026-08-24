@@ -193,7 +193,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
     beforeAll(() => {
         const stacksPath = path.join(
             __dirname,
-            '../../src/features/project-creation/config/stacks.json'
+            '../../src/features/components/config/stacks.json'
         );
         const componentsPath = path.join(
             __dirname,

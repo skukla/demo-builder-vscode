@@ -1,6 +1,6 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { getStackById } from '../hooks/useSelectedStack';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { hasRequiredReviewData } from './reviewPredicates';
 import {
     buildComponentInfoList,

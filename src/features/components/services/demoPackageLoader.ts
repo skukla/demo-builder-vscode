@@ -17,7 +17,7 @@
 import demoPackagesConfig from '../config/demo-packages.json';
 import stacksConfig from '../config/stacks.json';
 import type { AddonSource, DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
-import type { StacksConfig } from '@/types/stacks';
+import type { Stack, StacksConfig } from '@/types/stacks';
 
 /**
  * Storefront with package and stack context
@@ -198,6 +198,15 @@ export async function getAllStorefronts(
  *   console.log(`Blocks from ${source.owner}/${source.repo}:${source.branch}`);
  * }
  */
+/**
+ * Get a stack definition by ID (canonical lookup over stacks.json).
+ * Consolidates the copies that lived in useSelectedStack, the prerequisites
+ * check handler, the reset service, and the executor's component loading.
+ */
+export function getStackById(stackId: string): Stack | undefined {
+    return (stacksConfig.stacks as Stack[]).find((s) => s.id === stackId);
+}
+
 export function getAddonSource(addonId: string): AddonSource | undefined {
     const config = stacksConfig as unknown as StacksConfig;
     const addonDef = config.addonDefinitions?.[addonId];

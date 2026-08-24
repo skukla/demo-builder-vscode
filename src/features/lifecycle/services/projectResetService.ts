@@ -19,21 +19,12 @@ import * as path from 'path';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import stacksConfig from '@/features/project-creation/config/stacks.json';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project, TransformedComponentDefinition, ComponentRegistry } from '@/types';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Stack } from '@/types/stacks';
 
-// Stacks configuration — same source of truth used by executor.ts
-
-/**
- * Look up a stack by ID from stacks.json
- * Mirrors the private getStackById in executor.ts
- */
-function getStackById(stackId: string): Stack | undefined {
-    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
-}
 
 // ==========================================================
 // Types

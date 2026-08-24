@@ -8,8 +8,8 @@
  * + lock reasons + values). Side-effect-free; derives from persisted wizard state.
  */
 
-import stacksConfig from '@/features/project-creation/config/stacks.json';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
+import stacksConfig from '@/features/components/config/stacks.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {
     resolveStackForBackend,
     provisionalStackForBackend,

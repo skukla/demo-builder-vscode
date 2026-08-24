@@ -20,7 +20,7 @@
  * patches between releases and existing projects pick it up on their next run.
  */
 
-import { getStorefrontForStack } from '@/features/project-creation/services/demoPackageLoader';
+import { getStorefrontForStack } from '@/features/components/services/demoPackageLoader';
 import type { Logger } from '@/types/logger';
 
 /**

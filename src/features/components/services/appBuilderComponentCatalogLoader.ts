@@ -18,7 +18,7 @@
  * to `stacks.json` and `components.json` instead, exactly as project creation
  * expects.
  *
- * @module features/project-creation/services/appBuilderComponentCatalogLoader
+ * @module features/components/services/appBuilderComponentCatalogLoader
  */
 
 import appBuilderComponentsConfig from '../config/app-builder-components.json';

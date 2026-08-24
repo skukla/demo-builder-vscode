@@ -24,7 +24,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { isPrebuiltIntegration } from '../../../services/appBuilderComponentCatalogLoader';
+import { isPrebuiltIntegration } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { type FlowMode, FlowStageId } from './flowStages';

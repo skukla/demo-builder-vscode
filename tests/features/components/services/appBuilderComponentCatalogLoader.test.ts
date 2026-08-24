@@ -15,9 +15,9 @@ import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
     isBlankSource,
-} from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 
-const CONFIG_DIR = path.join(__dirname, '../../../../src/features/project-creation/config');
+const CONFIG_DIR = path.join(__dirname, '../../../../src/features/components/config');
 
 describe('appBuilderComponentCatalogLoader', () => {
     describe('getAvailableAppBuilderComponents (backend/frontend filter)', () => {

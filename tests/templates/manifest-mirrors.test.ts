@@ -216,13 +216,13 @@ describe('webview bundle names mirror esbuild WEBVIEW_ENTRIES', () => {
 describe('cross-config id references resolve', () => {
     const demoPackages = JSON.parse(
         fs.readFileSync(
-            path.join(ROOT, 'src/features/project-creation/config/demo-packages.json'),
+            path.join(ROOT, 'src/features/components/config/demo-packages.json'),
             'utf-8'
         )
     );
     const blockLibraries = JSON.parse(
         fs.readFileSync(
-            path.join(ROOT, 'src/features/project-creation/config/block-libraries.json'),
+            path.join(ROOT, 'src/features/components/config/block-libraries.json'),
             'utf-8'
         )
     );

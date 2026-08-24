@@ -36,11 +36,11 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     beforeAll(() => {
         const packagesPath = path.join(
             __dirname,
-            '../../src/features/project-creation/config/demo-packages.json'
+            '../../src/features/components/config/demo-packages.json'
         );
         const schemaPath = path.join(
             __dirname,
-            '../../src/features/project-creation/config/demo-packages.schema.json'
+            '../../src/features/components/config/demo-packages.schema.json'
         );
         packagesConfig = JSON.parse(fs.readFileSync(packagesPath, 'utf-8'));
         schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));

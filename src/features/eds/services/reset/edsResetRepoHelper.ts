@@ -27,7 +27,7 @@ import {
     getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
-} from '@/features/project-creation/services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';

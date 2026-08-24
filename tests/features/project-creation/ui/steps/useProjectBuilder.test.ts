@@ -21,14 +21,14 @@ import type { WizardState } from '@/types/webview';
 
 // The mesh seeding depends on getResolvedMeshRequirement for the reset path.
 // Default each test to 'optional' (no auto-include) unless overridden.
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
     getPackageById: jest.fn(),
 }));
 
 // onStackSelect seeds default block libraries (EDS only) via blockLibraryLoader.
 // Mock it so the parity tests are deterministic and independent of config JSON.
-jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
+jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getNativeBlockLibraries: jest.fn(() => []),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
@@ -41,9 +41,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 
 // Real catalog by default; individual tests append a nativeForPackages entry to
 // drive the generic required-component guard (the catalog ships none today).
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => {
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => {
     const actual = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     );
     return {
         ...actual,
@@ -51,11 +51,11 @@ jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader
     };
 });
 
-import { getResolvedMeshRequirement } from '@/features/project-creation/services/demoPackageLoader';
+import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
-} from '@/features/project-creation/services/blockLibraryLoader';
+} from '@/features/components/services/blockLibraryLoader';
 import { setup } from './useProjectBuilder.testUtils';
 
 const mockGetResolvedMeshRequirement = getResolvedMeshRequirement as jest.Mock;
@@ -401,10 +401,10 @@ describe('required NON-mesh components cannot be removed (generic guard)', () =>
     // requirement:'required' exactly like a required mesh, and both removal
     // doors (the toggle and the remove callback) must refuse it.
     const { getAvailableAppBuilderComponents } = jest.requireMock(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     ) as { getAvailableAppBuilderComponents: jest.Mock };
     const actualLoader = jest.requireActual(
-        '@/features/project-creation/services/appBuilderComponentCatalogLoader'
+        '@/features/components/services/appBuilderComponentCatalogLoader'
     ) as { getAvailableAppBuilderComponents: (b: string, f: string) => unknown[] };
 
     const nativeEntry = {

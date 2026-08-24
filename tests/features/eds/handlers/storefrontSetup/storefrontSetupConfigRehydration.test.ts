@@ -14,9 +14,9 @@
  */
 
 import { rehydratePackageDerivedConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration';
-import { getStorefrontForStack } from '@/features/project-creation/services/demoPackageLoader';
+import { getStorefrontForStack } from '@/features/components/services/demoPackageLoader';
 
-jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
+jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getStorefrontForStack: jest.fn(),
 }));
 

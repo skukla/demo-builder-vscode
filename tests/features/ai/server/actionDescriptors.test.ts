@@ -8,7 +8,7 @@ import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 function row(tool: string) {

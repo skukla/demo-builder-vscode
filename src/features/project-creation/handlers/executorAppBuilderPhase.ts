@@ -12,7 +12,7 @@
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
-} from '../services/appBuilderComponentCatalogLoader';
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';

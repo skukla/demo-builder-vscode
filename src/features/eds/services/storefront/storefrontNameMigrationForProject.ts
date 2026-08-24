@@ -54,7 +54,7 @@ import {
     type StorefrontMigrationContext,
     type StorefrontMigrationResult,
 } from '@/features/eds/services/storefront/storefrontNameMigration';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
