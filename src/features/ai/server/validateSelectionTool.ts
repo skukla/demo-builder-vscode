@@ -49,6 +49,7 @@ export function registerValidateSelectionTool(
     server.registerTool(
         'validate_component_selection',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'Can this frontend + backend be built together: compatibility, the dependencies the pair pulls in, and whether the resulting chain validates. Answers in one call what the wizard asks in three.',
             inputSchema: {

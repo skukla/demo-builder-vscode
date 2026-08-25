@@ -222,6 +222,7 @@ const OPERATION_MODE = z.enum(['import', 'export', 'delete', 'validate']);
 export const READ_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'verify_ai_setup',
+        readOnly: true,
         description:
             "Check the project's AI setup (context files, MCP config, skills) and report status. " +
             'Returns the verdict plus inventory counts; pass inventory:"full" for the complete ' +
@@ -238,6 +239,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_ai_prompts',
+        readOnly: true,
         description:
             'List saved AI prompts for the current project (global + project-local, merged). ' +
             'Returns an index with previews; pass promptId for one prompt in full.',
@@ -253,6 +255,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_mesh',
+        readOnly: true,
         description: "Report whether the current project's API mesh is deployed and up to date",
         map: meshHandlers,
         type: 'check-api-mesh',
@@ -271,6 +274,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_console_apis',
+        readOnly: true,
         description:
             "List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's " +
             'Developer Console workspace, flagging the ones Demo Builder already manages. Use before ' +
@@ -287,6 +291,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_store_structure',
+        readOnly: true,
         description:
             "The Commerce websites, store groups and store views the project's backend actually " +
             'has, plus whether the website/store/store-view codes the project is configured for ' +
@@ -297,6 +302,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_project_urls',
+        readOnly: true,
         description:
             "The current project's useful URLs as data (no browser opened): local storefront " +
             '(while running), EDS live site + DA.live authoring, Commerce admin, and the Developer ' +
@@ -334,6 +340,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     // a fixture says what the shape is, never what the VOLUME will be.
     {
         tool: 'check_datapack_service',
+        readOnly: true,
         description:
             'Check whether the Data Installer API is configured and reachable. Use before the ' +
             'other datapack tools when one fails, to tell a service outage from a bad request.',
@@ -342,6 +349,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'find_datapacks',
+        readOnly: true,
         description:
             'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
             'per (name, version) pair — the same pack appears once per version. Curated packs ' +
@@ -360,6 +368,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack',
+        readOnly: true,
         description:
             "One datapack's metadata plus which of its declared data types the service actually " +
             'stores. Use before installing: a pack can declare a type it holds no item for.',
@@ -374,6 +383,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_data_types',
+        readOnly: true,
         description:
             'The data types the Data Installer can process for one operation mode, in dependency ' +
             'order. Ask per mode — the import and export sets genuinely differ.',
@@ -386,6 +396,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_installed_datapacks',
+        readOnly: true,
         description:
             'Datapacks the Data Installer records as installed, and the Commerce instance each ' +
             "went into. This is the service's own tracking, not a live check of the instance.",
@@ -400,6 +411,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack_activity',
+        readOnly: true,
         description:
             "The Data Installer's own request log — which packs were imported, exported or " +
             'validated, against which instance, and when. Use to see what a previous run did.',

@@ -200,6 +200,7 @@ export function registerConfigureProjectTool(
     server.registerTool(
         'configure_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Configure the current project: datapack, addons, block libraries, store scope and non-secret env vars. Returns what changed and what is still unset. Secrets must be entered by the user.',
             // A STRICT z.object, not a raw shape. The SDK accepts both, but a raw

@@ -30,6 +30,24 @@ export interface ToolDescriptor {
     type: string;
     /** Zod input schema fields (omit for no-arg tools). */
     inputSchema?: Record<string, z.ZodTypeAny>;
+    /**
+     * Does this tool, AS EXPOSED, only read?
+     *
+     * REQUIRED, and required on purpose: it is what the dry run gates on, and a
+     * field you can forget is a hole that opens quietly. The compiler asks every
+     * row; that is stronger than any test.
+     *
+     * "AS EXPOSED" is the load-bearing phrase. It describes the tool a caller can
+     * actually reach, not the handler in the abstract. `check_github_app`
+     * declares `readOnly: true` even though its handler triggers a Helix code
+     * sync, because {@link ToolDescriptor.argDefaults} forces `skipTrigger` and
+     * the write is unreachable through this tool. Do not "correct" that.
+     *
+     * The tool's NAME is not consulted. It used to be — `isReadOnlyToolName`, a
+     * regex — and a regex cannot express "named `check_` and writes anyway",
+     * which is why that one guard had to be found by a hand audit.
+     */
+    readOnly: boolean;
     /** When true, the tool refuses unless called with `confirm: true`. */
     confirm?: boolean;
     /**
@@ -183,8 +201,24 @@ export function registerDescriptorTools(
         };
         const shape = d.shape ?? defaultShape;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        server.registerTool(d.tool, { description: d.description, inputSchema }, async (args: any) => {
+        server.registerTool(
+            d.tool,
+            {
+                description: d.description,
+                inputSchema,
+                // MCP's own annotation block, so the declaration does double
+                // duty: our dry run reads it, and it travels to the client in
+                // `tools/list` — Claude Code learns which of our tools are safe.
+                annotations: {
+                    readOnlyHint: d.readOnly,
+                    // A tool that demands `confirm` has declared itself
+                    // destructive; saying so twice in two vocabularies would be
+                    // two things to keep in sync.
+                    destructiveHint: d.confirm === true,
+                },
+            },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            async (args: any) => {
             if (d.confirm && args?.confirm !== true) {
                 return asRawText(`${d.tool} requires confirm:true to proceed.`);
             }

@@ -370,6 +370,7 @@ export function registerCreateProjectTool(server: any, ctxFactory: () => Handler
     server.registerTool(
         'create_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
                 'Create a new Demo Builder project headlessly from a package + stack. EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true',

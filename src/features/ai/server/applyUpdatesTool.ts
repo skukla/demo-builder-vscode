@@ -50,6 +50,7 @@ export function registerApplyUpdatesTool(
     server.registerTool(
         'apply_updates',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available.',
             inputSchema: {

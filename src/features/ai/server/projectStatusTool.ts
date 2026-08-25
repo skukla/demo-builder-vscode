@@ -44,6 +44,7 @@ export function registerProjectStatusTool(
     server.registerTool(
         'get_project_status',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'Is the current demo running, on what port, is its frontend config stale, is the EDS storefront published, and what is the mesh status. Use after start_demo/stop_demo to confirm they took effect.',
             inputSchema: {},

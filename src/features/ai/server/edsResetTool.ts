@@ -50,6 +50,7 @@ export function registerEdsResetTool(
     server.registerTool(
         'reset_eds_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Reset an EDS storefront to its template (repo + DA.live content + config). Requires confirm:true.',
             inputSchema: {

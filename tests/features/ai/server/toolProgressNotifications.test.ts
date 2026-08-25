@@ -43,7 +43,7 @@ function registerProbes(srv: {
     srv.registerTool('deploy_mesh_probe', { description: 'write', inputSchema: {} }, ok);
     srv.registerTool(
         'get_probe_thing',
-        { description: 'read', inputSchema: { scope: z.string().optional() } },
+        { description: 'read', inputSchema: { scope: z.string().optional() }, annotations: { readOnlyHint: true } },
         ok
     );
 }

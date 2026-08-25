@@ -50,6 +50,39 @@ const SERVER_VERSION = '1.0.0';
  * a false negative is a live-CDN mutation running invisibly. A new tool
  * with a novel name fails CLOSED into "mutating".
  */
+/**
+ * Does this tool's own definition say it only reads?
+ *
+ * THE classifier. Three things gate on it — the dry run, the chat's opening
+ * line, and the phase sinks — and all three used to gate on
+ * {@link isReadOnlyToolName}, a regex over the tool's name.
+ *
+ * A name cannot express "called `check_` and writes anyway". `check_github_app`
+ * is exactly that (it triggers a Helix code sync on a 404) and the guard that
+ * holds it closed had to be found by a hand audit of all 43 read-shaped tools,
+ * because nothing could state it.
+ *
+ * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
+ * over-blocked under the dry run, which is recoverable; the other direction is a
+ * real mutation during a mode that promises none. `toolAnnotations.test.ts`
+ * asserts every registered tool declares, so the fallback never runs in
+ * production.
+ */
+function declaredReadOnly(schema: unknown): boolean {
+    const annotations = (schema as { annotations?: { readOnlyHint?: unknown } } | undefined)
+        ?.annotations;
+    return annotations?.readOnlyHint === true;
+}
+
+/**
+ * Name-shape guess at read-vs-write. NOT used to gate anything any more — see
+ * {@link declaredReadOnly}, which reads the tool's own declaration.
+ *
+ * Kept as the cross-check `toolAnnotations.test.ts` runs: a declaration that
+ * disagrees with the name is either a bug or a deliberate exception, and the
+ * test makes the difference explicit rather than silent. Both `check_github_app`
+ * and the `select_*` trio are real, recorded disagreements.
+ */
 export function isReadOnlyToolName(name: string): boolean {
     return /^(list|get|read|check|find|verify|inspect|show|describe)_/.test(name);
 }
@@ -125,7 +158,7 @@ const CONSENT_FIELDS = {
  * rather than a silent mutation.
  */
 function strictifyWriteSchema(name: string, schema: unknown): unknown {
-    if (isReadOnlyToolName(name)) return schema;
+    if (declaredReadOnly(schema)) return schema;
     const shaped = schema as { inputSchema?: unknown } | undefined;
     const input = shaped?.inputSchema;
     if (input instanceof z.ZodObject) {
@@ -247,6 +280,9 @@ function withToolLogging(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
              
+            // Read ONCE at registration: the declaration is static, and re-deriving
+            // it per call would invite someone to make it dynamic later.
+            const readOnly = declaredReadOnly(schema);
             server.registerTool(
                 name,
                 strictifyWriteSchema(name, schema),
@@ -272,7 +308,7 @@ function withToolLogging(
                     //
                     // `isReadOnlyToolName` is REUSED rather than a second
                     // classification, because two would drift.
-                    if (dryRun?.() && !isReadOnlyToolName(name)) {
+                    if (dryRun?.() && !readOnly) {
                         logger.info(`[MCP] ${name} blocked by dry run (nothing was changed)`);
                         return dryRunResult(name, args);
                     }
@@ -298,7 +334,7 @@ function withToolLogging(
                     // then raising a dialog the user declines would narrate work that
                     // never happened. Reads are skipped — they return promptly and a
                     // line per query is noise, not information.
-                    if (!isReadOnlyToolName(name)) {
+                    if (!readOnly) {
                         await announceToolStart(name, extra);
                     }
                     // Fan the operation's own phase strings out to BOTH places a
@@ -317,7 +353,7 @@ function withToolLogging(
                     // the intent — caught by a test that found the first version
                     // installing sinks for reads too.
                     let invoke: () => Promise<unknown>;
-                    if (isReadOnlyToolName(name)) {
+                    if (readOnly) {
                         invoke = () => handler(args);
                     } else if (notifier) {
                         invoke = () =>

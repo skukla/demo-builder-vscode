@@ -138,6 +138,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── reads ───────────────────────────────────────────────────────────────
     {
         tool: 'get_datapack_import_target',
+        readOnly: true,
         description:
             'Which Commerce instance an import would land on, derived from the current project, ' +
             'plus the datapack the project was created to hold and the website/store-view scope ' +
@@ -147,6 +148,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_import_scopes',
+        readOnly: true,
         description:
             "The websites and store views an import can be scoped to on this project's instance. " +
             'An empty list is normal — it means the import lands on the default.',
@@ -155,6 +157,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack_import_status',
+        readOnly: true,
         description:
             'Progress of the running or most recent datapack import/reset. Poll this after ' +
             'start_datapack_import — that call returns as soon as the job starts, not when it ends.',
@@ -163,6 +166,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_export_items',
+        readOnly: true,
         description:
             'What this Commerce instance holds for one data type, to choose from before exporting. ' +
             'Paged — totalCount reports how many exist.',
@@ -189,6 +193,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── the dry run ─────────────────────────────────────────────────────────
     {
         tool: 'validate_datapack_import',
+        // The safe half of the import pair — "same request body as the real
+        // thing, without writing".
+        readOnly: true,
         description:
             'Dry-run an import: same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
@@ -204,6 +211,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── writes ──────────────────────────────────────────────────────────────
     {
         tool: 'start_datapack_import',
+        readOnly: false,
         description:
             'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
             'the job starts — poll get_datapack_import_status for the outcome. Validate first.',
@@ -214,6 +222,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'reset_datapack',
+        readOnly: false,
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
             'Cannot be undone. Returns an activationId; poll get_datapack_import_status.',
@@ -228,6 +237,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'start_datapack_export',
+        readOnly: false,
         description:
             'Capture data from a Commerce instance into a datapack. **Writes into the SHARED ' +
             'catalog other teams depend on** — requires confirm:true and confirmName equal to the ' +

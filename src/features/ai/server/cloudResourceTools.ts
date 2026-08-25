@@ -85,6 +85,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'list_github_repos',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             description: 'List GitHub repositories you can push to (paginated summary)',
             inputSchema: {
                 offset: z.number().int().min(0).optional().describe('Start index for pagination (default 0)'),
@@ -112,6 +113,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'create_github_repo',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising.',
             inputSchema: {
@@ -203,6 +205,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'delete_github_repo',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo".',
             inputSchema: {
@@ -249,6 +252,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'list_dalive_sites',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             description: 'List DA.live sites in an organization (paginated summary)',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
@@ -286,6 +290,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'cleanup_dalive_site',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',
             inputSchema: {

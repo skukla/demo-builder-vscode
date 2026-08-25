@@ -34,6 +34,8 @@ export function registerViewTools(server: any, runCommand: (commandId: string) =
     server.registerTool(
         'open_view',
         {
+            // NOT read-only: it opens a panel in the user's window — same as open_url.
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Open View',
             description: 'Open a Demo Builder view in VS Code (projects_list, dashboard, configure, logs). Requires confirm:true — opens a UI panel',
             inputSchema: {

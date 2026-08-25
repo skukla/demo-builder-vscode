@@ -86,6 +86,7 @@ export function registerComponentRequirementsTool(
     server.registerTool(
         'get_component_requirements',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'What one component needs: its required/optional env vars (with what each one means), required services, and dependencies. list_components only returns ids and names.',
             // ZOD, not raw JSON Schema. The SDK rejects a plain object with

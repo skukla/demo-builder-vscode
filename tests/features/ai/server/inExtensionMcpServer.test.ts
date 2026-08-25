@@ -131,7 +131,7 @@ describe('InExtensionMcpServer', () => {
         const registerExtra = (mcpServer: unknown) =>
             registerDescriptorTools(
                 mcpServer,
-                [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping' }],
+                [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping', readOnly: true }],
                 () => ({}) as HandlerContext
             );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {

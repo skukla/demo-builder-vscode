@@ -120,6 +120,7 @@ export function registerSettingsTools(
     server.registerTool(
         'get_settings',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Settings',
             description:
                 "The extension's VS Code settings and their current values. Check here when a " +
@@ -158,6 +159,8 @@ export function registerSettingsTools(
     server.registerTool(
         'set_setting',
         {
+            // Hands back to the user; it changes no setting itself.
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Set Setting',
             description:
                 'Change one of the extension\'s VS Code settings. Hands back to the user — settings ' +

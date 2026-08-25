@@ -25,6 +25,7 @@ export function registerCurrentProjectTool(server: any, ctxFactory: () => Handle
     server.registerTool(
         'get_current_project',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Current Project',
             description: 'Resolve the active project (the persisted current-project pointer). Returns { currentProject: { name, path } | null }; null means no project is selected — ask the user which one.',
             inputSchema: {},

@@ -51,6 +51,7 @@ export function registerDiscoveryTools(server: any): void {
     server.registerTool(
         'list_stacks',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Stacks',
             description: 'List available architecture stacks (frontend+backend) for project creation',
             inputSchema: {},
@@ -72,6 +73,7 @@ export function registerDiscoveryTools(server: any): void {
     server.registerTool(
         'list_demo_packages',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Demo Packages',
             description: 'List demo packages (brands) and the stacks each supports, for project creation',
             inputSchema: {},
@@ -92,6 +94,7 @@ export function registerDiscoveryTools(server: any): void {
     server.registerTool(
         'list_components',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Components',
             description: 'List available project components grouped by type (frontends, backends, mesh, etc.)',
             inputSchema: {},

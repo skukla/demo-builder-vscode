@@ -71,7 +71,7 @@ function registerProbes(srv: {
     // measures a path nobody would ever take.
     srv.registerTool(
         'get_probe_thing',
-        { description: 'probe read', inputSchema: { scope: z.string().optional() } },
+        { description: 'probe read', inputSchema: { scope: z.string().optional() }, annotations: { readOnlyHint: true } },
         probe('get_probe_thing')
     );
 }

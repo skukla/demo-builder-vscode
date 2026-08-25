@@ -51,10 +51,17 @@ function registerProbes(srv: {
         }
     );
 
-    srv.registerTool('get_probe_thing', { description: 'read', inputSchema: {} }, async () => {
-        reportPhase('should never be seen');
-        return { content: [{ type: 'text' as const, text: 'read' }] };
-    });
+    srv.registerTool(
+        'get_probe_thing',
+        // Probes must DECLARE, exactly as real tools now do — the gate reads the
+        // declaration, not the name. Without this the probe is treated as a
+        // write, which is the fail-closed behaviour working.
+        { description: 'read', inputSchema: {}, annotations: { readOnlyHint: true } },
+        async () => {
+            reportPhase('should never be seen');
+            return { content: [{ type: 'text' as const, text: 'read' }] };
+        }
+    );
 }
 
 async function callWithProgress(socketPath: string, name: string): Promise<string[]> {

@@ -118,6 +118,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_projects',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
             description: 'List all Demo Builder projects',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
@@ -129,6 +130,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_project',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Project',
             description:
                 'Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json',
@@ -147,6 +149,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_component_config',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Component Config',
             description:
                 'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
@@ -168,6 +171,7 @@ export function registerProjectTools(
     server.registerTool(
         'update_project_config',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Update Project Config',
             description:
                 'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
@@ -193,6 +197,7 @@ export function registerProjectTools(
     server.registerTool(
         'sync_storefront',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sync Storefront',
             description: 'Git add, commit, and push changes in the storefront directory',
             inputSchema: {
@@ -214,6 +219,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_blocks',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Blocks',
             description: 'List all block directories in the storefront blocks/ directory',
             inputSchema: {
@@ -236,6 +242,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_block_source',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Source',
             description:
                 "List a block's files (names + sizes) by default; pass fileName to read one file's source",
@@ -266,6 +273,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_block_authoring_shape',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Authoring Shape',
             description:
                 "Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS to infer its shape.",
@@ -298,6 +306,7 @@ export function registerProjectTools(
     server.registerTool(
         'promote_block_to_library',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Promote Block to Library',
             // Phrasing matches sync-changes.md ("Block changes to push back to
             // source library"); mcpServer-promoteBlock.test.ts pins it.
@@ -359,6 +368,7 @@ export function registerProjectTools(
     server.registerTool(
         'remove_block_from_library',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Remove Block from Library',
             description:
                 'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',

@@ -28,6 +28,7 @@ export function registerDeleteProjectTool(
     server.registerTool(
         'delete_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete a project locally (files + recent list). Irreversible; does NOT delete cloud resources. Requires confirm:true and confirmName="<project name>".',
             inputSchema: {
