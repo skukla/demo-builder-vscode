@@ -64,8 +64,21 @@ Where it renders is the only real decision:
   a prompt, and an ambient trace has no prompt and no cost. Fitting it in would
   mean weakening the thing it does well.
 
-Start with the output channel. If producers reach for it often, the case for a
-view will make itself.
+**OWNER PREFERENCE 2026-08-25: a webview.** *"Somewhere we can control the
+output, offer copy buttons and save buttons… it'll read like a chat transcript,
+but one we control."*
+
+That is a stronger argument than cheapness, and it comes from a real frustration:
+the chat's rendering is Claude Code's, so when output reads badly there is
+nothing we can change. A surface we own can be fixed.
+
+So: **the workbench, in a second mode** — not the output channel. It already has
+the trace rendering and the waste analysis, and copy/save belong to a view rather
+than to a log. The concern that stopped me proposing it still stands and must be
+designed around rather than ignored: that view is built around a VERDICT for a
+prompt, and an ambient trace has neither a prompt nor a cost. It needs to be a
+distinct mode with its own empty state, not the same layout with two fields
+blanked.
 
 ## Traps
 
