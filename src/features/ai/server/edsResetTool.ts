@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     getDaLiveAuthService,
     getGitHubServices,
@@ -157,12 +158,17 @@ export function registerEdsResetTool(
                         },
                         ctx,
                         tokenProvider,
-                        (p) =>
+                        // Collected for the RESULT and reported LIVE. Reset runs
+                        // for minutes; the array is the agent's record afterwards,
+                        // reportPhase is what the user sees during the wait.
+                        (p) => {
                             phases.push({
                                 step: p.step,
                                 totalSteps: p.totalSteps,
                                 message: p.message,
-                            }),
+                            });
+                            reportPhase(`${p.message} (${p.step}/${p.totalSteps})`);
+                        },
                     ),
                 );
                 if (!result.success) {

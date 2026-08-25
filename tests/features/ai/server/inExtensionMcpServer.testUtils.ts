@@ -27,6 +27,14 @@ export class SocketRpc {
 
     private readonly pending = new Map<number, (msg: any) => void>();
 
+    /**
+     * Server→client messages with no `id` — notifications. Previously dropped on
+     * the floor, which made `notifications/progress` untestable: a suite could
+     * only ever see the final result, exactly the blind spot that let agent
+     * activity go unreported to the chat for so long.
+     */
+    readonly notifications: any[] = [];
+
     constructor(private readonly socket: net.Socket) {
         socket.setEncoding('utf8');
         socket.on('data', (chunk: string) => {
@@ -37,7 +45,11 @@ export class SocketRpc {
                 this.buf = this.buf.slice(idx + 1);
                 if (!line.trim()) continue;
                 const msg = JSON.parse(line);
-                const resolve = msg.id != null ? this.pending.get(msg.id) : undefined;
+                if (msg.id == null) {
+                    this.notifications.push(msg);
+                    continue;
+                }
+                const resolve = this.pending.get(msg.id);
                 if (resolve) {
                     this.pending.delete(msg.id);
                     resolve(msg);

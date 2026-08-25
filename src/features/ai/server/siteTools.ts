@@ -53,6 +53,7 @@ import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
 import { AGENT_PAGE_SIZE } from './projectors';
+import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import {
     addSiteAdmin,
@@ -63,7 +64,9 @@ import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
+import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
+import { isEdsProject } from '@/types/typeGuards';
 
 /**
  * Register the storefront-site tools on `server`: the site-access pair, the
@@ -72,6 +75,26 @@ import type { HandlerContext } from '@/types/handlers';
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
+/**
+ * Site configuration is an EDS concept — a Configuration Service entry keyed by
+ * the storefront's GitHub owner/repo. A headless project has none, so these tools
+ * cannot answer for it.
+ *
+ * Without this, `repair_site_configuration` on a headless project passed its
+ * confirm gate and called straight into the repair path with nothing to repair.
+ * Added 2026-08-24 after a sweep: `storefrontTools` already guarded exactly this
+ * ("republish applies only to EDS storefront projects") and these did not, so the
+ * rule was per-author rather than per-surface. Wording kept identical so the two
+ * files read as one policy.
+ *
+ * Returns the refusal to send, or undefined when the project is EDS.
+ */
+function refuseIfNotEds(project: Project, tool: string): { error: string } | undefined {
+    return isEdsProject(project)
+        ? undefined
+        : { error: `${tool} applies only to EDS storefront projects` };
+}
+
 export function registerSiteTools(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
@@ -93,6 +116,8 @@ export function registerSiteTools(
             if (!project) {
                 return asText({ error: 'No current project is open' });
             }
+            const wrongShape = refuseIfNotEds(project, 'get_site_access');
+            if (wrongShape) return asText(wrongShape);
             return asText(await listSiteAccess(project, ctx.context, ctx.logger));
         },
     );
@@ -130,6 +155,9 @@ export function registerSiteTools(
             if (!project) {
                 return asText({ error: 'No current project is open' });
             }
+
+            const wrongShape = refuseIfNotEds(project, 'set_site_admin');
+            if (wrongShape) return asText(wrongShape);
 
             const email = String(args.email ?? '');
             // Both halves verify by re-reading the role list, so `verified` on the
@@ -177,8 +205,15 @@ export function registerSiteTools(
                 return asText({ error: 'No current project is open' });
             }
 
-            const result = await repairSiteConfigForProject(project, ctx.context, ctx.logger, (p) =>
-                ctx.stateManager.saveProject(p),
+            const wrongShape = refuseIfNotEds(project, 'repair_site_configuration');
+            if (wrongShape) return asText(wrongShape);
+
+            const result = await repairSiteConfigForProject(
+                project,
+                ctx.context,
+                ctx.logger,
+                (p) => ctx.stateManager.saveProject(p),
+                phaseReporter(),
             );
 
             // Say what remains rather than reporting a bare success. A registration
@@ -316,6 +351,7 @@ export function registerSiteTools(
                 ctx.context,
                 ctx.logger,
                 (updated) => ctx.stateManager.saveProject(updated),
+                phaseReporter(),
             );
 
             return asText({

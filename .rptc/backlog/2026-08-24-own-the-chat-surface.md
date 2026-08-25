@@ -1,0 +1,108 @@
+# Own the chat surface — render Claude Code's stream in our own UI
+
+## Provenance
+
+Surfaced 2026-08-24, chasing a producer complaint: while an agent works you cannot
+tell what is running. Not which MCP server, not which tool, not which phase of a
+long operation. "Demo Builder is creating the project, now App Builder is adding a
+runtime" is invisible.
+
+Research: [`.rptc/research/agent-activity-visibility/research.md`](../research/agent-activity-visibility/research.md).
+That work established what IS possible on the terminal — and by doing so, mapped
+the ceiling.
+
+**Measured, not assumed:**
+
+- MCP progress notifications carry an optional `message` string, Claude Code
+  supplies a progress token, and **the interactive terminal renders those messages
+  live** (confirmed by the producer running `probe-server.mjs`).
+- So a tool CAN narrate itself. What it cannot do is control attribution, ordering,
+  styling, or how any OTHER server's lines look.
+
+## The correction this item exists to record
+
+An earlier read of this said owning the chat would mean abandoning Claude Code,
+citing [ADR-004](../../docs/architecture/adr/004-claude-code-harness.md) and a
+billing risk. **Both were wrong**, and the error is worth naming so it is not
+repeated:
+
+1. **"Own the chat" was conflated with "use the Agent SDK directly."** They are
+   separable. `claude --input-format stream-json --output-format stream-json
+   --include-partial-messages` runs a real bidirectional session against the local
+   binary. You render the event stream; Claude Code is still the engine.
+2. **Therefore nothing in the harness is lost.** Skills load. Hooks fire —
+   including the `aio` guard shipped the same day. `.mcp.json` connects.
+   `AGENTS.md` is read, so `AI_CONTEXT_VERSION` and the whole generated-bundle
+   machinery keep working unchanged.
+3. **ADR-004 chose the ENGINE, not the pixels.** It rejected VS Code Chat (a
+   different skill model, a different MCP transport, a second adapter layer) and
+   the Anthropic extension wrapper. Rendering Claude Code's own stream contradicts
+   none of its reasoning.
+4. **Billing was a non-issue twice over.** Adobe provides the subscriptions, and
+   the CLI path never touches an API key.
+
+## Prior art — this seam is already de-risked
+
+`app-builder/tech-case-studio` does exactly this: Claude drives through a sidecar,
+NDJSON to a React transcript, its own permission cards. Its Phase 0 spike existed
+to de-risk this specific seam (streaming + permission prompts + process tree-kill)
+and it passed. Its `ClaudeCliProvider` is the subscription-riding path; the Agent
+SDK with a key is only its fallback.
+
+Also directly reusable: `src/tool-call.ts::describeToolCall` maps a raw `tool_use`
+to `{icon, label, target, body}` — Bash to "Ran command", Edit to a diff. Note it
+does NOT yet handle MCP tools (they hit a JSON-dump default); that gap is filed
+separately in the studio's own backlog as
+`2026-08-24-mcp-tool-labels-in-chat.md`, and whoever picks this up should read
+both.
+
+## Goal / Scope
+
+**In scope:** a chat surface inside the extension that drives the local `claude`
+binary over a streaming session and renders the result — tool calls with server
+attribution and readable actions, live progress, permission requests as UI.
+
+**Out of scope:** replacing Claude Code, the Agent SDK path, and any change to the
+generated bundle. The bundle is what makes this work; it does not change.
+
+**Explicitly NOT decided here.** This item captures the option, its real cost, and
+why the earlier objection was wrong. It is not an argument that it should be built.
+
+## Constraints
+
+- **The terminal must keep working.** Whatever is built is an additional surface
+  or a replacement chosen deliberately — not a silent swap. Producers who like the
+  terminal keep it.
+- **Permission handling is the hard part, not rendering.** A custom UI must show
+  approvals and honour refusals. The studio solved this in Phase 0; read that
+  before designing anything.
+- **The stream format is Anthropic's, not ours.** It will change. That maintenance
+  is the standing cost of this option and should be stated plainly to whoever
+  decides.
+- **Do not fork the tool-label vocabulary.** If the studio ships MCP labels first,
+  take its mapping rather than writing a second one.
+
+## Do this first, either way
+
+**Emit MCP progress from our own tools.** It is small, it lands now, and it is a
+prerequisite for the big option rather than a detour — a custom UI still needs the
+server to send the notifications it renders.
+
+The seam is `withToolLogging` in `inExtensionMcpServer.ts`, already wrapping every
+call for logging, consent and the VS Code notifier. It gains a fourth concern, and
+the handler signature needs the SDK's `extra` argument to reach `sendNotification`.
+The phase strings largely exist — `create_project` and `add_integration` already
+compute them for the VS Code progress bar. Same words, second destination.
+
+Attribution is a prefix we choose, since the message is free-form text and the
+server knows its own name (`SERVER_NAME` in `inExtensionMcpServer.ts`).
+
+## Kickoff prompt
+
+```
+/rptc:feat "Decide whether Demo Builder should render Claude Code's stream in its own chat
+surface instead of a terminal. Read .rptc/backlog/2026-08-24-own-the-chat-surface.md first —
+it records a correction (owning the chat does NOT mean abandoning Claude Code or ADR-004)
+and names the prior art in app-builder/tech-case-studio. Start with the smaller prerequisite
+it identifies: emitting MCP progress notifications from withToolLogging."
+```

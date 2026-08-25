@@ -19,7 +19,11 @@ import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import { raisesConsentDialog } from './agentAlertCopy';
 import { probeSocket } from './mcpSocketDiscovery';
+import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
+import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
@@ -59,60 +63,236 @@ export function isReadOnlyToolName(name: string): boolean {
  * agent-traversability half of the design forbids. A call WITHOUT confirm
  * needs no dialog — the handler's own prose refusal is its answer.
  */
-export function callRequestsConsent(args: unknown): boolean {
-    return (
-        !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true
-    );
+export function callRequestsConsent(toolName: string, args: unknown): boolean {
+    // The OPERATION decides, not the agent's assertion.
+    //
+    // This used to fire on `confirm: true` alone, which aimed the one real
+    // safety net at the wrong tools: `open_url` (opens a browser tab) raised a
+    // modal while `remove_integration` (undeploys from Runtime) and
+    // `reset_datapack` ("cannot be undone") raised nothing — because the gate
+    // measured what the agent volunteered rather than what the call does.
+    //
+    // Membership now lives with the copy (`agentAlertCopy`), so a tool that
+    // interrupts the user is exactly a tool somebody has written words for. A
+    // dialog with no authored text is not a thing that can exist.
+    //
+    // `confirm` is still required alongside: it is the agent's own gate and its
+    // absence still earns a prose refusal from the handler. This narrows what
+    // interrupts; it never widens what runs unconfirmed.
+    const asserted =
+        !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true;
+    return asserted && raisesConsentDialog(toolName);
 }
 
 /** The injected consent gate's verdict. `refusal` is a ready MCP result. */
 export type ConsentVerdict = { allowed: true } | { allowed: false; refusal: unknown };
 
+/**
+ * Fields every write tool must tolerate even when it declares no arguments.
+ *
+ * The generated guidance tells agents that destructive tools take `confirm:true`
+ * (and a `confirmName` echo on the most destructive), and several write tools
+ * legitimately declare NO arguments — `republish`, `sync_content`. Strictifying
+ * those naively would reject the very call the guidance asks for, turning a
+ * safety affordance into a hard failure. Declared shapes still win: a tool that
+ * describes its own `confirm` keeps its description.
+ */
+const CONSENT_FIELDS = {
+    confirm: z.boolean().optional(),
+    confirmName: z.string().optional(),
+};
+
+/**
+ * Make a WRITE tool's input schema reject unknown arguments instead of silently
+ * dropping them.
+ *
+ * Measured against the real SDK 2026-08-24: a raw-shape `inputSchema` is wrapped
+ * in `z.object(shape)`, which STRIPS. Send `{scope, stroeScope}` and the handler
+ * receives `{scope}` and answers "ok" — the agent believes it asked for something
+ * it did not, and finds out through a wrong result rather than an error. On a
+ * write tool that is the dangerous shape; `mcp-tool-authoring` records the
+ * `{addons, stroeScope}` typo that applied the addons and discarded the rest.
+ * A strict object instead returns `isError: true` naming the offending field.
+ *
+ * Applied HERE rather than per tool because this wrapper is the one seam every
+ * registration passes through (`registerProjectTools` and `registerExtraTools`
+ * both receive it), so a new tool is covered on the day it is written rather
+ * than whenever someone remembers.
+ *
+ * READS are deliberately left permissive — a strict read tool mostly costs
+ * friction, and a dropped argument on a query yields a visibly wrong answer
+ * rather than a silent mutation.
+ */
+function strictifyWriteSchema(name: string, schema: unknown): unknown {
+    if (isReadOnlyToolName(name)) return schema;
+    const shaped = schema as { inputSchema?: unknown } | undefined;
+    const input = shaped?.inputSchema;
+    if (input instanceof z.ZodObject) {
+        return { ...shaped, inputSchema: input.strict() };
+    }
+    if (input && typeof input === 'object') {
+        const shape = { ...CONSENT_FIELDS, ...(input as z.ZodRawShape) };
+        return { ...shaped, inputSchema: z.object(shape).strict() };
+    }
+    return schema;
+}
+
+/**
+ * Tell the CHAT what is running, while it runs.
+ *
+ * The extension already surfaces agent activity — `agentOperationNotifier` puts a
+ * progress notification, a status-bar message and a failure toast in the VS Code
+ * window. None of that reaches a user who is reading the chat, which is where
+ * they are looking while an agent works. This is the same fact, delivered to the
+ * window they are actually in.
+ *
+ * Measured 2026-08-24 before building: Claude Code supplies a `progressToken` on
+ * MCP tool calls, and its interactive terminal RENDERS the `message` field live
+ * (probe kept at `.rptc/research/agent-activity-visibility/`). Both halves were
+ * verified rather than assumed, because the protocol explicitly says a receiver
+ * "is not obligated to provide these notifications".
+ *
+ * Attributed via `progressLabel` because a chat can have several MCP servers
+ * connected — an unattributed "Deploying to Runtime…" is ambiguous the moment
+ * there is a second one.
+ *
+ * BEST EFFORT, always. A tool must never fail because a status line could not be
+ * sent, and a client that supplies no token simply gets nothing.
+ */
+/**
+ * Send one progress line to the client mid-call.
+ *
+ * Shared by the start announcement and every phase. Best effort: a client that
+ * supplied no token gets nothing, and a send that fails must not cost the user
+ * the operation.
+ */
+async function sendProgress(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra: any,
+    message: string,
+): Promise<void> {
+    const progressToken = extra?._meta?.progressToken;
+    if (progressToken === undefined || typeof extra?.sendNotification !== 'function') return;
+    try {
+        await extra.sendNotification({
+            method: 'notifications/progress',
+            params: { progressToken, progress: 0, message },
+        });
+    } catch {
+        // Visibility is a courtesy; losing it must not cost the user the call.
+    }
+}
+
+/** One phase of the operation in flight, as the chat sees it. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function announcePhase(extra: any, message: string): Promise<void> {
+    return sendProgress(extra, `${SERVER_DISPLAY_NAME} · ${message}`);
+}
+
+async function announceToolStart(
+    name: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra: any,
+): Promise<void> {
+    await sendProgress(extra, progressLabel(name));
+}
+
 function withToolLogging(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     logger: Logger,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    notifier?: (toolName: string, run: () => Promise<any>) => Promise<any>,
-    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>,
+     
+    notifier?: (
+        toolName: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        run: (report: PhaseSink) => Promise<any>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) => Promise<any>,
+    consentGate?: (
+        toolName: string,
+        args: unknown,
+        description?: string,
+    ) => Promise<ConsentVerdict>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            server.registerTool(name, schema, async (args: any) => {
-                const started = Date.now();
-                const argKeys =
-                    args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
-                logger.info(`[MCP] tool: ${name}`);
-                logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                // Consent FIRST, notifier second: a declined operation never
-                // ran, so no progress notification may claim it did. The gate
-                // decides only when the call carries the destructive marker.
-                if (consentGate && callRequestsConsent(args)) {
-                    const verdict = await consentGate(name, args);
-                    if (!verdict.allowed) {
-                        logger.info(`[MCP] ${name} declined by user consent dialog`);
-                        return verdict.refusal;
+             
+            server.registerTool(
+                name,
+                strictifyWriteSchema(name, schema),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                async (args: any, extra: any) => {
+                    const started = Date.now();
+                    const argKeys =
+                        args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
+                    logger.info(`[MCP] tool: ${name}`);
+                    logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
+                    // Consent FIRST, notifier second: a declined operation never
+                    // ran, so no progress notification may claim it did. The gate
+                    // decides only when the call carries the destructive marker.
+                    if (consentGate && callRequestsConsent(name, args)) {
+                        // The tool's own description goes to the dialog. Reading all
+                    // 60 write tools showed the NAMES are mostly fine but several
+                    // are ambiguous alone — "Republish" (what?), "Sync content"
+                    // vs "Sync storefront" (CDN publish vs git push). Each one
+                    // already carries a description written to explain exactly
+                    // that, and the dialog was showing boilerplate instead.
+                    const description = (schema as { description?: string } | undefined)
+                        ?.description;
+                    const verdict = await consentGate(name, args, description);
+                        if (!verdict.allowed) {
+                            logger.info(`[MCP] ${name} declined by user consent dialog`);
+                            return verdict.refusal;
+                        }
                     }
-                }
-                const invoke =
-                    notifier && !isReadOnlyToolName(name)
-                        ? () => notifier(name, () => handler(args))
-                        : () => handler(args);
-                try {
-                    const result = await invoke();
-                    logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
-                    return result;
-                } catch (err) {
-                    logger.error(
-                        `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
-                        err instanceof Error ? err : undefined,
-                    );
-                    throw err;
-                }
-            });
+                    // AFTER consent, never before: announcing "Deploying mesh…" and
+                    // then raising a dialog the user declines would narrate work that
+                    // never happened. Reads are skipped — they return promptly and a
+                    // line per query is noise, not information.
+                    if (!isReadOnlyToolName(name)) {
+                        await announceToolStart(name, extra);
+                    }
+                    // Fan the operation's own phase strings out to BOTH places a
+                    // user might be watching: the chat (MCP progress) and the
+                    // VS Code notification (the notifier's reporter). Previously
+                    // neither got them — the phases were computed and dropped for
+                    // every agent call, so a two-minute create_project announced
+                    // itself once and then went silent everywhere.
+                    const mcpSink: PhaseSink = (message) => {
+                        void announcePhase(extra, message);
+                    };
+                    // Reads get NO sinks at all, matching the opening line they
+                    // also do not get: a query returns promptly, and a line per
+                    // query is noise rather than information. A read tool that
+                    // calls reportPhase therefore narrates to nobody, which is
+                    // the intent — caught by a test that found the first version
+                    // installing sinks for reads too.
+                    let invoke: () => Promise<unknown>;
+                    if (isReadOnlyToolName(name)) {
+                        invoke = () => handler(args);
+                    } else if (notifier) {
+                        invoke = () =>
+                            notifier(name, (report) =>
+                                withPhaseSinks([mcpSink, report], () => handler(args)),
+                            );
+                    } else {
+                        invoke = () => withPhaseSinks([mcpSink], () => handler(args));
+                    }
+                    try {
+                        const result = await invoke();
+                        logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
+                        return result;
+                    } catch (err) {
+                        logger.error(
+                            `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
+                            err instanceof Error ? err : undefined,
+                        );
+                        throw err;
+                    }
+                },
+            );
         },
     };
 }
@@ -136,8 +316,11 @@ export interface InExtensionMcpServerOptions {
      * client, closed chat — both observed live 2026-08-23 around a 2-minute
      * refresh that mutated the live site invisibly).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    longRunningNotifier?: (toolName: string, run: () => Promise<any>) => Promise<any>;
+     
+    longRunningNotifier?: (
+        toolName: string,
+        run: (report: (message: string) => void) => Promise<any>,
+    ) => Promise<any>;
     /**
      * Native consent for destructive calls (injected — this module stays
      * vscode-free). Consulted BEFORE the notifier for every call that carries
@@ -146,7 +329,11 @@ export interface InExtensionMcpServerOptions {
      * converting the agent-supplied honor-system parameter into consent that
      * survives a harness-side tool allowlist.
      */
-    consentGate?: (toolName: string, args: unknown) => Promise<ConsentVerdict>;
+    consentGate?: (
+        toolName: string,
+        args: unknown,
+        description?: string,
+    ) => Promise<ConsentVerdict>;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,

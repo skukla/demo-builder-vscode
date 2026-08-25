@@ -99,19 +99,86 @@ describe('createAgentConsentGate', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
-    it('raises a MODAL dialog and allows when the user picks Allow', async () => {
+    it('titles the dialog with AUTHORED copy, not the tool name', async () => {
+        // delete_project's authored action is "Delete this project" — the tool
+        // name would have read "Delete project", and the description would have
+        // dragged in agent guidance behind it.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        const verdict = await gate('delete_page', { path: '/products/x', confirm: true });
+        await gate('delete_project', { confirm: true });
 
-        expect(verdict).toEqual({ allowed: true });
-        const [message, opts] = mockShowWarningMessage.mock.calls[0];
-        expect(String(message)).toContain('Delete page');
-        expect(opts).toEqual(
-            expect.objectContaining({ modal: true, detail: expect.stringContaining('/products/x') })
+        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+            'Demo Builder: Delete this project?'
         );
+    });
+
+    it('states the CONSEQUENCE, and never the agent-facing description', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        // A description is still passed; it must not reach the dialog. Four
+        // passes of transforming it still produced text a producer should not
+        // have been shown, which is why the copy is authored instead.
+        await gate(
+            'delete_github_repo',
+            { confirm: true },
+            'Permanently delete a GitHub repository (irreversible). Requires confirm:true.'
+        );
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain("Deletes the repository and its history on GitHub.");
+        expect(detail).toContain("can't be undone");
+        expect(detail).not.toContain('confirm:true');
+        expect(detail).not.toContain('Permanently delete a GitHub repository');
+    });
+
+    it('says what is irreversible in plain words, not in a parenthetical', async () => {
+        // "(irreversible)" survived every mechanical rule precisely because it
+        // mattered. Authored copy says it as a sentence instead.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('cleanup_dalive_site', { confirm: true });
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain("can't be undone");
+        expect(detail).not.toContain('(irreversible)');
+    });
+
+    it('falls back to the humanised name when nobody has written copy', async () => {
+        // An unwritten tool must be no worse than it is today -- never blank.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('some_unwritten_tool', { confirm: true });
+
+        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+            'Demo Builder: Some unwritten tool?'
+        );
+    });
+
+
+    it('labels the proof-of-intent echo as a Name, not confirmName', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('start_demo', { confirm: true, confirmName: 'bodea' });
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('Name: bodea');
+        expect(detail).not.toContain('confirmName');
     });
 
     it('answers a ready refusal envelope when the dialog is dismissed or declined', async () => {
@@ -144,9 +211,13 @@ describe('createAgentConsentGate', () => {
 
         const [, opts] = mockShowWarningMessage.mock.calls[0];
         const detail = String((opts as { detail?: string }).detail);
-        expect(detail).toContain('blockId: hero');
+        // Labels, not schema field names — a producer approving this should not
+        // have to decode `blockId`. Masking still keys off the RAW name, so a
+        // friendlier label must never widen what is shown.
+        expect(detail).toContain('Block id: hero');
+        expect(detail).not.toContain('blockId:');
         expect(detail).not.toContain('confirm');
-        expect(detail).toContain('githubToken: ***');
+        expect(detail).toContain('Github token: ***');
         expect(detail).not.toContain('ghp_secret_value');
         expect(detail).not.toContain('x'.repeat(100));
         expect(detail).not.toContain('not: shown');

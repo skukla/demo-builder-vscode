@@ -323,10 +323,14 @@ describe('agent-operation visibility (the notifier seam)', () => {
     // (list_/get_/read_/…) never notify.
     it('routes a mutating tool call through the injected notifier; read tools bypass it', async () => {
         const seen: string[] = [];
-        const notifier = jest.fn(async (name: string, run: () => Promise<unknown>) => {
-            seen.push(name);
-            return run();
-        });
+        // `run` now takes the notifier's own progress reporter, so an operation's
+        // phase strings can reach the VS Code notification as well as the chat.
+        const notifier = jest.fn(
+            async (name: string, run: (report: (m: string) => void) => Promise<unknown>) => {
+                seen.push(name);
+                return run(() => {});
+            }
+        );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: notifier,
         });
@@ -364,46 +368,72 @@ describe('agent-operation visibility (the notifier seam)', () => {
     // half forbids). Decline short-circuits BEFORE the handler and before the
     // notifier: the refusal is the tool's answer, and no progress
     // notification must claim an operation that never ran.
-    it('callRequestsConsent: true only for args carrying confirm === true', () => {
-        expect(callRequestsConsent({ confirm: true })).toBe(true);
-        expect(callRequestsConsent({ confirm: true, path: '/x' })).toBe(true);
-        expect(callRequestsConsent({ confirm: false })).toBe(false);
-        expect(callRequestsConsent({ confirm: 'true' })).toBe(false);
-        expect(callRequestsConsent({})).toBe(false);
-        expect(callRequestsConsent(undefined)).toBe(false);
+    it('callRequestsConsent: the OPERATION decides, not the agent assertion', () => {
+        // Both halves required. `confirm` is the agent's own gate; membership is
+        // ours. Keying on `confirm` alone aimed the dialog at open_url (opens a
+        // browser tab) while remove_integration and reset_datapack raised
+        // nothing.
+        expect(callRequestsConsent('delete_project', { confirm: true })).toBe(true);
+        expect(callRequestsConsent('delete_project', { confirm: true, path: '/x' })).toBe(true);
+
+        // Confirmed, but not an operation worth interrupting for.
+        expect(callRequestsConsent('open_url', { confirm: true })).toBe(false);
+        expect(callRequestsConsent('open_view', { confirm: true })).toBe(false);
+
+        // Destructive, but the agent never asserted intent — the handler's own
+        // prose refusal answers it, exactly as before.
+        expect(callRequestsConsent('delete_project', { confirm: false })).toBe(false);
+        expect(callRequestsConsent('delete_project', { confirm: 'true' })).toBe(false);
+        expect(callRequestsConsent('delete_project', {})).toBe(false);
+        expect(callRequestsConsent('delete_project', undefined)).toBe(false);
+    });
+
+    it('every tool that interrupts has authored copy — no dialog without words', () => {
+        // Membership IS the copy table, so a dialog with no written text is not
+        // expressible. This pins that the two cannot drift apart.
+         
+        const { AGENT_ALERT_COPY } = require('@/features/ai/server/agentAlertCopy');
+        for (const [tool, copy] of Object.entries(AGENT_ALERT_COPY)) {
+            expect(callRequestsConsent(tool, { confirm: true })).toBe(true);
+            const { action, consequence } = copy as { action: string; consequence: string };
+            expect(action.length).toBeGreaterThan(0);
+            expect(action.endsWith('.')).toBe(false);
+            expect(consequence.endsWith('.')).toBe(true);
+        }
     });
 
     it('a declined consent gate answers the refusal without running handler or notifier', async () => {
         const notified: string[] = [];
         const refusal = {
             content: [
-                { type: 'text' as const, text: 'The user declined "promote_block_to_library".' },
+                { type: 'text' as const, text: 'The user declined "remove_block_from_library".' },
             ],
         };
         const consentGate = jest.fn(async () => ({ allowed: false as const, refusal }));
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: async (name, run) => {
                 notified.push(name);
-                return run();
+                return run(() => {});
             },
             consentGate,
         });
         await server.start();
 
-        // promote_block_to_library carries confirm:true → the gate decides.
-        // Its handler would throw on the empty projects dir; the refusal
-        // arriving instead is the proof the handler never ran.
-        const result = await callToolOverSocket(socketPath, 'promote_block_to_library', {
+        // remove_block_from_library is registered on the bare server AND in the
+        // consent set, so the gate decides. Its handler would fail on the empty
+        // projects dir; the refusal arriving instead proves it never ran.
+        const result = await callToolOverSocket(socketPath, 'remove_block_from_library', {
             projectName: 'nope',
             blockId: 'hero',
-            title: 'Hero',
-            unsafeHTML: '<div></div>',
             confirm: true,
         });
-        expect(result).toBe('The user declined "promote_block_to_library".');
+        expect(result).toBe('The user declined "remove_block_from_library".');
+        // The description is still forwarded (the signature is stable) even
+        // though the dialog no longer shows it — see agentAlertCopy.
         expect(consentGate).toHaveBeenCalledWith(
-            'promote_block_to_library',
-            expect.objectContaining({ confirm: true })
+            'remove_block_from_library',
+            expect.objectContaining({ confirm: true }),
+            expect.any(String)
         );
         expect(notified).toEqual([]);
     });
@@ -414,7 +444,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             longRunningNotifier: async (name, run) => {
                 notified.push(name);
-                return run();
+                return run(() => {});
             },
             consentGate,
         });
@@ -422,15 +452,13 @@ describe('agent-operation visibility (the notifier seam)', () => {
 
         // Allowed → the call flows on into the notifier (and then the handler,
         // which fails on the empty dir — irrelevant here).
-        await callToolOverSocket(socketPath, 'promote_block_to_library', {
+        await callToolOverSocket(socketPath, 'remove_block_from_library', {
             projectName: 'nope',
             blockId: 'hero',
-            title: 'Hero',
-            unsafeHTML: '<div></div>',
             confirm: true,
         }).catch(() => undefined);
         expect(consentGate).toHaveBeenCalledTimes(1);
-        expect(notified).toEqual(['promote_block_to_library']);
+        expect(notified).toEqual(['remove_block_from_library']);
 
         // A mutating call WITHOUT confirm bypasses the gate entirely — the
         // handler's own prose refusal is the answer, and a dialog for a call

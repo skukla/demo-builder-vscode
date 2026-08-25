@@ -154,7 +154,9 @@ function applyToProject(
     const backend = project.componentSelections?.backend;
     if (input.storeScope) {
         if (!backend) {
-            return { error: 'Cannot set store scope: this project has no backend component selected.' };
+            return {
+                error: 'Cannot set store scope: this project has no backend component selected.',
+            };
         }
         const scope = input.storeScope as Record<string, string>;
         project.componentConfigs = project.componentConfigs ?? {};
@@ -208,30 +210,38 @@ export function registerConfigureProjectTool(
             // in the published schema only protects clients that validate; the
             // server must not depend on that. Found by probing live: a misspelled
             // key came back as "Nothing to apply" instead of naming the key.
-            inputSchema: z.object({
-                datapack: z
-                    .object({ name: z.string(), version: z.string() })
-                    .optional()
-                    .describe('Datapack that seeds this project (recorded, not imported)'),
-                addons: z.array(z.string()).optional().describe('Addon component ids, e.g. adobe-commerce-aco'),
-                blockLibraries: z.array(z.string()).optional().describe('Block library ids to enable'),
-                storeScope: z
-                    .object({
-                        website: z.string(),
-                        store: z.string(),
-                        storeView: z.string(),
-                    })
-                    .optional()
-                    .describe(
-                        'All THREE codes together, from discover_store_structure. Two of three is a broken scope, not a narrower one',
-                    ),
-                env: z
-                    .record(z.record(z.union([z.string(), z.boolean(), z.number()])))
-                    .optional()
-                    .describe(
-                        'Non-secret env vars, keyed by component id then var name. See get_component_requirements',
-                    ),
-            }).strict(),
+            inputSchema: z
+                .object({
+                    datapack: z
+                        .object({ name: z.string(), version: z.string() })
+                        .optional()
+                        .describe('Datapack that seeds this project (recorded, not imported)'),
+                    addons: z
+                        .array(z.string())
+                        .optional()
+                        .describe('Addon component ids, e.g. adobe-commerce-aco'),
+                    blockLibraries: z
+                        .array(z.string())
+                        .optional()
+                        .describe('Block library ids to enable'),
+                    storeScope: z
+                        .object({
+                            website: z.string(),
+                            store: z.string(),
+                            storeView: z.string(),
+                        })
+                        .optional()
+                        .describe(
+                            'All THREE codes together, from discover_store_structure. Two of three is a broken scope, not a narrower one',
+                        ),
+                    env: z
+                        .record(z.record(z.union([z.string(), z.boolean(), z.number()])))
+                        .optional()
+                        .describe(
+                            'Non-secret env vars, keyed by component id then var name. See get_component_requirements',
+                        ),
+                })
+                .strict(),
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
@@ -239,6 +249,17 @@ export function registerConfigureProjectTool(
 
             // Reject, never ignore. A configuration write that silently drops a
             // field leaves the agent believing something is set that is not.
+            //
+            // In production this branch is UNREACHABLE and that is fine. The
+            // schema above is `.strict()`, and `strictifyWriteSchema` in
+            // inExtensionMcpServer now applies the same to every write tool, so
+            // the SDK rejects an unknown key with `isError: true` before the
+            // handler runs (measured against the real SDK 2026-08-24). Kept as
+            // the fallback for any registration path that does not pass through
+            // that wrapper, and because its message names the accepted fields
+            // where the SDK's names only the offending one. Its unit test calls
+            // this handler directly, so it exercises the contract rather than
+            // the live path.
             const unknown = Object.keys(input).filter(
                 (k) => !(ACCEPTED as readonly string[]).includes(k),
             );
@@ -248,18 +269,24 @@ export function registerConfigureProjectTool(
                 });
             }
             if (Object.keys(input).length === 0) {
-                return asText({ error: `Nothing to apply. Pass one or more of: ${ACCEPTED.join(', ')}.` });
+                return asText({
+                    error: `Nothing to apply. Pass one or more of: ${ACCEPTED.join(', ')}.`,
+                });
             }
 
             const project = await stateManager.getCurrentProject();
             if (!project) {
-                return asText({ error: 'No current project. Use list_projects and select one first.' });
+                return asText({
+                    error: 'No current project. Use list_projects and select one first.',
+                });
             }
 
             // Secrets are refused BEFORE anything is applied, so a payload mixing
             // a secret with valid fields does not half-apply.
             const secrets = secretKeys();
-            const offered = Object.values((input.env ?? {}) as Record<string, Record<string, unknown>>)
+            const offered = Object.values(
+                (input.env ?? {}) as Record<string, Record<string, unknown>>,
+            )
                 .flatMap((vars) => Object.keys(vars ?? {}))
                 .filter((key) => secrets.has(key));
             if (offered.length) {

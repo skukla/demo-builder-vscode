@@ -27,19 +27,39 @@
  */
 
 import * as vscode from 'vscode';
+import { alertCopyFor } from './agentAlertCopy';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
+import { humanize } from './toolDisplayName';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
-/** `snake_case_tool` → "Snake case tool", for notification copy. */
-function humanize(toolName: string): string {
-    const words = toolName.replace(/_/g, ' ');
-    return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;
+
+/**
+ * Friendlier labels for argument keys a producer would not recognise.
+ *
+ * `confirmName` is the surface's proof-of-intent echo — the agent repeats the
+ * target's name to show it means this one. As a dialog line it read
+ * "confirmName: bodea", which is a field name from our schema leaking into a
+ * question we are asking a human.
+ */
+const CONSENT_KEY_LABELS: Record<string, string> = {
+    confirmName: 'Name',
+    projectName: 'Project',
+};
+
+/** `blockId` / `block_id` → "Block id". A label, not an identifier. */
+function humanizeKey(key: string): string {
+    const labelled = CONSENT_KEY_LABELS[key];
+    if (labelled) return labelled;
+    const spaced = key
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .toLowerCase();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
 
 /** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
 const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
@@ -58,19 +78,19 @@ function renderArgsForConsent(args: unknown): string {
     for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
         if (key === 'confirm') continue;
         if (SECRET_KEY_RE.test(key)) {
-            lines.push(`${key}: ***`);
+            lines.push(`${humanizeKey(key)}: ***`);
             continue;
         }
         if (typeof value === 'string') {
             lines.push(
-                `${key}: ${
+                `${humanizeKey(key)}: ${
                     value.length > CONSENT_DETAIL_VALUE_MAX
                         ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
                         : value
                 }`,
             );
         } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${key}: ${value}`);
+            lines.push(`${humanizeKey(key)}: ${value}`);
         }
     }
     return lines.join('\n');
@@ -97,8 +117,11 @@ function renderArgsForConsent(args: unknown): string {
  */
 export function createAgentConsentGate(
     logger: Logger,
-): (toolName: string, args: unknown) => Promise<ConsentVerdict> {
-    return async (toolName, args) => {
+): (toolName: string, args: unknown, description?: string) => Promise<ConsentVerdict> {
+    // `_description` is accepted and deliberately NOT shown — see the dialog
+    // block below and agentAlertCopy for why the agent-facing text is not human
+    // copy. Kept in the signature so the gate's contract is stable.
+    return async (toolName, args, _description) => {
         const required = vscode.workspace
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.requireAgentConsent', true);
@@ -106,13 +129,16 @@ export function createAgentConsentGate(
             return { allowed: true };
         }
 
-        const detail = renderArgsForConsent(args);
+        // AUTHORED copy, not derived. `description` is still accepted so the
+        // signature stays stable, but it is deliberately NOT shown: it is written
+        // for an agent, and four passes of transforming it still produced text a
+        // producer should not have been handed. See agentAlertCopy.
+        const copy = alertCopyFor(toolName);
+        const params = renderArgsForConsent(args);
+        const detail = [copy?.consequence, params].filter(Boolean).join('\n\n');
         const choice = await vscode.window.showWarningMessage(
-            `Demo Builder — an AI agent requests: ${humanize(toolName)}. Allow it?`,
-            {
-                modal: true,
-                detail: detail || 'No parameters beyond the confirmation itself.',
-            },
+            `Demo Builder: ${copy?.action ?? humanize(toolName)}?`,
+            { modal: true, detail: detail || undefined },
             'Allow',
         );
 
@@ -142,7 +168,10 @@ export function createAgentConsentGate(
  */
 export function createAgentOperationNotifier(
     logger: Logger,
-): (toolName: string, run: () => Promise<unknown>) => Promise<unknown> {
+): (
+    toolName: string,
+    run: (report: (message: string) => void) => Promise<unknown>,
+) => Promise<unknown> {
     return (toolName, run) =>
         Promise.resolve(
             vscode.window.withProgress(
@@ -151,9 +180,13 @@ export function createAgentOperationNotifier(
                     title: `Demo Builder — agent: ${humanize(toolName)}…`,
                     cancellable: false,
                 },
-                async () => {
+                async (progress) => {
                     try {
-                        const result = await run();
+                        // Hand our reporter to the caller so the operation's own
+                        // phase strings reach this notification. Previously `run`
+                        // took nothing, so the notification could only ever show
+                        // the tool's title while the phases went nowhere.
+                        const result = await run((message) => progress.report({ message }));
                         vscode.window.setStatusBarMessage(
                             `$(check) Agent: ${humanize(toolName)} completed`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
