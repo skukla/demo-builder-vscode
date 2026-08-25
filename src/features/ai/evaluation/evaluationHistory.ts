@@ -32,13 +32,36 @@
 import type { EvaluationRun } from '@/types/base';
 
 /**
- * Runs kept per project, oldest dropped first.
+ * Runs kept per PROMPT, oldest dropped first.
  *
- * Chosen from what the view can show: a headline delta needs two, and a trend
- * worth reading needs a handful. Twenty is generous for both and small enough
- * that the manifest stays a manifest.
+ * Per prompt, not per project — and the first version got this wrong. A single
+ * global cap of 20 evicts by recency across ALL prompts, so a producer
+ * alternating between five prompts keeps only four runs of each, and a trend
+ * they were building disappears because of runs that had nothing to do with it.
+ * Worse, it disappears SILENTLY: an evicted history is indistinguishable from a
+ * prompt that was never run.
+ *
+ * Ten is what a trend needs. The unit of meaning is the prompt, so that is what
+ * the cap counts.
  */
-export const HISTORY_LIMIT = 20;
+export const RUNS_PER_PROMPT = 10;
+
+/**
+ * How many distinct prompts keep any history at all.
+ *
+ * The second half of the bound: without it, a producer who never repeats a
+ * prompt would accumulate one row each, forever. When the cap is reached the
+ * LEAST RECENTLY RUN prompt is dropped whole — recency is the honest proxy for
+ * "still working on this", and dropping a whole prompt is cleaner than leaving
+ * a stump nobody can compare against.
+ */
+export const TRACKED_PROMPTS = 25;
+
+/**
+ * Worst case on disk: 25 prompts × 10 runs × (~5 numbers + the prompt text).
+ * A 200-byte prompt puts that near 50KB — small for a manifest that already
+ * carries component state, and the reason the cap can be generous.
+ */
 
 /** What a new run should be compared against, if anything. */
 export interface Delta {
@@ -67,21 +90,43 @@ export function findDelta(
 }
 
 /**
- * Add a run, dropping the oldest when the cap is reached.
+ * Add a run, evicting per prompt and then per prompt-count.
  *
- * Pure — the caller persists the result. That keeps the rotation rule testable
- * without a state manager, and it is the rule most likely to be got wrong.
+ * Pure — the caller persists the result. That keeps the eviction rule testable
+ * without a state manager, and it is the rule most likely to be got wrong: the
+ * first version capped globally, which let unrelated prompts evict a trend.
  *
  * @param history - existing runs, oldest first
  * @param run - the run just completed
- * @returns the new list, oldest first, never longer than {@link HISTORY_LIMIT}
+ * @returns the new list, oldest first, bounded on both axes
  */
 export function appendRun(
     history: readonly EvaluationRun[] | undefined,
     run: EvaluationRun,
 ): EvaluationRun[] {
-    const next = [...(history ?? []), run];
-    return next.length > HISTORY_LIMIT ? next.slice(next.length - HISTORY_LIMIT) : next;
+    const all = [...(history ?? []), run];
+
+    // 1. Cap the runs of THIS prompt. Other prompts are untouched, which is the
+    //    whole correction — a trend is per prompt, so eviction must be too.
+    const mine = all.filter((r) => r.prompt === run.prompt);
+    const dropFromMine = Math.max(0, mine.length - RUNS_PER_PROMPT);
+    const doomed = new Set(mine.slice(0, dropFromMine));
+    let kept = all.filter((r) => !doomed.has(r));
+
+    // 2. Cap how many distinct prompts are tracked, dropping the LEAST RECENTLY
+    //    RUN one whole. A stump of one run is not comparable against anything,
+    //    so half-dropping a prompt would keep bytes and lose the meaning.
+    const lastSeen = new Map<string, number>();
+    kept.forEach((r, i) => lastSeen.set(r.prompt, i));
+    if (lastSeen.size > TRACKED_PROMPTS) {
+        const stale = [...lastSeen.entries()]
+            .sort((a, b) => a[1] - b[1])
+            .slice(0, lastSeen.size - TRACKED_PROMPTS)
+            .map(([prompt]) => prompt);
+        const drop = new Set(stale);
+        kept = kept.filter((r) => !drop.has(r.prompt));
+    }
+    return kept;
 }
 
 /**

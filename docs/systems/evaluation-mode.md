@@ -104,7 +104,18 @@ prompts differing in exactly the way the producer was testing.
 
 Kept in `.demo-builder.json` under `Project.evaluationHistory`, matching the rule
 `aiPrompts` already set — project-specific in the manifest, global in extension
-state. Capped at twenty runs, oldest dropped.
+state.
+
+**Bounded on two axes, and the first version got this wrong.** Ten runs PER
+PROMPT, and twenty-five prompts tracked. A single global cap evicts by recency
+across all prompts, so a producer alternating between five would keep four runs
+of each and lose a trend to runs that had nothing to do with it — silently, since
+an evicted history is indistinguishable from a prompt never run. When the prompt
+cap is reached the least recently run prompt is dropped WHOLE: one surviving run
+is not comparable against anything, so a stump costs bytes and buys nothing.
+
+Worst case on disk is about 50KB per project, which is why the caps can be
+generous.
 
 **Not the trace.** That is the diagnostic read once, it is large, and keeping it
 would recreate the unbounded-log concern the in-memory recorder was capped to

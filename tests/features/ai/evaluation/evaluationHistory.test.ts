@@ -15,7 +15,8 @@
  */
 
 import {
-    HISTORY_LIMIT,
+    RUNS_PER_PROMPT,
+    TRACKED_PROMPTS,
     appendRun,
     findDelta,
     toStoredRun,
@@ -61,27 +62,74 @@ describe('finding what a prompt cost last time', () => {
     });
 });
 
-describe('keeping the list bounded', () => {
+describe('keeping the list bounded — PER PROMPT', () => {
     it('appends, oldest first', () => {
         const out = appendRun([run('a', 1)], run('b', 2));
 
         expect(out.map((r) => r.prompt)).toEqual(['a', 'b']);
     });
 
-    it('drops the OLDEST past the cap', () => {
-        // A history that grows forever is the thing that was objected to before
-        // this feature existed.
-        const full = Array.from({ length: HISTORY_LIMIT }, (_, i) => run(`p${i}`, i));
+    it('does NOT let other prompts evict a trend', () => {
+        // The bug in the first version. A single global cap evicted by recency
+        // across ALL prompts, so alternating between five prompts left four runs
+        // of each — and the trend a producer was building disappeared because of
+        // runs that had nothing to do with it.
+        let history: ReturnType<typeof appendRun> = [];
+        for (let i = 0; i < 30; i++) {
+            history = appendRun(history, run(['A', 'B', 'C', 'D', 'E'][i % 5], i));
+        }
 
-        const out = appendRun(full, run('newest', 99));
+        // Six runs of A happened; all six survive, because B–E cannot evict them.
+        expect(history.filter((r) => r.prompt === 'A')).toHaveLength(6);
+    });
 
-        expect(out).toHaveLength(HISTORY_LIMIT);
-        expect(out[0].prompt).toBe('p1');
-        expect(out[out.length - 1].prompt).toBe('newest');
+    it('caps the runs of ONE prompt, keeping the newest', () => {
+        let history: ReturnType<typeof appendRun> = [];
+        for (let i = 0; i < RUNS_PER_PROMPT + 5; i++) {
+            history = appendRun(history, run('p', i));
+        }
+
+        const mine = history.filter((r) => r.prompt === 'p');
+        expect(mine).toHaveLength(RUNS_PER_PROMPT);
+        // The newest survive: costs 5..14 for a limit of 10.
+        expect(mine[0].costUSD).toBe(5);
+        expect(mine[mine.length - 1].costUSD).toBe(RUNS_PER_PROMPT + 4);
+    });
+
+    it('drops the LEAST RECENTLY RUN prompt whole, not a stump', () => {
+        // A single remaining run is not comparable against anything, so keeping
+        // one would cost bytes and buy nothing.
+        let history: ReturnType<typeof appendRun> = [];
+        for (let i = 0; i < TRACKED_PROMPTS; i++) history = appendRun(history, run(`p${i}`, i));
+        // Re-run the oldest so it is no longer the least recent.
+        history = appendRun(history, run('p0', 99));
+
+        history = appendRun(history, run('brand-new', 1));
+
+        const prompts = new Set(history.map((r) => r.prompt));
+        expect(prompts.size).toBe(TRACKED_PROMPTS);
+        expect(prompts.has('brand-new')).toBe(true);
+        // p1 was the least recently run, so it went; p0 was refreshed and stayed.
+        expect(prompts.has('p1')).toBe(false);
+        expect(prompts.has('p0')).toBe(true);
     });
 
     it('handles a project with no history yet', () => {
         expect(appendRun(undefined, run('first', 1))).toHaveLength(1);
+    });
+
+    it('stays small enough for a manifest', () => {
+        // Worst case, so the cap can be judged rather than assumed.
+        let history: ReturnType<typeof appendRun> = [];
+        const prompt = 'x'.repeat(200);
+        for (let p = 0; p < TRACKED_PROMPTS; p++) {
+            for (let i = 0; i < RUNS_PER_PROMPT + 3; i++) {
+                history = appendRun(history, run(`${prompt}${p}`, i));
+            }
+        }
+
+        expect(history).toHaveLength(TRACKED_PROMPTS * RUNS_PER_PROMPT);
+        expect(JSON.stringify(history).length).toBeLessThan(120_000);
     });
 });
 
