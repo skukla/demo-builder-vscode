@@ -86,7 +86,8 @@ a build log, not a menu.
 | 08 | `step-08-the-ambient-trace.md` | ✅ SHIPPED — the workbench's second mode plus `demoBuilder.showAgentTrace`; cost is stated as unavailable rather than estimated |
 | — | `prompt-threads/overview.md` | ✅ SHIPPED — history keyed by THREAD, saved prompts load back and resume, the cheapest run survives eviction, anchored threads outlive abandoned ones |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
-| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
+| 10 | `step-10-a-surface-you-can-read.md` | **NEXT** — the workbench reads like a clean, detailed chat, and gets a door. Raised by the owner: placement, and the look of the input and output |
+| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace. AFTER step 10 — it lands inside that surface |
 | — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
 
 ## Steps 05–09: decided 2026-08-25
@@ -111,15 +112,26 @@ rewrote storage step 07 had shipped, then step 08 on top of it.
 
 What remains, in order:
 
-1. **Make the trace panel live.** It updates on open and on Refresh; the record
-   is already being written continuously in the extension host and the panel is
-   already listening for pushes. Hours, not weeks. This is the whole of what the
-   owner chose over owning the chat surface.
-2. **The spike is PARKED** — `.rptc/plans/own-the-chat-surface/overview.md`
+1. **Step 10 — a surface you can read.** The owner does not like the one that
+   shipped: no door, and it renders like a log. This gives the workbench a
+   sidebar tile plus a way in from a saved prompt, deletes the duplicate picker
+   it should never have grown, and rebuilds the body as a transcript with the
+   103 authored phrases it already owns and has never used.
+2. **Make the panel live.** The record is already written continuously in the
+   extension host and the panel already listens for pushes; it just refreshes on
+   demand today. Hours. Fold it into step 10's transcript rather than doing it
+   twice.
+3. **The spike is PARKED** — `.rptc/plans/own-the-chat-surface/overview.md`
    records the decision and what would revive it. Keeping Claude Code's terminal
    and rendering beside it was chosen deliberately, not deferred.
-3. Then, and only if the surface is being used: `measurement/`, step 09,
+4. Then, and only if the surface is being used: `measurement/`, step 09,
    `opentelemetry/` (now a local sink, not an exporter).
+
+**One design rule came out of step 10's planning and governs all of it:** each
+surface does ONE thing — the Prompt Library PICKS, the terminal RUNS, the
+workbench MEASURES. A proposal to fold the workbench into the library as a tab
+was made and rejected on those grounds; the library is a card-grid launcher whose
+job is pick-one-and-go, not a workspace.
 
 **The open question above all of these** is the 37-session survey's:
 `.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`. Agents in demo
