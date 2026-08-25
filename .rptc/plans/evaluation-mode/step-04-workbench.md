@@ -85,6 +85,37 @@ Keep a **held-out set** so we do not overfit — they use one for exactly this.
 is never a pass/fail criterion. ("Too rigid… overly brittle, as agents regularly
 find valid approaches that eval designers didn't anticipate.")
 
+## What shipped, and what did NOT
+
+**Shipped:** the loop. Type a prompt, try it out, read the verdict (nothing was
+changed · N steps · dollars · seconds · what was wasted), see suggestions with
+the trace fact behind each, apply a mechanical one with a click, try again and
+see the delta, run it for real in the chat, or save it to the library.
+
+Reused rather than rebuilt: `openInClaude` runs it for real (the Prompt
+Library's own Launch route) and `save-ai-prompt` keeps it. The panel registers
+BOTH handler maps. The first draft added a `run-prompt-for-real` handler before
+noticing it was a second copy of a path this step's own text told it to reuse.
+
+**NOT shipped — suggestions written by Claude.** The documented mechanism is to
+hand the trace to the model and ask what should change, and that is the right
+end state. What ships instead derives suggestions from the trace
+deterministically, each carrying its evidence. Two honest reasons:
+
+1. It would DOUBLE the cost of every evaluation, in a feature whose entire
+   purpose is reducing cost.
+2. There is no held-out set yet, and this plan's own research says that is what
+   stops the loop overfitting to the prompts it was tuned on.
+
+Build the held-out set first. Then the model writes the suggestions and
+`evaluationSuggestions.ts` becomes the fallback for when it has nothing to add.
+
+**NOT shipped — history per prompt.** The delta works within a session (a second
+run reports "down from $0.21"); it does not survive a window reload, because the
+recorder is in memory by design and step 02 said not to build a file until
+something proved it was needed. This is that proof arriving — but it is a
+storage decision, not a view decision, and belongs in its own change.
+
 ## Done when
 
 A user can evaluate a prompt, see what it would do and what it costs, apply a

@@ -18,6 +18,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { registerEvaluatePromptCommand } from '@/features/ai/evaluation/evaluatePromptCommand';
 import { isEvaluating } from '@/features/ai/evaluation/evaluationSession';
+import { setEvaluationRecorder } from '@/features/ai/evaluation/handlers/evaluationHandlers';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
@@ -310,6 +311,11 @@ export async function activate(context: vscode.ExtensionContext) {
         // Door 2 of the evaluation runner. Both doors take the SAME service and
         // the SAME recorder — two implementations of "evaluate a prompt" would
         // drift, and the drifting one would be whichever nobody was watching.
+        // The workbench's handler reads the SAME recorder the MCP server writes
+        // to — that join is the whole point, and two recorders would give the
+        // panel a trace of nothing.
+        setEvaluationRecorder(agentTrace);
+
         registerEvaluatePromptCommand(context, {
             runner: ServiceLocator.getCommandExecutor(),
             trace: agentTrace,

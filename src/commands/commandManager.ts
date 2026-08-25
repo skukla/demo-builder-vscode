@@ -16,6 +16,7 @@ import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { openUrl } from '@/core/utils/browserUtils';
+import { ShowEvaluationWorkbenchCommand } from '@/features/ai/evaluation/commands/showEvaluationWorkbench';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -267,6 +268,17 @@ export class CommandManager {
         const openAi = new ShowAiCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.openAi', async () => {
             await openAi.execute();
+        });
+
+        // Evaluation workbench — try a prompt out with every change simulated,
+        // see what it would cost and where it wasted steps, then run it for real.
+        const workbench = new ShowEvaluationWorkbenchCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.showEvaluationWorkbench', async () => {
+            await workbench.execute();
         });
 
         // Open AI Experience (chat-first) — onboarding + open the Claude Code

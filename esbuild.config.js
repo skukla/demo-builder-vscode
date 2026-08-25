@@ -207,6 +207,8 @@ const WEBVIEW_ENTRIES = {
     integrations: 'src/features/dashboard/ui/integrationsSurface/index.tsx',
     // Standalone Data Installer surface — webview behind `demoBuilder.showDataInstaller`.
     dataInstaller: 'src/features/data-installer/ui/index.tsx',
+    // Evaluation workbench — webview behind `demoBuilder.showEvaluationWorkbench`.
+    evaluation: 'src/features/ai/evaluation/ui/index.tsx',
 };
 
 function runWebviewBuild() {

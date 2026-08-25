@@ -59,6 +59,15 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         command: 'features/data-installer/commands/showDataInstaller.ts',
     },
     {
+        // The workbench registers TWO maps: its own `evaluate-prompt`, plus
+        // `aiHandlers` for `openInClaude` (run for real) and `save-ai-prompt`.
+        // This is exactly the reuse this guard exists for — a message living in
+        // only one map is not an error, it is silence.
+        name: 'evaluation',
+        entry: 'features/ai/evaluation/ui/index.tsx',
+        command: 'features/ai/evaluation/commands/showEvaluationWorkbench.ts',
+    },
+    {
         name: 'integrations',
         entry: 'features/dashboard/ui/integrationsSurface/index.tsx',
         command: 'features/dashboard/commands/showIntegrations.ts',

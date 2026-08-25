@@ -145,11 +145,13 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 33 commands (resetAll only in dev mode)', () => {
+        it('should register all 34 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 34 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(34);
+            // 34 + 1 = 35: the previous 34, plus `showEvaluationWorkbench` — the
+            // prompt workbench panel (2026-08-25). resetAll stays excluded, dev
+            // mode only.
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(35);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -177,6 +179,9 @@ describe('CommandManager', () => {
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
+                // Registered between openAi and openAiExperience — see
+                // commandManager.registerCommands().
+                'demoBuilder.showEvaluationWorkbench',
                 'demoBuilder.openAiExperience',
                 'demoBuilder.newAiChat',
                 'demoBuilder.showPromptsPicker',

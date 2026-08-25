@@ -28,6 +28,14 @@ describe('SOP: Inline Styles', () => {
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
         'ContentWithSidebar.tsx': 'Dynamic sidebar inner-content max-width from props',
         'ControlPanelLayout.tsx': 'Dynamic secondary-panel inner-content max-width from props',
+        // The Spectrum Flex 450px workaround — this project's OWN prescribed
+        // pattern for a full-width webview layout (root CLAUDE.md: "Adobe
+        // Spectrum Flex constrains width (450px): use a standard HTML div with
+        // flex styles for critical wizard layouts"). Following it necessarily
+        // produces an inline style, so these are exceptions by construction
+        // rather than by oversight.
+        'EvaluationWorkbench.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
+        'EvaluationVerdict.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',

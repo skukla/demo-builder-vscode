@@ -18,7 +18,7 @@ the previous is green.
 | 01b | `step-01b-tool-self-description.md` | ✅ SHIPPED `dce810b0d`+`0c4cb2950`+`7de43fdf9`+`219d305c9`+`e9dab5afe` — tools declare read/write, carry an authored phrase, and the consent dialog names its target |
 | 02 | `step-02-trace-recorder.md` | ✅ SHIPPED — What was called — reads included — blocked, and how big the answers were |
 | 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view |
-| 04 | `step-04-workbench.md` | The view, the refine loop, run-for-real, save |
+| 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save. LLM-written suggestions and cross-session history deliberately deferred (see the step) |
 
 **Added 2026-08-25, after step 01 shipped.** Step 01b was not in the original
 plan. Two things put it there, and they turned out to be the same thing:

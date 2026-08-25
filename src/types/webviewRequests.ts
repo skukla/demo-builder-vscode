@@ -396,3 +396,59 @@ export interface AddAppBuilderComponentRequestPayload {
      */
     apis?: string[];
 }
+
+/**
+ * `evaluate-prompt` — the workbench asks for one prompt to be tried out.
+ *
+ * The response is {@link EvaluatePromptResponse}. Both sides import these, so a
+ * change to either shape fails the build rather than the feature.
+ */
+export interface EvaluatePromptRequest {
+    /** The prompt, exactly as the user typed it. */
+    prompt: string;
+}
+
+/** One recorded tool call, as the workbench renders it. */
+export interface EvaluationTraceStep {
+    tool: string;
+    readOnly: boolean;
+    argumentKeys: string[];
+    argumentFingerprint: string;
+    resultBytes: number;
+    durationMs: number;
+    outcome: 'ok' | 'error' | 'blocked-by-dry-run';
+    at: number;
+}
+
+/** One thing the user could change, with the trace fact behind it. */
+export interface EvaluationSuggestion {
+    text: string;
+    evidence: string;
+    /** Present only when the fix is mechanical enough for one click. */
+    append?: string;
+}
+
+/**
+ * The ENVELOPE, not the domain type.
+ *
+ * A handler that returns `{success: false}` does NOT reject on the webview
+ * side — it arrives looking exactly like a success, because only a THROW sets
+ * the response's `error` field. So the consumer must branch on `success`
+ * before reading anything else, and typing this as the domain shape alone
+ * would be typing on a lie.
+ */
+export interface EvaluatePromptResponse {
+    success: boolean;
+    error?: string;
+    data?: {
+        prompt: string;
+        costUSD: number;
+        numTurns: number;
+        durationMs: number;
+        isError: boolean;
+        trace: EvaluationTraceStep[];
+        repeats: EvaluationTraceStep[];
+        blocked: EvaluationTraceStep[];
+        suggestions: EvaluationSuggestion[];
+    };
+}
