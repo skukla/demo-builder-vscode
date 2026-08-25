@@ -20,7 +20,8 @@ the previous is green.
 | 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view |
 | 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save |
 | 05 | `step-05-scope-the-dry-run.md` | ✅ SHIPPED — an evaluation gets its own dry-run server; it stops pausing the user's other work, and can no longer escape to a window that does not know |
-| 06 | `step-06-consent-where-you-are-looking.md` | The approval prompt reaches the surface the producer is watching |
+| 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached |
+| 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation |
 | 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
 | 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
@@ -47,8 +48,10 @@ One step per session, and the order is not arbitrary:
 
 1. **Step 05 first**, because it is the only LIVE hazard — the feature is on the
    branch and can currently mislead someone.
-2. **Step 06** next: it opens with a measurement that decides its own shape, and
-   step 05 may settle the same connection-identity question it needs.
+2. **Step 06** — SHIPPED. Its measurement is done (elicitation is declared and
+   answered); the session grants shipped; the chat-prompt half became **06b**,
+   which is GATED on one observation and can be picked up any time someone is at
+   a plain terminal. It blocks nothing.
 3. **Step 07** is self-contained and can slot anywhere after 04.
 4. **The `measurement/` sub-plan BEFORE step 09**, without exception. Advice
    tuned on the prompts it is judged by will look excellent and generalise to

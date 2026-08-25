@@ -41,10 +41,10 @@ depending on it: "not an explicit accept" covers both answers, so the only thing
 left to settle is whether elicitation is worth BUILDING, which is scheduling
 rather than design.
 
-**So this step proceeds with the session-grant work below**, which is useful
-whatever that answer turns out to be. Pick the elicitation branch up when someone
-is at a plain terminal — the command and the four traps are in the research
-writeup.
+**This step became the session-grant work below**, which shipped. The elicitation
+half moved to its own step — `step-06b-consent-in-the-chat.md` — because leaving
+a step half-open hides which part is real. 06b carries the decision rule (settled),
+the one observation it waits on, and the three things still genuinely undesigned.
 
 ## Start with the measurement, not the design
 
