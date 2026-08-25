@@ -6,7 +6,7 @@ If starting fresh (context was cleared), re-invoke the workflow before executing
 any step:
 
 ```
-/rptc:feat "Plan is approved, continue to implementation. Plan: .rptc/plans/evaluation-mode/ — start at step-01. Read .rptc/handoff/2026-08-24-evaluation-mode.md first; it carries the traps and the seam to copy."
+/rptc:feat "Continue Evaluation Mode. Steps 01-07 are SHIPPED and pushed on feature/evaluation-mode-dry-run. Read .rptc/handoff/2026-08-25-evaluation-mode-shipped.md FIRST - it says what exists, what is known-broken, and what to do next. The next work is the prompt-threads sub-plan; do not start a numbered step."
 ```
 
 **Steps, in order.** Each is independently shippable; do not start the next until
