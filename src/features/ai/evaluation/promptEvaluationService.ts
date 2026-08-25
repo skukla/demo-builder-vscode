@@ -228,14 +228,36 @@ export async function evaluatePrompt(
                 timeout: EVALUATION_TIMEOUT_MS,
             });
 
-            let parsed: ClaudeRunOutput = {};
+            // A run whose output cannot be read is a FAILED RUN, and must not
+            // be rendered as a successful one that happened to do nothing.
+            //
+            // The first version caught the parse error, logged a warning, and
+            // defaulted every field to 0 — so a total failure arrived on screen
+            // as "Nothing was changed. 0 steps, $0.00, 0s, nothing wasted",
+            // which reads as a working feature reporting an empty result. The
+            // owner hit exactly that on 2026-08-25 and could not tell what had
+            // gone wrong, because nothing on the surface said anything HAD.
+            //
+            // The trace is still worth keeping when it has entries — it is the
+            // more interesting half — but it is reported as a partial failure,
+            // never as a clean zero.
+            let parsed: ClaudeRunOutput;
             try {
                 parsed = JSON.parse(stdout) as ClaudeRunOutput;
             } catch {
-                // A run that produced unreadable output still produced a TRACE,
-                // and the trace is the more interesting half. Report the cost as
-                // unknown rather than losing the path.
-                deps.logger.warn('[Evaluation] could not parse the run output as JSON');
+                const head = String(stdout ?? '').trim().slice(0, 400);
+                deps.logger.error(
+                    `[Evaluation] the run produced no readable output. First 400 bytes: ${
+                        head || '(nothing at all)'
+                    }`,
+                );
+                throw new Error(
+                    'The run did not finish. Nothing was changed. ' +
+                        (head
+                            ? `It answered: ${head}`
+                            : 'It produced no output at all — check that `claude` runs in a ' +
+                              'terminal from this project, then see Demo Builder: Debug Logs.'),
+                );
             }
 
             const entries = [...deps.trace.all()];

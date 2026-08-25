@@ -345,19 +345,44 @@ describe('evaluating a prompt', () => {
         expect(result).toEqual({ refused: expect.stringContaining('nothing to evaluate') });
     });
 
-    it('keeps the trace when the run output cannot be parsed', async () => {
-        // The trace is the more interesting half. Losing the path because the
-        // cost was unreadable would throw away the better answer.
-        const result = (await evaluatePrompt('anything', {
-            runner: fakeRunner('not json at all'),
-            trace,
-            logger,
-            projectPath,
-        })) as EvaluationResult;
+    it('FAILS LOUDLY when the run output cannot be read', async () => {
+        // The first version caught the parse error and defaulted every field to
+        // 0, so a total failure arrived on screen as "Nothing was changed.
+        // 0 steps, $0.00, 0s, nothing wasted" — indistinguishable from a working
+        // feature reporting an empty result. The owner hit exactly that and
+        // could not tell anything had gone wrong.
+        await expect(
+            evaluatePrompt('anything', {
+                runner: fakeRunner('not json at all'),
+                trace,
+                logger,
+                projectPath,
+            }),
+        ).rejects.toThrow(/did not finish/i);
+    });
 
-        expect(result.costUSD).toBe(0);
-        expect(result.trace).toEqual([]);
-        expect(result.isError).toBe(false);
+    it('says what the run actually answered, so the cause is findable', async () => {
+        await expect(
+            evaluatePrompt('anything', {
+                runner: fakeRunner('claude: command not found'),
+                trace,
+                logger,
+                projectPath,
+            }),
+        ).rejects.toThrow(/command not found/);
+    });
+
+    it('says so plainly when there was NO output at all', async () => {
+        // Empty output and unreadable output need different advice: one means
+        // the process produced nothing, which is a different problem.
+        await expect(
+            evaluatePrompt('anything', {
+                runner: fakeRunner(''),
+                trace,
+                logger,
+                projectPath,
+            }),
+        ).rejects.toThrow(/no output at all/i);
     });
 });
 
