@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     applyUpdatesHeadless,
     computeProjectUpdateSelections,
@@ -102,7 +103,13 @@ export function registerApplyUpdatesTool(
                     stateManager: ctx.stateManager,
                     logger: ctx.logger,
                 },
-                (m) => phases.push(m),
+                // Collected for the RESULT and reported LIVE. The array is the
+                // agent's after-the-fact record; reportPhase is what the user
+                // sees while the wait is happening, which is when they care.
+                (m) => {
+                    phases.push(m);
+                    reportPhase(m);
+                },
             );
 
             return asText({
