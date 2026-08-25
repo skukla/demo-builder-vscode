@@ -1,4 +1,20 @@
-# Human copy for the agent consent dialog — write all 60 by hand
+# Human copy for the agent consent dialog — SHIPPED 2026-08-25
+
+**Done in `201ebe086`, and smaller than filed.** The item scoped 60 write tools
+because every one of them could raise a dialog. Re-aiming the gate at operations
+that actually warrant interrupting took that to **15**, and all 15 are written.
+
+What shipped: `agentAlertCopy` (authored `action` + `consequence` per tool), the
+derived-copy transforms removed, the gate keyed on the operation rather than the
+agent's `confirm`, and `docs/systems/agent-alerts.md` recording all five alert
+surfaces and the standing rule — alert text is authored, never transformed.
+
+`worksheet.md` is kept as the audit trail: it holds all 60 rows with the text each
+tool showed BEFORE, which is what a future reader needs to see why the derived
+approach was abandoned. It is not a to-do list; the 45 tools not in the dialog set
+show no dialog at all.
+
+The original scope, for the record:
 
 ## Provenance
 
