@@ -5,6 +5,27 @@
 whole-repo lint 0 errors (131 pre-existing warnings — that is the baseline),
 build succeeds.
 
+## Read this before anything else
+
+**This is ONE feature, not a list of tools.** The owner had to say so on
+2026-08-25 after a session answered "is the panel the feature or a test
+affordance?" as though those were separate products.
+
+A producer works with an agent, and at every moment can see what it is doing,
+stop it changing anything, look at what it would have done, make the ask better,
+and keep the version that worked. The CHAT is the live view — every call
+narrates, changes are impossible under dry run, destructive calls ask where the
+producer is looking. The PANEL is the considered view — the same trace, plus
+cost, waste and suggestions. Nothing is stranded between them.
+
+**Three holes break that flow, and they come before anything else:** the chat
+cannot show its own trace (step 08), refining a prompt loses its history, and a
+saved prompt cannot be loaded back (both `prompt-threads/`). They are not
+options on a menu. Until they land, the feature is parts.
+
+The step table in the overview is a BUILD LOG, not a menu. "Independently
+shippable" was a delivery property and was repeatedly misread as "optional".
+
 ## Read these first, in this order
 
 1. `docs/systems/evaluation-mode.md` — what exists and how it works.
@@ -35,8 +56,8 @@ into the workbench, and suggestions never see the prompt so they advise naming a
 project in a prompt that already names it.
 
 All three are one problem and all three are specified in `prompt-threads/`.
-**Do that before any further workbench work** — it changes the storage step 07
-shipped, and doing it later means migrating twice.
+**Do that FIRST** — it changes the storage step 07 shipped, so anything built on
+that storage afterwards would migrate twice. Then step 08. Then everything else.
 
 ## Open, and none of it blocks
 

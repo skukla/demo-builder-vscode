@@ -9,8 +9,71 @@ any step:
 /rptc:feat "Continue Evaluation Mode. Steps 01-07 are SHIPPED and pushed on feature/evaluation-mode-dry-run. Read .rptc/handoff/2026-08-25-evaluation-mode-shipped.md FIRST - it says what exists, what is known-broken, and what to do next. The next work is the prompt-threads sub-plan; do not start a numbered step."
 ```
 
-**Steps, in order.** Each is independently shippable; do not start the next until
-the previous is green.
+## ONE feature. Read this before the step table means anything.
+
+Rewritten 2026-08-25 after the owner said, correctly: *"I was/am expecting an
+ENTIRE feature. Not one-off little tools."*
+
+The step table below made every part look optional, and the sessions that
+executed it inherited that framing — building a panel here, a toggle there, and
+answering "is the panel the feature or a test affordance?" as though those were
+separate products. They are not. **This is one feature with two views, and
+everything flows between them.**
+
+### What the feature IS
+
+A producer works with an agent. At every moment they can see what it is doing,
+stop it changing anything, look at what it would have done, make the ask better,
+and keep the version that worked.
+
+    THE CHAT — the live view
+      · every call narrates, in words a person wrote
+      · dry run makes changes impossible, not discouraged
+      · destructive calls ask, where the producer is looking
+      · and it can show its own trace
+
+    THE PANEL — the considered view
+      · the SAME trace, plus cost, plus what was wasted
+      · suggestions carrying the evidence behind them
+      · refine, re-run, and watch the number move
+      · save what worked; load it back to keep working on it
+
+    BETWEEN THEM — nothing is stranded
+      · a prompt from the panel runs for real in the chat
+      · a trace from the chat opens in the panel
+      · a saved prompt returns to the panel with its history intact
+
+### What is MISSING, stated as holes rather than options
+
+Three things break that flow today. None is a nice-to-have; each is a place a
+producer hits a wall:
+
+| Hole | What a producer experiences |
+|---|---|
+| The chat cannot show its own trace (**step 08**) | Dry run keeps them safe and shows them nothing. The recorder HAS the data — `extension.ts:324` — and nothing reads it |
+| Refining a prompt loses its history (**`prompt-threads/`**) | The improvement loop forgets every improvement. "Down from $0.24" fires only when nothing changed |
+| A saved prompt cannot be loaded back (**`prompt-threads/`**) | Coming back to good work means retyping it, which starts the history over |
+
+**Build these before anything else.** Not because they are next in a list — because
+until they land, the feature is parts rather than a whole.
+
+### What the feature is FOR — both answers are true
+
+The owner's original ask was measuring the path an agent takes through the
+extension, so the surface stays efficient. That is a TEAM concern and it is real:
+`measurement/` serves it.
+
+The producer story is also real, and the panel serves it. An earlier draft of
+this section argued the producer story was unvalidated and the panel should be
+treated as our instrument instead. **That was carving one thing in half again.**
+The same trace, the same narration and the same suggestions serve both readers;
+what differs is who is looking and why. Build one feature, and measure with it.
+
+## The parts, and the order they were built
+
+**Each was independently shippable — that is a delivery property, NOT a statement
+that any of them is optional.** Read the section above first; the table below is
+a build log, not a menu.
 
 | Step | File | Ships |
 |---|---|---|
@@ -44,26 +107,25 @@ The owner reviewed everything steps 01–04 chose not to build and settled it:
 | `projectShape`, built but never supplied | **DELETE** — an optional field nothing fills is the accepted-but-ignored shape this project forbids |
 | "Succeeded but changed nothing" as an outcome | **DROP** — needs a change across the whole tool surface for a rare finding, and the one real instance is guarded |
 
-### Session boundaries
+### What to build next, and why that order
 
-One step per session, and the order is not arbitrary:
+**The three holes first, because until they land the feature is parts.**
 
-1. **Step 05 first**, because it is the only LIVE hazard — the feature is on the
-   branch and can currently mislead someone.
-2. **Step 06** — SHIPPED. Its measurement is done (elicitation is declared and
-   answered); the session grants shipped; the chat-prompt half became **06b**,
-   which is GATED on one observation and can be picked up any time someone is at
-   a plain terminal. It blocks nothing.
-3. **Step 07** is self-contained and can slot anywhere after 04.
-4. **The `measurement/` sub-plan BEFORE step 09**, without exception. Advice
-   tuned on the prompts it is judged by will look excellent and generalise to
-   nothing — and the held-out set is cheap to build before and impossible to
-   reconstruct after.
-5. **The OpenTelemetry sub-plan** starts with a MEASUREMENT, not code — see the
-   open tasks below.
-6. **`prompt-threads/` before any more workbench work.** It changes the storage
-   step 07 shipped, and every later view reads that storage. Doing it after would
-   mean migrating twice.
+1. **`prompt-threads/`** — refining loses history, and a saved prompt cannot be
+   loaded back. Two of the three holes, one model change. It rewrites storage
+   step 07 shipped, so anything built on that storage afterwards would migrate
+   twice.
+2. **Step 08** — the chat shows its own trace. The recorder already has the data;
+   nothing reads it. Renders in the panel as a second mode (owner preference:
+   a surface we control, with copy and save).
+3. Only then the rest: `measurement/`, step 09, `opentelemetry/`.
+
+**One step per session** still holds, and the reason is not context — it is that
+a fresh session READS the plan instead of remembering it. Two plan-vs-reality
+drifts on 2026-08-25 were both caught that way, and both were introduced by
+working from memory.
+
+Everything after the three holes is genuinely schedulable. The holes are not.
 
 ### When something becomes a sub-plan rather than a step
 
