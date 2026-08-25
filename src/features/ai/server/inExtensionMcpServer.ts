@@ -24,6 +24,12 @@ import { raisesConsentDialog } from './agentAlertCopy';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
+import {
+    fingerprintArgs,
+    resultByteLength,
+    type ToolTraceRecorder,
+    type TraceOutcome,
+} from './toolTraceRecorder';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
@@ -280,6 +286,8 @@ function withToolLogging(
         description?: string,
     ) => Promise<ConsentVerdict>,
     dryRun?: () => boolean,
+    trace?: ToolTraceRecorder,
+    projectShape?: () => string | undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
@@ -298,6 +306,32 @@ function withToolLogging(
                     const argKeys =
                         args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                     logger.info(`[MCP] tool: ${name}`);
+                    /**
+                     * Record this call, whatever happened to it.
+                     *
+                     * Never throws: a recorder fault must not turn a working
+                     * tool call into a failure. Recording is a diagnostic, and a
+                     * diagnostic that can break the thing it observes is worse
+                     * than no diagnostic.
+                     */
+                    const recordCall = (result: unknown, outcome: TraceOutcome): void => {
+                        if (!trace) return;
+                        try {
+                            trace.record({
+                                tool: name,
+                                readOnly,
+                                argumentKeys:
+                                    args && typeof args === 'object' ? Object.keys(args) : [],
+                                argumentFingerprint: fingerprintArgs(args),
+                                resultBytes: resultByteLength(result),
+                                durationMs: Date.now() - started,
+                                outcome,
+                                projectShape: projectShape?.(),
+                            });
+                        } catch {
+                            /* a trace is never worth failing a call over */
+                        }
+                    };
                     logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
                     // DRY RUN FIRST, before consent and before the notifier.
                     //
@@ -316,7 +350,12 @@ function withToolLogging(
                     // classification, because two would drift.
                     if (dryRun?.() && !readOnly) {
                         logger.info(`[MCP] ${name} blocked by dry run (nothing was changed)`);
-                        return dryRunResult(name, args);
+                        const blocked = dryRunResult(name, args);
+                        // A blocked call is part of the path an agent took and
+                        // belongs in the trace. Leaving it out would make a dry
+                        // run look like a shorter route than the real thing.
+                        recordCall(blocked, 'blocked-by-dry-run');
+                        return blocked;
                     }
                     // Consent SECOND, notifier third: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
@@ -372,12 +411,14 @@ function withToolLogging(
                     try {
                         const result = await invoke();
                         logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
+                        recordCall(result, 'ok');
                         return result;
                     } catch (err) {
                         logger.error(
                             `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
                             err instanceof Error ? err : undefined,
                         );
+                        recordCall(undefined, 'error');
                         throw err;
                     }
                 },
@@ -437,6 +478,24 @@ export interface InExtensionMcpServerOptions {
      * window reload — the same shape as `demoBuilder.ai.requireAgentConsent`.
      */
     dryRun?: () => boolean;
+    /**
+     * Records every tool call for Evaluation Mode.
+     *
+     * Optional: without it the server behaves exactly as before. The recorder is
+     * owned by the extension so one instance spans reconnects — a client that
+     * drops and returns mid-task is still one path through the extension, and a
+     * per-connection recorder would cut the trace in half at the seam.
+     */
+    trace?: ToolTraceRecorder;
+    /**
+     * The kind of project calls are running against (injected — resolving it
+     * needs extension state, and this module stays vscode-free).
+     *
+     * Recorded on every entry so a trace can be read as "this tool, on this kind
+     * of project". Without it, "this tool does nothing on EDS projects" is not
+     * expressible — and that bug shipped once already.
+     */
+    projectShape?: () => string | undefined;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,
@@ -605,6 +664,8 @@ export class InExtensionMcpServer {
             this.options.longRunningNotifier,
             this.options.consentGate,
             this.options.dryRun,
+            this.options.trace,
+            this.options.projectShape,
         );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
         this.options.registerExtraTools?.(logged);

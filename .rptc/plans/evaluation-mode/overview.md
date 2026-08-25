@@ -15,7 +15,7 @@ the previous is green.
 | Step | File | Ships |
 |---|---|---|
 | 01 | `step-01-dry-run-gate.md` | ✅ SHIPPED `f40a7a954` — the server-enforced gate; mutation is impossible |
-| 01b | `step-01b-tool-self-description.md` | Tools declare what they ARE and what to CALL them, instead of four surfaces guessing from the name |
+| 01b | `step-01b-tool-self-description.md` | ✅ SHIPPED `dce810b0d`+`0c4cb2950`+`7de43fdf9`+`219d305c9`+`e9dab5afe` — tools declare read/write, carry an authored phrase, and the consent dialog names its target |
 | 02 | `step-02-trace-recorder.md` | What was called — reads included — blocked, and how big the answers were |
 | 03 | `step-03-runner-and-tool.md` | One runner behind three doors, incl. `evaluate_prompt` |
 | 04 | `step-04-workbench.md` | The view, the refine loop, run-for-real, save |

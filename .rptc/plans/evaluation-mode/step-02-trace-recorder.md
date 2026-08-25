@@ -48,6 +48,23 @@ input in a form worth attacking, and never log the fingerprint's preimage.
 response is serialised through — the natural place to measure bytes without
 touching 23 registrar modules.
 
+## `projectShape` is built but NOT wired — and why
+
+The recorder accepts it and its tests cover it. It is not supplied, deliberately.
+
+The only way to resolve the current project today is `getCurrentProject()`,
+which reads from DISK on purpose: an in-memory pointer went stale and answered
+confidently — right data, wrong project, and it bit the MCP surface. A disk read
+on every tool call would add overhead to the very thing built to measure
+overhead, which is the one cost this feature must not introduce.
+
+The workbench (step 04) consumes this trace in the same process and can resolve
+the project itself, segmenting at each `set_current_project` entry — the only
+point in a trace where the answer can change. Wire it there, or add a
+synchronous accessor to `StateManager` if step 04 shows it needs one per entry.
+Do not paper over it with a TTL cache; a stale shape is the failure mode that
+made `getCurrentProject` read from disk in the first place.
+
 ## Do NOT parse transcripts in the extension
 
 The first draft of this plan said to read token cost from the session transcript.
@@ -90,6 +107,19 @@ file speculatively; the owner explicitly raised unbounded logs as a concern.
   directly-registered one. The response-envelope guard shipped covering only one
   directory and missed ten tools in `src/mcp-server.ts`; the same shape is
   available here.
+
+## Success-with-no-effect is NOT built here
+
+The overview asks for it as a distinct outcome. It is not in this step, because
+no honest signal exists yet: a tool that returns `{success:true}` having changed
+nothing is indistinguishable, from the wrapper's seat, from one that changed
+something. Inventing a heuristic would produce a field that reads as evidence
+and is not.
+
+What this step does instead is record enough that step 04 can ASK the question —
+outcome, result bytes, duration and the repeat detector. If a real signal is
+wanted, it has to come from the tools themselves (a handler saying "nothing to
+do"), and that is a surface change, not a recorder change.
 
 ## Done when
 

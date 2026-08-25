@@ -46,6 +46,7 @@ import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
@@ -99,6 +100,23 @@ let inExtensionMcpServer: InExtensionMcpServer | undefined;
  * `startInExtensionMcpServer` runs again on every workspace-folder change.
  */
 let agentDryRun: (() => boolean) | undefined;
+/**
+ * Records every agent tool call for Evaluation Mode.
+ *
+ * ONE recorder for the window, not one per MCP connection: a client that drops
+ * and reconnects mid-task is still one path through the extension, and a
+ * per-connection recorder would cut that trace in half at the seam.
+ *
+ * `projectShape` is deliberately NOT wired yet. The recorder accepts it and its
+ * tests cover it, but the only way to resolve the current project today is
+ * `getCurrentProject()`, which reads from disk on purpose (an in-memory pointer
+ * went stale and answered confidently — right data, wrong project). A disk read
+ * per tool call would add overhead to the very thing built to measure overhead.
+ * The workbench consumes this trace in-process and can resolve the project
+ * itself, segmenting at each `set_current_project` entry, which is the only
+ * point the answer can change.
+ */
+const agentTrace = new ToolTraceRecorder();
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -558,6 +576,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
             dryRun: agentDryRun,
+            trace: agentTrace,
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,
