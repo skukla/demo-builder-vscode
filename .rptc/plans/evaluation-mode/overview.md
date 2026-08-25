@@ -111,11 +111,21 @@ rewrote storage step 07 had shipped, then step 08 on top of it.
 
 What remains, in order:
 
-1. **The spike** — whether Demo Builder should render Claude Code's stream in its
-   own chat surface (`.rptc/backlog/2026-08-24-own-the-chat-surface.md`). Every
-   remaining visibility complaint points at it, and step 08's honest limit —
-   no cost for a chat session — is a symptom of not owning the process.
-2. `measurement/`, step 09, `opentelemetry/` (now a local sink, not an exporter).
+1. **Make the trace panel live.** It updates on open and on Refresh; the record
+   is already being written continuously in the extension host and the panel is
+   already listening for pushes. Hours, not weeks. This is the whole of what the
+   owner chose over owning the chat surface.
+2. **The spike is PARKED** — `.rptc/plans/own-the-chat-surface/overview.md`
+   records the decision and what would revive it. Keeping Claude Code's terminal
+   and rendering beside it was chosen deliberately, not deferred.
+3. Then, and only if the surface is being used: `measurement/`, step 09,
+   `opentelemetry/` (now a local sink, not an exporter).
+
+**The open question above all of these** is the 37-session survey's:
+`.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`. Agents in demo
+projects are barely asked to use the extension at all. More efficiency work on a
+surface nobody reaches for is the wrong target, and no amount of it changes the
+answer.
 
 **One step per session** still holds, and the reason is not context — it is that
 a fresh session READS the plan instead of remembering it. Two plan-vs-reality

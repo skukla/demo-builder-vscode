@@ -1,7 +1,61 @@
 # Spike — should Demo Builder render its own chat?
 
-**Status:** planned, not started. Written 2026-08-25, immediately after the three
-Evaluation Mode holes closed.
+**Status: PARKED 2026-08-25, the day it was written.** Do not run it without
+re-opening the decision below.
+
+The owner read it and chose the smaller path instead: **keep Claude Code's
+terminal, keep narrating into it, and render anything we want to control in a
+companion panel beside it.** Most of that was already built — narration ships,
+the workbench renders evaluation runs, and the trace mode renders ordinary chat
+activity. The only piece missing is making that panel update live rather than on
+refresh, which is hours of work against this spike's day or two plus a permanent
+second chat to maintain.
+
+A setting to pick between two chats was considered and rejected in the same
+conversation: it does not halve the work, it doubles what has to stay correct,
+and whichever surface is not the default stops being tested.
+
+### What parking this costs, stated plainly
+
+One thing, and it is the spike's strongest argument: **a permission prompt for
+tools that are not ours.** Claude Code's own checks are off by owner decision
+(the interruption cost is real), so nothing asks before an agent runs a shell
+command.
+
+A shell guard was considered on 2026-08-25 and **declined on evidence**:
+
+- The 37-session survey (`.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`)
+  found the work in these projects is Commerce consulting — query shapes, Postman
+  collections, catalog questions. No destructive shell in the sample.
+- Every irreversible action here is REMOTE — delete repo, delete Console project,
+  wipe DA.live, unpublish, reset — and all fifteen already stop and ask through
+  `agentAlertCopy.ts`. The guard would cover the recoverable half.
+- Nothing in the fifteen generated skills instructs a destructive command. The
+  only shell command any of them names is `npm run dev`.
+- A local mistake costs a checkout and an `.env`; code is on GitHub, content on
+  DA.live, and the project rebuilds.
+
+**The one shape still worth a rule** is a force-push or hard reset over unpushed
+work — plausible, genuinely unrecoverable, and it has already caused one alarm
+(investigated, disproven). If anything is built, build that narrow rule as a
+`PreToolUse` hook, not a general guard. We already ship such a hook for three
+commerce tools, so the mechanism is proven and stays native.
+
+### What would revive this spike
+
+- A real incident where nothing asked and something was lost.
+- Producers saying the terminal's rendering is blocking them, after the live
+  panel exists — i.e. the cheap fix was tried and was not enough.
+- Anthropic making the stream a supported embedding path, which would cut the
+  standing maintenance cost that made this expensive.
+
+---
+
+*Original plan below, unchanged. It is still the right plan if the decision
+reopens.*
+
+**Written:** 2026-08-25, immediately after the three Evaluation Mode holes
+closed.
 
 **This is a SPIKE, not a build.** Nothing it produces ships. Its whole job is to
 turn four opinions into four measurements, and then to put a decision in front of
