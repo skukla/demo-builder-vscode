@@ -24,11 +24,11 @@ export class ExtensionUpdater {
             cancellable: false,
         }, async (progress) => {
             // Download VSIX
-            progress.report({ message: 'Downloading update...' });
+            progress.report({ message: 'Downloading update…' });
             const vsixPath = await this.downloadVsix(downloadUrl, newVersion);
       
             // Install via VS Code command
-            progress.report({ message: 'Installing...' });
+            progress.report({ message: 'Installing…' });
             this.logger.debug(`[Updates] Installing extension from ${vsixPath}`);
             await vscode.commands.executeCommand(
                 'workbench.extensions.installExtension',

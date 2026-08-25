@@ -485,7 +485,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 // The shared service performs the ordering internally.
                 progress.report({ message: 'Updating the DA.live editor link…' });
                 if (experience === 'experience-workspace') {
-                    progress.report({ message: 'Wiring Quick Edit into the storefront…' });
+                    progress.report({ message: 'Adding Quick Edit to the storefront…' });
                 }
                 await applyAuthoringExperienceFlip(project, experience, {
                     context: this.context,

@@ -384,7 +384,7 @@ async function unpublishCdnContent(
     if (!githubOwner || !githubRepo) return;
 
     try {
-        progress.report({ message: 'Unpublishing CDN content...' });
+        progress.report({ message: 'Unpublishing CDN content…' });
         await HelixService.initKeyStore(context.context.secrets, context.context.globalState);
         const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
         const daOrg = edsMetadata.daLiveOrg ?? '';
@@ -426,7 +426,7 @@ async function performDaLiveCleanup(
 ): Promise<void> {
     if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
 
-    progress.report({ message: 'Deleting DA.live site...' });
+    progress.report({ message: 'Deleting DA.live site…' });
     const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
 
     try {
@@ -441,7 +441,7 @@ async function performDaLiveCleanup(
         // Uses DA.live Bearer token auth which bypasses the "source exists" restriction
         await unpublishCdnContent(context, edsMetadata, daLiveTokenProvider, results, progress);
 
-        progress.report({ message: 'Deleting DA.live site content...' });
+        progress.report({ message: 'Deleting DA.live site content…' });
         const cleanupResult = await deleteDaLiveSite(
             daLiveContentOps,
             edsMetadata.daLiveOrg,
@@ -493,7 +493,7 @@ async function performGitHubCleanup(
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
 ): Promise<void> {
-    progress.report({ message: 'Deleting GitHub repository...' });
+    progress.report({ message: 'Deleting GitHub repository…' });
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
