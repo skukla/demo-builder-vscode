@@ -49,25 +49,43 @@ sees one connection per client. If the evaluation's spawned `claude` can be
 identified at connect time, `dryRun` becomes per-connection rather than global,
 and the hazard disappears rather than being explained.
 
-**The route, checked 2026-08-25 rather than assumed.** Every piece already
-exists:
+**The route, checked 2026-08-25 rather than assumed — and the first design was
+wrong.**
 
-1. `evaluate_prompt` spawns the CLI, so it can set an environment variable —
-   a per-run token, not a constant, so a stale value cannot mark an unrelated
-   connection.
-2. `mcp-proxy.js` is OUR code and runs as a child of that spawn, so it inherits
-   the variable. It already CAPTURES the client's `initialize` line and replays
-   it on reconnect (`initializedLine`, `capturedHandshake`), so stamping the
-   token into what it forwards is an edit to a line it is already holding — and
-   the stamp survives the reconnects the proxy is built to ride out.
-3. The server creates **a fresh MCP server instance per socket connection**
-   (`StdioServerTransport(socket, socket)`, and `withToolLogging` already wraps
-   per connection). So a per-connection flag has a natural home; there is no
-   shared object to thread it through.
+The obvious plan was to mark the evaluation's connection: set an environment
+variable on the spawn, have `mcp-proxy.js` stamp it into the handshake it is
+already holding, and read it server-side. Every piece exists. **It does not
+work.** The project's `.mcp.json` pins `DEMO_BUILDER_MCP_SOCKET` in the server
+entry's own `env` block, and Claude Code re-applies that block over the inherited
+environment — the exact trap the battery README already records for
+`ENABLE_TOOL_SEARCH` ("unsetting it in the spawned process does nothing").
 
-Then `dryRun` becomes `thisConnectionIsAnEvaluation || the setting`, and
-`evaluationSession` keeps only the recursion guard — which is what it was
-actually good for.
+**What works instead: give the evaluation its OWN server.**
+
+1. When an evaluation starts, the extension opens a SECOND `InExtensionMcpServer`
+   on its own socket path, built from the same options as the main one — same
+   tools, same trace recorder — but with `dryRun` hard-wired to `true`.
+2. The spawn passes `--mcp-config <json>` naming that socket, plus
+   `--strict-mcp-config` so the project's `.mcp.json` is ignored rather than
+   merged. Both flags verified present in the installed CLI.
+3. The listener is disposed when the run ends.
+
+This is better than marking a connection, not just easier:
+
+- **Nothing else pauses.** The main server never enters dry run, so the producer's
+  other chats keep working. That was the whole hazard.
+- **The multi-window escape closes.** The evaluation cannot land on another
+  window's server, because it is told exactly which socket to use and that socket
+  is live.
+- **No protocol change.** No handshake rewriting, no marker to keep in sync
+  across the proxy's reconnect-and-replay path.
+
+**One trap `--strict-mcp-config` introduces.** It drops every OTHER MCP server the
+project declares — Playwright and anything else in `.mcp.json`. An evaluation
+without them measures a path the producer would never take, which contradicts the
+reason reads execute at all. So the config passed in must be the project's own
+`.mcp.json` with ONLY the demo-builder socket swapped, not a config containing
+demo-builder alone. Test that a third-party entry survives the swap.
 
 **Floor — if per-connection proves impossible, make it VISIBLE and say why.**
 Not a smaller version of the fix; a different one, and it must be complete:

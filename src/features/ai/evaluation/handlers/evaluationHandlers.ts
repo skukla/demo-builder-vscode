@@ -49,20 +49,22 @@ async function handleEvaluatePrompt(
         return { success: false, error: 'Evaluation is not available in this window.' };
     }
 
+    // Resolved BEFORE the run: the evaluation is launched with this project's
+    // own MCP configuration, and the suggestions need its name for a one-click
+    // fix. One read, not one per tool call.
+    const project = await context.stateManager.getCurrentProject();
+
     try {
         const result = await evaluatePrompt(prompt, {
             runner: ServiceLocator.getCommandExecutor(),
             trace: recorder,
             logger: context.logger,
+            projectPath: project?.path,
         });
         if ('refused' in result) {
             return { success: false, error: result.refused };
         }
 
-        // The project name enables the ONE-CLICK fix in a suggestion. Resolved
-        // here rather than in the recorder: this runs once per evaluation, where
-        // stamping every trace entry would mean a disk read per tool call.
-        const project = await context.stateManager.getCurrentProject();
         return {
             success: true,
             data: {

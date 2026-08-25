@@ -17,8 +17,6 @@ import { evaluatePrompt, type CommandRunner } from './promptEvaluationService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
-export const EVALUATE_PROMPT_COMMAND = 'demoBuilder.evaluatePrompt';
-
 /** Money and minutes — stated before either is spent. */
 const COST_WARNING =
     'This runs your prompt for real to see what it would do. It takes up to two minutes ' +
@@ -32,7 +30,12 @@ const COST_WARNING =
  */
 export function registerEvaluatePromptCommand(
     context: vscode.ExtensionContext,
-    deps: { runner: CommandRunner; trace: ToolTraceRecorder; logger: Logger },
+    deps: {
+        runner: CommandRunner;
+        trace: ToolTraceRecorder;
+        logger: Logger;
+        currentProjectPath: () => Promise<string | undefined>;
+    },
 ): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('demoBuilder.evaluatePrompt', async () => {
@@ -59,7 +62,11 @@ export function registerEvaluatePromptCommand(
                     title: 'Trying the prompt out…',
                     cancellable: false,
                 },
-                () => evaluatePrompt(prompt, deps),
+                async () =>
+                    evaluatePrompt(prompt, {
+                        ...deps,
+                        projectPath: await deps.currentProjectPath(),
+                    }),
             );
 
             if ('refused' in result) {

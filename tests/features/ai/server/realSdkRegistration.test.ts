@@ -80,6 +80,7 @@ describe('registration against the real MCP SDK', () => {
                     runner: { execute: async () => ({ stdout: '{}' }) },
                     trace: new ToolTraceRecorder(),
                     logger: { info() {}, debug() {}, warn() {}, error() {} } as never,
+                    currentProjectPath: async () => undefined,
                 }),
         ],
     ])('accepts %s', (_name, register) => {

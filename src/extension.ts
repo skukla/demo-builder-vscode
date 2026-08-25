@@ -17,7 +17,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { registerEvaluatePromptCommand } from '@/features/ai/evaluation/evaluatePromptCommand';
-import { isEvaluating } from '@/features/ai/evaluation/evaluationSession';
+import { setEvaluationServerFactory } from '@/features/ai/evaluation/evaluationServer';
 import { setEvaluationRecorder } from '@/features/ai/evaluation/handlers/evaluationHandlers';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
@@ -41,7 +41,10 @@ import { registerDryRunMode } from '@/features/ai/server/dryRunMode';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerEvaluationTools } from '@/features/ai/server/evaluationTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
-import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import {
+    InExtensionMcpServer,
+    type InExtensionMcpServerOptions,
+} from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
@@ -320,6 +323,7 @@ export async function activate(context: vscode.ExtensionContext) {
             runner: ServiceLocator.getCommandExecutor(),
             trace: agentTrace,
             logger: debugLogger,
+            currentProjectPath: async () => (await stateManager.getCurrentProject())?.path,
         });
 
         // Start the in-extension MCP server (serves Claude Code via the
@@ -584,7 +588,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // stamp the activation `[Build]` line prints; undefined when unreadable,
         // which falls back to the static version.
         const buildInfo = await readBuildInfo(context.extensionPath);
-        const server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
+        // Named and kept, because an evaluation opens a SECOND server on its own
+        // socket and it must expose exactly the same tools — otherwise the path
+        // it measures is not the path a producer takes. Two option objects would
+        // drift, and the drifting one would be whichever nobody watches.
+        const mcpServerOptions: InExtensionMcpServerOptions = {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
             // Agent-triggered mutations get the same visible progress their
@@ -593,10 +601,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
-            // An evaluation is ALWAYS a dry run, whatever the status bar says.
-            // The spawned agent reaches this same server, so forcing it here is
-            // the only place the guarantee can actually hold.
-            dryRun: () => isEvaluating() || (agentDryRun?.() ?? false),
+            // The user's own toggle, and ONLY that. An evaluation no longer
+            // forces this server into dry run: it gets its own listener with the
+            // dry run hard-wired (`evaluationServer.ts`), so a run stops pausing
+            // whatever else the producer is doing in this window.
+            dryRun: () => agentDryRun?.() ?? false,
             trace: agentTrace,
             registerExtraTools: (mcpServer) => {
                 // Door 1: the agent's way in, same service as the command.
@@ -604,6 +613,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     runner: ServiceLocator.getCommandExecutor(),
                     trace: agentTrace,
                     logger,
+                    currentProjectPath: async () =>
+                        (await stateManager.getCurrentProject())?.path,
                 });
                 registerDescriptorTools(
                     mcpServer,
@@ -648,7 +659,17 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
             },
-        });
+        };
+        // The evaluation server is created on demand with the SAME options and
+        // `dryRun` hard-wired on — see `evaluationServer.ts` for why it is a
+        // separate listener rather than a flag on this one.
+        setEvaluationServerFactory((evaluationSocketPath: string) =>
+            new InExtensionMcpServer(evaluationSocketPath, projectsDir, logger, {
+                ...mcpServerOptions,
+                dryRun: () => true,
+            }),
+        );
+        const server = new InExtensionMcpServer(socketPath, projectsDir, logger, mcpServerOptions);
         await server.start();
         inExtensionMcpServer = server;
     } catch (err) {

@@ -19,7 +19,7 @@ the previous is green.
 | 02 | `step-02-trace-recorder.md` | ✅ SHIPPED — What was called — reads included — blocked, and how big the answers were |
 | 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view |
 | 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save |
-| 05 | `step-05-scope-the-dry-run.md` | An evaluation stops silently pausing the user's other work |
+| 05 | `step-05-scope-the-dry-run.md` | ✅ SHIPPED — an evaluation gets its own dry-run server; it stops pausing the user's other work, and can no longer escape to a window that does not know |
 | 06 | `step-06-consent-where-you-are-looking.md` | The approval prompt reaches the surface the producer is watching |
 | 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |

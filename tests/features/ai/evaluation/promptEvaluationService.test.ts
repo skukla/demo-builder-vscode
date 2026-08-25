@@ -22,8 +22,12 @@ import {
     type EvaluationResult,
 } from '@/features/ai/evaluation/promptEvaluationService';
 import { isEvaluating, resetEvaluationSession } from '@/features/ai/evaluation/evaluationSession';
+import { setEvaluationServerFactory } from '@/features/ai/evaluation/evaluationServer';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import type { Logger } from '@/types/logger';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 const logger = {
     info: jest.fn(),
@@ -52,13 +56,49 @@ const RUN_JSON = JSON.stringify({
     is_error: false,
 });
 
+/** Records the sockets the evaluation server was asked to bind. */
+const boundSockets: string[] = [];
+const disposed = jest.fn();
+
 describe('evaluating a prompt', () => {
     let trace: ToolTraceRecorder;
+    let projectPath: string;
+
+    /** A project with a real `.mcp.json`, including a third-party server. */
+    function makeProject(config?: unknown): string {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-proj-'));
+        fs.writeFileSync(
+            path.join(dir, '.mcp.json'),
+            JSON.stringify(
+                config ?? {
+                    mcpServers: {
+                        'demo-builder': {
+                            command: 'node',
+                            args: ['/dist/mcp-proxy.js'],
+                            env: { DEMO_BUILDER_MCP_SOCKET: '/the/ordinary/socket.sock' },
+                        },
+                        playwright: { command: 'npx', args: ['@playwright/mcp'] },
+                    },
+                },
+            ),
+        );
+        return dir;
+    }
 
     beforeEach(() => {
         resetEvaluationSession();
         trace = new ToolTraceRecorder();
         jest.clearAllMocks();
+        boundSockets.length = 0;
+        disposed.mockReset();
+        projectPath = makeProject();
+        // A stand-in for the real dry-run listener. The property under test is
+        // that ONE is started and the spawn is pointed at it — not what it does,
+        // which `agentDryRun.test.ts` already covers by execution.
+        setEvaluationServerFactory((socketPath: string) => {
+            boundSockets.push(socketPath);
+            return { start: async () => {}, dispose: disposed } as never;
+        });
     });
 
     it('reports cost in dollars, from the run\'s own output', async () => {
@@ -68,6 +108,7 @@ describe('evaluating a prompt', () => {
             runner,
             trace,
             logger,
+            projectPath,
         })) as EvaluationResult;
 
         expect(result.costUSD).toBe(0.21);
@@ -105,6 +146,7 @@ describe('evaluating a prompt', () => {
             runner,
             trace,
             logger,
+            projectPath,
         })) as EvaluationResult;
 
         expect(result.trace.map((e) => e.tool)).toEqual(['get_current_project', 'deploy_mesh']);
@@ -126,12 +168,85 @@ describe('evaluating a prompt', () => {
             runner: fakeRunner(RUN_JSON),
             trace,
             logger,
+            projectPath,
         })) as EvaluationResult;
 
         expect(result.trace).toEqual([]);
     });
 
-    it('forces the dry run for the whole run, by EXECUTION', async () => {
+    it('points the run at a DEDICATED dry-run server, not the ordinary one', async () => {
+        // The whole of step 05. Before this, an evaluation forced the dry run
+        // window-wide, so the producer's other chats silently stopped changing
+        // anything — and if the spawned agent landed on a DIFFERENT window's
+        // server, its writes executed for real while the workbench said nothing
+        // was changed.
+        const runner = fakeRunner(RUN_JSON);
+
+        await evaluatePrompt('anything', { runner, trace, logger, projectPath, runId: 'r1' });
+
+        expect(boundSockets).toHaveLength(1);
+        const command = runner.commands[0];
+        expect(command).toContain('--mcp-config');
+        // strict, so the project's own .mcp.json cannot resolve demo-builder
+        // back to the ordinary socket.
+        expect(command).toContain('--strict-mcp-config');
+        expect(command).toContain(boundSockets[0]);
+        expect(command).not.toContain('/the/ordinary/socket.sock');
+    });
+
+    it('KEEPS the project\'s other MCP servers', async () => {
+        // The trap --strict-mcp-config introduces: it ignores every other MCP
+        // configuration. An evaluation without Playwright measures a path the
+        // producer would never take, which contradicts the reason reads execute
+        // during a dry run at all.
+        const runner = fakeRunner(RUN_JSON);
+
+        await evaluatePrompt('anything', { runner, trace, logger, projectPath });
+
+        expect(runner.commands[0]).toContain('playwright');
+    });
+
+    it('disposes the dry-run server even when the run THROWS', async () => {
+        // A leftover listener is discoverable by the next ordinary session,
+        // which would silently put it in dry run.
+        const runner = {
+            execute: async () => {
+                throw new Error('claude exploded');
+            },
+        };
+
+        await expect(
+            evaluatePrompt('anything', { runner, trace, logger, projectPath }),
+        ).rejects.toThrow();
+
+        expect(disposed).toHaveBeenCalledTimes(1);
+    });
+
+    it('REFUSES rather than running against the ordinary server', async () => {
+        // No .mcp.json means no config to point at the dry-run socket. Running
+        // anyway would reach the real server and could change things, which is
+        // the failure this design exists to make impossible.
+        const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-bare-'));
+        const runner = fakeRunner(RUN_JSON);
+
+        await expect(
+            evaluatePrompt('anything', { runner, trace, logger, projectPath: bare }),
+        ).rejects.toThrow(/no \.mcp\.json/i);
+
+        expect(runner.commands).toHaveLength(0);
+    });
+
+    it('refuses without a project at all', async () => {
+        const result = await evaluatePrompt('anything', {
+            runner: fakeRunner(RUN_JSON),
+            trace,
+            logger,
+        });
+
+        expect(result).toEqual({ refused: expect.stringContaining('Open a project') });
+    });
+
+    it('marks the session while running, for the recursion guard only', async () => {
         // Not by reading a flag. The spawned agent reaches the same MCP server
         // this window serves, so the only guarantee that holds is the server
         // refusing writes while the run is in flight.
@@ -141,7 +256,7 @@ describe('evaluating a prompt', () => {
         });
 
         expect(isEvaluating()).toBe(false);
-        await evaluatePrompt('anything', { runner, trace, logger });
+        await evaluatePrompt('anything', { runner, trace, logger, projectPath });
 
         expect(duringRun).toBe(true);
         expect(isEvaluating()).toBe(false);
@@ -156,7 +271,7 @@ describe('evaluating a prompt', () => {
             },
         };
 
-        await expect(evaluatePrompt('anything', { runner, trace, logger })).rejects.toThrow();
+        await expect(evaluatePrompt('anything', { runner, trace, logger, projectPath })).rejects.toThrow();
 
         expect(isEvaluating()).toBe(false);
     });
@@ -180,12 +295,18 @@ describe('evaluating a prompt', () => {
                     runner,
                     trace,
                     logger,
+                    projectPath,
                 });
                 return runner.execute(command);
             },
         };
 
-        await evaluatePrompt('the outer prompt', { runner: reentrant, trace, logger });
+        await evaluatePrompt('the outer prompt', {
+            runner: reentrant,
+            trace,
+            logger,
+            projectPath,
+        });
 
         expect(inner).toEqual({ refused: expect.stringContaining('already running') });
         // And it never spawned: one command, the outer one.
@@ -197,7 +318,7 @@ describe('evaluating a prompt', () => {
         // NOT because a string is evidence — the previous test is the evidence.
         const runner = fakeRunner(RUN_JSON);
 
-        await evaluatePrompt('anything', { runner, trace, logger });
+        await evaluatePrompt('anything', { runner, trace, logger, projectPath });
 
         expect(runner.commands[0]).toContain('--disallowedTools');
         expect(runner.commands[0]).toContain(DISALLOWED_IN_EVALUATION);
@@ -207,7 +328,7 @@ describe('evaluating a prompt', () => {
         // The prompt is the USER's text and can contain anything.
         const runner = fakeRunner(RUN_JSON);
 
-        await evaluatePrompt("it's fine; rm -rf /", { runner, trace, logger });
+        await evaluatePrompt("it's fine; rm -rf /", { runner, trace, logger, projectPath });
 
         expect(runner.commands[0]).not.toMatch(/;\s*rm -rf \/(?!')/);
         expect(runner.commands[0]).toContain(`'\\''`);
@@ -218,6 +339,7 @@ describe('evaluating a prompt', () => {
             runner: fakeRunner(RUN_JSON),
             trace,
             logger,
+            projectPath,
         });
 
         expect(result).toEqual({ refused: expect.stringContaining('nothing to evaluate') });
@@ -230,6 +352,7 @@ describe('evaluating a prompt', () => {
             runner: fakeRunner('not json at all'),
             trace,
             logger,
+            projectPath,
         })) as EvaluationResult;
 
         expect(result.costUSD).toBe(0);

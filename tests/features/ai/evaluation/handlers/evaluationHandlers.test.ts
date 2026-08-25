@@ -11,18 +11,39 @@
 import { evaluationHandlers, setEvaluationRecorder } from '@/features/ai/evaluation/handlers/evaluationHandlers';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { dispatchHandler } from '@/core/handlers';
+import { setEvaluationServerFactory } from '@/features/ai/evaluation/evaluationServer';
 import type { HandlerContext } from '@/types/handlers';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 const mockExecute = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
 }));
 
+/** A project with a real `.mcp.json` — an evaluation is launched with one. */
+function makeProject(): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-handler-'));
+    fs.writeFileSync(
+        path.join(dir, '.mcp.json'),
+        JSON.stringify({
+            mcpServers: {
+                'demo-builder': { command: 'node', args: ['/p.js'], env: {} },
+            },
+        }),
+    );
+    return dir;
+}
+
+let projectDir = '';
+
 function contextWith(projectName?: string): HandlerContext {
     return {
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
         stateManager: {
-            getCurrentProject: async () => (projectName ? { name: projectName } : undefined),
+            getCurrentProject: async () =>
+                projectName ? { name: projectName, path: projectDir } : undefined,
         },
     } as unknown as HandlerContext;
 }
@@ -41,6 +62,10 @@ describe('evaluate-prompt', () => {
         mockExecute.mockResolvedValue({ stdout: RUN_JSON });
         trace = new ToolTraceRecorder();
         setEvaluationRecorder(trace);
+        projectDir = makeProject();
+        setEvaluationServerFactory(
+            () => ({ start: async () => {}, dispose: () => {} }) as never,
+        );
     });
 
     it('returns the verdict, the trace and the suggestions', async () => {

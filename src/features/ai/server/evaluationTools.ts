@@ -43,7 +43,12 @@ import type { Logger } from '@/types/logger';
 export function registerEvaluationTools(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
-    deps: { runner: CommandRunner; trace: ToolTraceRecorder; logger: Logger },
+    deps: {
+        runner: CommandRunner;
+        trace: ToolTraceRecorder;
+        logger: Logger;
+        currentProjectPath: () => Promise<string | undefined>;
+    },
 ): void {
     server.registerTool(
         'evaluate_prompt',
@@ -73,7 +78,14 @@ export function registerEvaluationTools(
                         'confirm:true once the user has agreed.',
                 });
             }
-            const result = await evaluatePrompt(String(args?.prompt ?? ''), deps);
+            // The project is resolved PER CALL: an evaluation is launched with
+            // that project's own MCP configuration, and the current project can
+            // change between calls.
+            const project = await deps.currentProjectPath();
+            const result = await evaluatePrompt(String(args?.prompt ?? ''), {
+                ...deps,
+                projectPath: project,
+            });
             // A SUMMARY, never the whole trace. The trace can hold hundreds of
             // entries; the workbench reads it in-process, and an agent asking
             // "how did this prompt do?" wants the verdict and the waste.

@@ -29,6 +29,8 @@
  */
 
 import type { ToolTraceRecorder, TraceEntry } from '../server/toolTraceRecorder';
+import { buildEvaluationMcpConfig } from './evaluationMcpConfig';
+import { withEvaluationServer } from './evaluationServer';
 import { isEvaluating, runAsEvaluation } from './evaluationSession';
 import type { Logger } from '@/types/logger';
 
@@ -147,7 +149,15 @@ function shellQuote(text: string): string {
  */
 export async function evaluatePrompt(
     prompt: string,
-    deps: { runner: CommandRunner; trace: ToolTraceRecorder; logger: Logger; cwd?: string },
+    deps: {
+        runner: CommandRunner;
+        trace: ToolTraceRecorder;
+        logger: Logger;
+        /** The project the prompt runs against. Its `.mcp.json` is the base config. */
+        projectPath?: string;
+        /** Unique per run — keeps concurrent windows off each other's socket. */
+        runId?: string;
+    },
 ): Promise<EvaluationResult | EvaluationRefusal> {
     const text = prompt.trim();
     if (!text) return { refused: 'No prompt was given, so there was nothing to evaluate.' };
@@ -161,51 +171,85 @@ export async function evaluatePrompt(
         };
     }
 
+    const projectPath = deps.projectPath;
+    if (!projectPath) {
+        return {
+            refused:
+                'Open a project first. A prompt is evaluated against one, and its MCP ' +
+                'configuration is what the run is launched with.',
+        };
+    }
+
     const outcome = await runAsEvaluation(async () => {
         // The trace is per-run. Anything recorded before this call belongs to
         // whatever the user was doing, and joining it in would report their work
         // as the prompt's cost.
         deps.trace.clear();
 
-        // `--disallowedTools` is belt and braces. The guard that actually holds
-        // is `evaluationSession`, because a flag is a string and a string cannot
-        // be proven by execution.
-        const command = [
-            'claude',
-            '-p',
-            shellQuote(text),
-            '--output-format',
-            'json',
-            '--disallowedTools',
-            shellQuote(DISALLOWED_IN_EVALUATION),
-        ].join(' ');
+        return withEvaluationServer(deps.runId ?? String(process.pid), async (socketPath) => {
+            // The narrowed local, not `deps.projectPath` — narrowing is lost
+            // inside this closure, and a `!` here would silence the one check
+            // standing between an evaluation and the ordinary server.
+            const mcpConfig = await buildEvaluationMcpConfig(projectPath, socketPath);
+            if (!mcpConfig) {
+                // Refuse rather than run without the flag. Without it the agent
+                // reaches the ORDINARY server and its writes execute for real,
+                // while the workbench says nothing was changed — the exact
+                // failure this design exists to make impossible.
+                throw new Error(
+                    "This project has no .mcp.json to base an evaluation on. Run " +
+                        '"Demo Builder: Regenerate AI Files" and try again.',
+                );
+            }
 
-        deps.logger.info('[Evaluation] running a prompt evaluation');
-        const { stdout } = await deps.runner.execute(command, {
-            timeout: EVALUATION_TIMEOUT_MS,
+            // `--strict-mcp-config` so the project's own .mcp.json is IGNORED
+            // rather than merged — a merged config could still resolve
+            // demo-builder to the ordinary socket. The config passed in carries
+            // the project's other servers, so the agent keeps the tools it
+            // would normally have.
+            //
+            // `--disallowedTools` is belt and braces beside `evaluationSession`;
+            // a flag is a string and cannot be proven by execution.
+            const command = [
+                'claude',
+                '-p',
+                shellQuote(text),
+                '--output-format',
+                'json',
+                '--mcp-config',
+                shellQuote(mcpConfig),
+                '--strict-mcp-config',
+                '--disallowedTools',
+                shellQuote(DISALLOWED_IN_EVALUATION),
+            ].join(' ');
+
+            deps.logger.info('[Evaluation] running a prompt evaluation');
+            const { stdout } = await deps.runner.execute(command, {
+                timeout: EVALUATION_TIMEOUT_MS,
+            });
+
+            let parsed: ClaudeRunOutput = {};
+            try {
+                parsed = JSON.parse(stdout) as ClaudeRunOutput;
+            } catch {
+                // A run that produced unreadable output still produced a TRACE,
+                // and the trace is the more interesting half. Report the cost as
+                // unknown rather than losing the path.
+                deps.logger.warn('[Evaluation] could not parse the run output as JSON');
+            }
+
+            const entries = [...deps.trace.all()];
+            return {
+                prompt: text,
+                costUSD: parsed.total_cost_usd ?? 0,
+                numTurns: parsed.num_turns ?? 0,
+                durationMs: parsed.duration_ms ?? 0,
+                isError: parsed.is_error === true,
+                trace: entries,
+                repeats: deps.trace.repeats(),
+                blocked: entries.filter((e) => e.outcome === 'blocked-by-dry-run'),
+            } satisfies EvaluationResult;
         });
-
-        let parsed: ClaudeRunOutput = {};
-        try {
-            parsed = JSON.parse(stdout) as ClaudeRunOutput;
-        } catch {
-            // A run that produced unreadable output still produced a TRACE, and
-            // the trace is the more interesting half. Report the cost as unknown
-            // rather than losing the path.
-            deps.logger.warn('[Evaluation] could not parse the run output as JSON');
-        }
-
-        const entries = [...deps.trace.all()];
-        return {
-            prompt: text,
-            costUSD: parsed.total_cost_usd ?? 0,
-            numTurns: parsed.num_turns ?? 0,
-            durationMs: parsed.duration_ms ?? 0,
-            isError: parsed.is_error === true,
-            trace: entries,
-            repeats: deps.trace.repeats(),
-            blocked: entries.filter((e) => e.outcome === 'blocked-by-dry-run'),
-        } satisfies EvaluationResult;
     });
 
     // `undefined` means the session guard refused between the check above and
