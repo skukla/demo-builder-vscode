@@ -157,11 +157,13 @@ describe('delete_adobe_project', () => {
             confirmName: 'Doomed',
         });
 
-        expect(mockTeardown).toHaveBeenCalledWith(expect.anything(), {
-            orgId: 'org-1',
-            projectId: 'proj-1',
-            projectTitle: 'Doomed',
-        });
+        // Third argument is the phase reporter: teardown runs long enough that a
+        // silent wait reads as a hang, so its steps are narrated to the chat.
+        expect(mockTeardown).toHaveBeenCalledWith(
+            expect.anything(),
+            { orgId: 'org-1', projectId: 'proj-1', projectTitle: 'Doomed' },
+            expect.any(Function)
+        );
         expect(out).toEqual({ deleted: true, project: 'Doomed' });
     });
 

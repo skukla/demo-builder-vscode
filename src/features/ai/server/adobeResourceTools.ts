@@ -32,6 +32,7 @@ import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import type { HandlerContext } from '@/types/handlers';
@@ -215,6 +216,11 @@ export function registerAdobeResourceTools(
             const result = await teardownConsoleProject(
                 createTeardownDeps(ServiceLocator.getAuthenticationService()),
                 { orgId: target.orgId, projectId, projectTitle: projectName },
+                // Teardown removes event registrations and providers before the
+                // project itself, and runs long enough that a silent wait reads
+                // as a hang. Step count rides along for the same reason reset's
+                // does.
+                (p) => reportPhase(`${p.message} (${p.step}/${p.totalSteps})`),
             );
 
             // `items` is the per-step teardown log the dashboard renders. An agent

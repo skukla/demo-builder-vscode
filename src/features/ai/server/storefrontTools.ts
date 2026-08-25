@@ -20,6 +20,7 @@ import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
 import { COMPONENT_IDS } from '@/core/constants';
+import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
 import {
@@ -99,6 +100,14 @@ export function registerStorefrontTools(
                         project,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
+                        // The service already emits "Extracting configuration…",
+                        // "Generating config.json…" and two more. Without this
+                        // the tool passed no callback, so every one was computed
+                        // and dropped and the chat sat silent through the whole
+                        // publish. The DASHBOARD path is a different function
+                        // (edsContentHandlers) — wiring that one does nothing for
+                        // the agent, which is a mistake already made once here.
+                        onProgress: phaseReporter(),
                     }),
                 );
                 return asText({
@@ -179,6 +188,7 @@ export function registerStorefrontTools(
                         daLiveSite: targets.daLiveSite,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
+                        onProgress: phaseReporter(),
                         daLiveAuthService,
                         githubTokenService,
                     }),

@@ -53,6 +53,7 @@ import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
 import { AGENT_PAGE_SIZE } from './projectors';
+import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import {
     addSiteAdmin,
@@ -207,8 +208,12 @@ export function registerSiteTools(
             const wrongShape = refuseIfNotEds(project, 'repair_site_configuration');
             if (wrongShape) return asText(wrongShape);
 
-            const result = await repairSiteConfigForProject(project, ctx.context, ctx.logger, (p) =>
-                ctx.stateManager.saveProject(p),
+            const result = await repairSiteConfigForProject(
+                project,
+                ctx.context,
+                ctx.logger,
+                (p) => ctx.stateManager.saveProject(p),
+                phaseReporter(),
             );
 
             // Say what remains rather than reporting a bare success. A registration
@@ -346,6 +351,7 @@ export function registerSiteTools(
                 ctx.context,
                 ctx.logger,
                 (updated) => ctx.stateManager.saveProject(updated),
+                phaseReporter(),
             );
 
             return asText({

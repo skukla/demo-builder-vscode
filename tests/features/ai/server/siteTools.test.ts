@@ -458,10 +458,13 @@ describe('migrate_storefront_name', () => {
             confirmName: 'demo',
         });
 
+        // Fifth argument is the phase reporter — the migration's own steps reach
+        // the chat instead of being computed and dropped.
         expect(mockMigrateStorefrontNameForProject).toHaveBeenCalledWith(
             candidate,
             extensionContext,
             logger,
+            expect.any(Function),
             expect.any(Function),
         );
         expect(out.migrated).toBe(true);
