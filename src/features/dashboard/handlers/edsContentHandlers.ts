@@ -10,6 +10,7 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { COMPONENT_IDS } from '@/core/constants';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
@@ -91,17 +92,19 @@ export const handleRepublishContent: MessageHandler = async (context) => {
     const effectiveDaLiveOrg = daLiveOrg || repoOwner;
     const effectiveDaLiveSite = daLiveSite || repoName;
 
-    return vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: `Republishing ${project.name}`,
-            cancellable: false,
-        },
-        async (progress) => {
+    // withProgressRegister, not vscode.window.withProgress directly: the register
+    // is the ONE place a phase fans out to both destinations (the notification and
+    // an agent's chat). Calling withProgress here meant every step below reached
+    // only the VS Code window — so `republish` and `sync_content`, the long
+    // operations an EDS project actually runs, narrated nothing to the chat while
+    // mesh deploy did.
+    return withProgressRegister(
+        { title: `Republishing ${project.name}` },
+        async (report) => {
             try {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
-                progress.report({ message: 'Checking authentication...' });
+                report('Checking authentication...');
                 const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
                     '@/features/eds/handlers/edsHelpers'
                 );
@@ -119,7 +122,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 const daLiveAuthService = getDaLiveAuthService(context.context);
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
-                progress.report({ message: 'Republishing content...' });
+                report('Republishing content...');
                 const { republishStorefrontContent } = await import(
                     '@/features/eds/services/storefront/storefrontRepublishService'
                 );
@@ -134,7 +137,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                     logger: context.logger,
                     daLiveAuthService,
                     githubTokenService,
-                    onProgress: (message: string) => progress.report({ message }),
+                    onProgress: (message: string) => report(message),
                 });
 
                 if (!contentResult.success) {
