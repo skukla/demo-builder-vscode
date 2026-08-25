@@ -173,3 +173,22 @@ Not a dependency either way, but related: Evaluation Mode records the PATH an
 agent took for later inspection, while this shows it live. Same underlying facts,
 different consumer. If both are built, they should read the same phase strings
 rather than inventing two vocabularies.
+
+
+## Running this probe from somewhere other than the repo root
+
+`probe-mcp.json` beside this file uses RELATIVE paths — this repo is public and a
+committed home path is forbidden — so it only resolves when `claude` runs from
+the repo root. A probe is most useful run from a DEMO PROJECT, which is not that.
+
+Generate a runnable config instead (nothing with a home path is written inside
+the repo):
+
+```bash
+CFG=$(node <repo>/.rptc/research/probe-config.mjs \
+        <repo>/.rptc/research/agent-activity-visibility/probe-server.mjs probe-srv)
+claude --mcp-config "$CFG" --strict-mcp-config
+```
+
+Added 2026-08-25 after this exact command was handed over twice with a relative
+path and failed both times with "config file doesn't exist".
