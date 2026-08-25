@@ -46,8 +46,29 @@ Everything above holds either way. What is unknown is whether this is worth
 building: if no prompt renders, there is nothing to move into the chat and this
 step closes as ANSWERED rather than built.
 
-Run it from a **plain terminal outside the Extension Development Host** — the
-extension's Chat tab is a managed session and is where the last attempt failed:
+### Where to run it, and why the answer is not "the chat tab"
+
+**The target surface IS the extension's Chat tab** — a VS Code editor-area
+terminal running `claude --continue` (`openInClaude.ts:245`,
+`location=editor-active`). That is where producers work and where consent needs
+to appear. Nothing below contradicts that.
+
+But the PROBE cannot run there. The Chat tab launches `claude` with fixed
+arguments, so a throwaway probe server has no way to attach — `--mcp-config`
+cannot be injected into a session the extension spawns. That is a limitation of
+the PROBE, not a statement about where consent belongs.
+
+**Use a VS Code integrated terminal** (Terminal → New Terminal, not the Chat
+tile). Same machine, same binary, same interactive TUI — the only difference is
+that you control the arguments. A separate Terminal.app window works equally
+well; an earlier draft of this step said "plain terminal outside the Extension
+Development Host", which was about escaping the fixed arguments and read as
+though the chat tab were the wrong environment. It is not.
+
+**And the flags disappear in the real thing.** They exist only to attach a
+throwaway server. The shipped path needs none of them: the Chat tab's session
+already connects to the extension's own MCP server through the generated
+`.mcp.json`, and that server is the one that would call `elicitInput`.
 
 ```bash
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \

@@ -109,8 +109,19 @@ a scheduling question, not a design one.
 
 ### If someone picks it up
 
-Use a **plain terminal outside the Extension Development Host**. The extension's
-Chat tab is a managed session and was where attempt 4 failed.
+**Use a VS Code integrated terminal** (Terminal → New Terminal), not the Demo
+Builder Chat tile.
+
+To be clear about WHY, because an earlier draft said "plain terminal outside the
+Extension Development Host" and that read as though the chat tab were the wrong
+environment: **it is not.** The Chat tab is the target surface — an editor-area
+terminal running `claude --continue`, which is exactly where consent needs to
+appear. It just launches `claude` with fixed arguments, so a throwaway probe
+server cannot be attached to it. Same binary, same TUI, you control the flags.
+
+The flags vanish in the real implementation. The Chat tab's session already
+reaches the extension's own MCP server via the generated `.mcp.json`, and that
+server is the one that would call `elicitInput`.
 
 ```bash
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
