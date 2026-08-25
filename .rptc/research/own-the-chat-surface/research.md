@@ -114,10 +114,26 @@ reasoning, not just their values:
 1. **Does `--permission-prompt-tool stdio` behave the same when the host is a
    VS Code extension rather than a Tauri sidecar?** Nothing suggests otherwise —
    it is stdio either way — but it is the load-bearing assumption.
-2. **What is lost when `--setting-sources=` is empty?** The producer's own
-   CLAUDE.md, their MCP servers, their settings. The studio re-injects model and
-   MCP deliberately. We would need to decide about the generated project bundle,
-   which is the whole basis of our agent experience.
+2. ~~What is lost when `--setting-sources=` is empty?~~ **ANSWERED 2026-08-25 —
+   nothing we need. This was my error and the owner caught it.**
+
+   I called it the fatal risk. It is not, and the check took five minutes.
+
+   Our generated `.claude/settings.json` contains **only `hooks`** — nothing
+   else. And hooks pass straight back in through `--settings`, which is an
+   independent source. Verified by running with `--setting-sources=` empty and a
+   `PreToolUse` hook injected via `--settings`: it fired and vetoed the call.
+
+       PreToolUse:Bash hook error: HOOK_FIRED_BLOCKING
+
+   The rest of the bundle never went through settings sources at all:
+   `AGENTS.md` is a context file, `.mcp.json` arrives via `--mcp-config`, and
+   skills load with plugins — all three documented as independent in the
+   studio's own flag comments.
+
+   **So the bundle survives intact**, and the reason to empty settings sources
+   stands unweakened: it is what stops a `permissions.allow` entry
+   short-circuiting the permission card.
 3. **Streaming into a webview at speed.** Our messaging is request/response with
    a handshake; partial-message streaming is a different shape. Measure before
    designing.
@@ -137,6 +153,17 @@ whether or not this happens — a saved prompt must load back, and a trace must 
 readable — and both produce pieces this would reuse. Building them first is not a
 detour; it is the same work in the order that keeps it useful either way.
 
-**What would change the answer to "no":** if the spike shows the generated
-project bundle cannot survive `--setting-sources=`, the agent experience we ship
-would be worse inside our own chat than outside it, and that is fatal.
+**What would change the answer to "no".** The bundle risk I named first turned
+out not to be one — see unknown 2, which is answered. What is left that could
+still kill it:
+
+- **Streaming into a webview at speed** proving unworkable through our
+  request/response messaging. Measurable in an afternoon.
+- **The terminal affordances mattering more than expected.** Slash commands,
+  `@file`, image paste, ctrl-C, resume. That is a producer judgement, not a
+  technical one, and it should be asked BEFORE building rather than discovered
+  after.
+
+Neither is fatal in the way I claimed the bundle was. **The honest state is that
+this is more buildable than the first pass concluded**, and the remaining
+questions are about experience rather than feasibility.
