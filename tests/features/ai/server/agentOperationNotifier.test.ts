@@ -51,12 +51,18 @@ describe('createAgentOperationNotifier', () => {
         const result = await notifier('sync_storefront', async () => ({ ok: true }));
 
         expect(result).toEqual({ ok: true });
+        // The AUTHORED phrase, not a transform of `sync_storefront`. The old
+        // wording was "Sync storefront", which is ambiguous with sync_content
+        // (this one pushes code to git; that one publishes to the CDN) — a
+        // confusion `agentAlertCopy` already records for the consent dialog.
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: expect.stringContaining('Sync storefront') }),
+            expect.objectContaining({
+                title: expect.stringContaining('Pushing the storefront code to GitHub'),
+            }),
             expect.any(Function)
         );
         expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-            expect.stringContaining('Sync storefront completed'),
+            expect.stringContaining('Pushing the storefront code to GitHub — done'),
             expect.any(Number)
         );
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
@@ -71,8 +77,12 @@ describe('createAgentOperationNotifier', () => {
             })
         ).rejects.toThrow('CDN said no');
 
+        // "Republish" alone never said republish WHAT — the single worst line
+        // the 2026-08-25 narration audit found.
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('"Republish" failed: CDN said no')
+            expect.stringContaining(
+                'Republishing the storefront configuration failed: CDN said no'
+            )
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -153,8 +163,17 @@ describe('createAgentConsentGate', () => {
         expect(detail).not.toContain('(irreversible)');
     });
 
-    it('falls back to the humanised name when nobody has written copy', async () => {
-        // An unwritten tool must be no worse than it is today -- never blank.
+    it('falls back to the BARE TOOL NAME when nobody has written copy', async () => {
+        // This used to assert a humanised name derived from the tool id. That
+        // derivation is gone: a 2026-08-25 audit found it produced "Set project
+        // pinned…", "Set setting…" and "Republish…" (republish WHAT?), so the
+        // words a person reads are now authored per tool and there is no
+        // transform to fall back to.
+        //
+        // The bare id is the deliberate replacement. It is visibly a fallback
+        // rather than prose pretending to be authored copy — and unreachable in
+        // practice, since AGENT_ALERT_COPY membership is what makes this gate
+        // fire at all.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
@@ -162,7 +181,7 @@ describe('createAgentConsentGate', () => {
         await gate('some_unwritten_tool', { confirm: true });
 
         expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
-            'Demo Builder: Some unwritten tool?'
+            'Demo Builder: some_unwritten_tool?'
         );
     });
 

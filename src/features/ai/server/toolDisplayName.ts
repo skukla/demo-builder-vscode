@@ -22,6 +22,8 @@
  * servers active at once — an unattributed "Deploying to Runtime…" is ambiguous
  * the moment a second server is connected.
  */
+import { narrationFor } from './toolNarration';
+
 export const SERVER_DISPLAY_NAME = 'Demo Builder';
 
 /**
@@ -30,46 +32,17 @@ export const SERVER_DISPLAY_NAME = 'Demo Builder';
  * "Reset eds project", which reads as a typo in a dialog a producer is being
  * asked to approve.
  */
-const ACRONYMS: Record<string, string> = {
-    // Proper nouns belong here too — snake_case lowercases them exactly like an
-    // acronym. "Create adobe project" was shipping in a consent dialog because
-    // this map was written from imagination rather than from the tool list; a
-    // sweep of all 103 names found it. Re-run that sweep when adding tools.
-    adobe: 'Adobe',
-    eds: 'EDS',
-    ai: 'AI',
-    mcp: 'MCP',
-    api: 'API',
-    apis: 'APIs',
-    url: 'URL',
-    urls: 'URLs',
-    accs: 'ACCS',
-    io: 'I/O',
-    cdn: 'CDN',
-    github: 'GitHub',
-    dalive: 'DA.live',
-    sku: 'SKU',
-    pdp: 'PDP',
-};
-
-/** `reset_eds_project` → "Reset EDS project". */
-export function humanize(toolName: string): string {
-    const words = toolName.split('_').map((w) => ACRONYMS[w] ?? w);
-    const [first, ...rest] = words;
-    if (first === undefined) return '';
-    const head = ACRONYMS[toolName.split('_')[0]]
-        ? first
-        : first.charAt(0).toUpperCase() + first.slice(1);
-    return [head, ...rest].join(' ');
-}
-
 /**
- * The line an agent's chat shows while a tool runs, e.g.
- * "Demo Builder · Deploy mesh…".
+ * The chat's opening line for a tool call.
  *
- * Attributed, because the point is telling the user WHICH tool of WHICH server
- * is responsible for the wait.
+ * Returns undefined when the tool has no authored phrase. Callers must say
+ * NOTHING in that case — there is no fallback that derives words from the tool
+ * name, because that derivation is what `toolNarration.ts` exists to remove.
+ *
+ * @param toolName - MCP tool name
+ * @returns the line to show, or undefined if the tool has no phrase
  */
-export function progressLabel(toolName: string): string {
-    return `${SERVER_DISPLAY_NAME} · ${humanize(toolName)}…`;
+export function progressLabel(toolName: string): string | undefined {
+    const phrase = narrationFor(toolName);
+    return phrase ? `${SERVER_DISPLAY_NAME} · ${phrase}…` : undefined;
 }

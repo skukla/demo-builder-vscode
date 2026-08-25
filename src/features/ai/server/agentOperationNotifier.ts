@@ -30,7 +30,7 @@ import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
-import { humanize } from './toolDisplayName';
+import { narrationFor } from './toolNarration';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -49,6 +49,16 @@ const CONSENT_KEY_LABELS: Record<string, string> = {
     confirmName: 'Name',
     projectName: 'Project',
 };
+
+/**
+ * The authored phrase for a VS Code frame, or the bare tool name if a tool has
+ * somehow shipped without one. The tool NAME is the honest fallback here: it is
+ * visibly a fallback rather than prose pretending to be authored, and
+ * `toolNarration.test.ts` makes the case unreachable.
+ */
+function label(toolName: string): string {
+    return narrationFor(toolName) ?? toolName;
+}
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */
 function humanizeKey(key: string): string {
@@ -133,11 +143,15 @@ export function createAgentConsentGate(
         // signature stays stable, but it is deliberately NOT shown: it is written
         // for an agent, and four passes of transforming it still produced text a
         // producer should not have been handed. See agentAlertCopy.
+        // `copy` is always present in practice — AGENT_ALERT_COPY membership IS
+        // what makes this gate fire (`raisesConsentDialog`). The fallback below
+        // is the bare tool name: visibly a fallback, rather than prose that
+        // pretends to be authored copy.
         const copy = alertCopyFor(toolName);
         const params = renderArgsForConsent(args);
         const detail = [copy?.consequence, params].filter(Boolean).join('\n\n');
         const choice = await vscode.window.showWarningMessage(
-            `Demo Builder: ${copy?.action ?? humanize(toolName)}?`,
+            `Demo Builder: ${copy?.action ?? toolName}?`,
             { modal: true, detail: detail || undefined },
             'Allow',
         );
@@ -177,7 +191,7 @@ export function createAgentOperationNotifier(
             vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: `Demo Builder — agent: ${humanize(toolName)}…`,
+                    title: `Demo Builder — agent: ${label(toolName)}…`,
                     cancellable: false,
                 },
                 async (progress) => {
@@ -188,7 +202,7 @@ export function createAgentOperationNotifier(
                         // the tool's title while the phases went nowhere.
                         const result = await run((message) => progress.report({ message }));
                         vscode.window.setStatusBarMessage(
-                            `$(check) Agent: ${humanize(toolName)} completed`,
+                            `$(check) ${label(toolName)} — done`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
                         );
                         return result;
@@ -198,7 +212,7 @@ export function createAgentOperationNotifier(
                         // A toast, not a status-bar flash: a failed live-site
                         // mutation is the one outcome the user must not miss.
                         void vscode.window.showWarningMessage(
-                            `Demo Builder — agent operation "${humanize(toolName)}" failed: ${message}`,
+                            `Demo Builder — ${label(toolName)} failed: ${message}`,
                         );
                         throw error;
                     }

@@ -40,7 +40,14 @@ function registerProbes(srv: {
     registerTool: (n: string, s: unknown, h: (a: unknown) => Promise<unknown>) => void;
 }): void {
     const ok = async () => ({ content: [{ type: 'text' as const, text: 'ran' }] });
-    srv.registerTool('deploy_mesh_probe', { description: 'write', inputSchema: {} }, ok);
+    // A REAL tool name, not a made-up probe: narration comes from an authored
+    // table with no name-derived fallback, so a fictional tool narrates nothing.
+    // Using the real name means this also proves the shipped phrase.
+    srv.registerTool(
+        'deploy_mesh',
+        { description: 'write', inputSchema: {}, annotations: { readOnlyHint: false } },
+        ok
+    );
     srv.registerTool(
         'get_probe_thing',
         { description: 'read', inputSchema: { scope: z.string().optional() }, annotations: { readOnlyHint: true } },
@@ -90,12 +97,12 @@ describe('agent activity is reported to the chat', () => {
     });
 
     it('announces a write tool by name, attributed to this server', async () => {
-        const { progressMessages, ok } = await callWithProgress(socketPath, 'deploy_mesh_probe');
+        const { progressMessages, ok } = await callWithProgress(socketPath, 'deploy_mesh');
 
         expect(ok).toBe(true);
         // Attribution is the point: a chat can have several MCP servers connected,
         // and an unattributed "Deploying…" is ambiguous the moment it has two.
-        expect(progressMessages).toContain('Demo Builder · Deploy mesh probe…');
+        expect(progressMessages).toContain('Demo Builder · Deploying the API mesh…');
     });
 
     it('says nothing for a read tool', async () => {
@@ -114,7 +121,7 @@ describe('agent activity is reported to the chat', () => {
         // precondition.
         const { socket, rpc } = await connectAndInit(socketPath);
         const res = await rpc.request(2, 'tools/call', {
-            name: 'deploy_mesh_probe',
+            name: 'deploy_mesh',
             arguments: {},
         });
         const progress = rpc.notifications.filter((n) => n.method === 'notifications/progress');

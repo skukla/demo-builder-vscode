@@ -40,9 +40,16 @@ function registerProbes(srv: {
 }): void {
     // A tool that reports phases from DEEP inside its work — no reporter is
     // threaded through its signature, which is the whole point of the channel.
+    // A REAL tool name: the opening line comes from an authored table with no
+    // name-derived fallback, so a fictional tool would narrate nothing and this
+    // suite would be asserting against silence.
     srv.registerTool(
-        'deploy_probe',
-        { description: 'write with phases', inputSchema: {} },
+        'deploy_mesh',
+        {
+            description: 'write with phases',
+            inputSchema: {},
+            annotations: { readOnlyHint: false },
+        },
         async () => {
             await Promise.resolve();
             reportPhase('Reading mesh configuration…');
@@ -114,9 +121,9 @@ describe('phases reach the chat', () => {
     it('sends each phase, attributed, after the opening line', async () => {
         await start(false);
 
-        const messages = await callWithProgress(socketPath, 'deploy_probe');
+        const messages = await callWithProgress(socketPath, 'deploy_mesh');
 
-        expect(messages[0]).toBe('Demo Builder · Deploy probe…');
+        expect(messages[0]).toBe('Demo Builder · Deploying the API mesh…');
         expect(messages).toContain('Demo Builder · Reading mesh configuration…');
         expect(messages).toContain('Demo Builder · Deploying to Runtime…');
     });
@@ -126,7 +133,7 @@ describe('phases reach the chat', () => {
         // notification only for UI-triggered work, and nowhere at all for agents.
         await start(true);
 
-        await callWithProgress(socketPath, 'deploy_probe');
+        await callWithProgress(socketPath, 'deploy_mesh');
 
         expect(notifierPhases).toEqual([
             'Reading mesh configuration…',
@@ -145,7 +152,7 @@ describe('phases reach the chat', () => {
         // would narrate an earlier one's steps.
         await start(false);
 
-        await callWithProgress(socketPath, 'deploy_probe');
+        await callWithProgress(socketPath, 'deploy_mesh');
         const second = await callWithProgress(socketPath, 'get_probe_thing');
 
         expect(second).toEqual([]);

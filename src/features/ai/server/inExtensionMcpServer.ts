@@ -254,7 +254,13 @@ async function announceToolStart(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extra: any,
 ): Promise<void> {
-    await sendProgress(extra, progressLabel(name));
+    // Silence when a tool has no authored phrase. Saying nothing is strictly
+    // better than announcing "Deploy mesh" — the derived wording is the defect
+    // `toolNarration.ts` exists to remove, so there is no fallback to it here.
+    // `toolNarration.test.ts` asserts every registered tool has a phrase, which
+    // makes this branch unreachable rather than merely unlikely.
+    const line = progressLabel(name);
+    if (line) await sendProgress(extra, line);
 }
 
 function withToolLogging(
