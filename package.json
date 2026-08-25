@@ -156,6 +156,11 @@
         "command": "demoBuilder.showEvaluationWorkbench",
         "title": "Try a Prompt Out",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.showAgentTrace",
+        "title": "Show What The Agent Just Did",
+        "category": "Demo Builder"
       }
     ],
     "configuration": [

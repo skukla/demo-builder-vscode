@@ -33,6 +33,8 @@ export interface EvaluationVerdictProps {
     verdict: Verdict;
     /** Append this text to the prompt. Only offered for mechanical fixes. */
     onApply: (append: string) => void;
+    /** Replace the prompt with an earlier version of it. */
+    onRevert: (prompt: string) => void;
 }
 
 /** Dollars, because "$0.21" means something and "47,550 tokens" does not. */
@@ -61,11 +63,18 @@ function delta(now: number, before: number | undefined, format: (n: number) => s
 export function EvaluationVerdict({
     verdict,
     onApply,
+    onRevert,
 }: EvaluationVerdictProps): React.JSX.Element {
     // Read from the RESPONSE, which read it from disk. Holding the previous run
     // in React state made the delta die with the window — and "is this getting
     // better" is the question the feature exists to answer.
     const previous = verdict.previousRun;
+    // Offered only when going back would actually help: a cheaper run, wearing
+    // different words from the ones on screen. History keeps the best run even
+    // when it is the oldest, which is what makes this possible at all.
+    const best = verdict.bestRun;
+    const canRevert =
+        best !== undefined && best.costUSD < verdict.costUSD && best.prompt !== verdict.prompt;
     const steps = verdict.trace.length;
     const wasted = verdict.repeats.length;
     const seconds = Math.round(verdict.durationMs / 1000);
@@ -89,6 +98,23 @@ export function EvaluationVerdict({
                     {verdict.priorRuns > 1 ? ` Run ${verdict.priorRuns + 1} of this prompt.` : ''}
                 </Text>
             </View>
+
+            {canRevert && best && (
+                <View data-testid="evaluation-best-run">
+                    <Text>
+                        Your cheapest version of this cost {money(best.costUSD)}.{' '}
+                        <a
+                            href="#"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onRevert(best.prompt);
+                            }}
+                        >
+                            Go back to it
+                        </a>
+                    </Text>
+                </View>
+            )}
 
             {verdict.suggestions.length > 0 && (
                 <View data-testid="evaluation-suggestions">

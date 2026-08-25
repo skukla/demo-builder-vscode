@@ -43,19 +43,16 @@ and keep the version that worked.
       · a trace from the chat opens in the panel
       · a saved prompt returns to the panel with its history intact
 
-### What is MISSING, stated as holes rather than options
+### The three holes — CLOSED 2026-08-25
 
-Three things break that flow today. None is a nice-to-have; each is a place a
-producer hits a wall:
+These were the places a producer hit a wall. All three are now built; the row is
+kept because the reasoning is what the next hole should be measured against.
 
-| Hole | What a producer experiences |
-|---|---|
-| The chat cannot show its own trace (**step 08**) | Dry run keeps them safe and shows them nothing. The recorder HAS the data — `extension.ts:324` — and nothing reads it |
-| Refining a prompt loses its history (**`prompt-threads/`**) | The improvement loop forgets every improvement. "Down from $0.24" fires only when nothing changed |
-| A saved prompt cannot be loaded back (**`prompt-threads/`**) | Coming back to good work means retyping it, which starts the history over |
-
-**Build these before anything else.** Not because they are next in a list — because
-until they land, the feature is parts rather than a whole.
+| Hole | What a producer experienced | Now |
+|---|---|---|
+| The chat cannot show its own trace (**step 08**) | Dry run kept them safe and showed them nothing. The recorder HAD the data and nothing read it | ✅ The workbench has a second mode, and "Demo Builder: Show What The Agent Just Did" opens it |
+| Refining a prompt loses its history (**`prompt-threads/`**) | The improvement loop forgot every improvement. "Down from $0.24" fired only when nothing changed | ✅ History is keyed by THREAD; editing the wording keeps the comparison |
+| A saved prompt cannot be loaded back (**`prompt-threads/`**) | Coming back to good work meant retyping it, which started the history over | ✅ A picker loads a saved prompt and resumes its thread; "Start fresh" forks deliberately |
 
 ### What the feature is FOR — both answers are true
 
@@ -85,9 +82,9 @@ a build log, not a menu.
 | 05 | `step-05-scope-the-dry-run.md` | ✅ SHIPPED — an evaluation gets its own dry-run server; it stops pausing the user's other work, and can no longer escape to a window that does not know |
 | 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached |
 | 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation |
-| 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
-| 08 | `step-08-the-ambient-trace.md` | See what the agent did in YOUR chat — the recorder already captures it, nothing shows it |
-| — | `prompt-threads/overview.md` | Sub-plan: keep the WORK, not the wording — refining a prompt currently destroys its history |
+| 07 | `step-07-evaluation-history.md` | ✅ SHIPPED — "Better" survives a window reload |
+| 08 | `step-08-the-ambient-trace.md` | ✅ SHIPPED — the workbench's second mode plus `demoBuilder.showAgentTrace`; cost is stated as unavailable rather than estimated |
+| — | `prompt-threads/overview.md` | ✅ SHIPPED — history keyed by THREAD, saved prompts load back and resume, the cheapest run survives eviction, anchored threads outlive abandoned ones |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
 | 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
 | — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
@@ -109,16 +106,16 @@ The owner reviewed everything steps 01–04 chose not to build and settled it:
 
 ### What to build next, and why that order
 
-**The three holes first, because until they land the feature is parts.**
+**The three holes are closed** (2026-08-25) — `prompt-threads/` first because it
+rewrote storage step 07 had shipped, then step 08 on top of it.
 
-1. **`prompt-threads/`** — refining loses history, and a saved prompt cannot be
-   loaded back. Two of the three holes, one model change. It rewrites storage
-   step 07 shipped, so anything built on that storage afterwards would migrate
-   twice.
-2. **Step 08** — the chat shows its own trace. The recorder already has the data;
-   nothing reads it. Renders in the panel as a second mode (owner preference:
-   a surface we control, with copy and save).
-3. Only then the rest: `measurement/`, step 09, `opentelemetry/`.
+What remains, in order:
+
+1. **The spike** — whether Demo Builder should render Claude Code's stream in its
+   own chat surface (`.rptc/backlog/2026-08-24-own-the-chat-surface.md`). Every
+   remaining visibility complaint points at it, and step 08's honest limit —
+   no cost for a chat session — is a symptom of not owning the process.
+2. `measurement/`, step 09, `opentelemetry/` (now a local sink, not an exporter).
 
 **One step per session** still holds, and the reason is not context — it is that
 a fresh session READS the plan instead of remembering it. Two plan-vs-reality

@@ -1,5 +1,12 @@
 # Own the chat surface — render Claude Code's stream in our own UI
 
+> **ACTIVE 2026-08-25.** A spike plan now exists:
+> [`.rptc/plans/own-the-chat-surface/overview.md`](../plans/own-the-chat-surface/overview.md),
+> built on the research pass in `.rptc/research/own-the-chat-surface/`. Read those
+> first — this file is kept for the correction it records and the prior art it
+> names, and the "do this first either way" prerequisite below has SHIPPED
+> (MCP progress notifications, Evaluation Mode step 01b).
+
 ## Provenance
 
 Surfaced 2026-08-24, chasing a producer complaint: while an agent works you cannot

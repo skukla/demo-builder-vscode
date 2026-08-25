@@ -6,7 +6,7 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
-import type { AiOverviewInitialData } from '@/types/webviewPayloads';
+import type { EvaluationWorkbenchInitialData } from '@/types/webviewPayloads';
 
 const container = document.getElementById('root');
 if (!container) {
@@ -18,8 +18,10 @@ createRoot(container).render(
         {(data) => {
             // ONE boundary cast, against the shape the command's getInitialData
             // owns. Partial because `data` is null until the init message lands.
-            const init = (data ?? {}) as Partial<AiOverviewInitialData>;
-            return init.project ? <EvaluationWorkbench project={init.project} /> : null;
+            const init = (data ?? {}) as Partial<EvaluationWorkbenchInitialData>;
+            return init.project ? (
+                <EvaluationWorkbench project={init.project} initialMode={init.mode} />
+            ) : null;
         }}
     </WebviewApp>,
 );

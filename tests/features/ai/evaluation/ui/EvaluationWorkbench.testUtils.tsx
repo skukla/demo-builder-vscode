@@ -13,10 +13,15 @@ import React from 'react';
 
 export const mockRequest = jest.fn();
 
+export const mockOnMessage = jest.fn(() => () => {});
+
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
         request: (...args: unknown[]) => mockRequest(...args),
         postMessage: jest.fn(),
+        // Returns its unsubscribe, because the shell calls it from a useEffect
+        // cleanup — a mock returning undefined crashes on unmount.
+        onMessage: (...args: unknown[]) => mockOnMessage(...(args as [])),
     },
 }));
 
@@ -32,7 +37,7 @@ jest.mock('@adobe/react-spectrum', () => ({
     Flex: ({ children }: any) => <div>{children}</div>,
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Heading: ({ children }: any) => <h3>{children}</h3>,
-    Text: ({ children }: any) => <span>{children}</span>,
+    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
     TextArea: ({ label, value, onChange, isDisabled, placeholder }: any) => (
         <label>
             {label}
@@ -44,6 +49,27 @@ jest.mock('@adobe/react-spectrum', () => ({
             />
         </label>
     ),
+    Picker: ({ label, items, selectedKey, onSelectionChange, children, ...props }: any) => (
+        <label>
+            {label}
+            <select
+                value={selectedKey ?? ''}
+                onChange={(e) => onSelectionChange(e.target.value)}
+                {...props}
+            >
+                <option value="">Choose</option>
+                {[...(items ?? [])].map((item: any) => {
+                    const rendered = children(item);
+                    return (
+                        <option key={rendered.key} value={rendered.key}>
+                            {rendered.props.children}
+                        </option>
+                    );
+                })}
+            </select>
+        </label>
+    ),
+    Item: ({ children }: any) => <>{children}</>,
     Disclosure: ({ children }: any) => <div>{children}</div>,
     DisclosureTitle: ({ children }: any) => <div>{children}</div>,
     DisclosurePanel: ({ children }: any) => <div>{children}</div>,
@@ -79,18 +105,53 @@ import type { Project } from '@/types/base';
 
 const PROJECT = { name: 'bodea', path: '/tmp/bodea' } as unknown as Project;
 
+/** A saved prompt as the library returns it. */
+export const SAVED_PROMPT = {
+    id: 'saved-1',
+    title: 'deploy the mesh',
+    prompt: 'deploy the mesh',
+};
+
+/**
+ * Answer each message type in turn, the way the real handlers do.
+ *
+ * The workbench sends four different messages now, and a single
+ * `mockResolvedValue` answers all of them with the same envelope — which quietly
+ * makes a test pass for the wrong reason (a picker "populated" by a verdict).
+ */
+export function respondByType(
+    byType: Record<string, unknown>,
+    fallback: unknown = { success: true }
+): void {
+    mockRequest.mockImplementation(async (type: string) =>
+        type in byType ? byType[type] : fallback
+    );
+}
+
 /** userEvent MUST be told about the fake timers (tests/setup/react.ts installs them). */
 export function setupUser() {
     return userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 }
 
-export function renderWorkbench() {
-    return render(<EvaluationWorkbench project={PROJECT} />);
+export function renderWorkbench(project: Partial<Project> = {}) {
+    return render(<EvaluationWorkbench project={{ ...PROJECT, ...project } as Project} />);
 }
 
 export function resetWorkbenchMocks(): void {
     jest.clearAllMocks();
     mockRequest.mockReset();
+    mockOnMessage.mockReset();
+    mockOnMessage.mockReturnValue(() => {});
+}
+
+/** Deliver a push the way the extension does, to whatever the shell subscribed. */
+export function pushMessage(type: string, data: unknown): void {
+    for (const [subscribedType, handler] of mockOnMessage.mock.calls as unknown as [
+        string,
+        (d: unknown) => void,
+    ][]) {
+        if (subscribedType === type) handler(data);
+    }
 }
 
 /** A verdict envelope shaped exactly as the handler returns it. */
@@ -114,6 +175,7 @@ export function verdictResponse(overrides: Record<string, unknown> = {}) {
                 },
             ],
             priorRuns: 0,
+            threadId: 'thread-1',
             ...overrides,
         },
     };

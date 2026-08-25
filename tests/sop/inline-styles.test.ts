@@ -36,6 +36,8 @@ describe('SOP: Inline Styles', () => {
         // rather than by oversight.
         'EvaluationWorkbench.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
         'EvaluationVerdict.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
+        'PromptWorkbench.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
+        'AgentTraceView.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',

@@ -43,14 +43,42 @@ export interface AiPrompt {
 /**
  * One completed evaluation, as it is remembered.
  *
- * The prompt is stored VERBATIM and is the key: the point is comparing a prompt
- * against its own past, and a normalised or truncated key would silently merge
- * two different prompts. It is also the failure `.rptc/plans/evaluation-mode/battery/`
- * exists to prevent — six prompts were once lost, and their results became
- * uncomparable to everything measured afterwards.
+ * Runs are grouped by {@link EvaluationRun.threadId} — the piece of work — and
+ * each run stores the prompt text VERBATIM as it was run. Verbatim matters twice
+ * over: it is what makes "go back to the cheapest version" possible, and it is
+ * the failure `.rptc/plans/evaluation-mode/battery/` exists to prevent, where
+ * six prompts were lost and every result measured against them became
+ * uncomparable.
  */
 export interface EvaluationRun {
-    /** The prompt, exactly as it was run. */
+    /**
+     * The piece of WORK this run belongs to — "getting this prompt right".
+     *
+     * The unit that matters, and the reason this field exists. History used to
+     * key on the prompt TEXT, so improving a prompt made it a different prompt
+     * with no past: "down from $0.24" appeared only when re-running something
+     * unchanged, the one case where nothing improved. The headline feature did
+     * not fire during the loop it was built for.
+     *
+     * A thread is DECLARED, never inferred. No fuzzy matching — a producer must
+     * be able to say why two runs are in the same thread, and "the model thought
+     * they were alike" fails that.
+     */
+    threadId: string;
+    /**
+     * The saved prompt this thread belongs to, when there is one.
+     *
+     * Set when a thread is started from the library, and it does two jobs:
+     * coming back to a saved prompt resumes its history, and an anchored thread
+     * survives eviction longer than an abandoned experiment.
+     *
+     * A pinned prompt appears in every project while history is per project, so
+     * one saved prompt can anchor several threads — one per project. That is
+     * correct: the same prompt costs different amounts against different
+     * projects.
+     */
+    promptId?: string;
+    /** The prompt as it was run — this version, not the thread's latest. */
     prompt: string;
     /** Real dollars, from the run's own output. */
     costUSD: number;

@@ -51,16 +51,25 @@ const ORIENTATION_TOOLS = new Set(['get_current_project', 'list_projects', 'get_
  *
  * @param trace - every call the run made, in order
  * @param projectName - the open project, when known; enables a one-click fix
+ * @param prompt - the prompt that produced the trace, so advice already TAKEN
+ *   is not offered again. Without it the workbench told producers to name the
+ *   project in a prompt that already named it — which reads as the tool not
+ *   having looked, and it is the reason the argument exists.
  * @returns suggestions, most useful first; empty when the run was clean
  */
-export function suggestionsFor(trace: TraceEntry[], projectName?: string): Suggestion[] {
+export function suggestionsFor(
+    trace: TraceEntry[],
+    projectName?: string,
+    prompt?: string,
+): Suggestion[] {
     const out: Suggestion[] = [];
 
     const repeated = countRepeats(trace);
     const orientation = [...repeated.entries()].filter(([tool]) => ORIENTATION_TOOLS.has(tool));
     const orientationSteps = orientation.reduce((n, [, count]) => n + count, 0);
+    const alreadyNamed = namesTheProject(prompt, projectName);
 
-    if (orientationSteps > 0) {
+    if (orientationSteps > 0 && !alreadyNamed) {
         out.push({
             text: projectName
                 ? `Say which project you mean, so it does not have to work it out.`
@@ -93,6 +102,19 @@ export function suggestionsFor(trace: TraceEntry[], projectName?: string): Sugge
     }
 
     return out;
+}
+
+/**
+ * Does the prompt already say which project it means?
+ *
+ * A plain case-insensitive substring test, and deliberately no more: the fix
+ * being suggested is literally "put this name in the prompt", so the check for
+ * whether it was taken is whether the name is in the prompt. Anything cleverer
+ * would be inference, and would suppress real advice when it guessed wrong.
+ */
+function namesTheProject(prompt?: string, projectName?: string): boolean {
+    if (!prompt || !projectName) return false;
+    return prompt.toLowerCase().includes(projectName.toLowerCase());
 }
 
 /**

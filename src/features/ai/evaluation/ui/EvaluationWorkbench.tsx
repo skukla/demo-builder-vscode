@@ -1,176 +1,95 @@
 /**
- * The workbench — the loop this whole feature exists for.
+ * The workbench shell — two modes, one panel.
  *
- * Type a prompt, see what it WOULD do and what it costs, apply a suggestion,
- * try it again and watch the delta, then run it for real or save it.
+ * **Try a prompt out** is the loop the feature was built for: type a prompt, see
+ * what it would do and cost, refine, run it for real.
  *
- * THE ONE HARD RULE: "Run for real" must be unmistakable. The user will have
- * spent minutes reading "would have deployed"; the transition to actually
- * deploying cannot look like the other buttons. It is `negative` variant, it
- * names what it is about to do, and it sits apart from the try-it-out controls.
+ * **What the agent did** is the other half, and it was missing. With the dry run
+ * on you could chat normally and get the safety with none of the visibility —
+ * every call was being recorded and nothing read it.
+ *
+ * They are DISTINCT modes rather than one layout with fields blanked. An ambient
+ * trace has no prompt and no cost; fitting it into a view built around a verdict
+ * would weaken the thing that view does well.
+ *
+ * @module features/ai/evaluation/ui/EvaluationWorkbench
  */
 
-import { Button, ButtonGroup, Flex, Heading, Text, TextArea, View } from '@adobe/react-spectrum';
-import React, { useCallback, useState } from 'react';
-import { EvaluationVerdict } from './EvaluationVerdict';
-import { InlineNotice } from '@/core/ui/components/feedback';
+import { Button, ButtonGroup } from '@adobe/react-spectrum';
+import React, { useEffect, useState } from 'react';
+import { AgentTraceView } from './AgentTraceView';
+import { PromptWorkbench } from './PromptWorkbench';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
-import type { EvaluatePromptResponse } from '@/types/webviewRequests';
+import type { WorkbenchMode } from '@/types/webviewPayloads';
 
-/**
- * What the try-it-out button says.
- *
- * A helper, not a nested ternary — the project's SOP forbids those and a scan
- * enforces it. Three states also read better named than stacked.
- */
-function tryButtonLabel(busy: boolean, hasVerdict: boolean): string {
-    if (busy) return 'Trying it out…';
-    return hasVerdict ? 'Try it again' : 'Try it out';
-}
-
-/** What a completed evaluation left on screen. */
-type Verdict = NonNullable<EvaluatePromptResponse['data']>;
+/** What the header says in each mode. */
+const HEADINGS: Record<WorkbenchMode, { title: string; description: string }> = {
+    prompt: {
+        title: 'Try a prompt out',
+        description:
+            'Nothing is changed. You will see what the agent would do, what it would cost, and where it wasted steps.',
+    },
+    trace: {
+        title: 'What the agent did',
+        description:
+            'Every tool call this window has seen, newest last. Cost is not recorded for a chat session.',
+    },
+};
 
 export interface EvaluationWorkbenchProps {
     project: Project;
+    /** Which mode the command that opened the panel asked for. */
+    initialMode?: WorkbenchMode;
 }
 
-export function EvaluationWorkbench({ project }: EvaluationWorkbenchProps): React.JSX.Element {
-    const [prompt, setPrompt] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [verdict, setVerdict] = useState<Verdict | null>(null);
+export function EvaluationWorkbench({
+    project,
+    initialMode = 'prompt',
+}: EvaluationWorkbenchProps): React.JSX.Element {
+    const [mode, setMode] = useState<WorkbenchMode>(initialMode);
 
-    const evaluate = useCallback(async () => {
-        setBusy(true);
-        setError(null);
-        try {
-            // Typed as the ENVELOPE and branched on `success`. A handler that
-            // returns {success:false} does NOT reject here — it arrives looking
-            // exactly like a success, because only a THROW sets an error field.
-            const response = await webviewClient.request<EvaluatePromptResponse>(
-                'evaluate-prompt',
-                { prompt },
-            );
-            if (!response?.success || !response.data) {
-                setError(response?.error ?? 'The evaluation did not finish.');
-                return;
-            }
-            // The previous run comes from the RESPONSE, not from React state.
-            // Session state cannot survive a reload, which is the whole point:
-            // "down from $0.21" has to still be true tomorrow.
-            setVerdict(response.data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : String(err));
-        } finally {
-            setBusy(false);
-        }
-    }, [prompt]);
-
-    const applySuggestion = useCallback((append: string) => {
-        // Appended, never replaced: the user's words are theirs, and a
-        // suggestion that rewrote the prompt would lose whatever it did not
-        // understand.
-        setPrompt((current) => `${current.trimEnd()}${append}`);
-    }, []);
-
-    const runForReal = useCallback(async () => {
-        // The EXISTING route the Prompt Library's Launch button uses. Real work
-        // belongs in the chat, where the user can watch it and stop it — not in
-        // a headless run they cannot see.
-        await webviewClient.request('openInClaude', { prompt });
-    }, [prompt]);
-
-    const savePrompt = useCallback(async () => {
-        await webviewClient.request('save-ai-prompt', {
-            name: prompt.slice(0, 60),
-            prompt,
-        });
-    }, [prompt]);
-
-    const canRun = prompt.trim().length > 0 && !busy;
+    // The panel is reused, so a second command has to reach an ALREADY OPEN
+    // window. Initial data only arrives once; this is how the trace command
+    // switches a workbench the producer already had open.
+    useEffect(
+        () =>
+            webviewClient.onMessage('workbench-mode', (data) => {
+                const next = (data as { mode?: WorkbenchMode })?.mode;
+                if (next === 'prompt' || next === 'trace') setMode(next);
+            }),
+        [],
+    );
 
     return (
         <PageLayout
             header={
                 <PageHeader
-                    title="Try a prompt out"
+                    title={HEADINGS[mode].title}
                     subtitle={getProjectDisplayName(project)}
-                    description="Nothing is changed. You will see what the agent would do, what it would cost, and where it wasted steps."
+                    description={HEADINGS[mode].description}
                 />
             }
         >
-            {/*
-              A plain div with flex styles, NOT a Spectrum Flex: Spectrum's Flex
-              constrains width at 450px, which is the documented trap for any
-              full-width webview layout in this project.
-            */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
-                <TextArea
-                    label="What would you ask the agent to do?"
-                    value={prompt}
-                    onChange={setPrompt}
-                    width="100%"
-                    height="size-1600"
-                    isDisabled={busy}
-                    placeholder="Set up Bodea with B2B"
-                />
+                <ButtonGroup>
+                    <Button
+                        variant={mode === 'prompt' ? 'accent' : 'secondary'}
+                        onPress={() => setMode('prompt')}
+                    >
+                        Try a prompt
+                    </Button>
+                    <Button
+                        variant={mode === 'trace' ? 'accent' : 'secondary'}
+                        onPress={() => setMode('trace')}
+                    >
+                        What the agent did
+                    </Button>
+                </ButtonGroup>
 
-                {error && (
-                    <InlineNotice title="The prompt was not tried out" testId="evaluation-error">
-                        {error}
-                    </InlineNotice>
-                )}
-
-                <Flex justifyContent="space-between" alignItems="center" wrap>
-                    <ButtonGroup>
-                        <Button variant="cta" onPress={evaluate} isDisabled={!canRun}>
-                            {tryButtonLabel(busy, verdict !== null)}
-                        </Button>
-                        {verdict && (
-                            <Button variant="secondary" onPress={savePrompt} isDisabled={busy}>
-                                Save to library
-                            </Button>
-                        )}
-                    </ButtonGroup>
-
-                    {/*
-                      Set apart, and worded as what it does. See the file note:
-                      after minutes of "would have", this button must not read
-                      as one more thing to click.
-                    */}
-                    {verdict && (
-                        <View>
-                            <Button variant="negative" onPress={runForReal} isDisabled={busy}>
-                                Run this for real in the chat
-                            </Button>
-                        </View>
-                    )}
-                </Flex>
-
-                {busy && (
-                    <Text>
-                        Running your prompt with every change simulated. This takes up to two
-                        minutes.
-                    </Text>
-                )}
-
-                {verdict && !busy && (
-                    <EvaluationVerdict verdict={verdict} onApply={applySuggestion} />
-                )}
-
-                {!verdict && !busy && (
-                    <View>
-                        <Heading level={3}>Nothing tried yet</Heading>
-                        <Text>
-                            Type what you would normally ask, then try it out. Your project is not
-                            touched.
-                        </Text>
-                    </View>
-                )}
+                {mode === 'prompt' ? <PromptWorkbench project={project} /> : <AgentTraceView />}
             </div>
         </PageLayout>
     );

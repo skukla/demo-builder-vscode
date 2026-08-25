@@ -1,8 +1,28 @@
 # Sub-plan — Prompt threads: keeping the work, not the wording
 
 **Parent:** `.rptc/plans/evaluation-mode/` (steps 01–07 shipped).
-**Status:** planned, not started. Raised by the owner 2026-08-25 after walking the
-user journey against the shipped code.
+**Status:** ✅ SHIPPED 2026-08-25. Raised by the owner the same day after walking
+the user journey against the shipped code.
+
+**What landed, against what this plan asked for:**
+
+| Asked for | Where it lives |
+|---|---|
+| Thread-keyed history, declared not inferred | `evaluationHistory.ts`, `usePromptThread.ts` |
+| Axis 1 — cap runs, keep the CHEAPEST as well as the newest | `appendRun` |
+| Axis 2 — drop the least recently run thread whole | `appendRun` |
+| Axis 3 — anchored threads evicted last | **BUILT AND REMOVED the same day.** It worked, and it was reverted on the owner's judgement: it needed both prompt stores read and threaded into eviction, reached across a feature boundary to do it, and could only change WHICH thread fell off past twenty-five. Nobody would ever see it. What survives of axis 3 is the part that earns its keep — a run records the saved prompt it came from, which is what lets the workbench find a thread again |
+| Axis 4 — age is not an axis | not built, deliberately |
+| Load a saved prompt, resume its thread | `resume-evaluation-thread` + the workbench picker |
+| Start fresh | the workbench, keeping the words |
+| Migration | `migrateHistory`, applied on read and written back on the next save |
+| The byte bound, asserted | `evaluationHistory.test.ts` — 25 × 10 rows stays under 120KB |
+| Two-window behaviour | ACCEPTED as last-writer-wins, and said so in `docs/systems/evaluation-mode.md` rather than left to be discovered |
+| Suggestions see the prompt | `suggestionsFor(trace, projectName, prompt)` — advice already taken is no longer offered |
+
+One thing this plan did not anticipate: **saving to the library was broken.** The
+workbench sent `{name, prompt}` where the library handler expects an `AiPrompt`,
+so every save was refused — silently, because nothing read the answer.
 
 ## Why this is a sub-plan
 
@@ -68,6 +88,17 @@ comparable against anything, so partial eviction costs bytes and buys nothing.
 (This part of today's rule is right and should survive.)
 
 ### Axis 3 — threads anchored to a SAVED prompt are stickier
+
+> **DECIDED AGAINST, 2026-08-25, after building it.** The questions below were
+> answered and implemented — higher priority rather than exemption, deletion
+> un-anchors rather than cascades, one pinned prompt anchors one thread per
+> project — and then the whole rule was removed. Not because any answer was
+> wrong, but because the rule only ever changes which thread falls off past
+> twenty-five, and no producer would see that happen. The cost was a parameter
+> threaded through eviction, a helper reading two prompt stores, and an import
+> reaching from the evaluation feature into the dashboard's storage key. Keep the
+> reasoning here so the same rule is not re-proposed without a producer who
+> noticed it missing.
 
 A producer who saved a prompt to the library said it was worth keeping. Dropping
 its history is worse than dropping an experiment they abandoned.

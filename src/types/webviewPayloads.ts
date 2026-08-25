@@ -117,6 +117,20 @@ export interface AiOverviewInitialData {
 }
 
 /**
+ * Which half of the workbench a command asked for.
+ *
+ * `prompt` tries a prompt out; `trace` shows what the agent has already done in
+ * this window. Two commands, one panel — so the mode also travels as a push for
+ * a workbench that is already open.
+ */
+export type WorkbenchMode = 'prompt' | 'trace';
+
+/** The workbench panel's init payload — the AI surface's, plus the mode. */
+export interface EvaluationWorkbenchInitialData extends AiOverviewInitialData {
+    mode: WorkbenchMode;
+}
+
+/**
  * The Configure screen's registry slice: the categorized component buckets
  * (registry entries pass through untransformed) plus the keyed env-var
  * definitions. No `appBuilder` bucket — that mechanism was removed

@@ -406,6 +406,87 @@ export interface AddAppBuilderComponentRequestPayload {
 export interface EvaluatePromptRequest {
     /** The prompt, exactly as the user typed it. */
     prompt: string;
+    /**
+     * The piece of work this run belongs to.
+     *
+     * DECLARED by the workbench, because it is the surface that knows whether
+     * the producer is refining the same prompt, starting fresh, or resuming a
+     * saved one. Absent on the first run of a thread; the handler mints one and
+     * hands it back.
+     */
+    threadId?: string;
+    /** The saved prompt this thread is anchored to, when it came from one. */
+    promptId?: string;
+}
+
+/**
+ * `get-agent-trace` — what the agent has done in this window.
+ *
+ * The envelope for the trace view. Cost is deliberately absent: it comes from a
+ * run's own output and the extension does not own the chat's process, so any
+ * number here would be an estimate wearing a measurement's clothes.
+ */
+export interface AgentTraceResponse {
+    success: boolean;
+    error?: string;
+    data?: {
+        /** Every call, in the order it happened. */
+        rows: AgentTraceRow[];
+        /** The ones worth reading first — failures, blocked writes, repeats, slow calls. */
+        standouts: AgentTraceRow[];
+        totalCalls: number;
+        wastedCalls: number;
+        blockedCalls: number;
+        failedCalls: number;
+    };
+}
+
+/** One call in the window's trace. */
+export interface AgentTraceRow {
+    tool: string;
+    outcome: 'ok' | 'error' | 'blocked-by-dry-run';
+    durationMs: number;
+    resultBytes: number;
+    /** Milliseconds since the recorder started. */
+    at: number;
+    /** Set when this call is one of the ones that stood out. */
+    flag?: 'failed' | 'blocked' | 'repeated' | 'slow';
+}
+
+/**
+ * `resume-evaluation-thread` — pick up the history of a saved prompt.
+ *
+ * The response is {@link ResumeThreadResponse}. It answers with nothing found
+ * (rather than an error) when the prompt has never been evaluated here — that is
+ * a normal state, not a failure.
+ */
+export interface ResumeThreadRequest {
+    /** The saved prompt's id, from the library. */
+    promptId: string;
+}
+
+/** One remembered run, as the workbench renders it. */
+export interface EvaluationRunSummary {
+    prompt: string;
+    costUSD: number;
+    steps: number;
+    wastedSteps: number;
+    durationMs: number;
+    at: string;
+}
+
+/** The envelope for {@link ResumeThreadRequest}. Branch on `success` first. */
+export interface ResumeThreadResponse {
+    success: boolean;
+    error?: string;
+    data?: {
+        /** Undefined when this prompt has never been run against this project. */
+        threadId?: string;
+        priorRuns: number;
+        previousRun?: EvaluationRunSummary;
+        /** Every run in the thread, oldest first. */
+        history: EvaluationRunSummary[];
+    };
 }
 
 /** One recorded tool call, as the workbench renders it. */
@@ -456,15 +537,23 @@ export interface EvaluatePromptResponse {
          * Absent when the prompt has no past — which is a different fact from a
          * delta of zero, and the view must not render them the same way.
          */
-        previousRun?: {
-            prompt: string;
-            costUSD: number;
-            steps: number;
-            wastedSteps: number;
-            durationMs: number;
-            at: string;
-        };
-        /** How many earlier runs of this prompt exist. 0 means none. */
+        previousRun?: EvaluationRunSummary;
+        /**
+         * The cheapest run in this thread so far.
+         *
+         * Kept even when it is the oldest, which is deliberate: the best version
+         * of a prompt is the one a producer comes back for, and evicting it for
+         * age would remove the reason to keep history at all.
+         */
+        bestRun?: EvaluationRunSummary;
+        /** How many earlier runs this thread holds. 0 means none. */
         priorRuns: number;
+        /**
+         * The thread this run was recorded in.
+         *
+         * Handed back so the workbench keeps refining the SAME thread across
+         * runs — including the first, where the handler minted it.
+         */
+        threadId: string;
     };
 }

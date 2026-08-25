@@ -2,7 +2,18 @@
 
 **Ships:** what the agent just did in YOUR chat, visible.
 **Depends on:** step 02 (the recorder, which already captures it).
-**Status:** the gap found by the owner while testing, 2026-08-25.
+**Status:** ✅ SHIPPED 2026-08-25. Found by the owner while testing the same day.
+
+Built as the owner preferred — the workbench in a second mode, not an output
+channel: `AgentTraceView.tsx`, `agentTraceReport.ts`, `agentTraceHandlers.ts`,
+and the command `demoBuilder.showAgentTrace` ("Show What The Agent Just Did"),
+which opens the same panel on that half. Copy reuses the Prompt Library's one
+clipboard write; save writes plain text to a file the producer picks.
+
+All three traps in this document are handled on the surface: the list says it is
+the WINDOW rather than one conversation, it says it resets on reload, and the
+calls worth acting on are pulled out under "What stood out" while the full list
+stays in time order.
 
 ## The gap
 

@@ -18,7 +18,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { registerEvaluatePromptCommand } from '@/features/ai/evaluation/evaluatePromptCommand';
 import { setEvaluationServerFactory } from '@/features/ai/evaluation/evaluationServer';
-import { setEvaluationRecorder } from '@/features/ai/evaluation/handlers/evaluationHandlers';
+import { setEvaluationRecorder } from '@/features/ai/evaluation/handlers/traceRecorderAccess';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';

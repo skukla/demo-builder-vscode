@@ -278,7 +278,15 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.showEvaluationWorkbench', async () => {
-            await workbench.execute();
+            await workbench.execute({ mode: 'prompt' });
+        });
+
+        // The same panel, opened on the OTHER half: what the agent has already
+        // done in this window. With the dry run on, a producer could chat
+        // normally and get the safety with none of the visibility — every call
+        // was being recorded and nothing read it.
+        this.registerCommand('demoBuilder.showAgentTrace', async () => {
+            await workbench.execute({ mode: 'trace' });
         });
 
         // Open AI Experience (chat-first) — onboarding + open the Claude Code

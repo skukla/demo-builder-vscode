@@ -8,9 +8,12 @@
  */
 
 import {
+    SAVED_PROMPT,
+    pushMessage,
     mockRequest,
     renderWorkbench,
     resetWorkbenchMocks,
+    respondByType,
     screen,
     setupUser,
     verdictResponse,
@@ -93,7 +96,7 @@ describe('the workbench', () => {
                     durationMs: 41_000,
                     at: '2026-08-24T10:00:00.000Z',
                 },
-            }),
+            })
         );
 
         expect(await screen.findByText(/down from \$0\.21/i)).toBeInTheDocument();
@@ -115,7 +118,7 @@ describe('the workbench', () => {
         await evaluateWith({ success: false, error: 'An evaluation is already running.' });
 
         expect(await screen.findByTestId('evaluation-error')).toHaveTextContent(
-            'An evaluation is already running.',
+            'An evaluation is already running.'
         );
     });
 
@@ -136,7 +139,7 @@ describe('the workbench', () => {
             expect(button).toHaveAttribute('data-variant', 'negative');
             expect(screen.getByRole('button', { name: /try it again/i })).toHaveAttribute(
                 'data-variant',
-                'cta',
+                'cta'
             );
         });
 
@@ -150,6 +153,258 @@ describe('the workbench', () => {
             expect(mockRequest).toHaveBeenLastCalledWith('openInClaude', {
                 prompt: 'deploy the mesh',
             });
+        });
+    });
+
+    describe('coming back to a prompt', () => {
+        /** Load the one saved prompt through the picker. */
+        async function loadSaved(resume: unknown) {
+            const user = setupUser();
+            respondByType({
+                'list-ai-prompts': { success: true, aiPrompts: [SAVED_PROMPT] },
+                'resume-evaluation-thread': resume,
+                'evaluate-prompt': verdictResponse({ threadId: 'thread-9' }),
+            });
+            renderWorkbench();
+            const picker = await screen.findByRole('combobox');
+            await user.selectOptions(picker, 'saved-1');
+            return user;
+        }
+
+        it('fills the box from the library and says where it left off', async () => {
+            // The missing half of the loop: a producer who saved a good prompt
+            // had no way back to it, so they retyped it and lost its history.
+            await loadSaved({
+                success: true,
+                data: { threadId: 'thread-9', priorRuns: 2, history: [] },
+            });
+
+            expect(screen.getByRole('textbox')).toHaveValue('deploy the mesh');
+            expect(await screen.findByTestId('evaluation-thread-note')).toHaveTextContent(
+                /2 earlier runs/i
+            );
+        });
+
+        it('runs the NEXT evaluation in that same thread', async () => {
+            // Which is what makes the delta compare against the version the
+            // producer was happy with.
+            const user = await loadSaved({
+                success: true,
+                data: { threadId: 'thread-9', priorRuns: 2, history: [] },
+            });
+            await screen.findByTestId('evaluation-thread-note');
+
+            await user.click(screen.getByRole('button', { name: /try it out/i }));
+
+            expect(mockRequest).toHaveBeenCalledWith('evaluate-prompt', {
+                prompt: 'deploy the mesh',
+                threadId: 'thread-9',
+                promptId: 'saved-1',
+            });
+        });
+
+        it('says plainly when a saved prompt has never been tried here', async () => {
+            // Not an error — it simply starts its thread on the next run.
+            await loadSaved({ success: true, data: { priorRuns: 0, history: [] } });
+
+            expect(await screen.findByTestId('evaluation-thread-note')).toHaveTextContent(
+                /not been tried out here/i
+            );
+        });
+
+        it('START FRESH keeps the words and drops the past', async () => {
+            // A fork. Without it the only way to start clean is to retype from
+            // memory, which is exactly how history got lost.
+            const user = await loadSaved({
+                success: true,
+                data: { threadId: 'thread-9', priorRuns: 2, history: [] },
+            });
+            await screen.findByTestId('evaluation-thread-note');
+
+            await user.click(screen.getByRole('button', { name: /start fresh/i }));
+            await user.click(screen.getByRole('button', { name: /try it out/i }));
+
+            expect(screen.getByRole('textbox')).toHaveValue('deploy the mesh');
+            expect(mockRequest).toHaveBeenCalledWith('evaluate-prompt', {
+                prompt: 'deploy the mesh',
+                threadId: undefined,
+                promptId: undefined,
+            });
+        });
+    });
+
+    describe('saving to the library', () => {
+        it('sends a real prompt entry, and anchors the runs already made', async () => {
+            // The save used to send `{name, prompt}`, which the library handler
+            // rejects as an invalid payload — silently, because the workbench
+            // never read the answer. And anchoring only future runs would leave
+            // the thread unreachable from the library until it was run again.
+            const user = setupUser();
+            respondByType({
+                'list-ai-prompts': { success: true, aiPrompts: [] },
+                'evaluate-prompt': verdictResponse({ threadId: 'thread-9' }),
+                'save-ai-prompt': { success: true, aiPrompts: [] },
+            });
+            renderWorkbench();
+            await user.type(screen.getByRole('textbox'), 'deploy the mesh');
+            await user.click(screen.getByRole('button', { name: /try it out/i }));
+            await screen.findByText(/nothing was changed/i);
+
+            await user.click(screen.getByRole('button', { name: /save to library/i }));
+
+            const saved = mockRequest.mock.calls.find((c) => c[0] === 'save-ai-prompt');
+            expect(saved?.[1]).toEqual({
+                prompt: {
+                    id: expect.any(String),
+                    title: 'deploy the mesh',
+                    prompt: 'deploy the mesh',
+                },
+            });
+            expect(mockRequest).toHaveBeenLastCalledWith('anchor-evaluation-thread', {
+                threadId: 'thread-9',
+                promptId: (saved?.[1] as { prompt: { id: string } }).prompt.id,
+            });
+        });
+    });
+
+    describe('the cheapest version', () => {
+        it('offers a way back to it, because history keeps it on purpose', async () => {
+            const user = await evaluateWith(
+                verdictResponse({
+                    costUSD: 0.4,
+                    priorRuns: 3,
+                    bestRun: {
+                        prompt: 'the cheap wording',
+                        costUSD: 0.09,
+                        steps: 2,
+                        wastedSteps: 0,
+                        durationMs: 9000,
+                        at: '2026-08-20T10:00:00.000Z',
+                    },
+                })
+            );
+            await screen.findByTestId('evaluation-best-run');
+
+            await user.click(screen.getByRole('link', { name: /go back to it/i }));
+
+            expect(screen.getByRole('textbox')).toHaveValue('the cheap wording');
+        });
+
+        it('does not offer it when this run IS the cheapest', async () => {
+            await evaluateWith(
+                verdictResponse({
+                    costUSD: 0.09,
+                    priorRuns: 3,
+                    bestRun: {
+                        prompt: 'deploy the mesh',
+                        costUSD: 0.09,
+                        steps: 2,
+                        wastedSteps: 0,
+                        durationMs: 9000,
+                        at: '2026-08-20T10:00:00.000Z',
+                    },
+                })
+            );
+            await screen.findByText(/nothing was changed/i);
+
+            expect(screen.queryByTestId('evaluation-best-run')).toBeNull();
+        });
+    });
+
+    describe('showing what the agent already did', () => {
+        /** A trace report shaped exactly as the handler returns it. */
+        function traceReport(overrides: Record<string, unknown> = {}) {
+            const row = {
+                tool: 'get_current_project',
+                outcome: 'ok',
+                durationMs: 5,
+                resultBytes: 20,
+                at: 0,
+            };
+            return {
+                success: true,
+                data: {
+                    rows: [row, { ...row, at: 10, flag: 'repeated' }],
+                    standouts: [{ ...row, at: 10, flag: 'repeated' }],
+                    totalCalls: 2,
+                    wastedCalls: 1,
+                    blockedCalls: 0,
+                    failedCalls: 0,
+                    ...overrides,
+                },
+            };
+        }
+
+        async function openTrace(report: unknown) {
+            const user = setupUser();
+            respondByType({
+                'list-ai-prompts': { success: true, aiPrompts: [] },
+                'get-agent-trace': report,
+            });
+            renderWorkbench();
+            await user.click(screen.getByRole('button', { name: /what the agent did/i }));
+            return user;
+        }
+
+        it('shows calls made through the ORDINARY chat, not only workbench runs', async () => {
+            // The gap this closes: the recorder was capturing every chat and
+            // nothing read it.
+            await openTrace(traceReport());
+
+            expect(await screen.findByTestId('trace-steps')).toHaveTextContent(
+                'get_current_project',
+            );
+        });
+
+        it('calls out the repeats rather than only listing them', async () => {
+            await openTrace(traceReport());
+
+            expect(await screen.findByTestId('trace-standouts')).toHaveTextContent(/asked again/i);
+        });
+
+        it('EXPLAINS the missing cost instead of showing zero', async () => {
+            // Cost comes from a run's own output and we do not own the chat's
+            // process. A zero would read as "this was free".
+            await openTrace(traceReport());
+
+            expect(await screen.findByTestId('trace-no-cost')).toHaveTextContent(
+                /not recorded for a chat session/i,
+            );
+            expect(screen.queryByText(/\$0\.00/)).toBeNull();
+        });
+
+        it('says so when nothing has happened yet', async () => {
+            await openTrace(
+                traceReport({ rows: [], standouts: [], totalCalls: 0, wastedCalls: 0 }),
+            );
+
+            expect(await screen.findByTestId('trace-empty')).toHaveTextContent(
+                /has not done anything yet/i,
+            );
+        });
+
+        it('warns that the list is the WINDOW, not one conversation', async () => {
+            // Two chats and a workbench run all write to the same recorder.
+            // Presenting it as one conversation would be a lie.
+            await openTrace(traceReport());
+
+            expect(await screen.findByTestId('trace-summary')).toHaveTextContent(
+                /window.*not one conversation/i,
+            );
+        });
+
+        it('opens straight into the trace when the command asked for it', async () => {
+            // Two commands, one panel. The mode arrives with the init payload on
+            // a first open, and as a push when the panel is already there.
+            respondByType({
+                'list-ai-prompts': { success: true, aiPrompts: [] },
+                'get-agent-trace': traceReport(),
+            });
+            renderWorkbench();
+
+            pushMessage('workbench-mode', { mode: 'trace' });
+
+            expect(await screen.findByTestId('trace-summary')).toBeInTheDocument();
         });
     });
 });

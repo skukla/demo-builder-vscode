@@ -24,11 +24,19 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import type { AiOverviewInitialData } from '@/types/webviewPayloads';
+import type { EvaluationWorkbenchInitialData, WorkbenchMode } from '@/types/webviewPayloads';
 
 const TITLE = 'Try a Prompt Out';
 
-export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<AiOverviewInitialData> {
+export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<EvaluationWorkbenchInitialData> {
+    /**
+     * Which half the last command asked for.
+     *
+     * Two commands share one panel, and initial data is sent once — so a second
+     * command reaching an already-open workbench has to push the mode instead.
+     */
+    private requestedMode: WorkbenchMode = 'prompt';
+
     protected getWebviewId(): string {
         return 'demoBuilder.evaluationWorkbench';
     }
@@ -41,7 +49,8 @@ export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<AiOvervie
         return 'Opening…';
     }
 
-    public async execute(): Promise<void> {
+    public async execute(options: { mode?: WorkbenchMode } = {}): Promise<void> {
+        this.requestedMode = options.mode ?? 'prompt';
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -55,6 +64,9 @@ export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<AiOvervie
             if (!this.communicationManager) {
                 await this.initializeCommunication();
             }
+            // Sent every time, including the first: the handshake queues it, and
+            // an already-open panel has no other way to hear about the mode.
+            await this.sendMessage('workbench-mode', { mode: this.requestedMode });
             this.logger.debug(`[Evaluation] workbench opened for ${project.name}`);
         } catch (error) {
             await this.showError('Could not open the prompt workbench', error as Error);
@@ -81,7 +93,7 @@ export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<AiOvervie
         });
     }
 
-    protected async getInitialData(): Promise<AiOverviewInitialData> {
+    protected async getInitialData(): Promise<EvaluationWorkbenchInitialData> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             throw new Error('No project found');
@@ -92,6 +104,7 @@ export class ShowEvaluationWorkbenchCommand extends BaseWebviewCommand<AiOvervie
                     ? 'dark'
                     : 'light',
             project,
+            mode: this.requestedMode,
         };
     }
 

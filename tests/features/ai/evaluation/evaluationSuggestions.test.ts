@@ -14,7 +14,7 @@ import type { TraceEntry } from '@/features/ai/server/toolTraceRecorder';
 function step(
     tool: string,
     fingerprint = 'none',
-    outcome: TraceEntry['outcome'] = 'ok',
+    outcome: TraceEntry['outcome'] = 'ok'
 ): TraceEntry {
     return {
         tool,
@@ -55,6 +55,27 @@ describe('what the trace says to change', () => {
 
         expect(suggestionsFor(trace, 'bodea')[0].append).toBe(' for bodea');
         expect(suggestionsFor(trace)[0].append).toBeUndefined();
+    });
+
+    it('does NOT tell you to name a project your prompt already names', () => {
+        // Advice already taken, offered again, reads as the tool not having
+        // looked at the prompt at all. The other suggestions still stand — only
+        // the one whose fix is already in place is dropped.
+        const trace = [step('get_current_project'), step('get_current_project')];
+
+        const withName = suggestionsFor(trace, 'bodea', 'deploy the mesh for bodea');
+        const withoutName = suggestionsFor(trace, 'bodea', 'deploy the mesh');
+
+        expect(withName.some((s) => /project/i.test(s.text))).toBe(false);
+        expect(withoutName.some((s) => /project/i.test(s.text))).toBe(true);
+    });
+
+    it('matches the project name however it is capitalised', () => {
+        // The fix being suggested is literally "put this name in the prompt", so
+        // the check is whether the name is there — not how it was typed.
+        const trace = [step('get_current_project'), step('get_current_project')];
+
+        expect(suggestionsFor(trace, 'bodea', 'Deploy the mesh for Bodea')).toHaveLength(0);
     });
 
     it('counts the second ask, not the first', () => {
