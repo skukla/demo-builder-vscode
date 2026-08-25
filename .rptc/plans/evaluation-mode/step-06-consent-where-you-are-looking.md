@@ -34,8 +34,17 @@ deliberate unattended escape hatch. Nothing hangs, and nobody is asked twice. Th
 modal stays the path for clients that declare NO elicitation, rather than being a
 second chance after a chat prompt.
 
-**Still untested:** whether an interactive session renders a usable prompt. One
-human minute settles it; the command is in the research writeup.
+**PARKED:** whether an interactive session renders a usable prompt. Four attempts
+failed on config paths, tool-search deferral and the extension's own managed chat
+session — none of them about elicitation. Parked once the design stopped
+depending on it: "not an explicit accept" covers both answers, so the only thing
+left to settle is whether elicitation is worth BUILDING, which is scheduling
+rather than design.
+
+**So this step proceeds with the session-grant work below**, which is useful
+whatever that answer turns out to be. Pick the elicitation branch up when someone
+is at a plain terminal — the command and the four traps are in the research
+writeup.
 
 ## Start with the measurement, not the design
 

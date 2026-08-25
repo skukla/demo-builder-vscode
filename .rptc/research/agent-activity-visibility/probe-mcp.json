@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "probe": {
-      "command": "node",
-      "args": ["./.rptc/research/agent-activity-visibility/probe-server.mjs"]
-    }
-  }
-}

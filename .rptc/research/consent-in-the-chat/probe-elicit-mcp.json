@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "elicit-probe": {
-      "command": "node",
-      "args": [".rptc/research/consent-in-the-chat/probe-elicit.mjs"]
-    }
-  }
-}

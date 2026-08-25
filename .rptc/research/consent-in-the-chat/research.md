@@ -87,59 +87,48 @@ acceptable:
 The modal stays the path for clients that declare NO elicitation — which is what
 it is for, rather than a second chance after a chat prompt.
 
-## STILL UNVERIFIED — needs a human
+## PARKED — the interactive question, and why it stopped mattering
 
-**Whether an interactive Claude Code session actually RENDERS a usable prompt.**
-Declared and works are different questions, and this is the same shape the
-progress research hit: the protocol allowed it, the declaration was there, and
-what settled it was a producer running the probe in a real terminal and watching.
+**Whether an interactive Claude Code session renders a usable prompt is still
+unmeasured.** Four attempts on 2026-08-25 failed for reasons that had nothing to
+do with elicitation:
 
-To check it — **run this from wherever you actually are**, which for a probe is
-usually a demo project, not the repo:
+1. a relative `--mcp-config` path, run from `~/.demo-builder/projects` where it
+   did not resolve (fixed by `probe-config.mjs`);
+2. the same again;
+3. `ENABLE_TOOL_SEARCH: true` hiding the probe's tool, so the session reported it
+   did not exist while the server was connected (fixed by `--settings`);
+4. run inside the extension's own Chat tab — a managed `claude --continue`
+   session, not a clean one — where the settings override did not take.
+
+**Parked deliberately, because the design stopped depending on it.** Once
+"anything that is not an explicit `accept` is a refusal" replaced the
+decline-vs-cancel branch, both answers lead to the same consent logic. The only
+thing an interactive run still decides is whether elicitation is worth BUILDING —
+a scheduling question, not a design one.
+
+### If someone picks it up
+
+Use a **plain terminal outside the Extension Development Host**. The extension's
+Chat tab is a managed session and was where attempt 4 failed.
 
 ```bash
-# generates an absolute-path config in the temp dir and prints where
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
         <repo>/.rptc/research/consent-in-the-chat/probe-elicit.mjs elicit-probe)
 claude --mcp-config "$CFG" --strict-mcp-config \
        --settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}' \
        --allowedTools 'mcp__elicit-probe__ask_the_user'
-# then: "call ask_the_user"
+# then: "call ask_the_user"      /mcp lists servers if the tool seems missing
 ```
 
-**BOTH extra flags are required, and getting this wrong cost three round trips.**
+Two things worth capturing while there: whether a prompt renders at all, and
+**which action a deliberate decline produces**. The design needs neither, but the
+second is one observation away and a future change might.
 
-`--settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}'` is the one that actually
-matters. `ENABLE_TOOL_SEARCH` is set in `~/.claude/settings.json`, and the
-battery README already records that it "is set from settings.json, not the
-environment — unsetting it in the spawned process does nothing" and must be
-overridden per run exactly this way. That note existed before this probe was
-written and was not applied.
+### The lesson that outlived the probe
 
-**`--allowedTools` alone is not enough.** With
-`ENABLE_TOOL_SEARCH: true` in `~/.claude/settings.json` — which is the setting
-here — MCP tools are DEFERRED: the model does not see them until it searches by
-name. Run without it and an interactive session answers *"There's no tool named
-ask_the_user"* while the server is connected perfectly well. The headless runs
-above worked only because they passed the full tool name.
-
-Two ways to tell the difference, since "no such tool" reads identically to a
-server that failed to start: type `/mcp` to list connected servers, or name the
-tool in full — `use mcp__elicit-probe__ask_the_user`.
-
-The tracked `probe-elicit-mcp.json` beside this file uses RELATIVE paths, because
-this repo is public and a committed home path is forbidden. That config therefore
-only works from the repo root. `probe-config.mjs` exists to bridge exactly that
-gap — twice on 2026-08-25 a probe command was handed over that failed with
-"config file doesn't exist" because the producer was in
-`~/.demo-builder/projects`, which is where they should have been.
-
-Watch for a prompt in the chat. Whatever comes back — `accept`, `decline`, or a
-cancel because no prompt appeared — is the answer. The design above holds either way, because everything that is not `accept` is a
-refusal; but if no prompt renders at all, elicitation is not worth building and
-the step reduces to the session-grant work.
-
-What an interactive run would ALSO settle, and it is worth capturing while
-someone is there: **which action a deliberate decline produces.** Not because the
-design needs it — it no longer does — but because a future change might, and it
-is one observation away.
+Every one of the four failures was fixed at the INSTANCE — a new path, a new
+flag — when the repo already held the answer. `ENABLE_TOOL_SEARCH` being
+settings-only, and needing `--settings` to override per run, was written in the
+battery README before this probe existed. Read what the repo knows about running
+`claude` with overridden config BEFORE handing someone a command.
