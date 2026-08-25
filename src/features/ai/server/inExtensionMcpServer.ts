@@ -23,7 +23,7 @@ import { z } from 'zod';
 import { raisesConsentDialog } from './agentAlertCopy';
 import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
-import { asRawText, asText } from './mcpToolResult';
+import { asRawText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import { narrationFor } from './toolNarration';
 import {
