@@ -18,7 +18,44 @@ the previous is green.
 | 01b | `step-01b-tool-self-description.md` | ✅ SHIPPED `dce810b0d`+`0c4cb2950`+`7de43fdf9`+`219d305c9`+`e9dab5afe` — tools declare read/write, carry an authored phrase, and the consent dialog names its target |
 | 02 | `step-02-trace-recorder.md` | ✅ SHIPPED — What was called — reads included — blocked, and how big the answers were |
 | 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view |
-| 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save. LLM-written suggestions and cross-session history deliberately deferred (see the step) |
+| 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save |
+| 05 | `step-05-scope-the-dry-run.md` | An evaluation stops silently pausing the user's other work |
+| 06 | `step-06-consent-where-you-are-looking.md` | The approval prompt reaches the surface the producer is watching |
+| 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
+| — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
+| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
+| — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
+
+## Steps 05–09: decided 2026-08-25
+
+The owner reviewed everything steps 01–04 chose not to build and settled it:
+
+| Item | Decision |
+|---|---|
+| Suggestions written by Claude | **BUILD** (step 09). "The value of the feature is to aid the end user in creating better prompts" — three rules is not that |
+| Held-out set / the battery | **BUILD, and put it in the plan** → promoted to the `measurement/` sub-plan |
+| OpenTelemetry | **BUILD, needs its own sub-plan** → `opentelemetry/` |
+| The window-wide dry run during an evaluation | **DESIGN A FIX** (step 05) |
+| Consent in the chat + session grants | **BUILD**, after measuring the capability (step 06) |
+| History across reloads | **BUILD** (step 07) |
+| `projectShape`, built but never supplied | **DELETE** — an optional field nothing fills is the accepted-but-ignored shape this project forbids |
+| "Succeeded but changed nothing" as an outcome | **DROP** — needs a change across the whole tool surface for a rare finding, and the one real instance is guarded |
+
+### Session boundaries
+
+One step per session, and the order is not arbitrary:
+
+1. **Step 05 first**, because it is the only LIVE hazard — the feature is on the
+   branch and can currently mislead someone.
+2. **Step 06** next: it opens with a measurement that decides its own shape, and
+   step 05 may settle the same connection-identity question it needs.
+3. **Step 07** is self-contained and can slot anywhere after 04.
+4. **The `measurement/` sub-plan BEFORE step 09**, without exception. Advice
+   tuned on the prompts it is judged by will look excellent and generalise to
+   nothing — and the held-out set is cheap to build before and impossible to
+   reconstruct after.
+5. **The OpenTelemetry sub-plan** waits on a question that is not a coding
+   question: where the collector lives and who runs it.
 
 **Added 2026-08-25, after step 01 shipped.** Step 01b was not in the original
 plan. Two things put it there, and they turned out to be the same thing:
