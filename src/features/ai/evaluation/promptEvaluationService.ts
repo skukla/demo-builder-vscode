@@ -112,9 +112,25 @@ export interface EvaluationRefusal {
     refused: string;
 }
 
-/** Runs a shell command and returns its stdout. */
+/**
+ * Runs a shell command and returns its stdout.
+ *
+ * `shell` is in the signature and is NOT optional in practice. `CommandExecutor`
+ * defaults it to FALSE (`commandExecutor.ts`: `options.shell || false`) and hands
+ * the whole string to execa as the executable NAME — so a command with arguments
+ * fails instantly with no process ever starting. It does not throw either
+ * (`reject: false`), so the caller receives empty stdout and a successful-looking
+ * result.
+ *
+ * That cost a whole test session on 2026-08-25: the first evaluation returned in
+ * TWO MILLISECONDS and rendered as "Nothing was changed. 0 steps, $0.00, 0s".
+ * Eleven other callers in this repo pass `shell: true`; this one did not.
+ */
 export interface CommandRunner {
-    execute(command: string, options?: { timeout?: number }): Promise<{ stdout: string }>;
+    execute(
+        command: string,
+        options?: { timeout?: number; shell?: boolean },
+    ): Promise<{ stdout: string }>;
 }
 
 /** What the CLI's JSON output carries that this service reads. */
@@ -226,6 +242,9 @@ export async function evaluatePrompt(
             deps.logger.info('[Evaluation] running a prompt evaluation');
             const { stdout } = await deps.runner.execute(command, {
                 timeout: EVALUATION_TIMEOUT_MS,
+                // NOT optional — see CommandRunner. Without it the executor treats
+                // this entire string as an executable name and nothing runs.
+                shell: true,
             });
 
             // A run whose output cannot be read is a FAILED RUN, and must not

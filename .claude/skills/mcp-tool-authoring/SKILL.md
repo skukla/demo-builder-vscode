@@ -247,6 +247,26 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
 - Tool NAME/description are the agent's search surface: short snake_case name, one-line
   description saying WHEN to use it (deferred tool loading ranks on these).
 
+## Spawning a command: `shell: true` is NOT optional
+
+`CommandExecutor.execute(command, opts)` defaults `shell` to **false**
+(`commandExecutor.ts`: `options.shell || false`) and hands the whole string to
+execa as the **executable name**. So a command with arguments never starts — and
+because execa is called with `reject: false`, it does not throw either. The caller
+gets empty stdout and a result that looks fine.
+
+Cost on 2026-08-25: a prompt evaluation returned in **two milliseconds** and
+rendered as "Nothing was changed. 0 steps, $0.00, 0s, nothing wasted" — a total
+failure wearing the clothes of a clean result. Eleven other callers in this repo
+already pass `shell: true`; the new one did not, and nothing in the type system
+or the tests could see the difference.
+
+Two rules:
+
+1. **Pass `shell: true`** whenever the command string carries arguments.
+2. **Treat unparseable stdout as a FAILURE**, never as empty data. Defaulting
+   fields to zero is how a dead process renders as a working feature.
+
 ## Logging
 
 `withToolLogging` wraps every tool: name + arg KEYS only (args can carry secrets).

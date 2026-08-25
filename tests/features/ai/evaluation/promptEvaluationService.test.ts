@@ -39,10 +39,13 @@ const logger = {
 /** A CLI stand-in that records what it was asked to run. */
 function fakeRunner(stdout = '{}', onRun?: () => void) {
     const commands: string[] = [];
+    const options: ({ shell?: boolean } | undefined)[] = [];
     return {
         commands,
-        execute: async (command: string) => {
+        options,
+        execute: async (command: string, opts?: { shell?: boolean }) => {
             commands.push(command);
+            options.push(opts);
             onRun?.();
             return { stdout };
         },
@@ -311,6 +314,20 @@ describe('evaluating a prompt', () => {
         expect(inner).toEqual({ refused: expect.stringContaining('already running') });
         // And it never spawned: one command, the outer one.
         expect(runner.commands).toHaveLength(1);
+    });
+
+    it('runs through a SHELL, or nothing starts at all', async () => {
+        // CommandExecutor defaults shell to FALSE and hands the whole string to
+        // execa as the executable NAME, so a command with arguments fails
+        // instantly — and with reject:false it does not even throw. The first
+        // real evaluation returned in TWO MILLISECONDS and rendered as
+        // "Nothing was changed. 0 steps, $0.00, 0s". Eleven other callers in
+        // this repo pass shell:true; this one did not.
+        const runner = fakeRunner(RUN_JSON);
+
+        await evaluatePrompt('anything', { runner, trace, logger, projectPath });
+
+        expect(runner.options[0]?.shell).toBe(true);
     });
 
     it('also tells the spawned run the tool is off limits', async () => {
