@@ -117,9 +117,11 @@ describe('agent dry run', () => {
         });
 
         expect(ran.deploy_probe_thing).not.toHaveBeenCalled();
-        const answer = JSON.parse(text);
-        expect(answer.dryRun).toBe(true);
-        expect(answer.wouldRun).toBe('deploy_probe_thing');
+        // PROSE, not JSON — Claude Code renders an MCP result verbatim in the
+        // chat, so a JSON body puts a raw object dump in the producer's
+        // transcript. A sentence renders as a sentence.
+        expect(text).toMatch(/nothing was changed/i);
+        expect(text).toMatch(/dry run is on/i);
     });
 
     it('lets a read tool run normally', async () => {
@@ -153,7 +155,7 @@ describe('agent dry run', () => {
 
         expect(ran.reset_datapack).not.toHaveBeenCalled();
         expect(consentGate).not.toHaveBeenCalled();
-        expect(JSON.parse(text).dryRun).toBe(true);
+        expect(text).toMatch(/nothing was changed/i);
     });
 
     it('still raises the consent dialog for that call when the mode is off', async () => {

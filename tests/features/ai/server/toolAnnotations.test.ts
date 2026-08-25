@@ -109,7 +109,7 @@ describe('the gate reads the declaration, not the name', () => {
         const text = await callToolOverSocket(socketPath, 'get_probe_that_writes', {});
 
         expect(ran).not.toHaveBeenCalled();
-        expect(JSON.parse(text).dryRun).toBe(true);
+        expect(text).toMatch(/nothing was changed/i);
     });
 
     it('runs a write-NAMED tool that declares it only reads', async () => {
@@ -126,7 +126,7 @@ describe('the gate reads the declaration, not the name', () => {
         // that promises none is not.
         const text = await callToolOverSocket(socketPath, 'get_probe_undeclared', {});
 
-        expect(JSON.parse(text).dryRun).toBe(true);
+        expect(text).toMatch(/nothing was changed/i);
     });
 
     it('says nothing in the chat for a write-NAMED tool that only reads', async () => {

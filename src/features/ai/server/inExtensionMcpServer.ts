@@ -25,6 +25,7 @@ import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asRawText, asText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
+import { narrationFor } from './toolNarration';
 import {
     fingerprintArgs,
     resultByteLength,
@@ -193,15 +194,21 @@ function strictifyWriteSchema(name: string, schema: unknown): unknown {
 function dryRunResult(name: string, args: unknown): unknown {
     const argumentKeys =
         args && typeof args === 'object' ? Object.keys(args as Record<string, unknown>) : [];
-    return asText({
-        dryRun: true,
-        wouldRun: name,
-        argumentKeys,
-        note:
-            'Dry run is on, so nothing was changed. This call would have run with the ' +
-            'arguments above. Continue planning as if it had succeeded, and tell the ' +
-            'user what you would have done.',
-    });
+    const phrase = narrationFor(name) ?? name;
+    const withArgs = argumentKeys.length
+        ? ` It would have run with: ${argumentKeys.join(', ')}.`
+        : '';
+    // PROSE, not JSON, and the reason is what a producer SEES. Claude Code
+    // renders an MCP result verbatim in the chat, so a JSON body puts a raw
+    // object dump in their transcript — which is what the owner met on
+    // 2026-08-25 and reasonably asked about. A sentence renders as a sentence.
+    //
+    // The surface is already not all-JSON: refusals answer prose by convention
+    // (`mcpToolResult.ts`), and this is a refusal.
+    return asRawText(
+        `Nothing was changed — dry run is on. ${phrase} was simulated.${withArgs} ` +
+            'Continue as if it had succeeded, and tell the user what you would have done.',
+    );
 }
 
 /**
