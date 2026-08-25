@@ -79,6 +79,30 @@ run a shell command this extension never sees? Today, yes.
 Comparison with what to borrow either way:
 `.rptc/research/consent-in-the-chat/compared-with-tech-case-studio.md`.
 
+## Research pass, 2026-08-25 — `.rptc/research/own-the-chat-surface/research.md`
+
+Measured rather than argued. Headline: **less work than it looks, and the cost is
+Claude Code's terminal UI rather than the rendering.**
+
+- **~1,000–1,500 new lines**, against ~1,900 lines of EXISTING surfaces that fold
+  in rather than being rebuilt: the Prompt Library becomes the composer's saved
+  prompts (closing the "cannot load a prompt back" hole for free), the evaluation
+  workbench is already a transcript view, and `toolNarration` / `agentAlertCopy` /
+  `consentText` are a permission card's content already written.
+- **No sidecar.** The studio needs a separate process because Tauri cannot spawn;
+  a VS Code extension host IS node and already spawns `claude`. Most of its
+  420-line provider becomes extension-side code.
+- **The cost is real and is not rendering:** slash commands (the studio had to
+  intercept five terminal-only built-ins that silently no-op headless),
+  `--continue`/`--resume`, `@file`, image paste, ctrl-C, and any future TUI work
+  Anthropic ships.
+- **Four unknowns must be spiked first**, chief among them what is lost when
+  `--setting-sources=` is empty — if the generated project bundle cannot survive
+  it, our agent experience would be WORSE inside our own chat, which is fatal.
+
+Recommendation: spike, do not commit — and do it after the three Evaluation Mode
+holes, which are needed either way and produce pieces this reuses.
+
 ## Goal / Scope
 
 **In scope:** a chat surface inside the extension that drives the local `claude`
