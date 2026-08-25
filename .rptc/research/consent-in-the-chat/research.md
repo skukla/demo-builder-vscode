@@ -41,35 +41,51 @@ that blocks a headless run forever — and it is not what happens.
 
 ## The problem this uncovered, which is the real finding
 
-A server cannot tell "the user dismissed it" from "there is no user". Both would
-arrive as a cancelled elicitation, and treating a cancel as a refusal would mean
-**every destructive operation silently refuses in any headless run**.
+A server cannot tell "the user dismissed it" from "there is no user". Both arrive
+as `action: "cancel"`, and **the payload carries nothing that separates them.**
 
-**What saves it: MCP defines THREE outcomes, not two.**
+### A design that rested on an untested assumption — CORRECTED
 
-| Action | Means | What we should do |
-|---|---|---|
-| `accept` | the user said yes | allow |
-| `decline` | the user deliberately said no | refuse — and it is a real answer |
-| `cancel` | dismissed, or nobody was there | **fall back to the VS Code modal** |
+An earlier version of this file claimed the spec's three-way split saved us:
+`decline` is a deliberate no, `cancel` is the absence of an answer, so route
+`cancel` to the modal and treat `decline` as a refusal.
 
-Claude Code returns `cancel` for the no-human case, not `decline`. So the
-distinction the spec already draws is exactly the one needed: a decline is an
-answer, a cancel is the absence of one.
+**The three actions are real** — `ElicitResultSchema` defines
+`accept | decline | cancel`. **But we have only ever observed `cancel`.** Whether
+an interactive decline returns `decline` or `cancel` is untested, so a design
+branching on that distinction is built on a guess. Worse, both branches of it are
+bad if the guess is wrong:
 
-## The design that follows
+- If an interactive decline returns `cancel`, routing `cancel` to the modal means
+  **declining in the chat pops a second prompt** — the user says no, and is asked
+  again somewhere else.
+- Routing `cancel` to the modal in a HEADLESS run means the operation waits on a
+  dialog nobody is looking at. That is a hang, which is the thing this whole
+  investigation was trying to avoid.
 
-1. If the client declares `elicitation`, ask in the CHAT.
-2. `accept` → allowed. `decline` → refused, and say the user declined.
-3. `cancel` → **fall back to the modal**, because nobody answered. In a headless
-   producer run that means the operation waits for the VS Code window — which is
-   correct, since our server lives there and `demoBuilder.ai.requireAgentConsent`
-   remains the escape hatch for genuinely unattended use.
-4. If the client declares no elicitation, the modal is the only path, exactly as
-   today.
+### What to do instead: cancel means NOT APPROVED
 
-The modal never stops being the floor. A consent gate that silently stops working
-is the worst available outcome.
+Simpler, and it depends on nothing untested:
+
+| Action | Treat as |
+|---|---|
+| `accept` | approved |
+| `decline` | not approved |
+| `cancel` | **not approved** |
+
+Anything that is not an explicit `accept` is a refusal. Consequences, all
+acceptable:
+
+- **Headless refuses every destructive operation.** Correct by default, and the
+  existing escape hatch already covers deliberate unattended use:
+  `demoBuilder.ai.requireAgentConsent` turned off.
+- **Nothing ever hangs**, in either mode.
+- **Nobody is ever asked twice.**
+- The refusal message must say WHY and how to proceed, since in a headless run
+  the user never saw a prompt at all.
+
+The modal stays the path for clients that declare NO elicitation — which is what
+it is for, rather than a second chance after a chat prompt.
 
 ## STILL UNVERIFIED — needs a human
 
@@ -109,7 +125,11 @@ gap — twice on 2026-08-25 a probe command was handed over that failed with
 `~/.demo-builder/projects`, which is where they should have been.
 
 Watch for a prompt in the chat. Whatever comes back — `accept`, `decline`, or a
-cancel because no prompt appeared — is the answer. The design above holds either
-way, because `cancel` already routes to the modal; but if no prompt renders at
-all, elicitation is not worth building and the step reduces to the session-grant
-work.
+cancel because no prompt appeared — is the answer. The design above holds either way, because everything that is not `accept` is a
+refusal; but if no prompt renders at all, elicitation is not worth building and
+the step reduces to the session-grant work.
+
+What an interactive run would ALSO settle, and it is worth capturing while
+someone is there: **which action a deliberate decline produces.** Not because the
+design needs it — it no longer does — but because a future change might, and it
+is one observation away.

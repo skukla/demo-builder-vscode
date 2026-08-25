@@ -10,6 +10,33 @@ The consent dialog opens in the VS Code window. The producer is looking at the
 TERMINAL. A blocking prompt in a window nobody is watching is worse than no
 prompt: the agent hangs until it happens to be noticed.
 
+## MEASURED 2026-08-25 — the answer, and what it changed
+
+Full record: `.rptc/research/consent-in-the-chat/research.md`.
+
+- **Claude Code declares `elicitation: { form: {} }`** and genuinely handles the
+  request — it is answered, not ignored.
+- **Headless it answers in ~5ms with `action: "cancel"`.** No hang, no throw. The
+  producer sees no prompt; the client generates that answer, not a person.
+- **A server cannot tell "nobody was there" from "the user said no".** Both are
+  `cancel`, and the payload carries nothing that separates them.
+
+That last point killed the first design, which branched on `decline` vs `cancel`.
+The three actions exist in the spec, but only `cancel` has ever been observed, so
+branching on the difference was a guess dressed as a fact — and both ways of
+being wrong are bad (a chat decline gets asked again in a modal; a headless run
+waits on a dialog nobody is watching).
+
+**The design that survives: anything that is not an explicit `accept` is a
+refusal.** Headless therefore refuses every destructive operation, which is
+correct by default — `demoBuilder.ai.requireAgentConsent` already exists as the
+deliberate unattended escape hatch. Nothing hangs, and nobody is asked twice. The
+modal stays the path for clients that declare NO elicitation, rather than being a
+second chance after a chat prompt.
+
+**Still untested:** whether an interactive session renders a usable prompt. One
+human minute settles it; the command is in the research writeup.
+
 ## Start with the measurement, not the design
 
 **One fact decides this step, and it is unverified.** The SDK in this repo
