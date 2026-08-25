@@ -99,112 +99,73 @@ describe('createAgentConsentGate', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
-    it('raises a MODAL dialog and allows when the user picks Allow', async () => {
+    it('titles the dialog with AUTHORED copy, not the tool name', async () => {
+        // delete_project's authored action is "Delete this project" — the tool
+        // name would have read "Delete project", and the description would have
+        // dragged in agent guidance behind it.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        const verdict = await gate('delete_page', { path: '/products/x', confirm: true });
+        await gate('delete_project', { confirm: true });
 
-        expect(verdict).toEqual({ allowed: true });
-        const [message, opts] = mockShowWarningMessage.mock.calls[0];
-        // The ACTION leads. It used to arrive mid-sentence behind two clauses of
-        // preamble, so the one thing being decided came last.
-        expect(String(message)).toBe('Demo Builder: Delete page?');
-        expect(opts).toEqual(
-            expect.objectContaining({ modal: true, detail: expect.stringContaining('/products/x') })
-        );
-        expect(String((opts as { detail?: string }).detail)).toContain(
-            'An AI agent asked Demo Builder to run this.'
-        );
-    });
-
-    it('expands acronyms in the title — snake_case hides them', async () => {
-        settingIs(true);
-        mockShowWarningMessage.mockResolvedValue('Allow');
-        const gate = createAgentConsentGate(logger);
-
-        await gate('reset_eds_project', { confirm: true });
-
-        // "Reset eds project?" reads as a typo in a dialog asking for approval.
         expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
-            'Demo Builder: Reset EDS project?'
+            'Demo Builder: Delete this project?'
         );
     });
 
-    it("shows the tool's own description, trimmed to one sentence", async () => {
-        // Several tool NAMES are ambiguous alone — "Republish" republishes what?
-        // The description already answers that and was being shown to nobody.
+    it('states the CONSEQUENCE, and never the agent-facing description', async () => {
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        await gate(
-            'republish',
-            { confirm: true },
-            'Regenerate and republish the EDS storefront config.json to GitHub and the CDN. ' +
-                'Requires confirm:true. Ask the user first.'
-        );
-
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
-        expect(detail).toContain('Regenerate and republish the EDS storefront config.json');
-        // Agent-facing guidance is not a decision aid for a human.
-        expect(detail).not.toContain('Ask the user first');
-        expect(detail).not.toContain('Requires confirm:true');
-    });
-
-    it('drops agent-only asides but KEEPS "(irreversible)"', async () => {
-        // 29 of 60 write-tool descriptions open with a parenthetical, and they
-        // are two different things wearing the same punctuation. A blanket strip
-        // would delete the one word that decides the answer on a delete dialog.
-        settingIs(true);
-        mockShowWarningMessage.mockResolvedValue('Allow');
-        const gate = createAgentConsentGate(logger);
-
-        await gate(
-            'add_console_apis',
-            { confirm: true },
-            'Subscribe Adobe APIs (sdk codes from list_console_apis) on this workspace. More.'
-        );
+        // A description is still passed; it must not reach the dialog. Four
+        // passes of transforming it still produced text a producer should not
+        // have been shown, which is why the copy is authored instead.
         await gate(
             'delete_github_repo',
             { confirm: true },
             'Permanently delete a GitHub repository (irreversible). Requires confirm:true.'
         );
 
-        const detailOf = (i: number) =>
-            String((mockShowWarningMessage.mock.calls[i][1] as { detail?: string }).detail);
-        expect(detailOf(0)).toContain('Subscribe Adobe APIs on this workspace.');
-        expect(detailOf(0)).not.toContain('list_console_apis');
-        expect(detailOf(1)).toContain('(irreversible)');
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain("Deletes the repository and its history on GitHub.");
+        expect(detail).toContain("can't be undone");
+        expect(detail).not.toContain('confirm:true');
+        expect(detail).not.toContain('Permanently delete a GitHub repository');
     });
 
-    it('falls back to boilerplate when a tool has no description', async () => {
+    it('says what is irreversible in plain words, not in a parenthetical', async () => {
+        // "(irreversible)" survived every mechanical rule precisely because it
+        // mattered. Authored copy says it as a sentence instead.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        await gate('republish', { confirm: true });
+        await gate('cleanup_dalive_site', { confirm: true });
 
-        expect(
-            String((mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail)
-        ).toBe('An AI agent asked Demo Builder to run this.');
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain("can't be undone");
+        expect(detail).not.toContain('(irreversible)');
     });
 
-    it('says so plainly when a tool takes no parameters', async () => {
+    it('falls back to the humanised name when nobody has written copy', async () => {
+        // An unwritten tool must be no worse than it is today -- never blank.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        await gate('republish', { confirm: true });
+        await gate('some_unwritten_tool', { confirm: true });
 
-        const [, opts] = mockShowWarningMessage.mock.calls[0];
-        expect(String((opts as { detail?: string }).detail)).toBe(
-            'An AI agent asked Demo Builder to run this.'
+        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+            'Demo Builder: Some unwritten tool?'
         );
     });
+
 
     it('labels the proof-of-intent echo as a Name, not confirmName', async () => {
         settingIs(true);

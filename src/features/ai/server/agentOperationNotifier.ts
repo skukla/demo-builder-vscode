@@ -27,6 +27,7 @@
  */
 
 import * as vscode from 'vscode';
+import { alertCopyFor } from './agentAlertCopy';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
 import { humanize } from './toolDisplayName';
@@ -48,45 +49,6 @@ const CONSENT_KEY_LABELS: Record<string, string> = {
     confirmName: 'Name',
     projectName: 'Project',
 };
-
-/**
- * The first sentence of a tool description, for the dialog's detail line.
- *
- * Descriptions are written for an AGENT and often carry several sentences of
- * guidance — "Requires confirm:true", "Ask the user first", pointers to sibling
- * tools. A human deciding yes-or-no needs the first one, which is always what the
- * tool does.
- */
-function firstSentence(text: string | undefined): string | undefined {
-    const trimmed = text?.trim();
-    if (!trimmed) return undefined;
-    const end = trimmed.search(/\.\s|\.$/);
-    const sentence = end === -1 ? trimmed : trimmed.slice(0, end + 1);
-    const cleaned = dropAgentAsides(sentence).trim();
-    return cleaned.endsWith('.') ? cleaned : `${cleaned}.`;
-}
-
-/**
- * Remove parentheticals written for the AGENT, keep the ones written for a human.
- *
- * 29 of 60 write-tool descriptions open with a parenthetical, and they are two
- * different things wearing the same punctuation:
- *
- *   agent-only   (sdk codes from list_console_apis)  (select_org first)
- *                (with confirm:true)
- *   human-facing (irreversible)
- *
- * So a blanket strip is WRONG — it would delete "(irreversible)" from precisely
- * the dialogs where it decides the answer. The rule is therefore narrow: drop an
- * aside only when it names a tool (`snake_case`) or a protocol token
- * (`confirm:`), which is what makes it agent-shaped. Anything in plain words
- * survives untouched.
- */
-function dropAgentAsides(sentence: string): string {
-    return sentence
-        .replace(/\s*\([^)]*(?:[a-z]+_[a-z_]+|confirm:)[^)]*\)/g, '')
-        .replace(/\s{2,}/g, ' ');
-}
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */
 function humanizeKey(key: string): string {
@@ -156,7 +118,10 @@ function renderArgsForConsent(args: unknown): string {
 export function createAgentConsentGate(
     logger: Logger,
 ): (toolName: string, args: unknown, description?: string) => Promise<ConsentVerdict> {
-    return async (toolName, args, description) => {
+    // `_description` is accepted and deliberately NOT shown — see the dialog
+    // block below and agentAlertCopy for why the agent-facing text is not human
+    // copy. Kept in the signature so the gate's contract is stable.
+    return async (toolName, args, _description) => {
         const required = vscode.workspace
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.requireAgentConsent', true);
@@ -164,23 +129,16 @@ export function createAgentConsentGate(
             return { allowed: true };
         }
 
-        // Lead with the ACTION. The previous wording buried it mid-sentence
-        // behind two clauses of preamble ("Demo Builder — an AI agent requests:
-        // Start demo. Allow it?"), so the one thing being decided arrived last.
-        // VS Code renders `message` prominently and `detail` beneath it, which
-        // is the natural split between "what" and "who/with what".
-        // Prefer the tool's OWN description over boilerplate. Several names are
-        // ambiguous on their own — "Republish", "Sync content" vs "Sync
-        // storefront" — and the description is the sentence already written to
-        // disambiguate them. Trimmed to one sentence: the dialog is a decision,
-        // not documentation, and some descriptions run to several lines of agent
-        // guidance ("Ask the user first", cross-references to other tools).
-        const what = firstSentence(description) ?? 'An AI agent asked Demo Builder to run this.';
+        // AUTHORED copy, not derived. `description` is still accepted so the
+        // signature stays stable, but it is deliberately NOT shown: it is written
+        // for an agent, and four passes of transforming it still produced text a
+        // producer should not have been handed. See agentAlertCopy.
+        const copy = alertCopyFor(toolName);
         const params = renderArgsForConsent(args);
-        const detail = params ? `${what}\n\n${params}` : what;
+        const detail = [copy?.consequence, params].filter(Boolean).join('\n\n');
         const choice = await vscode.window.showWarningMessage(
-            `Demo Builder: ${humanize(toolName)}?`,
-            { modal: true, detail },
+            `Demo Builder: ${copy?.action ?? humanize(toolName)}?`,
+            { modal: true, detail: detail || undefined },
             'Allow',
         );
 

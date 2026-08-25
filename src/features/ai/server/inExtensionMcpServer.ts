@@ -20,6 +20,7 @@ import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { raisesConsentDialog } from './agentAlertCopy';
 import { probeSocket } from './mcpSocketDiscovery';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
@@ -62,8 +63,25 @@ export function isReadOnlyToolName(name: string): boolean {
  * agent-traversability half of the design forbids. A call WITHOUT confirm
  * needs no dialog — the handler's own prose refusal is its answer.
  */
-export function callRequestsConsent(args: unknown): boolean {
-    return !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true;
+export function callRequestsConsent(toolName: string, args: unknown): boolean {
+    // The OPERATION decides, not the agent's assertion.
+    //
+    // This used to fire on `confirm: true` alone, which aimed the one real
+    // safety net at the wrong tools: `open_url` (opens a browser tab) raised a
+    // modal while `remove_integration` (undeploys from Runtime) and
+    // `reset_datapack` ("cannot be undone") raised nothing — because the gate
+    // measured what the agent volunteered rather than what the call does.
+    //
+    // Membership now lives with the copy (`agentAlertCopy`), so a tool that
+    // interrupts the user is exactly a tool somebody has written words for. A
+    // dialog with no authored text is not a thing that can exist.
+    //
+    // `confirm` is still required alongside: it is the agent's own gate and its
+    // absence still earns a prose refusal from the handler. This narrows what
+    // interrupts; it never widens what runs unconfirmed.
+    const asserted =
+        !!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true;
+    return asserted && raisesConsentDialog(toolName);
 }
 
 /** The injected consent gate's verdict. `refusal` is a ready MCP result. */
@@ -214,7 +232,7 @@ function withToolLogging(
                     // Consent FIRST, notifier second: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
-                    if (consentGate && callRequestsConsent(args)) {
+                    if (consentGate && callRequestsConsent(name, args)) {
                         // The tool's own description goes to the dialog. Reading all
                     // 60 write tools showed the NAMES are mostly fine but several
                     // are ambiguous alone — "Republish" (what?), "Sync content"
