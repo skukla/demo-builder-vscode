@@ -23,6 +23,7 @@ the previous is green.
 | 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached |
 | 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation |
 | 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
+| — | `prompt-threads/overview.md` | Sub-plan: keep the WORK, not the wording — refining a prompt currently destroys its history |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
 | 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
 | — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
@@ -59,6 +60,25 @@ One step per session, and the order is not arbitrary:
    reconstruct after.
 5. **The OpenTelemetry sub-plan** starts with a MEASUREMENT, not code — see the
    open tasks below.
+6. **`prompt-threads/` before any more workbench work.** It changes the storage
+   step 07 shipped, and every later view reads that storage. Doing it after would
+   mean migrating twice.
+
+### When something becomes a sub-plan rather than a step
+
+Two grounds, and the second was learned on 2026-08-25 rather than planned:
+
+- **It needs something outside this extension's code** — a collector to receive
+  telemetry, held-out prompts written by real producers. `opentelemetry/` and
+  `measurement/` qualify this way.
+- **It changes a MODEL that shipped steps depend on, and its real content is
+  POLICY.** `prompt-threads/` qualifies this way: entirely inside the code, but
+  it rewrites storage that step 07 shipped, and what it actually decides is when
+  a thing begins, when it may be dropped, and what happens when someone returns
+  to it. A step would bury those in an implementation.
+
+The tell for the second: writing the step reveals you are choosing rules rather
+than writing code.
 
 ### Open tasks that are NOT code, and must not be lost
 
