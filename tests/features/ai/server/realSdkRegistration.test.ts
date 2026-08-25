@@ -26,6 +26,8 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerEvaluationTools } from '@/features/ai/server/evaluationTools';
+import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
@@ -71,6 +73,15 @@ describe('registration against the real MCP SDK', () => {
         ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
         ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
         ['cloud resource tools', (s: McpServer) => registerCloudResourceTools(s, ctxFactory)],
+        [
+            'evaluate_prompt',
+            (s: McpServer) =>
+                registerEvaluationTools(s, {
+                    runner: { execute: async () => ({ stdout: '{}' }) },
+                    trace: new ToolTraceRecorder(),
+                    logger: { info() {}, debug() {}, warn() {}, error() {} } as never,
+                }),
+        ],
     ])('accepts %s', (_name, register) => {
         expect(() => register(server())).not.toThrow();
     });

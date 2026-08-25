@@ -146,6 +146,11 @@
         "command": "demoBuilder.toggleAgentDryRun",
         "title": "Toggle Agent Dry Run",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.evaluatePrompt",
+        "title": "Try a Prompt Out",
+        "category": "Demo Builder"
       }
     ],
     "configuration": [

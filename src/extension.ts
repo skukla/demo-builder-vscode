@@ -16,6 +16,8 @@ import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { registerEvaluatePromptCommand } from '@/features/ai/evaluation/evaluatePromptCommand';
+import { isEvaluating } from '@/features/ai/evaluation/evaluationSession';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
@@ -36,6 +38,7 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerDryRunMode } from '@/features/ai/server/dryRunMode';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerEvaluationTools } from '@/features/ai/server/evaluationTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
@@ -303,6 +306,15 @@ export async function activate(context: vscode.ExtensionContext) {
         // makes the mode visible while it is on. Before the server starts, so
         // the reader exists by the time a tool can be called.
         agentDryRun = registerDryRunMode(context, debugLogger);
+
+        // Door 2 of the evaluation runner. Both doors take the SAME service and
+        // the SAME recorder — two implementations of "evaluate a prompt" would
+        // drift, and the drifting one would be whichever nobody was watching.
+        registerEvaluatePromptCommand(context, {
+            runner: ServiceLocator.getCommandExecutor(),
+            trace: agentTrace,
+            logger: debugLogger,
+        });
 
         // Start the in-extension MCP server (serves Claude Code via the
         // stdio→UDS proxy). Bound to the open workspace folder; restarted when
@@ -575,9 +587,18 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
-            dryRun: agentDryRun,
+            // An evaluation is ALWAYS a dry run, whatever the status bar says.
+            // The spawned agent reaches this same server, so forcing it here is
+            // the only place the guarantee can actually hold.
+            dryRun: () => isEvaluating() || (agentDryRun?.() ?? false),
             trace: agentTrace,
             registerExtraTools: (mcpServer) => {
+                // Door 1: the agent's way in, same service as the command.
+                registerEvaluationTools(mcpServer, {
+                    runner: ServiceLocator.getCommandExecutor(),
+                    trace: agentTrace,
+                    logger,
+                });
                 registerDescriptorTools(
                     mcpServer,
                     [
