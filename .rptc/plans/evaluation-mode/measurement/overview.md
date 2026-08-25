@@ -77,11 +77,49 @@ The load-bearing ones:
 - **Restore what the run mutates.** `run.mjs` overwrites the developer's home
   `AGENTS.md` and does not put it back. Fix that as part of productising it.
 
+## What a "prompt" here actually is
+
+Worth stating plainly, because the term did real damage in the 2026-08-25 review:
+it is **an ordinary thing a producer would type into the chat**. Nothing
+specialised about its form.
+
+    Set up a Bodea demo with B2B turned on.
+    Why aren't my product pages loading?
+    Add the catalog integration to this project.
+
+The battery is a fixed list of those. Run the list, record what each costs and
+how many steps it takes, and the numbers are a baseline. Run the same list after
+changing the extension and the difference says whether agents got a better or
+worse deal.
+
+**"Held out" means one specific thing.** If a suggestion system is built and then
+measured against the same prompts it was tuned on, it will look excellent —
+because it was fitted to them. The held-out list is prompts the system has never
+been measured against, so an improvement there is an improvement rather than a
+fit.
+
+Concretely: **five to build against, five different ones nobody touches until we
+are claiming it works.**
+
 ## Split the battery
 
-The five recorded prompts are the TUNING set. The held-out set must be prompts
-step 09 never sees — write them here, from real producer asks, and mark the split
-in the directory so a later change cannot quietly merge them.
+The five recorded prompts in `../battery/` are the TUNING set. The held-out set
+must be prompts step 09 never sees.
+
+**OPEN — the one question this sub-plan cannot answer itself.** The held-out five
+have to come from somewhere, and the source decides whether the eventual claim is
+worth anything:
+
+- **Real producer asks** — the only source that makes an improvement claim real,
+  and the slowest to start, because it means asking colleagues what they type.
+- **Mined from existing session transcripts** — genuinely real prompts, already
+  on disk, but skewed toward whoever's sessions they are.
+- **Written from the tool surface** — fast and comprehensive, and precisely the
+  overfitting the held-out set exists to prevent, since they would be one
+  person's guess at what producers ask.
+
+Mark the split in this directory as a FILE, not an intention, so a later change
+cannot quietly merge the two sets.
 
 ## Where it runs
 

@@ -19,19 +19,35 @@ Advice tuned on the prompts it is judged by will look excellent and generalise t
 nothing. The held-out set is what makes an improvement claim real, and it is
 cheap to build before and impossible to reconstruct after.
 
-## The cost problem, stated honestly
+## The cost of a suggestion is OURS, not the prompt's
 
-This doubles the price of an evaluation, in a feature whose purpose is reducing
-cost. Three ways to hold that, and the choice should be made with a measurement
-rather than a preference:
+**Owner decision, 2026-08-25: "their suggestions shouldn't be considered part of
+the cost we track."** This is a measurement-correctness constraint, not a budget
+preference, and it is stronger than the question that produced it.
 
-- **Ask only when there is something to explain** — a clean run gets no second
-  call. Most of the win, most of the time, for none of the cost on good prompts.
-- **Fold it into the run being evaluated** rather than spawning a second one, if
-  the harness allows the run to report on itself.
-- **Make it opt-in** per evaluation, so the producer chooses to spend it.
+The number a producer is trying to reduce is what THEIR PROMPT costs. Tokens we
+spend analysing that prompt are our overhead. Fold the two together and the
+headline inflates by our own analysis, run-to-run comparisons stop meaning
+anything, and the feature reports failure at the moment it starts helping.
 
-The first is the obvious default. Measure the second before dismissing it.
+Two consequences, both binding:
+
+1. **The reported `costUSD` covers the evaluated run and nothing else.** The
+   suggestion call is accounted separately or not at all, never added in.
+2. **It rules out folding the analysis into the run being evaluated.** That was
+   the cheapest option on the table and it is now unavailable: a run that
+   analyses itself spends the analysis inside the figure being measured, with no
+   way to subtract it afterwards.
+
+So the analysis is a SEPARATE call, and the remaining question is only when to
+spend it. Default: **only when there is something to explain** — a clean run gets
+no second call, which costs nothing on exactly the prompts that need no advice.
+Opt-in per evaluation stays available if the second call proves expensive in
+practice.
+
+**Test this explicitly.** A reported cost that quietly includes the analysis is
+invisible — it just looks like a slightly worse prompt. Assert that the figure
+for a run WITH suggestions equals the figure for the same run without them.
 
 ## Keep the deterministic rules
 

@@ -39,12 +39,21 @@ explicit about which answers which question, or someone will delete one.
 
 ## The questions to settle BEFORE writing code
 
-1. **Where does the collector live**, who runs it, and who pays for it. If the
-   answer is "nobody yet", that is the first task and not a detail.
-2. **What leaves the machine.** Argument KEYS are already safe by construction;
-   the fingerprint is one-way. Project NAMES and prompts are not obviously safe
-   and must be decided deliberately, not defaulted. This repo is public and has
-   a standing rule about identifiers in anything committed — the same care
+1. **Where does the collector live**, who runs it, and who pays for it.
+   **ANSWERED 2026-08-25 (owner): nobody yet — and that is task one.** So this
+   sub-plan does not begin with code. It begins with finding a destination and an
+   owner, and if that stalls, the honest move is to stop rather than build an
+   exporter with nowhere to send.
+2. **What leaves the machine.** **DEFERRED BEHIND QUESTION 1, deliberately**
+   (owner, 2026-08-25: "it depends on where this data will go"). Asked before the
+   destination is known, this question has no answer — an internal Adobe
+   collector and a third-party service permit completely different things.
+
+   What is already settled either way: argument KEYS are safe by construction and
+   the fingerprint is one-way. What must be decided against a known destination:
+   project names, project shape, and prompts. Prompts are the sensitive one —
+   they can contain anything, including customer names. This repo is public and
+   has a standing rule about identifiers in anything committed; the same care
    applies to anything exported.
 3. **Opt-in or opt-out**, and how a producer turns it off. Given the above, opt-in.
 4. **Does it duplicate the CLI's own telemetry?** Claude Code can already export

@@ -18,6 +18,30 @@ agent reaches the same server, so forcing it window-wide was the only guarantee
 that held). The trade is defensible for the run the user is watching. It is not
 defensible for a run they forgot they left open in another tab.
 
+## A worse problem found while planning this (2026-08-25)
+
+The window-wide dry run is the visible hazard. Checking whether per-connection
+scoping was possible turned up a correctness gap underneath it.
+
+`isEvaluating()` is **module state in ONE window**. The spawned `claude` reaches
+a server through `mcp-proxy.js`, which resolves its target as: the pinned
+`DEMO_BUILDER_MCP_SOCKET` from the project's `.mcp.json` **if that socket is
+live**, otherwise a newest-mtime sweep of the socket directory
+(`mcpSocketDiscovery.ts`).
+
+So when the pinned socket is dead — the window was reloaded, or the extension
+host restarted — and another window is live, the evaluation's agent connects to a
+DIFFERENT window's server. That server's `isEvaluating()` is false. **Its writes
+execute for real, while the workbench reports "nothing was changed."**
+
+It needs two conditions at once, so it is not the common case. It is also the
+worst possible failure for this feature: the one promise it makes, broken
+silently, with a UI actively asserting the opposite.
+
+**Per-connection scoping fixes this as a side effect**, because the marker
+travels with the connection rather than living in whichever window happened to
+start the run. That moves it from "the nicer fix" to "the correct one".
+
 ## The fix, and its floor
 
 **Goal — scope the dry run to the evaluation's own MCP connection.** The server
@@ -25,12 +49,25 @@ sees one connection per client. If the evaluation's spawned `claude` can be
 identified at connect time, `dryRun` becomes per-connection rather than global,
 and the hazard disappears rather than being explained.
 
-Route to check FIRST, before designing anything: `evaluate_prompt` spawns the
-CLI, so it can pass an environment variable that the stdio→UDS proxy
-(`dist/mcp-proxy.js`) forwards, or a distinguishing argument the server can read
-at `initialize` (`clientInfo` is already read there for the build stamp). Verify
-which of those actually reaches the server — do not assume either does. This is
-the whole step if it works.
+**The route, checked 2026-08-25 rather than assumed.** Every piece already
+exists:
+
+1. `evaluate_prompt` spawns the CLI, so it can set an environment variable —
+   a per-run token, not a constant, so a stale value cannot mark an unrelated
+   connection.
+2. `mcp-proxy.js` is OUR code and runs as a child of that spawn, so it inherits
+   the variable. It already CAPTURES the client's `initialize` line and replays
+   it on reconnect (`initializedLine`, `capturedHandshake`), so stamping the
+   token into what it forwards is an edit to a line it is already holding — and
+   the stamp survives the reconnects the proxy is built to ride out.
+3. The server creates **a fresh MCP server instance per socket connection**
+   (`StdioServerTransport(socket, socket)`, and `withToolLogging` already wraps
+   per connection). So a per-connection flag has a natural home; there is no
+   shared object to thread it through.
+
+Then `dryRun` becomes `thisConnectionIsAnEvaluation || the setting`, and
+`evaluationSession` keeps only the recursion guard — which is what it was
+actually good for.
 
 **Floor — if per-connection proves impossible, make it VISIBLE and say why.**
 Not a smaller version of the fix; a different one, and it must be complete:
