@@ -163,14 +163,11 @@ dialog also offers **"Allow for the rest of this session"** — but only for
 and are undone by running them again. Everything else asks every time. See
 `agent-alerts.md` for the two tests that decide it.
 
-**Moving consent into the chat is measured but parked.** Claude Code declares the
-`elicitation` capability and answers the request, so a server CAN ask the user
-directly — but headless it answers `cancel` in 5ms with no prompt shown, and a
-server cannot tell "nobody was there" from "the user said no". The design that
-survives is simple: anything that is not an explicit accept is a refusal. Whether
-an interactive session renders a usable prompt is still unmeasured; four attempts
-failed on config paths and tool-search deferral rather than on elicitation.
-Record: `.rptc/research/consent-in-the-chat/`.
+**Consent is asked in the CHAT first**, since that is where the producer is
+looking, with the VS Code modal as the floor when the client cannot be asked.
+Anything that is not an explicit accept is a refusal — a server cannot tell
+"nobody was there" from "the user said no", so the blunt rule is the honest one.
+Record: `.rptc/research/consent-in-the-chat/`; details in `agent-alerts.md`.
 
 ## Related
 

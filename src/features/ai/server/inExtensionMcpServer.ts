@@ -21,8 +21,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { raisesConsentDialog } from './agentAlertCopy';
+import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
-import { asText } from './mcpToolResult';
+import { asRawText, asText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import {
     fingerprintArgs,
@@ -360,19 +361,41 @@ function withToolLogging(
                     // Consent SECOND, notifier third: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
-                    if (consentGate && callRequestsConsent(name, args)) {
-                        // The tool's own description goes to the dialog. Reading all
-                    // 60 write tools showed the NAMES are mostly fine but several
-                    // are ambiguous alone — "Republish" (what?), "Sync content"
-                    // vs "Sync storefront" (CDN publish vs git push). Each one
-                    // already carries a description written to explain exactly
-                    // that, and the dialog was showing boilerplate instead.
-                    const description = (schema as { description?: string } | undefined)
-                        ?.description;
-                    const verdict = await consentGate(name, args, description);
-                        if (!verdict.allowed) {
-                            logger.info(`[MCP] ${name} declined by user consent dialog`);
-                            return verdict.refusal;
+                    if (callRequestsConsent(name, args)) {
+                        // ASK THE CHAT FIRST, because that is where the producer
+                        // is looking. The modal opens in the VS Code window,
+                        // which they may not be watching — and a blocking prompt
+                        // nobody sees is worse than no prompt.
+                        const caps = server.server?.getClientCapabilities?.();
+                        const chat = await askChatForConsent(
+                            name,
+                            args,
+                            extra,
+                            Boolean(caps && 'elicitation' in caps),
+                        );
+                        if (chat === 'refuse') {
+                            logger.info(`[MCP] ${name} refused in the chat`);
+                            return asRawText(
+                                `${name} was not approved. Nothing was changed. Ask the user ` +
+                                    'again only if they want to retry.',
+                            );
+                        }
+                        // 'unavailable' — the client cannot be asked, or the ask
+                        // failed. NOT a refusal: fall through to the modal, which
+                        // stays the floor. A consent gate that silently stops
+                        // working is the worst available outcome.
+                        if (chat !== 'accept' && consentGate) {
+                            // The tool's own description reaches the gate. Reading all
+                            // 60 write tools showed the NAMES are mostly fine but several
+                            // are ambiguous alone — "Republish" (what?), "Sync content"
+                            // vs "Sync storefront" (CDN publish vs git push).
+                            const description = (schema as { description?: string } | undefined)
+                                ?.description;
+                            const verdict = await consentGate(name, args, description);
+                            if (!verdict.allowed) {
+                                logger.info(`[MCP] ${name} declined by user consent dialog`);
+                                return verdict.refusal;
+                            }
                         }
                     }
                     // AFTER consent, never before: announcing "Deploying mesh…" and

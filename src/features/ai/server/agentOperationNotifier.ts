@@ -28,6 +28,7 @@
 
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
 import { narrationFor } from './toolNarration';
@@ -53,88 +54,6 @@ export function clearSessionGrants(): void {
     sessionGrants.clear();
 }
 
-/** Longest arg value the consent dialog will print before eliding. */
-const CONSENT_DETAIL_VALUE_MAX = 60;
-
-/**
- * Friendlier labels for argument keys a producer would not recognise.
- *
- * `confirmName` used to be here. It is the surface's proof-of-intent echo — the
- * agent repeats the target's name to show it means this one — and it was
- * rendered because the dialog printed every scalar it was handed. Now that only
- * authored target keys are shown, and no tool names `confirmName` as its target
- * (the tools that require it already name the same thing properly, e.g.
- * `start_datapack_export` shows the pack rather than the echo), the entry was
- * unreachable and is gone rather than left as a stub.
- */
-const CONSENT_KEY_LABELS: Record<string, string> = {
-    projectName: 'Project',
-};
-
-/**
- * The authored phrase for a VS Code frame, or the bare tool name if a tool has
- * somehow shipped without one. The tool NAME is the honest fallback here: it is
- * visibly a fallback rather than prose pretending to be authored, and
- * `toolNarration.test.ts` makes the case unreachable.
- */
-function label(toolName: string): string {
-    return narrationFor(toolName) ?? toolName;
-}
-
-/** `blockId` / `block_id` → "Block id". A label, not an identifier. */
-function humanizeKey(key: string): string {
-    const labelled = CONSENT_KEY_LABELS[key];
-    if (labelled) return labelled;
-    const spaced = key
-        .replace(/[_-]+/g, ' ')
-        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-        .toLowerCase();
-    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
-/** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
-const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
-
-/**
- * Render a call's args for the consent dialog — the informed half of
- * informed consent. Scalars only (an object arg is structure, not a decision
- * input), the `confirm` marker itself skipped, secret-shaped keys masked,
- * long values elided. This deliberately DOES show values where the logging
- * wrapper shows only keys: "publish /products/x" is the substance the user
- * is consenting to.
- */
-function renderTargetForConsent(args: unknown, keys: string[]): string {
-    if (!args || typeof args !== 'object') return '';
-    const record = args as Record<string, unknown>;
-    const lines: string[] = [];
-    // AUTHORED order, not schema order. The previous version walked
-    // Object.entries and printed everything, so deleting an Adobe project led
-    // with a 19-digit id and buried the name.
-    for (const key of keys) {
-        const value = record[key];
-        if (value === undefined || value === null) continue;
-        if (SECRET_KEY_RE.test(key)) {
-            // Belt and braces. A key should never be authored into `target` if
-            // it holds a credential, but authoring is not a guarantee, and the
-            // cost of being wrong here is a secret in a screenshot.
-            lines.push(`${humanizeKey(key)}: ***`);
-            continue;
-        }
-        if (typeof value === 'string') {
-            lines.push(
-                `${humanizeKey(key)}: ${
-                    value.length > CONSENT_DETAIL_VALUE_MAX
-                        ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
-                        : value
-                }`,
-            );
-        } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${humanizeKey(key)}: ${value}`);
-        }
-    }
-    return lines.join('\n');
-}
-
 /**
  * The open project's name, for tools that act on it and take no argument
  * naming it — `republish`, `sync_content`, `reset_eds_project`.
@@ -151,6 +70,17 @@ async function currentProjectLine(): Promise<string> {
     } catch {
         return '';
     }
+}
+
+
+/**
+ * The authored phrase for a VS Code frame, or the bare tool name if a tool has
+ * somehow shipped without one. The tool NAME is the honest fallback here: it is
+ * visibly a fallback rather than prose pretending to be authored, and
+ * `toolNarration.test.ts` makes the case unreachable.
+ */
+function label(toolName: string): string {
+    return narrationFor(toolName) ?? toolName;
 }
 
 /**
@@ -198,10 +128,9 @@ export function createAgentConsentGate(
         // Three lines and no more: what happens, what it costs, and WHICH one.
         // An empty `target` means the tool acts on the open project, which is
         // named instead — a reader is never asked to approve an unnamed thing.
-        const target = copy?.target?.length
-            ? renderTargetForConsent(args, copy.target)
-            : await currentProjectLine();
-        const detail = [copy?.consequence, target].filter(Boolean).join('\n\n');
+        // ONE builder, shared with the chat path. Two surfaces phrasing the
+        // same question differently is how they drift.
+        const prompt = buildConsentPrompt(toolName, args, await currentProjectLine());
         // A standing grant answers before the dialog opens. Checked AFTER the
         // setting so turning consent back on revokes them, and after the copy
         // lookup so a tool with no copy can never be granted.
@@ -217,8 +146,8 @@ export function createAgentConsentGate(
         if (copy?.sessionGrant) buttons.push('Allow for the rest of this session');
 
         const choice = await vscode.window.showWarningMessage(
-            `Demo Builder: ${copy?.action ?? toolName}?`,
-            { modal: true, detail: detail || undefined },
+            prompt?.title ?? `Demo Builder: ${toolName}?`,
+            { modal: true, detail: prompt?.detail || undefined },
             ...buttons,
         );
 

@@ -68,6 +68,32 @@ All of these raised a dialog before 2026-08-25. They are recoverable, additive, 
 trivially reversible, and a prompt on a cheap mutation trains people to click
 Allow without reading — which costs more than it saves.
 
+## Where the question appears
+
+**The chat first, the VS Code modal as the floor.** The modal opens in the VS
+Code window; the producer is watching the terminal Claude session the extension
+launched. A blocking prompt nobody is looking at is worse than no prompt.
+
+MCP's elicitation lets a server ask the user directly, and Claude Code declares
+the capability. So `consentViaChat.ts` asks there, and falls back to the modal
+when it cannot.
+
+**The rule is deliberately blunt: anything that is not an explicit `accept` is a
+refusal.** A server cannot tell "nobody was there to ask" from "the user said
+no" — both arrive as `cancel`, measured 2026-08-25. The spec defines three
+actions, but only `cancel` has ever been observed here, so branching on the
+difference would be a guess dressed as a fact.
+
+**A client that cannot be ASKED is a different thing from a no.** No elicitation
+capability, a failed request, or a timeout is `unavailable`, and that falls
+through to the modal. The invariant that holds throughout: **no call is ever
+allowed without an explicit accept from somewhere.** The modal cannot auto-allow
+either, so falling back never weakens the gate.
+
+Both surfaces render the SAME authored text, built once in `consentText.ts`. Two
+surfaces phrasing one question differently is how they drift, and the one that
+drifts is whichever nobody is watching.
+
 ## "Don't ask again this session"
 
 A single storefront flow raises the same prompt several times, and someone who
