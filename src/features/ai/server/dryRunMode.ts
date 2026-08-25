@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /** The setting, without its `demoBuilder.` prefix (how `getConfiguration` wants it). */
@@ -63,22 +64,30 @@ export function registerDryRunMode(
     logger: Logger,
 ): () => boolean {
     const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    item.text = '$(beaker) Agent dry run';
-    item.tooltip =
-        'Demo Builder: AI agents can read, but every change is simulated. ' +
-        'Click to turn off.';
-    // Warning colours, because this changes what the extension DOES. A grey
-    // status item reads as information; this has to read as a mode.
-    item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     item.command = TOGGLE_DRY_RUN_COMMAND;
     context.subscriptions.push(item);
 
+    /**
+     * The item lives in the status bar in BOTH states.
+     *
+     * It used to hide when off, which put the toggle out of reach exactly when
+     * someone wanted to turn it ON — the affordance vanished at the moment it
+     * was useful, and the only way back was the command palette. Owner feedback,
+     * 2026-08-25.
+     *
+     * The two states must not look alike: ON carries the warning colour, because
+     * it changes what the extension DOES and a grey item reads as information.
+     */
     const sync = (): void => {
-        if (isDryRunEnabled()) {
-            item.show();
-        } else {
-            item.hide();
-        }
+        const on = isDryRunEnabled();
+        item.text = on ? '$(beaker) Dry run ON' : '$(beaker) Dry run off';
+        item.tooltip = on
+            ? 'Agent changes are simulated. Click to turn off.'
+            : 'Agent changes are real. Click to simulate them instead.';
+        item.backgroundColor = on
+            ? new vscode.ThemeColor('statusBarItem.warningBackground')
+            : undefined;
+        item.show();
     };
     sync();
 
@@ -95,11 +104,13 @@ export function registerDryRunMode(
                 .getConfiguration('demoBuilder')
                 .update(DRY_RUN_SETTING, next, vscode.ConfigurationTarget.Global);
             logger.info(`[MCP] agent dry run ${next ? 'ON' : 'OFF'}`);
-            vscode.window.showInformationMessage(
-                next
-                    ? 'Agent dry run is ON. AI agents can read your projects, but every ' +
-                          'change is simulated until you turn this off.'
-                    : 'Agent dry run is OFF. AI agents can change your projects again.',
+            // TRANSIENT, and short. A persistent notification for a toggle is
+            // twice wrong: the status bar item already IS the indicator, so the
+            // message only needs to confirm the change landed — and one long
+            // enough to need expanding is not read at all.
+            vscode.window.setStatusBarMessage(
+                next ? '$(beaker) Dry run on — changes simulated' : '$(beaker) Dry run off',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
             );
         }),
     );

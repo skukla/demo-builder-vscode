@@ -29,6 +29,7 @@ import {
     TOGGLE_DRY_RUN_COMMAND,
 } from '@/features/ai/server/dryRunMode';
 import * as pkg from '../../../../package.json';
+import { readFileSync } from 'fs';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
@@ -304,5 +305,41 @@ describe('the name shape the gate classifies by agrees with the declared split',
 
         expect(row).toBeDefined();
         expect(row?.argDefaults).toEqual({ skipTrigger: true });
+    });
+});
+
+describe('the status bar item is a TOGGLE, not just an indicator', () => {
+    /*
+     * It used to hide when the mode was off, which put the control out of reach
+     * exactly when someone wanted to turn it ON — the affordance vanished at the
+     * moment it became useful. Owner feedback while testing, 2026-08-25.
+     *
+     * Asserted at the SOURCE because the alternative is booting vscode. What
+     * matters is that no code path hides it, and that the two states are told
+     * apart by more than wording.
+     */
+    const source = readFileSync('src/features/ai/server/dryRunMode.ts', 'utf8');
+
+    it('never hides the item', () => {
+        expect(source).not.toMatch(/item\.hide\(\)/);
+    });
+
+    it('shows it on every sync, whichever state it is in', () => {
+        // One unconditional show() inside sync, not one per branch.
+        expect(source).toMatch(/item\.show\(\);/);
+    });
+
+    it('distinguishes the states by COLOUR, not only by words', () => {
+        // A grey item reads as information. This changes what the extension
+        // does, so the on state has to look like a mode.
+        expect(source).toMatch(/statusBarItem\.warningBackground/);
+        expect(source).toMatch(/: undefined/);
+    });
+
+    it('confirms a toggle transiently rather than with a sticky notification', () => {
+        // The status bar item already IS the indicator; the message only
+        // confirms the change landed. A long persistent one is not read.
+        expect(source).toMatch(/setStatusBarMessage/);
+        expect(source).not.toMatch(/showInformationMessage/);
     });
 });
