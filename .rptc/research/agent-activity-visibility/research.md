@@ -187,8 +187,13 @@ the repo):
 ```bash
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
         <repo>/.rptc/research/agent-activity-visibility/probe-server.mjs probe-srv)
-claude --mcp-config "$CFG" --strict-mcp-config
+claude --mcp-config "$CFG" --strict-mcp-config \
+       --allowedTools 'mcp__probe-srv__run_probe'
 ```
+
+`--allowedTools` matters: with `ENABLE_TOOL_SEARCH: true` (the setting here) MCP
+tools are deferred, and an interactive session will say the tool does not exist
+while the server is connected fine.
 
 Added 2026-08-25 after this exact command was handed over twice with a relative
 path and failed both times with "config file doesn't exist".

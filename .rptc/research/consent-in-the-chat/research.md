@@ -85,9 +85,21 @@ usually a demo project, not the repo:
 # generates an absolute-path config in the temp dir and prints where
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
         <repo>/.rptc/research/consent-in-the-chat/probe-elicit.mjs elicit-probe)
-claude --mcp-config "$CFG" --strict-mcp-config
+claude --mcp-config "$CFG" --strict-mcp-config \
+       --allowedTools 'mcp__elicit-probe__ask_the_user'
 # then: "call ask_the_user"
 ```
+
+**`--allowedTools` is not optional, and this cost a round trip.** With
+`ENABLE_TOOL_SEARCH: true` in `~/.claude/settings.json` — which is the setting
+here — MCP tools are DEFERRED: the model does not see them until it searches by
+name. Run without it and an interactive session answers *"There's no tool named
+ask_the_user"* while the server is connected perfectly well. The headless runs
+above worked only because they passed the full tool name.
+
+Two ways to tell the difference, since "no such tool" reads identically to a
+server that failed to start: type `/mcp` to list connected servers, or name the
+tool in full — `use mcp__elicit-probe__ask_the_user`.
 
 The tracked `probe-elicit-mcp.json` beside this file uses RELATIVE paths, because
 this repo is public and a committed home path is forbidden. That config therefore
