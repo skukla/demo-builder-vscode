@@ -12,14 +12,23 @@ shown. The rule that came out of it: **alert text is authored, never transformed
 | # | Surface | When | Text comes from |
 |---|---|---|---|
 | 1 | Modal consent dialog | Before a call that cannot be undone or reaches beyond this machine | `agentAlertCopy` — authored |
-| 2 | Progress notification (VS Code) | While any non-read tool runs | Tool name, humanised |
-| 3 | Chat progress line | While any non-read tool runs, plus each phase | Tool name / the operation's own phase strings |
-| 4 | Status bar | On success | Tool name, humanised |
-| 5 | Warning toast | On failure | Tool name + the error |
+| 2 | Progress notification (VS Code) | While any tool that writes runs | `toolNarration` — authored |
+| 3 | Chat progress line | While any tool that writes runs, plus each phase | `toolNarration` + the operation's own phase strings |
+| 4 | Status bar | On success | `toolNarration` — authored |
+| 5 | Warning toast | On failure | `toolNarration` + the error |
 
-Surfaces 2–5 name an operation the user already asked for; a name is the right
-content and no copy is authored for them. Surface 1 asks a QUESTION, and a
-question needs words written for the person answering.
+**All five are authored now.** An earlier version of this page said surfaces 2–5
+merely name an operation the user already asked for, so a humanised tool name was
+the right content. A narration audit on 2026-08-25 disproved it: deriving the
+text from `deploy_mesh` produced "Deploy mesh…", a button label sitting above the
+status lines beneath it, and about ten tools got wording that was not English —
+"Set project pinned…", "Set setting…" (a tool that changes no setting), and
+"Republish…", which never said republish WHAT.
+
+So the rule at the top of this page applies to every surface, not just the
+question. Phrases live in `toolNarration.ts`, one per tool including reads, in
+the progressive form, written from each tool's DESCRIPTION rather than its name.
+There is no fallback: a tool without a phrase says nothing.
 
 ## 1. The consent dialog
 

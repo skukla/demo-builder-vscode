@@ -730,7 +730,8 @@ extension-side in `agentOperationNotifier.ts`:
   values — informed consent needs them — with secret-shaped keys masked and
   long values elided; the keys-only rule remains for logging.
 - **Mutating calls are visible** (2026-08-23). Every tool whose name is not
-  read-shaped (`isReadOnlyToolName`, an allowlist failing closed) runs inside
+  declared `readOnlyHint: false` (see the dry-run section below — this was an
+  allowlist over tool NAMES until 2026-08-25) runs inside
   a `withProgress` notification (`createAgentOperationNotifier`, injected as
   `longRunningNotifier`), and the OUTCOME lands in the window — status bar on
   success, warning toast on failure — because the agent's own report may
@@ -762,10 +763,24 @@ Four things about it are load-bearing:
   not happen is worse than not asking.
 - **Reads pass through untouched.** A dry run that also blinds the agent
   measures a path nobody would take.
-- **It classifies by `isReadOnlyToolName`, reusing the visibility allowlist
-  rather than adding a second classification** — two would drift, and the
-  consequence of drift is now a real mutation during a mode that promises none.
-  `agentDryRun.test.ts` pins the descriptor rows on both sides of that split.
+- **It classifies by the tool's own DECLARATION**, not by its name. Every tool
+  carries MCP's `annotations.readOnlyHint` (descriptor rows spell it
+  `readOnly`, which `ToolDescriptor` makes required, so the compiler asks).
+  Missing means "assume it writes". `toolAnnotations.test.ts` covers both
+  registration paths — the compiler for the 46 descriptor rows, a source scan
+  for the 57 direct ones.
+
+  It was a regex over names until 2026-08-25. A name cannot express "called
+  `check_` and writes anyway", which is why `check_github_app`'s guard had to be
+  found by a hand audit. The regex survives only as a cross-check: a declaration
+  that disagrees with the name must be listed as deliberate, and four already
+  are — `select_org`/`select_project`/`select_workspace` (in-memory session
+  targeting) and `set_setting` (hands back to the user). Under the old rule all
+  four were blocked during an evaluation for no reason, which made the trace lie
+  about the path an agent normally takes.
+
+  Annotations also travel to the client in `tools/list`, so Claude Code learns
+  which of our tools are safe instead of guessing the same way we were.
 
 **The audit behind that trust (2026-08-25).** All 43 read-shaped tools of the 103
 were read, handler by handler, following each into its service. One genuine
