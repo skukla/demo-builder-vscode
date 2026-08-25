@@ -188,6 +188,7 @@ the repo):
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
         <repo>/.rptc/research/agent-activity-visibility/probe-server.mjs probe-srv)
 claude --mcp-config "$CFG" --strict-mcp-config \
+       --settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}' \
        --allowedTools 'mcp__probe-srv__run_probe'
 ```
 

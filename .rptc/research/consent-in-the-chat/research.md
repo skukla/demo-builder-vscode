@@ -102,11 +102,21 @@ usually a demo project, not the repo:
 CFG=$(node <repo>/.rptc/research/probe-config.mjs \
         <repo>/.rptc/research/consent-in-the-chat/probe-elicit.mjs elicit-probe)
 claude --mcp-config "$CFG" --strict-mcp-config \
+       --settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}' \
        --allowedTools 'mcp__elicit-probe__ask_the_user'
 # then: "call ask_the_user"
 ```
 
-**`--allowedTools` is not optional, and this cost a round trip.** With
+**BOTH extra flags are required, and getting this wrong cost three round trips.**
+
+`--settings '{"env":{"ENABLE_TOOL_SEARCH":"false"}}'` is the one that actually
+matters. `ENABLE_TOOL_SEARCH` is set in `~/.claude/settings.json`, and the
+battery README already records that it "is set from settings.json, not the
+environment — unsetting it in the spawned process does nothing" and must be
+overridden per run exactly this way. That note existed before this probe was
+written and was not applied.
+
+**`--allowedTools` alone is not enough.** With
 `ENABLE_TOOL_SEARCH: true` in `~/.claude/settings.json` — which is the setting
 here — MCP tools are DEFERRED: the model does not see them until it searches by
 name. Run without it and an interactive session answers *"There's no tool named
