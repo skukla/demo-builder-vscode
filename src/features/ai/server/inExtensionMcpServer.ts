@@ -22,6 +22,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { raisesConsentDialog } from './agentAlertCopy';
 import { probeSocket } from './mcpSocketDiscovery';
+import { asText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
@@ -138,6 +139,32 @@ function strictifyWriteSchema(name: string, schema: unknown): unknown {
 }
 
 /**
+ * What a mutating tool answers while the dry run is on.
+ *
+ * DATA, not an error, and the distinction is the whole point: an error teaches an
+ * agent to retry, while data teaches it what would have happened. Same rule the
+ * datapack dry run already states — "a refusal comes back as valid:false with a
+ * reason, not as an error."
+ *
+ * Argument KEYS only, never values. Args carry secrets (`update_project_config`
+ * holds `.env` contents), which is the same reason `withToolLogging` logs keys
+ * and not values one line above.
+ */
+function dryRunResult(name: string, args: unknown): unknown {
+    const argumentKeys =
+        args && typeof args === 'object' ? Object.keys(args as Record<string, unknown>) : [];
+    return asText({
+        dryRun: true,
+        wouldRun: name,
+        argumentKeys,
+        note:
+            'Dry run is on, so nothing was changed. This call would have run with the ' +
+            'arguments above. Continue planning as if it had succeeded, and tell the ' +
+            'user what you would have done.',
+    });
+}
+
+/**
  * Tell the CHAT what is running, while it runs.
  *
  * The extension already surfaces agent activity — `agentOperationNotifier` puts a
@@ -213,6 +240,7 @@ function withToolLogging(
         args: unknown,
         description?: string,
     ) => Promise<ConsentVerdict>,
+    dryRun?: () => boolean,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
@@ -229,7 +257,26 @@ function withToolLogging(
                         args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                     logger.info(`[MCP] tool: ${name}`);
                     logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                    // Consent FIRST, notifier second: a declined operation never
+                    // DRY RUN FIRST, before consent and before the notifier.
+                    //
+                    // Ordering is deliberate. A call carrying `confirm: true`
+                    // under dry run must be stopped HERE and must not raise a
+                    // dialog: asking someone to approve something that will not
+                    // happen is worse than not asking. The notifier is skipped
+                    // for the same reason — no progress may claim work that never
+                    // ran.
+                    //
+                    // Reads pass through untouched. The path an agent takes is
+                    // only realistic if its queries answer truthfully; a dry run
+                    // that also blinds the agent measures nothing.
+                    //
+                    // `isReadOnlyToolName` is REUSED rather than a second
+                    // classification, because two would drift.
+                    if (dryRun?.() && !isReadOnlyToolName(name)) {
+                        logger.info(`[MCP] ${name} blocked by dry run (nothing was changed)`);
+                        return dryRunResult(name, args);
+                    }
+                    // Consent SECOND, notifier third: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
                     if (consentGate && callRequestsConsent(name, args)) {
@@ -334,6 +381,20 @@ export interface InExtensionMcpServerOptions {
         args: unknown,
         description?: string,
     ) => Promise<ConsentVerdict>;
+    /**
+     * Evaluation Mode's dry run, read LIVE per call (injected, same reason as
+     * `consentGate` — this module stays vscode-free).
+     *
+     * While it answers true, every tool that is not read-shaped is stopped
+     * before its handler and answers with what it WOULD have done. The point is
+     * to measure the path an agent takes through the extension without a
+     * measurement run mutating a real project.
+     *
+     * Read fresh on every call rather than captured at construction, so
+     * toggling the mode takes effect on the next tool call instead of the next
+     * window reload — the same shape as `demoBuilder.ai.requireAgentConsent`.
+     */
+    dryRun?: () => boolean;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,
@@ -501,6 +562,7 @@ export class InExtensionMcpServer {
             this.logger,
             this.options.longRunningNotifier,
             this.options.consentGate,
+            this.options.dryRun,
         );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
         this.options.registerExtraTools?.(logged);

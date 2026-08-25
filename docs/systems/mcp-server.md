@@ -743,6 +743,51 @@ extension-side in `agentOperationNotifier.ts`:
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
 
+### The dry run (Evaluation Mode, 2026-08-25)
+
+`demoBuilder.ai.dryRun` (default OFF, read live per call, injected as `dryRun`
+from `dryRunMode.ts`) makes agent mutation **impossible** rather than
+discouraged. While it is on, every tool that is not read-shaped is stopped in
+`withToolLogging` before its handler and answers what it WOULD have done:
+`{dryRun: true, wouldRun: <tool>, argumentKeys: [...]}` — argument KEYS only,
+never values, the same rule the logger follows because args carry secrets.
+
+Four things about it are load-bearing:
+
+- **It is DATA, not an error.** An error teaches an agent to retry; data teaches
+  it what would happen, so the rest of the path it would have taken still gets
+  measured. Same rule the datapack dry run already states.
+- **It runs BEFORE consent.** A call carrying `confirm: true` is stopped by the
+  dry run and raises no dialog — asking someone to approve something that will
+  not happen is worse than not asking.
+- **Reads pass through untouched.** A dry run that also blinds the agent
+  measures a path nobody would take.
+- **It classifies by `isReadOnlyToolName`, reusing the visibility allowlist
+  rather than adding a second classification** — two would drift, and the
+  consequence of drift is now a real mutation during a mode that promises none.
+  `agentDryRun.test.ts` pins the descriptor rows on both sides of that split.
+
+**The audit behind that trust (2026-08-25).** All 43 read-shaped tools of the 103
+were read, handler by handler, following each into its service. One genuine
+write-in-a-read exists: `check_github_app`, whose handler triggers a Helix code
+sync (`POST /code/{owner}/{repo}/main/*`) on a 404 — so an agent enumerating
+checks would fire a sync at every repo it asked about. It is neutralised by
+`argDefaults: { skipTrigger: true }`, which `runHandler` applies LAST
+(`{...args, ...argDefaults}`) so a caller cannot send the flag that turns the
+read back into a write; a test now pins that line. Everything else reads. Three
+tools have side effects that are not project or cloud changes and are therefore
+allowed under the dry run, named here so nobody rediscovers them as bugs:
+`check_mesh` writes and deletes a temp workspace config under the extension's own
+global storage; `get_auth_status` (and anything calling `isAuthenticated`) writes
+an in-memory auth cache; `check_prerequisites` spawns detection processes but
+installs nothing.
+
+While the mode is on it is pinned to the status bar in the warning colour
+(**Agent dry run**), because a mode you cannot see is a trap: the user would ask
+for a deploy, be told "done" by an agent reading the synthetic result, and
+believe it. `demoBuilder.toggleAgentDryRun` flips it; `get_settings` exposes the
+key read-only so an agent can confirm why its deploy was simulated.
+
 ---
 
 ## 12. Client discovery & configuration
