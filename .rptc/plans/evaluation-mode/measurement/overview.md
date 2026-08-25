@@ -106,20 +106,73 @@ are claiming it works.**
 The five recorded prompts in `../battery/` are the TUNING set. The held-out set
 must be prompts step 09 never sees.
 
-**OPEN — the one question this sub-plan cannot answer itself.** The held-out five
-have to come from somewhere, and the source decides whether the eventual claim is
-worth anything:
-
-- **Real producer asks** — the only source that makes an improvement claim real,
-  and the slowest to start, because it means asking colleagues what they type.
-- **Mined from existing session transcripts** — genuinely real prompts, already
-  on disk, but skewed toward whoever's sessions they are.
-- **Written from the tool surface** — fast and comprehensive, and precisely the
-  overfitting the held-out set exists to prevent, since they would be one
-  person's guess at what producers ask.
+**ANSWERED 2026-08-25 (owner): both — mine the existing chats AND map the tasks
+from the extension's code.** That turned out to be the right instruction for a
+reason nobody predicted, below.
 
 Mark the split in this directory as a FILE, not an intention, so a later change
 cannot quietly merge the two sets.
+
+### What the transcripts actually contain (surveyed 2026-08-25)
+
+37 sessions run inside demo projects, 70 distinct asks. **Almost none of them
+exercise the extension's tool surface.** The overwhelming majority are Commerce
+consulting — GraphQL queries, catalog shapes, Postman collections, which category
+has which products, what a partner needs to integrate. The handful that touch
+Demo Builder at all are orientation and sign-in:
+
+    We're in a new home now. Please use the demo builder mcp to find out which project.
+    run the Demo Builder sign_in tool with provider dalive.
+    To be clear, that's the DEMO BUILDER project. Run the skill to rehome yourself.
+    I've now created the full project. Should be headless-paas.
+
+**This is a finding, not an obstacle**, and it is worth more than the battery it
+was collected for. A surface of 104 tools is barely being asked for. Two readings,
+and they need different fixes:
+
+- Producers do not KNOW the tools exist → a discoverability problem, and no
+  amount of prompt efficiency helps.
+- The tools do not match what producers actually need → a surface problem, and
+  the efficiency work is aimed at the wrong thing.
+
+Either way it belongs in front of whoever decides what to build next. Report it
+before the battery is finished, not after.
+
+### So the two sources do different jobs
+
+- **Transcripts give REALISM, not coverage.** They fix phrasing — real asks are
+  terse, contextual, and often refer to things by nickname ("Leah's instance",
+  "the headless project"). Invented prompts are always tidier than real ones, and
+  a battery of tidy prompts measures a surface nobody is using.
+- **The code gives COVERAGE, not realism.** The task map below is the frame; each
+  group needs at least one prompt or that area of the extension is unmeasured.
+
+Write the held-out prompts from the task map, phrased the way the transcripts
+phrase things. Neither source alone is enough, which is what the owner's
+"both" was for.
+
+### The task map (from the code, 2026-08-25)
+
+104 tools, grouped as a producer would recognise them. Every group needs at least
+one prompt in the battery, and the split says which set it goes in.
+
+| Task | Tools |
+|---|---|
+| Start a project | 7 |
+| Find my way around | 8 |
+| Sign in / Adobe setup | 11 |
+| Run the demo | 3 |
+| Mesh & integrations | 11 |
+| Storefront & content | 17 |
+| Blocks | 6 |
+| Sample data | 14 |
+| Store structure | 2 |
+| Config & settings | 19 |
+| AI bundle | 6 |
+
+The five existing tuning prompts cover **Find my way around**, **Sign in** and
+**Sample data**. Everything else is currently unmeasured — which is the concrete
+gap this sub-plan closes.
 
 ## Where it runs
 
