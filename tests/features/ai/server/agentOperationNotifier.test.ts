@@ -186,18 +186,46 @@ describe('createAgentConsentGate', () => {
     });
 
 
-    it('labels the proof-of-intent echo as a Name, not confirmName', async () => {
+    it('shows the target the reader can CHECK, and hides the id they cannot', async () => {
+        // The headline fix. This dialog used to print every scalar the schema
+        // declared, in declaration order, so it led with a 19-digit Console id
+        // and pushed the project's name to second place. Nobody can verify an
+        // id against anything; everybody can verify a name.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        await gate('start_demo', { confirm: true, confirmName: 'bodea' });
+        await gate('delete_adobe_project', {
+            confirm: true,
+            projectId: '4566206088344572345',
+            projectName: 'bodea',
+        });
 
         const detail = String(
             (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
         );
-        expect(detail).toContain('Name: bodea');
-        expect(detail).not.toContain('confirmName');
+        expect(detail).toContain('Project: bodea');
+        expect(detail).not.toContain('4566206088344572345');
+    });
+
+    it('names the open project when the tool takes no argument naming it', async () => {
+        // `republish`, `sync_content` and `reset_eds_project` act on whatever is
+        // open and declare no target argument. Without this the dialog would ask
+        // someone to approve an unnamed thing.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        // State is unavailable in this harness, so the line is absent rather
+        // than wrong — the gate must still appear. That fallback is the
+        // behaviour under test as much as the happy path is.
+        expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('Pushes the current configuration live');
     });
 
     it('answers a ready refusal envelope when the dialog is dismissed or declined', async () => {
@@ -215,30 +243,49 @@ describe('createAgentConsentGate', () => {
         expect(text).toContain('demoBuilder.ai.requireAgentConsent');
     });
 
-    it('renders scalar args for informed consent — confirm skipped, secrets masked, long values truncated', async () => {
+    it('shows nothing but the target — not secrets, not flags, not structure', async () => {
+        // The old contract rendered every scalar and masked the ones that looked
+        // like credentials. The new one shows ONLY authored keys, so a secret is
+        // excluded by construction rather than by a regex catching its name.
+        // The mask stays as a second line of defence and is asserted separately.
         settingIs(true);
         mockShowWarningMessage.mockResolvedValue('Allow');
         const gate = createAgentConsentGate(logger);
 
-        await gate('promote_block_to_library', {
+        await gate('remove_block_from_library', {
             confirm: true,
+            projectName: 'bodea',
             blockId: 'hero',
             githubToken: 'ghp_secret_value',
             unsafeHTML: `<div>${'x'.repeat(200)}</div>`,
             nested: { not: 'shown' },
         });
 
-        const [, opts] = mockShowWarningMessage.mock.calls[0];
-        const detail = String((opts as { detail?: string }).detail);
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
         // Labels, not schema field names — a producer approving this should not
-        // have to decode `blockId`. Masking still keys off the RAW name, so a
-        // friendlier label must never widen what is shown.
+        // have to decode `blockId`.
         expect(detail).toContain('Block id: hero');
+        expect(detail).toContain('Project: bodea');
         expect(detail).not.toContain('blockId:');
-        expect(detail).not.toContain('confirm');
-        expect(detail).toContain('Github token: ***');
         expect(detail).not.toContain('ghp_secret_value');
+        expect(detail).not.toContain('confirm');
         expect(detail).not.toContain('x'.repeat(100));
         expect(detail).not.toContain('not: shown');
+    });
+
+    it('truncates a target value too long to read', async () => {
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('delete_page', { confirm: true, path: `/products/${'x'.repeat(200)}` });
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('chars)');
+        expect(detail).not.toContain('x'.repeat(100));
     });
 });

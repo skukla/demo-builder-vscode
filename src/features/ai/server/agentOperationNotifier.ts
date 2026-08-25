@@ -31,6 +31,7 @@ import { alertCopyFor } from './agentAlertCopy';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
 import { narrationFor } from './toolNarration';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -40,13 +41,15 @@ const CONSENT_DETAIL_VALUE_MAX = 60;
 /**
  * Friendlier labels for argument keys a producer would not recognise.
  *
- * `confirmName` is the surface's proof-of-intent echo — the agent repeats the
- * target's name to show it means this one. As a dialog line it read
- * "confirmName: bodea", which is a field name from our schema leaking into a
- * question we are asking a human.
+ * `confirmName` used to be here. It is the surface's proof-of-intent echo — the
+ * agent repeats the target's name to show it means this one — and it was
+ * rendered because the dialog printed every scalar it was handed. Now that only
+ * authored target keys are shown, and no tool names `confirmName` as its target
+ * (the tools that require it already name the same thing properly, e.g.
+ * `start_datapack_export` shows the pack rather than the echo), the entry was
+ * unreachable and is gone rather than left as a stub.
  */
 const CONSENT_KEY_LABELS: Record<string, string> = {
-    confirmName: 'Name',
     projectName: 'Project',
 };
 
@@ -82,12 +85,20 @@ const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
  * wrapper shows only keys: "publish /products/x" is the substance the user
  * is consenting to.
  */
-function renderArgsForConsent(args: unknown): string {
+function renderTargetForConsent(args: unknown, keys: string[]): string {
     if (!args || typeof args !== 'object') return '';
+    const record = args as Record<string, unknown>;
     const lines: string[] = [];
-    for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
-        if (key === 'confirm') continue;
+    // AUTHORED order, not schema order. The previous version walked
+    // Object.entries and printed everything, so deleting an Adobe project led
+    // with a 19-digit id and buried the name.
+    for (const key of keys) {
+        const value = record[key];
+        if (value === undefined || value === null) continue;
         if (SECRET_KEY_RE.test(key)) {
+            // Belt and braces. A key should never be authored into `target` if
+            // it holds a credential, but authoring is not a guarantee, and the
+            // cost of being wrong here is a secret in a screenshot.
             lines.push(`${humanizeKey(key)}: ***`);
             continue;
         }
@@ -104,6 +115,24 @@ function renderArgsForConsent(args: unknown): string {
         }
     }
     return lines.join('\n');
+}
+
+/**
+ * The open project's name, for tools that act on it and take no argument
+ * naming it — `republish`, `sync_content`, `reset_eds_project`.
+ *
+ * Best-effort: the dialog must still appear if state is unavailable. A missing
+ * name costs the reader context; a thrown error would cost them the gate.
+ *
+ * @returns the "Project: x" line, or '' when it cannot be resolved
+ */
+async function currentProjectLine(): Promise<string> {
+    try {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        return project?.name ? `Project: ${project.name}` : '';
+    } catch {
+        return '';
+    }
 }
 
 /**
@@ -148,8 +177,13 @@ export function createAgentConsentGate(
         // is the bare tool name: visibly a fallback, rather than prose that
         // pretends to be authored copy.
         const copy = alertCopyFor(toolName);
-        const params = renderArgsForConsent(args);
-        const detail = [copy?.consequence, params].filter(Boolean).join('\n\n');
+        // Three lines and no more: what happens, what it costs, and WHICH one.
+        // An empty `target` means the tool acts on the open project, which is
+        // named instead — a reader is never asked to approve an unnamed thing.
+        const target = copy?.target?.length
+            ? renderTargetForConsent(args, copy.target)
+            : await currentProjectLine();
+        const detail = [copy?.consequence, target].filter(Boolean).join('\n\n');
         const choice = await vscode.window.showWarningMessage(
             `Demo Builder: ${copy?.action ?? toolName}?`,
             { modal: true, detail: detail || undefined },
