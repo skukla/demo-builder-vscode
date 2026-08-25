@@ -11,7 +11,7 @@ across a new feature directory, four new server modules and a new webview.
 | component-extraction | 4 groups | **3 groups** | Improved, not by this work. No group contains a new file |
 | code-duplication (jscpd) | 64 clones / 0.70% | **72 clones / 0.61%** | Count up 8, DENSITY down. Composition now: 62 typescript, 7 json, 3 tsx. **Zero touch the new code** |
 | circular-dependency | 13 cycles | **0 cycles** | Genuinely clean — verified with a planted cycle, which madge caught |
-| dead-code doc-drift | 0 | **1** | Real, and pre-existing — see below |
+| dead-code doc-drift | 0 | **0** | The one hit is a FALSE POSITIVE — see below |
 | boundary casts | 40 | **31** | Down 9. The new code adds **zero** |
 
 The cycle result deserves the control it got: a zero from a scan is
@@ -32,15 +32,23 @@ planted two-file cycle reported it, so the zero over `src` is a measurement.
 - Verdict: an optional export nothing fills is the accepted-but-ignored shape
   this project forbids. Deleted rather than reported.
 
-### 2. Doc drift naming a deleted symbol — PRE-EXISTING, NOT FIXED
+### 2. The doc-drift hit is a FALSE POSITIVE — do not "fix" it
 
-- Site: `src/features/project-creation/ui/steps/reviewPredicates.ts:41` —
-  comment names `summarizeSelectedAppBuilderComponents`, defined once under
-  `src/` and absent now.
-- Verdict: real (the scan confirms against `git log`), one line, and **outside
-  anything this work touched**. Reported rather than chased — fixing code a pass
-  did not otherwise open is scope creep wearing a tidy hat. Cheap for whoever is
-  next in that file.
+- Site: `src/features/project-creation/ui/steps/reviewPredicates.ts:41`, naming
+  `summarizeSelectedAppBuilderComponents`.
+- The scan is right that the symbol is gone. It is wrong that this is drift: the
+  comment is a deliberate RECORD of why it was deleted — "lived here from 2026-06
+  to 2026-08-23 WITHOUT A SINGLE PRODUCTION CALLER … the live path is
+  `resolveReviewIntegrationNames`". That is exactly the kind of history this
+  project writes on purpose.
+- The scan classifies 76 other mentions as "historically framed, not drift" and
+  missed this one, most likely because the symbol name opens the comment in
+  backticks rather than sitting inside a sentence.
+- **Verdict: leave it.** Deleting the comment would destroy a useful record to
+  satisfy a heuristic. Doc-drift baseline stays 0.
+- Worth carrying: this is why a scan hit is a candidate and never a verdict. One
+  file read was the difference between a correct no-op and losing the reason a
+  symbol was removed.
 
 ### 3. The two EDS service cards are one shell rendered twice — REAL, NOT IN REACH
 
@@ -66,8 +74,10 @@ shape that drifts — a fix to one card's error state does not reach the other.
 **Not fixed here, deliberately.** It is in `features/eds/ui/components/`, which
 this work never opened; chasing it is scope creep wearing a tidy hat. It is also
 not urgent — both cards work, and the duplication costs a future edit rather than
-a user. Recorded with file:line so whoever next touches either card can extract
-in the same turn, which is when it is genuinely cheap.
+a user. **Filed as
+[`2026-08-25-eds-service-cards-are-one-shell.md`](../../backlog/2026-08-25-eds-service-cards-are-one-shell.md)**
+with the line ranges and the success test, so whoever next touches either card
+can extract in the same turn — which is when it is genuinely cheap.
 
 ## Considered and rejected
 
@@ -105,8 +115,8 @@ classes, and none of these groups shares a file set with another.
 | component-extraction | 3 groups |
 | code-duplication (jscpd) | 72 clones, 0.61% lines — 62 typescript / 7 json / 3 tsx |
 | circular-dependency | 0 cycles |
-| dead-code doc-drift | 1 (reviewPredicates.ts:41, unfixed) |
-| open extraction candidate | EDS service cards (finding 3), unfixed by choice |
+| dead-code doc-drift | 0 (the one hit is a known false positive — see finding 2) |
+| open extraction candidate | EDS service cards — filed as `2026-08-25-eds-service-cards-are-one-shell.md` |
 | boundary casts | 31 (0 `as any`, all remaining carry 2026-08-21 verdicts) |
 
 Note the cycle baseline is now **0**, which makes the next sweep's job easier and
