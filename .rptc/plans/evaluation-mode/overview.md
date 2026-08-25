@@ -23,6 +23,7 @@ the previous is green.
 | 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached |
 | 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation |
 | 07 | `step-07-evaluation-history.md` | "Better" survives a window reload |
+| 08 | `step-08-the-ambient-trace.md` | See what the agent did in YOUR chat — the recorder already captures it, nothing shows it |
 | — | `prompt-threads/overview.md` | Sub-plan: keep the WORK, not the wording — refining a prompt currently destroys its history |
 | — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
 | 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace |
@@ -210,6 +211,11 @@ and which is far better for a demo builder than a token count.
 to read, because we do not own that process. Its trace comes from the recorder
 above; token accounting there is deferred rather than duplicated — OpenTelemetry
 is the supported route if we later want it.
+
+**This was written and not built.** Steps 02–04 shipped the recorder and a
+workbench that reads it for runs IT spawns; nothing ever showed the ambient
+trace, so chatting with dry run on gives a guarantee and no visibility. Found by
+the owner while testing, 2026-08-25, and now **step 08**.
 
 `scripts/trace-session.mjs` stays the offline/retroactive tool for historical
 analysis across sessions already on disk. Different job, no overlap, nothing to
