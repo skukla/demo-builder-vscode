@@ -65,12 +65,18 @@ nobody reads until they open that sub-plan — which is after they needed it.
 
 | # | Task | Gates | Why it is not code |
 |---|---|---|---|
-| A | Read what a `claude_code.tool` span actually contains for a session against this extension | the whole `opentelemetry/` sub-plan | It decides whether that sub-plan proceeds or closes as ANSWERED. Rich spans earn OTel its place; thin ones mean extending step 07 instead |
-| B | Log the client capabilities the server receives at `initialize`, and read whether Claude Code declares `elicitation` | step 06 | It decides the step's shape. Designing either branch first wastes the one that turns out to be right |
+| A | **OPEN.** Read what a `claude_code.tool` span actually contains for a session against this extension | the whole `opentelemetry/` sub-plan | Decides whether that sub-plan proceeds or closes as ANSWERED. With no collector and no vendor (owner, 2026-08-25) the standard only earns its place if those spans are rich enough to be worth joining; thin ones mean extending step 07 instead |
+| B | ~~Log the client capabilities and read whether Claude Code declares `elicitation`~~ **DONE 2026-08-25** | step 06 | It declares `elicitation: { form: {} }` and answers the request; headless it returns `cancel` in ~5ms with no prompt shown. A follow-on — does an INTERACTIVE session render a usable prompt — is PARKED, because the design stopped depending on it. Record: `.rptc/research/consent-in-the-chat/` |
 | C | Decide what to do about the tool surface barely being used | nothing here — it is bigger than this plan | Filed as a backlog item; see `2026-08-25-agents-barely-use-the-tool-surface.md` |
 
-A and B are each under an hour and neither needs a decision from anyone. Do them
-when their step comes up, not before — but do them FIRST within that step.
+A is under an hour and needs no decision from anyone; do it FIRST within its
+sub-plan, not after. B is done — what it found is in the row above, and what it
+changed is in step 06.
+
+**Nothing on this plan is waiting on the owner.** Both questions that were —
+where telemetry lives, and where the held-out prompts come from — were answered
+on 2026-08-25 and are recorded in their sub-plans. A summary that says otherwise
+is stale; check here.
 
 **Added 2026-08-25, after step 01 shipped.** Step 01b was not in the original
 plan. Two things put it there, and they turned out to be the same thing:
