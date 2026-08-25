@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.144] - 2026-08-25
+
+### Added
+
+- **Live narration of agent work in the chat.** Every non-read MCP tool announces
+  itself and streams its phases as it runs, attributed to this server
+  (`Demo Builder · Extracting configuration…`). The phase strings already existed
+  and reached only the VS Code notification; `core/utils/agentPhaseChannel`
+  (AsyncLocalStorage, same shape as `withOrgContext`) carries them without
+  threading a reporter through ~60 handler signatures. Verified before building:
+  Claude Code supplies a `progressToken` and its terminal renders the `message`
+  field live.
+
+### Changed
+
+- **The consent dialog fires on the OPERATION, not the agent's assertion.**
+  Keying on `confirm: true` alone put a modal on `open_url` while
+  `remove_integration` and `reset_datapack` raised nothing. Membership now lives
+  in `agentAlertCopy`, so a dialog with no authored words is not expressible.
+  Seven tools stopped prompting; `remove_block_from_library` and others started.
+- **Consent copy is AUTHORED, never derived.** Four passes at transforming the
+  agent-facing description (first sentence, asides stripped, keys relabelled,
+  acronyms fixed) each produced text a producer should not have been shown. Full
+  rationale and the five alert surfaces: `docs/systems/agent-alerts.md`.
+- **`start_demo` / `stop_demo` / `restart_demo` refuse on EDS projects** with a
+  reason and a redirect. The dashboard had always hidden the control; the MCP
+  surface offered it to every project and reported a no-op as success.
+
+### Fixed
+
+- **Write tools reject unknown arguments.** Only `configure_project` used zod
+  `.strict()`; every other tool passed a raw shape, which the MCP SDK STRIPS — so
+  `{scope, stroeScope}` reached the handler as `{scope}` and answered "ok".
+  Applied at the one registration seam. `confirm`/`confirmName` are always
+  tolerated so the consent affordance cannot be rejected.
+- **`get_site_access`, `set_site_admin`, `repair_site_configuration` refuse
+  non-EDS projects**, matching `storefrontTools`, which already did.
+
+
 ## [1.0.0-beta.143] - 2026-08-24
 
 ### Added
