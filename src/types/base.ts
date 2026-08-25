@@ -40,6 +40,30 @@ export interface AiPrompt {
 /**
  * Project - Core project definition
  */
+/**
+ * One completed evaluation, as it is remembered.
+ *
+ * The prompt is stored VERBATIM and is the key: the point is comparing a prompt
+ * against its own past, and a normalised or truncated key would silently merge
+ * two different prompts. It is also the failure `.rptc/plans/evaluation-mode/battery/`
+ * exists to prevent — six prompts were once lost, and their results became
+ * uncomparable to everything measured afterwards.
+ */
+export interface EvaluationRun {
+    /** The prompt, exactly as it was run. */
+    prompt: string;
+    /** Real dollars, from the run's own output. */
+    costUSD: number;
+    /** Demo Builder tool calls the run made. */
+    steps: number;
+    /** How many of those asked something already asked. */
+    wastedSteps: number;
+    /** Wall clock, milliseconds. */
+    durationMs: number;
+    /** When it ran (ISO 8601), so a trend reads in order. */
+    at: string;
+}
+
 export interface Project {
     /**
      * The SLUG. Folder name under `~/.demo-builder/projects/`, the key
@@ -209,6 +233,20 @@ export interface Project {
     componentApiPicks?: Record<string, string[]>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
+    /**
+     * Past evaluations, so "is this prompt getting better" survives a reload.
+     *
+     * Project-scoped and stored here rather than in `globalState`, matching the
+     * rule `aiPrompts` already set: project-specific in the manifest, global in
+     * extension state. An evaluation is always against one project.
+     *
+     * Deliberately NOT the trace — that is the diagnostic you read once, and
+     * keeping it would recreate the unbounded-log concern the in-memory recorder
+     * was capped to avoid. Five numbers per run and nothing else.
+     *
+     * Capped and rotated; see `evaluationHistory.ts`.
+     */
+    evaluationHistory?: EvaluationRun[];
     /**
      * Version of the AI context bundle last generated into this project (stamped
      * from the `AI_CONTEXT_VERSION` constant on generate). Since v8 a stale (or

@@ -95,7 +95,30 @@ all through this one service, so the paths cannot drift.
 Cost is reported in **dollars**. "$0.21" means something to a demo builder;
 "47,550 tokens" does not.
 
-### 5. The workbench — the loop
+### 5. History — "better" survives a reload
+
+Each evaluation stores five numbers against the project: cost, steps, wasted
+steps, duration, and when. Keyed by the prompt VERBATIM, because the comparison
+is a prompt against its own past and a normalised key would silently merge two
+prompts differing in exactly the way the producer was testing.
+
+Kept in `.demo-builder.json` under `Project.evaluationHistory`, matching the rule
+`aiPrompts` already set — project-specific in the manifest, global in extension
+state. Capped at twenty runs, oldest dropped.
+
+**Not the trace.** That is the diagnostic read once, it is large, and keeping it
+would recreate the unbounded-log concern the in-memory recorder was capped to
+avoid.
+
+Two rules that are easy to get subtly wrong, both pinned by tests: the past is
+looked up BEFORE the new run is appended (otherwise a run finds itself and every
+delta reads as zero), and a prompt with no past reports NO delta rather than a
+delta of zero — "no change" and "never run before" are different facts.
+
+A failed save never fails the evaluation. Losing a real result to a bookkeeping
+problem would be the worse outcome.
+
+### 6. The workbench — the loop
 
 A webview (`features/ai/evaluation/ui/`) showing the verdict, the waste, what was
 blocked, and the trace in plain language. Running for real and saving to the

@@ -11,6 +11,7 @@
  */
 
 import type { ToolTraceRecorder } from '../../server/toolTraceRecorder';
+import { appendRun, findDelta, toStoredRun } from '../evaluationHistory';
 import { suggestionsFor } from '../evaluationSuggestions';
 import { evaluatePrompt } from '../promptEvaluationService';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -65,11 +66,47 @@ async function handleEvaluatePrompt(
             return { success: false, error: result.refused };
         }
 
+        // The comparison BEFORE this run is appended — otherwise the run would
+        // find itself and every delta would read as zero.
+        const delta = project ? findDelta(project.evaluationHistory, prompt) : undefined;
+
+        if (project) {
+            // Best-effort: a history that cannot be written must not fail an
+            // evaluation that already happened. The producer would lose a real
+            // result to a bookkeeping problem.
+            try {
+                project.evaluationHistory = appendRun(
+                    project.evaluationHistory,
+                    toStoredRun(
+                        {
+                            prompt,
+                            costUSD: result.costUSD,
+                            steps: result.trace.length,
+                            wastedSteps: result.repeats.length,
+                            durationMs: result.durationMs,
+                        },
+                        new Date().toISOString(),
+                    ),
+                );
+                await context.stateManager.saveProject(project);
+            } catch (err) {
+                context.logger.warn(
+                    `[Evaluation] could not save history: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`,
+                );
+            }
+        }
+
         return {
             success: true,
             data: {
                 ...result,
                 suggestions: suggestionsFor(result.trace, project?.name),
+                // What this prompt cost LAST time, from disk — so the delta
+                // survives a reload rather than living in the view's state.
+                previousRun: delta?.previous,
+                priorRuns: delta?.priorRuns ?? 0,
             },
         };
     } catch (error) {

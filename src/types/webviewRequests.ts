@@ -450,5 +450,21 @@ export interface EvaluatePromptResponse {
         repeats: EvaluationTraceStep[];
         blocked: EvaluationTraceStep[];
         suggestions: EvaluationSuggestion[];
+        /**
+         * What this exact prompt cost LAST time, read from the project manifest.
+         *
+         * Absent when the prompt has no past — which is a different fact from a
+         * delta of zero, and the view must not render them the same way.
+         */
+        previousRun?: {
+            prompt: string;
+            costUSD: number;
+            steps: number;
+            wastedSteps: number;
+            durationMs: number;
+            at: string;
+        };
+        /** How many earlier runs of this prompt exist. 0 means none. */
+        priorRuns: number;
     };
 }

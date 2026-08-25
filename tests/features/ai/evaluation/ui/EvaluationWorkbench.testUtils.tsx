@@ -113,6 +113,7 @@ export function verdictResponse(overrides: Record<string, unknown> = {}) {
                     append: ' for bodea',
                 },
             ],
+            priorRuns: 0,
             ...overrides,
         },
     };

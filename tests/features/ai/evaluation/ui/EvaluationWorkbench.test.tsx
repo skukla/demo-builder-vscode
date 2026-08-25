@@ -75,16 +75,37 @@ describe('the workbench', () => {
         expect(screen.getByRole('textbox')).toHaveValue('deploy the mesh for bodea');
     });
 
-    it('shows the delta on a second run, so improvement is the headline', async () => {
-        const user = await evaluateWith(verdictResponse());
-        await screen.findByText(/\$0\.21/);
-
-        mockRequest.mockResolvedValue(
-            verdictResponse({ costUSD: 0.14, trace: [], repeats: [], blocked: [] }),
+    it('shows the delta from the STORED past, not from session state', async () => {
+        // The point of step 07. The previous run arrives in the RESPONSE, read
+        // from the project manifest — so this renders on a FIRST mount, which is
+        // what a reloaded window is. Holding it in React state made "down from
+        // $0.21" die with the window, and "is this getting better" is the
+        // question the whole feature exists to answer.
+        await evaluateWith(
+            verdictResponse({
+                costUSD: 0.14,
+                priorRuns: 1,
+                previousRun: {
+                    prompt: 'deploy the mesh',
+                    costUSD: 0.21,
+                    steps: 8,
+                    wastedSteps: 3,
+                    durationMs: 41_000,
+                    at: '2026-08-24T10:00:00.000Z',
+                },
+            }),
         );
-        await user.click(screen.getByRole('button', { name: /try it again/i }));
 
         expect(await screen.findByText(/down from \$0\.21/i)).toBeInTheDocument();
+    });
+
+    it('says nothing about a delta when the prompt has no past', async () => {
+        // "No change" and "never run before" are different facts. A zero delta
+        // would read as the first.
+        await evaluateWith(verdictResponse());
+
+        expect(await screen.findByText(/nothing was changed/i)).toBeInTheDocument();
+        expect(screen.queryByText(/down from|up from/i)).toBeNull();
     });
 
     it('surfaces a REFUSAL, which arrives looking like a success', async () => {

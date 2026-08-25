@@ -38,12 +38,24 @@ function makeProject(): string {
 
 let projectDir = '';
 
-function contextWith(projectName?: string): HandlerContext {
+/** The project object the handler mutates, so a test can read it after. */
+let savedProject: { evaluationHistory?: unknown[] } | undefined;
+/** Module-scoped: BOTH describe blocks drive it. */
+let trace: ToolTraceRecorder;
+const saveProject = jest.fn();
+
+function contextWith(
+    projectName?: string,
+    history?: unknown[],
+): HandlerContext {
+    savedProject = projectName
+        ? ({ name: projectName, path: projectDir, evaluationHistory: history } as never)
+        : undefined;
     return {
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
         stateManager: {
-            getCurrentProject: async () =>
-                projectName ? { name: projectName, path: projectDir } : undefined,
+            getCurrentProject: async () => savedProject,
+            saveProject,
         },
     } as unknown as HandlerContext;
 }
@@ -51,7 +63,6 @@ function contextWith(projectName?: string): HandlerContext {
 const RUN_JSON = JSON.stringify({ total_cost_usd: 0.21, num_turns: 5, duration_ms: 38_000 });
 
 describe('evaluate-prompt', () => {
-    let trace: ToolTraceRecorder;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -63,6 +74,8 @@ describe('evaluate-prompt', () => {
         trace = new ToolTraceRecorder();
         setEvaluationRecorder(trace);
         projectDir = makeProject();
+        saveProject.mockReset();
+        saveProject.mockResolvedValue(undefined);
         setEvaluationServerFactory(
             () => ({ start: async () => {}, dispose: () => {} }) as never,
         );
@@ -148,5 +161,104 @@ describe('evaluate-prompt', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('claude is not installed');
+    });
+});
+
+describe('history', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockExecute.mockReset();
+        mockExecute.mockResolvedValue({ stdout: RUN_JSON });
+        trace = new ToolTraceRecorder();
+        setEvaluationRecorder(trace);
+        projectDir = makeProject();
+        saveProject.mockReset();
+        saveProject.mockResolvedValue(undefined);
+        setEvaluationServerFactory(
+            () => ({ start: async () => {}, dispose: () => {} }) as never,
+        );
+    });
+
+    it('stores the run against the project', async () => {
+        const ctx = contextWith('bodea');
+
+        await dispatchHandler(evaluationHandlers, ctx, 'evaluate-prompt', {
+            prompt: 'deploy the mesh',
+        });
+
+        expect(saveProject).toHaveBeenCalledTimes(1);
+        const stored = savedProject?.evaluationHistory as { prompt: string; costUSD: number }[];
+        expect(stored).toHaveLength(1);
+        expect(stored[0].prompt).toBe('deploy the mesh');
+        expect(stored[0].costUSD).toBe(0.21);
+    });
+
+    it('reports what the prompt cost LAST time', async () => {
+        const ctx = contextWith('bodea', [
+            {
+                prompt: 'deploy the mesh',
+                costUSD: 0.31,
+                steps: 9,
+                wastedSteps: 4,
+                durationMs: 50_000,
+                at: '2026-08-24T10:00:00.000Z',
+            },
+        ]);
+
+        const res = await dispatchHandler(evaluationHandlers, ctx, 'evaluate-prompt', {
+            prompt: 'deploy the mesh',
+        });
+
+        const data = res.data as { previousRun?: { costUSD: number }; priorRuns: number };
+        expect(data.previousRun?.costUSD).toBe(0.31);
+        expect(data.priorRuns).toBe(1);
+    });
+
+    it('compares against the past BEFORE appending, not after', async () => {
+        // Append first and the run finds ITSELF, so every delta reads as zero.
+        const ctx = contextWith('bodea');
+
+        const res = await dispatchHandler(evaluationHandlers, ctx, 'evaluate-prompt', {
+            prompt: 'a brand new prompt',
+        });
+
+        const data = res.data as { previousRun?: unknown; priorRuns: number };
+        expect(data.previousRun).toBeUndefined();
+        expect(data.priorRuns).toBe(0);
+    });
+
+    it('never stores the trace', async () => {
+        mockExecute.mockImplementation(async () => {
+            trace.record({
+                tool: 'get_current_project',
+                readOnly: true,
+                argumentKeys: ['secretish'],
+                argumentFingerprint: 'abc123',
+                resultBytes: 10,
+                durationMs: 1,
+                outcome: 'ok',
+            });
+            return { stdout: RUN_JSON };
+        });
+        const ctx = contextWith('bodea');
+
+        await dispatchHandler(evaluationHandlers, ctx, 'evaluate-prompt', { prompt: 'p' });
+
+        expect(JSON.stringify(savedProject?.evaluationHistory)).not.toMatch(
+            /argumentKeys|fingerprint|abc123|get_current_project/,
+        );
+    });
+
+    it('still returns the result when the save FAILS', async () => {
+        // A producer must not lose a real evaluation to a bookkeeping problem.
+        saveProject.mockRejectedValue(new Error('disk full'));
+        const ctx = contextWith('bodea');
+
+        const res = await dispatchHandler(evaluationHandlers, ctx, 'evaluate-prompt', {
+            prompt: 'p',
+        });
+
+        expect(res.success).toBe(true);
+        expect((res.data as { costUSD: number }).costUSD).toBe(0.21);
     });
 });

@@ -31,8 +31,6 @@ type Verdict = NonNullable<EvaluatePromptResponse['data']>;
 
 export interface EvaluationVerdictProps {
     verdict: Verdict;
-    /** The run before this one, when there was one — turns numbers into a delta. */
-    previous: Verdict | null;
     /** Append this text to the prompt. Only offered for mechanical fixes. */
     onApply: (append: string) => void;
 }
@@ -62,9 +60,12 @@ function delta(now: number, before: number | undefined, format: (n: number) => s
 
 export function EvaluationVerdict({
     verdict,
-    previous,
     onApply,
 }: EvaluationVerdictProps): React.JSX.Element {
+    // Read from the RESPONSE, which read it from disk. Holding the previous run
+    // in React state made the delta die with the window — and "is this getting
+    // better" is the question the feature exists to answer.
+    const previous = verdict.previousRun;
     const steps = verdict.trace.length;
     const wasted = verdict.repeats.length;
     const seconds = Math.round(verdict.durationMs / 1000);
@@ -82,9 +83,10 @@ export function EvaluationVerdict({
                 </Heading>
                 <Text>
                     {steps} step{steps === 1 ? '' : 's'}
-                    {delta(steps, previous?.trace.length, (n) => `${n}`)}, {money(verdict.costUSD)}
+                    {delta(steps, previous?.steps, (n) => `${n}`)}, {money(verdict.costUSD)}
                     {delta(verdict.costUSD, previous?.costUSD, money)}, {seconds}s
                     {wasted > 0 ? `, ${wasted} wasted` : ', nothing wasted'}.
+                    {verdict.priorRuns > 1 ? ` Run ${verdict.priorRuns + 1} of this prompt.` : ''}
                 </Text>
             </View>
 

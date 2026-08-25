@@ -43,8 +43,6 @@ export function EvaluationWorkbench({ project }: EvaluationWorkbenchProps): Reac
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [verdict, setVerdict] = useState<Verdict | null>(null);
-    /** The previous run, so the headline can be a DELTA rather than a number. */
-    const [previous, setPrevious] = useState<Verdict | null>(null);
 
     const evaluate = useCallback(async () => {
         setBusy(true);
@@ -61,14 +59,16 @@ export function EvaluationWorkbench({ project }: EvaluationWorkbenchProps): Reac
                 setError(response?.error ?? 'The evaluation did not finish.');
                 return;
             }
-            setPrevious(verdict);
+            // The previous run comes from the RESPONSE, not from React state.
+            // Session state cannot survive a reload, which is the whole point:
+            // "down from $0.21" has to still be true tomorrow.
             setVerdict(response.data);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setBusy(false);
         }
-    }, [prompt, verdict]);
+    }, [prompt]);
 
     const applySuggestion = useCallback((append: string) => {
         // Appended, never replaced: the user's words are theirs, and a
@@ -159,11 +159,7 @@ export function EvaluationWorkbench({ project }: EvaluationWorkbenchProps): Reac
                 )}
 
                 {verdict && !busy && (
-                    <EvaluationVerdict
-                        verdict={verdict}
-                        previous={previous}
-                        onApply={applySuggestion}
-                    />
+                    <EvaluationVerdict verdict={verdict} onApply={applySuggestion} />
                 )}
 
                 {!verdict && !busy && (
