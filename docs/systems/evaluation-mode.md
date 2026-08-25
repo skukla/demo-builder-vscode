@@ -169,6 +169,18 @@ Anything that is not an explicit accept is a refusal — a server cannot tell
 "nobody was there" from "the user said no", so the blunt rule is the honest one.
 Record: `.rptc/research/consent-in-the-chat/`; details in `agent-alerts.md`.
 
+## The limit worth knowing
+
+The dry run makes **Demo Builder's** tools unable to change anything. It does not
+stop an agent writing a file or running a command with Claude Code's own tools —
+those never reach this extension, so neither the dry run nor the recorder sees
+them.
+
+An evaluation therefore measures the path through OUR surface accurately, and is
+blind to the rest of what the agent did. For prompt efficiency that is mostly
+fine, since the waste being hunted is in our round trips. For "was that safe", it
+is not: read `agent-alerts.md`.
+
 ## Related
 
 - `mcp-server.md` — the tool surface these run against

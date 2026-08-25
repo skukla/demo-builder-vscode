@@ -68,6 +68,33 @@ All of these raised a dialog before 2026-08-25. They are recoverable, additive, 
 trivially reversible, and a prompt on a cheap mutation trains people to click
 Allow without reading — which costs more than it saves.
 
+## What this protects, and what it does NOT
+
+**Demo Builder's consent gate covers Demo Builder's tools.** Nothing else.
+
+When an agent deletes a project, republishes a storefront or resets a datapack
+through this extension, the gate fires. When the same agent runs a shell command,
+writes a file or edits code with Claude Code's OWN tools, **this extension never
+sees it** — no dialog, no chat prompt, no log entry of ours.
+
+That is not a bug and it is not fixable from here. Consent fires inside our tool
+calls, so it can only ever see calls made to us. `tech-case-studio` sees
+everything because it DRIVES the Claude process and intercepts its permission
+system (`--permission-prompt-tool stdio`); our extension launches `claude` into a
+terminal and steps back. Two architectures, and the mechanism available depends
+on which one you are.
+
+Claude Code has its own permission checks for those tools. **Whether they fire is
+the producer's setting, not ours** — and it was measured on 2026-08-24 that this
+machine runs `defaultMode: auto` with no allowlist, so they do not. The owner
+confirmed on 2026-08-25 that this stays: the interruption cost is real.
+
+So state it plainly rather than let the dialogs imply otherwise: **the gate makes
+Demo Builder's own destructive operations safe. It does not make an agent safe.**
+
+Comparison and what follows from it:
+`.rptc/research/consent-in-the-chat/compared-with-tech-case-studio.md`.
+
 ## Where the question appears
 
 **The chat first, the VS Code modal as the floor.** The modal opens in the VS

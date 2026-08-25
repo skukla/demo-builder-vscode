@@ -75,3 +75,32 @@ producer runs `defaultMode: auto` with no allowlist, so Claude Code approves
 everything and OUR dialog is the only checkpoint that fires. Same hazard, found
 independently, and it is the reason the gate has to be server-side rather than
 configuration.
+
+
+## OWNER DECISION 2026-08-25: auto-approve stays on
+
+Turning Claude Code's own permission checks back on would close most of the gap
+without touching our code. **The owner declined, and the reason is sound: the
+interruption cost is real.** A producer building a demo is interrupted enough.
+
+So this is settled, and it changes what is worth building:
+
+**Prevention is as good as it is going to get.** Our gate covers our tools, aimed
+at the sixteen that are irreversible or reach other people. Claude's own tools —
+Bash, Write, Edit — run unasked, by choice.
+
+**Which promotes VISIBILITY from nice-to-have to the actual mitigation.** If you
+cannot prevent it, you can at least see it afterwards. And the thing that would
+give that is already scheduled: task A of the `opentelemetry/` sub-plan is to
+read what a `claude_code.tool` span contains, and **those spans cover Claude's
+OWN tools** — the exact set our recorder is blind to.
+
+That is a real change to why that sub-plan matters. It was filed as "durable
+capture, useful for measuring the surface over time". It is now also the only
+after-the-fact record of what an agent did with the tools nobody asked about.
+Worth doing sooner than it was.
+
+**What is NOT worth doing**, recorded so it is not re-proposed: restricting what
+Claude may do (`--disallowedTools` on the spawn). We control the launch, so it is
+technically available — and the skills we ship need exactly those abilities.
+Blocking Bash to guard the producer would break the thing it is guarding.

@@ -67,6 +67,24 @@ storage. Extending it is a smaller change, produces readable JSON, adds no
 dependency, and answers "did this get better" — the question actually being
 asked.
 
+## Raised in priority 2026-08-25 — it is now a SAFETY story, not just a metrics one
+
+Filed as durable capture for measuring the tool surface over time. Then two
+things happened on the same day:
+
+1. Comparing with `tech-case-studio` established that our consent gate covers
+   **our** tools only. Anything the agent does with Bash, Write or Edit passes
+   without Demo Builder seeing it.
+2. The owner decided Claude Code's own permission checks stay OFF, because the
+   interruption cost is real.
+
+So nothing asks about those tools, by choice. **That makes after-the-fact
+visibility the only mitigation left** — and `claude_code.tool` spans cover
+exactly the set our recorder is blind to.
+
+The measurement below was already task one. It is now worth doing sooner than
+its position in the plan suggests.
+
 ## Task one is a MEASUREMENT, not code
 
 **Settle argument 1 by looking.** Turn on Claude Code's own OTel export to a local
