@@ -70,6 +70,29 @@ export interface AgentAlertCopy {
      * granting and revoking are different decisions.
      */
     target: string[];
+    /**
+     * May the user say "don't ask again this session" for this tool?
+     *
+     * REQUIRED, so every entry makes the decision explicitly. An optional flag
+     * would default the answer, and the default would be wrong for whichever
+     * tool someone forgot.
+     *
+     * TWO tests, and a tool must pass BOTH:
+     *
+     * 1. **Repeating it is recoverable.** Anything whose consequence says "can't
+     *    be undone" fails here immediately.
+     * 2. **It does not reach another person.** `set_site_admin` passes the first
+     *    test — access can be re-granted — and fails this one, because a
+     *    standing grant would let an agent change someone else's access
+     *    repeatedly on one approval.
+     *
+     * Reading all sixteen consequences on 2026-08-25 left exactly TWO: the pair
+     * that fires repeatedly inside a single flow and can simply be run again.
+     * If a future entry makes it three, be suspicious — the point of a grant is
+     * to remove friction from something harmless and frequent, not to reduce
+     * prompts in general.
+     */
+    sessionGrant: boolean;
 }
 
 /**
@@ -87,6 +110,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         consequence:
             "Removes the project folder and its settings from this machine. Cloud resources aren't touched. This can't be undone.",
         target: ['name'],
+        sessionGrant: false,
     },
     // The one entry here that is not destructive. It earns a dialog because it
     // SPENDS: a real paid run, 30 seconds to two minutes, started on the agent's
@@ -99,11 +123,16 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The prompt itself is the thing being approved, and it is the only
         // argument a person can meaningfully check.
         target: ['prompt'],
+        // Reversible - it changes nothing - but it SPENDS, and money does not
+        // come back. A standing grant would let an agent bill repeatedly on one
+        // approval.
+        sessionGrant: false,
     },
     delete_github_repo: {
         action: 'Delete a GitHub repository',
         consequence: "Deletes the repository and its history on GitHub. This can't be undone.",
         target: ['owner', 'repo'],
+        sessionGrant: false,
     },
     delete_adobe_project: {
         action: 'Delete an Adobe project',
@@ -112,35 +141,42 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // NOT projectId: a 19-digit Console id is not checkable by a human,
         // and it used to lead this dialog.
         target: ['projectName'],
+        sessionGrant: false,
     },
     cleanup_dalive_site: {
         action: 'Delete all content for a site',
         consequence: "Removes every page and asset from the DA.live site. This can't be undone.",
         target: ['org', 'site'],
+        sessionGrant: false,
     },
     delete_page: {
         action: 'Delete a page',
         consequence:
             "Unpublishes the page and removes it from the storefront. Visitors stop seeing it immediately. This can't be undone.",
         target: ['path'],
+        sessionGrant: false,
     },
     reset_eds_project: {
         action: 'Reset this storefront',
         consequence:
             "Replaces the storefront's code and content with the original template. Anything customised here is lost.",
         target: [],
+        sessionGrant: false,
     },
     reset_datapack: {
         action: 'Remove sample data',
         consequence:
             "Deletes this data pack's products and categories from the Commerce instance. This can't be undone.",
         target: ['datapackName', 'version'],
+        sessionGrant: false,
     },
     remove_integration: {
         action: 'Remove an integration',
         consequence:
             'Undeploys the integration from Adobe Runtime and deletes its files. Anything calling it stops working.',
         target: ['id'],
+        // The deployment could be redeployed, but the local files are deleted.
+        sessionGrant: false,
     },
     migrate_storefront_name: {
         action: 'Rename this storefront',
@@ -149,6 +185,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // Its `projectPath` argument is an absolute disk path — noise in a
         // dialog. The open project names the target.
         target: [],
+        sessionGrant: false,
     },
     remove_block_from_library: {
         action: 'Remove a block from the library',
@@ -157,6 +194,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // `blockId`, not blockName — and the project too, since the library
         // belongs to one storefront.
         target: ['projectName', 'blockId'],
+        sessionGrant: false,
     },
     set_site_admin: {
         action: 'Change who can administer this site',
@@ -165,23 +203,32 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // BOTH: granting and revoking are different decisions, and `admin`
         // is the one that says which.
         target: ['email', 'admin'],
+        // Recoverable (access can be re-granted) but it reaches ANOTHER PERSON,
+        // which fails the second test.
+        sessionGrant: false,
     },
     republish: {
         action: 'Republish the storefront',
         consequence: 'Pushes the current configuration live. Visitors see the change within minutes.',
         target: [],
+        // Repeatable and recoverable, and it fires several times in one flow -
+        // the case a grant exists for.
+        sessionGrant: true,
     },
     sync_content: {
         action: 'Publish all storefront content',
         consequence:
             'Pushes every page, asset and config change to the live site. Visitors see it within minutes.',
         target: [],
+        // Same as republish: run it again and the previous state returns.
+        sessionGrant: true,
     },
     start_datapack_import: {
         action: 'Import sample data',
         consequence:
             'Writes products and categories into the live Commerce instance. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version'],
+        sessionGrant: false,
     },
     start_datapack_export: {
         action: 'Export sample data',
@@ -190,6 +237,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],
+        sessionGrant: false,
     },
 };
 

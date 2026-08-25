@@ -35,6 +35,24 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
+/**
+ * Tools the user has said "don't ask again this session" for.
+ *
+ * Module state, and it dies with the window — that is the whole point of the
+ * word SESSION. A grant that survived a reload would be a preference the user
+ * never set, hiding in a place they cannot see it.
+ *
+ * Only tools whose copy sets `sessionGrant` can enter this set, so the two tests
+ * that decide it (recoverable, and does not reach another person) are enforced
+ * where they are authored rather than at the call site.
+ */
+const sessionGrants = new Set<string>();
+
+/** Forget every grant. Test seam, and the reset a future "lock again" would use. */
+export function clearSessionGrants(): void {
+    sessionGrants.clear();
+}
+
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;
 
@@ -184,12 +202,31 @@ export function createAgentConsentGate(
             ? renderTargetForConsent(args, copy.target)
             : await currentProjectLine();
         const detail = [copy?.consequence, target].filter(Boolean).join('\n\n');
+        // A standing grant answers before the dialog opens. Checked AFTER the
+        // setting so turning consent back on revokes them, and after the copy
+        // lookup so a tool with no copy can never be granted.
+        if (copy?.sessionGrant && sessionGrants.has(toolName)) {
+            logger.info(`[MCP] ${toolName} allowed by a session grant`);
+            return { allowed: true };
+        }
+
+        // The third button appears only where the copy allows it. Its wording
+        // says what is being granted and for how long — "Allow" and "Always
+        // allow" would read as the same promise at a glance.
+        const buttons: string[] = ['Allow'];
+        if (copy?.sessionGrant) buttons.push('Allow for the rest of this session');
+
         const choice = await vscode.window.showWarningMessage(
             `Demo Builder: ${copy?.action ?? toolName}?`,
             { modal: true, detail: detail || undefined },
-            'Allow',
+            ...buttons,
         );
 
+        if (choice === 'Allow for the rest of this session') {
+            sessionGrants.add(toolName);
+            logger.info(`[MCP] user granted ${toolName} for this session`);
+            return { allowed: true };
+        }
         if (choice === 'Allow') {
             logger.info(`[MCP] user allowed agent operation: ${toolName}`);
             return { allowed: true };

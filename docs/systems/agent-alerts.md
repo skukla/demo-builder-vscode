@@ -68,6 +68,44 @@ All of these raised a dialog before 2026-08-25. They are recoverable, additive, 
 trivially reversible, and a prompt on a cheap mutation trains people to click
 Allow without reading — which costs more than it saves.
 
+## "Don't ask again this session"
+
+A single storefront flow raises the same prompt several times, and someone who
+clicks Allow four times has stopped reading by the fourth. That is worse than not
+asking — the gate becomes a formality.
+
+So the dialog offers a third button, **"Allow for the rest of this session"**,
+and it is offered PER TOOL rather than for the surface. A blanket grant would
+switch the gate off exactly when the agent is doing most, and
+`demoBuilder.ai.requireAgentConsent` already exists as the deliberate way to run
+unattended.
+
+**Which tools qualify is authored, not inferred** — `sessionGrant` on each
+`AGENT_ALERT_COPY` entry, required so every entry decides. Two tests, and a tool
+must pass BOTH:
+
+1. **Repeating it is recoverable.** Anything whose consequence says "can't be
+   undone" fails immediately.
+2. **It does not reach another person.** `set_site_admin` passes the first test —
+   access can be re-granted — and fails this one: a standing grant would let an
+   agent change someone else's access repeatedly on one approval.
+
+Reading all sixteen consequences on 2026-08-25 left exactly **two**: `republish`
+and `sync_content`. Both fire repeatedly inside one flow and both are undone by
+running them again. `evaluate_prompt` was refused despite changing nothing — it
+SPENDS, and money does not come back.
+
+If a future entry makes it three, be suspicious. A grant removes friction from
+something harmless and frequent; it is not a way to reduce prompts in general.
+
+Grants live in module state and **die with the window**. That is what the word
+session means, and a grant that survived a reload would be a preference the user
+never set, hiding somewhere they cannot see it.
+
+`agentSessionGrants.test.ts` asserts the qualifying set against the AUTHORED
+copy, so a new entry that opts an irreversible tool into grants fails at the
+point the claim is made rather than in review.
+
 ## Writing the copy
 
 `action` completes "Demo Builder: ___?" — a verb phrase, no full stop.

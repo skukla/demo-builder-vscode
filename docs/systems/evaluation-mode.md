@@ -155,6 +155,23 @@ A constraint worth carrying: **the cost of generating a suggestion is ours, not
 the prompt's.** Folding them together would inflate the number a producer is
 trying to reduce and break run-to-run comparison.
 
+## Consent, and asking twice
+
+Destructive calls raise a modal in the VS Code window. Since 2026-08-25 the
+dialog also offers **"Allow for the rest of this session"** — but only for
+`republish` and `sync_content`, the two tools that fire repeatedly in one flow
+and are undone by running them again. Everything else asks every time. See
+`agent-alerts.md` for the two tests that decide it.
+
+**Moving consent into the chat is measured but parked.** Claude Code declares the
+`elicitation` capability and answers the request, so a server CAN ask the user
+directly — but headless it answers `cancel` in 5ms with no prompt shown, and a
+server cannot tell "nobody was there" from "the user said no". The design that
+survives is simple: anything that is not an explicit accept is a refusal. Whether
+an interactive session renders a usable prompt is still unmeasured; four attempts
+failed on config paths and tool-search deferral rather than on elicitation.
+Record: `.rptc/research/consent-in-the-chat/`.
+
 ## Related
 
 - `mcp-server.md` — the tool surface these run against
