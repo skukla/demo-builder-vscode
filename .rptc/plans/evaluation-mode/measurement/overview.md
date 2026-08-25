@@ -135,8 +135,12 @@ and they need different fixes:
 - The tools do not match what producers actually need → a surface problem, and
   the efficiency work is aimed at the wrong thing.
 
-Either way it belongs in front of whoever decides what to build next. Report it
-before the battery is finished, not after.
+Either way it belongs in front of whoever decides what to build next, which is
+why it is **filed as its own item rather than left here**:
+[`2026-08-25-agents-barely-use-the-tool-surface.md`](../../../backlog/2026-08-25-agents-barely-use-the-tool-surface.md).
+It carries the survey, both readings, the cheap checks that tell them apart, and
+the caveats that weaken it. A finding about the whole tool surface does not
+belong inside a sub-plan about batteries — nobody would read it there.
 
 ### So the two sources do different jobs
 

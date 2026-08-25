@@ -54,8 +54,23 @@ One step per session, and the order is not arbitrary:
    tuned on the prompts it is judged by will look excellent and generalise to
    nothing — and the held-out set is cheap to build before and impossible to
    reconstruct after.
-5. **The OpenTelemetry sub-plan** waits on a question that is not a coding
-   question: where the collector lives and who runs it.
+5. **The OpenTelemetry sub-plan** starts with a MEASUREMENT, not code — see the
+   open tasks below.
+
+### Open tasks that are NOT code, and must not be lost
+
+Each of these gates a step, and none of them lives in a step's implementation.
+They are listed here because a task that exists only inside a sub-plan is a task
+nobody reads until they open that sub-plan — which is after they needed it.
+
+| # | Task | Gates | Why it is not code |
+|---|---|---|---|
+| A | Read what a `claude_code.tool` span actually contains for a session against this extension | the whole `opentelemetry/` sub-plan | It decides whether that sub-plan proceeds or closes as ANSWERED. Rich spans earn OTel its place; thin ones mean extending step 07 instead |
+| B | Log the client capabilities the server receives at `initialize`, and read whether Claude Code declares `elicitation` | step 06 | It decides the step's shape. Designing either branch first wastes the one that turns out to be right |
+| C | Decide what to do about the tool surface barely being used | nothing here — it is bigger than this plan | Filed as a backlog item; see `2026-08-25-agents-barely-use-the-tool-surface.md` |
+
+A and B are each under an hour and neither needs a decision from anyone. Do them
+when their step comes up, not before — but do them FIRST within that step.
 
 **Added 2026-08-25, after step 01 shipped.** Step 01b was not in the original
 plan. Two things put it there, and they turned out to be the same thing:
@@ -286,8 +301,11 @@ and was found only because a human happened to know EDS does not work that way.
 A prompt per tool (103) · path grading (research: grade outcomes, the path is a
 diagnostic) · catalog-size optimisation (measured at ~3,900 tokens for our whole
 surface — not the lever) · background re-runs (each is a real paid agent run) ·
-OpenTelemetry (right destination for durable capture; needs a collector, and the
-reader works today).
+OpenTelemetry — **SUPERSEDED 2026-08-25**: the owner moved it onto the plan as
+the `opentelemetry/` sub-plan, then scoped it local-only with no vendor, which
+means it now begins by measuring whether the standard buys anything at all. The
+original reason recorded here ("needs a collector, and the reader works today")
+is no longer the blocker; read the sub-plan rather than this line.
 
 ## Verification
 
