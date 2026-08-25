@@ -21,12 +21,29 @@ plain div with flex styles for the main layout).
 
 ## What the view shows
 
-- **A verdict, one line.** "Would have deployed the mesh for bodea. 5 steps,
-  $0.21, 38s, nothing blocked."
+- **A verdict, one line**, and it names waste even when nothing was blocked —
+  a run that changes nothing can still be a bad run. "Would have deployed the
+  mesh for bodea. 5 steps, $0.21, 38s, nothing blocked, 2 steps wasted."
 - **The trace** — steps in order, **plain language by default** ("Checked whether
   the demo is running"), expandable to the tool name, argument keys and tokens.
 - **What it stopped** — blocked writes stated plainly, so the user is never
   unsure whether something ran.
+- **What it wasted** — a first-class finding, equal billing with the section
+  above. Blocked writes answer "is my project safe"; this answers the question
+  the feature exists for. Reads are where the waste actually is: the orientation
+  call removed on 2026-08-24 was a read, and it cost 25-57% of three prompts.
+  Three shapes, all computable from the recorder's fingerprint:
+  - **Asked the same thing twice** — same tool, same argument fingerprint, more
+    than once in a run. "Asked which project you're in three times."
+  - **Read and never used** — a large answer followed by no call that depends on
+    it. State it as an observation, not a verdict; it is a heuristic.
+  - **The long way round** — a sequence with a known shorter equivalent, e.g.
+    `list_projects` → `get_project` → `get_project_status` where one call
+    answers. Seed it from the trio already named in the overview rather than
+    inventing patterns speculatively.
+
+  Report waste in the SAME units as everything else — steps and dollars — so it
+  is comparable: "Three of eight steps re-asked something it already knew.
 - **Suggestions**, two kinds:
   - *prompt-level, applied with a click* — "You did not say which project, so it
     spent two steps working it out. Add: 'for bodea'."

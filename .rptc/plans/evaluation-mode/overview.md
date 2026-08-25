@@ -14,10 +14,28 @@ the previous is green.
 
 | Step | File | Ships |
 |---|---|---|
-| 01 | `step-01-dry-run-gate.md` | The server-enforced gate — mutation becomes impossible |
-| 02 | `step-02-trace-recorder.md` | What was called, blocked, and how big the answers were |
+| 01 | `step-01-dry-run-gate.md` | ✅ SHIPPED `f40a7a954` — the server-enforced gate; mutation is impossible |
+| 01b | `step-01b-tool-self-description.md` | Tools declare what they ARE and what to CALL them, instead of four surfaces guessing from the name |
+| 02 | `step-02-trace-recorder.md` | What was called — reads included — blocked, and how big the answers were |
 | 03 | `step-03-runner-and-tool.md` | One runner behind three doors, incl. `evaluate_prompt` |
 | 04 | `step-04-workbench.md` | The view, the refine loop, run-for-real, save |
+
+**Added 2026-08-25, after step 01 shipped.** Step 01b was not in the original
+plan. Two things put it there, and they turned out to be the same thing:
+
+1. **The dry run trusts a regex.** It classifies read vs write by the tool's
+   NAME. An audit of all 43 read-shaped tools found the surface clean and one
+   genuine write-in-a-read (`check_github_app`) held closed by a forced argument
+   — but a name cannot express "called `check_` and it writes", so that guard had
+   to be found by hand.
+2. **Step 04 needs authored tool names** for its plain-language trace, and would
+   otherwise become the FOURTH surface transforming a tool's name into English —
+   the exact mistake `agentAlertCopy.ts` was written to correct.
+
+Both are fixed by putting the truth in the tool definition, using MCP's own
+`annotations` block. The same migration also fixes a live usability bug: the
+permission dialog prints every argument the schema declares, so deleting an
+Adobe project leads with a 19-digit id instead of the project's name.
 
 
 ## What this plan is, and what it is not
@@ -66,6 +84,11 @@ are in the terminal — exactly where the sidebar is not.
   `consentGate`** so the module stays vscode-free. That seam already proves the
   pattern: it short-circuits a call and returns its own answer.
 - Read-shaped tools execute normally — the path is only realistic if they do.
+  **They are still recorded and still reported.** Letting reads run is about
+  keeping the path honest; it is not a decision to leave them out of the
+  feature's output. An inefficient read costs the same as an inefficient write,
+  and in every measurement so far it has been the read that cost more (owner,
+  2026-08-25).
   Everything else returns a synthetic "would have run X" naming the argument
   KEYS, and never reaches the handler. Classify with the existing
   `isReadOnlyToolName`; do not invent a second classification.
@@ -156,6 +179,10 @@ The view (on `BaseWebviewCommand` + the webview-command-handler machinery):
   running"), expandable to tool name and argument keys.
 - **What it stopped** — blocked writes, stated plainly, so the user is never
   unsure whether something ran.
+- **What it wasted** — equal billing with the line above: repeated reads,
+  answers fetched and never used, and sequences with a shorter equivalent.
+  Reported in the same units (steps, dollars). See step 04 for the three shapes
+  and why the recorder's argument fingerprint is what makes them computable.
 - **Suggestions**, two kinds: *prompt-level, applied with a click*; and
   *surface-level, for us*, accumulating in the panel rather than onto a prompt.
 - **History per prompt**, so the delta is the headline: "38k tokens, down from
