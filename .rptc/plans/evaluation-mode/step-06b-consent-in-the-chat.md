@@ -83,6 +83,28 @@ Capture two things while there: whether a prompt renders, and **which action a
 deliberate decline produces**. The decision rule needs neither — but the second
 is one observation away and a future change might.
 
+## Compared with tech-case-studio — and the gap it exposes
+
+The studio solved permission prompts first, using a DIFFERENT mechanism: Claude
+Code's own permission system, intercepted via `--permission-prompt-tool stdio`
+alongside `--input-format stream-json`. It covers **every tool Claude uses**, not
+just ours.
+
+We cannot use it: it needs someone reading and writing that stdio stream, and the
+extension launches `claude --continue` into a VS Code terminal that Claude Code
+owns. The two mechanisms belong to two architectures, and which is available
+depends on whether you own the stream.
+
+**The gap that comparison exposes is worth carrying forward:** our consent gate
+protects OUR tools. Anything Claude does with its own — Bash, Write, Edit —
+passes without Demo Builder knowing, whatever we build with elicitation. That is
+the strongest argument yet for
+[`own-the-chat-surface`](../../backlog/2026-08-24-own-the-chat-surface.md), and
+it was not in that item until now.
+
+Full comparison, including what to borrow: `compared-with-tech-case-studio.md`
+in the research directory.
+
 ## What is NOT yet designed
 
 Naming these so nobody reads "designed" and finds a blank:

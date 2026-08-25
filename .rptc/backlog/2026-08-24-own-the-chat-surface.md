@@ -56,6 +56,29 @@ separately in the studio's own backlog as
 `2026-08-24-mcp-tool-labels-in-chat.md`, and whoever picks this up should read
 both.
 
+## The strongest argument for it, added 2026-08-25
+
+**Owning the stream is what makes Claude Code's OWN permission system available
+to us**, and that covers every tool — not just ours.
+
+Demo Builder shipped consent via MCP elicitation on 2026-08-25 (`consentViaChat.ts`).
+It works, and it protects **our** tools only. Anything the agent does with Bash,
+Write or Edit passes without Demo Builder knowing, and no amount of elicitation
+closes that: elicitation is a mechanism our SERVER has, and it fires inside our
+own tool calls.
+
+The studio gets `control_request` / `can_use_tool` instead — the same message the
+Agent SDK answers through `canUseTool` — because it drives the process with
+`--permission-prompt-tool stdio` and `--input-format stream-json`
+(`sidecar/src/claude-cli-provider.ts:243-252`). That message arrives for EVERY
+tool, before it runs.
+
+So the choice is not only about rendering. It is: does a producer's agent get to
+run a shell command this extension never sees? Today, yes.
+
+Comparison with what to borrow either way:
+`.rptc/research/consent-in-the-chat/compared-with-tech-case-studio.md`.
+
 ## Goal / Scope
 
 **In scope:** a chat surface inside the extension that drives the local `claude`
