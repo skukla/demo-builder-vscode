@@ -68,13 +68,14 @@ nobody reads until they open that sub-plan — which is after they needed it.
 
 | # | Task | Gates | Why it is not code |
 |---|---|---|---|
-| A | **OPEN.** Read what a `claude_code.tool` span actually contains for a session against this extension | the whole `opentelemetry/` sub-plan | Decides whether that sub-plan proceeds or closes as ANSWERED. With no collector and no vendor (owner, 2026-08-25) the standard only earns its place if those spans are rich enough to be worth joining; thin ones mean extending step 07 instead |
+| A | ~~Read what a `claude_code.tool` span contains~~ **DONE 2026-08-25 — the sub-plan PROCEEDS** | `opentelemetry/` | There are no spans at all: events and metrics only. For Claude's OWN tools they carry names, sizes, durations and whether it was auto-approved — the set our recorder is blind to. Our tools arrive anonymised as `mcp_tool`, so it complements the recorder rather than replacing it. And we need a SINK, not an exporter: Claude Code already emits everything. Record: `.rptc/research/claude-code-telemetry/` |
 | B | ~~Log the client capabilities and read whether Claude Code declares `elicitation`~~ **DONE 2026-08-25** | step 06 | It declares `elicitation: { form: {} }` and answers the request; headless it returns `cancel` in ~5ms with no prompt shown. A follow-on — does an INTERACTIVE session render a usable prompt — is PARKED, because the design stopped depending on it. Record: `.rptc/research/consent-in-the-chat/` |
 | C | Decide what to do about the tool surface barely being used | nothing here — it is bigger than this plan | Filed as a backlog item; see `2026-08-25-agents-barely-use-the-tool-surface.md` |
 
-A is under an hour and needs no decision from anyone; do it FIRST within its
-sub-plan, not after. B is done — what it found is in the row above, and what it
-changed is in step 06.
+Both are done. Each took under an hour and each changed the work it gated — A
+turned the telemetry sub-plan from "instrument our own spans" into "receive what
+Claude Code already sends", and B settled step 06's shape. That is the argument
+for doing this kind of task first rather than after.
 
 **Nothing on this plan is waiting on the owner.** Both questions that were —
 where telemetry lives, and where the held-out prompts come from — were answered

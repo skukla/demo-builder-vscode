@@ -85,15 +85,52 @@ exactly the set our recorder is blind to.
 The measurement below was already task one. It is now worth doing sooner than
 its position in the plan suggests.
 
-## Task one is a MEASUREMENT, not code
+## Task one is DONE — measured 2026-08-25
 
-**Settle argument 1 by looking.** Turn on Claude Code's own OTel export to a local
-file and read what a `claude_code.tool` span actually contains for a session
-against this extension. Rich enough to be worth joining, and OTel earns its place
-and this sub-plan proceeds. Thin, and extend step 07's storage and close this
-sub-plan as ANSWERED rather than built — a real outcome, not a failure.
+Full record: `.rptc/research/claude-code-telemetry/research.md`.
 
-Nothing else here starts before that.
+**Verdict: it earns its place, and the sub-plan's shape was wrong in three ways.**
+
+1. **There are NO TRACES.** Nothing reaches `/v1/traces`. Everything is log
+   EVENTS and metrics. The premise "`claude_code.tool` spans carry
+   `tool_result_size_bytes`" was right about the data and wrong about the form,
+   and anything designed around spans or trace context would target something
+   that is not there.
+2. **We do not need to build an exporter — we need a SINK.** Claude Code already
+   emits it all. A local receiver that stores what arrives is dramatically
+   smaller than instrumenting our own spans, and turning it on is CONFIGURATION
+   (`CLAUDE_CODE_ENABLE_TELEMETRY` plus `OTEL_*`), which the extension already
+   controls because it launches the chat.
+3. **Our own tools arrive ANONYMISED.** `tool_name` is the literal string
+   `mcp_tool` — never `list_projects`. So this cannot replace our recorder, and
+   the two are complementary rather than overlapping:
+
+   | | Claude Code telemetry | Our recorder |
+   |---|---|---|
+   | Bash / Read / Write | full detail | invisible |
+   | Our tools | `mcp_tool`, unnamed | names, argument keys, repeat fingerprint |
+
+**The value is the SAFETY story.** For Claude's own tools the events carry real
+names, sizes, durations — and `decision` + `source`, which records auto-approval
+explicitly. The owner decided the same day that Claude's permission checks stay
+off; this is the after-the-fact evidence of what that lets through, which is the
+mitigation that decision left open. Cost and tokens are NOT the draw: those
+already come from `claude -p --output-format json`, which the runner reads today.
+
+**Two things measured that constrain the build:**
+
+- **Joining is not solved.** The events carry `tool_use_id` and `prompt.id`; our
+  recorder carries neither. Correlation means timestamps and ordering, or an id
+  our side cannot currently see. Do not assume it is cheap.
+- **Every record carries the producer's EMAIL** plus account, organisation and
+  session identifiers. Local-only makes that storable rather than sent, but the
+  file must be gitignored and outside any project directory — and whoever later
+  adds an upload, or attaches it to a support ticket, is sending exactly that.
+
+**Method note worth keeping:** the first capture truncated bodies at 4,000 bytes
+and a search for "tool" returned ZERO — which reads exactly like "Claude Code
+does not report tool use". Full bodies found the events immediately. A zero from
+a truncated sample proves nothing.
 
 ## The remaining questions, if it proceeds
 
