@@ -179,6 +179,29 @@ describe('agent dry run', () => {
         expect(text).not.toContain('fake-test-pw-not-a-secret');
     });
 
+    it('NARRATES a simulated call, marked as simulated', async () => {
+        // Silence used to be the rule here, on the reasoning that announcing
+        // "Republishing…" for something that will not happen is a lie. Silence
+        // is worse: the producer sees nothing and cannot tell the agent tried.
+        // The honest form is the authored phrase plus the fact it was simulated.
+        await startServer();
+
+        const { socket, rpc } = await connectAndInit(socketPath);
+        await rpc.request(2, 'tools/call', {
+            name: 'reset_datapack',
+            arguments: { confirm: true },
+            _meta: { progressToken: 'tok-1' },
+        });
+        const lines = rpc.notifications
+            .filter((n) => n.method === 'notifications/progress')
+            .map((n) => n.params?.message);
+        socket.end();
+
+        expect(lines).toContain(
+            'Demo Builder · Removing the sample data (simulated — nothing changed)',
+        );
+    });
+
     it('answers as DATA, not as an error', async () => {
         // An error teaches an agent to retry; data teaches it what would happen.
         await startServer();

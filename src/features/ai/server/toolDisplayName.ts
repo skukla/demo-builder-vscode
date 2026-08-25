@@ -42,7 +42,13 @@ export const SERVER_DISPLAY_NAME = 'Demo Builder';
  * @param toolName - MCP tool name
  * @returns the line to show, or undefined if the tool has no phrase
  */
-export function progressLabel(toolName: string): string | undefined {
+export function progressLabel(toolName: string, simulated = false): string | undefined {
     const phrase = narrationFor(toolName);
-    return phrase ? `${SERVER_DISPLAY_NAME} · ${phrase}…` : undefined;
+    if (!phrase) return undefined;
+    // A simulated call still narrates — silence would leave the producer unable
+    // to tell the agent tried at all — but it must never read as though the work
+    // happened. The marker is the whole difference.
+    return simulated
+        ? `${SERVER_DISPLAY_NAME} · ${phrase} (simulated — nothing changed)`
+        : `${SERVER_DISPLAY_NAME} · ${phrase}…`;
 }

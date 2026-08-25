@@ -260,13 +260,14 @@ async function announceToolStart(
     name: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extra: any,
+    simulated = false,
 ): Promise<void> {
     // Silence when a tool has no authored phrase. Saying nothing is strictly
     // better than announcing "Deploy mesh" — the derived wording is the defect
     // `toolNarration.ts` exists to remove, so there is no fallback to it here.
     // `toolNarration.test.ts` asserts every registered tool has a phrase, which
     // makes this branch unreachable rather than merely unlikely.
-    const line = progressLabel(name);
+    const line = progressLabel(name, simulated);
     if (line) await sendProgress(extra, line);
 }
 
@@ -351,6 +352,13 @@ function withToolLogging(
                     // classification, because two would drift.
                     if (dryRun?.() && !readOnly) {
                         logger.info(`[MCP] ${name} blocked by dry run (nothing was changed)`);
+                        // Narrate it. An earlier version stayed SILENT here on the
+                        // reasoning that announcing "Republishing…" for something
+                        // that will not happen is a lie — but silence is worse: the
+                        // producer sees nothing at all and cannot tell the agent
+                        // even tried. The honest form is the authored phrase plus
+                        // the fact that it was simulated.
+                        await announceToolStart(name, extra, true);
                         const blocked = dryRunResult(name, args);
                         // A blocked call is part of the path an agent took and
                         // belongs in the trace. Leaving it out would make a dry
@@ -402,7 +410,12 @@ function withToolLogging(
                     // then raising a dialog the user declines would narrate work that
                     // never happened. Reads are skipped — they return promptly and a
                     // line per query is noise, not information.
-                    if (!readOnly) {
+                    {
+                        // EVERY call, reads included. Reads used to be silent on
+                        // the reasoning that a line per query is noise — but the
+                        // whole point of this feature is seeing the path the agent
+                        // takes, and a path with its reads removed is not the path.
+                        // Owner correction, 2026-08-25.
                         await announceToolStart(name, extra);
                     }
                     // Fan the operation's own phase strings out to BOTH places a

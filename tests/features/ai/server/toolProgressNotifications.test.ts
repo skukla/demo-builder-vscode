@@ -48,9 +48,21 @@ function registerProbes(srv: {
         { description: 'write', inputSchema: {}, annotations: { readOnlyHint: false } },
         ok
     );
+    // A REAL read-tool name. An invented one has no authored phrase, so it
+    // narrates nothing whatever the rule is — which is why the old version of
+    // this suite passed both before and after reads started narrating.
     srv.registerTool(
-        'get_probe_thing',
-        { description: 'read', inputSchema: { scope: z.string().optional() }, annotations: { readOnlyHint: true } },
+        'list_projects_probe_unused',
+        { description: 'read', inputSchema: {}, annotations: { readOnlyHint: true } },
+        ok
+    );
+    srv.registerTool(
+        'get_current_project',
+        {
+            description: 'read',
+            inputSchema: { scope: z.string().optional() },
+            annotations: { readOnlyHint: true },
+        },
         ok
     );
 }
@@ -105,13 +117,31 @@ describe('agent activity is reported to the chat', () => {
         expect(progressMessages).toContain('Demo Builder · Deploying the API mesh…');
     });
 
-    it('says nothing for a read tool', async () => {
-        // Reads return promptly; a line per query is noise, not information.
-        const { progressMessages, ok } = await callWithProgress(socketPath, 'get_probe_thing', {
-            scope: 'x',
-        });
+    it('announces READS too — the path is not the path without them', async () => {
+        // Reads used to be silent, on the reasoning that a line per query is
+        // noise. The owner corrected that on 2026-08-25: the whole point of this
+        // feature is seeing the path an agent takes, and a path with its reads
+        // removed is not the path.
+        const { progressMessages, ok } = await callWithProgress(
+            socketPath,
+            'get_current_project',
+            { scope: 'x' }
+        );
 
         expect(ok).toBe(true);
+        expect(progressMessages).toContain('Demo Builder · Checking which project is open…');
+    });
+
+    it('says nothing for a tool with no authored phrase', async () => {
+        // The no-fallback rule: rather than deriving words from a tool name, a
+        // tool without a phrase stays silent. This is also why a suite using
+        // INVENTED tool names cannot test narration at all.
+        const { progressMessages } = await callWithProgress(
+            socketPath,
+            'list_projects_probe_unused',
+            {}
+        );
+
         expect(progressMessages).toEqual([]);
     });
 
