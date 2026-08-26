@@ -74,3 +74,7 @@ accident on the newest one: which of our tools take an enum or a mode the agent
 must choose, and whether any of those choices can be inferred instead.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  docs(backlog): drop AI-1k, file AI-1l — the tool was the obstacle (`a16188edb`)

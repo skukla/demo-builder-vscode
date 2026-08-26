@@ -58,3 +58,8 @@ So: one command each. Revisit only if a third provider appears that VS Code does
 not already handle, and none is expected.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  docs(backlog): settle the sign-in question — two commands, not a picker (`faea7a40a`)
+- 2026-08-26  docs(backlog): PL-5 and EDS-9 — sign-in is not in the command palette (`b45ceae5c`)

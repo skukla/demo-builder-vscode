@@ -240,6 +240,19 @@ SHA_W="$(git rev-parse HEAD)"
 EDS3=".rptc/backlog/2026-05-28-eds-site-scraping.md"
 if grep -q "${SHA_W:0:9}" "$EDS3"; then ok "the commit sha is written into the item"; else bad "the commit sha is written into the item" "not found"; fi
 says "  ...and status flipped backlog -> active" "active" -- "${T[@]}" show EDS-3
+
+# FILING an item is not STARTING it. A commit touching only `.rptc/` is the
+# record moving, not the work — both sign-in items were flipped to `active` on
+# 2026-08-26 by the very commit that created them.
+"${T[@]}" set EDS-4 status=backlog >/dev/null 2>&1
+echo "x" >> .rptc/backlog/README.md; git add -A >/dev/null 2>&1
+git commit -q -F - >/dev/null 2>&1 <<'M'
+docs(backlog): file it
+
+Backlog: EDS-4
+M
+"${T[@]}" unlogged --write >/dev/null 2>&1
+denies "an .rptc-only commit does NOT flip to active" "active" -- "${T[@]}" show EDS-4
 # NOT "unlogged is clean" — an earlier case deliberately left a `Backlog: ZZ-9`
 # commit in history, and the tool is right to keep reporting it. Assert the
 # SPECIFIC sha is gone, or the test asserts the wrong thing and blames the tool.

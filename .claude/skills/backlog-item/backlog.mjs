@@ -516,9 +516,20 @@ function main() {
                     if (!item) { refused.push(`${m.id} — no such item`); continue; }
                     if (DONE.has(item.status)) { refused.push(`${m.id} — is "${item.status}"`); continue; }
                     appendShipped(item, `${m.subject} (\`${m.sha.slice(0, 9)}\`)`, m.date);
-                    // Evidence of work is evidence it started. `built`/`shipped` stay
-                    // a human call — only a person knows whether anyone USED it.
-                    if (item.status === 'backlog' || item.status === 'planned') {
+                    // Evidence of work is evidence it started — but FILING an item is
+                    // not starting it. A commit that touches only `.rptc/` is
+                    // bookkeeping: the record moving, not the work. Both sign-in
+                    // items were flipped to `active` on 2026-08-26 by the very
+                    // commit that created them, which is a lie the next reader has
+                    // no way to spot.
+                    const touchedCode = (() => {
+                        try {
+                            const files = execFileSync('git', ['show', '--name-only', '--format=', c.sha],
+                                { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+                            return files.some((f) => !f.startsWith('.rptc/'));
+                        } catch { return true; }   // unknown: do not silently skip the flip
+                    })();
+                    if (touchedCode && (item.status === 'backlog' || item.status === 'planned')) {
                         writeFrontmatter(item, { status: 'active' });
                         console.log(`  ${m.id}: ${item.status} -> active`);
                         // Keep the in-memory copy in step, or an item named by three

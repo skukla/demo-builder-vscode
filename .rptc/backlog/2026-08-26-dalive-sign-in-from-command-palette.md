@@ -48,3 +48,8 @@ only two providers, and at two a picker costs a keystroke and hides them both.
 One command each. See `PL-5`.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  docs(backlog): settle the sign-in question — two commands, not a picker (`faea7a40a`)
+- 2026-08-26  docs(backlog): PL-5 and EDS-9 — sign-in is not in the command palette (`b45ceae5c`)
