@@ -130,7 +130,7 @@ export function renderTraceText(report: TraceReport): string {
     const lines = [
         `Demo Builder — what the agent did (${report.totalCalls} calls)`,
         `${report.wastedCalls} repeated, ${report.blockedCalls} simulated, ${report.failedCalls} failed.`,
-        'Cost is not recorded for a chat session — try a prompt out to measure it.',
+        'Cost is not recorded for a chat session — simulate a prompt to measure it.',
         '',
     ];
     for (const [i, row] of report.rows.entries()) {

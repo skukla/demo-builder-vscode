@@ -34,10 +34,12 @@ describe('SOP: Inline Styles', () => {
         // flex styles for critical wizard layouts"). Following it necessarily
         // produces an inline style, so these are exceptions by construction
         // rather than by oversight.
-        'EvaluationWorkbench.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
-        'EvaluationVerdict.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
-        'PromptWorkbench.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
-        'AgentTraceView.tsx': 'Plain-div flex layout — Spectrum Flex caps width at 450px',
+        // The evaluation surface has NO exceptions any more. Step 10's visual
+        // pass (2026-08-25) moved its whole layout into `workbench.css`, which
+        // is where it belonged: the look needs hover states, `::before`
+        // separators and `tabular-nums`, none of which an inline style can
+        // express. The Spectrum-Flex-450px trap is still avoided — the panel is
+        // plain divs — it is just that the flex now lives in a class.
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',

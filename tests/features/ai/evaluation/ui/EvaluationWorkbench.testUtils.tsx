@@ -7,7 +7,7 @@
  * Spectrum, and fail as confusing assertion noise rather than a clear error.
  */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -38,38 +38,23 @@ jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Heading: ({ children }: any) => <h3>{children}</h3>,
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    TextArea: ({ label, value, onChange, isDisabled, placeholder }: any) => (
-        <label>
-            {label}
-            <textarea
-                value={value}
-                placeholder={placeholder}
-                disabled={isDisabled}
-                onChange={(e) => onChange(e.target.value)}
-            />
-        </label>
+    // `...props` LAST so `aria-label` reaches the textarea — the composer has
+    // no visible label now that it sits under the transcript like a chat input.
+    TextArea: ({ value, onChange, isDisabled, placeholder, ...props }: any) => (
+        <textarea
+            value={value}
+            placeholder={placeholder}
+            disabled={isDisabled}
+            onChange={(e) => onChange(e.target.value)}
+            {...props}
+        />
     ),
-    Picker: ({ label, items, selectedKey, onSelectionChange, children, ...props }: any) => (
-        <label>
-            {label}
-            <select
-                value={selectedKey ?? ''}
-                onChange={(e) => onSelectionChange(e.target.value)}
-                {...props}
-            >
-                <option value="">Choose</option>
-                {[...(items ?? [])].map((item: any) => {
-                    const rendered = children(item);
-                    return (
-                        <option key={rendered.key} value={rendered.key}>
-                            {rendered.props.children}
-                        </option>
-                    );
-                })}
-            </select>
-        </label>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
+    Divider: () => <hr />,
+    // The phase band and its steps. Rendering the panel ALWAYS is deliberate:
+    // real Spectrum hides it until expanded, and a test that had to click every
+    // band open would be testing Disclosure rather than our grouping. What the
+    // band says COLLAPSED is asserted through `transcript-phase` instead, which
+    // is the row inside the title.
     Disclosure: ({ children }: any) => <div>{children}</div>,
     DisclosureTitle: ({ children }: any) => <div>{children}</div>,
     DisclosurePanel: ({ children }: any) => <div>{children}</div>,
@@ -96,16 +81,21 @@ jest.mock('@/core/ui/components/feedback', () => ({
             {title}: {children}
         </div>
     ),
+    LoadingDisplay: ({ message, subMessage, helperText }: any) => (
+        <div data-testid="evaluation-running">
+            {message} {subMessage} {helperText}
+        </div>
+    ),
 }));
 
 // Below the mocks on purpose — see the file note. `import/first` is not a
 // registered rule in this repo, so there is nothing to disable.
 import { EvaluationWorkbench } from '@/features/ai/evaluation/ui/EvaluationWorkbench';
-import type { Project } from '@/types/base';
+import type { AiPrompt, Project } from '@/types/base';
 
 const PROJECT = { name: 'bodea', path: '/tmp/bodea' } as unknown as Project;
 
-/** A saved prompt as the library returns it. */
+/** A saved prompt as the library hands it over. */
 export const SAVED_PROMPT = {
     id: 'saved-1',
     title: 'deploy the mesh',
@@ -133,8 +123,24 @@ export function setupUser() {
     return userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 }
 
-export function renderWorkbench(project: Partial<Project> = {}) {
-    return render(<EvaluationWorkbench project={{ ...PROJECT, ...project } as Project} />);
+/**
+ * Render the panel the way a command opens it.
+ *
+ * `initialPrompt` is the Prompt Library's "Open in workbench" arriving with the
+ * init payload. The panel has no picker of its own any more — the library is the
+ * picker — so this is one of the only two ways a prompt gets in, the other being
+ * a `workbench-open` push to an already-open panel.
+ */
+export function renderWorkbench(
+    project: Partial<Project> = {},
+    options: { initialPrompt?: AiPrompt } = {}
+) {
+    return render(
+        <EvaluationWorkbench
+            project={{ ...PROJECT, ...project } as Project}
+            initialPrompt={options.initialPrompt}
+        />
+    );
 }
 
 export function resetWorkbenchMocks(): void {
@@ -144,14 +150,21 @@ export function resetWorkbenchMocks(): void {
     mockOnMessage.mockReturnValue(() => {});
 }
 
-/** Deliver a push the way the extension does, to whatever the shell subscribed. */
+/**
+ * Deliver a push the way the extension does, to whatever the shell subscribed.
+ *
+ * Wrapped in `act` because a push sets state outside React's own event loop —
+ * without it every push logs an act() warning that buries real failures.
+ */
 export function pushMessage(type: string, data: unknown): void {
-    for (const [subscribedType, handler] of mockOnMessage.mock.calls as unknown as [
-        string,
-        (d: unknown) => void,
-    ][]) {
-        if (subscribedType === type) handler(data);
-    }
+    act(() => {
+        for (const [subscribedType, handler] of mockOnMessage.mock.calls as unknown as [
+            string,
+            (d: unknown) => void,
+        ][]) {
+            if (subscribedType === type) handler(data);
+        }
+    });
 }
 
 /** A verdict envelope shaped exactly as the handler returns it. */
@@ -165,6 +178,7 @@ export function verdictResponse(overrides: Record<string, unknown> = {}) {
             durationMs: 38_000,
             isError: false,
             trace: [step('get_current_project'), step('deploy_mesh', 'blocked-by-dry-run')],
+            reply: 'I would deploy the mesh, then republish the storefront.',
             repeats: [step('get_current_project')],
             blocked: [step('deploy_mesh', 'blocked-by-dry-run')],
             suggestions: [
@@ -181,7 +195,15 @@ export function verdictResponse(overrides: Record<string, unknown> = {}) {
     };
 }
 
-function step(tool: string, outcome: 'ok' | 'error' | 'blocked-by-dry-run' = 'ok') {
+/**
+ * One recorded call. `at` defaults apart per call so consecutive steps of one
+ * tool produce a phase with a real span rather than a zero one.
+ */
+export function step(
+    tool: string,
+    outcome: 'ok' | 'error' | 'blocked-by-dry-run' = 'ok',
+    at = 0
+) {
     return {
         tool,
         readOnly: outcome === 'ok',
@@ -190,7 +212,7 @@ function step(tool: string, outcome: 'ok' | 'error' | 'blocked-by-dry-run' = 'ok
         resultBytes: 10,
         durationMs: 3,
         outcome,
-        at: 0,
+        at,
     };
 }
 

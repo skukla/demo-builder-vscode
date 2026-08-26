@@ -19,7 +19,7 @@ import type { Logger } from '@/types/logger';
 
 /** Money and minutes — stated before either is spent. */
 const COST_WARNING =
-    'This runs your prompt for real to see what it would do. It takes up to two minutes ' +
+    'This runs your prompt to see what it WOULD do. It takes up to two minutes ' +
     'and costs money. Nothing in your project is changed.';
 
 /**
@@ -40,7 +40,7 @@ export function registerEvaluatePromptCommand(
     context.subscriptions.push(
         vscode.commands.registerCommand('demoBuilder.evaluatePrompt', async () => {
             const prompt = await vscode.window.showInputBox({
-                title: 'Try a prompt out',
+                title: 'Simulate a prompt',
                 prompt: 'What would you ask the agent to do?',
                 placeHolder: 'Set up Bodea with B2B',
                 ignoreFocusOut: true,
@@ -50,7 +50,7 @@ export function registerEvaluatePromptCommand(
             // Cost is stated BEFORE the run, not after. The agent-facing door
             // does the same through the consent dialog.
             const go = await vscode.window.showWarningMessage(
-                'Try this prompt out?',
+                'Simulate this prompt?',
                 { modal: true, detail: COST_WARNING },
                 'Run it',
             );
@@ -59,7 +59,7 @@ export function registerEvaluatePromptCommand(
             const result = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Trying the prompt out…',
+                    title: 'Simulating the prompt…',
                     cancellable: false,
                 },
                 async () =>
@@ -74,9 +74,11 @@ export function registerEvaluatePromptCommand(
                 return;
             }
 
-            // Dollars, not tokens: "$0.21" means something to a demo builder and
-            // "47,550 tokens" does not. The tokens ride along in the trace for
-            // whoever wants them.
+            // Dollars, not tokens — REVERSED 2026-08-26, pending step 11. The
+            // surface is moving to tokens: dollars measure our cost, tokens
+            // measure the producer's remaining ability to work. See
+            // `step-11-two-tools.md`. Unchanged here until that step lands, so
+            // the quick command and the panel do not disagree mid-flight.
             const cost = `$${result.costUSD.toFixed(2)}`;
             const seconds = Math.round(result.durationMs / 1000);
             const waste = result.repeats.length

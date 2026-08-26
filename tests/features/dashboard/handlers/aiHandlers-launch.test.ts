@@ -8,6 +8,7 @@
 
 import {
     handleOpenInClaude,
+    handleOpenPromptInWorkbench,
     handleSaveAiPrompt,
     handleListAiPrompts,
     createMockContext,
@@ -119,6 +120,54 @@ describe('aiHandlers — launch & save', () => {
                 'demoBuilder.openInClaude',
                 { prompt: 'Add a hero block' },
             );
+        });
+    });
+
+    describe('handleOpenPromptInWorkbench', () => {
+        it('sends the prompt ID, never its text', async () => {
+            // The command resolves the prompt from the extension's own stores,
+            // so a compromised webview cannot put words into the workbench that
+            // are not in the library.
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+            };
+            const context = createMockContext();
+
+            const result = await handleOpenPromptInWorkbench(context, { promptId: 'saved-1' });
+
+            expect(result).toEqual({ success: true });
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.showEvaluationWorkbench',
+                { mode: 'prompt', promptId: 'saved-1' },
+            );
+        });
+
+        it('goes somewhere DIFFERENT from launching the prompt', async () => {
+            // Two destinations from one card: launch runs it for real in the
+            // terminal, this simulates it in the workbench. Both landing on the
+            // same command would quietly make the card's kebab pointless.
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+            };
+            const context = createMockContext();
+
+            await handleOpenInClaude(context, { prompt: 'deploy the mesh' });
+            await handleOpenPromptInWorkbench(context, { promptId: 'saved-1' });
+
+            const commands = vscode.commands.executeCommand.mock.calls.map((c) => c[0]);
+            expect(new Set(commands).size).toBe(2);
+        });
+
+        it('refuses without a prompt id rather than opening an empty panel', async () => {
+            const vscode = jest.requireMock('vscode') as {
+                commands: { executeCommand: jest.Mock };
+            };
+            const context = createMockContext();
+
+            const result = await handleOpenPromptInWorkbench(context, {});
+
+            expect(result.success).toBe(false);
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
     });
 

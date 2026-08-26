@@ -8,8 +8,8 @@
  * unchanged. The first draft of this file added a `run-prompt-for-real` handler
  * before noticing.
  *
- * What IS here is what nothing else knows: a prompt tried out with every change
- * simulated, the link between a saved prompt and the runs made against it, and
+ * What IS here is what nothing else knows: a prompt simulated with every change
+ * blocked, the link between a saved prompt and the runs made against it, and
  * the window's own record of what the agent has been doing.
  *
  * @module features/ai/evaluation/handlers/evaluationHandlers

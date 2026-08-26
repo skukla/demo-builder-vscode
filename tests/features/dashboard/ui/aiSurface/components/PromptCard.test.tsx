@@ -271,4 +271,51 @@ describe('PromptCard', () => {
             expect(screen.queryByText('Copy prompt')).not.toBeInTheDocument();
         });
     });
+
+    describe('Open in workbench kebab item', () => {
+        const USER_PROMPT = {
+            id: 'user-1',
+            title: 'My prompt',
+            prompt: 'Do something specific.',
+        };
+
+        const ALL_HANDLERS = {
+            isUserPrompt: true as const,
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle: jest.fn(),
+        };
+
+        it('offers BOTH destinations, and they are different places', () => {
+            // Clicking the card runs the prompt FOR REAL in the terminal;
+            // "Open in workbench" only simulates it. The whole point of the
+            // second route is that it is not the first, so a card that offered
+            // one of them would leave the workbench with no door from here.
+            const onLaunch = jest.fn();
+            const onOpenInWorkbench = jest.fn();
+            renderCard({
+                prompt: USER_PROMPT,
+                ...ALL_HANDLERS,
+                onLaunch,
+                onOpenInWorkbench,
+            });
+
+            screen.getByLabelText(/more actions/i).click();
+            screen.getByText('Open in workbench').click();
+            expect(onOpenInWorkbench).toHaveBeenCalledTimes(1);
+            expect(onLaunch).not.toHaveBeenCalled();
+
+            screen.getByTestId('ai-prompt-card').click();
+            expect(onLaunch).toHaveBeenCalledTimes(1);
+            expect(onOpenInWorkbench).toHaveBeenCalledTimes(1);
+        });
+
+        it('omits the row when there is no workbench to open', () => {
+            // A menu row that does nothing is worse than a missing one.
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.queryByText('Open in workbench')).not.toBeInTheDocument();
+        });
+    });
 });

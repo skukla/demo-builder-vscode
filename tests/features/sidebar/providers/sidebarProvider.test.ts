@@ -271,6 +271,17 @@ describe('SidebarProvider', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
+        it('routes showPromptWorkbench to demoBuilder.showEvaluationWorkbench', async () => {
+            // The Prompt Workbench's ONLY door in the UI: the extension
+            // contributes no menus for its commands, so without this route it
+            // is reachable only by typing the command name into the palette.
+            await messageHandler({ type: 'showPromptWorkbench' });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.showEvaluationWorkbench',
+            );
+        });
+
         it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
             await messageHandler({ type: 'showPrompts' });
 

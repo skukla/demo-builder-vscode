@@ -1,16 +1,30 @@
 /**
- * The thread the workbench is working in, and the library it loads from.
+ * The thread the workbench is working in.
  *
  * A **thread** is one piece of work — "getting this prompt right". It is
  * DECLARED here, by the only surface that can know which it is: this hook starts
  * one on the first run, keeps it while the producer edits and re-runs, resumes
- * one when they load a saved prompt, and forks a new one when they say start
- * fresh. Nothing infers a thread from how similar two prompts look — a producer
- * has to be able to say why two runs belong together.
+ * one when a saved prompt is handed to the workbench, and forks a new one when
+ * they say start fresh. Nothing infers a thread from how similar two prompts
+ * look — a producer has to be able to say why two runs belong together.
  *
  * It lives outside the component because it is the state, not the layout: the
- * component would otherwise be five `useState`s and four requests deep before
+ * component would otherwise be four `useState`s and three requests deep before
  * rendering anything.
+ *
+ * ## The picker that used to live here, and why it is gone
+ *
+ * This hook once owned a LIST of saved prompts and a `loadSaved(id)` to choose
+ * from it, which the workbench rendered as a `Picker`. That duplicated the
+ * Prompt Library's entire job — a second, worse picker beside the one that
+ * already works — and it went in because the workbench was designed as if the
+ * library did not exist.
+ *
+ * Each surface does one thing: **the library PICKS, the terminal RUNS, the
+ * workbench MEASURES.** So a prompt now arrives from OUTSIDE, handed over by the
+ * library's "Open in workbench", and the workbench's own door opens it empty.
+ * What is kept is everything the library cannot know: which thread this is, resuming its
+ * history, forking it, and saving back.
  *
  * @module features/ai/evaluation/ui/usePromptThread
  */
@@ -20,7 +34,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AiPrompt } from '@/types/base';
 import type { ResumeThreadResponse } from '@/types/webviewRequests';
 
-/** What `save-ai-prompt` and `list-ai-prompts` both answer with. */
+/** What `save-ai-prompt` answers with. */
 interface PromptListResponse {
     success: boolean;
     aiPrompts?: AiPrompt[];
@@ -53,7 +67,7 @@ function newId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1_000_000).toString(36)}`;
 }
 
-/** A saved prompt's title, kept short enough to read in a picker. */
+/** A saved prompt's title, kept short enough to read in the library's card. */
 function titleFor(prompt: string): string {
     const firstLine = prompt.trim().split('\n')[0];
     return firstLine.length > 60 ? `${firstLine.slice(0, 57)}…` : firstLine;
@@ -65,9 +79,6 @@ export interface PromptThread {
     /** Append to what the producer wrote — never replace it. */
     appendToPrompt: (append: string) => void;
     thread: ThreadState;
-    savedPrompts: AiPrompt[];
-    /** Load a saved prompt and resume whatever history it has here. */
-    loadSaved: (promptId: string) => Promise<void>;
     /** Same text, new thread — a fork, deliberately. */
     startFresh: () => void;
     /** Save the current text to the library and anchor this thread to it. */
@@ -77,29 +88,44 @@ export interface PromptThread {
 }
 
 /**
- * Own the prompt text, the thread it belongs to, and the saved-prompt list.
+ * Own the prompt text and the thread it belongs to.
  *
+ * @param handedOver - a prompt sent from the Prompt Library's "Open in workbench",
+ *   whose history is resumed on arrival. Undefined when the workbench was
+ *   opened from its own door, which starts empty.
  * @returns everything the workbench needs to refine across sittings
  */
-export function usePromptThread(seed: AiPrompt[] = []): PromptThread {
-    const [prompt, setPrompt] = useState('');
+export function usePromptThread(handedOver?: AiPrompt): PromptThread {
+    const [prompt, setPrompt] = useState(handedOver?.prompt ?? '');
     const [thread, setThread] = useState<ThreadState>(NO_THREAD);
-    const [savedPrompts, setSavedPrompts] = useState<AiPrompt[]>(seed);
 
-    // The MERGED list — pinned prompts live in global state and reach a webview
-    // only through this handler, so the project prop alone shows a subset.
+    const handedOverId = handedOver?.id;
+    const handedOverText = handedOver?.prompt;
+
+    // Resume whatever runs this saved prompt already has here, so the next
+    // result compares against the version the producer was happy with. A prompt
+    // with no runs is NORMAL, not a failure — it simply starts its thread on the
+    // next run, anchored to this saved prompt.
     useEffect(() => {
+        if (!handedOverId) return undefined;
         let live = true;
+        setPrompt(handedOverText ?? '');
         void (async () => {
-            const response = await webviewClient.request<PromptListResponse>('list-ai-prompts');
-            if (live && response?.success && Array.isArray(response.aiPrompts)) {
-                setSavedPrompts(response.aiPrompts);
-            }
+            const response = await webviewClient.request<ResumeThreadResponse>(
+                'resume-evaluation-thread',
+                { promptId: handedOverId },
+            );
+            if (!live) return;
+            setThread({
+                threadId: response?.success ? response.data?.threadId : undefined,
+                promptId: handedOverId,
+                priorRuns: response?.data?.priorRuns ?? 0,
+            });
         })();
         return () => {
             live = false;
         };
-    }, []);
+    }, [handedOverId, handedOverText]);
 
     const appendToPrompt = useCallback((append: string) => {
         // Appended, never replaced: the producer's words are theirs, and a
@@ -107,26 +133,6 @@ export function usePromptThread(seed: AiPrompt[] = []): PromptThread {
         // understand.
         setPrompt((current) => `${current.trimEnd()}${append}`);
     }, []);
-
-    const loadSaved = useCallback(
-        async (promptId: string) => {
-            const saved = savedPrompts.find((p) => p.id === promptId);
-            if (!saved) return;
-            setPrompt(saved.prompt);
-            const response = await webviewClient.request<ResumeThreadResponse>(
-                'resume-evaluation-thread',
-                { promptId },
-            );
-            // A prompt with no runs here is normal, not a failure — it simply
-            // starts its thread on the next run, anchored to this saved prompt.
-            setThread({
-                threadId: response?.success ? response.data?.threadId : undefined,
-                promptId,
-                priorRuns: response?.data?.priorRuns ?? 0,
-            });
-        },
-        [savedPrompts],
-    );
 
     const startFresh = useCallback(() => {
         // The TEXT stays. Wanting a clean comparison from the same starting
@@ -149,7 +155,6 @@ export function usePromptThread(seed: AiPrompt[] = []): PromptThread {
             prompt: entry,
         });
         if (!response?.success) return undefined;
-        if (Array.isArray(response.aiPrompts)) setSavedPrompts(response.aiPrompts);
         // Stamp the runs already in this thread, not just the ones to come.
         // Saving happens AFTER the refining, so anchoring only future runs would
         // leave the thread unreachable from the library until it was run again —
@@ -173,8 +178,6 @@ export function usePromptThread(seed: AiPrompt[] = []): PromptThread {
         setPrompt,
         appendToPrompt,
         thread,
-        savedPrompts,
-        loadSaved,
         startFresh,
         saveToLibrary,
         noteRun,

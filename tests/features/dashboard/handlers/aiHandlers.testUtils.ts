@@ -103,6 +103,7 @@ export {
     handleVerifyAiSetup,
     handleRegenerateAiFiles,
     handleOpenInClaude,
+    handleOpenPromptInWorkbench,
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,

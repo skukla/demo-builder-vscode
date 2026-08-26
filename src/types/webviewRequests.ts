@@ -398,7 +398,7 @@ export interface AddAppBuilderComponentRequestPayload {
 }
 
 /**
- * `evaluate-prompt` — the workbench asks for one prompt to be tried out.
+ * `evaluate-prompt` — the workbench asks for one prompt to be simulated.
  *
  * The response is {@link EvaluatePromptResponse}. Both sides import these, so a
  * change to either shape fails the build rather than the feature.
@@ -527,6 +527,13 @@ export interface EvaluatePromptResponse {
         numTurns: number;
         durationMs: number;
         isError: boolean;
+        /**
+         * What the agent said at the end, in its own words.
+         *
+         * Absent when the run produced no final message — the transcript then
+         * renders the phases without a "Claude" turn rather than an empty one.
+         */
+        reply?: string;
         trace: EvaluationTraceStep[];
         repeats: EvaluationTraceStep[];
         blocked: EvaluationTraceStep[];

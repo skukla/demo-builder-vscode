@@ -20,7 +20,18 @@
  * and duplicating it inside `src/` is the thing this repo fixes rather than
  * files.
  *
- * ## Dollars, not tokens
+ * ## Dollars, not tokens — REVERSED 2026-08-26, pending step 11
+ *
+ * The surface is moving to TOKENS. Dollars measure OUR cost; tokens measure the
+ * producer's remaining ability to work, and a quota that runs out costs them the
+ * afternoon rather than seven cents. A probe also killed the premise: 33,819
+ * tokens to answer "pong", of which the prompt was 10 — wording is not the
+ * lever, ROUND TRIPS are, because each turn re-reads the whole context. This
+ * service already returns everything needed (`usage` carries the cache split);
+ * what changes is what the UI leads with. See `step-11-two-tools.md`.
+ *
+ * The original reasoning, kept because the reversal is about SCARCITY rather
+ * than legibility and the legibility point still stands on its own:
  *
  * "$0.21" means something to a demo builder; "47,550 tokens" does not. Tokens
  * ride along for the expanded view, beside the tool names.
@@ -52,6 +63,19 @@ export interface EvaluationResult {
     durationMs: number;
     /** Did the run itself fail (as opposed to the work being refused)? */
     isError: boolean;
+    /**
+     * What the agent said at the end — its own answer, in its own words.
+     *
+     * The CLI returns it as `result` alongside the cost fields (verified
+     * 2026-08-25 against `claude -p --output-format json`, which answers a
+     * top-level `result` string). Capturing it is what turns the workbench from
+     * a log of tool calls into a conversation: the phases say what it DID, this
+     * says what it would TELL you.
+     *
+     * Absent when a run produced no final message. The transcript renders
+     * without it rather than showing an empty speaker.
+     */
+    reply?: string;
     /** Every Demo Builder tool call the run made, in order. */
     trace: TraceEntry[];
     /** The calls that asked something already asked — the waste. */
@@ -70,6 +94,10 @@ export interface EvaluationResult {
  * This split exists because a response-size guard caught the first version
  * returning every entry — the surface has already been bitten twice by a list
  * with no page size (725 Adobe projects, 111KB; 1,099 datapack rows, 25KB).
+ *
+ * The run's `reply` is left out for the same reason: it is unbounded prose, and
+ * an agent that asked how a prompt performed wants the numbers. The workbench
+ * renders it, because a person reading a transcript wants the answer.
  */
 export interface EvaluationSummary {
     prompt: string;
@@ -139,6 +167,8 @@ interface ClaudeRunOutput {
     num_turns?: number;
     duration_ms?: number;
     is_error?: boolean;
+    /** The final assistant message. See `EvaluationResult.reply`. */
+    result?: string;
 }
 
 /**
@@ -286,6 +316,11 @@ export async function evaluatePrompt(
                 numTurns: parsed.num_turns ?? 0,
                 durationMs: parsed.duration_ms ?? 0,
                 isError: parsed.is_error === true,
+                // Only when there is something to say — an empty string would
+                // render a "Claude" heading above nothing.
+                ...(typeof parsed.result === 'string' && parsed.result.trim()
+                    ? { reply: parsed.result.trim() }
+                    : {}),
                 trace: entries,
                 repeats: deps.trace.repeats(),
                 blocked: entries.filter((e) => e.outcome === 'blocked-by-dry-run'),

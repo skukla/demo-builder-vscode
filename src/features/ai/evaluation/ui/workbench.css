@@ -1,0 +1,290 @@
+/* ============================================
+   THE PROMPT WORKBENCH — the look, not the layout
+
+   The first pass at step 10 rebuilt this surface's INFORMATION ARCHITECTURE —
+   phases instead of a numbered list, plain English instead of tool names, the
+   composer at the bottom — and left it visually flat: one column of same-sized
+   text with a Spectrum chevron per row. The owner's complaint was "the look of
+   the input and output", and the look had not been touched.
+
+   The reference is `tech-case-studio`'s `styles.css` (the owner named the repo;
+   the first pass read only its two LOGIC modules and never opened its
+   stylesheet). Four devices carry almost all of the difference, and each is
+   here for the reason its own comment states:
+
+     1. A LEFT RULE per phase. "The left rule turns it from another paragraph
+        into a visible band, so the boundaries between phases are findable when
+        scrolling a long turn." This is the single biggest change.
+     2. STATE LIVES IN THE RULE'S COLOUR, so a failed phase is findable without
+        reading it.
+     3. A QUIET HIERARCHY — the label carries weight, the counts recede. A row
+        where everything is the same size is a row with no answer on it.
+     4. TABULAR NUMERALS on every duration, so a column of times does not
+        jitter and can be compared down the page.
+
+   All colour comes from `--db-*` semantic tokens (`tokens.css`), never raw hex,
+   so the panel follows the theme like every other surface.
+   ============================================ */
+
+@layer overrides {
+    /* ── The panel ─────────────────────────────────────────────────────── */
+
+    /* A plain div with flex styles, NOT a Spectrum `Flex`: Spectrum's Flex caps
+       width at 450px, this project's documented trap for a full-width webview. */
+    .wb-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        width: 100%;
+    }
+
+    /* ── Speaker turns ─────────────────────────────────────────────────── */
+
+    .wb-turn {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+    }
+
+    /* Small, muted, letter-spaced — a name tag, not a heading. It should be
+       findable when scanning and invisible when reading. */
+    .wb-turn-who {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--db-text-muted);
+    }
+
+    .wb-turn-body {
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        line-height: 1.55;
+        color: var(--db-text-primary);
+    }
+
+    /* The producer's OWN words get a quiet tint and a rule, so the thing they
+       asked is distinguishable at a glance from everything the agent said back.
+       Without it the two turns are the same grey paragraph. */
+    .wb-turn-you .wb-turn-body {
+        padding: 10px 12px;
+        border-left: 2px solid var(--db-border-default);
+        border-radius: 0 4px 4px 0;
+        background: var(--db-color-gray-100);
+        color: var(--db-text-primary);
+    }
+
+    /* ── Phase bands ───────────────────────────────────────────────────── */
+
+    .wb-phases {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    /* THE device. A 2px rule down the left turns each phase from another
+       paragraph into a band with findable boundaries. */
+    .wb-phase {
+        padding-left: 12px;
+        border-left: 2px solid var(--db-border-subtle);
+        transition: border-color var(--db-motion-fast) var(--db-motion-ease);
+    }
+
+    /* State in the rule, so it is findable without reading the row. */
+    .wb-phase-failed {
+        border-left-color: var(--db-color-red-500);
+    }
+
+    .wb-phase-simulated {
+        border-left-color: var(--db-color-amber-500);
+    }
+
+    .wb-phase-band {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        cursor: pointer;
+    }
+
+    .wb-phase:hover {
+        border-left-color: var(--db-border-default);
+    }
+
+    /* The label carries the weight; it is the answer on this row. */
+    .wb-phase-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--db-text-primary);
+    }
+
+    /* The counts recede. Same row, clearly secondary. */
+    .wb-phase-meta {
+        flex: 0 0 auto;
+        font-size: 11px;
+        color: var(--db-text-muted);
+        /* A ticking or compared duration must not jitter the row width. */
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* "· " as a separator drawn by CSS rather than concatenated into the
+       string, so the parts stay independently styleable. */
+    .wb-phase-meta > span + span::before {
+        content: ' · ';
+    }
+
+    .wb-phase-note-failed {
+        color: var(--db-color-red-500);
+    }
+
+    .wb-phase-note-simulated {
+        color: var(--db-color-amber-600);
+    }
+
+    /* ── Steps inside an expanded phase ────────────────────────────────── */
+
+    .wb-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        /* Indented so an opened phase still reads as ONE unit rather than as
+           the flat list this replaced. */
+        padding: 8px 0 4px 18px;
+    }
+
+    .wb-step {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        width: 100%;
+        font-size: 12px;
+    }
+
+    .wb-step-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        color: var(--db-text-secondary);
+    }
+
+    .wb-step-outcome {
+        flex: 0 0 auto;
+        color: var(--db-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* The raw tool name and its argument names — the identifiers, in the one
+       place a reader has asked for them. Monospace because that is what they
+       are, and quietest because they are the last thing anyone needs. */
+    .wb-step-detail {
+        flex: 0 0 auto;
+        max-width: 45%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 11px;
+        color: var(--db-text-muted);
+        opacity: 0.85;
+    }
+
+    /* ── The verdict ───────────────────────────────────────────────────── */
+
+    /* A card, not a rule-and-paragraph. After a transcript full of "would
+       have", the reassurance is the thing the eye should land on. */
+    .wb-verdict {
+        padding: 16px 18px;
+        border: 1px solid var(--db-border-subtle);
+        border-radius: 6px;
+        background: var(--db-color-gray-100);
+    }
+
+    .wb-verdict-headline {
+        margin: 0 0 10px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--db-text-primary);
+    }
+
+    /* The numbers as a ROW of discrete stats rather than a run-on sentence —
+       each one findable, and comparable down the page between runs. */
+    .wb-stats {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px 18px;
+        font-size: 12px;
+        color: var(--db-text-secondary);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .wb-stat-value {
+        font-weight: 600;
+        color: var(--db-text-primary);
+    }
+
+    /* A delta is the question the feature exists to answer, so it is the one
+       coloured thing in the row. */
+    .wb-stat-down {
+        color: var(--db-color-green-600);
+    }
+
+    .wb-stat-up {
+        color: var(--db-color-amber-600);
+    }
+
+    /* ── The composer ──────────────────────────────────────────────────── */
+
+    .wb-composer {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        padding-top: 18px;
+        /* A rule rather than a heading — a chat's input has no title. */
+        border-top: 1px solid var(--db-border-subtle);
+    }
+
+    .wb-composer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .wb-composer-note {
+        flex: 1 1 240px;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--db-text-muted);
+    }
+
+    /* ── Result actions ────────────────────────────────────────────────── */
+
+    /* Separated from the composer's own button by the whole transcript, which
+       is the point — see `EvaluationVerdict`'s note on the one hard rule. */
+    .wb-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    /* ── Sections below the verdict ────────────────────────────────────── */
+
+    .wb-section-title {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--db-text-muted);
+    }
+}

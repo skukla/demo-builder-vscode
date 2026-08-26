@@ -120,6 +120,42 @@ describe('evaluating a prompt', () => {
         expect(result.isError).toBe(false);
     });
 
+    it("captures the agent's own reply, which used to be thrown away", async () => {
+        // The CLI answers a top-level `result` string alongside the cost fields
+        // (verified 2026-08-25 against `claude -p --output-format json`).
+        // Capturing it is what turns the workbench from a log of tool calls into
+        // a conversation: the phases say what it DID, this says what it would
+        // TELL you.
+        const runner = fakeRunner(
+            JSON.stringify({ ...JSON.parse(RUN_JSON), result: '  I would deploy the mesh.  ' }),
+        );
+
+        const result = (await evaluatePrompt('set up bodea', {
+            runner,
+            trace,
+            logger,
+            projectPath,
+        })) as EvaluationResult;
+
+        expect(result.reply).toBe('I would deploy the mesh.');
+    });
+
+    it('leaves the reply ABSENT rather than empty when the run said nothing', async () => {
+        // An empty string would render a "Claude" heading above nothing, which
+        // reads as a reply that failed to load.
+        const runner = fakeRunner(JSON.stringify({ ...JSON.parse(RUN_JSON), result: '   ' }));
+
+        const result = (await evaluatePrompt('set up bodea', {
+            runner,
+            trace,
+            logger,
+            projectPath,
+        })) as EvaluationResult;
+
+        expect(result.reply).toBeUndefined();
+        expect('reply' in result).toBe(false);
+    });
+
     it('joins the run with the trace the server recorded WHILE it ran', async () => {
         // The two halves answer different questions: the run's JSON says what it
         // COST, the trace says what it DID. A result carrying only one is half
@@ -423,6 +459,7 @@ describe('what the agent is handed back', () => {
             numTurns: 5,
             durationMs: 100,
             isError: false,
+            reply: 'x'.repeat(5_000),
             trace: Array.from({ length: 200 }, () => entry('get_project', 'ok')),
             repeats: Array.from({ length: 199 }, () => entry('get_project', 'ok')),
             blocked: [entry('deploy_mesh', 'blocked-by-dry-run')],
@@ -430,6 +467,10 @@ describe('what the agent is handed back', () => {
 
         const summary = summariseForAgent(result);
 
+        // The REPLY is left out for the same reason as the trace: it is
+        // unbounded prose, and an agent that asked how a prompt performed wants
+        // the numbers. The workbench renders it; this does not.
+        expect(JSON.stringify(summary)).not.toContain('reply');
         expect(summary.steps).toBe(200);
         expect(summary.wastedSteps).toBe(199);
         // Deduplicated NAMES, so 199 repeats cost one string, not 199 objects.

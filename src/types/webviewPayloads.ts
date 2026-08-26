@@ -14,7 +14,13 @@
  */
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
-import type { AppBuilderComponentState, AuthoringExperience, Project, ProjectStatus } from './base';
+import type {
+    AiPrompt,
+    AppBuilderComponentState,
+    AuthoringExperience,
+    Project,
+    ProjectStatus,
+} from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
@@ -125,10 +131,30 @@ export interface AiOverviewInitialData {
  */
 export type WorkbenchMode = 'prompt' | 'trace';
 
-/** The workbench panel's init payload — the AI surface's, plus the mode. */
-export interface EvaluationWorkbenchInitialData extends AiOverviewInitialData {
+/**
+ * What an OPENING of the workbench decides.
+ *
+ * Both the init payload and the `workbench-open` push carry this, because a
+ * command can reach a panel that is already open and initial data only arrives
+ * once. One message rather than one per field: a push named for the mode alone
+ * is what it was called while mode was all it carried, and adding a second field
+ * to a message named after the first is how the next reader gets misled.
+ */
+export interface WorkbenchOpenPayload {
     mode: WorkbenchMode;
+    /**
+     * A saved prompt the Prompt Library's "Open in workbench" handed over.
+     *
+     * Absent when the workbench was opened from its own door, which starts
+     * empty. A mode-only push must leave whatever the producer is editing alone.
+     */
+    prompt?: AiPrompt;
 }
+
+/** The workbench panel's init payload — the AI surface's, plus the opening. */
+export interface EvaluationWorkbenchInitialData
+    extends AiOverviewInitialData,
+        WorkbenchOpenPayload {}
 
 /**
  * The Configure screen's registry slice: the categorized component buckets

@@ -2623,22 +2623,29 @@ button[class*="spectrum-Button"][disabled],
     overflow-y: auto !important;
 }
 
-/* Centered, not top-padded.
+/* TOP-ALIGNED, so the slack pools at the bottom where a tile can use it.
  *
- * This replaced a hardcoded `padding-top: 80px` (itself lifted out of an inline
- * UNSAFE_style). The fixed offset had to be re-derived every time the tile count
- * changed, and it was only ever an approximation of "sit in the middle" — so
- * centering is both simpler and self-adjusting: add or remove a tile and the
- * spacing above and below rebalances on its own, at any zoom.
+ * History, because this has moved three times and each move had a reason:
  *
- * `safe center` matters. Plain `center` overflows a too-short panel in BOTH
- * directions, pushing the first tile above the scroll origin where it cannot be
- * reached at all. `safe` falls back to start-aligned exactly when that would
- * happen, so the degradation is "scrolls from the top", not "the top is gone".
- * The padding is then breathing room for that fallback, not layout. */
+ *   1. `padding-top: 80px` — a fixed offset that had to be re-derived every
+ *      time the tile count changed.
+ *   2. `justify-content: safe center` — simpler and self-adjusting, and it
+ *      fixed the re-derivation problem.
+ *   3. Top-aligned (here). Centring is self-adjusting but it SPLITS the leftover
+ *      space between the top and the bottom, so half of it sits above the "AI"
+ *      label doing nothing while the stack is treated as though it were out of
+ *      room. Owner, 2026-08-25: "there is room at the top and bottom, so you can
+ *      shift it up to fit additional tiles. And you should." Top-aligning gathers
+ *      all of that slack below the last tile, which is exactly where a new tile
+ *      extends into.
+ *
+ * `safe center` is no longer needed and its problem goes with it. Plain `center`
+ * overflowed a too-short panel in BOTH directions, pushing the first tile above
+ * the scroll origin where it could not be reached; `flex-start` cannot do that,
+ * because overflow only ever runs downward into `.sidebar-provider`'s scroll. */
 .sidebar-view {
-    justify-content: safe center !important;
-    padding-top: 16px !important;
+    justify-content: flex-start !important;
+    padding-top: 20px !important;
     padding-bottom: 16px !important;
 }
 
@@ -2668,14 +2675,20 @@ button[class*="spectrum-Button"][disabled],
  * px-sized neighbour grew. Switching LAYOUT on available height is the correct
  * use of the same measurement; scaling controls by it is not.)
  *
- * Threshold: 600px, and it is DERIVED, not chosen by eye. The roomy layout
- * (one per row, 80px top padding) measures 572px for six tiles, so the switch
- * has to happen above that or the last tile is clipped in the gap between the
- * two modes — at 560px it was, by ~12px. 600 gives 572 a little slack.
+ * Threshold: 640px, and it is DERIVED, not chosen by eye. With SEVEN tiles
+ * (AI: Chat, Prompts, Workbench — plus the utility bar's four) the roomy layout
+ * measures 600px, so the switch has to happen above that or the last tile is
+ * clipped in the gap between the two modes — at 560px it was, by ~12px. 640
+ * leaves 40px of real slack.
+ *
+ * (This said 600px against a 596px content height until 2026-08-25 — four
+ * pixels, which is not slack. And it said 572px before that, from the era when
+ * `.sidebar-view` carried `padding-top: 80px`. Recomputed both times a tile
+ * count or the padding actually changed, which is the discipline.)
  *
  * ADDING TILES MEANS RECOMPUTING IT: ~72px per tile in the roomy layout. The
  * arithmetic is in the sidebar feature doc. */
-@media (max-height: 600px) {
+@media (max-height: 640px) {
     .sidebar-tile-grid {
         flex-direction: row !important;
         flex-wrap: wrap !important;

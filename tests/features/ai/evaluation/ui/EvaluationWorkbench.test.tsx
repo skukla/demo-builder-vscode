@@ -1,5 +1,5 @@
 /**
- * The workbench: try a prompt, read the verdict, apply a fix, try again.
+ * The Prompt Workbench: simulate a prompt, read the verdict, apply a fix, again.
  *
  * THE ONE HARD UI RULE is tested here — "Run this for real" must be
  * unmistakable. The user will have spent minutes reading "would have"; a button
@@ -16,6 +16,7 @@ import {
     respondByType,
     screen,
     setupUser,
+    step,
     verdictResponse,
 } from './EvaluationWorkbench.testUtils';
 
@@ -29,14 +30,14 @@ describe('the workbench', () => {
         mockRequest.mockResolvedValue(response);
         renderWorkbench();
         await user.type(screen.getByRole('textbox'), prompt);
-        await user.click(screen.getByRole('button', { name: /try it out/i }));
+        await user.click(screen.getByRole('button', { name: /^simulate$/i }));
         return user;
     }
 
     it('will not run an empty prompt', async () => {
         renderWorkbench();
 
-        expect(screen.getByRole('button', { name: /try it out/i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /^simulate$/i })).toBeDisabled();
     });
 
     it('leads with "nothing was changed", because that is the reassurance', async () => {
@@ -99,7 +100,10 @@ describe('the workbench', () => {
             })
         );
 
-        expect(await screen.findByText(/down from \$0\.21/i)).toBeInTheDocument();
+        // Rendered as "↓ from $0.21" — the arrow is what the plan's sketch drew
+        // and what reads at a glance; the word is on `aria-label` for anyone who
+        // cannot see the glyph, and that is what this asserts.
+        expect(await screen.findByLabelText(/down from \$0\.21/i)).toBeInTheDocument();
     });
 
     it('says nothing about a delta when the prompt has no past', async () => {
@@ -122,6 +126,133 @@ describe('the workbench', () => {
         );
     });
 
+    describe('the transcript', () => {
+        it('says what each step DID, never the raw tool name on the band', async () => {
+            // The defect this replaced: `1. get_current_project — 5ms`, while
+            // 103 authored phrases sat in toolNarration.ts unimported.
+            await evaluateWith(verdictResponse());
+
+            const bands = await screen.findAllByTestId('transcript-phase');
+            expect(bands[0]).toHaveTextContent(/checking which project is open/i);
+            expect(bands[0]).not.toHaveTextContent('get_current_project');
+        });
+
+        it('keeps the tool name for the reader who opens the phase', async () => {
+            // Plain English on the band, identifiers underneath — "unless they
+            // ask for it" is the rule, not "never".
+            await evaluateWith(verdictResponse());
+
+            const steps = await screen.findAllByTestId('transcript-step');
+            expect(steps[0]).toHaveTextContent('get_current_project');
+        });
+
+        it('folds consecutive calls of the SAME tool into ONE band', async () => {
+            // Eleven lines is a log; three bands is a story.
+            await evaluateWith(
+                verdictResponse({
+                    trace: [
+                        step('check_mesh', 'ok', 0),
+                        step('check_mesh', 'ok', 10),
+                        step('check_mesh', 'ok', 20),
+                        step('deploy_mesh', 'blocked-by-dry-run', 30),
+                    ],
+                })
+            );
+
+            const bands = await screen.findAllByTestId('transcript-phase');
+            expect(bands).toHaveLength(2);
+            expect(bands[0]).toHaveTextContent(/checking the api mesh/i);
+            expect(bands[0]).toHaveTextContent('3 steps');
+        });
+
+        it('says a phase FAILED on the band, without it being expanded', async () => {
+            // "Did something go wrong" is what a producer scans for, and
+            // opening eleven bands to find out is not scanning.
+            await evaluateWith(
+                verdictResponse({ trace: [step('check_mesh', 'error', 0)], repeats: [] })
+            );
+
+            const bands = await screen.findAllByTestId('transcript-phase');
+            expect(bands[0]).toHaveTextContent(/failed/i);
+        });
+
+        it('marks a blocked write SIMULATED in the transcript, not only in a summary', async () => {
+            await evaluateWith(
+                verdictResponse({ trace: [step('deploy_mesh', 'blocked-by-dry-run', 0)] })
+            );
+
+            const bands = await screen.findAllByTestId('transcript-phase');
+            expect(bands[0]).toHaveTextContent(/simulated — nothing changed/i);
+        });
+
+        it("shows the agent's own reply, which used to be thrown away", async () => {
+            // The CLI returns it beside the cost fields. Capturing it is what
+            // turns a log of tool calls into a conversation.
+            await evaluateWith(verdictResponse());
+
+            expect(await screen.findByTestId('evaluation-reply')).toHaveTextContent(
+                /I would deploy the mesh/i
+            );
+        });
+
+        it('renders the transcript fine when the run returned no reply', async () => {
+            // A "Claude" heading over nothing would read as a reply that failed
+            // to load, so the turn is omitted rather than emptied.
+            await evaluateWith(verdictResponse({ reply: undefined }));
+
+            await screen.findByText(/nothing was changed/i);
+            expect(screen.queryByTestId('evaluation-reply')).toBeNull();
+            expect(screen.getAllByTestId('transcript-phase').length).toBeGreaterThan(0);
+        });
+
+        it('quotes the prompt back as the producer wrote it', async () => {
+            await evaluateWith(verdictResponse());
+
+            expect(await screen.findByTestId('evaluation-prompt-turn')).toHaveTextContent(
+                'deploy the mesh'
+            );
+        });
+
+        it('says so plainly when the agent used no Demo Builder tools at all', async () => {
+            // A real answer, not an empty state: it worked it out without
+            // asking us anything.
+            await evaluateWith(verdictResponse({ trace: [], repeats: [], blocked: [] }));
+
+            expect(await screen.findByTestId('transcript-no-steps')).toHaveTextContent(
+                /did not use any Demo Builder tools/i
+            );
+        });
+    });
+
+    describe('the ambient view shows LESS, on purpose', () => {
+        it('has no speaker turns and no cost, because we do not own that process', async () => {
+            const user = setupUser();
+            respondByType({
+                'get-agent-trace': {
+                    success: true,
+                    data: {
+                        rows: [step('get_current_project', 'ok', 0)],
+                        standouts: [],
+                        totalCalls: 1,
+                        wastedCalls: 0,
+                        blockedCalls: 0,
+                        failedCalls: 0,
+                    },
+                },
+            });
+            renderWorkbench();
+            await user.click(screen.getByRole('button', { name: /what the agent did/i }));
+            await screen.findByTestId('trace-steps');
+
+            // Same bands as a run…
+            expect(screen.getAllByTestId('transcript-phase').length).toBeGreaterThan(0);
+            // …and none of what a run has that this cannot honestly have.
+            expect(screen.queryByTestId('evaluation-prompt-turn')).toBeNull();
+            expect(screen.queryByTestId('evaluation-reply')).toBeNull();
+            expect(screen.queryByText(/\$\d/)).toBeNull();
+        });
+    });
+
     describe('the run-for-real button', () => {
         it('is not offered until something has been tried out', () => {
             renderWorkbench();
@@ -137,7 +268,7 @@ describe('the workbench', () => {
             // minutes of "would have" either alone is easy to miss.
             expect(button).toHaveTextContent(/run this for real in the chat/i);
             expect(button).toHaveAttribute('data-variant', 'negative');
-            expect(screen.getByRole('button', { name: /try it again/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /simulate again/i })).toHaveAttribute(
                 'data-variant',
                 'cta'
             );
@@ -157,24 +288,35 @@ describe('the workbench', () => {
     });
 
     describe('coming back to a prompt', () => {
-        /** Load the one saved prompt through the picker. */
-        async function loadSaved(resume: unknown) {
+        /**
+         * A prompt arrives from the LIBRARY, not from a picker in this panel.
+         *
+         * The saved-prompt dropdown that used to live here duplicated the
+         * Prompt Library's entire job, and it is gone: the library picks, the
+         * terminal runs, the workbench measures.
+         */
+        function handOver(resume: unknown) {
             const user = setupUser();
             respondByType({
-                'list-ai-prompts': { success: true, aiPrompts: [SAVED_PROMPT] },
                 'resume-evaluation-thread': resume,
                 'evaluate-prompt': verdictResponse({ threadId: 'thread-9' }),
             });
-            renderWorkbench();
-            const picker = await screen.findByRole('combobox');
-            await user.selectOptions(picker, 'saved-1');
+            renderWorkbench({}, { initialPrompt: SAVED_PROMPT });
             return user;
         }
+
+        it('has no picker of its own — the library is the picker', () => {
+            renderWorkbench();
+
+            expect(screen.queryByRole('combobox')).toBeNull();
+            // And it does not even ask for the list any more.
+            expect(mockRequest).not.toHaveBeenCalledWith('list-ai-prompts', expect.anything());
+        });
 
         it('fills the box from the library and says where it left off', async () => {
             // The missing half of the loop: a producer who saved a good prompt
             // had no way back to it, so they retyped it and lost its history.
-            await loadSaved({
+            handOver({
                 success: true,
                 data: { threadId: 'thread-9', priorRuns: 2, history: [] },
             });
@@ -185,16 +327,36 @@ describe('the workbench', () => {
             );
         });
 
+        it('also takes a prompt PUSHED to a workbench that is already open', async () => {
+            // Init data arrives once. A producer with the panel already open who
+            // picks "Open in workbench" on a card must still land on that
+            // prompt, so the opening travels as a push too.
+            respondByType({
+                'resume-evaluation-thread': {
+                    success: true,
+                    data: { threadId: 'thread-9', priorRuns: 2, history: [] },
+                },
+            });
+            renderWorkbench();
+
+            pushMessage('workbench-open', { mode: 'prompt', prompt: SAVED_PROMPT });
+
+            expect(await screen.findByTestId('evaluation-thread-note')).toHaveTextContent(
+                /2 earlier runs/i
+            );
+            expect(screen.getByRole('textbox')).toHaveValue('deploy the mesh');
+        });
+
         it('runs the NEXT evaluation in that same thread', async () => {
             // Which is what makes the delta compare against the version the
             // producer was happy with.
-            const user = await loadSaved({
+            const user = handOver({
                 success: true,
                 data: { threadId: 'thread-9', priorRuns: 2, history: [] },
             });
             await screen.findByTestId('evaluation-thread-note');
 
-            await user.click(screen.getByRole('button', { name: /try it out/i }));
+            await user.click(screen.getByRole('button', { name: /^simulate$/i }));
 
             expect(mockRequest).toHaveBeenCalledWith('evaluate-prompt', {
                 prompt: 'deploy the mesh',
@@ -203,26 +365,26 @@ describe('the workbench', () => {
             });
         });
 
-        it('says plainly when a saved prompt has never been tried here', async () => {
+        it('says plainly when a saved prompt has never been simulated here', async () => {
             // Not an error — it simply starts its thread on the next run.
-            await loadSaved({ success: true, data: { priorRuns: 0, history: [] } });
+            handOver({ success: true, data: { priorRuns: 0, history: [] } });
 
             expect(await screen.findByTestId('evaluation-thread-note')).toHaveTextContent(
-                /not been tried out here/i
+                /not been simulated here/i
             );
         });
 
         it('START FRESH keeps the words and drops the past', async () => {
             // A fork. Without it the only way to start clean is to retype from
             // memory, which is exactly how history got lost.
-            const user = await loadSaved({
+            const user = handOver({
                 success: true,
                 data: { threadId: 'thread-9', priorRuns: 2, history: [] },
             });
             await screen.findByTestId('evaluation-thread-note');
 
-            await user.click(screen.getByRole('button', { name: /start fresh/i }));
-            await user.click(screen.getByRole('button', { name: /try it out/i }));
+            await user.click(screen.getByRole('link', { name: /start fresh/i }));
+            await user.click(screen.getByRole('button', { name: /^simulate$/i }));
 
             expect(screen.getByRole('textbox')).toHaveValue('deploy the mesh');
             expect(mockRequest).toHaveBeenCalledWith('evaluate-prompt', {
@@ -241,13 +403,12 @@ describe('the workbench', () => {
             // the thread unreachable from the library until it was run again.
             const user = setupUser();
             respondByType({
-                'list-ai-prompts': { success: true, aiPrompts: [] },
                 'evaluate-prompt': verdictResponse({ threadId: 'thread-9' }),
                 'save-ai-prompt': { success: true, aiPrompts: [] },
             });
             renderWorkbench();
             await user.type(screen.getByRole('textbox'), 'deploy the mesh');
-            await user.click(screen.getByRole('button', { name: /try it out/i }));
+            await user.click(screen.getByRole('button', { name: /^simulate$/i }));
             await screen.findByText(/nothing was changed/i);
 
             await user.click(screen.getByRole('button', { name: /save to library/i }));
@@ -337,10 +498,7 @@ describe('the workbench', () => {
 
         async function openTrace(report: unknown) {
             const user = setupUser();
-            respondByType({
-                'list-ai-prompts': { success: true, aiPrompts: [] },
-                'get-agent-trace': report,
-            });
+            respondByType({ 'get-agent-trace': report });
             renderWorkbench();
             await user.click(screen.getByRole('button', { name: /what the agent did/i }));
             return user;
@@ -351,9 +509,12 @@ describe('the workbench', () => {
             // nothing read it.
             await openTrace(traceReport());
 
-            expect(await screen.findByTestId('trace-steps')).toHaveTextContent(
-                'get_current_project',
-            );
+            // In PLAIN ENGLISH, with the raw tool name kept for the reader
+            // who opens the phase — the defect this replaced was the list of
+            // raw names with no words at all.
+            const steps = await screen.findByTestId('trace-steps');
+            expect(steps).toHaveTextContent(/checking which project is open/i);
+            expect(steps).toHaveTextContent('get_current_project');
         });
 
         it('calls out the repeats rather than only listing them', async () => {
@@ -396,13 +557,10 @@ describe('the workbench', () => {
         it('opens straight into the trace when the command asked for it', async () => {
             // Two commands, one panel. The mode arrives with the init payload on
             // a first open, and as a push when the panel is already there.
-            respondByType({
-                'list-ai-prompts': { success: true, aiPrompts: [] },
-                'get-agent-trace': traceReport(),
-            });
+            respondByType({ 'get-agent-trace': traceReport() });
             renderWorkbench();
 
-            pushMessage('workbench-mode', { mode: 'trace' });
+            pushMessage('workbench-open', { mode: 'trace' });
 
             expect(await screen.findByTestId('trace-summary')).toBeInTheDocument();
         });

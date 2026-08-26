@@ -112,6 +112,13 @@ function SidebarApp(): React.ReactElement {
         sendMessage('newAiChat');
     }, []);
 
+    // Handle the prompt workbench (Prompts ⌄ in AiZone) — try a prompt out with
+    // every change simulated. This is its only door in the UI; without it the
+    // panel is reachable only by typing a command name.
+    const handleShowWorkbench = useCallback(() => {
+        sendMessage('showPromptWorkbench');
+    }, []);
+
     // Handle start demo
     const handleStartDemo = useCallback(() => {
         sendMessage('startDemo');
@@ -170,6 +177,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
                 onNewAiChat={handleNewAiChat}
+                onShowWorkbench={handleShowWorkbench}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

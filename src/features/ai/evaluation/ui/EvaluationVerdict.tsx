@@ -1,31 +1,33 @@
 /**
- * What the run would have done — the result surface.
+ * What the run would have done — read as a conversation, not a log.
  *
- * Four things, in the order a person needs them:
+ * WHAT CHANGED, AND WHY. This view used to render the trace as a numbered list
+ * of raw tool names (`1. get_current_project — 5ms`) under a grey verdict box,
+ * while `toolNarration.ts` held 103 authored plain-English phrases for exactly
+ * those tools and nothing imported them. The owner used it and said so. It now
+ * reads top to bottom the way a chat does:
  *
- *   1. The VERDICT, one line, with the delta when there is a previous run.
- *   2. What it WASTED — equal billing with what it stopped, because that is the
- *      question this feature exists to answer. Blocked writes tell you your
- *      project is safe; wasted steps tell you the prompt could be better.
- *   3. What it STOPPED, so nobody is left unsure whether something ran.
- *   4. The TRACE, in plain language, tool names on expand.
+ *     You      — the prompt as it was run
+ *     phases   — what it did, in plain English, expandable
+ *     Claude   — what it would have told you
+ *     ─────    — the numbers, once, at the end
+ *
+ * The ORDER is the argument. A producer reads what they asked, what happened,
+ * and what they would have been told; the measurement comes last because it is
+ * the thing they check rather than the thing they read.
+ *
+ * WHAT SURVIVED. The waste, what was blocked, the suggestions with their
+ * evidence, and the way back to the cheapest version are all still here and
+ * still ranked ahead of the raw trace — they answer "could this prompt be
+ * better", which is the question the feature exists for. Only the rendering of
+ * the trace changed.
  */
 
-import {
-    Disclosure,
-    DisclosurePanel,
-    DisclosureTitle,
-    Flex,
-    Heading,
-    Text,
-    View,
-} from '@adobe/react-spectrum';
+import { Button, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
-import type {
-    EvaluationSuggestion,
-    EvaluationTraceStep,
-    EvaluatePromptResponse,
-} from '@/types/webviewRequests';
+import { SpeakerTurn, TranscriptPhases } from './Transcript';
+import './workbench.css';
+import type { EvaluationSuggestion, EvaluatePromptResponse } from '@/types/webviewRequests';
 
 type Verdict = NonNullable<EvaluatePromptResponse['data']>;
 
@@ -35,35 +37,78 @@ export interface EvaluationVerdictProps {
     onApply: (append: string) => void;
     /** Replace the prompt with an earlier version of it. */
     onRevert: (prompt: string) => void;
+    /** Hand the prompt to the chat to run for real. Set apart, deliberately. */
+    onRunForReal: () => void;
+    /** Save the prompt to the library, or update it there. */
+    onSave: () => void;
+    /** True when this thread already came from the library. */
+    isSaved: boolean;
+    /** Nothing may be pressed while a run is in flight. */
+    isBusy: boolean;
 }
 
-/** Dollars, because "$0.21" means something and "47,550 tokens" does not. */
+/**
+ * Dollars — REVERSED 2026-08-26, pending step 11.
+ *
+ * The metric becomes tokens: dollars measure our cost, tokens measure what the
+ * producer has left to work with. Kept until step 11 rebuilds this panel, so the
+ * three surfaces reporting a run do not disagree mid-flight.
+ */
 function money(usd: number): string {
     return `$${usd.toFixed(2)}`;
 }
 
 /**
- * What one step's outcome should read as.
+ * One statistic, with its delta when there is something to compare.
  *
- * A helper rather than a nested ternary — the project's SOP forbids those, and
- * a scan enforces it. Three outcomes is already one too many to read inline.
+ * A ROW of discrete stats rather than a run-on sentence: each is findable, and
+ * they line up down the page between runs (the CSS sets `tabular-nums`). The
+ * delta is the one coloured thing, because "is this getting better" is the
+ * question the whole feature exists to answer.
  */
-function stepOutcome(step: EvaluationTraceStep): string {
-    if (step.outcome === 'blocked-by-dry-run') return '(simulated)';
-    if (step.outcome === 'error') return '(failed)';
-    return `${step.durationMs}ms`;
-}
-
-/** "down from $0.24", or nothing when there is nothing to compare. */
-function delta(now: number, before: number | undefined, format: (n: number) => string): string {
-    if (before === undefined || before === now) return '';
-    return `, ${now < before ? 'down' : 'up'} from ${format(before)}`;
+function Stat({
+    value,
+    label,
+    now,
+    before,
+    format,
+}: {
+    value: string;
+    label: string;
+    now?: number;
+    before?: number;
+    format?: (n: number) => string;
+}): React.JSX.Element {
+    const showDelta =
+        now !== undefined && before !== undefined && before !== now && format !== undefined;
+    const down = showDelta && now < before;
+    return (
+        <span>
+            <span className="wb-stat-value">{value}</span> {label}
+            {showDelta && (
+                // The arrow is the glance-readable form (it is what the plan's
+                // own sketch drew), and `aria-label` carries the word for anyone
+                // who cannot see it — a bare glyph reads as nothing aloud.
+                <span
+                    className={down ? 'wb-stat-down' : 'wb-stat-up'}
+                    aria-label={`${down ? 'down' : 'up'} from ${format(before)}`}
+                >
+                    {' '}
+                    {down ? '↓' : '↑'} from {format(before)}
+                </span>
+            )}
+        </span>
+    );
 }
 
 export function EvaluationVerdict({
     verdict,
     onApply,
     onRevert,
+    onRunForReal,
+    onSave,
+    isSaved,
+    isBusy,
 }: EvaluationVerdictProps): React.JSX.Element {
     // Read from the RESPONSE, which read it from disk. Holding the previous run
     // in React state made the delta die with the window — and "is this getting
@@ -80,24 +125,50 @@ export function EvaluationVerdict({
     const seconds = Math.round(verdict.durationMs / 1000);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
-            <View
-                backgroundColor="gray-100"
-                padding="size-200"
-                borderRadius="medium"
-                data-testid="evaluation-verdict"
-            >
-                <Heading level={3} marginBottom="size-50">
-                    Nothing was changed.
-                </Heading>
-                <Text>
-                    {steps} step{steps === 1 ? '' : 's'}
-                    {delta(steps, previous?.steps, (n) => `${n}`)}, {money(verdict.costUSD)}
-                    {delta(verdict.costUSD, previous?.costUSD, money)}, {seconds}s
-                    {wasted > 0 ? `, ${wasted} wasted` : ', nothing wasted'}.
-                    {verdict.priorRuns > 1 ? ` Run ${verdict.priorRuns + 1} of this prompt.` : ''}
-                </Text>
-            </View>
+        <div className="wb-panel">
+            <SpeakerTurn who="You" isYou testId="evaluation-prompt-turn">
+                {verdict.prompt}
+            </SpeakerTurn>
+
+            <TranscriptPhases steps={verdict.trace} testId="evaluation-transcript" />
+
+            {/* Only when the run actually said something. A "Claude" heading
+                over nothing reads as a reply that failed to load. */}
+            {verdict.reply && (
+                <SpeakerTurn who="Claude" testId="evaluation-reply">
+                    {verdict.reply}
+                </SpeakerTurn>
+            )}
+
+            {/* A CARD, not a rule and a paragraph. After a transcript full of
+                "would have", the reassurance is what the eye should land on. */}
+            <div className="wb-verdict">
+                <p className="wb-verdict-headline">Nothing was changed.</p>
+                <div className="wb-stats" data-testid="evaluation-verdict">
+                    <Stat
+                        value={`${steps}`}
+                        label={steps === 1 ? 'step' : 'steps'}
+                        now={steps}
+                        before={previous?.steps}
+                        format={(n) => `${n}`}
+                    />
+                    <Stat
+                        value={money(verdict.costUSD)}
+                        label="cost"
+                        now={verdict.costUSD}
+                        before={previous?.costUSD}
+                        format={money}
+                    />
+                    <Stat value={`${seconds}s`} label="elapsed" />
+                    <Stat
+                        value={`${wasted}`}
+                        label={wasted === 1 ? 'wasted step' : 'wasted steps'}
+                    />
+                    {verdict.priorRuns > 1 && (
+                        <Stat value={`${verdict.priorRuns + 1}`} label="runs of this prompt" />
+                    )}
+                </div>
+            </div>
 
             {canRevert && best && (
                 <View data-testid="evaluation-best-run">
@@ -118,7 +189,7 @@ export function EvaluationVerdict({
 
             {verdict.suggestions.length > 0 && (
                 <View data-testid="evaluation-suggestions">
-                    <Heading level={4}>What would make this better</Heading>
+                    <p className="wb-section-title">What would make this better</p>
                     {verdict.suggestions.map((s, i) => (
                         <SuggestionRow key={`${s.text}-${i}`} suggestion={s} onApply={onApply} />
                     ))}
@@ -127,7 +198,7 @@ export function EvaluationVerdict({
 
             {verdict.blocked.length > 0 && (
                 <View data-testid="evaluation-blocked">
-                    <Heading level={4}>What it would have changed</Heading>
+                    <p className="wb-section-title">What it would have changed</p>
                     <Text>
                         These were simulated, so nothing happened:{' '}
                         {[...new Set(verdict.blocked.map((b) => b.tool))].join(', ')}.
@@ -135,21 +206,22 @@ export function EvaluationVerdict({
                 </View>
             )}
 
-            <Disclosure>
-                <DisclosureTitle>Show every step ({steps})</DisclosureTitle>
-                <DisclosurePanel>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {verdict.trace.map((step, i) => (
-                            <Flex key={`${step.tool}-${step.at}-${i}`} gap="size-100">
-                                <Text>
-                                    {i + 1}. {step.tool}
-                                </Text>
-                                <Text>{stepOutcome(step)}</Text>
-                            </Flex>
-                        ))}
-                    </div>
-                </DisclosurePanel>
-            </Disclosure>
+            {/*
+              THE ONE HARD RULE. After minutes of reading "would have", the move
+              to actually doing it cannot look like one more thing to click. It
+              is `negative`, it names what it is about to do, and it sits at the
+              END of the result — a whole transcript away from "Simulate",
+              which now lives in the composer at the bottom of the panel. That is
+              the furthest apart the two have ever been.
+            */}
+            <div className="wb-actions" data-testid="evaluation-actions">
+                <Button variant="secondary" onPress={onSave} isDisabled={isBusy}>
+                    {isSaved ? 'Update in library' : 'Save to library'}
+                </Button>
+                <Button variant="negative" onPress={onRunForReal} isDisabled={isBusy}>
+                    Run this for real in the chat
+                </Button>
+            </div>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 /**
  * Sidebar Component
  *
- * Single layout across all contexts: AiZone (Chat + Prompts) above UtilityBar
+ * Single layout across all contexts: AiZone (Chat ⌄ + Prompts ⌄) above UtilityBar
  * (Tools + Help + Settings), vertically centered as one group. AI is globally
  * available — MCP is wired at the extension level, not per project — so the
  * AiZone renders in every sidebar context.
@@ -41,6 +41,8 @@ export interface SidebarProps {
     /** Callback to show the prompt picker — Prompts button in AiZone. */
     onShowPrompts?: () => void;
     onNewAiChat?: () => void;
+    /** Callback to open the prompt workbench — the Prompts menu in AiZone. */
+    onShowWorkbench?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -68,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenAiChat,
     onShowPrompts,
     onNewAiChat,
+    onShowWorkbench,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
@@ -96,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={onShowPrompts}
                     onNewAiChat={onNewAiChat}
+                    onShowWorkbench={onShowWorkbench}
                 />
             )}
             <UtilityBar

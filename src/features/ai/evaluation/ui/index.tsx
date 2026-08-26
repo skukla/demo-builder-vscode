@@ -20,7 +20,11 @@ createRoot(container).render(
             // owns. Partial because `data` is null until the init message lands.
             const init = (data ?? {}) as Partial<EvaluationWorkbenchInitialData>;
             return init.project ? (
-                <EvaluationWorkbench project={init.project} initialMode={init.mode} />
+                <EvaluationWorkbench
+                    project={init.project}
+                    initialMode={init.mode}
+                    initialPrompt={init.prompt}
+                />
             ) : null;
         }}
     </WebviewApp>,

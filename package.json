@@ -149,12 +149,12 @@
       },
       {
         "command": "demoBuilder.evaluatePrompt",
-        "title": "Try a Prompt Out (Quick)",
+        "title": "Simulate a Prompt (Quick)",
         "category": "Demo Builder"
       },
       {
         "command": "demoBuilder.showEvaluationWorkbench",
-        "title": "Try a Prompt Out",
+        "title": "Prompt Workbench",
         "category": "Demo Builder"
       },
       {

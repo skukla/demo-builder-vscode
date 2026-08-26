@@ -117,9 +117,12 @@ describe('Sidebar', () => {
             expect(onOpenAiChat).toHaveBeenCalledTimes(1);
         });
 
-        it('does not add a third tile — the AI zone stays at two', () => {
-            // The density problem that sent us to a menu: a third flat tile
-            // pushed the stack past the panel at editor zoom.
+        it('renders THREE AI tiles once the workbench has a callback', () => {
+            // Reversed 2026-08-25. Two earlier readings said a third tile would
+            // not fit; both missed that the stack was CENTRED, so half the
+            // leftover space sat above the zone label doing nothing. Top-aligned
+            // (`.sidebar-view`), the slack gathers below the last tile — which is
+            // exactly where a new tile extends into.
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
@@ -128,13 +131,59 @@ describe('Sidebar', () => {
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={jest.fn()}
                     onNewAiChat={jest.fn()}
+                    onShowWorkbench={jest.fn()}
                 />
             );
 
             const aiTiles = screen
                 .getAllByRole('button')
-                .filter((b) => /^(chat|prompts)$/i.test(b.getAttribute('aria-label') ?? ''));
-            expect(aiTiles).toHaveLength(2);
+                .filter((b) =>
+                    /^(chat|prompts|workbench)$/i.test(b.getAttribute('aria-label') ?? '')
+                );
+            expect(aiTiles).toHaveLength(3);
+        });
+
+        it('gives the Prompt Workbench its own tile — the feature had no door at all', () => {
+            // The extension contributes no menus for
+            // `demoBuilder.showEvaluationWorkbench`, so before this the panel was
+            // reachable only by typing the command's name into the palette.
+            const onShowPrompts = jest.fn();
+            const onShowWorkbench = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={onShowPrompts}
+                    onShowWorkbench={onShowWorkbench}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^workbench$/i }));
+            expect(onShowWorkbench).toHaveBeenCalledTimes(1);
+            expect(onShowPrompts).not.toHaveBeenCalled();
+
+            // Prompts is a plain button again, and still goes where it went.
+            fireEvent.click(screen.getByRole('button', { name: /^prompts$/i }));
+            expect(onShowPrompts).toHaveBeenCalledTimes(1);
+        });
+
+        it('omits the Workbench tile when no callback is supplied', () => {
+            // Callers that predate it are unaffected — the same contract the
+            // Chat tile already has for `onNewAiChat`.
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /^workbench$/i })).toBeNull();
+            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
         });
 
         it('dispatches onOpenAiChat when Chat is clicked', () => {

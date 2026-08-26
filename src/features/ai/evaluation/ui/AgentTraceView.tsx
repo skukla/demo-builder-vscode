@@ -6,45 +6,31 @@
  * and no cost. Every one of those calls was already being recorded; nothing read
  * it. This is the read.
  *
- * It is a DISTINCT mode, not the verdict layout with two fields blanked. An
- * ambient trace has no prompt and no cost, and squeezing it into a view built
- * around a verdict would weaken the thing that view does well.
+ * It renders the SAME phase bands as a workbench run — one renderer, in
+ * `Transcript.tsx`, so the two views cannot drift — and deliberately nothing
+ * else that view has:
  *
- * THE HONEST LINE: cost is stated as unavailable, never shown as zero. It comes
- * from a run's own output and the extension does not own the chat's process. A
- * per-call estimate would be a number that looks authoritative and is not — in a
- * feature whose whole purpose is replacing guesses with measurements.
+ * - **No speaker turns.** The extension does not own the chat's process, so
+ *   there is no prompt to quote and no assistant reply to show. Growing them
+ *   here would mean inventing them.
+ * - **No cost, and no estimate.** It comes from a run's own output. A per-call
+ *   guess would be a number that looks authoritative and is not — in a feature
+ *   whose whole purpose is replacing guesses with measurements. The line says so
+ *   out loud rather than showing a zero.
+ *
+ * Those two absences are the reason this is a distinct view rather than the
+ * verdict layout with fields blanked, and they are what must not converge.
  */
 
-import { Button, ButtonGroup, Flex, Heading, Text, View } from '@adobe/react-spectrum';
+import { Button, ButtonGroup, Heading, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
+import { TranscriptPhases, TranscriptSteps } from './Transcript';
+import './workbench.css';
 import { InlineNotice } from '@/core/ui/components/feedback';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { AgentTraceResponse, AgentTraceRow } from '@/types/webviewRequests';
+import type { AgentTraceResponse } from '@/types/webviewRequests';
 
 type Report = NonNullable<AgentTraceResponse['data']>;
-
-/** What a flag means, in words a producer can act on. */
-const FLAG_TEXT: Record<NonNullable<AgentTraceRow['flag']>, string> = {
-    failed: 'failed',
-    blocked: 'simulated — nothing changed',
-    repeated: 'asked again',
-    slow: 'slow',
-};
-
-/** One call, as a line. A helper so both lists render identically. */
-function TraceLine({ row, index }: { row: AgentTraceRow; index: number }): React.JSX.Element {
-    return (
-        <Flex gap="size-100">
-            <Text>
-                {index}. {row.tool}
-            </Text>
-            <Text>
-                {row.durationMs}ms{row.flag ? ` · ${FLAG_TEXT[row.flag]}` : ''}
-            </Text>
-        </Flex>
-    );
-}
 
 export function AgentTraceView(): React.JSX.Element {
     const [report, setReport] = useState<Report | null>(null);
@@ -96,7 +82,7 @@ export function AgentTraceView(): React.JSX.Element {
     }, []);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+        <div className="wb-panel">
             {error && (
                 <InlineNotice title="The trace could not be shown" testId="trace-error">
                     {error}
@@ -129,12 +115,23 @@ export function AgentTraceView(): React.JSX.Element {
 
             {report && report.totalCalls > 0 && (
                 <>
-                    <View
-                        backgroundColor="gray-100"
-                        padding="size-200"
-                        borderRadius="medium"
-                        data-testid="trace-summary"
-                    >
+                    {/* The trace FIRST, because it is what someone opened this
+                        for. The counts and the caveats follow it, the same way
+                        the workbench puts its numbers after its transcript. */}
+                    <TranscriptPhases steps={report.rows} testId="trace-steps" />
+
+                    {report.standouts.length > 0 && (
+                        <View data-testid="trace-standouts">
+                            <p className="wb-section-title">What stood out</p>
+                            {/* A flat list, NOT bands: these are picked from
+                                across the whole window and are not a run of
+                                consecutive calls, so drawing them as phases
+                                would claim an adjacency they do not have. */}
+                            <TranscriptSteps steps={report.standouts} />
+                        </View>
+                    )}
+
+                    <View data-testid="trace-summary">
                         <Heading level={3} marginBottom="size-50">
                             {report.totalCalls} step{report.totalCalls === 1 ? '' : 's'} in this
                             window
@@ -146,30 +143,14 @@ export function AgentTraceView(): React.JSX.Element {
                         <br />
                         {/* Said, never estimated. See the file note. */}
                         <Text data-testid="trace-no-cost">
-                            Cost is not recorded for a chat session — try a prompt out to measure
-                            it.
+                            Cost is not recorded for a chat session — simulate a prompt to
+                            measure it.
                         </Text>
                         <br />
                         <Text>
                             This is everything the agent did in this VS Code window, not one
                             conversation, and it resets when the window reloads.
                         </Text>
-                    </View>
-
-                    {report.standouts.length > 0 && (
-                        <View data-testid="trace-standouts">
-                            <Heading level={4}>What stood out</Heading>
-                            {report.standouts.map((row, i) => (
-                                <TraceLine key={`${row.tool}-${row.at}-${i}`} row={row} index={i + 1} />
-                            ))}
-                        </View>
-                    )}
-
-                    <View data-testid="trace-steps">
-                        <Heading level={4}>Every step, in order</Heading>
-                        {report.rows.map((row, i) => (
-                            <TraceLine key={`${row.tool}-${row.at}-${i}`} row={row} index={i + 1} />
-                        ))}
                     </View>
                 </>
             )}

@@ -1,9 +1,15 @@
 /**
  * PromptCard
  *
- * A single user-saved AI prompt rendered as a clickable card. Pin/Unpin,
- * Edit, Duplicate, Delete live in the kebab menu. Pinned prompts show a
- * small pin indicator inline with the title.
+ * A single user-saved AI prompt rendered as a clickable card. Pin/Unpin, Open
+ * in workbench, Edit, Duplicate, Delete live in the kebab menu. Pinned prompts
+ * show a small pin indicator inline with the title.
+ *
+ * TWO DESTINATIONS, DELIBERATELY DIFFERENT WORDS. Clicking the card LAUNCHES —
+ * it hands the prompt to the terminal, where it runs for real. "Open in
+ * workbench" in the kebab hands the same prompt to the Prompt Workbench, which
+ * simulates it and changes nothing. The library stays a launcher either way: it
+ * picks, and something else runs or simulates.
  *
  * Title clamps to 1 line and body clamps to 3 lines, so every card has the
  * same fixed height regardless of content length.
@@ -43,6 +49,13 @@ export interface PromptCardProps {
     onPinToggle?: (nextPinned: boolean) => void;
     /** Kebab action: copy prompt body to clipboard. Called with the prompt body. */
     onCopy?: (promptBody: string) => void;
+    /**
+     * Kebab action: open the Prompt Workbench on this prompt.
+     *
+     * Optional, so a surface with no workbench to open simply omits the row
+     * rather than offering one that does nothing.
+     */
+    onOpenInWorkbench?: () => void;
 }
 
 /**
@@ -120,6 +133,7 @@ interface PromptKebabProps {
     onDelete: () => void;
     onPinToggle: (nextPinned: boolean) => void;
     onCopy?: (promptBody: string) => void;
+    onOpenInWorkbench?: () => void;
 }
 
 function PromptKebab({
@@ -130,10 +144,14 @@ function PromptKebab({
     onDelete,
     onPinToggle,
     onCopy,
+    onOpenInWorkbench,
 }: PromptKebabProps): React.ReactElement {
     const handleAction = useCallback(
         (key: React.Key) => {
             switch (String(key)) {
+                case 'open-in-workbench':
+                    if (onOpenInWorkbench) onOpenInWorkbench();
+                    break;
                 case 'pin-toggle':
                     onPinToggle(!isPinned);
                     break;
@@ -151,7 +169,16 @@ function PromptKebab({
                     break;
             }
         },
-        [isPinned, promptBody, onPinToggle, onEdit, onDuplicate, onDelete, onCopy],
+        [
+            isPinned,
+            promptBody,
+            onPinToggle,
+            onEdit,
+            onDuplicate,
+            onDelete,
+            onCopy,
+            onOpenInWorkbench,
+        ],
     );
 
     return (
@@ -159,6 +186,14 @@ function PromptKebab({
         // brings the trigger, the menu, and its own click containment.
         <div style={STYLE_KEBAB_WRAPPER}>
             <CardActionsMenu ariaLabel="More actions" onAction={handleAction}>
+                {/* First, and worded as the opposite of the card click: that
+                    one runs the prompt for real, this one only simulates it. */}
+                {onOpenInWorkbench ? (
+                    <Item key="open-in-workbench" textValue="Open in workbench">
+                        {renderMenuIcon('measure')}
+                        <Text>Open in workbench</Text>
+                    </Item>
+                ) : null}
                 <Item key="pin-toggle" textValue={isPinned ? 'Unpin' : 'Pin'}>
                     {renderMenuIcon(isPinned ? 'pinOff' : 'pinOn')}
                     <Text>{isPinned ? 'Unpin' : 'Pin'}</Text>
@@ -195,6 +230,7 @@ export function PromptCard({
     onDelete,
     onPinToggle,
     onCopy,
+    onOpenInWorkbench,
 }: PromptCardProps): React.ReactElement {
     const handleClick = useCallback(() => onLaunch(), [onLaunch]);
     const isPinned = Boolean(prompt.pinned);
@@ -252,6 +288,7 @@ export function PromptCard({
                 onDelete={onDelete}
                 onPinToggle={handlePinToggle}
                 onCopy={onCopy}
+                onOpenInWorkbench={onOpenInWorkbench}
             />
         </div>
     );

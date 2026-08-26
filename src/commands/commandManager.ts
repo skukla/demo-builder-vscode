@@ -270,15 +270,19 @@ export class CommandManager {
             await openAi.execute();
         });
 
-        // Evaluation workbench — try a prompt out with every change simulated,
+        // The Prompt Workbench — simulate a prompt with every change blocked,
         // see what it would cost and where it wasted steps, then run it for real.
         const workbench = new ShowEvaluationWorkbenchCommand(
             this.context,
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.showEvaluationWorkbench', async () => {
-            await workbench.execute({ mode: 'prompt' });
+        // Takes an optional `{ promptId }` — the Prompt Library's "Open in
+        // workbench" opens it on a saved prompt, with that prompt's history
+        // resumed. The palette entry passes nothing and opens it empty.
+        this.registerCommand('demoBuilder.showEvaluationWorkbench', async (...args: unknown[]) => {
+            const options = (args[0] ?? {}) as { promptId?: string };
+            await workbench.execute({ mode: 'prompt', promptId: options.promptId });
         });
 
         // The same panel, opened on the OTHER half: what the agent has already
