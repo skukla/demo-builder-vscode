@@ -1,0 +1,59 @@
+# Read-only tools from the OTHER MCP servers a real project carries.
+#
+# A project's .mcp.json has four servers: demo-builder, commerce-extensibility,
+# playwright, dropins. The battery used to allow only demo-builder, so every
+# "the agent went around us" result was measured in a world where our tools were
+# the only option — and the conclusion drawn from it (AI-1b: discoverability is
+# not the constraint) had never been tested against the surface an agent has.
+#
+# Enumerated live from each server on 2026-08-26 via MCP tools/list, not guessed.
+#
+# WHY NOT ALL OF THEM. The allowlist's other job is keeping destructive tools out
+# of an unattended run. commerce-extensibility ships `aio-app-deploy`; playwright
+# ships `browser_run_code_unsafe`. Widening the surface must not widen that.
+# Same read-only rule as the rest of the battery, applied per tool.
+
+# ── commerce-extensibility (11 tools; 2 read-only) ────────────────────────────
+# Excluded: aio-app-deploy, aio-app-dev, aio-app-use, aio-configure-global,
+# aio-dev-invoke, aio-login, commerce-event-subscribe, onboard,
+# upload-chat-history — all deploy, mutate config, authenticate, or send data out.
+mcp__commerce-extensibility__aio-where
+mcp__commerce-extensibility__search-commerce-docs
+
+# ── dropins (21 tools; 18 read-only) ──────────────────────────────────────────
+# Excluded: scaffold_block, scaffold_extension, scaffold_slot — they write files
+# into the storefront.
+mcp__dropins__analyze_project
+mcp__dropins__list_slots
+mcp__dropins__list_events
+mcp__dropins__list_containers
+mcp__dropins__list_api_functions
+mcp__dropins__list_design_tokens
+mcp__dropins__list_i18n_keys
+mcp__dropins__list_models
+mcp__dropins__list_init_config
+mcp__dropins__check_config
+mcp__dropins__check_block_health
+mcp__dropins__search_docs
+mcp__dropins__search_commerce_docs
+mcp__dropins__list_graphql_queries
+mcp__dropins__get_upgrade_diff
+mcp__dropins__explain_event_flow
+mcp__dropins__suggest_slot_implementation
+mcp__dropins__suggest_event_handler
+
+# ── playwright (24 tools; 9 allowed) ──────────────────────────────────────────
+# Reading a page requires NAVIGATING to it, so navigation is in. Everything that
+# acts ON the page is out: click, type, fill_form, press_key, drag, drop,
+# select_option, file_upload, handle_dialog, evaluate, run_code_unsafe — on a live
+# demo storefront those can add to a cart or submit a form. Also out: close and
+# resize (they change the shared browser for whatever runs next).
+mcp__playwright__browser_navigate
+mcp__playwright__browser_navigate_back
+mcp__playwright__browser_snapshot
+mcp__playwright__browser_take_screenshot
+mcp__playwright__browser_console_messages
+mcp__playwright__browser_network_requests
+mcp__playwright__browser_network_request
+mcp__playwright__browser_find
+mcp__playwright__browser_wait_for

@@ -21,6 +21,27 @@ measurement can only compare against itself.
 | `results/<utc>.meta.json` | Which build was serving, prompt count, cache state. |
 | `score.test.mjs` | Drives all six diagnoses with fabricated transcripts. No agent runs. |
 
+## The agent gets the surface a real project has
+
+Four MCP servers, not one: `demo-builder`, `commerce-extensibility`, `playwright`,
+`dropins`. The allowlist covers all of them — 74 read-only tools — because a
+battery offering only our tools cannot tell "the agent chose us" from "the agent
+had no alternative", and that distinction is the whole finding.
+
+Read-only per tool, enumerated live from each server rather than guessed:
+`commerce-extensibility` ships `aio-app-deploy`, `playwright` ships
+`browser_run_code_unsafe`, `dropins` ships three `scaffold_*` writers. Widening
+the surface must not widen what an unattended run can do. See
+`other-servers-readonly.txt` for what is excluded and why.
+
+Measured 2026-08-26 after the change: **10 of 10 hits, and zero prompts reached
+for another server** — with 29 alternatives available including direct
+competitors (`dropins` `list_slots`, `search_docs`; Playwright `browser_navigate`).
+
+The caveat that keeps that honest: these ten prompts target OUR jobs. "Why is
+this block rendering wrong?" is `dropins` territory and is not asked. The result
+says our tools win on our ground, not everywhere.
+
 ## Results are never overwritten
 
 Each run writes `results/<utc-timestamp>.jsonl` and refuses to clobber an

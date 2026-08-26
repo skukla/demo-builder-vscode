@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: shipped
 layer: B
 ---
 # The battery measures a world that does not exist, and feeds itself
@@ -63,3 +63,7 @@ no battery sessions as real work, and `AI-1b`'s answer has been re-checked
 against both. If the answer changes, so does the roadmap.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  BOTH halves done and re-measured. (1) 54 of 90 sessions were the battery measuring itself — excluded; tools-ever-called back to 20, matching the pre-battery hand analysis. (2) Battery now offers all four servers, 74 read-only tools. Re-run: 10/10 hits and ZERO prompts reached for another server despite 29 alternatives including direct dropins competitors. AI-1b's answer HOLDS, now on stronger evidence.

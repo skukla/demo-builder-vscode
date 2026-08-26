@@ -23,6 +23,18 @@ const REPO = new URL('../../../..', import.meta.url).pathname;
 const ALLOWED = readFileSync(`${AB}/readonly-tools.txt`, 'utf-8').trim().split('\n')
     .map((t) => `mcp__demo-builder__${t}`);
 
+// The OTHER servers a real project carries. Without these the battery measured a
+// world where our tools were the only option, so "the agent went around us" could
+// never have meant "it used Playwright instead" — and that is exactly the reading
+// AI-1b's answer depends on. Fully-qualified names, read-only only; see the file
+// for what is excluded and why.
+const OTHER = `${AB}/other-servers-readonly.txt`;
+if (existsSync(OTHER)) {
+    ALLOWED.push(...readFileSync(OTHER, 'utf-8').split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith('#')));
+}
+
 // Bash is allowed ON PURPOSE. The question this battery asks is "what does the
 // agent reach for?", and the most important answer is "it went around us" — 25
 // hand-built Commerce queries and 4 hand-built page fetches in the corpus. Deny
