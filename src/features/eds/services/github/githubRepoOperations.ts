@@ -15,12 +15,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
-import { injectTokenIntoUrl } from './githubHelpers';
-import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubRepo,
     GitHubApiError,
 } from '../types';
+import { injectTokenIntoUrl } from './githubHelpers';
+import type { GitHubTokenService } from './githubTokenService';
 import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils';

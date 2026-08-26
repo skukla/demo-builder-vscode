@@ -24,7 +24,6 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { isPrebuiltIntegration } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { type FlowMode, FlowStageId } from './flowStages';
@@ -42,6 +41,7 @@ import {
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { isPrebuiltIntegration } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 

@@ -27,9 +27,9 @@
  * @module features/eds/services/configService/siteConfigRegistrar
  */
 
-import type { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { registerPublishKey, type PublishKeyTokenProvider } from '../pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '../types';
+import type { buildSiteConfigParams, ConfigurationService } from './configurationService';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

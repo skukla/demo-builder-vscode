@@ -15,13 +15,13 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/types/handlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
 import { ErrorCode } from '@/types/errorCodes';
 import { isTimeout, toAppError } from '@/types/errors';
+import { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteInstallCompletePayload, PrerequisiteStatusPayload } from '@/types/webviewPayloads';

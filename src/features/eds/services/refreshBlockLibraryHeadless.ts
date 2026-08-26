@@ -27,8 +27,8 @@ import {
     DaLiveContentOperations,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
-import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { HelixService } from '@/features/eds/services/helix/helixService';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

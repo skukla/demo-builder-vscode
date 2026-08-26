@@ -30,7 +30,6 @@
  * defaults wire the real functions; unit tests mock them.
  */
 
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { isStandaloneApp } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
@@ -42,10 +41,11 @@ import {
     type CachedOrgRef,
     type CommandExecutor,
 } from '@/core/shell';
+import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentManager } from '@/features/components/services/componentManager';
-import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

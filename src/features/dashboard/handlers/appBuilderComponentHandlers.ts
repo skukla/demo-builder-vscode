@@ -27,6 +27,11 @@
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
+import {
+    getAppBuilderComponent,
+    listAppBuilderComponents,
+    setAppBuilderComponent,
+} from '@/core/state/appBuilderComponentState';
 import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
@@ -34,18 +39,13 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
-    buildDefaultRunnerDeps,
-    buildRunnerDepsContext,
-} from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import {
-    getAppBuilderComponent,
-    listAppBuilderComponents,
-    setAppBuilderComponent,
-} from '@/core/state/appBuilderComponentState';
-import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    buildDefaultRunnerDeps,
+    buildRunnerDepsContext,
+} from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

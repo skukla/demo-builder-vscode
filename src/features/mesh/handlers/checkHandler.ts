@@ -14,7 +14,6 @@ import {
     checkMeshExistence,
     fallbackMeshCheck,
 } from '../services/meshCheckHelpers';
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import {
     buildOrgTargetFromProjectAdobe,
@@ -24,6 +23,7 @@ import {
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**

@@ -24,9 +24,9 @@
  * @module features/eds/services/github/githubCredentialProbe
  */
 
+import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { describeTokenType } from './githubAppService';
 import type { GitHubTokenService } from './githubTokenService';
-import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

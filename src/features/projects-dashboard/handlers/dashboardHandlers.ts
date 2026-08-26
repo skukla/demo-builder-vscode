@@ -21,15 +21,15 @@ import {
 import { BaseWebviewCommand } from '@/core/base';
 import { executeCommandForProject } from '@/core/handlers';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
-import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';

@@ -6,11 +6,11 @@
  * Backward-compatible function exports use a lazy-loaded default logger.
  */
 
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';

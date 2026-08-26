@@ -13,9 +13,9 @@
  * @module features/eds/services/daLive/daLiveSourceOperations
  */
 
+import { DaLiveNetworkError, type DaLiveEntry, type DaLiveSourceResult } from '../types';
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
-import { DaLiveNetworkError, type DaLiveEntry, type DaLiveSourceResult } from '../types';
 import type { Logger } from '@/types/logger';
 
 /**

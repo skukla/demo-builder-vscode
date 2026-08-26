@@ -26,8 +26,8 @@ import {
 } from '../daLive/daLiveContentOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
-import { updateStorefrontState } from './storefrontStalenessDetector';
 import type { PhaseProgressCallback } from '../types';
+import { updateStorefrontState } from './storefrontStalenessDetector';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';

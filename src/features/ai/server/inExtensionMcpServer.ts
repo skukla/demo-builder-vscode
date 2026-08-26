@@ -489,11 +489,15 @@ export interface InExtensionMcpServerOptions {
      * client, closed chat — both observed live 2026-08-23 around a 2-minute
      * refresh that mutated the live site invisibly).
      */
-     
+    // `unknown`, not `any`: this wraps EVERY tool handler and only passes the
+    // value through, so it never needs to look inside one. The injected
+    // implementation (`createAgentOperationNotifier`) has always declared
+    // `Promise<unknown>` — the `any` here was the declaration disagreeing with
+    // its own implementation, which is exactly the silenced-type-error shape.
     longRunningNotifier?: (
         toolName: string,
-        run: (report: (message: string) => void) => Promise<any>,
-    ) => Promise<any>;
+        run: (report: (message: string) => void) => Promise<unknown>,
+    ) => Promise<unknown>;
     /**
      * Native consent for destructive calls (injected — this module stays
      * vscode-free). Consulted BEFORE the notifier for every call that carries

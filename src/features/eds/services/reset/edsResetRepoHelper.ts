@@ -10,18 +10,18 @@
  */
 
 import { installBlockCollections } from '../blockCollectionHelpers';
-import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
-import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
-import { type EdsResetParams } from './edsResetParams';
 import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
+import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
+import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { readLkgSha } from '../patches/lkgReader';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
 import type { GitHubTreeInput } from '../types';
+import { type EdsResetParams } from './edsResetParams';
 import {
     getBlockLibrarySource,
     getBlockLibraryContentSource,

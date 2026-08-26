@@ -7,11 +7,11 @@
  * - Updates UI with current status
  */
 
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
 import type { PrerequisiteStatusPayload, PrerequisitesCompletePayload } from '@/types/webviewPayloads';

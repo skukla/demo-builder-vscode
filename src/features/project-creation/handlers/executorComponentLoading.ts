@@ -10,9 +10,9 @@
  */
 
 import type { ComponentDefinitionEntry } from '../services';
-import type { HandlerContext } from '@/types/handlers';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { TransformedComponentDefinition } from '@/types';
+import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 

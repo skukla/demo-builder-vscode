@@ -9,6 +9,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
@@ -18,7 +19,6 @@ import {
 } from '@/features/authentication/services/ensureOrgContext';
 import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
 import type { AdobeProject } from '@/features/authentication/services/types';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext, HandlerResponse } from '@/types/handlers';

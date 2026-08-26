@@ -12,8 +12,8 @@
  * @module features/eds/services/daLive/daLiveContentDiscovery
  */
 
-import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { DaLiveError, type DaLiveContentSource } from '../types';
+import { DaLiveSourceOperations } from './daLiveSourceOperations';
 
 /** Enumerate content paths on a source DA.live site. */
 export class DaLiveContentDiscovery {

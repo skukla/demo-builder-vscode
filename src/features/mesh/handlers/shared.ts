@@ -5,10 +5,10 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
 import { getEndpoint as getEndpointHelper } from '../services/meshEndpoint';
+import { ServiceLocator } from '@/core/di';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { Logger } from '@/types/logger';
 
 /**

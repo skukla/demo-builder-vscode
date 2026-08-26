@@ -11,9 +11,9 @@
  */
 
 import { maskEmail } from '@/core/utils/maskEmail';
-import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
+import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/storefront/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';

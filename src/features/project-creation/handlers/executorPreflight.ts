@@ -10,9 +10,9 @@
 
 import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/types/handlers';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { HandlerContext } from '@/types/handlers';
 import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 

@@ -19,11 +19,11 @@
  * services subscribe with `{ licenseConfigs:null, roles:null }`.
  */
 
+import { BASELINE_API } from '@/core/constants';
 import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
 } from '@/features/authentication/services/types';
-import { BASELINE_API } from '@/core/constants';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */

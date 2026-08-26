@@ -32,6 +32,11 @@ import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponent
 import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
+import {
+    getIdentifiedMeshAppBuilderComponent,
+    getMeshAppBuilderComponent,
+    listAppBuilderComponents,
+} from '@/core/state/appBuilderComponentState';
 import { CtaEmptyState, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
@@ -39,11 +44,6 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import {
-    getIdentifiedMeshAppBuilderComponent,
-    getMeshAppBuilderComponent,
-    listAppBuilderComponents,
-} from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';

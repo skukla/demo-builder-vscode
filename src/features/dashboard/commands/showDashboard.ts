@@ -7,10 +7,11 @@ import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
@@ -19,7 +20,6 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';

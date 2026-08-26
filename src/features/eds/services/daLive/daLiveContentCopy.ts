@@ -13,18 +13,6 @@
  * @module features/eds/services/daLive/daLiveContentCopy
  */
 
-import { DaLiveApiClient } from './daLiveApiClient';
-import {
-    CONTENT_COPY_BATCH_SIZE,
-    DA_LIVE_BASE_URL,
-    MAX_RETRY_ATTEMPTS,
-    getRetryDelay,
-    normalizePath,
-} from './daLiveConstants';
-import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
-import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
-import { DaLiveSourceOperations } from './daLiveSourceOperations';
-import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import {
     addContentResult,
     addReferenceResult,
@@ -39,6 +27,18 @@ import {
     type DaLiveProgressCallback,
     type DaLiveContentSource,
 } from '../types';
+import { DaLiveApiClient } from './daLiveApiClient';
+import {
+    CONTENT_COPY_BATCH_SIZE,
+    DA_LIVE_BASE_URL,
+    MAX_RETRY_ATTEMPTS,
+    getRetryDelay,
+    normalizePath,
+} from './daLiveConstants';
+import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
+import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
+import { DaLiveSourceOperations } from './daLiveSourceOperations';
+import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

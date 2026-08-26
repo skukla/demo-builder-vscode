@@ -9,15 +9,15 @@
  * @module features/project-creation/handlers/executorAppBuilderPhase
  */
 
+import { buildDeployOrgTarget } from './executorMeshPhase';
+import type { ProgressTracker } from './shared';
+import { withOrgContext } from '@/core/shell';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { buildDeployOrgTarget } from './executorMeshPhase';
-import type { ProgressTracker } from './shared';
-import type { HandlerContext } from '@/types/handlers';
-import { withOrgContext } from '@/core/shell';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**

@@ -36,7 +36,6 @@ import {
     type ConfigWriteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
 import { buildContentSourceUrl } from '@/features/eds/services/configService/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     addSiteAdmin,
     listSiteAccess,
@@ -45,6 +44,7 @@ import {
     type SiteAccessListing,
     type SiteAccessMutation,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Project } from '@/types/base';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
 

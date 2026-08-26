@@ -14,13 +14,13 @@ import {
 } from '../../handlers/edsHelpers';
 import { logConfigAccessState } from '../configService/configAccessRecovery';
 import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
-import type { TokenProvider } from '../daLive/daLiveOrgOperations';
-import type { EdsResetParams } from './edsResetParams';
-import type { GitHubTokenService } from '../github/githubTokenService';
-import { HelixService } from '../helix/helixService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import { registerSiteConfig } from '../configService/siteConfigRegistrar';
+import type { TokenProvider } from '../daLive/daLiveOrgOperations';
+import type { GitHubTokenService } from '../github/githubTokenService';
+import { HelixService } from '../helix/helixService';
 import { DaLiveAuthError } from '../types';
+import type { EdsResetParams } from './edsResetParams';
 import type { Logger } from '@/types/logger';
 
 /**

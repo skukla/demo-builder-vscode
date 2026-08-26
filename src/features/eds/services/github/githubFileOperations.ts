@@ -16,7 +16,6 @@ import {
     describeRejectionDiagnostics,
     isRulesetRejection,
 } from '../errorFormatters';
-import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
     GitHubFileResult,
@@ -24,6 +23,7 @@ import type {
     GitHubTreeEntry,
     GitHubTreeInput,
 } from '../types';
+import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 

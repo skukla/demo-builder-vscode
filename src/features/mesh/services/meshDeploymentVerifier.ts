@@ -3,8 +3,8 @@
  * Used by both project creation wizard and manual deploy command
  */
 
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { ServiceLocator } from '@/core/di';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
