@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (20)
+### ai  (21)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -203,6 +203,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-1j` | feature | └ [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) | — | high | shipped |
 | `AI-1k` | feature | └ [The agent can query Commerce now, but has to discover the schema every time](2026-08-26-commerce-schema-guidance.md) | — | med | dropped |
 | `AI-1l` | question | └ [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) | — | high | open |
+| `AI-1m` | fix | └ [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) | — | high | backlog |
 | `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
 | `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
 | `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |
@@ -211,7 +212,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
 | `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
 
-### eds  (10)
+### eds  (9)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -224,7 +225,6 @@ each item's own file; what has already landed against an item is in its
 | `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | backlog |
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | backlog |
-| `EDS-10` | fix | [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) | — | high | backlog |
 
 ### app-builder  (5)
 
@@ -368,8 +368,8 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — shipped
 - `AI-1k` [The agent can query Commerce now, but has to discover the schema every time](2026-08-26-commerce-schema-guidance.md) — dropped
 - `AI-1l` [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) — open
+- `AI-1m` [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) — backlog
 - `EDS-5` [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) — gated
-- `EDS-10` [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) — backlog
 
 **D** — 2 items
 

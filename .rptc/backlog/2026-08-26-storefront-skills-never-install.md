@@ -1,7 +1,8 @@
 ---
-id: EDS-10
+id: AI-1m
 kind: fix
-area: eds
+area: ai
+parent: AI-1
 needs: []
 value: high
 status: backlog
@@ -27,7 +28,11 @@ IS `@adobe/aem-boilerplate-commerce`** — we look for the package inside itself
 and the boilerplate repo ships no `skills/` directory at all, because Adobe
 installs them with `aio commerce extensibility tools-setup`. `copyAdobeSkillBundle`
 ENOENT-skips silently on purpose, so it has looked installed since the day it was
-written. Raised by the owner 2026-08-26. Filed 2026-08-26.
+written. Raised by the owner 2026-08-26. Filed 2026-08-26 as `EDS-10`, renumbered to `AI-1m` the same day. It is not an EDS
+item: skills are what prompts are orchestrated ACROSS, so which skills an agent
+carries is surface work whatever product it touches. The owner made that call —
+"it's going to affect how we orchestrate prompts across all of these skills".
+Commit `cd5cc668f` still carries the old trailer.
 
 ## What a project actually has
 
@@ -95,3 +100,7 @@ This is also the first known case of a silent-skip hiding a whole feature — wo
 checking whether any other `aiSkillBundle` declaration has the same shape.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  Filed as EDS-10 and renumbered to AI-1m (cd5cc668f) — it is AI-surface work, not EDS: which skills an agent carries determines what prompts can be orchestrated across.

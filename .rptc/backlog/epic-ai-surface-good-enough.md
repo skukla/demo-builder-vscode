@@ -29,6 +29,13 @@ needs (`AI-1a`).
 | `AI-1d` | Measurement battery (plan: `evaluation-mode/measurement/`) |
 | `AI-1e` | Agent round-trip optimisation |
 | `AI-1f` | An open-ended design skill |
+| `AI-1g` | The home AGENTS.md flip-flop — **shipped** |
+| `AI-1h` | `run_commerce_query` — **shipped** |
+| `AI-1i` | The battery destroyed its own baseline — **shipped** |
+| `AI-1j` | `reload_window` — **shipped** |
+| `AI-1k` | *(dropped — the schema gap did not exist)* |
+| `AI-1l` | Does a tool make the agent faster, or move where it gets stuck? |
+| `AI-1m` | The storefront skills have never installed |
 
 ## Done when
 
