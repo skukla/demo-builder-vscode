@@ -72,7 +72,9 @@ function runOnce(prompt) {
         ];
         const child = spawn('claude', args, { cwd: ROOT });
         let buf = '';
-        const calls = [];
+        const calls = [];       // {name, input} — the route, with arguments
+        const said = [];        // the agent's OWN words
+        const results = [];     // {id, isError, preview} — what came back
         let result = null;
         child.stdout.on('data', (d) => {
             buf += d.toString();
@@ -84,13 +86,31 @@ function runOnce(prompt) {
                 try { ev = JSON.parse(line); } catch { continue; }
                 if (ev.type === 'assistant') {
                     for (const c of ev.message?.content ?? []) {
-                        if (c.type === 'tool_use') calls.push(c.name);
+                        if (c.type === 'tool_use') calls.push({ name: c.name, input: c.input ?? {} });
+                        // The agent frequently STATES the gap — "there is no tool
+                        // for this, so I will use curl". That sentence is worth
+                        // more than any inference we could draw from the route,
+                        // and the first version threw it away.
+                        else if (c.type === 'text' && c.text?.trim()) said.push(c.text.trim());
+                    }
+                }
+                if (ev.type === 'user') {
+                    // Tool RESULTS. A call that happened and returned junk looks
+                    // identical to a call that worked, if you only record names —
+                    // and those are opposite findings: one means improve the tool,
+                    // the other means it is fine.
+                    for (const c of ev.message?.content ?? []) {
+                        if (c.type !== 'tool_result') continue;
+                        let txt = c.content;
+                        if (Array.isArray(txt)) txt = txt.map((x) => x?.text ?? '').join(' ');
+                        results.push({ id: c.tool_use_id, isError: !!c.is_error,
+                                       preview: String(txt ?? '').replace(/\s+/g, ' ').slice(0, 300) });
                     }
                 }
                 if (ev.type === 'result') result = ev;
             }
         });
-        child.on('close', () => resolve({ calls, result }));
+        child.on('close', () => resolve({ calls, said, results, result }));
     });
 }
 
@@ -106,11 +126,40 @@ const bare = (n) => n.replace(/^mcp__demo-builder__/, '');
  *            tool for the job, or we have one and the agent never found it.
  *   miss   — neither. It answered from something else, or not at all.
  */
-function score(calls, expect) {
-    const names = calls.map(bare);
+function score(calls, results, said, expect) {
+    const names = calls.map((c) => bare(c.name));
     const hit = names.some((n) => expect.includes(n));
     const around = names.some((n) => n === 'Bash' || n === 'WebFetch');
-    return { hit, around, outcome: hit ? 'hit' : around ? 'around' : 'miss' };
+    const outcome = hit ? 'hit' : around ? 'around' : 'miss';
+
+    // WHY, not just WHAT. "It did not use our tool" is one finding; the reason
+    // splits into four with completely different fixes, and only one of them is
+    // "build a new tool".
+    const searched = names.some((n) => n === 'ToolSearch');
+    const byId = new Map(results.map((r) => [r.id, r]));
+    const ourCalls = calls.filter((c) => c.name.startsWith('mcp__demo-builder__'));
+    const ourFailed = ourCalls.filter((c) => byId.get(c.id)?.isError);
+    const triedThenLeft = hit && around;
+
+    let diagnosis;
+    // ERRORED is checked before INSUFFICIENT: both look like "called ours, then
+    // left", but a tool that threw is a bug to fix and a tool that answered
+    // uselessly is a design to revisit. The more specific label wins.
+    if (outcome === 'hit' && !around) diagnosis = ourFailed.length
+        ? `TOOL-BROKEN: ${bare(ourFailed[0].name)} errored, but the answer came anyway`
+        : 'ok';
+    else if (ourFailed.length) diagnosis = `TOOL-BROKEN: ${bare(ourFailed[0].name)} was called and errored`;
+    else if (triedThenLeft) diagnosis = 'TOOL-INSUFFICIENT: called ours, still went to the shell';
+    else if (around && searched) diagnosis = 'NOT-FINDABLE: it searched for a tool and still went around';
+    else if (around && !searched) diagnosis = 'NOT-ANNOUNCED: it never looked — it did not know to';
+    else diagnosis = 'NO-ROUTE: neither our tool nor the shell';
+
+    // The agent's own account, when it gives one. Cheapest possible evidence.
+    const excuse = said.find((s) => /\bno (mcp )?tool\b|not available|isn'?t a tool|no direct tool|fall back/i.test(s));
+
+    return { hit, around, outcome, searched, triedThenLeft,
+             ourToolErrors: ourFailed.map((c) => bare(c.name)), diagnosis,
+             excuse: excuse ? excuse.slice(0, 300) : null };
 }
 
 {
@@ -118,7 +167,7 @@ function score(calls, expect) {
     for (const { id: task, prompt, expect, why } of PROMPTS) {
         const started = Date.now();
         const { calls, result } = await runOnce(prompt);
-        const s = score(calls, expect);
+        const s = score(calls, results, said, expect);
         const row = {
             variant,
             task,
@@ -127,8 +176,15 @@ function score(calls, expect) {
             why,
             ...s,
             calls: calls.length,
-            route: calls.map(bare),
-            calledGetCurrentProject: calls.some((c) => c.endsWith('get_current_project')),
+            route: calls.map((c) => bare(c.name)),
+            // What it ran INSTEAD. The shell command an agent writes by hand is
+            // the specification for the tool it needed — that is exactly where
+            // `get_commerce_endpoints` came from.
+            shellCommands: calls.filter((c) => c.name === 'Bash')
+                .map((c) => String(c.input.command ?? '').replace(/\s+/g, ' ').slice(0, 300)),
+            said,
+            toolResults: results.map((r) => ({ isError: r.isError, preview: r.preview })),
+            calledGetCurrentProject: calls.some((c) => c.name.endsWith('get_current_project')),
             billable:
                 (result?.usage?.input_tokens ?? 0) +
                 (result?.usage?.cache_creation_input_tokens ?? 0) +
@@ -142,9 +198,12 @@ function score(calls, expect) {
         appendFileSync(OUT, JSON.stringify(row) + '\n');
         const MARK = { hit: 'HIT   ', around: 'AROUND', miss: 'MISS  ' }[s.outcome];
         console.log(
-            `${variant.padEnd(9)} ${task.padEnd(18)} ${MARK} ` +
-            `want=${expect.join('|').padEnd(28)} got=${row.route.join(' ') || '(nothing)'} ` +
-            `| calls=${row.calls} billable=${row.billable}`,
+            `${task.padEnd(18)} ${MARK} ${s.diagnosis}\n` +
+            `    want: ${expect.join(' | ')}\n` +
+            `    got : ${row.route.join(' ') || '(nothing)'}\n` +
+            (row.shellCommands.length ? `    shell: ${row.shellCommands[0]}\n` : '') +
+            (s.excuse ? `    said : ${s.excuse}\n` : '') +
+            `    calls=${row.calls} billable=${row.billable}`,
         );
     }
 }

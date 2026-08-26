@@ -40,6 +40,30 @@ an agent hand-wrote four `curl`s to aem.live instead.
 **Bash is deliberately allowed.** Deny it and every prompt is forced through our
 tools, and the battery measures nothing.
 
+## It says WHY, not just what
+
+`around` on its own tells you something is wrong and nothing about the fix. Each
+run is diagnosed, and only ONE of these means "build a new tool":
+
+| diagnosis | what it means | the fix |
+|---|---|---|
+| `NOT-ANNOUNCED` | it never even searched — it did not know to look | name the tool in the generated bundle |
+| `NOT-FINDABLE` | it searched, and still went around | the name or description is wrong |
+| `TOOL-BROKEN` | our tool was called and errored | fix the tool |
+| `TOOL-INSUFFICIENT` | it called ours, then went to the shell anyway | the tool answered, but not usefully |
+| `NO-ROUTE` | neither our tool nor the shell | there may be no way to do this at all |
+
+To tell those apart the runner records what the first version threw away: the
+agent's own words, tool results, the shell commands it ran instead, and whether
+it searched. **The agent usually says the gap out loud** — "there is no tool for
+this, so I will use curl" — and that sentence is worth more than any inference
+from the route.
+
+The shell command it ran instead is the specification for the tool it needed.
+That is exactly where `get_commerce_endpoints` came from.
+
+Test the diagnosis without spending a run: `node score.test.mjs` (6 cases).
+
 ## Running it
 
 From the repo, with a live extension host serving the MCP socket:
