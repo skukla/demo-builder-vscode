@@ -1,0 +1,101 @@
+---
+id: AI-1d
+kind: feature
+area: ai
+parent: AI-1
+needs: [AI-1c]
+value: high
+status: backlog
+layer: B
+---
+# Journeys, not prompts, are what the battery should measure
+
+## Index hook
+
+*The item in one paragraph.*
+
+**The measurement battery defines a prompt as "an ordinary thing a producer would
+type into the chat" — one turn, one short task — and that is not where the cost
+is.** Raised by the owner 2026-08-26: *"suppose I want to build a new App Builder
+app that mimics an ERP system. I'd start by giving it a very vague prompt and
+then I would waste a ton of tokens while the LLM guides me through the process.
+These are the things that I want to actually dog food."* The expensive thing is
+not a prompt with a route; it is a **journey** — vague at the start, dozens of
+turns long, where the agent and the producer feel their way to a shape. **That
+exact journey is already on disk**: a 264-turn, 4.4MB session that built the
+`crm-integration` App Builder app, found while researching `AI-1c`. So this also
+answers the battery sub-plan's own open question — *"Who writes the held-out
+prompts, and from what?"* — with: **nobody writes them. We harvest the journeys
+that already happened.** Filed 2026-08-26.
+
+## Why the current unit is wrong
+
+`.rptc/plans/evaluation-mode/measurement/overview.md` is explicit about what it
+measures, and it is right for what it covers:
+
+> it is **an ordinary thing a producer would type into the chat**. Nothing
+> specialised about its form.
+>
+>     Set up a Bodea demo with B2B turned on.
+>     Why aren't my product pages loading?
+
+Those are answerable in a handful of turns. A battery of them measures whether
+the surface answers a **known question efficiently**.
+
+It cannot measure the case the owner actually cares about: a producer who does
+not yet know what they want, arriving with *"build me something like an ERP"*,
+and spending an afternoon converging. The waste there is not in any single
+round trip. It is in the **shape of the path** — re-orientation, dead ends,
+rediscovering the same facts, and reaching for Bash where a tool should have
+existed.
+
+## The corpus already exists
+
+Measured 2026-08-26 while researching `AI-1c`:
+
+| session | user turns | tool calls | size |
+|---|---|---|---|
+| `de59e150…` | 264 | 171 | 4.4 MB |
+| `f74743c6…` | 56 | 53 | 0.5 MB |
+
+Both are the ERP/App Builder journey. Nobody has to invent a hard prompt: the
+hard journeys have been run, and they are sitting in `~/.claude/projects/`.
+
+**This is why it needs `AI-1c`.** That item builds the transcript-reading
+machinery — scoping to demo-project sessions, walking `tool_use` blocks,
+classifying what the agent reached for. Harvesting journeys is the same
+machinery pointed at a different question, and building it twice would be the
+duplication this repo keeps having to delete.
+
+## What a journey measurement would record
+
+Not yet decided, and deliberately not designed here. Candidates the two hand
+passes suggest:
+
+- **Turns to first useful action** — how long before anything happened.
+- **Re-orientation count** — how often the agent re-asked what project it is in.
+  `AI-1b` measured 77% of all calls as six orientation reads; in a long journey
+  that is likely worse, not better.
+- **Bash-instead-of-a-tool moments**, with where in the arc they fell. Early is a
+  discovery gap; late is a capability gap.
+- **Where the producer had to intervene** — a correction is the clearest possible
+  marker of the agent being off the path.
+
+## What this is NOT
+
+Not a replacement for the battery. The short-prompt battery answers "is a known
+question answered efficiently?" and stays. This adds "does a vague, long job
+converge, and where does it bleed?" — a second unit, not a substitute.
+
+Not a live surface. Same reasoning as `AI-1c`: the audience is whoever is
+improving the extension, and they work in this repo.
+
+## Open
+
+- Which journeys count as the held-out set, given they are the owner's own
+  sessions and therefore already "seen"?
+- Is a journey replayable at all, or only measurable after the fact? A 264-turn
+  session cannot be re-run cheaply, which may make this observational rather
+  than a battery you execute.
+
+Filed 2026-08-26.

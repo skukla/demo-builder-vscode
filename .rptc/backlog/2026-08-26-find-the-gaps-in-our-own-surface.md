@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: backlog
+status: active
 layer: B
 ---
 # The other half of suggestions: finding holes in OUR tools
@@ -79,3 +79,7 @@ Three, and only the first is covered today:
   `codebase-sweep`, which already run there)?
 - Does it read transcripts, the live recorder, battery results, or all three?
 - Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  Research done (.rptc/research/gap-finder/research.md) — both open questions answered from evidence: transcripts-only, as a release-cut skill. Shape 2 proven detectable; two new tool gaps found (run a Commerce GraphQL query; read Adobe I/O context + deployed mesh).
