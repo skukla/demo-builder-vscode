@@ -12,6 +12,7 @@
  * injection, Markdown link injection).
  */
 
+import aiDefaultsConfig from '../../config/ai-defaults.json';
 import {
     sanitizeTemplateValue,
     sanitizeGithubSlug,
@@ -20,7 +21,6 @@ import {
     escapeMarkdown,
 } from '../sanitization';
 import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
-import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesJson from '@/features/components/config/demo-packages.json';
 import {

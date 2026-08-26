@@ -39,12 +39,12 @@ describe('AiMcpsList', () => {
             ],
         });
 
-        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder');
-        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright');
+        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder MCP');
+        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright MCP');
         expect(screen.getByTestId('ai-mcp-commerce-extensibility')).toHaveTextContent(
-            'Adobe App Builder'
+            'Adobe Commerce App Builder MCP'
         );
-        expect(screen.getByTestId('ai-mcp-dropins')).toHaveTextContent('Adobe Commerce Dropins');
+        expect(screen.getByTestId('ai-mcp-dropins')).toHaveTextContent('Dropins MCP');
     });
 
     it('falls back to the raw id for a server it does not recognise', () => {
@@ -123,19 +123,22 @@ describe('AiMcpsList', () => {
     });
 
     it('sorts by the DISPLAYED label, not the id', () => {
-        // Discriminating pair: by id, demo-builder < dropins; by label,
-        // "Adobe Commerce Dropins" < "Demo Builder". The list renders labels,
-        // so the dropins row must come first.
+        // Needs a pair whose id order and label order DISAGREE. The four
+        // servers we label no longer provide one — every current label happens
+        // to sort like its id — so pair a known server against an unrecognised
+        // id, which renders as itself: by id `bb-server` < `commerce-
+        // extensibility`; by label "Adobe Commerce App Builder MCP" <
+        // "bb-server". The list renders labels, so the known row comes first.
         renderList({
             mcps: [
-                { id: 'demo-builder', status: 'ok', tools: [] },
-                { id: 'dropins', status: 'ok', tools: [] },
+                { id: 'bb-server', status: 'ok', tools: [] },
+                { id: 'commerce-extensibility', status: 'ok', tools: [] },
             ],
         });
 
         const rows = screen.getAllByTestId(/^ai-mcp-/);
         const ids = rows.map((r) => r.getAttribute('data-testid'));
-        expect(ids).toEqual(['ai-mcp-dropins', 'ai-mcp-demo-builder']);
+        expect(ids).toEqual(['ai-mcp-commerce-extensibility', 'ai-mcp-bb-server']);
     });
 });
 

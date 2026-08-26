@@ -16,6 +16,7 @@
 import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
+import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -85,6 +86,9 @@ export interface AiCapabilitiesModalProps {
 /** Bundle prefix that routes an edited file to the skills list instead of the note. */
 const SKILLS_PREFIX = '.claude/skills/';
 
+/** Stable empty array — a fresh `[]` prop would rerender the gated-only list. */
+const EMPTY_SKILLS: SkillInventoryEntry[] = [];
+
 export function AiCapabilitiesModal({
     skills,
     mcps,
@@ -100,6 +104,24 @@ export function AiCapabilitiesModal({
     errorMessage,
 }: AiCapabilitiesModalProps): React.ReactElement {
     const editedNonSkillFiles = (editedFiles ?? []).filter((f) => !f.startsWith(SKILLS_PREFIX));
+    // Adobe pairs each MCP server with its skill set; show them that way so a
+    // missing half reads as a gap. See `aiIntegrations`.
+    const sections = React.useMemo(
+        () => buildIntegrationSections(mcps, skills),
+        [mcps, skills],
+    );
+    // Pairs are for the populated, healthy case. Whenever a half is missing or
+    // errored, fall back to the flat two-list body — it owns the "checking…",
+    // "none wired" and inspector-error copy, and a sectioned view would hide
+    // all three: a section renders its MCP list only when it HAS an MCP, so an
+    // empty or failed inspector produced no row to carry the message.
+    const useSections =
+        !isLoading &&
+        !hasMcpsError &&
+        !hasSkillsError &&
+        mcps.length > 0 &&
+        skills.length > 0 &&
+        sections.length > 0;
     return (
         <Modal
             title="AI Capabilities"
@@ -197,28 +219,73 @@ export function AiCapabilitiesModal({
                             className="ai-capabilities-columns"
                             data-testid="ai-capabilities-columns"
                         >
-                            <Flex direction="column" gap="size-150">
-                                <Heading
-                                    level={4}
-                                    UNSAFE_className="ai-section-heading"
-                                    data-testid="ai-mcps-heading"
-                                >
-                                    MCP servers · {mcps.length}
-                                </Heading>
-                                <AiMcpsList
-                                    mcps={mcps}
-                                    hasError={hasMcpsError}
-                                    isLoading={isLoading}
+                            {!useSections ? (
+                                // Loading, errored, or one half empty — see
+                                // `useSections`.
+                                <>
+                                    <Flex direction="column" gap="size-150">
+                                        <Heading
+                                            level={4}
+                                            UNSAFE_className="ai-section-heading"
+                                            data-testid="ai-mcps-heading"
+                                        >
+                                            MCP servers · {mcps.length}
+                                        </Heading>
+                                        <AiMcpsList
+                                            mcps={mcps}
+                                            hasError={hasMcpsError}
+                                            isLoading={isLoading}
+                                        />
+                                    </Flex>
+                                    <AiSkillsList
+                                        skills={skills}
+                                        hasError={hasSkillsError}
+                                        isLoading={isLoading}
+                                        editedFiles={editedFiles}
+                                        gatedSkills={gatedSkills}
+                                    />
+                                </>
+                            ) : (
+                                sections.map((section) => (
+                                    <Flex
+                                        key={section.key}
+                                        direction="column"
+                                        gap="size-150"
+                                        data-testid={`ai-integration-${section.key}`}
+                                    >
+                                        <Heading
+                                            level={4}
+                                            UNSAFE_className="ai-section-heading"
+                                            data-testid="ai-integration-heading"
+                                        >
+                                            {section.label}
+                                        </Heading>
+                                        {section.mcps.length > 0 && (
+                                            <AiMcpsList
+                                                mcps={section.mcps}
+                                                hasError={hasMcpsError}
+                                            />
+                                        )}
+                                        {section.skills.length > 0 && (
+                                            <AiSkillsList
+                                                skills={section.skills}
+                                                hasError={hasSkillsError}
+                                                editedFiles={editedFiles}
+                                                flat
+                                            />
+                                        )}
+                                    </Flex>
+                                ))
+                            )}
+                            {/* Gated skills are a project-wide absence, not one
+                                pair's — render them once, under everything. */}
+                            {useSections && (
+                                <AiSkillsList
+                                    skills={EMPTY_SKILLS}
+                                    gatedSkills={gatedSkills}
+                                    flat
                                 />
-                            </Flex>
-
-                            <AiSkillsList
-                                skills={skills}
-                                hasError={hasSkillsError}
-                                isLoading={isLoading}
-                                editedFiles={editedFiles}
-                                gatedSkills={gatedSkills}
-                            />
+                            )}
                         </div>
                     </div>
                 )}

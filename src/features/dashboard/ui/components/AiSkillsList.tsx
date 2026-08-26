@@ -51,6 +51,14 @@ export interface AiSkillsListProps {
      * step 4).
      */
     gatedSkills?: Array<{ file: string; toolId: string; reason: 'setting-disabled' | 'tool-missing' }>;
+    /**
+     * Rendered INSIDE an integration section (see `aiIntegrations`), where the
+     * section already carries the heading and the modal body already scrolls.
+     * Drops this list's own "Skills · N" summary and its fixed-height scroll
+     * region; the group header stays, because within a section it names the
+     * skill set ("Storefront skills · 6") rather than repeating the section.
+     */
+    flat?: boolean;
 }
 
 /** Human copy per gated reason. */
@@ -81,10 +89,97 @@ function isEditedSkill(skill: SkillInventoryEntry, editedFiles: string[]): boole
  * unrecognised bundle falls back to a plain "Adobe" rather than borrowing a
  * name that would be wrong.
  */
+/*
+ * Adobe pairs each MCP server with a skill set and names the pair on one line
+ * (developer.adobe.com/commerce/extensibility/developer-agent/dropins-mcp-server):
+ * "installs the @dropins/mcp server and a set of storefront-specific agent
+ * skills, alongside the standard commerce-extensibility MCP server and App
+ * Builder skills." Those two headings — Storefront skills / App Builder skills
+ * — are the parallel pair, and they sit next to the matching MCP rows in this
+ * same modal.
+ *
+ * Experience League titles the storefront page "Boilerplate skills" and calls
+ * the thing you install the "AEM Boilerplate Commerce skill set"; both are
+ * real, and "Storefront skills" is the one that reads as a peer of "App
+ * Builder skills". The starter-kit ids (`aem-boilerplate-commerce`) are CLI
+ * arguments, not names.
+ */
+/*
+ * The SECTION heading carries the friendly grouping (Storefront / App Builder);
+ * this label names WHICH starter kit's skill set actually landed. Adobe ships a
+ * separate set per template — `aem-boilerplate-commerce`, `integration-starter-
+ * kit`, `checkout-starter-kit` — and we copy two of the three. "App Builder
+ * skills" (Adobe's own collective term) would be true and would still not
+ * answer the first question anyone asks on opening this modal, which is what
+ * exactly did my project get. Name the kit.
+ *
+ * Both read "Adobe Commerce <thing> skills", in Title Case.
+ *
+ * The integration kit's name comes from its own architect skill ("Adobe
+ * Commerce Integration Starter Kit") and the starter-kit picker in
+ * `aio commerce extensibility tools-setup` ("Integration Starter Kit", in
+ * starterKits.json). Experience League lowercases it in running prose, which is
+ * right for a sentence and wrong for a label.
+ *
+ * The storefront set is deliberately NOT "AEM Boilerplate Commerce", which is
+ * the picker's id for the boilerplate REPO — accurate, and not what anyone
+ * calls the thing they are building. Its two halves are both Adobe's:
+ * "Adobe Commerce Storefront" titles the docs site these six are documented on,
+ * and "Storefront skills" is the heading developer.adobe.com gives this exact
+ * set. The joined phrase is ours; each half is theirs.
+ */
 const BUNDLE_LABELS: Readonly<Record<string, string>> = {
-    aem: 'Adobe AEM',
-    appbuilder: 'Adobe App Builder',
+    aem: 'Adobe Commerce Storefront skills',
+    appbuilder: 'Adobe Commerce Integration Starter Kit skills',
 };
+
+/**
+ * Row titles as Adobe's own docs write them, keyed by the skill name with its
+ * bundle prefix stripped.
+ *
+ * Only the cases `titleFromSlug` gets WRONG are listed — the rest derive
+ * correctly and an entry here would just be another thing to keep in sync.
+ *
+ * Storefront six: the "What the skills provide" table at
+ * experienceleague.adobe.com/developer/commerce/storefront/ai/boilerplate-skills/
+ * — sentence case, and "Drop-in developer" hyphenated even though the skill id
+ * is `dropin-developer`.
+ *
+ * App Builder seven: the titled table in the `commerce-extensibility-tools`
+ * README, which is the only place Adobe writes display titles for them (the
+ * docs list slash commands instead). It uses Title Case; we render sentence
+ * case so one list does not mix two conventions, keeping DevOps as the proper
+ * noun it is. Both read 2026-08-26.
+ */
+const SKILL_TITLE_OVERRIDES: Readonly<Record<string, string>> = {
+    'dropin-developer': 'Drop-in developer',
+    'devops-engineer': 'DevOps engineer',
+};
+
+/**
+ * `add-component` → `Add component`. Sentence case, matching how the docs
+ * write their skill titles ("Block developer", not "Block Developer").
+ */
+function titleFromSlug(slug: string): string {
+    const spaced = slug.replace(/-/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * The title a user can match against Adobe's documentation. On disk a bundled
+ * skill is `aem-block-developer` — we prefix the directory so two bundles that
+ * both ship a `tester` stay distinct, and Claude requires the `name:` to match
+ * that directory. Neither constraint applies to a catalog a person reads, and
+ * the prefixed slug appears nowhere in the docs. The literal name still renders
+ * beside the title, muted, because this modal doubles as a debugging surface.
+ */
+function displayTitleOf(skill: SkillInventoryEntry): string {
+    const bare =
+        skill.bundle && skill.name.startsWith(`${skill.bundle}-`)
+            ? skill.name.slice(skill.bundle.length + 1)
+            : skill.name;
+    return SKILL_TITLE_OVERRIDES[bare] ?? titleFromSlug(bare);
+}
 
 /** Rank for the canonical render order: Demo Builder → Adobe bundles → Custom. */
 const SOURCE_ORDER: Readonly<Record<SkillSource, number>> = {
@@ -93,10 +188,15 @@ const SOURCE_ORDER: Readonly<Record<SkillSource, number>> = {
     unknown: 2,
 };
 
+/*
+ * "…skills", so a group reads as a SET beside its MCP server inside an
+ * integration section ("Demo Builder · 107 tools" / "Demo Builder skills · 15")
+ * rather than repeating the section heading back at the reader.
+ */
 const SOURCE_LABELS: Readonly<Record<SkillSource, string>> = {
-    'demo-builder': 'Demo Builder',
-    adobe: 'Adobe',
-    unknown: 'Custom',
+    'demo-builder': 'Demo Builder skills',
+    adobe: 'Adobe skills',
+    unknown: 'Custom skills',
 };
 
 /**
@@ -120,6 +220,7 @@ export function AiSkillsList({
     isLoading = false,
     editedFiles,
     gatedSkills,
+    flat = false,
 }: AiSkillsListProps): React.ReactElement {
     const grouped = useMemo(() => {
         const byKey = new Map<
@@ -138,7 +239,9 @@ export function AiSkillsList({
             byKey.set(key, group);
         }
         for (const group of byKey.values()) {
-            group.items.sort((a, b) => a.name.localeCompare(b.name));
+            // Sort by the DISPLAYED title, not the on-disk name — the list
+            // renders titles (same rule AiMcpsList follows for its labels).
+            group.items.sort((a, b) => displayTitleOf(a).localeCompare(displayTitleOf(b)));
         }
         // Source rank first, then label — so two Adobe bundles sit together and
         // in a stable order rather than in Map insertion order.
@@ -183,11 +286,15 @@ export function AiSkillsList({
             {/* Counted the same way as the MCP section heading. One said
                 "Skills · N installed" and the other just "MCP servers", so two
                 parallel lists were labelled by two different rules. */}
-            <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
-                Skills · {skills.length}
-            </Text>
-            {/* Fixed-height scroll region — the modal frame never resizes. */}
-            <div className="ai-skills-scroll">
+            {!flat && (
+                <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
+                    Skills · {skills.length}
+                </Text>
+            )}
+            {/* Fixed-height scroll region — the modal frame never resizes.
+                Inside a section the modal body owns the scrolling, so a nested
+                one would trap the wheel in a short inner box. */}
+            <div className={flat ? undefined : 'ai-skills-scroll'}>
                 {grouped.map(({ key, label, items }) => (
                     <div key={key}>
                         <div
@@ -206,7 +313,14 @@ export function AiSkillsList({
                                     data-testid="ai-skill-row"
                                     UNSAFE_className="text-gray-800"
                                 >
-                                    {skill.name}
+                                    {displayTitleOf(skill)}
+                                    <span
+                                        data-testid="ai-skill-literal-name"
+                                        className="text-gray-600"
+                                    >
+                                        {' '}
+                                        · {skill.name}
+                                    </span>
                                     {isEditedSkill(skill, editedFiles ?? []) && (
                                         <span
                                             data-testid="ai-skill-edited-flag"

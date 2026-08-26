@@ -7,7 +7,7 @@
  * error states use plain language. Footer carries a Regenerate AI files action.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiCapabilitiesModal } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
@@ -78,9 +78,36 @@ describe('AiCapabilitiesModal', () => {
     // Detailed skills-list behavior (grouping, disclosure, sorting) lives in
     // AiSkillsList.test.tsx; this suite only checks integration into the modal.
 
-    it('renders the skills summary line', () => {
+    // Adobe ships an MCP server and its matching skill set as one integration,
+    // and the modal used to split every pair across two sections — which is how
+    // a storefront project running the App Builder pair, and no storefront pair
+    // at all, stayed invisible (AI-1m, AI-1o).
+    it('groups each MCP server with its own skill set', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent('Skills · 2');
+
+        const section = screen.getByTestId('ai-integration-demo-builder');
+        expect(section).toHaveTextContent('Demo Builder MCP');
+        // Scoped: each section renders its OWN pair of lists, so an unscoped
+        // query matches every section at once.
+        expect(within(section).getByTestId('ai-mcps-list')).toBeInTheDocument();
+        expect(within(section).getByTestId('ai-skills-list')).toBeInTheDocument();
+    });
+
+    it('shows a pair that is missing its skills as a section with only the server', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: [...MCPS, { id: 'dropins', status: 'ok', tools: [] }],
+        });
+
+        // The storefront half exists as a server with no skill set beside it —
+        // the exact shape of the AI-1m bug, now readable off the screen.
+        const storefront = screen.getByTestId('ai-integration-storefront');
+        expect(storefront).toHaveTextContent('Dropins MCP');
+        // Assert the ABSENCE of a skill row, not of a label string — a label
+        // that no longer exists makes this pass whether skills are there or
+        // not, which is what the previous wording had quietly become.
+        expect(within(storefront).queryAllByTestId('ai-skill-row')).toHaveLength(0);
+        expect(within(storefront).queryByTestId('ai-skills-list')).not.toBeInTheDocument();
     });
 
     it('surfaces every skill name at rest (flat list — no accordions to jump the modal)', () => {
@@ -94,17 +121,18 @@ describe('AiCapabilitiesModal', () => {
         // The "What the AI can do…" subtitle was removed (2026-07-09) — the
         // title + section headings carry the framing.
         expect(screen.queryByText(/what the ai can do/i)).not.toBeInTheDocument();
-        expect(screen.getByTestId('ai-mcps-heading')).toBeInTheDocument();
-        expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
+        expect(screen.getAllByTestId('ai-integration-heading').length).toBeGreaterThan(0);
     });
 
-    it('counts the MCP section the same way it counts the skills section', () => {
+    it('counts both halves of a pair the same way', () => {
         // One section said "Skills · N installed" and the other just "MCP
         // servers", so two parallel lists were labelled by different rules.
+        // Inside a pair the rule is one rule: name · count.
         renderModal({ skills: SKILLS, mcps: MCPS });
 
-        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent('MCP servers · 2');
-        expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent('Skills · 2');
+        const section = screen.getByTestId('ai-integration-demo-builder');
+        expect(section).toHaveTextContent('Demo Builder MCP · 2 tools');
+        expect(section).toHaveTextContent('Demo Builder skills · 2');
     });
 
     it('places both sections in the two-column body', () => {
@@ -113,8 +141,7 @@ describe('AiCapabilitiesModal', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
 
         const columns = screen.getByTestId('ai-capabilities-columns');
-        expect(columns).toContainElement(screen.getByTestId('ai-mcps-heading'));
-        expect(columns).toContainElement(screen.getByTestId('ai-skills-summary'));
+        expect(columns).toContainElement(screen.getByTestId('ai-integration-demo-builder'));
     });
 
     it('shows a plain-language empty state for skills when none are installed', () => {
@@ -132,8 +159,8 @@ describe('AiCapabilitiesModal', () => {
     it('lists each MCP server under its display label', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
         // Scoped by testid: "Demo Builder" also appears as a skills group header.
-        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder');
-        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright');
+        expect(screen.getByTestId('ai-mcp-demo-builder')).toHaveTextContent('Demo Builder MCP');
+        expect(screen.getByTestId('ai-mcp-playwright')).toHaveTextContent('Playwright MCP');
     });
 
     it('shows the tool count for each healthy MCP', () => {
@@ -274,8 +301,8 @@ describe('AiCapabilitiesModal', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: false });
         expect(screen.queryByTestId('ai-capabilities-loading')).not.toBeInTheDocument();
         // Body content present
-        expect(screen.getByTestId('ai-mcps-list')).toBeInTheDocument();
-        expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
+        const section = screen.getByTestId('ai-integration-demo-builder');
+        expect(within(section).getByTestId('ai-mcps-list')).toBeInTheDocument();
     });
 
     // ─── Live progress reporting ──────────────────────────────────────────────
