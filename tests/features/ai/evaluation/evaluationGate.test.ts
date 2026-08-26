@@ -25,8 +25,18 @@ const GATED_COMMANDS = [
     'demoBuilder.evaluatePrompt',
     'demoBuilder.showEvaluationWorkbench',
     'demoBuilder.showAgentTrace',
-    'demoBuilder.toggleAgentDryRun',
 ];
+
+/**
+ * NOT gated, deliberately. `demoBuilder.toggleAgentDryRun` looks like an
+ * evaluation tool and is not one: dry run is a standing safety switch — an
+ * agent may read your projects but every write is simulated — enforced in the
+ * MCP server for anyone using an agent, whether or not the workbench exists.
+ * The dependency runs one way (the workbench hard-wires its own dry run; dry
+ * run knows nothing about the workbench), so hiding this hid a shipped
+ * protection behind a flag for an unshipped feature.
+ */
+const NOT_GATED = ['demoBuilder.toggleAgentDryRun'];
 
 describe('evaluation tools gate', () => {
     const palette = manifest.contributes.menus?.commandPalette ?? [];
@@ -51,6 +61,12 @@ describe('evaluation tools gate', () => {
         ) as Record<string, { default?: unknown }>;
         expect(properties[EVALUATION_TOOLS_SETTING_KEY]).toBeDefined();
         expect(properties[EVALUATION_TOOLS_SETTING_KEY].default).toBe(false);
+    });
+
+    it('leaves the dry-run toggle visible — it is a safety switch, not an instrument', () => {
+        for (const command of NOT_GATED) {
+            expect(palette.find((e) => e.command === command)).toBeUndefined();
+        }
     });
 
     it('leaves every OTHER command visible', () => {

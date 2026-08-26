@@ -12,6 +12,12 @@
  * key that mirrors the setting. `package.json` carries the `when` clauses; this
  * module owns the key.
  *
+ * `demoBuilder.toggleAgentDryRun` is deliberately NOT among them. It reads like
+ * an evaluation tool and is not one: dry run is a standing safety switch that
+ * the MCP server enforces for anyone driving this extension with an agent, and
+ * the workbench merely hard-wires its own copy. Gating it hid a shipped
+ * protection behind a flag for an unshipped feature. Pinned in the tests.
+ *
  * Modelled on `dryRunMode` in the sibling directory: setting read live, never
  * cached, and re-synced on change.
  *

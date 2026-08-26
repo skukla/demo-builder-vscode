@@ -469,10 +469,6 @@
         {
           "command": "demoBuilder.showAgentTrace",
           "when": "demoBuilder.evaluationToolsEnabled"
-        },
-        {
-          "command": "demoBuilder.toggleAgentDryRun",
-          "when": "demoBuilder.evaluationToolsEnabled"
         }
       ]
     }
