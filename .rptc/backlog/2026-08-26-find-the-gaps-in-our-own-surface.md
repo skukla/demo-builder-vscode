@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: built
 layer: B
 ---
 # The other half of suggestions: finding holes in OUR tools
@@ -83,3 +83,4 @@ Three, and only the first is covered today:
 ## Shipped so far
 
 - 2026-08-26  Research done (.rptc/research/gap-finder/research.md) — both open questions answered from evidence: transcripts-only, as a release-cut skill. Shape 2 proven detectable; two new tool gaps found (run a Commerce GraphQL query; read Adobe I/O context + deployed mesh).
+- 2026-08-26  agent-gap-scan skill built — transcripts-only, three shapes + orientation share. Reproduces the AI-1b hand pass EXACTLY (20 of 105 tools, 77% orientation) on first run.
