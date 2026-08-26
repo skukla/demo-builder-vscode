@@ -1,0 +1,86 @@
+[
+  {
+    "id": "urls",
+    "prompt": "What are the URLs for my demo project?",
+    "expect": [
+      "get_project_urls"
+    ],
+    "why": "The most-used tool in the corpus. A control: if this misses, the battery itself is wrong."
+  },
+  {
+    "id": "published",
+    "prompt": "Is the home page of my storefront actually live? Check what's published, not what's in the repo.",
+    "expect": [
+      "read_published_page"
+    ],
+    "why": "THE case this battery exists for. The tool exists and does exactly this; the agent hand-wrote 4 curls to aem.live instead on 2026-08-25."
+  },
+  {
+    "id": "commerce-endpoint",
+    "prompt": "What GraphQL endpoint should I query for this project's products, and what headers does it need?",
+    "expect": [
+      "get_commerce_endpoints"
+    ],
+    "why": "Shipped 2026-08-26 to close 28 hand-built curls. Never yet exercised by an agent."
+  },
+  {
+    "id": "commerce-query",
+    "prompt": "How many products are in the catalog for this project?",
+    "expect": [
+      "get_commerce_endpoints"
+    ],
+    "why": "NO tool can answer this end to end. Expect Bash. This is the candidate gap run_commerce_query would fill \u2014 the battery measures whether it is real before we build it."
+  },
+  {
+    "id": "mesh",
+    "prompt": "Is my API Mesh deployed, and what's its endpoint?",
+    "expect": [
+      "check_mesh",
+      "get_project_status"
+    ],
+    "why": "23 aio api-mesh calls in the corpus. Two tools could answer; either counts."
+  },
+  {
+    "id": "blocks",
+    "prompt": "What blocks does my storefront have available?",
+    "expect": [
+      "list_blocks"
+    ],
+    "why": "A read tool in the never-called list. Is it unfound, or just unneeded?"
+  },
+  {
+    "id": "content",
+    "prompt": "What pages exist in my site's content?",
+    "expect": [
+      "list_content"
+    ],
+    "why": "Never called. Pairs with `published` \u2014 both are content reads."
+  },
+  {
+    "id": "datapacks",
+    "prompt": "What sample data is installed in this project?",
+    "expect": [
+      "list_installed_datapacks",
+      "get_datapack"
+    ],
+    "why": "Never called, despite datapacks being a core feature."
+  },
+  {
+    "id": "auth",
+    "prompt": "Am I signed in to Adobe, and which org am I in?",
+    "expect": [
+      "get_auth_status"
+    ],
+    "why": "Used in the corpus. A second control."
+  },
+  {
+    "id": "components",
+    "prompt": "What components does my project use?",
+    "expect": [
+      "get_project",
+      "list_components",
+      "get_project_status"
+    ],
+    "why": "From the original 2026-08-24 battery, kept verbatim so the two runs stay comparable."
+  }
+]

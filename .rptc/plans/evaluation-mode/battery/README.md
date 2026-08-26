@@ -14,8 +14,31 @@ measurement can only compare against itself.
 
 | File | What it is |
 |---|---|
-| `run.mjs` | The A/B runner used on 2026-08-24. Two arms, five tasks, one run each. |
-| `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info` output. |
+| `prompts.json` | The battery. Each prompt declares the tool that SHOULD answer it. |
+| `run.mjs` | Runs every prompt once and scores what the agent actually reached for. |
+| `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info`. |
+| `results.jsonl` | Written by a run: one row per prompt, with the full route. |
+
+## The idea
+
+**We know the right answer before we ask.** Every prompt names the tool that
+should handle it, so "what did the agent use?" is a score rather than an
+interpretation. Three outcomes:
+
+| | meaning |
+|---|---|
+| **hit** | it used a tool we said should answer this |
+| **around** | it used Bash or WebFetch instead — **the finding** |
+| **miss** | neither; it answered from something else, or not at all |
+
+`around` is the one worth having, and it splits two ways that look identical
+until you check: either we have **no tool** for that job, or we have one and the
+agent **never found it**. `published` is in the battery precisely to tell those
+apart — `read_published_page` exists and does exactly that job, and on 2026-08-25
+an agent hand-wrote four `curl`s to aem.live instead.
+
+**Bash is deliberately allowed.** Deny it and every prompt is forced through our
+tools, and the battery measures nothing.
 
 ## Running it
 

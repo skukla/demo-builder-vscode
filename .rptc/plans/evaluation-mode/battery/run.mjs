@@ -17,22 +17,32 @@ import { homedir } from 'node:os';
 
 const AB = new URL('.', import.meta.url).pathname;
 const ROOT = `${homedir()}/.demo-builder/projects`;
-const AGENTS = `${ROOT}/AGENTS.md`;
-const ALLOWED = readFileSync(`${AB}/readonly.txt`, 'utf-8').trim().split('\n')
+const ALLOWED = readFileSync(`${AB}/readonly-tools.txt`, 'utf-8').trim().split('\n')
     .map((t) => `mcp__demo-builder__${t}`);
 
-const PROMPTS = [
-    ['urls', 'What are the URLs for my demo project?'],
-    ['auth', 'Am I signed in to Adobe?'],
-    ['health', 'Is my project healthy?'],
-    ['datapacks', 'What sample data packs are available?'],
-    ['components', 'What components does my project use?'],
-];
+// Bash is allowed ON PURPOSE. The question this battery asks is "what does the
+// agent reach for?", and the most important answer is "it went around us" — 25
+// hand-built Commerce queries and 4 hand-built page fetches in the corpus. Deny
+// Bash and every prompt is forced through our tools, which measures nothing.
+ALLOWED.push('Bash', 'WebFetch');
 
-const VARIANTS = [
-    ['control', `${AB}/AGENTS.control.md`],
-    ['treatment', `${AB}/AGENTS.treatment.md`],
-];
+// Every prompt declares the tool that SHOULD answer it. That is the whole idea:
+// we know the right route in advance, so "what did it actually use?" becomes a
+// score instead of an interpretation. Kept in a file, verbatim, because the
+// original six prompts were lost and their run became incomparable.
+const PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
+
+// NO VARIANTS, and no writing to AGENTS.md.
+//
+// This was an A/B runner: it swapped `~/.demo-builder/projects/AGENTS.md` between
+// a control and a treatment copy. Both copies are gone, and it never backed the
+// real file up — so running it would have destroyed a live 3.1KB AGENTS.md and
+// then crashed on the missing variant.
+//
+// The battery asks a simpler question: with the bundle AS IT SHIPS, what does the
+// agent reach for? So it runs once against whatever is actually installed and
+// touches nothing. To A/B a bundle change later, copy this file and back up
+// AGENTS.md first — deliberately, not as a side effect.
 
 const OUT = `${AB}/results.jsonl`;
 writeFileSync(OUT, '');
@@ -70,16 +80,40 @@ function runOnce(prompt) {
     });
 }
 
-for (const [variant, file] of VARIANTS) {
-    writeFileSync(AGENTS, readFileSync(file, 'utf-8'));
-    for (const [task, prompt] of PROMPTS) {
+/** Strip the MCP prefix so a route reads as tool names. */
+const bare = (n) => n.replace(/^mcp__demo-builder__/, '');
+
+/**
+ * Score one run against what we expected.
+ *
+ * Three outcomes, and the third is the one worth having:
+ *   hit    — it used a tool we said should answer this.
+ *   around — it went to Bash/WebFetch instead. THE finding: either we have no
+ *            tool for the job, or we have one and the agent never found it.
+ *   miss   — neither. It answered from something else, or not at all.
+ */
+function score(calls, expect) {
+    const names = calls.map(bare);
+    const hit = names.some((n) => expect.includes(n));
+    const around = names.some((n) => n === 'Bash' || n === 'WebFetch');
+    return { hit, around, outcome: hit ? 'hit' : around ? 'around' : 'miss' };
+}
+
+{
+    const variant = 'as-shipped';
+    for (const { id: task, prompt, expect, why } of PROMPTS) {
         const started = Date.now();
         const { calls, result } = await runOnce(prompt);
+        const s = score(calls, expect);
         const row = {
             variant,
             task,
+            prompt,
+            expect,
+            why,
+            ...s,
             calls: calls.length,
-            route: calls,
+            route: calls.map(bare),
             calledGetCurrentProject: calls.some((c) => c.endsWith('get_current_project')),
             billable:
                 (result?.usage?.input_tokens ?? 0) +
@@ -92,10 +126,11 @@ for (const [variant, file] of VARIANTS) {
             isError: result?.is_error ?? null,
         };
         appendFileSync(OUT, JSON.stringify(row) + '\n');
+        const MARK = { hit: 'HIT   ', around: 'AROUND', miss: 'MISS  ' }[s.outcome];
         console.log(
-            `${variant.padEnd(9)} ${task.padEnd(11)} calls=${row.calls} ` +
-            `gcp=${row.calledGetCurrentProject ? 'YES' : 'no '} ` +
-            `billable=${row.billable} $${(row.costUSD ?? 0).toFixed(4)}`,
+            `${variant.padEnd(9)} ${task.padEnd(18)} ${MARK} ` +
+            `want=${expect.join('|').padEnd(28)} got=${row.route.join(' ') || '(nothing)'} ` +
+            `| calls=${row.calls} billable=${row.billable}`,
         );
     }
 }

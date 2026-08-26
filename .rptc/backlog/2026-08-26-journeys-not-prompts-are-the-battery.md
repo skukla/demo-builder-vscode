@@ -99,3 +99,7 @@ improving the extension, and they work in this repo.
   than a battery you execute.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  Battery reshaped: 10 targeted prompts, each declaring the tool that SHOULD answer it, scored hit/around/miss. Fixed run.mjs — it read a filename that no longer existed AND overwrote the live AGENTS.md with no backup, so it could not have been run since the rename.
