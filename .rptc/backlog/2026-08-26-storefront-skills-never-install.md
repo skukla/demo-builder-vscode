@@ -104,3 +104,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  Filed as EDS-10 and renumbered to AI-1m (cd5cc668f) — it is AI-surface work, not EDS: which skills an agent carries determines what prompts can be orchestrated across.
+- 2026-08-26  SIZED honestly. dropins is still used ZERO times across five runs on three rigs, so the gap is real — but on a clean rig it costs 4 shell calls, not the 43 I first reported. Build the guidance; do not quote the old number.

@@ -67,3 +67,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  BOTH halves done and re-measured. (1) 54 of 90 sessions were the battery measuring itself — excluded; tools-ever-called back to 20, matching the pre-battery hand analysis. (2) Battery now offers all four servers, 74 read-only tools. Re-run: 10/10 hits and ZERO prompts reached for another server despite 29 alternatives including direct dropins competitors. AI-1b's answer HOLDS, now on stronger evidence.
+- 2026-08-26  Re-measured on the clean rig: cross-server calls 69/68/48 -> 22/24, shell 19/26/17 -> 2/2, billable ~4M -> ~1.2M. Most of the 'agent tunnels and falls back to the shell' finding was OUR broken rig — blocked Glob/Grep, a stale allowlist, and the user's global MCP servers competing with the project's.
