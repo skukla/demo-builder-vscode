@@ -20,7 +20,27 @@ node $B set AI-1c status=active value=high
 node $B log AI-1c "Phase 1 landed (abc1234)"
 node $B sync                  # rewrite the README's generated spans
 node $B stale                 # advisory: WIP items with nothing recorded
+node $B unlogged              # commits that NAME an item but never reached it
 ```
+
+## Name the item in the commit
+
+A commit that belongs to an item carries a trailer:
+
+```
+Backlog: AI-1b
+```
+
+`unlogged` then finds any such commit whose sha is missing from that item's
+`## Shipped so far`, and exits non-zero. Run it after committing; it is also part
+of `rptc-hygiene-scan`.
+
+**Opt-in, and know what that costs.** Most commits belong to no item — a lint
+sweep, the tooling itself — and demanding a trailer everywhere just trains people
+to write a meaningless one. So a commit with NO trailer is invisible to this: it
+catches "named it and forgot to log", not "forgot entirely". The output says so
+itself when nothing carried a trailer, because "0 unlogged" and "nothing was
+scanned for it" print the same line and mean opposite things.
 
 ## Log at commit time, not at cleanup time
 
