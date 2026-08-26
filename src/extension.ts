@@ -17,6 +17,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { registerEvaluatePromptCommand } from '@/features/ai/evaluation/evaluatePromptCommand';
+import { registerEvaluationToolsGate } from '@/features/ai/evaluation/evaluationGate';
 import { setEvaluationServerFactory } from '@/features/ai/evaluation/evaluationServer';
 import { setEvaluationRecorder } from '@/features/ai/evaluation/handlers/traceRecorderAccess';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
@@ -225,6 +226,11 @@ export async function activate(context: vscode.ExtensionContext) {
         const hasProject = await stateManager.hasProject();
         await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', hasProject);
         await vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);
+
+        // The evaluation tools are extension-development instruments, not demo
+        // tools — hidden from the Command Palette unless switched on. Commands
+        // stay REGISTERED either way; only their visibility is gated.
+        registerEvaluationToolsGate(context);
 
         // Register Sidebar WebviewView EARLY to minimize blank sidebar time
         // The sidebar only needs stateManager and logger to render

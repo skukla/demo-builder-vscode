@@ -34,6 +34,7 @@ function sendMessage(type: string, payload?: unknown): void {
 function SidebarApp(): React.ReactElement {
     const [context, setContext] = useState<SidebarContext>({ type: 'projects' });
     const [isLoading, setIsLoading] = useState(true);
+    const [evaluationToolsEnabled, setEvaluationToolsEnabled] = useState(false);
 
     // Handle messages from extension
     useEffect(() => {
@@ -47,6 +48,12 @@ function SidebarApp(): React.ReactElement {
                         setContext(message.data.context);
                         setIsLoading(false);
                     }
+                    // Rides along with every context message rather than living
+                    // inside SidebarContext, which is a three-way union that
+                    // would each have to carry it. Defaults to hidden: a missing
+                    // flag means an older host, and showing a door to a feature
+                    // that may not be switched on is the worse failure.
+                    setEvaluationToolsEnabled(message.data?.evaluationToolsEnabled === true);
                     break;
             }
         };
@@ -177,7 +184,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
                 onNewAiChat={handleNewAiChat}
-                onShowWorkbench={handleShowWorkbench}
+                onShowWorkbench={evaluationToolsEnabled ? handleShowWorkbench : undefined}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

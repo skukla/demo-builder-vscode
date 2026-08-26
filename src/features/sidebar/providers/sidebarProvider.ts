@@ -11,6 +11,7 @@ import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
+import { isEvaluationToolsEnabled } from '@/features/ai/evaluation/evaluationGate';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import type { Logger } from '@/types/logger';
 
@@ -208,7 +209,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * — the wizard timeline lives inside the wizard webview itself.
      */
     public async updateContext(context: SidebarContext): Promise<void> {
-        await this.sendMessage('contextUpdate', { context });
+        await this.sendMessage('contextUpdate', {
+            context,
+            evaluationToolsEnabled: isEvaluationToolsEnabled(),
+        });
     }
 
     /**
@@ -220,7 +224,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Update sidebar context
         const newContext = await this.getCurrentContext();
-        await this.sendMessage('contextUpdate', { context: newContext });
+        await this.sendMessage('contextUpdate', {
+            context: newContext,
+            evaluationToolsEnabled: isEvaluationToolsEnabled(),
+        });
     }
 
     /**
@@ -306,7 +313,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      */
     private async handleGetContext(): Promise<void> {
         const context = await this.getCurrentContext();
-        await this.sendMessage('contextResponse', { context });
+        await this.sendMessage('contextResponse', {
+            context,
+            evaluationToolsEnabled: isEvaluationToolsEnabled(),
+        });
     }
 
     /**
