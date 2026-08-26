@@ -84,3 +84,4 @@ Filed 2026-08-26.
 
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
 - 2026-08-26  fix(ai): the home AGENTS.md tracks the current project instead of guessing (`dc0d8ab58`)
+- 2026-08-26  docs(backlog): AI-1g built — awaiting the measurement that would ship it (`f6f12e6af`)

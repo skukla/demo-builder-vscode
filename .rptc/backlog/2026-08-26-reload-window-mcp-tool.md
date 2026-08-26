@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: built
 layer: B
 ---
 # reload_window — the last manual step in the measure loop
@@ -58,3 +58,7 @@ command does not.
 reload over the socket, wait for the rebind, run the battery, compare.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  feat(mcp): reload_window — restart the host without leaving the socket (`82783c9eb`)
