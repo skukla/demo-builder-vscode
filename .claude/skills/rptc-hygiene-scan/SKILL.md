@@ -96,7 +96,7 @@ beats total coverage that gets switched off.
 ### 0. Frontmatter and references (run this FIRST — it is the cheap one)
 
 ```bash
-node .claude/skills/backlog-item/build-index.mjs --check
+node .claude/skills/backlog-item/backlog.mjs check
 ```
 
 Exit 1 names every problem: missing or unknown `kind` / `area` / `value`, a

@@ -5,12 +5,29 @@ description: File, shape, or re-file an RPTC backlog item — the frontmatter co
 
 # Filing a backlog item
 
-**The index is GENERATED. Never hand-edit the table in `README.md`.**
+**The index is GENERATED. Never hand-edit between the `BEGIN/END GENERATED`
+markers in `README.md`.** One tool does everything, reads and writes:
 
 ```bash
-node .claude/skills/backlog-item/build-index.mjs           # print the table
-node .claude/skills/backlog-item/build-index.mjs --check   # validate; exit 1 on any problem
+B=".claude/skills/backlog-item/backlog.mjs"
+
+node $B list [--area ai] [--status active] [--layer B] [--grep mesh] [--json]
+node $B next                  # what you could start TODAY — nothing unfinished blocks it
+node $B show AI-1c            # one item: fields, children, what is blocking it
+node $B check                 # validate everything; exit 1 on any problem
+node $B new <slug> --id AI-5  # scaffold a file with valid frontmatter
+node $B set AI-1c status=active value=high
+node $B log AI-1c "Phase 1 landed (abc1234)"
+node $B sync                  # rewrite the README's generated spans
 ```
+
+**Every read command takes `--json`.** That is the agent-facing form — an agent
+picking up work should call `next --json`, not parse a markdown table.
+
+**Writes validate BEFORE they touch disk.** `set` builds the would-be result,
+runs the full check on it, and refuses if anything breaks. It used to write first
+and validate second, so a rejected `status=nonsense` still landed on disk while
+the command exited 1 — dogfooding found it in about a minute (see `dogfood.sh`).
 
 It was hand-maintained until 2026-08-26 and rotted in three separate ways, each
 of which the generator now makes impossible:
@@ -153,7 +170,34 @@ chat-surface rewrite and states plainly that only one gets built.
    months later. The frontmatter carries the structure so the prose does not
    have to.
 
+## Testing: dogfood it, on a copy
+
+```bash
+bash .claude/skills/backlog-item/dogfood.sh     # 28 assertions, ~2s
+```
+
+Run it after ANY change to `backlog.mjs`. It exercises the real backlog's content
+through the real CLI — including every failure case — inside a temp copy, so the
+destructive assertions need no revert step.
+
+**It copies because reverting does not work.** The first dogfooding pass ran the
+write commands against the real `.rptc/backlog/` and undid them with `git
+checkout`. That destroyed uncommitted work twice in twenty minutes: a 69KB prose
+migration and a frontmatter field, both rebuilt from a scratch backup. `git
+checkout` cannot tell which of your uncommitted changes belonged to the test.
+
+The harness ends with a **negative control** that deliberately fails, proving
+`unchanged()` can actually see a write. Without it, a broken assertion helper
+would report 28 silent passes.
+
+Two bugs came out of the first pass and both are pinned there now: `set` writing
+before validating, and `next` listing a `gated` item as startable.
+
 ## Related
 
-- `backlog-view` — renders the index for reading and filtering.
-- `rptc-hygiene-scan` — runs `--check` as part of the record sweep.
+- `rptc-hygiene-scan` — runs `check` as part of the record sweep.
+
+*(`backlog-view` was deleted on 2026-08-26. It parsed the README's hand-written
+prose while the generator read the files, so it reported 25 items against a
+registry of 32 — nineteen invisible to the very thing people used to ask "is this
+already filed?". `list --grep` replaces it.)*
