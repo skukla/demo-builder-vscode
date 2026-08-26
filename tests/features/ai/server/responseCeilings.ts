@@ -132,6 +132,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why: 'one project\'s status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size',
     },
 
+    get_commerce_endpoints: {
+        bytes: 2_000,
+        why:
+            'three endpoints, one header block and four scope codes — a FIXED field count. ' +
+            'Nothing here grows with catalog, store or project size, so a breach means a ' +
+            'field entered the payload rather than a project getting bigger',
+    },
+
     get_component_requirements: {
         bytes: 3_000,
         why:

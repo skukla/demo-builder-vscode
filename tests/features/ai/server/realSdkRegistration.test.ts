@@ -37,6 +37,7 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -69,6 +70,10 @@ describe('registration against the real MCP SDK', () => {
         ['get_component_requirements', (s: McpServer) => registerComponentRequirementsTool(s)],
         ['validate_component_selection', (s: McpServer) => registerValidateSelectionTool(s, ctxFactory)],
         ['get_project_status', (s: McpServer) => registerProjectStatusTool(s, stateManager)],
+        [
+            'get_commerce_endpoints',
+            (s: McpServer) => registerCommerceEndpointsTool(s, stateManager),
+        ],
         ['discovery tools', (s: McpServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
         ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
@@ -113,6 +118,7 @@ describe('registration against the real MCP SDK', () => {
             registerCreateProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
             registerProjectStatusTool(s, stateManager);
+            registerCommerceEndpointsTool(s, stateManager);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);

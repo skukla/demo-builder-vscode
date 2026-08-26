@@ -80,6 +80,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     find_storefront_name_mismatches: 'Looking for storefronts whose names do not match',
     get_auth_status: 'Checking who you are signed in as',
     get_block_authoring_shape: 'Looking up how the block is authored',
+    get_commerce_endpoints: 'Looking up the Commerce endpoints',
     get_block_source: 'Reading the block source',
     get_component_config: 'Reading the project configuration',
     get_component_requirements: 'Looking up what the component needs',
@@ -197,7 +198,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     open_view: 'Opening the Demo Builder view',
 
     // ── Evaluation ──────────────────────────────────────────────────────
-    evaluate_prompt: 'Trying the prompt out with every change simulated',
+    evaluate_prompt: 'Simulating a prompt to see what it would do',
 
     // ── AI bundle ───────────────────────────────────────────────────────
     regenerate_ai_files: 'Regenerating the AI files',
