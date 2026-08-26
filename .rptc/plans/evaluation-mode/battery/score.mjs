@@ -30,6 +30,29 @@ function failed(result) {
 }
 
 
+/**
+ * Was this run INVALID rather than informative?
+ *
+ * A tool the harness refused to let the agent call produces a route that looks
+ * exactly like the agent choosing to go around us — and it is the opposite: the
+ * agent chose us and was blocked. On 2026-08-26 `run_commerce_query` shipped and
+ * was not added to `readonly-tools.txt`; the agent found it unprompted on first
+ * exposure, called it, was denied, and the run scored `NOT-FINDABLE` — reading as
+ * "the agent could not find the tool" when it had found it immediately.
+ *
+ * The allowlist guard cannot catch this: it checks the tools a prompt EXPECTS,
+ * and no list predicts what an agent might reach for. So detect the SYMPTOM — a
+ * permission denial anywhere in the run makes the run unscorable, not a finding.
+ */
+const DENIED = /permission[^.]*denied|requested permissions|don'?t ask mode|not allowed to use/i;
+
+function blockedTools(calls, results) {
+    const byId = new Map(results.map((r) => [r.id, r]));
+    return calls
+        .filter((c) => DENIED.test(byId.get(c.id)?.preview ?? ''))
+        .map((c) => bare(c.name));
+}
+
 function score(calls, results, said, expect) {
     const names = calls.map((c) => bare(c.name));
     // A tool that was called and answered an error is NOT a hit. Scoring on the
@@ -49,6 +72,16 @@ function score(calls, results, said, expect) {
     const ourCalls = calls.filter((c) => c.name.startsWith('mcp__demo-builder__'));
     const ourFailed = ourCalls.filter((c) => failed(byId.get(c.id)));
     const triedThenLeft = hit && around;
+
+    // A blocked tool invalidates the run before anything else is judged.
+    const blocked = blockedTools(calls, results);
+    if (blocked.length) {
+        return {
+            hit, around, outcome: 'invalid', searched, triedThenLeft, blocked,
+            ourToolErrors: [], excuse: null,
+            diagnosis: `INVALID: the harness blocked ${blocked.join(', ')} — add it to readonly-tools.txt and re-run`,
+        };
+    }
 
     let diagnosis;
     // ERRORED is checked before INSUFFICIENT: both look like "called ours, then
@@ -73,4 +106,4 @@ function score(calls, results, said, expect) {
              excuse: excuse ? excuse.slice(0, 300) : null };
 }
 
-export { bare, failed, score };
+export { bare, failed, score, blockedTools };

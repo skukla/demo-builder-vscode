@@ -72,3 +72,4 @@ Filed 2026-08-26.
 
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
 - 2026-08-26  VERIFIED live: { productSearch(phrase:"", page_size:1) { total_count } } returns 30 products in one call, 112 bytes — the same answer the agent hand-assembled two curls for. Mutation refused, unknown field returns the GraphQL error, missing endpoint named with what IS available.
+- 2026-08-26  MEASURED end to end: 2-3 calls, no shell, 3/3 runs. Before: 4-5 calls with two hand-written curls. Billable ~262k -> ~128k. First measurement showed NO improvement (5 calls) because the tool refused endpoint:catalogService on ACCS — correct request, wrong refusal, one endpoint serves both. Fixed; that one bug was costing more than the tool saved.

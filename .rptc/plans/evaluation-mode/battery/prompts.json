@@ -27,9 +27,9 @@
     "id": "commerce-query",
     "prompt": "How many products are in the catalog for this project?",
     "expect": [
-      "get_commerce_endpoints"
+      "run_commerce_query"
     ],
-    "why": "NO tool can answer this end to end. Expect Bash. This is the candidate gap run_commerce_query would fill \u2014 the battery measures whether it is real before we build it."
+    "why": "The gap that produced run_commerce_query. Before it existed the agent found get_commerce_endpoints, used it correctly, then hand-wrote two curls. This now tests whether it reaches for the tool instead."
   },
   {
     "id": "mesh",

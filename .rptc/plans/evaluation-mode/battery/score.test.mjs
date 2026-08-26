@@ -53,5 +53,30 @@ for (const [label, calls, results, said, want] of proseCases) {
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
+
+// ── a blocked tool is an INVALID run, not a finding ─────────────────────────
+//
+// The fixture is the REAL denial, lifted from the run it fooled me with
+// (results/2026-08-26T18-07*.jsonl). The agent had found `run_commerce_query` on
+// first exposure and called it; the harness refused, and the run scored
+// NOT-FINDABLE — the exact opposite of what happened.
+const DENIAL = "Permission to use mcp__demo-builder__run_commerce_query has been denied because Claude Code is running in don't ask mode. IMPORTANT: You *may* attempt to accomplish this action using other tools that ";
+
+const blockedCases = [
+  ['a blocked tool invalidates the run',
+   [{name: M + 'run_commerce_query', id: '1', input: {}}, {name: 'Bash', id: '2', input: {}}],
+   [{id: '1', isError: false, preview: DENIAL}], [], 'INVALID'],
+  ['an unblocked run is still scored normally',
+   [{name: M + 'run_commerce_query', id: '1', input: {}}],
+   [{id: '1', isError: false, preview: '{"data":{"productSearch":{"total_count":30}}}'}], [], 'ok'],
+];
+for (const [label, calls, results, said, want] of blockedCases) {
+  const s = score(calls, results, said, ['run_commerce_query']);
+  const ok = s.diagnosis.startsWith(want);
+  ok ? pass++ : fail++;
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(34)} ${s.outcome.padEnd(7)} ${s.diagnosis.slice(0, 62)}`);
+}
+
+console.log(`\n  ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
 

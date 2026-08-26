@@ -191,12 +191,27 @@ describe('run_commerce_query', () => {
         expect(init.headers['Magento-Environment-Id']).toBe('env-1');
     });
 
-    it('lets the caller target a specific endpoint', async () => {
+    it('routes a catalogService request to the single ACCS endpoint instead of refusing', async () => {
+        // Asking for the catalog service is the OBVIOUS read of "how many products
+        // are in the catalog", and on ACCS it is correct — one endpoint serves
+        // both. The first version answered "this project has no catalogService
+        // endpoint": true of the name, false of the capability. An agent hit that
+        // on 2026-08-26 and spent a round trip recovering from a non-error.
         const s = serve();
-        const text = await s.raw({ query: '{ x }', endpoint: 'catalogService' });
-        // ACCS has no separate Catalog Service endpoint — say so rather than
-        // silently querying the wrong one.
-        expect(text).toMatch(/catalogService/i);
+        await s.json({ query: '{ productSearch { total_count } }', endpoint: 'catalogService' });
+
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe('https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql');
+        expect(init.headers['Magento-Website-Code']).toBe('bodea');
+    });
+
+    it('still refuses an endpoint the project genuinely does not have', async () => {
+        // The fallback is specific to catalogService-on-one-endpoint. A mesh that
+        // was never deployed is a real absence and must still be named.
+        const s = serve();
+        const text = await s.raw({ query: '{ x }', endpoint: 'mesh' });
+        expect(text).toMatch(/no `mesh` endpoint/i);
+        expect(text).toMatch(/commerceGraphQl/);
         expect(fetchMock).not.toHaveBeenCalled();
     });
 

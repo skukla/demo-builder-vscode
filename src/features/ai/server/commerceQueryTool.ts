@@ -131,9 +131,27 @@ export function registerCommerceQueryTool(
             // site does must hit the same endpoint, and `storefrontUses` is already
             // the answer to that.
             const requested: EndpointKey | undefined = args?.endpoint;
-            const chosen: EndpointKey =
+            let chosen: EndpointKey =
                 requested ??
                 (facts.storefrontUses === 'none' ? 'commerceGraphQl' : facts.storefrontUses);
+
+            // Asking for `catalogService` on ACCS is CORRECT, not a mistake.
+            //
+            // ACCS serves Commerce Core and Catalog Service from one endpoint, so
+            // there is no separate `catalogService` to name — and the first version
+            // answered "this project has no catalogService endpoint", which is true
+            // of the NAME and false of the capability. Measured 2026-08-26: an agent
+            // asked for the catalog service (the obvious read of "how many products
+            // are in the catalog"), was refused, and spent a round trip recovering
+            // from an error that should never have been one.
+            //
+            // Same shape as the header rule, and I fixed that one and not this one:
+            // route by what an endpoint SERVES, not by what it is called.
+            if (chosen === 'catalogService' && !facts.endpoints.catalogService
+                && facts.endpoints.commerceGraphQl) {
+                chosen = 'commerceGraphQl';
+            }
+
             const url = facts.endpoints[chosen];
             if (!url) {
                 const have = Object.keys(facts.endpoints);

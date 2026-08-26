@@ -41,4 +41,5 @@ list_stacks
 list_workspaces
 read_page
 read_published_page
+run_commerce_query
 verify_ai_setup

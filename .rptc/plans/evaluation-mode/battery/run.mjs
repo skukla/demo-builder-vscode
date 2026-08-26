@@ -269,7 +269,7 @@ function runOnce(prompt) {
             isError: result?.is_error ?? null,
         };
         appendFileSync(OUT, JSON.stringify(row) + '\n');
-        const MARK = { hit: 'HIT   ', around: 'AROUND', miss: 'MISS  ' }[s.outcome];
+        const MARK = { hit: 'HIT   ', around: 'AROUND', miss: 'MISS  ', invalid: 'INVALID' }[s.outcome];
         console.log(
             `${task.padEnd(18)} ${MARK} ${s.diagnosis}\n` +
             `    want: ${expect.join(' | ')}\n` +
