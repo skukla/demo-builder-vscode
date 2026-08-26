@@ -45,9 +45,16 @@ The extension already knows. `get_auth_status` reports
 - **Should the title say what state you are in?** A palette entry reading
   "Demo Builder: Sign in to Adobe" is fine, but the useful version knows you are
   already signed in and for how long.
-- **GitHub is the same shape and also missing** (`github-oauth`), as is DA.live
-  (`EDS-9`). Three commands or one "Sign in…" picker is a real choice, not an
-  implementation detail — a picker is one palette entry and one more keystroke;
-  three entries are discoverable by typing the provider's name.
+## Two entries, not a picker — settled 2026-08-26
+
+**GitHub is NOT in scope**, and that decided it. GitHub auth goes through
+`vscode.authentication.getSession` (`edsGitHubHandlers.ts:232`), so VS Code owns
+the flow and prompts on demand — there is nothing for us to contribute. That
+leaves Adobe and DA.live (`EDS-9`), and at two providers a picker costs a
+keystroke and hides them: you would type "sign in" and then choose, instead of
+typing "adobe" and landing on it.
+
+So: one command each. Revisit only if a third provider appears that VS Code does
+not already handle, and none is expected.
 
 Filed 2026-08-26.

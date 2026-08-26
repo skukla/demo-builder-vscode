@@ -40,10 +40,11 @@ browser.
 | `get_auth_status` | `dalive.authenticated` and `orgName` — the poll target |
 | `open-dalive-login` | An existing message the tool deliberately bypasses; check why before reusing it |
 
-## Worth deciding while building
+## Its own entry — settled 2026-08-26
 
-Whether this is its own palette entry or one branch of a shared "Sign in…"
-picker — see `PL-5`, where the same question is open. Decide once for all three
-providers rather than twice.
+A shared "Sign in…" picker was considered and dropped. GitHub is out of scope
+entirely (VS Code owns it via `vscode.authentication.getSession`), so there are
+only two providers, and at two a picker costs a keystroke and hides them both.
+One command each. See `PL-5`.
 
 Filed 2026-08-26.
