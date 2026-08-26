@@ -17,7 +17,25 @@ measurement can only compare against itself.
 | `prompts.json` | The battery. Each prompt declares the tool that SHOULD answer it. |
 | `run.mjs` | Runs every prompt once and scores what the agent actually reached for. |
 | `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info`. |
-| `results.jsonl` | Written by a run: one row per prompt, with the full route. |
+| `results/<utc>.jsonl` | One immutable file per run: a row per prompt, with the full route. |
+| `results/<utc>.meta.json` | Which build was serving, prompt count, cache state. |
+| `score.test.mjs` | Drives all six diagnoses with fabricated transcripts. No agent runs. |
+
+## Results are never overwritten
+
+Each run writes `results/<utc-timestamp>.jsonl` and refuses to clobber an
+existing one. The first version truncated a single `results.jsonl` on startup, so
+running the "after" deleted the "before" — and before-versus-after is the only
+thing this battery is for.
+
+Two things are recorded beside every run, because without them a number cannot be
+compared to anything:
+
+- **Which build was serving.** Read live from `mcp-live-probe`. The running host
+  is routinely many commits behind the checkout — it was 22 behind during the
+  first run.
+- **Cache state**, from `BATTERY_CACHE`. Declared, never inferred: cache alone
+  swung one prompt 55,236 → 8,959 in a prior measurement.
 
 ## The idea
 

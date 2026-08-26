@@ -1,0 +1,8 @@
+{
+  "startedAt": "2026-08-26T12-19-00Z",
+  "serving": "feature/evaluation-mode-dry-run@a9d99b76b+ built 2026-08-26T03:18:24.720Z",
+  "promptCount": 10,
+  "allowlist": 46,
+  "cache": "unspecified",
+  "note": "The first run. Filename time reconstructed from the session, not recorded by the runner \u2014 that is the bug this fixes."
+}

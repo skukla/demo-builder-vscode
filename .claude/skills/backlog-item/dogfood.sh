@@ -22,7 +22,8 @@
 
 set -uo pipefail
 
-TOOL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/backlog.mjs"
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+TOOL_SRC="$(dirname "$SELF")/backlog.mjs"
 REAL_BACKLOG="${1:-.rptc/backlog}"
 
 if [[ ! -f "$TOOL_SRC" ]]; then echo "no backlog.mjs beside this script"; exit 1; fi
@@ -34,6 +35,29 @@ mkdir -p "$SANDBOX/.rptc/backlog" "$SANDBOX/.rptc/complete"
 cp -R "$REAL_BACKLOG/." "$SANDBOX/.rptc/backlog/"
 cp "$TOOL_SRC" "$SANDBOX/backlog.mjs"
 cd "$SANDBOX" || exit 1
+
+# ── Self-check: no pipefail-unsafe assertions ─────────────────────────────────
+#
+# `if cmd | grep -q x` reports the PIPELINE's worst exit code under `set -o
+# pipefail`, so a command that legitimately exits non-zero reads as "grep did not
+# match" — the harness then blames working code. It cost two false FAILs on
+# 2026-08-26 and the rules against it were already written down in CLAUDE.md.
+#
+# Prose did not stop it. This does. Use `says`/`denies`, which capture first.
+# `$SELF` is ABSOLUTE and resolved before any cd. The first version used
+# `${BASH_SOURCE[0]}` verbatim, which is relative — the script had already cd'd
+# into its sandbox, grep failed with "No such file", `|| true` swallowed it, and
+# the guard reported nothing while checking nothing. A check that cannot fail is
+# not a check, which is the rule this guard exists to enforce.
+if [[ ! -r "$SELF" ]]; then
+    echo "ABORT: cannot read $SELF to self-check"; exit 2
+fi
+UNSAFE="$(grep -nE '^[[:space:]]*if .*\| *grep -q' "$SELF" | grep -v '^[0-9]*:#' || true)"
+if [[ -n "$UNSAFE" ]]; then
+    echo "ABORT: pipefail-unsafe assertion(s) in this harness — use says/denies:"
+    echo "$UNSAFE"
+    exit 2
+fi
 
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -91,12 +115,8 @@ echo
 echo "NEXT is honest about what you can start"
 # `gated`/`blocked` mean waiting on a NAMED thing. Listing one as startable is the
 # single answer this command must never give. EDS-5 is gated in the real backlog.
-if "${T[@]}" next | grep -qE ' (gated|blocked) '; then
-  bad "gated/blocked excluded from next" "a gated or blocked item was listed as startable"
-else ok "gated/blocked excluded from next"; fi
-if "${T[@]}" next | grep -qE ' open '; then
-  bad "questions excluded from next" "an 'open' question was listed as startable"
-else ok "questions excluded from next"; fi
+denies "gated/blocked excluded from next" " gated \| blocked " -- "${T[@]}" next
+denies "questions excluded from next" " open " -- "${T[@]}" next
 
 echo
 echo "WRITE rejects invalidity WITHOUT touching disk"
@@ -121,7 +141,7 @@ exits 1    "log without text is a usage error"        -- "${T[@]}" log PL-4
 echo
 echo "WRITE succeeds when valid"
 exits 0 "set a valid value"                           -- "${T[@]}" set PL-4 value=high
-if "${T[@]}" show PL-4 | grep -q 'value   high'; then ok "  ...and it landed"; else bad "  ...and it landed" "value did not change"; fi
+says "  ...and it landed" "value   high" -- "${T[@]}" show PL-4
 exits 0 "check still passes after a valid set"        -- "${T[@]}" check
 exits 0 "log appends"                                 -- "${T[@]}" log PL-4 "dogfood line"
 if grep -q 'dogfood line' "$PL4"; then ok "  ...and it landed"; else bad "  ...and it landed" "no line appended"; fi
@@ -156,10 +176,10 @@ if i >= 0:
     nxt = t.find('\n## ', i + 5)
     p.write_text(t[:i] + (t[nxt+1:] if nxt >= 0 else ''))
 PYEOF
-if "${T[@]}" stale | grep -q 'EDS-3'; then ok "positive control: stale NAMES a logless WIP item"; else bad "positive control: stale NAMES a logless WIP item" "stale reported nothing — it cannot see"; fi
+says "positive control: stale NAMES a logless WIP item" "EDS-3" -- "${T[@]}" stale
 # Epics must NOT be reported: an epic is active because a CHILD is, and ships nothing.
 "${T[@]}" set AI-2 status=active >/dev/null 2>&1
-if "${T[@]}" stale | grep -q 'AI-2 '; then bad "epics excluded from stale" "an epic was reported"; else ok "epics excluded from stale"; fi
+denies "epics excluded from stale" "AI-2 " -- "${T[@]}" stale
 "${T[@]}" set EDS-3 status=backlog >/dev/null 2>&1
 
 echo

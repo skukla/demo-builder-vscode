@@ -12,11 +12,13 @@
  * basis for comparing against the original per-task token figures.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 
 const AB = new URL('.', import.meta.url).pathname;
 const ROOT = `${homedir()}/.demo-builder/projects`;
+const REPO = new URL('../../../..', import.meta.url).pathname;
 const ALLOWED = readFileSync(`${AB}/readonly-tools.txt`, 'utf-8').trim().split('\n')
     .map((t) => `mcp__demo-builder__${t}`);
 
@@ -58,8 +60,45 @@ if (bad.length) {
 // touches nothing. To A/B a bundle change later, copy this file and back up
 // AGENTS.md first — deliberately, not as a side effect.
 
-const OUT = `${AB}/results.jsonl`;
+// One immutable file per run. The old code opened with `writeFileSync(OUT, '')`,
+// so running the "after" DELETED the "before" — and comparing before to after is
+// the only thing this battery exists for. It is also the exact failure this
+// directory was created to prevent: its README says the original six prompts were
+// lost and that anything Evaluation Mode runs "must persist its prompts verbatim
+// alongside its results".
+//
+// The timestamp comes from the shell, not `new Date()`, so a resumed or replayed
+// run cannot silently reuse an earlier name.
+const STAMP = execFileSync('date', ['-u', '+%Y-%m-%dT%H-%M-%SZ'], { encoding: 'utf8' }).trim();
+const RUNS = `${AB}/results`;
+mkdirSync(RUNS, { recursive: true });
+const OUT = `${RUNS}/${STAMP}.jsonl`;
+if (existsSync(OUT)) {
+    console.error(`refusing to overwrite ${OUT}`);
+    process.exit(2);
+}
+
+// What the extension was actually SERVING. The running host is routinely many
+// commits behind the checkout — it was 22 behind during the first run — so a
+// result without this cannot be compared to anything.
+let serving = 'unknown';
+try {
+    serving = execFileSync('node', ['.claude/skills/mcp-live-probe/probe.mjs', 'info'],
+        { encoding: 'utf8', cwd: REPO }).split('\n')[0].replace(/^serving:\s*/, '').trim();
+} catch { /* probe unavailable — recorded as unknown rather than guessed */ }
+
+const META = {
+    startedAt: STAMP,
+    serving,
+    promptCount: PROMPTS.length,
+    allowlist: ALLOWED.length,
+    // Cache state alone swung one prompt 55,236 -> 8,959 in a prior measurement,
+    // so an unlabelled token figure is not comparable. Declared, not inferred.
+    cache: process.env.BATTERY_CACHE ?? 'unspecified',
+};
+writeFileSync(`${RUNS}/${STAMP}.meta.json`, JSON.stringify(META, null, 2) + '\n');
 writeFileSync(OUT, '');
+console.log(`run ${STAMP}\n  serving: ${serving}\n  results: ${OUT}\n`);
 
 function runOnce(prompt) {
     return new Promise((resolve) => {
