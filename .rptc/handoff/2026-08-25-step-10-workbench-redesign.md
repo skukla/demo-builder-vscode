@@ -1,5 +1,11 @@
 # Handoff — build step 10, the workbench redesign
 
+> **SUPERSEDED 2026-08-25 — step 10 was built from this handoff.** The code is
+> green and unobserved. Current position, and the four things left before it can
+> be archived, are at the foot of
+> `.rptc/plans/evaluation-mode/step-10-a-surface-you-can-read.md`. Read the plan,
+> not this file; it is kept because its trap list was accurate and paid for.
+
 **Written 2026-08-25 at the end of the session that closed the three holes.**
 The next session BUILDS; this file says where things are and what has already
 been decided, so none of it gets re-opened.

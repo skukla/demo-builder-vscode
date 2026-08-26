@@ -6,8 +6,12 @@ If starting fresh (context was cleared), re-invoke the workflow before executing
 any step:
 
 ```
-/rptc:feat "Continue Evaluation Mode. Steps 01-07 are SHIPPED and pushed on feature/evaluation-mode-dry-run. Read .rptc/handoff/2026-08-25-evaluation-mode-shipped.md FIRST - it says what exists, what is known-broken, and what to do next. The next work is the prompt-threads sub-plan; do not start a numbered step."
+/rptc:feat "Continue Evaluation Mode on feature/evaluation-mode-dry-run. Steps 01-08 and prompt-threads are SHIPPED; step 10 is BUILT BUT NOT DONE — the code is green and nobody has opened the panel. Read .rptc/plans/evaluation-mode/overview.md FIRST, then the Status section at the foot of step-10-a-surface-you-can-read.md. The next work is finishing step 10 by USING it; do not start a new numbered step."
 ```
+
+**This prompt is rewritten whenever the position changes.** It said "steps 01-07"
+and pointed at a handoff for three weeks after that stopped being true, which is
+exactly the drift the one-step-per-session rule exists to catch.
 
 ## ONE feature. Read this before the step table means anything.
 
@@ -85,9 +89,10 @@ a build log, not a menu.
 | 07 | `step-07-evaluation-history.md` | ✅ SHIPPED — "Better" survives a window reload |
 | 08 | `step-08-the-ambient-trace.md` | ✅ SHIPPED — the workbench's second mode plus `demoBuilder.showAgentTrace`; cost is stated as unavailable rather than estimated |
 | — | `prompt-threads/overview.md` | ✅ SHIPPED — history keyed by THREAD, saved prompts load back and resume, the cheapest run survives eviction, anchored threads outlive abandoned ones |
-| — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving |
-| 10 | `step-10-a-surface-you-can-read.md` | **NEXT** — the workbench reads like a clean, detailed chat, and gets a door. Raised by the owner: placement, and the look of the input and output |
-| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace. AFTER step 10 — it lands inside that surface |
+| — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving. **Part-answered 2026-08-25** — 20 of 104 tools are ever reached, measured from real sessions without running a prompt |
+| 10 | `step-10-a-surface-you-can-read.md` | 🔨 **BUILT, NOT DONE** — the transcript, the door, the deleted picker and the `Simulate` vocabulary are all in and green; **nobody has opened the panel.** Four items remain before archiving, listed at the foot of the step file |
+| 11 | `step-11-two-tools.md` | **NEXT** — the trace has TWO jobs, so it gets two surfaces: Activity narrates while you work, the Workbench analyses a prompt. Owner-decided 2026-08-25; step 10's renderer, vocabulary and doors all survive |
+| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace. AFTER step 11 — it lands inside the Workbench, whose shape step 11 settles |
 | — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
 
 ## Steps 05–09: decided 2026-08-25
@@ -110,22 +115,66 @@ The owner reviewed everything steps 01–04 chose not to build and settled it:
 **The three holes are closed** (2026-08-25) — `prompt-threads/` first because it
 rewrote storage step 07 had shipped, then step 08 on top of it.
 
-What remains, in order:
+What remains, in order — **revised 2026-08-25 after step 10 was built and the
+survey question was part-answered:**
 
-1. **Step 10 — a surface you can read.** The owner does not like the one that
-   shipped: no door, and it renders like a log. This gives the workbench a
-   sidebar tile plus a way in from a saved prompt, deletes the duplicate picker
-   it should never have grown, and rebuilds the body as a transcript with the
-   103 authored phrases it already owns and has never used.
-2. **Make the panel live.** The record is already written continuously in the
-   extension host and the panel already listens for pushes; it just refreshes on
-   demand today. Hours. Fold it into step 10's transcript rather than doing it
-   twice.
-3. **The spike is PARKED** — `.rptc/plans/own-the-chat-surface/overview.md`
+0. **Activity FIRST, then the Workbench.** Owner priority, 2026-08-26: *"the most
+   important thing I wanted was number one — I'm sick and tired of not knowing
+   what was happening when they ran a prompt."* Visibility is both the thing
+   asked for and the thing closest to done; the advice panel's value is
+   explicitly unproven, and Activity is the experiment that settles it.
+1. **Step 11 — two tools.** The owner reviewed step 10's shape and found it
+   answers the wrong question: it is a conversation viewer, and the workbench's
+   job is prompt ANALYSIS. The trace's two jobs — narrate while you work, drive a
+   rewrite afterwards — want opposite layouts, so they become two surfaces. Step
+   10's renderer, phrases, CSS, vocabulary and doors all survive; the frame around
+   them changes on one of the two. See `step-11-two-tools.md`.
+2. **Finish step 10 by USING it.** Still owed and now partly folded into 11: the
+   phase bands have never met a real trace, and same-tool grouping is the
+   strictest rule available, so the live question is whether it yields too many
+   bands. That answer applies to BOTH tools, so it is worth getting before
+   building either frame.
+3. **Make Activity live.** Deferred behind step 11's placement question — a live
+   feed into a surface nobody can see is wasted work.
+4. **The coverage battery** (`measurement/`), which is a DIFFERENT job from the
+   above and no longer waits on them. Steps 1–2 serve a producer reading a panel;
+   this serves us deciding what to build, reads the transcript rather than the
+   panel, and needs no UI at all. Evaluation Mode's dry run is what makes it able
+   to ask write prompts for the first time — see the sub-plan's "the write paths
+   are now measurable".
+5. **The 76-tool triage.** Neither announced nor used. Delete, consolidate, or
+   announce — the largest remaining piece of the backlog item, and the thing the
+   coverage battery is most likely to inform.
+6. **The spike is PARKED** — `.rptc/plans/own-the-chat-surface/overview.md`
    records the decision and what would revive it. Keeping Claude Code's terminal
    and rendering beside it was chosen deliberately, not deferred.
-4. Then, and only if the surface is being used: `measurement/`, step 09,
-   `opentelemetry/` (now a local sink, not an exporter).
+7. Then: step 09, `opentelemetry/` (now a local sink, not an exporter).
+
+**Step 09's gate has NOT moved.** It still depends on the held-out set, and the
+held-out prompts still do not exist. What changed is that the sub-plan blocking it
+now knows which groups are worth writing prompts for — and that step 09's advice
+now has a settled place to land, which is the Workbench's "MAKE IT BETTER" block.
+
+**Step 11 is now fully designed** — placement, the hand-off, the metric, and the
+layout are all settled and written down (2026-08-26). Activity becomes a BOTTOM
+PANEL view beside Problems and Output: it costs height rather than width, and
+width is the one thing the Claude terminal cannot spare, since it is a tab in the
+active editor group. Almost everything is reuse — the trace view, the renderer,
+the data and the provider pattern all exist; what is new is a `package.json` view
+container, a provider modelled on `SidebarProvider`, and a bundle entry.
+
+The real work in that half is **making it live**, which the parked chat decision
+already named as the one missing piece and which this plan has carried as "hours,
+not days" since 2026-08-25.
+
+**A SECOND open question, deliberately kept out of step 11:** the ambient dry-run
+switch. It makes an ordinary chat safe and does nothing for prompt writing, so it
+belongs to neither tool. Today it is a status-bar item that is permanently
+visible in both states — because the control had nowhere else to live, which is
+the tail wagging the dog. Its honest user story is "a safe CONVERSATION, not a
+safe question", since the Workbench already covers the single-prompt case better.
+Unsettled: whether that story is real for producers at all, or whether the mode is
+an instrument for US and should retreat to the command palette plus an indicator.
 
 **One design rule came out of step 10's planning and governs all of it:** each
 surface does ONE thing — the Prompt Library PICKS, the terminal RUNS, the
@@ -133,11 +182,27 @@ workbench MEASURES. A proposal to fold the workbench into the library as a tab
 was made and rejected on those grounds; the library is a card-grid launcher whose
 job is pick-one-and-go, not a workspace.
 
-**The open question above all of these** is the 37-session survey's:
-`.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`. Agents in demo
-projects are barely asked to use the extension at all. More efficiency work on a
-surface nobody reaches for is the wrong target, and no amount of it changes the
-answer.
+**The open question above all of these** was the survey's:
+`.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`.
+
+**It was re-measured the same day and the headline was WRONG in a useful
+direction.** "Agents are barely asked to use the extension" does not survive
+contact with the raw transcripts — 38 of 48 sessions did call its tools. What
+survives, and is worse, is narrower: **20 of 104 tools are ever reached, and 77%
+of all calls are six orientation reads.** The surface is not ignored; it is
+enormous relative to its demand.
+
+Three consequences for this plan:
+
+- **Efficiency work is not obviously the wrong target any more** — but it should
+  aim at the six reads that carry 77% of traffic, not at the surface as a whole.
+- **A coverage gap was found and closed the same day.** The one long session of
+  real Commerce work hand-assembled 28 `curl`s because nothing answered "what is
+  this project's GraphQL endpoint". `get_commerce_endpoints` now does, and
+  `AI_CONTEXT_VERSION` 23 announces it — because the same measurement showed
+  agents overwhelmingly use the tools the bundle NAMES (15 of 104 are named).
+- **The 76 unannounced, unused tools are now the biggest open item**, and they
+  are a triage rather than a build.
 
 **One step per session** still holds, and the reason is not context — it is that
 a fresh session READS the plan instead of remembering it. Two plan-vs-reality
@@ -172,7 +237,7 @@ nobody reads until they open that sub-plan — which is after they needed it.
 |---|---|---|---|
 | A | ~~Read what a `claude_code.tool` span contains~~ **DONE 2026-08-25 — the sub-plan PROCEEDS** | `opentelemetry/` | There are no spans at all: events and metrics only. For Claude's OWN tools they carry names, sizes, durations and whether it was auto-approved — the set our recorder is blind to. Our tools arrive anonymised as `mcp_tool`, so it complements the recorder rather than replacing it. And we need a SINK, not an exporter: Claude Code already emits everything. Record: `.rptc/research/claude-code-telemetry/` |
 | B | ~~Log the client capabilities and read whether Claude Code declares `elicitation`~~ **DONE 2026-08-25** | step 06 | It declares `elicitation: { form: {} }` and answers the request; headless it returns `cancel` in ~5ms with no prompt shown. A follow-on — does an INTERACTIVE session render a usable prompt — is PARKED, because the design stopped depending on it. Record: `.rptc/research/consent-in-the-chat/` |
-| C | Decide what to do about the tool surface barely being used | nothing here — it is bigger than this plan | Filed as a backlog item; see `2026-08-25-agents-barely-use-the-tool-surface.md` |
+| C | Decide what to do about the tool surface barely being used | nothing here — it is bigger than this plan | Filed as a backlog item; see `2026-08-25-agents-barely-use-the-tool-surface.md`. **Part-answered 2026-08-25**: re-measured (20 of 104 reached), one coverage gap closed (`get_commerce_endpoints` + `AI_CONTEXT_VERSION` 23). The 76 neither-announced-nor-used tools remain |
 
 Both are done. Each took under an hour and each changed the work it gated — A
 turned the telemetry sub-plan from "instrument our own spans" into "receive what
@@ -317,6 +382,14 @@ recorder, so the two halves join without parsing anything.
 **Report cost in dollars, not tokens.** `total_cost_usd` is in the output and
 "$0.21" means something to a demo builder where "47,550 tokens" does not. Show
 tokens on expand, next to the tool names.
+
+> **SUPERSEDED 2026-08-26 — the metric is TOKENS, not dollars.** Dollars measure
+> OUR cost; tokens measure the producer's remaining ability to work, and a quota
+> that runs out costs them the afternoon. A probe also showed the premise was
+> wrong: 33,819 tokens to answer "pong", of which the prompt was 10 — wording is
+> not the lever, ROUND TRIPS are. Full reasoning and the replacement headline:
+> `step-11-two-tools.md`, "The metric changes".
+
 
 **Door 1 — the agent, on the user's behalf.** An MCP tool
 `evaluate_prompt({ prompt, runs? })`, so a user can say *"evaluate this prompt"*

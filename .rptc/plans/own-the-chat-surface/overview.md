@@ -1,5 +1,44 @@
 # Spike — should Demo Builder render its own chat?
 
+**Status: SPIKE RUN 2026-08-26.** The owner reopened the decision and the spike
+executed. **All four unknowns are answered — see
+`.rptc/research/own-the-chat-surface/spike.md`.** Three pass outright; the fourth
+confirms that our tools must be pre-trusted at the permission card or a producer
+is asked twice.
+
+The owner then asked for everything spikeable, and eleven findings came back.
+**Three of the four cost items were overstated and one capability set was
+undercounted:**
+
+- **Slash commands mostly WORK.** `/model` reads AND sets, `/cost`, `/context`,
+  `/clear`, `/mcp`, `/compact`, `/doctor` all function; the five that do not
+  answer one clear sentence rather than silently no-op. `/login` is the only
+  serious loss.
+- **Interrupt works** — acknowledged, and it aborts the turn.
+- **`set_model` and `set_permission_mode` work at RUNTIME**, so a model picker and
+  a mode switch are ours to build natively.
+- **`initialize` returns a whole client's metadata** — 48 commands with
+  descriptions, 5 models with display names, agents, output styles, the account's
+  plan, the current permission mode.
+- **Permission cards are effect-based and QUIET** — reads and in-cwd Bash pass
+  free; only writes and out-of-cwd paths card.
+- **The stream shows EVERY tool call**, carded or not — which is what would make
+  an agent reaching for `curl` visible.
+- Plus `permission_suggestions` (a card's buttons, pre-computed) and
+  `rate_limit_event` (quota utilisation — the number step 11 rests on, and which
+  that step wrongly recorded as uncomputable).
+
+**The risk moved from "can we?" to "should we build on an undocumented API?"**
+`--permission-prompt-tool` is absent from `claude --help`, and the control
+protocol around it is undocumented. That is the standing cost now, not
+feasibility.
+
+**Still not decided.** The spike answered feasibility; the cost is the terminal's
+own affordances, and that remains the owner's judgement. The original parking
+note follows, unchanged.
+
+---
+
 **Status: PARKED 2026-08-25, the day it was written.** Do not run it without
 re-opening the decision below.
 

@@ -20,7 +20,15 @@ It is wrong for three questions the recorder cannot answer:
 - What did agents do across a WEEK, not a session?
 - Is the tool surface getting better or worse for everyone, not for whoever ran
   the battery today?
-- Which tools does nobody ever call?
+- ~~Which tools does nobody ever call?~~ **ANSWERED WITHOUT THIS, 2026-08-25.**
+  Claude Code's own session transcripts (`~/.claude/projects/**/*.jsonl`) already
+  record every `tool_use` block, across every session, durably, on disk. Counting
+  them gave "20 of 104 tools are ever reached" in one script and no
+  infrastructure. That weakens the case for this sub-plan rather than killing it:
+  transcripts cover ONE machine's sessions and only where Claude Code is the
+  client, so the cross-user question stands. But the cheapest version of the
+  headline question is a `jsonl` read, and this sub-plan should not be started
+  without saying what it adds beyond one.
 
 **It does not replace the recorder.** The workbench needs a live, in-process
 trace with no collector in the path. This is the durable half; keep both, and be

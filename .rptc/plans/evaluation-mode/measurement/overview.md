@@ -3,7 +3,10 @@
 **Parent:** `.rptc/plans/evaluation-mode/` (steps 01–09).
 **Blocks:** step 09 — suggestions written by Claude must not be tuned on the
 prompts they are judged by.
-**Status:** planned, not started.
+**Status:** planned, not started — but PART OF ITS QUESTION IS ANSWERED. A
+2026-08-25 re-measurement of 48 real sessions established which tools agents
+actually reach (20 of 104) without running a single battery prompt. See "What
+agents ACTUALLY reach" below; it changes which prompts are worth writing.
 
 ## Why this is a SUB-PLAN and not a step
 
@@ -177,6 +180,60 @@ one prompt in the battery, and the split says which set it goes in.
 The five existing tuning prompts cover **Find my way around**, **Sign in** and
 **Sample data**. Everything else is currently unmeasured — which is the concrete
 gap this sub-plan closes.
+
+### What agents ACTUALLY reach, measured 2026-08-25
+
+Counted from 48 real sessions' `tool_use` blocks, not from the asks. This is the
+demand side of the table above, and it is lopsided:
+
+- **20 of 104 tools are ever called.** 76 are neither announced nor used.
+- **77% of all calls are six orientation reads** — `get_current_project`,
+  `get_project_urls`, `get_project`, `get_auth_status`, `list_projects`,
+  `get_project_status`.
+- Everything that DOES something totals ~13 calls across 48 sessions.
+
+Mapped onto the task map: **Find my way around** is almost the entire measured
+demand. **Run the demo**, **Mesh & integrations** and **Storefront & content**
+appear once or twice each. **Blocks**, **Store structure**, **Config & settings**
+and **AI bundle** appear not at all.
+
+Full numbers and their caveats:
+`.rptc/backlog/2026-08-25-agents-barely-use-the-tool-surface.md`.
+
+**This changes what the battery is FOR.** A battery of orientation prompts would
+measure the part of the surface that already works. The prompts that need writing
+are the ones for the groups nobody reaches — because "the agent never found the
+tool and used Bash instead" is a result, and today it is invisible.
+
+### The write paths are now measurable — this is the unlock
+
+`battery/run.mjs` restricts itself to 43 read-only tools and talks to the ORDINARY
+MCP server, so a write prompt would do real work. That is why every existing
+prompt is a question rather than a task, and it is a limitation of the runner, not
+of what we want to know.
+
+**Evaluation Mode removes it.** Turn on `demoBuilder.toggleAgentDryRun` and every
+write on that same server is simulated and recorded. Drop the allowlist and the
+battery can finally ask the things the extension CLAIMS to do — "deploy the mesh",
+"republish the storefront", "set up Bodea with B2B" — and read the route the agent
+took to get there, or failed to.
+
+Two operational notes:
+
+- The window-wide toggle simulates writes for **everything in that window**,
+  including the developer's own work. That is fine for a dedicated battery window
+  and wrong for a shared one; the status bar shows `Agent dry run` while it is on.
+- Prefer the battery's transcript-based counting over `evaluate_prompt` for this.
+  `evaluate_prompt` serialises (it refuses to run two at once) and reads the
+  single in-memory recorder; the battery parses `stream-json` and therefore has
+  neither constraint.
+
+### The prerequisite that is easy to miss
+
+**A live extension host must be running** — the dry-run gate, the recorder and the
+socket all live in it. Checked 2026-08-25 and it was NOT: the socket file existed
+and answered `ECONNREFUSED`, which is a stale file with no host. F5, not a
+rebuild; `npm run compile` refreshes the bundle and starts nothing.
 
 ## Where it runs
 

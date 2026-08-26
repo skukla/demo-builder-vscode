@@ -181,3 +181,65 @@ A producer opens the workbench from the sidebar, or from a prompt they saved,
 types something, and reads what the agent would do in plain English — phases they
 can expand, a reply, and one line of numbers — without ever seeing a tool name or
 a JSON blob unless they ask for it.
+
+---
+
+## Status 2026-08-25 — BUILT, NOT DONE
+
+The code is written and green; **nobody has opened the panel.** The "Done when"
+above is a statement about what a producer sees, and that has not been observed
+once. Do not archive this step until it has.
+
+### What shipped
+
+| Piece | Where |
+|---|---|
+| Phase grouping + the words, pure and testable without React | `src/features/ai/evaluation/transcriptPhases.ts` (new) |
+| One transcript renderer, shared by both views | `src/features/ai/evaluation/ui/Transcript.tsx` (new) |
+| Verdict rebuilt as You → phases → Claude → numbers | `EvaluationVerdict.tsx` |
+| Composer moved to the bottom; the duplicate `Picker` deleted | `PromptWorkbench.tsx`, `usePromptThread.ts` |
+| Same bands in the ambient view, no speaker turns, no cost | `AgentTraceView.tsx` |
+| The agent's own reply captured off the CLI's `result` field | `promptEvaluationService.ts` |
+| The door: `Prompts ⌄` → *Pick a prompt* / *Prompt workbench* | `AiZone.tsx` + sidebar wiring |
+| Second door: `Open in workbench` on a saved prompt's kebab | `PromptCard.tsx` → `open-prompt-in-workbench` |
+| `workbench-mode` push renamed `workbench-open`, now carrying the prompt | `EvaluationWorkbench.tsx`, `webviewPayloads.ts` |
+
+Tests: 37 in the workbench suite, 25 new across `transcriptPhases`, the card and
+the sidebar. Full suite green (1,155 / 15,106), both typechecks, compile clean.
+
+### The tile decision, recorded because it was a judgement call
+
+The plan said prove three flat tiles at zoom or fall back to a menu. **It fell
+back.** By the sidebar's own derivation a seventh tile needs 596px against a
+600px wrap breakpoint — four pixels is not slack — and the "reads as three
+separate features" half of the original objection is untouched by any amount of
+height. Reversing it is about ten lines if the owner prefers the tile.
+
+While checking that, two stale claims were found and fixed: `custom-spectrum.css`
+and `sidebar/CLAUDE.md` both still derived the threshold from a `padding-top:
+80px` that was replaced by centring long ago, quoting 572px where the current
+layout measures 524px.
+
+### The vocabulary changed mid-step (owner, 2026-08-25)
+
+"Try it out" is gone from the product. The action is **Simulate** — the word every
+blocked step already used ("simulated — nothing changed"), pairing against the one
+control that does not: "Run this for real in the chat". The command palette entry
+is **Demo Builder: Prompt Workbench**.
+
+### What remains before this can be archived
+
+1. **Open it.** Reload the Extension Dev Host, open `Prompts ⌄ → Prompt
+   workbench`, simulate a prompt, and read the result. Nothing here has been seen
+   by a human.
+2. **Check the two doors** — the sidebar menu item, and `Open in workbench` on a
+   saved prompt card, which should load that prompt AND resume its history.
+3. **Verify the transcript against a REAL run.** The phase bands have only ever
+   rendered fixtures. A live run is the first time the grouping meets a real
+   trace — and same-tool grouping is deliberately the strictest rule, so the open
+   question is whether it produces too MANY bands in practice. If it does, the
+   fix is the category-label variant the plan already describes, and the label is
+   one function.
+4. **Make the panel live** (parent overview, item 2). Deferred out of this step on
+   purpose; the transcript renderer it needs now exists, so it is no longer a
+   choice between doing the rendering twice.

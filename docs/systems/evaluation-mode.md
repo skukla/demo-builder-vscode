@@ -1,7 +1,7 @@
 # Evaluation Mode
 
-Try a prompt out, see what it *would* do and what it would cost, refine it, and
-only then run it for real.
+Simulate a prompt, see what it *would* do and what it would cost, refine it,
+and only then run it for real.
 
 ## Why it exists
 
@@ -15,21 +15,54 @@ better.
 
 ## Using it
 
-**Demo Builder: Try a Prompt Out** opens the workbench. Type what you would
-normally ask, and you get back:
+The **Prompt Workbench** opens from the sidebar — **Prompts ⌄ → Prompt
+workbench** — or from **Demo Builder: Prompt Workbench** in the palette. Type
+what you would normally ask, press **Simulate**, and it reads back like a chat:
 
-> **Nothing was changed.** 8 steps, $0.24, 41s, 3 wasted.
+```
+You
+Set up Bodea with B2B
 
-Below it: what it would have changed, which steps were wasted, and suggestions
-carrying the trace fact behind each — *"It looked up which project you meant 3
-times."* Mechanical fixes apply with a click, and a second run reports the delta.
-When the prompt is right, one deliberately different button hands it to the chat
-to run for real, and another saves it to the Prompt Library.
+✓  Checking which project is open      2 steps · 1s
+✓  Checking the API mesh               3 steps · 4s
+⊘  Deploying the API mesh              1 step · 2s · simulated — nothing changed
 
-Come back tomorrow and you can pick that saved prompt straight back up: the
-workbench loads it and **resumes its history**, so the next result compares
-against the version you were happy with. "Start fresh" beside it forks a new
-thread from the same words, for when you want a clean comparison on purpose.
+Claude
+I would deploy the mesh, then add the B2B package and republish…
+
+───────────────────────────────────────────
+Nothing was changed.
+8 steps, $0.24 down from $0.31, 41s, 3 wasted.
+```
+
+Every step is the tool's own **authored phrase** from `toolNarration.ts`, never
+its name; the raw name and its argument names are there when you open a band.
+Consecutive calls to one tool fold into a single band, and a band says whether
+anything failed or was simulated **without being opened**, because that is what
+a person scans for.
+
+Below the numbers: which steps were wasted, and suggestions carrying the trace
+fact behind each — *"It looked up which project you meant 3 times."* Mechanical
+fixes apply with a click, and a second run reports the delta. When the prompt is
+right, one deliberately different button hands it to the chat to run for real,
+and another saves it to the Prompt Library.
+
+The composer sits at the BOTTOM, one box, the way a chat is laid out. The
+workbench used to open as a form — a picker, a labelled text area, a row of
+buttons, and output somewhere below — and read like a log for it.
+
+Come back tomorrow and pick that saved prompt straight back up: **Open in
+workbench** on its card in the Prompt Library loads it and **resumes its
+history**, so the next result compares against the version you were happy with.
+"Start fresh instead" in the line under the composer forks a new thread from the
+same words, for when you want a clean comparison on purpose.
+
+**The workbench has no picker of its own, deliberately.** Each surface does one
+thing: the **library PICKS**, the **terminal RUNS**, the **workbench MEASURES**.
+A saved-prompt dropdown inside the workbench duplicated the library's entire job
+and was removed; the library's card now has two destinations instead — clicking
+it launches the prompt in the terminal, and its kebab's "Open in workbench"
+sends it here.
 
 An agent can do the same on your behalf: *"evaluate this prompt"* reaches the
 `evaluate_prompt` tool, which answers a summary rather than the whole trace.
@@ -99,11 +132,27 @@ and joins the CLI's own cost figures with the trace recorded while it ran. Two
 halves answering different questions: the JSON says what it COST, the trace says
 what it DID.
 
+It also captures the run's **`result`** — the agent's own final message (verified
+2026-08-25 against the CLI, which answers a top-level `result` string beside the
+cost fields). That is what turns the workbench from a log of tool calls into a
+conversation: the phases say what it did, the reply says what it would tell you.
+It is deliberately NOT in `summariseForAgent` — unbounded prose, and an agent
+that asked how a prompt performed wants the numbers.
+
 Reached by the agent (`evaluate_prompt`), by a command, and by the workbench —
 all through this one service, so the paths cannot drift.
 
 Cost is reported in **dollars**. "$0.21" means something to a demo builder;
 "47,550 tokens" does not.
+
+**REVERSED 2026-08-26, not yet implemented (step 11).** The metric becomes
+TOKENS: dollars measure our cost, tokens measure the producer's remaining ability
+to work — they are on a quota, and losing it costs them the afternoon. A probe
+also killed the premise behind the dollars line: 33,819 tokens to answer "pong",
+of which the producer's words were 10. Wording is not the lever; ROUND TRIPS are,
+because every extra turn re-reads the whole context. The headline becomes wasted
+steps with their token consequence. See
+`.rptc/plans/evaluation-mode/step-11-two-tools.md`.
 
 ### 5. History — "better" survives a reload, and survives an EDIT
 
@@ -174,16 +223,41 @@ problem would be the worse outcome.
 
 ### 6. The workbench — the loop
 
-A webview (`features/ai/evaluation/ui/`) showing the verdict, the waste, what was
-blocked, and the trace in plain language. Running for real and saving to the
-library reuse the Prompt Library's own handlers rather than reimplementing them.
+A webview (`features/ai/evaluation/ui/`) showing the transcript, the verdict, the
+waste, and what was blocked. Running for real and saving to the library reuse the
+Prompt Library's own handlers rather than reimplementing them.
+
+**The transcript is `Transcript.tsx` over `transcriptPhases.ts`, and both views
+share it.** The grouping and the words are pure and live in
+`transcriptPhases.ts`, so the rules are testable without a panel:
+
+- A **phase** is a run of consecutive calls to the SAME tool. That is the
+  strictest useful rule, and it is chosen because it makes the label
+  unimpeachable — every call in the band is the call the phrase describes.
+  Category-level grouping would need a second vocabulary of phase labels that
+  nobody has authored; the reference (`tech-case-studio`'s
+  `transcript-groups.ts`) records that exact gap as its own worst failure.
+- The label is `narrationFor(tool)` and **never derived from the tool's name**.
+  `toolNarration.ts` exists to remove that derivation; a tool with no authored
+  phrase gets a visibly generic "Working" instead, and `toolNarration.test.ts`
+  asserts every registered tool has one, so it is defensive rather than expected.
+- A band says failed / simulated **collapsed**. "Did something go wrong" is what
+  a producer scans for, and opening eleven bands to find out is not scanning.
+- A phase spans first-call START to last-call END, so four fast calls spread over
+  a second read as the second of waiting they were.
 
 It is also where a thread is DECLARED, because it is the only surface that knows
 which one this is. `usePromptThread` owns that state:
 
-- **Pick up a saved prompt** loads its text and resumes whatever runs it has
-  here, so the next result compares against the version the producer was happy
-  with. A saved prompt with no runs here is normal, not an error.
+- **A prompt handed over** by the library's "Open in workbench" loads its text
+  and resumes whatever runs it has here, so the next result compares against the
+  version the producer was happy with. A saved prompt with no runs here is
+  normal, not an error. It arrives with the init payload on a first open and as a
+  `workbench-open` push when the panel is already there.
+- **The workbench has NO picker of its own.** One was built and removed
+  (2026-08-25): it duplicated the Prompt Library's entire job — a second, worse
+  picker beside the one that already works — and it went in because the workbench
+  was designed as if the library did not exist.
 - **Start fresh** keeps the words and drops the past — a fork. Without it the
   only way to start clean is to retype from memory, which is how history got lost
   before threads existed.
@@ -206,8 +280,16 @@ data existed and nothing showed it.
 
 `agentTraceReport.ts` shapes the recorder's contents; `agentTraceHandlers.ts`
 serves them; `AgentTraceView.tsx` renders them as the workbench's second mode.
-Two commands, one panel — the mode arrives with the init payload on a first open
-and as a push when the panel is already there.
+Two commands, one panel — the opening arrives with the init payload on a first
+open and as a `workbench-open` push when the panel is already there.
+
+**Same phase bands, and deliberately nothing else the workbench has.** It renders
+`TranscriptPhases` from the shared `Transcript.tsx`, so the two views cannot
+drift on how a tool call reads. It has no "You"/"Claude" turns, because the
+extension does not own the chat's process: there is no prompt to quote and no
+reply to show, and growing them here would mean inventing them. `SpeakerTurn` is
+a separate export the ambient view never calls, precisely so the two cannot
+quietly converge into one surface implying we know more than we do.
 
 Three things the surface has to say out loud, because all three are surprising:
 
@@ -224,7 +306,12 @@ Three things the surface has to say out loud, because all three are surprising:
 
 The full list stays in the order things happened, because that is the story. What
 is pulled out separately is the short list worth reading first — a raw dump of
-500 reads is not something anyone scans in a hurry.
+500 reads is not something anyone scans in a hurry. That short list is drawn as a
+FLAT list of steps rather than as bands: its calls are picked from across the
+whole window and are not a run of consecutive ones, so a band would claim an
+adjacency they do not have. Each row keeps the flag that put it there ("asked
+again", "slow") — without it the list is a handful of ordinary-looking calls with
+no explanation of why they were singled out.
 
 ## The two guarantees, and how they hold
 

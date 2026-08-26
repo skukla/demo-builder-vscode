@@ -408,6 +408,42 @@ Thin tools declared as data and dispatched to existing handler maps:
 | `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. The confirm-gate refusal and every result name the project (`project`), so an agent can catch a wrong current-project pointer before confirming. |
 | `apply_updates` | `applyUpdatesTool.ts` | Check (no confirm) / apply (`confirm:true`) across all update categories. |
 
+### Commerce connection — `commerceEndpointsTool.ts`
+| Tool | File | Notes |
+|---|---|---|
+| `get_commerce_endpoints` | `commerceEndpointsTool.ts` | Where to send a Commerce query and what to send with it: the backend's GraphQL endpoint, Catalog Service, the deployed mesh, the `Magento-*` request headers, and the store scope they select. |
+
+**Why it exists.** A survey of 48 sessions run inside demo projects (2026-08-25)
+found 77% of all tool calls answering four orientation questions, while the one
+long session of real Commerce work issued **28 `curl`s at the GraphQL endpoint
+with the headers typed by hand**. It had to: `get_project_urls` returns places a
+BROWSER can open, `get_project_status` returns the mesh endpoint only, and
+`accsGraphqlEndpoint` appears on the surface exclusively as an INPUT
+`discover_store_structure` expects the caller to already know. The value was
+reachable only by asking `get_component_config` to read a `.env` by relative
+path — a file read, not an answer.
+
+**It returns the headers, not just the URL.** A Catalog Service query against the
+wrong store scope comes back empty *with no error*, which is the "why is phones
+empty?" the same session spent turns on. The headers come from
+`generateHeaders` — the function that writes the storefront's own `config.json` —
+so an agent and the site it is debugging cannot be querying two different stores.
+
+**Both endpoints, separately.** `extractConfigParamsFromConfigs` collapses them
+(`meshEndpoint || config[endpointKey]`), which is right for generating
+`config.json` and wrong for an agent: *"if a partner integrates with or without a
+mesh, what endpoints do they need?"* needs both, plus `storefrontUses` saying
+which one the site itself queries. The mesh value comes from `getMeshEndpoint`,
+the same accessor `get_project_status` reports through.
+
+**No secrets.** The registry marks confidential values `secret: true`; exactly two
+keys carry it (`ACCS_OAUTH_CLIENT_SECRET`, `ADOBE_COMMERCE_ADMIN_PASSWORD`) and
+neither is read by the resolvers behind this tool — asserted by a test, not
+assumed. A PaaS project's headers do carry `x-api-key`
+(`ADOBE_CATALOG_API_KEY`, `type: text`), deliberately: the same value ships in
+`config.json` to every browser that loads the storefront, and withholding it
+would break every PaaS Catalog Service call while protecting nothing.
+
 ### Cloud resources & storefront content
 | Tool | File | Notes |
 |---|---|---|
@@ -826,7 +862,7 @@ Three properties, none optional:
   dialog states the cost before it is gone. The one tool here that earns a
   dialog for spending rather than destroying.
 
-The same service backs **Demo Builder: Try a Prompt Out** in the command
+The same service backs **Demo Builder: Prompt Workbench** in the command
 palette. One implementation, because two would drift and the drifting one would
 be whichever nobody was watching.
 

@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The Prompt Workbench has a door.** The extension contributes no menus for
+  `showEvaluationWorkbench` / `showAgentTrace`, so the panel was reachable only
+  by typing a command name. The sidebar's Prompts tile becomes a menu —
+  **Pick a prompt** / **Prompt workbench** — following the Chat tile's
+  precedent, and a saved prompt's kebab gains **Open in workbench** beside its
+  launch. A third flat tile was measured and rejected: by the sidebar's own
+  derivation a seventh tile needs 596px against a 600px wrap breakpoint, and the
+  earlier third-tile attempt was withdrawn for exactly this.
+- **The bundle now ANNOUNCES that tool (`AI_CONTEXT_VERSION` 22 → 23).** A
+  "Querying Commerce" section in the generated `AGENTS.md` names
+  `get_commerce_endpoints` and warns that a Catalog Service query with the wrong
+  store scope returns an EMPTY result and no error — the "why is phones empty?"
+  failure, against a catalog that was not empty. The same survey is why: agents
+  called 20 of 104 tools, overwhelmingly the ones the bundle NAMES, so a tool
+  nobody is told about is a tool nobody calls. It points at the TOOL rather than
+  baking values in — the endpoint, the mesh and the scope all change between
+  regenerations, and a confidently stale endpoint is worse than none. Existing
+  projects pick it up on the next activation sweep.
+- **`get_commerce_endpoints` — the Commerce connection facts, as a tool.** Where
+  to send a query and what to send with it: the backend's GraphQL endpoint,
+  Catalog Service, the deployed mesh, the `Magento-*` headers and the store scope
+  they select. A survey of 48 sessions run inside demo projects found 77% of tool
+  calls answering four orientation questions while the one long session of real
+  Commerce work issued **28 hand-assembled `curl`s** — nothing on a 104-tool
+  surface answered "what is this project's GraphQL endpoint". Headers come from
+  `generateHeaders`, the same function that writes the storefront's `config.json`,
+  so an agent and the site it is debugging cannot query two different stores.
+  Reports the mesh and the direct endpoint separately, plus which one the
+  storefront uses. Returns nothing the registry marks `secret: true`, asserted by
+  a test.
+- **The agent's own reply.** The run's JSON carries a `result` string beside the
+  cost fields and it was being discarded. Capturing it is what turns the panel
+  from a log of tool calls into a conversation. Left out of the agent-facing
+  summary deliberately — unbounded prose against a bounded response.
+
+### Changed
+
+- **The workbench reads like a chat, not a log.** It rendered the trace as a
+  numbered list of RAW TOOL NAMES (`1. get_current_project — 5ms`) while
+  `toolNarration.ts` held 103 authored plain-English phrases for those exact
+  tools and neither view imported it. Now: a "You" turn, phase bands in the
+  tool's own words, a "Claude" reply, and the numbers once at the end. A phase is
+  a run of consecutive calls to ONE tool — the strictest rule, chosen so the
+  label is never wrong about what it contains — and a band says failed or
+  simulated **without being opened**. Tool names and argument names survive one
+  level down, for the reader who asks. Both views share the renderer
+  (`Transcript.tsx` over the pure `transcriptPhases.ts`) so they cannot drift.
+- **The composer moved to the bottom**, one box, and the panel's saved-prompt
+  Picker was deleted. It duplicated the Prompt Library's whole job. Each surface
+  does one thing: the library PICKS, the terminal RUNS, the workbench MEASURES.
+- **"Try it out" is gone from the product.** The action is **Simulate**, which is
+  the word every blocked step already used ("simulated — nothing changed") and
+  which pairs against the one control that does not: "Run this for real in the
+  chat". The command palette entry is now **Demo Builder: Prompt Workbench**.
+
+### Fixed
+
+- **Two stale layout claims in the sidebar.** `custom-spectrum.css` and
+  `sidebar/CLAUDE.md` both still derived the tile-wrap threshold from a
+  `padding-top: 80px` that was replaced by centring long ago, quoting 572px where
+  the current layout measures 524px. Found while checking whether a seventh tile
+  fits; the answer depended on the number being right.
+
 ## [1.0.0-beta.144] - 2026-08-25
 
 ### Added
