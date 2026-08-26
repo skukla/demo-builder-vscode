@@ -5,8 +5,15 @@ area: platform
 needs: []
 value: low
 status: backlog
+layer: G
 ---
 # Monorepo Support with Independent Release Tracking - Implementation Plan
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need — **re-measured 2026-08-23: still no repo serves two components** (4 distinct source URLs, each used once), and the plan's file map is stale: `COMPONENT_REPOS` no longer exists (repo resolution lives in `componentRepositoryResolver.ts`) and `templates/components.json` is now `src/features/components/config/components.json`. Fix the citations before executing.
 
 ## Status Tracking
 - [x] Planned

@@ -6,8 +6,15 @@ parent: AI-4
 needs: []
 value: med
 status: backlog
+layer: D
 ---
 # The Chat tile can only reach the MOST RECENT conversation
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Raised 2026-08-25 alongside the disk-footprint item, and connected to it: those transcripts are 1.7 GB precisely because they are resumable, and a producer can reach exactly one of them.** The Chat tile launches `claude --continue`, which resumes the most recent conversation in that directory (`openInClaude.ts:253`); the projects root alone holds **45 resumable conversations**. A demo build spans days — set up Monday, fight the storefront Wednesday, fix the catalog Friday — and each is its own conversation with its own context, of which only the last is reachable. The codebase already half-knows: `openInClaude.ts:227` notes a session "still reaches" via `claude --resume` after `--continue` stops landing on it, and nothing surfaces that. **The cheap answer is that Claude Code already ships the picker**: `claude --resume` with no value opens an interactive, searchable one, so this is a launch-flag change rather than a session browser — resist building our own, which would be a second list to keep correct. Goes in the existing `fresh` affordance rather than a new tile (`AiZone.tsx:11` records why continuing and starting fresh share one control; picking a past chat is a third way to do the same thing). Check FIRST that the native TUI picker renders in an editor-area terminal — that decides the whole shape — plus the cold-start guard and whether `--resume` takes a launch-argument prompt the way `--continue` does. Filed 2026-08-25.
 
 ## Provenance
 

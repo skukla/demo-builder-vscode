@@ -6,8 +6,15 @@ parent: AI-4
 needs: []
 value: med
 status: backlog
+layer: F
 ---
 # Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
 **Status:** Draft. UX decisions locked in below; implementation sized but not started. Scope expanded from "detect missing Claude CLI" to "make the AI engine path engine-aware so future Codex support drops in via a config map," following confirmation from the project owner.
 **Filed:** 2026-06-11

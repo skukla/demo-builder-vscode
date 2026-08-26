@@ -5,8 +5,15 @@ area: eds
 needs: []
 value: low
 status: backlog
+layer: F
 ---
 # Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
 
 **Created:** 2026-06-18 · **Research:** `.rptc/research/hybrid-storefront-model/research.md`.
 **Scope (PM):** canonical-boilerplate packages only (`b2b`, `citisignal-b2b`, `citisignal` EDS);

@@ -5,8 +5,15 @@ area: eds
 needs: []
 value: low
 status: backlog
+layer: F
 ---
 # Rebuild BuildRight on the thin-layer model
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
 
 > **DECIDED 2026-06-10 (owner)**: BuildRight will be **completely rebuilt** — option 1 below. The retain/replace options are off the table, and no audit of the existing `buildright-eds` codebase is needed (it's a from-scratch rebuild, not a migration). Remaining work when picked up: express BuildRight as a Demo Builder package on canonical — branded block library + brand CSS + patches (if any) + DA content — using the ADR-006 mechanisms. Still gated on the ADR-006 implementation (code-patches mechanism + LKG gate) existing first. The old repo archives when the rebuild ships.
 

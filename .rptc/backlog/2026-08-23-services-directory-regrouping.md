@@ -5,8 +5,15 @@ area: platform
 needs: []
 value: low
 status: backlog
+layer: G
 ---
 # Regroup crowded service directories into subfolders — where measurement says so
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Measured 2026-08-23: `features/eds/services` holds **95 direct files** in clear name families (15 `daLive*`, 8 `helix*`, 7 `github*`, 7 `eds*`/reset, 6 `storefront*`, 6 `config*`) — the one strong regrouping candidate in the repo. Everything else 38 files or under with a working naming convention; the item records the full table and why each is left alone (`ai/server`'s suffix convention, `core/ui`'s kind-grouping, `core/utils`' by-design grab-bag). Subfolders under `services/` are existing house practice (`prerequisites/services/installation/`, `dashboard/services/onOpenChecks/`). Cost measured for eds/services alone: ~700 alias imports, 232 sibling imports, **308 literal `jest.mock` path strings tsc can't check**, a 117-file test-mirror move, 13+ citing docs. Execute right after a release cut with no EDS branch in flight; full gate + `rptc-hygiene-scan` after. Discoverability only — no coupling changes. Filed 2026-08-23.
 
 > **✅ ROUND 3 EXECUTED same day — the configService deferral OVERRIDDEN by
 > user decision** ("just do it; the datapack branch pays the rebase"). The

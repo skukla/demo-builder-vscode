@@ -6,8 +6,15 @@ parent: AI-1
 needs: []
 value: high
 status: backlog
+layer: B
 ---
 # The other half of suggestions: finding holes in OUR tools
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Planned in step 04 of Evaluation Mode, never built, and not carried into steps 09/10/11 either.** That step said suggestions come in two kinds — *"prompt-level, applied with a click; and **surface-level, for us**"* — and only the prompt-level half shipped (`evaluationSuggestions.ts`, three deterministic rules). Raised by the owner 2026-08-26: *"I thought I could use what we're building to discover holes and gaps in my tools, skills, hooks."* **Worth more than it looks, because it was done BY HAND on 2026-08-25 and it worked**: a manual pass over 48 real sessions found agents reach 20 of 105 tools, that 77% of calls are six orientation reads, and that the one stretch of real Commerce work hand-assembled **28 `curl`s** because nothing answered "what is this project's GraphQL endpoint" — which produced `get_commerce_endpoints`, now shipped. This item is about not doing that by hand. **It is a SECOND TOOL, not a section of the producer's panel** — burying "for us" findings in a surface a producer reads is how it got lost the first time. Three shapes worth finding, only the first covered today: a tool nobody calls (76 of 105); **a job agents do WITHOUT us** (an agent reaching for Bash where a tool should exist is the strongest signal of a gap, and nothing looks for it); and a tool that succeeds while doing nothing. Build on: `ai-coverage-scan` (static supply side), the recorder (runtime), Claude Code's transcripts (durable — they answer "which tools does nobody call?" with one script, a question `opentelemetry/` claims for itself), and the `measurement/` battery. Open: command, skill, or release-cut report; and which sources it reads. Filed 2026-08-26.
 
 ## It was planned, and it fell through
 

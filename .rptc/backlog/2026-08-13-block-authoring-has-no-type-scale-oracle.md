@@ -5,8 +5,25 @@ area: eds
 needs: []
 value: med
 status: gated
+layer: C
 ---
 # Block authoring has no oracle — the type scale exists and nothing points at it
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
 
 > ## TIER 1 SHIPPED 2026-08-23 — now gated on field feedback
 >
@@ -25,7 +42,6 @@ status: gated
 > check whether its CSS uses `var(--type-…)`. If the complaint recurs WITH the
 > guidance in place, tier 2 (a Playwright `getComputedStyle` check) is the next
 > step, bounded so it does not become a fourth iteration loop.
-
 ## Shipped so far
 
 - 2026-08-23  Tier 1 — `commerce-block-mapper` maps a scraped type scale onto the shipped properties

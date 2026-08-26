@@ -6,8 +6,17 @@ parent: AI-2
 needs: []
 value: low
 status: spiked
+layer: E
 ---
 # Own the chat surface — render Claude Code's stream in our own UI
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**ACTIVE 2026-08-25 — a spike is planned at [`.rptc/plans/own-the-chat-surface/overview.md`](../plans/own-the-chat-surface/overview.md).** Read the plan first; this entry is kept for the correction it records and the prior art it names. The prerequisite it called for ("emit MCP progress from `withToolLogging`") SHIPPED with Evaluation Mode.
+
+**Filed to record a correction, not to argue for the work.** A producer could not tell what was running mid-task — which MCP server, which tool, which phase. Research (`.rptc/research/agent-activity-visibility/`) measured the terminal's ceiling: MCP progress notifications carry a `message` string, Claude Code supplies a progress token, and **the interactive terminal DOES render those messages live** (confirmed by running `probe-server.mjs`). So a tool can narrate itself; what it cannot control is attribution, ordering, styling, or how any other server's lines look. The correction: an earlier read said owning the chat meant abandoning Claude Code, citing ADR-004 and a billing risk, and **both were wrong** — "own the chat" was conflated with "use the Agent SDK directly", when `claude --input-format stream-json --output-format stream-json` runs a real bidirectional session against the local binary. Render the stream and Claude Code is still the engine: skills load, hooks fire (including the `aio` guard), `.mcp.json` connects, `AGENTS.md` is read so `AI_CONTEXT_VERSION` keeps working. ADR-004 chose the ENGINE, not the pixels — it rejected VS Code Chat's separate skill model and MCP transport, none of which applies here. Billing was moot twice: Adobe provides the subscriptions and the CLI path never touches an API key. Prior art is `app-builder/tech-case-studio`, whose Phase 0 spike de-risked this exact seam (streaming + permission prompts + tree-kill) and whose `ClaudeCliProvider` is the subscription-riding path; its `src/tool-call.ts` tool→view mapping is directly reusable, though it does not yet handle MCP tools (filed in that repo's backlog). Real cost is a UI, not the harness: permission cards are the hard part, and Anthropic's stream format is the standing maintenance. **Do first either way:** emit MCP progress from `withToolLogging` — small, lands now, and a prerequisite rather than a detour, since a custom UI still needs the server to send what it renders. Filed 2026-08-24.
 
 > **ACTIVE 2026-08-25.** A spike plan now exists:
 > [`.rptc/plans/own-the-chat-surface/overview.md`](../plans/own-the-chat-surface/overview.md),
@@ -15,7 +24,6 @@ status: spiked
 > first — this file is kept for the correction it records and the prior art it
 > names, and the "do this first either way" prerequisite below has SHIPPED
 > (MCP progress notifications, Evaluation Mode step 01b).
-
 ## Shipped so far
 
 - 2026-08-25  Prerequisite shipped either way — MCP progress notifications + Evaluation Mode step 01b (authored tool phrases)

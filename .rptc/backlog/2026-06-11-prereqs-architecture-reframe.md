@@ -5,8 +5,15 @@ area: prerequisites
 needs: []
 value: low
 status: backlog
+layer: F
 ---
 # Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. Unblocks the Claude CLI detection plan below. **Re-measured 2026-08-23: all five structural claims hold** — no `scope` discriminator, the schema drift (dead `groups`/`multiVersion`/`versionCheck`, missing `perNodeVersion`) is unchanged, all 5 entries still `optional: false`, the prereqs step survived the v6 wizard rebuild as step 2, and no welcome panel/walkthrough exists. The v6 rebuild touched nothing this item measures.
 
 **Status:** Backlog — research complete (2026-06-11), decisions locked, awaiting `/rptc:plan` cycle.
 **Filed:** 2026-06-11

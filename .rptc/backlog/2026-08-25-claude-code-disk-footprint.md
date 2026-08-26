@@ -5,8 +5,15 @@ area: platform
 needs: []
 value: low
 status: backlog
+layer: G
 ---
 # Claude Code's storage grows ~4 GB a year, and nothing reports it
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Measured 2026-08-25 while checking whether Evaluation Mode needed a data-management surface — it does not (78 KB per project, capped on two axes, asserted by a test), and the measurement found this instead.** On the owner's machine five months in: `~/.claude` is **2.2 GB**, of which 1.7 GB is session transcripts (323 files, oldest 24 March, nothing deletes any of it), plus 371 MB of plugins and 160 MB of file-history. Growth from the oldest and newest transcript dates: **11 MB/day → 331 MB/month → ~4 GB/year**, transcripts alone. Not our data, but it accumulates from work done THROUGH this extension, it sits beside our own storage where a producer cannot tell whose is whose, and we already own the surface that would say so — "Demo Builder: Diagnostics" reports on the environment and this is environment. **Build a REPORT, not a manager**, and the rule is deliberate: a cleanup button is the obvious next idea and is more dangerous than it looks, because transcripts are how `--continue` works (`claudeSessionStore.hasConversation` probes for a `.jsonl` to decide whether the Chat tile can resume), so deleting the wrong file breaks resuming silently and the producer experiences it as "my chat forgot everything". Report total, largest subdirectories, oldest transcript, and the path; let them run `rm` themselves. Compute on demand — do NOT walk a 2.2 GB tree on activation (the `buildStampUi.ts` precedent is explicit that the expensive walk is the on-demand half). Filed 2026-08-25.
 
 ## Provenance
 

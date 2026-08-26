@@ -5,8 +5,15 @@ area: eds
 needs: []
 value: low
 status: backlog
+layer: G
 ---
 # The two EDS service cards are one shell rendered twice
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Found by the 2026-08-25 codebase sweep, and the only real extraction candidate it produced.** TWO independent scans point at the same pair — jscpd on two clones totalling 27 lines (`DaLiveServiceCard.tsx [71:8-85:12]` ↔ `GitHubServiceCard.tsx [62:2-76:5]`, and `[239:8-252:2]` ↔ `[123:16-136:8]`), and the component-extraction scan via the `status-text` group. Both files were opened: it is the same connected/error/setup state machine written twice, with only labels and callbacks differing (`verifiedOrg` vs `user.login`, `onSetup` vs `onConnect`). A fix to one card's error state does not reach the other. **Not urgent and deliberately not fixed when found** — it is in `features/eds/ui/components/`, which the work that ran the sweep never opened, no divergent fix is on record yet (so this is Rule of Three, not the extract-at-two override), and both cards work. **The right moment is the next time anyone edits either card**, when the file is already open and its behaviour already in the reader's head. Success test: both existing suites pass UNCHANGED — a behaviour-preserving refactor proves itself by not moving its tests. Filed 2026-08-25.
 
 ## Provenance
 

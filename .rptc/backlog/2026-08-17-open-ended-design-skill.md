@@ -6,8 +6,15 @@ parent: AI-1
 needs: []
 value: low
 status: backlog
+layer: C
 ---
 # An open-ended design skill — for a pass that adds design skills, not for phase 5
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Deferred out of phase 5 by decision — belongs to a pass that ADDS design skills, not one that corrected existing ones.** Every generated skill today answers "how do I do this named thing", or in `diagnose-demo`'s case "how do I look"; none answers "how do I approach a demo nobody gave me a recipe for". Whether that gap is real is genuinely open, and the item exists mainly to stop the next person inheriting a claim that does not hold: the overview's "21 skills, all task-shaped" rests on a count measured as **14**, and the conclusion was never independently checked. Also unresolved by design: skill vs an `AGENTS.md` section — a skill is best at "here is the sequence and its traps", and an open-ended brief has no sequence. Either way it is the first deliberate exception to the 2026-07-11 "no new generated skills unless multi-step-with-traps" constraint, so it needs an argument rather than a gap. Filed 2026-08-17.
 
 **Provenance.** Deferred out of phase 5 of `.rptc/complete/ai-surface/` by user decision,
 2026-08-17: this belongs to a pass that ADDS new design skills, not to a pass that

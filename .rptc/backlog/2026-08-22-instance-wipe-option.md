@@ -5,8 +5,15 @@ area: data-installer
 needs: []
 value: med
 status: backlog
+layer: F
 ---
 # Instance wipe option — remove as much data as the service allows
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**FULLY DESIGNED 2026-08-23, then TABLED the same day by decision — bugfixes take priority.** The complete design lives in [`../research/instance-wipe-api-audit/research.md`](../research/instance-wipe-api-audit/research.md): the ACCS per-entity removability matrix (spec-diff of the full published REST surface, 489 ops / 51 DELETEs), the four load-bearing verdicts (App Builder cannot exceed the public API — sourced; website deletion does not remove orders; sales documents are the permanent floor; instance replacement via support ticket, credits returned, is the true clean slate), the three-phase wipe (pack discovery via the activity endpoint's instance filter — live-verified cross-pack — then a REST residue sweep, then order-cancel hygiene), the assisted-manual-step layer (instruct with exact codes → admin deep link → verify by API re-read with auto-poll; ACCS admin's store-structure delete buttons confirmed first-hand), and the three-surface communication model (Business Structure inline card, dashboard remedy-dot on the Datapacks tile, Instance Hygiene panel with a measured "Demo ready" verdict; read-only `check_instance_hygiene` MCP tool). First build slice when picked up: the headless hygiene service + read-only probes — every surface hangs off it. Service is frozen (owner retired, questions-only); the design uses only capabilities proven live. Filed 2026-08-22; designed and tabled 2026-08-23.
 
 **Filed:** 2026-08-22, as the successor to
 [`../complete/2026-08-17-what-does-a-datapack-removal-actually-delete.md`](../complete/2026-08-17-what-does-a-datapack-removal-actually-delete.md).
