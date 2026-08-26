@@ -21,6 +21,44 @@ measurement can only compare against itself.
 | `results/<utc>.meta.json` | Which build was serving, prompt count, cache state. |
 | `score.test.mjs` | Drives all six diagnoses with fabricated transcripts. No agent runs. |
 
+## The allowlist is GENERATED, never hand-kept
+
+```bash
+node enumerate-tools.mjs ~/.demo-builder/projects/bodea/.mcp.json   # 163 MCP tools
+node verify-coverage.mjs                                            # prove nothing is missing
+```
+
+The allowlist used to be a file of 45 read-only tool names. That drifts, and it
+drifts **silently**: a blocked tool and a missing tool produce identical routes,
+so the battery reports "the agent went around us" when the truth is "we refused
+it". `get_commerce_endpoints` and `run_commerce_query` both shipped and were
+blocked; the second produced a `NOT-FINDABLE` verdict for a tool the agent had
+found on first exposure.
+
+Now the four servers are asked at run time. A tool that shipped an hour ago is
+included; one that was deleted is not. **A server that fails to answer ABORTS the
+run** rather than contributing nothing, because silently contributing nothing is
+exactly how the list ends up short.
+
+## Claude's own tools are gated too, and inconsistently
+
+Measured, not assumed — the assumption was wrong:
+
+| tool | listed? | available? |
+|---|---|---|
+| `Read` `Write` `Edit` `ToolSearch` | no | **yes** — always on |
+| `Glob` `Grep` | no | **no** — refused until named |
+| `TodoWrite` | yes | **no** — absent in headless `-p` regardless |
+
+An agent denied `Glob` falls back to the shell without saying so, which then
+reads as "went around us". So `NATIVE_TOOLS` in `run.mjs` names them explicitly.
+
+**This is the one place drift can still enter**, because natives have no
+`tools/list`. `verify-coverage.mjs` checks the list against every native tool
+ever OBSERVED in a recorded run — which cannot prove completeness, only that
+nothing seen is missing. It says so in its own output rather than printing a
+reassuring tick.
+
 ## The agent gets the surface a real project has
 
 Four MCP servers, not one: `demo-builder`, `commerce-extensibility`, `playwright`,

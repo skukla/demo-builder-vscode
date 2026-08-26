@@ -59,26 +59,50 @@ function restoreMemory(snap) {
     rmSync(snap, { recursive: true, force: true });
     return before !== after;
 }
-const ALLOWED = readFileSync(`${AB}/readonly-tools.txt`, 'utf-8').trim().split('\n')
-    .map((t) => `mcp__demo-builder__${t}`);
+/**
+ * THE ALLOWLIST, generated at run time. Nothing hand-maintained.
+ *
+ * It used to be a file of 45 read-only demo-builder tools. That drifts, and it
+ * drifts SILENTLY: a blocked tool and a missing tool produce identical routes, so
+ * the battery reports "the agent went around us" when the truth is "we refused
+ * it". Both `get_commerce_endpoints` and `run_commerce_query` shipped and were
+ * blocked on 2026-08-26, and the second produced a NOT-FINDABLE verdict for a
+ * tool the agent had found on first exposure.
+ *
+ * Asking the servers at run time removes the failure mode instead of managing it.
+ */
+const ALLOWED = execFileSync('node', [`${AB}/enumerate-tools.mjs`, PROJECT_MCP], { encoding: 'utf8' })
+    .trim().split('\n').filter(Boolean);
 
-// The OTHER servers a real project carries. Without these the battery measured a
-// world where our tools were the only option, so "the agent went around us" could
-// never have meant "it used Playwright instead" — and that is exactly the reading
-// AI-1b's answer depends on. Fully-qualified names, read-only only; see the file
-// for what is excluded and why.
-const OTHER = `${AB}/other-servers-readonly.txt`;
-if (existsSync(OTHER)) {
-    ALLOWED.push(...readFileSync(OTHER, 'utf-8').split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith('#')));
-}
+/**
+ * Claude's own tools, which the allowlist ALSO gates — and inconsistently.
+ *
+ * Measured 2026-08-26 rather than assumed, because the assumption was wrong:
+ * `Read`, `Write`, `Edit` and `ToolSearch` run whether listed or not, while
+ * `Glob` and `Grep` were REFUSED until named. An agent denied Glob silently falls
+ * back to the shell, which then reads as "went around us" — the same lie the MCP
+ * drift produced.
+ *
+ * There is no `tools/list` for these, so this is a hand-kept list and the one
+ * place drift can still enter. `TodoWrite` is included and is NOT available in
+ * headless `-p` at all, listed or not; that is out of our hands and recorded so
+ * the next reader does not re-test it.
+ */
+const NATIVE_TOOLS = [
+    'Bash', 'Read', 'Write', 'Edit', 'NotebookEdit',
+    'Glob', 'Grep', 'ToolSearch',
+    'WebFetch', 'WebSearch',
+    'Task', 'TodoWrite', 'ExitPlanMode',
+];
+ALLOWED.push(...NATIVE_TOOLS);
+
+
 
 // Bash is allowed ON PURPOSE. The question this battery asks is "what does the
 // agent reach for?", and the most important answer is "it went around us" — 25
 // hand-built Commerce queries and 4 hand-built page fetches in the corpus. Deny
 // Bash and every prompt is forced through our tools, which measures nothing.
-ALLOWED.push('Bash', 'WebFetch');
+
 
 // Every prompt declares the tool that SHOULD answer it. That is the whole idea:
 // we know the right route in advance, so "what did it actually use?" becomes a
