@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: built
+status: shipped
 layer: B
 ---
 # reload_window — the last manual step in the measure loop
@@ -62,3 +62,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  feat(mcp): reload_window — restart the host without leaving the socket (`82783c9eb`)
+- 2026-08-26  TESTED live 2026-08-26: serving df0179fa6 (17:14) -> d4a1caeee (17:24) with no F5. Refused without confirm; answered BEFORE tearing down its own server (250 bytes, inside the 400-byte ceiling); the response's rebind instructions were the ones actually used to wait. The fix-measure loop now runs end to end.
