@@ -1,3 +1,11 @@
+---
+id: AB-2
+kind: epic
+area: app-builder
+needs: []
+value: med
+status: backlog
+---
 # Move deliberately to a per-SC Adobe I/O project (Option 2)
 
 **Filed:** 2026-08-16, from the Data Installer credential decision.

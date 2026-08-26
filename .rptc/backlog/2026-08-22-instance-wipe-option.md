@@ -1,3 +1,11 @@
+---
+id: DI-2
+kind: feature
+area: data-installer
+needs: []
+value: med
+status: backlog
+---
 # Instance wipe option — remove as much data as the service allows
 
 **Filed:** 2026-08-22, as the successor to

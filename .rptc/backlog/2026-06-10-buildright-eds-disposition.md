@@ -1,11 +1,11 @@
 ---
-id: 2026-06-10-buildright-eds-disposition
-title: Rebuild BuildRight on the thin-layer model (disposition decided 2026-06-10)
+id: EDS-4
+kind: feature
+area: eds
+needs: []
+value: low
 status: backlog
-created: 2026-06-10
-priority: medium
 ---
-
 # Rebuild BuildRight on the thin-layer model
 
 > **DECIDED 2026-06-10 (owner)**: BuildRight will be **completely rebuilt** — option 1 below. The retain/replace options are off the table, and no audit of the existing `buildright-eds` codebase is needed (it's a from-scratch rebuild, not a migration). Remaining work when picked up: express BuildRight as a Demo Builder package on canonical — branded block library + brand CSS + patches (if any) + DA content — using the ADR-006 mechanisms. Still gated on the ADR-006 implementation (code-patches mechanism + LKG gate) existing first. The old repo archives when the rebuild ships.

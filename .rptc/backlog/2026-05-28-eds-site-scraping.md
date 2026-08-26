@@ -1,4 +1,16 @@
+---
+id: EDS-3
+kind: feature
+area: eds
+needs: []
+value: med
+status: backlog
+---
 # EDS site-scraping capability for Demo Builder
+
+## Shipped so far
+
+- Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
 
 ## Provenance
 

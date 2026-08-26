@@ -1,3 +1,11 @@
+---
+id: EDS-5
+kind: feature
+area: eds
+needs: []
+value: med
+status: gated
+---
 # Block authoring has no oracle — the type scale exists and nothing points at it
 
 > ## TIER 1 SHIPPED 2026-08-23 — now gated on field feedback
@@ -17,6 +25,12 @@
 > check whether its CSS uses `var(--type-…)`. If the complaint recurs WITH the
 > guidance in place, tier 2 (a Playwright `getComputedStyle` check) is the next
 > step, bounded so it does not become a fourth iteration loop.
+
+## Shipped so far
+
+- 2026-08-23  Tier 1 — `commerce-block-mapper` maps a scraped type scale onto the shipped properties
+
+Now gated on field feedback before Tier 2.
 
 ## Provenance
 

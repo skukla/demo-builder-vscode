@@ -1,3 +1,12 @@
+---
+id: AB-1b
+kind: feature
+area: app-builder
+parent: AB-1
+needs: AB-1
+value: low
+status: backlog
+---
 # App Builder app — app-only / no-storefront project
 
 > **Status: PARTIAL dependency on slice 1** ([spine](../complete/2026-06-17-appbuilder-app-deploy-spine.md)) —

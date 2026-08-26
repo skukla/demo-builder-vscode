@@ -1,3 +1,12 @@
+---
+id: AB-1a
+kind: feature
+area: app-builder
+parent: AB-1
+needs: AB-1
+value: low
+status: gated
+---
 # App Builder app — package-bound apps (auto-attach to a demo template)
 
 > **Status: GATED on the first real package-bound integration.** Rewritten 2026-07-09

@@ -1,3 +1,12 @@
+---
+id: AI-1f
+kind: feature
+area: ai
+parent: AI-1
+needs: []
+value: low
+status: backlog
+---
 # An open-ended design skill — for a pass that adds design skills, not for phase 5
 
 **Provenance.** Deferred out of phase 5 of `.rptc/complete/ai-surface/` by user decision,

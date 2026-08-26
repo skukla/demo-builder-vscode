@@ -1,3 +1,11 @@
+---
+id: PL-2
+kind: chore
+area: platform
+needs: []
+value: low
+status: backlog
+---
 # Regroup crowded service directories into subfolders — where measurement says so
 
 > **✅ ROUND 3 EXECUTED same day — the configService deferral OVERRIDDEN by

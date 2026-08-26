@@ -1,3 +1,11 @@
+---
+id: PL-3
+kind: chore
+area: platform
+needs: []
+value: low
+status: backlog
+---
 # Monorepo Support with Independent Release Tracking - Implementation Plan
 
 ## Status Tracking

@@ -1,3 +1,11 @@
+---
+id: EDS-8
+kind: chore
+area: eds
+needs: []
+value: low
+status: backlog
+---
 # Files over the god-file threshold
 
 > **ADJUDICATED 2026-08-24 (same day, after reading each candidate): the

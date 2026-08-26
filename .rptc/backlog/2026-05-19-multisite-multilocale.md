@@ -1,3 +1,11 @@
+---
+id: EDS-1
+kind: epic
+area: eds
+needs: []
+value: med
+status: backlog
+---
 # Multi-Locale Storefront — Implementation Plan (Phase 1)
 
 ## Provenance

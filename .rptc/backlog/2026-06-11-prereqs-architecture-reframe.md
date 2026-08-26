@@ -1,3 +1,11 @@
+---
+id: PR-1
+kind: epic
+area: prerequisites
+needs: []
+value: low
+status: backlog
+---
 # Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)
 
 **Status:** Backlog — research complete (2026-06-11), decisions locked, awaiting `/rptc:plan` cycle.

@@ -1,3 +1,12 @@
+---
+id: AI-1a
+kind: question
+area: ai
+parent: AI-1
+needs: AI-1c
+value: high
+status: active
+---
 # AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?
 
 > **⚠️ RE-MEASURED 2026-08-24 (beta.141) — most of this item has SHIPPED; the numbers below are historical.**
@@ -40,6 +49,15 @@ item is about making sure that surface is good enough for an agent to do it well
 
 The question to keep asking of every gap below: *can an agent do this through the extension, and
 does it cost what it should?*
+
+## Shipped so far
+
+- 2026-08-24  Page authoring — `write_page`, `read_page`, `publish_page`, `delete_page`, `list_content` (ai-surface phases 1–6)
+- 2026-08-24  `get_block_authoring_shape` — replaces the ~121k-token block-shape derivation this item measured
+- 2026-08-24  The bundle's first PreToolUse hook (phase 6)
+- 2026-08-24  Agent layer settled deliberately: no agents ship — `scrape-reference-site` already orchestrates the one 3+-skill flow
+
+**Reachability is essentially closed** — 41 name-level gaps of 123 handler keys, hand-triaged to about five genuinely open. What REMAINS is the design/visual axis: no tool gives an agent visual feedback on a storefront. The four-phase plan below predates the current tool surface and needs re-scoping before anyone executes it.
 
 ## How to audit this systematically — `ai-coverage-scan`
 

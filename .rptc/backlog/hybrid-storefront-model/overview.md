@@ -1,3 +1,11 @@
+---
+id: EDS-2
+kind: epic
+area: eds
+needs: []
+value: low
+status: backlog
+---
 # Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection
 
 **Created:** 2026-06-18 · **Research:** `.rptc/research/hybrid-storefront-model/research.md`.

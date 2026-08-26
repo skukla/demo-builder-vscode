@@ -1,3 +1,11 @@
+---
+id: PL-4
+kind: chore
+area: platform
+needs: []
+value: low
+status: backlog
+---
 # Claude Code's storage grows ~4 GB a year, and nothing reports it
 
 ## Provenance

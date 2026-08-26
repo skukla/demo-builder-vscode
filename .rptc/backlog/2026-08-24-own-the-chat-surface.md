@@ -1,3 +1,12 @@
+---
+id: AI-2b
+kind: epic
+area: ai
+parent: AI-2
+needs: []
+value: low
+status: spiked
+---
 # Own the chat surface — render Claude Code's stream in our own UI
 
 > **ACTIVE 2026-08-25.** A spike plan now exists:
@@ -6,6 +15,13 @@
 > first — this file is kept for the correction it records and the prior art it
 > names, and the "do this first either way" prerequisite below has SHIPPED
 > (MCP progress notifications, Evaluation Mode step 01b).
+
+## Shipped so far
+
+- 2026-08-25  Prerequisite shipped either way — MCP progress notifications + Evaluation Mode step 01b (authored tool phrases)
+- 2026-08-26  Spike RUN — all four unknowns answered; see `.rptc/research/own-the-chat-surface/spike.md`
+
+Feasible, and more so than assumed. NOT decided: the cost is the terminal's own affordances, and the surface would sit on an undocumented API.
 
 ## Provenance
 

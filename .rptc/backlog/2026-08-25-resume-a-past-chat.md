@@ -1,3 +1,12 @@
+---
+id: AI-4b
+kind: feature
+area: ai
+parent: AI-4
+needs: []
+value: med
+status: backlog
+---
 # The Chat tile can only reach the MOST RECENT conversation
 
 ## Provenance

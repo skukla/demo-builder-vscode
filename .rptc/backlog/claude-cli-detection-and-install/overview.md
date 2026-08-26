@@ -1,3 +1,12 @@
+---
+id: AI-4a
+kind: feature
+area: ai
+parent: AI-4
+needs: []
+value: med
+status: backlog
+---
 # Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)
 
 **Status:** Draft. UX decisions locked in below; implementation sized but not started. Scope expanded from "detect missing Claude CLI" to "make the AI engine path engine-aware so future Codex support drops in via a config map," following confirmation from the project owner.

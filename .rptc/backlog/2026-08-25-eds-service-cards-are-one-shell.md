@@ -1,3 +1,11 @@
+---
+id: EDS-7
+kind: fix
+area: eds
+needs: []
+value: low
+status: backlog
+---
 # The two EDS service cards are one shell rendered twice
 
 ## Provenance

@@ -1,3 +1,11 @@
+---
+id: EDS-6
+kind: fix
+area: eds
+needs: []
+value: med
+status: backlog
+---
 # Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed
 
 **Filed:** 2026-08-17, while resolving the VIP nav gating open item.

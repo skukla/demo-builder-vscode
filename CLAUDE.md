@@ -120,6 +120,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
+- `backlog-item` — file or re-shape an RPTC backlog item: the frontmatter contract (kind/area/parent/needs/value/status), the five kinds and why a `question` is not an epic, and the GENERATED index. The index was hand-maintained until 2026-08-26 and rotted three separate ways — three items invisible for months, a reverted correction, an epic with no file
 - `rptc-hygiene-scan` — the same idea aimed at the RECORD rather than the code: backlog index rot in BOTH directions, plans that shipped and never moved, and file:line citations pointing at deleted files (runs at release cuts; proposes, never applies)
 - `circular-dependency-scan` — find import cycles (madge) and how to break them
 - `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one

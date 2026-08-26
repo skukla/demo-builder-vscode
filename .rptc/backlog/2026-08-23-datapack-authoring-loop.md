@@ -1,3 +1,11 @@
+---
+id: DI-1
+kind: feature
+area: data-installer
+needs: []
+value: med
+status: backlog
+---
 # Datapack authoring loop — export, modify, publish-your-own via project skills
 
 **Filed:** 2026-08-23, from user direction while closing the Bodea

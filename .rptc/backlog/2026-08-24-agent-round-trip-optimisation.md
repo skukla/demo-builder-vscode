@@ -1,3 +1,12 @@
+---
+id: AI-1e
+kind: feature
+area: ai
+parent: AI-1
+needs: AI-1c
+value: med
+status: active
+---
 # Agent round-trip optimisation — four measured candidates
 
 **Filed:** 2026-08-24, from the first real measurements of what an agent task
@@ -7,6 +16,12 @@ costs against this extension.
 runs plus a cold-start decomposition) and
 `.rptc/research/agent-efficiency-measurement/research.md` (what Anthropic
 documents). Reproduce any figure with `node scripts/trace-session.mjs`.
+
+## Shipped so far
+
+- 2026-08-24  Candidate 1 — the self-inflicted orientation call. The home AGENTS.md states the active project instead of ordering `get_current_project`
+
+Three candidates remain (the orientation trio, catalog preload vs `ToolSearch`, and `.strict()` on write tools). Each is measure → fix → re-measure.
 
 ## The finding that reorders everything
 

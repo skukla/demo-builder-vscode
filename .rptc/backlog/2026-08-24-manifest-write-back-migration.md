@@ -1,3 +1,11 @@
+---
+id: PL-1
+kind: chore
+area: platform
+needs: []
+value: med
+status: active
+---
 # Manifest write-back migration — retire the legacy-format read layer
 
 > **Phase 1 SHIPPED 2026-08-24** (`feature/manifest-write-back-migration` →
@@ -26,6 +34,11 @@
 **Filed:** 2026-08-24 (from the trim-cycle 4 legacy sweep — the sweep kept these
 layers because they are compatibility with DATA on disk, not with code; this
 item is the plan to remove that dependency at its source.)
+
+## Shipped so far
+
+- 2026-07-15  Keyed writer (`9059eee29`), first release tag beta.127
+- 2026-08-24  Phase 1 — `feature/manifest-write-back-migration`
 
 ## Problem
 

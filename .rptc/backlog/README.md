@@ -14,8 +14,29 @@ This directory is the **single source of truth** for "what's next." If it belong
   2026-08-07 an item was filed here for work `.rptc/complete/integrations-destination-control/`
   had covered since 2026-08-03, including the very question the session was answering.
 - **Promotion**: when an item becomes active, move it to `.rptc/plans/<topic-slug>/`.
+- **File it into a LAYER, not into "active".** The sections below (A–G) are a
+  dependency map, not priority buckets — see "The through-line". A new item goes
+  where it sits in the chain: does it ask whether the surface is good enough (A),
+  find gaps (B), point the agent at what exists (C), show what happened (D),
+  render it (E), build demo capability (F), or tidy the codebase (G)?
+  **"Active front" was retired 2026-08-26** after it accumulated sixteen items
+  with nothing in common but being un-started, which made the list unusable for
+  choosing work — the exact failure this index exists to prevent.
 
 ## Lifecycle
+
+**Status is the truth; the folder is storage.** Until 2026-08-26 the folder WAS
+the state machine — `backlog/` → `plans/` → `complete/` — and with only three
+states, everything real happened between them. Six of 27 items were carrying
+"partly shipped / superseded / historical" banners because there was nowhere else
+to put it.
+
+An item's phase now lives in its `status:` frontmatter, and what has already
+landed against it lives in its `## Shipped so far`. Moving a file is a filing
+decision, not a statement about progress. The phases, the two enforced rules and
+the reopen path are in the `backlog-item` skill.
+
+### The old folder lifecycle (still how files are stored)
 
 ```
 draft  →  ready  →  active  →  shipped/dropped
@@ -150,34 +171,206 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 The `jest worker force-exit` warning (once wrongly listed here as resolved, then reopened) is now genuinely CLOSED — diagnosed 2026-08-23 as jest-worker's hardcoded 500ms deadline, not a leak; see the 2026-08 archive section.
 
 ---
-
 ## Active backlog
 
-### A. Active front (nearest to actionable — nothing here is in progress)
+## Registry
 
-#### The Chat tile can only reach the MOST RECENT conversation ([`2026-08-25-resume-a-past-chat.md`](2026-08-25-resume-a-past-chat.md))
+<!-- GENERATED — do not hand-edit. Rebuild:
+     node .claude/skills/backlog-item/build-index.mjs
+     Validate: --check.  Filing rules + the phases: the `backlog-item` skill. -->
 
-**Raised 2026-08-25 alongside the disk-footprint item, and connected to it: those transcripts are 1.7 GB precisely because they are resumable, and a producer can reach exactly one of them.** The Chat tile launches `claude --continue`, which resumes the most recent conversation in that directory (`openInClaude.ts:253`); the projects root alone holds **45 resumable conversations**. A demo build spans days — set up Monday, fight the storefront Wednesday, fix the catalog Friday — and each is its own conversation with its own context, of which only the last is reachable. The codebase already half-knows: `openInClaude.ts:227` notes a session "still reaches" via `claude --resume` after `--continue` stops landing on it, and nothing surfaces that. **The cheap answer is that Claude Code already ships the picker**: `claude --resume` with no value opens an interactive, searchable one, so this is a launch-flag change rather than a session browser — resist building our own, which would be a second list to keep correct. Goes in the existing `fresh` affordance rather than a new tile (`AiZone.tsx:11` records why continuing and starting fresh share one control; picking a past chat is a third way to do the same thing). Check FIRST that the native TUI picker renders in an editor-area terminal — that decides the whole shape — plus the cold-start guard and whether `--resume` takes a launch-argument prompt the way `--continue` does. Filed 2026-08-25.
+Every open item, its kind, what it needs, its value and its phase. Detail lives in
+each item's own file; what has already landed against an item is in its
+`## Shipped so far`.
 
-#### Claude Code's storage grows ~4 GB a year, and nothing reports it ([`2026-08-25-claude-code-disk-footprint.md`](2026-08-25-claude-code-disk-footprint.md))
+### ai  (12)
 
-**Measured 2026-08-25 while checking whether Evaluation Mode needed a data-management surface — it does not (78 KB per project, capped on two axes, asserted by a test), and the measurement found this instead.** On the owner's machine five months in: `~/.claude` is **2.2 GB**, of which 1.7 GB is session transcripts (323 files, oldest 24 March, nothing deletes any of it), plus 371 MB of plugins and 160 MB of file-history. Growth from the oldest and newest transcript dates: **11 MB/day → 331 MB/month → ~4 GB/year**, transcripts alone. Not our data, but it accumulates from work done THROUGH this extension, it sits beside our own storage where a producer cannot tell whose is whose, and we already own the surface that would say so — "Demo Builder: Diagnostics" reports on the environment and this is environment. **Build a REPORT, not a manager**, and the rule is deliberate: a cleanup button is the obvious next idea and is more dangerous than it looks, because transcripts are how `--continue` works (`claudeSessionStore.hasConversation` probes for a `.jsonl` to decide whether the Chat tile can resume), so deleting the wrong file breaks resuming silently and the producer experiences it as "my chat forgot everything". Report total, largest subdirectories, oldest transcript, and the path; let them run `rm` themselves. Compute on demand — do NOT walk a 2.2 GB tree on activation (the `buildStampUi.ts` precedent is explicit that the expensive walk is the on-demand half). Filed 2026-08-25.
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | open |
+| `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | active |
+| `AI-1b` | question | └ [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
+| `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | backlog |
+| `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | active |
+| `AI-1f` | feature | └ [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) | — | low | backlog |
+| `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
+| `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
+| `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |
+| `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | open |
+| `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
+| `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
 
-#### The two EDS service cards are one shell rendered twice ([`2026-08-25-eds-service-cards-are-one-shell.md`](2026-08-25-eds-service-cards-are-one-shell.md))
+### eds  (8)
 
-**Found by the 2026-08-25 codebase sweep, and the only real extraction candidate it produced.** TWO independent scans point at the same pair — jscpd on two clones totalling 27 lines (`DaLiveServiceCard.tsx [71:8-85:12]` ↔ `GitHubServiceCard.tsx [62:2-76:5]`, and `[239:8-252:2]` ↔ `[123:16-136:8]`), and the component-extraction scan via the `status-text` group. Both files were opened: it is the same connected/error/setup state machine written twice, with only labels and callbacks differing (`verifiedOrg` vs `user.login`, `onSetup` vs `onConnect`). A fix to one card's error state does not reach the other. **Not urgent and deliberately not fixed when found** — it is in `features/eds/ui/components/`, which the work that ran the sweep never opened, no divergent fix is on record yet (so this is Rule of Three, not the extract-at-two override), and both cards work. **The right moment is the next time anyone edits either card**, when the file is already open and its behaviour already in the reader's head. Success test: both existing suites pass UNCHANGED — a behaviour-preserving refactor proves itself by not moving its tests. Filed 2026-08-25.
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `EDS-1` | epic | [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) | — | med | backlog |
+| `EDS-2` | epic | [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) | — | low | backlog |
+| `EDS-3` | feature | [EDS site-scraping capability for Demo Builder](2026-05-28-eds-site-scraping.md) | — | med | backlog |
+| `EDS-4` | feature | [Rebuild BuildRight on the thin-layer model](2026-06-10-buildright-eds-disposition.md) | — | low | backlog |
+| `EDS-5` | feature | [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) | — | med | gated |
+| `EDS-6` | fix | [Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md) | — | med | backlog |
+| `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | backlog |
+| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 
-#### 104 tools, and agents are barely asked to use them ([`2026-08-25-agents-barely-use-the-tool-surface.md`](2026-08-25-agents-barely-use-the-tool-surface.md))
+### app-builder  (5)
 
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `AB-1` | epic | [App Builder app family — attach a deployable app to a demo](epic-appbuilder-app-family.md) | — | med | active |
+| `AB-1a` | feature | └ [App Builder app — package-bound apps (auto-attach to a demo template)](2026-06-17-appbuilder-app-package-bound.md) | AB-1 | low | gated |
+| `AB-1b` | feature | └ [App Builder app — app-only / no-storefront project](2026-06-17-appbuilder-app-only-project.md) | AB-1 | low | backlog |
+| `AB-1c` | feature | └ [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) | AB-1 | low | backlog |
+| `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | backlog |
+
+### data-installer  (2)
+
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | backlog |
+| `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
+
+### prerequisites  (1)
+
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
+
+### platform  (4)
+
+| ID | Kind | Item | Needs | Value | Status |
+|---|---|---|---|---|---|
+| `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | active |
+| `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | backlog |
+| `PL-3` | chore | [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) | — | low | backlog |
+| `PL-4` | chore | [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) | — | low | backlog |
+
+## The through-line — read this before picking anything
+
+**Re-mapped 2026-08-26**, after the owner named the chain out loud:
+
+> *"What I want to do to unblock other backlog items as a developer of the tool
+> is to confirm that the Demo Builder MCP is as robust as possible. That's why I
+> wanted the tool trace to uncover gaps where we might need new tools or new
+> skills to point the LLM in which direction to use the tools we have, or agents
+> or hooks or whatever. Then that grew into a prompt workbench. Then that grew
+> into a brand new chat surface."*
+
+Everything below used to sit in one undifferentiated "Active front" of sixteen
+items. It is really **one goal with four layers of means**, and the layers depend
+on each other:
+
+```
+   GOAL   Can an agent actually BUILD a demo with our surface?          [A]
+            |  the thing that unblocks the rest of the roadmap
+            |
+   +--------+----------------------------------------------------+
+   |                                                             |
+  (1) EVIDENCE - where is it weak?                        [B]    |
+      tool traces . what agents did INSTEAD . coverage           |
+            |  findings feed (2)                                 |
+            v                                                    |
+  (2) GUIDANCE - does the agent know what we have?        [C]    |
+      new tools . skills . hooks . fewer round trips             |
+            |                                                    |
+            v                                                    |
+  (3) VISIBILITY - can anyone SEE what it did?            [D] <--+
+      the Activity view . the prompt workbench
+            |  needs somewhere to render
+            v
+  (4) SURFACE - where does that get drawn?                [E]
+      companion panel (cheap) . own the chat (spiked 2026-08-26)
+```
+
+**The warning this map exists to give:** the chain grew AWAY from the goal.
+Section E is three steps removed from "is my MCP good enough" and has absorbed
+the most design effort; section B is one step removed and is still unbuilt.
+**Effort should invert.**
+
+Two sections sit outside the chain and should not be read as competing with it:
+**F, demo capability** (what the product does for a customer) and **G, codebase
+health**.
+
+### Where the active work actually lives
+
+Not all of this is backlog. Some is an ACTIVE PLAN, and items are not duplicated
+into the backlog just to appear on this map:
+
+| Layer | Active plan | Backlog |
+|---|---|---|
+| (1) Evidence | `.rptc/plans/evaluation-mode/measurement/` | B |
+| (2) Guidance | — | C |
+| (3) Visibility | `.rptc/plans/evaluation-mode/` (step 11) | D |
+| (4) Surface | `.rptc/plans/own-the-chat-surface/` (spike RUN 2026-08-26) | E |
+
+### A. The question everything else serves
+
+*Is the agent surface good enough for real work? Neither of these is a task —
+they are the two standing questions that make the rest worth doing.*
+
+#### AI-surface coverage — is the surface good enough to BUILD a demo, not just provision one? ([`2026-08-16-mcp-surface-for-sc-design-work.md`](2026-08-16-mcp-surface-for-sc-design-work.md))
+
+**Re-measured 2026-08-24 on beta.141, and most of the original finding has SHIPPED.** The item was filed when there were 52 tools with "zero for authoring a page"; ai-surface phases 1–6 have since taken the surface to **103 tools** — page authoring (`write_page`, `read_page`, `publish_page`, `delete_page`, `list_content`) and the token fix the item wanted most (`get_block_authoring_shape`, replacing a ~121k-token derivation) both landed. **Reachability is essentially closed**: the corrected `ai-coverage-scan` reports 41 name-level gaps of 123 handler keys, and hand-triage puts the genuinely open count at about five (settings import needs a path-taking variant — the handler opens a modal picker; sign-out / GitHub account switching; `check-credential-service`; `provision-accs-credentials`; non-EDS project reset). Note the scan itself was inflating every figure until 2026-08-24 — it ran a regex that counted nested object keys as handlers; `handler-keys.mjs` shipped beside it unused. **Re-scoped to the design axis 2026-08-24**, replacing the retired four-phase plan — and correcting its headline: "zero tools for design" is no longer true. `refine-visual-match` already drives capped render-compare-adjust rounds through the Playwright MCP, and `commerce-block-mapper` models what is themeable versus immutable. The real gap is narrower: **every visual capability we ship assumes a REFERENCE to match; none supports open-ended design** — exactly the Bodea case (no reference site, the design is being invented, no oracle for "done"). Ordered work: (1) theme tokens as a knowledge tool, generalizing the type-scale fix that converted unbounded font-size iteration into a bounded choice without showing the agent anything; (2) close the `brandAssets` write-through trap — theme edits made inside a project are silently destroyed on reset, so any theming tool builds on sand until this is decided; (3) a design skill carrying a STOPPING rule (copy `refine-visual-match`'s capped rounds + honest deltas); (4) only then ask whether open-ended design needs its own feedback loop. Governing principle: when you cannot give the model feedback, give it constraints. Filed 2026-08-16, re-measured and re-scoped 2026-08-24.
+
+#### 104 tools, and agents reach 20 of them ([`2026-08-25-agents-barely-use-the-tool-surface.md`](2026-08-25-agents-barely-use-the-tool-surface.md))
+
+**RE-MEASURED 2026-08-25 the same day; the headline was wrong and the finding got sharper.** The first pass judged usage from what the producer TYPED and concluded "almost none exercise the extension". Counting `tool_use` blocks in the raw transcripts instead shows **38 of 48 sessions DID call Demo Builder tools** — the surface is not ignored. What is true, and worse, is narrower: **20 of 105 tools are ever called, 76 are neither announced nor used, and 77% of all calls are six orientation reads** (`get_current_project`, `get_project_urls`, `get_project`, `get_auth_status`, `list_projects`, `get_project_status`). Everything that DOES something totals ~13 calls across 48 sessions. The surface is not unused; it is enormous relative to its demand. **Discoverability is real but bounded** — the generated bundle is CURRENT (not stale, so that cheap discriminator is answered) and NAMES only **15 of 105** tools; 7 of those 15 were used against 13 of the other 90, and `ToolSearch` was the second most-used tool at 70 calls picking up the rest. **One coverage gap was found and CLOSED the same day**: the single long session of real Commerce work hand-assembled **28 `curl`s** because nothing answered "what is this project's GraphQL endpoint" — `get_commerce_endpoints` now does (endpoints, mesh, and the `Magento-*` store-scope headers from the same function that writes the storefront's `config.json`), and `AI_CONTEXT_VERSION` 23 announces it. **Still open, and now the biggest piece: the 76 tools that are neither announced nor used** — a triage (delete, consolidate, or announce), not a build. Original caveats stand: ONE producer's transcripts, and UI clicks leave no transcript. Filed 2026-08-25, corrected 2026-08-26.
+
+*Original 2026-08-25 hook, kept because its reasoning and caveats still stand:*
 **Surveyed 2026-08-25 while collecting held-out prompts for the Evaluation Mode battery — it produced this instead, and this is worth more.** Every Claude Code session run INSIDE a demo project: 37 sessions, 70 distinct asks. Almost none exercise the extension. They are Adobe Commerce consulting — GraphQL query shapes, Postman collections for a partner, which category holds which products, what endpoints a partner needs with and without a mesh. The four that mention Demo Builder at all are the producer telling the agent WHERE IT IS ("use the demo builder mcp to find out which project", "run the sign_in tool with provider dalive"); not one asks it to DO anything the extension can do. **This matters more than the battery it came from**: the round-trip and Evaluation Mode work makes agent paths cheaper and more visible, and it optimises a surface this survey says is barely invoked. Two readings needing OPPOSITE fixes — (1) producers do not know the tools exist, a discoverability problem where the fix is the generated AGENTS.md / skills / onboarding and efficiency work does nothing; or (2) the tools are not what producers need, a surface problem where the real work is Commerce data and the efficiency work is aimed at the wrong target. Reading 1 is a week of documentation; reading 2 is a roadmap change. Cheapest discriminator, needing nobody's time: check `verify_ai_setup` inventory across the projects people actually work in — a stale or absent bundle means the tools were never announced to their agents. Caveats stated in the item and they weaken it without dissolving it: ONE producer's transcripts (the repo owner's, who uses the extension differently from someone given it), and UI clicks leave no transcript so anything done by clicking is invisible. Filed 2026-08-25.
+
+### B. Evidence — finding the gaps  (unblocks A, feeds C)
+
+*How we learn where the surface is weak instead of guessing. One step from the
+goal, and the least built layer on this page.*
+
+#### The other half of suggestions: finding holes in OUR tools ([`2026-08-26-find-the-gaps-in-our-own-surface.md`](2026-08-26-find-the-gaps-in-our-own-surface.md))
+
+**Planned in step 04 of Evaluation Mode, never built, and not carried into steps 09/10/11 either.** That step said suggestions come in two kinds — *"prompt-level, applied with a click; and **surface-level, for us**"* — and only the prompt-level half shipped (`evaluationSuggestions.ts`, three deterministic rules). Raised by the owner 2026-08-26: *"I thought I could use what we're building to discover holes and gaps in my tools, skills, hooks."* **Worth more than it looks, because it was done BY HAND on 2026-08-25 and it worked**: a manual pass over 48 real sessions found agents reach 20 of 105 tools, that 77% of calls are six orientation reads, and that the one stretch of real Commerce work hand-assembled **28 `curl`s** because nothing answered "what is this project's GraphQL endpoint" — which produced `get_commerce_endpoints`, now shipped. This item is about not doing that by hand. **It is a SECOND TOOL, not a section of the producer's panel** — burying "for us" findings in a surface a producer reads is how it got lost the first time. Three shapes worth finding, only the first covered today: a tool nobody calls (76 of 105); **a job agents do WITHOUT us** (an agent reaching for Bash where a tool should exist is the strongest signal of a gap, and nothing looks for it); and a tool that succeeds while doing nothing. Build on: `ai-coverage-scan` (static supply side), the recorder (runtime), Claude Code's transcripts (durable — they answer "which tools does nobody call?" with one script, a question `opentelemetry/` claims for itself), and the `measurement/` battery. Open: command, skill, or release-cut report; and which sources it reads. Filed 2026-08-26.
+
+### C. Guidance — pointing the agent at what already exists  (acts on B)
+
+*Most gaps are not missing capability; they are capability the agent never finds.
+The 2026-08-25 measurement is the evidence: the generated bundle NAMES 15 of 105
+tools, and the tools it names are overwhelmingly the ones that get used.*
 
 #### Agent round-trip optimisation — four measured candidates ([`2026-08-24-agent-round-trip-optimisation.md`](2026-08-24-agent-round-trip-optimisation.md))
 
 **The round trip is the unit of cost, not the payload** — measured 2026-08-24 across six driven agent runs: 2 calls and 4 calls cost the SAME (~47k billable), 9 cost 82k, while our entire surface (103 tool schemas + all generated guidance) is ~3,900 tokens against a ~20k floor that belongs to Claude Code, not us. So shrinking responses barely moves anything at this scale (`list_projects` returns 127 bytes and still costs a whole turn) and shrinking the catalog moves less. Four candidates, each to be run measure → fix → re-measure against the fixed six-prompt battery, k=3, cold and warm separated (cache state alone swung one prompt 55,236 → 8,959): (1) **the self-inflicted orientation call** — the generated home AGENTS.md ORDERS `get_current_project` in bold before any action and 5 of 6 runs obeyed; that file is rewritten every activation so it can simply state the project; (2) the orientation trio, pending re-measure after (1); (3) **catalog preload vs `ToolSearch`** — 6/6 runs opened with a discovery call, which is Anthropic's documented progressive-disclosure pattern for 150k-token catalogs but may be a straight loss at our 2,616, so settle it with an A/B rather than an assumption; (4) **unknown arguments are silently dropped on 102 of 103 tools** — only `configure_project` uses zod `.strict()`, so on a write tool a misspelled argument is discarded rather than refused. Explicitly NOT to do: shrink the catalog, treat response size as the main lever, or grade agents on their path (Anthropic: "too rigid … overly brittle"). Independent of the Evaluation Mode plan, which makes this loop repeatable but is not a prerequisite. Filed 2026-08-24.
 
-#### AI-surface coverage — is the surface good enough to BUILD a demo, not just provision one? ([`2026-08-16-mcp-surface-for-sc-design-work.md`](2026-08-16-mcp-surface-for-sc-design-work.md))
+#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
 
-**Re-measured 2026-08-24 on beta.141, and most of the original finding has SHIPPED.** The item was filed when there were 52 tools with "zero for authoring a page"; ai-surface phases 1–6 have since taken the surface to **103 tools** — page authoring (`write_page`, `read_page`, `publish_page`, `delete_page`, `list_content`) and the token fix the item wanted most (`get_block_authoring_shape`, replacing a ~121k-token derivation) both landed. **Reachability is essentially closed**: the corrected `ai-coverage-scan` reports 41 name-level gaps of 123 handler keys, and hand-triage puts the genuinely open count at about five (settings import needs a path-taking variant — the handler opens a modal picker; sign-out / GitHub account switching; `check-credential-service`; `provision-accs-credentials`; non-EDS project reset). Note the scan itself was inflating every figure until 2026-08-24 — it ran a regex that counted nested object keys as handlers; `handler-keys.mjs` shipped beside it unused. **Re-scoped to the design axis 2026-08-24**, replacing the retired four-phase plan — and correcting its headline: "zero tools for design" is no longer true. `refine-visual-match` already drives capped render-compare-adjust rounds through the Playwright MCP, and `commerce-block-mapper` models what is themeable versus immutable. The real gap is narrower: **every visual capability we ship assumes a REFERENCE to match; none supports open-ended design** — exactly the Bodea case (no reference site, the design is being invented, no oracle for "done"). Ordered work: (1) theme tokens as a knowledge tool, generalizing the type-scale fix that converted unbounded font-size iteration into a bounded choice without showing the agent anything; (2) close the `brandAssets` write-through trap — theme edits made inside a project are silently destroyed on reset, so any theming tool builds on sand until this is decided; (3) a design skill carrying a STOPPING rule (copy `refine-visual-match`'s capped rounds + honest deltas); (4) only then ask whether open-ended design needs its own feedback loop. Governing principle: when you cannot give the model feedback, give it constraints. Filed 2026-08-16, re-measured and re-scoped 2026-08-24.
+Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
+Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
+36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
+sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
+AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
+var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
+and the two scrape-flow skills route typography through the shipped scale. **Now gated on
+field feedback:** the failure was inferred, never observed — the measure step is checking the
+next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
+recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
+tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
+
+#### An open-ended design skill ([`2026-08-17-open-ended-design-skill.md`](2026-08-17-open-ended-design-skill.md))
+
+**Deferred out of phase 5 by decision — belongs to a pass that ADDS design skills, not one that corrected existing ones.** Every generated skill today answers "how do I do this named thing", or in `diagnose-demo`'s case "how do I look"; none answers "how do I approach a demo nobody gave me a recipe for". Whether that gap is real is genuinely open, and the item exists mainly to stop the next person inheriting a claim that does not hold: the overview's "21 skills, all task-shaped" rests on a count measured as **14**, and the conclusion was never independently checked. Also unresolved by design: skill vs an `AGENTS.md` section — a skill is best at "here is the sequence and its traps", and an open-ended brief has no sequence. Either way it is the first deliberate exception to the 2026-07-11 "no new generated skills unless multi-step-with-traps" constraint, so it needs an argument rather than a gap. Filed 2026-08-17.
+
+### D. Visibility — seeing what the agent did  (serves A and the producer)
+
+*Active plan: `.rptc/plans/evaluation-mode/` step 11 — the Activity view and the
+prompt workbench. The item here is its neighbour.*
+
+#### The Chat tile can only reach the MOST RECENT conversation ([`2026-08-25-resume-a-past-chat.md`](2026-08-25-resume-a-past-chat.md))
+
+**Raised 2026-08-25 alongside the disk-footprint item, and connected to it: those transcripts are 1.7 GB precisely because they are resumable, and a producer can reach exactly one of them.** The Chat tile launches `claude --continue`, which resumes the most recent conversation in that directory (`openInClaude.ts:253`); the projects root alone holds **45 resumable conversations**. A demo build spans days — set up Monday, fight the storefront Wednesday, fix the catalog Friday — and each is its own conversation with its own context, of which only the last is reachable. The codebase already half-knows: `openInClaude.ts:227` notes a session "still reaches" via `claude --resume` after `--continue` stops landing on it, and nothing surfaces that. **The cheap answer is that Claude Code already ships the picker**: `claude --resume` with no value opens an interactive, searchable one, so this is a launch-flag change rather than a session browser — resist building our own, which would be a second list to keep correct. Goes in the existing `fresh` affordance rather than a new tile (`AiZone.tsx:11` records why continuing and starting fresh share one control; picking a past chat is a third way to do the same thing). Check FIRST that the native TUI picker renders in an editor-area terminal — that decides the whole shape — plus the cold-start guard and whether `--resume` takes a launch-argument prompt the way `--continue` does. Filed 2026-08-25.
+
+### E. The surface it renders on  (deepest layer — treat with suspicion)
+
+*Three steps from the goal. The spike RAN on 2026-08-26 and found it more
+feasible than assumed — which is exactly why this carries a warning rather than a
+green light. Read `.rptc/research/own-the-chat-surface/spike.md` before arguing
+either way.*
 
 #### Own the chat surface — render Claude Code's stream in our own UI ([`2026-08-24-own-the-chat-surface.md`](2026-08-24-own-the-chat-surface.md))
 
@@ -185,9 +378,10 @@ The `jest worker force-exit` warning (once wrongly listed here as resolved, then
 
 **Filed to record a correction, not to argue for the work.** A producer could not tell what was running mid-task — which MCP server, which tool, which phase. Research (`.rptc/research/agent-activity-visibility/`) measured the terminal's ceiling: MCP progress notifications carry a `message` string, Claude Code supplies a progress token, and **the interactive terminal DOES render those messages live** (confirmed by running `probe-server.mjs`). So a tool can narrate itself; what it cannot control is attribution, ordering, styling, or how any other server's lines look. The correction: an earlier read said owning the chat meant abandoning Claude Code, citing ADR-004 and a billing risk, and **both were wrong** — "own the chat" was conflated with "use the Agent SDK directly", when `claude --input-format stream-json --output-format stream-json` runs a real bidirectional session against the local binary. Render the stream and Claude Code is still the engine: skills load, hooks fire (including the `aio` guard), `.mcp.json` connects, `AGENTS.md` is read so `AI_CONTEXT_VERSION` keeps working. ADR-004 chose the ENGINE, not the pixels — it rejected VS Code Chat's separate skill model and MCP transport, none of which applies here. Billing was moot twice: Adobe provides the subscriptions and the CLI path never touches an API key. Prior art is `app-builder/tech-case-studio`, whose Phase 0 spike de-risked this exact seam (streaming + permission prompts + tree-kill) and whose `ClaudeCliProvider` is the subscription-riding path; its `src/tool-call.ts` tool→view mapping is directly reusable, though it does not yet handle MCP tools (filed in that repo's backlog). Real cost is a UI, not the harness: permission cards are the hard part, and Anthropic's stream format is the standing maintenance. **Do first either way:** emit MCP progress from `withToolLogging` — small, lands now, and a prerequisite rather than a detour, since a custom UI still needs the server to send what it renders. Filed 2026-08-24.
 
-#### Manifest write-back migration — retire the legacy-format read layer ([`2026-08-24-manifest-write-back-migration.md`](2026-08-24-manifest-write-back-migration.md))
+### F. Demo capability — what the product does for a customer
 
-Old project manifests are converted in memory on every load but never rewritten, so the legacy-read code (~half the repo's remaining `legacy` mentions, incl. the whole `meshState`/`appState` synthesis family) is load-bearing forever. Two phases: (1) an idempotent activation sweep step — joining the SEQUENCED upkeep chain in `extension.ts`, never beside it — loads and saves each unstamped manifest, plus a real format stamp (`version: '1.0.0'` today is static) and a pinned rollback floor; (2) two releases later, delete the converters — done = the `singularStateAccessGuard` allowlist (7 files) is empty. Settings export files and external-system shapes are explicitly out of scope. ~1 day per phase. Filed 2026-08-24 from the trim-cycle 4 sweep.
+*Outside the agent chain. These do not wait on A–E, and A–E do not wait on
+them.*
 
 #### Datapack authoring loop — export, modify, publish-your-own via project skills ([`2026-08-23-datapack-authoring-loop.md`](2026-08-23-datapack-authoring-loop.md))
 
@@ -197,13 +391,25 @@ Filed 2026-08-23 from user direction: a project's agent should carry the whole l
 
 **Measured, and it changes what the Bodea demo can claim.** Picked up 2026-08-23: a concrete differentiation proposal is in the item — REVISED the same day after comparing against the actual pack data (drop only `software`/`wi-fi`/`critical-power-equipment` from ServerSavvy Solutions; the structural `bodea` root and `products` container stay in every catalog, since dropping a structural ancestor can hide its children from tree queries; Default and Platinum Buyer untouched so the tier-price demo is unconfounded). Re-measure satisfied by provenance: `get_datapack` shows `bodea@main` unchanged since 2026-06-18, which predates the measurement. **No pack change is needed to implement it** (clarified same day): the pack rows are only the import seed — an SC can apply the differentiation on any live instance via the Admin's Set Pricing and Structure today (per-instance, reset re-seeds it), and the durable form is a request to the pack's owner (CoreTech) or a versioned fork. Sequence: prove demo-locally first, then pursue the pack change. **The user is applying the instance edits himself (2026-08-23)** on a running Bodea-connected demo; the round trip back into a pack is the acceptance test of [`2026-08-23-datapack-authoring-loop.md`](2026-08-23-datapack-authoring-loop.md). Original finding: all three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
 
-#### Move deliberately to a per-SC Adobe I/O project ([`per-sc-io-project.md`](per-sc-io-project.md))
+#### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
-**Retire the separately-deployed shared service; each SC gets their own Adobe I/O project.** Five items: (a) the `demo-builder-s2s` credential — **CANNOT MOVE**, settled 2026-08-16; (b) store discovery; (c) prerender — **a separate research item, do not decide it here**; (d) a single SC-built mesh and (e) SC-built integration packages, both **already built**, which is what makes this credible rather than speculative. (a) cannot move, and the reason turned out to be entitlement rather than reach: a credential in the Solution Led Commerce SC org cannot be subscribed to `ACCS-REST-API` at all — the service carries no product profile there (control: twelve other services in that org DO offer products), and the subscribe is refused inside an HTTP 200. The subscription IS the entitlement, so such a credential never gains `commerce.accs`. Measured 2026-08-16, both orgs compared: `.rptc/complete/data-installer-credential-broker/step-05.md`. **Three things must exist first, all verified 2026-08-16:** no notion of a REQUIRED deployable in the catalog schema (one entry today, `app-builder-shell`); no upgrade path for a deployed integration (staleness detection is mesh-shaped — **the cost centre**, since today one deployment serves everyone and a fix ships once); and no dedup, so two demo projects sharing a workspace each believe they own the deployment and the second deploy silently overwrites the first. D1 shipped; D2–D6 pending. What it buys: retires four actions, an AES-256-GCM per-site key store, a drift checker, the org-keyed `accsDiscovery.services` setting, and `byom.overlayUrl` — which today ships a stage Runtime endpoint as a default in this PUBLIC repo. Filed 2026-08-16.
+Serve multiple locales (eventually multiple brands) from a single project. **Re-measured 2026-08-23: the container shipped, the feature did not.** The v6 wizard rebuild delivered this item's structural proposal — a "Business Structure" sub-step exists inside the Commerce area (`commerceSections.ts:76`) — but as a SINGLE website/store/store-view scope selector feeding catalog gating and datapack import. Zero locale code anywhere in `src/` (measured with controls). So the item's "repurpose the settings step" plan is stale; what remains is adding the locale axis INSIDE the existing step. Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
 
-#### Files over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
+#### EDS site-scraping capability ([`2026-05-28-eds-site-scraping.md`](2026-05-28-eds-site-scraping.md))
 
-**Re-measured 2026-08-24: the candidate set rolled over.** Everything the item spent August on is cut — `executor.ts` (→ 493-line orchestrator + seven phase modules), `helixService.ts` (1845→823 over two cuts: key store, bulk-job protocol, auth seam, errors, API keys, site content), `mcp-server.ts` (1794→398 registration facade over `src/mcp/`), `adobeEntityFetcher.ts` (1769→273 facade over five services) — every cut behavior-preserving with existing suites untouched. The item's top banner carries the CURRENT table: `configure.ts` (916L, **32 non-type imports**) is the strongest candidate; `authenticationService.ts` (~42 methods) and `githubFileOperations.ts` (17) need a delegation-vs-logic read before a verdict; `projects-dashboard/dashboardHandlers.ts` is ~2× the handler threshold; and the never-examined `.tsx` tier has five components over 600 lines (`repoSelectionInline.helpers.tsx` 856 the standout). Earlier history: **re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
+Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
+
+#### Instance hygiene — wipe + assisted manual steps for demo reuse ([`2026-08-22-instance-wipe-option.md`](2026-08-22-instance-wipe-option.md))
+
+**FULLY DESIGNED 2026-08-23, then TABLED the same day by decision — bugfixes take priority.** The complete design lives in [`../research/instance-wipe-api-audit/research.md`](../research/instance-wipe-api-audit/research.md): the ACCS per-entity removability matrix (spec-diff of the full published REST surface, 489 ops / 51 DELETEs), the four load-bearing verdicts (App Builder cannot exceed the public API — sourced; website deletion does not remove orders; sales documents are the permanent floor; instance replacement via support ticket, credits returned, is the true clean slate), the three-phase wipe (pack discovery via the activity endpoint's instance filter — live-verified cross-pack — then a REST residue sweep, then order-cancel hygiene), the assisted-manual-step layer (instruct with exact codes → admin deep link → verify by API re-read with auto-poll; ACCS admin's store-structure delete buttons confirmed first-hand), and the three-surface communication model (Business Structure inline card, dashboard remedy-dot on the Datapacks tile, Instance Hygiene panel with a measured "Demo ready" verdict; read-only `check_instance_hygiene` MCP tool). First build slice when picked up: the headless hygiene service + read-only probes — every surface hangs off it. Service is frozen (owner retired, questions-only); the design uses only capabilities proven live. Filed 2026-08-22; designed and tabled 2026-08-23.
+
+#### Rebuild BuildRight on the thin-layer model ([`2026-06-10-buildright-eds-disposition.md`](2026-06-10-buildright-eds-disposition.md))
+
+Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
+
+#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
+
+One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -228,6 +434,10 @@ Five sequenced slices; **slice 1 gates the rest**:
 
 Layer 3 of deterministic-integrations, scoped out. A dashboard action on a blank-shell-built custom app that creates a new GitHub repo (owner picker via `getUserOrgs`) and pushes the app's local dir (fresh history, `.env`/secrets excluded), recording the repo on the component — so it can later be imported via "Import a repo". Reuses `GitHubRepoOperations` / `GitHubTokenService` / the deploy-action pattern. Real forks: public-vs-private repo, secrets hygiene (non-negotiable). Gated on the shell build-out maturing.
 
+#### Move deliberately to a per-SC Adobe I/O project ([`per-sc-io-project.md`](per-sc-io-project.md))
+
+**Retire the separately-deployed shared service; each SC gets their own Adobe I/O project.** Five items: (a) the `demo-builder-s2s` credential — **CANNOT MOVE**, settled 2026-08-16; (b) store discovery; (c) prerender — **a separate research item, do not decide it here**; (d) a single SC-built mesh and (e) SC-built integration packages, both **already built**, which is what makes this credible rather than speculative. (a) cannot move, and the reason turned out to be entitlement rather than reach: a credential in the Solution Led Commerce SC org cannot be subscribed to `ACCS-REST-API` at all — the service carries no product profile there (control: twelve other services in that org DO offer products), and the subscribe is refused inside an HTTP 200. The subscription IS the entitlement, so such a credential never gains `commerce.accs`. Measured 2026-08-16, both orgs compared: `.rptc/complete/data-installer-credential-broker/step-05.md`. **Three things must exist first, all verified 2026-08-16:** no notion of a REQUIRED deployable in the catalog schema (one entry today, `app-builder-shell`); no upgrade path for a deployed integration (staleness detection is mesh-shaped — **the cost centre**, since today one deployment serves everyone and a fix ships once); and no dedup, so two demo projects sharing a workspace each believe they own the deployment and the second deploy silently overwrites the first. D1 shipped; D2–D6 pending. What it buys: retires four actions, an AES-256-GCM per-site key store, a drift checker, the org-keyed `accsDiscovery.services` setting, and `byom.overlayUrl` — which today ships a stage Runtime endpoint as a default in this PUBLIC repo. Filed 2026-08-16.
+
 #### Prereqs architecture reframe — two-tier (Path A) ([`2026-06-11-prereqs-architecture-reframe.md`](2026-06-11-prereqs-architecture-reframe.md))
 
 Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. Unblocks the Claude CLI detection plan below. **Re-measured 2026-08-23: all five structural claims hold** — no `scope` discriminator, the schema drift (dead `groups`/`multiVersion`/`versionCheck`, missing `perNodeVersion`) is unchanged, all 5 entries still `optional: false`, the prereqs step survived the v6 wizard rebuild as step 2, and no welcome panel/walkthrough exists. The v6 rebuild touched nothing this item measures.
@@ -236,57 +446,33 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 **⚠️ Blocked on the prereqs reframe above.** Engine-aware structure (engine registry keyed by `demoBuilder.ai.engine`, `openInClaude.ts` → `openInAi.ts`), lazy install-gate notification, opt-in Homebrew install. **Partially started** — `demoBuilder.ai.engine` DOES exist (`package.json:345`, documented at `src/commands/CLAUDE.md:204`); the earlier "not started" note was wrong on that half. Still absent: the `openInClaude.ts` → `openInAi.ts` rename and the engine registry. Becomes a thin "fill in engine-specific bits" plan once the reframe lands.
 
-### D. Deferred by design (gated on an external condition)
+### G. Codebase health
 
-#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
+*Maintenance. Run at a release cut, or when the file is already open.*
 
-Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
-Playwright help, or SLICC?" **Neither: the tool is not the problem** — the boilerplate ships
-36 `--type-*` custom properties and no generated guidance mentioned them, so agents picked
-sizes by eye with no oracle to iterate against. **Tier 1 SHIPPED 2026-08-23 (AI bundle v18):**
-AGENTS.md's Storefront section carries the standing typography rule (read the scale, `font:
-var(--type-…)`, never invent a size — and don't copy the inconsistent neighbouring blocks),
-and the two scrape-flow skills route typography through the shipped scale. **Now gated on
-field feedback:** the failure was inferred, never observed — the measure step is checking the
-next authored block (or next "fonts too small" complaint) for `var(--type-…)` usage. If it
-recurs with the guidance in place, tier 2 is a bounded Playwright `getComputedStyle` check;
-tier 3 re-opens the tool question (SLICC's 2026-05-28 rejection was scraping-scoped).
+#### Manifest write-back migration — retire the legacy-format read layer ([`2026-08-24-manifest-write-back-migration.md`](2026-08-24-manifest-write-back-migration.md))
 
-#### Rebuild BuildRight on the thin-layer model ([`2026-06-10-buildright-eds-disposition.md`](2026-06-10-buildright-eds-disposition.md))
-
-Disposition decided 2026-06-10: **complete rebuild** — express BuildRight as a Demo Builder package on canonical (branded block library + brand CSS + DA content) using the ADR-006 mechanisms. ADR-006 has now shipped, so this is unblocked; the old `buildright-eds` repo archives when the rebuild ships. BuildRight is currently `hidden: true` in the picker.
-
-#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md))
-
-One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
-
-#### Instance hygiene — wipe + assisted manual steps for demo reuse ([`2026-08-22-instance-wipe-option.md`](2026-08-22-instance-wipe-option.md))
-
-**FULLY DESIGNED 2026-08-23, then TABLED the same day by decision — bugfixes take priority.** The complete design lives in [`../research/instance-wipe-api-audit/research.md`](../research/instance-wipe-api-audit/research.md): the ACCS per-entity removability matrix (spec-diff of the full published REST surface, 489 ops / 51 DELETEs), the four load-bearing verdicts (App Builder cannot exceed the public API — sourced; website deletion does not remove orders; sales documents are the permanent floor; instance replacement via support ticket, credits returned, is the true clean slate), the three-phase wipe (pack discovery via the activity endpoint's instance filter — live-verified cross-pack — then a REST residue sweep, then order-cancel hygiene), the assisted-manual-step layer (instruct with exact codes → admin deep link → verify by API re-read with auto-poll; ACCS admin's store-structure delete buttons confirmed first-hand), and the three-surface communication model (Business Structure inline card, dashboard remedy-dot on the Datapacks tile, Instance Hygiene panel with a measured "Demo ready" verdict; read-only `check_instance_hygiene` MCP tool). First build slice when picked up: the headless hygiene service + read-only probes — every surface hangs off it. Service is frozen (owner retired, questions-only); the design uses only capabilities proven live. Filed 2026-08-22; designed and tabled 2026-08-23.
-
-#### An open-ended design skill ([`2026-08-17-open-ended-design-skill.md`](2026-08-17-open-ended-design-skill.md))
-
-**Deferred out of phase 5 by decision — belongs to a pass that ADDS design skills, not one that corrected existing ones.** Every generated skill today answers "how do I do this named thing", or in `diagnose-demo`'s case "how do I look"; none answers "how do I approach a demo nobody gave me a recipe for". Whether that gap is real is genuinely open, and the item exists mainly to stop the next person inheriting a claim that does not hold: the overview's "21 skills, all task-shaped" rests on a count measured as **14**, and the conclusion was never independently checked. Also unresolved by design: skill vs an `AGENTS.md` section — a skill is best at "here is the sequence and its traps", and an open-ended brief has no sequence. Either way it is the first deliberate exception to the 2026-07-11 "no new generated skills unless multi-step-with-traps" constraint, so it needs an argument rather than a gap. Filed 2026-08-17.
-
-#### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
-
-Serve multiple locales (eventually multiple brands) from a single project. **Re-measured 2026-08-23: the container shipped, the feature did not.** The v6 wizard rebuild delivered this item's structural proposal — a "Business Structure" sub-step exists inside the Commerce area (`commerceSections.ts:76`) — but as a SINGLE website/store/store-view scope selector feeding catalog gating and datapack import. Zero locale code anywhere in `src/` (measured with controls). So the item's "repurpose the settings step" plan is stale; what remains is adding the locale axis INSIDE the existing step. Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
-
-#### EDS site-scraping capability ([`2026-05-28-eds-site-scraping.md`](2026-05-28-eds-site-scraping.md))
-
-Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
-
-#### Monorepo independent release tracking ([`monorepo-independent-release-tracking/`](monorepo-independent-release-tracking/overview.md))
-
-Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need — **re-measured 2026-08-23: still no repo serves two components** (4 distinct source URLs, each used once), and the plan's file map is stale: `COMPONENT_REPOS` no longer exists (repo resolution lives in `componentRepositoryResolver.ts`) and `templates/components.json` is now `src/features/components/config/components.json`. Fix the citations before executing.
-
-### F. Maintenance cycle anchors
+Old project manifests are converted in memory on every load but never rewritten, so the legacy-read code (~half the repo's remaining `legacy` mentions, incl. the whole `meshState`/`appState` synthesis family) is load-bearing forever. Two phases: (1) an idempotent activation sweep step — joining the SEQUENCED upkeep chain in `extension.ts`, never beside it — loads and saves each unstamped manifest, plus a real format stamp (`version: '1.0.0'` today is static) and a pinned rollback floor; (2) two releases later, delete the converters — done = the `singularStateAccessGuard` allowlist (7 files) is empty. Settings export files and external-system shapes are explicitly out of scope. ~1 day per phase. Filed 2026-08-24 from the trim-cycle 4 sweep.
 
 #### Regroup crowded service directories ([`2026-08-23-services-directory-regrouping.md`](2026-08-23-services-directory-regrouping.md))
 
 Measured 2026-08-23: `features/eds/services` holds **95 direct files** in clear name families (15 `daLive*`, 8 `helix*`, 7 `github*`, 7 `eds*`/reset, 6 `storefront*`, 6 `config*`) — the one strong regrouping candidate in the repo. Everything else 38 files or under with a working naming convention; the item records the full table and why each is left alone (`ai/server`'s suffix convention, `core/ui`'s kind-grouping, `core/utils`' by-design grab-bag). Subfolders under `services/` are existing house practice (`prerequisites/services/installation/`, `dashboard/services/onOpenChecks/`). Cost measured for eds/services alone: ~700 alias imports, 232 sibling imports, **308 literal `jest.mock` path strings tsc can't check**, a 117-file test-mirror move, 13+ citing docs. Execute right after a release cut with no EDS branch in flight; full gate + `rptc-hygiene-scan` after. Discoverability only — no coupling changes. Filed 2026-08-23.
 
-### G. Instrumentation & guidance gaps (filed 2026-08-13)
+#### The two EDS service cards are one shell rendered twice ([`2026-08-25-eds-service-cards-are-one-shell.md`](2026-08-25-eds-service-cards-are-one-shell.md))
+
+**Found by the 2026-08-25 codebase sweep, and the only real extraction candidate it produced.** TWO independent scans point at the same pair — jscpd on two clones totalling 27 lines (`DaLiveServiceCard.tsx [71:8-85:12]` ↔ `GitHubServiceCard.tsx [62:2-76:5]`, and `[239:8-252:2]` ↔ `[123:16-136:8]`), and the component-extraction scan via the `status-text` group. Both files were opened: it is the same connected/error/setup state machine written twice, with only labels and callbacks differing (`verifiedOrg` vs `user.login`, `onSetup` vs `onConnect`). A fix to one card's error state does not reach the other. **Not urgent and deliberately not fixed when found** — it is in `features/eds/ui/components/`, which the work that ran the sweep never opened, no divergent fix is on record yet (so this is Rule of Three, not the extract-at-two override), and both cards work. **The right moment is the next time anyone edits either card**, when the file is already open and its behaviour already in the reader's head. Success test: both existing suites pass UNCHANGED — a behaviour-preserving refactor proves itself by not moving its tests. Filed 2026-08-25.
+
+#### Files over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
+
+**Re-measured 2026-08-24: the candidate set rolled over.** Everything the item spent August on is cut — `executor.ts` (→ 493-line orchestrator + seven phase modules), `helixService.ts` (1845→823 over two cuts: key store, bulk-job protocol, auth seam, errors, API keys, site content), `mcp-server.ts` (1794→398 registration facade over `src/mcp/`), `adobeEntityFetcher.ts` (1769→273 facade over five services) — every cut behavior-preserving with existing suites untouched. The item's top banner carries the CURRENT table: `configure.ts` (916L, **32 non-type imports**) is the strongest candidate; `authenticationService.ts` (~42 methods) and `githubFileOperations.ts` (17) need a delegation-vs-logic read before a verdict; `projects-dashboard/dashboardHandlers.ts` is ~2× the handler threshold; and the never-examined `.tsx` tier has five components over 600 lines (`repoSelectionInline.helpers.tsx` 856 the standout). Earlier history: **re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
+
+#### Claude Code's storage grows ~4 GB a year, and nothing reports it ([`2026-08-25-claude-code-disk-footprint.md`](2026-08-25-claude-code-disk-footprint.md))
+
+**Measured 2026-08-25 while checking whether Evaluation Mode needed a data-management surface — it does not (78 KB per project, capped on two axes, asserted by a test), and the measurement found this instead.** On the owner's machine five months in: `~/.claude` is **2.2 GB**, of which 1.7 GB is session transcripts (323 files, oldest 24 March, nothing deletes any of it), plus 371 MB of plugins and 160 MB of file-history. Growth from the oldest and newest transcript dates: **11 MB/day → 331 MB/month → ~4 GB/year**, transcripts alone. Not our data, but it accumulates from work done THROUGH this extension, it sits beside our own storage where a producer cannot tell whose is whose, and we already own the surface that would say so — "Demo Builder: Diagnostics" reports on the environment and this is environment. **Build a REPORT, not a manager**, and the rule is deliberate: a cleanup button is the obvious next idea and is more dangerous than it looks, because transcripts are how `--continue` works (`claudeSessionStore.hasConversation` probes for a `.jsonl` to decide whether the Chat tile can resume), so deleting the wrong file breaks resuming silently and the producer experiences it as "my chat forgot everything". Report total, largest subdirectories, oldest transcript, and the path; let them run `rm` themselves. Compute on demand — do NOT walk a 2.2 GB tree on activation (the `buildStampUi.ts` precedent is explicit that the expensive walk is the on-demand half). Filed 2026-08-25.
+
+#### Monorepo independent release tracking ([`monorepo-independent-release-tracking/`](monorepo-independent-release-tracking/overview.md))
+
+Full RPTC plan (overview + 3 steps) drafted 2025-12-16, never executed. Adds tag-prefix support (`backend@1.0.0`, `optimizer@2.0.0`) for independent release lifecycles in one repo. Pick up when monorepo components become a real need — **re-measured 2026-08-23: still no repo serves two components** (4 distinct source URLs, each used once), and the plan's file map is stale: `COMPONENT_REPOS` no longer exists (repo resolution lives in `componentRepositoryResolver.ts`) and `templates/components.json` is now `src/features/components/config/components.json`. Fix the citations before executing.
 
 ## Recently shipped — 2026-08
 

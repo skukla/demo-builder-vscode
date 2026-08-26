@@ -1,3 +1,12 @@
+---
+id: AB-1c
+kind: feature
+area: app-builder
+parent: AB-1
+needs: AB-1
+value: low
+status: backlog
+---
 # Promote a shell-built custom app to a GitHub repo
 
 ## Provenance
