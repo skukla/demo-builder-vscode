@@ -91,6 +91,12 @@ unchanged "$PL4" "  ...and does not write it"         -- "${T[@]}" set PL-4 area
 exits 1    "set rejects epic shipped w/ open children" -- "${T[@]}" set AI-1 status=shipped
 unchanged "$EPIC" "  ...and does not write it"        -- "${T[@]}" set AI-1 status=shipped
 exits 1    "set rejects a malformed assignment"       -- "${T[@]}" set PL-4 nokeyvalue
+# A `gated`/`blocked` item must name what it waits on. Found by USING the tool:
+# EDS-5 was gated with an empty `needs`, so "gated by what?" was unanswerable.
+exits 1    "set rejects gated with no blocker named"   -- "${T[@]}" set PL-4 status=gated
+exits 0    "  ...but accepts it with waiting-on"       -- "${T[@]}" set PL-4 status=gated "waiting-on=a named thing"
+exits 0    "check passes with waiting-on set"          -- "${T[@]}" check
+exits 0    "  ...restore"                              -- "${T[@]}" set PL-4 status=backlog
 exits 1    "new refuses a taken id"                   -- "${T[@]}" new whatever --id AI-1c
 exits 1    "log without text is a usage error"        -- "${T[@]}" log PL-4
 

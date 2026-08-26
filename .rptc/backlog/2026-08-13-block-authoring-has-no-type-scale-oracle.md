@@ -6,6 +6,7 @@ needs: []
 value: med
 status: gated
 layer: C
+waiting-on: field feedback — the next authored block, or the next 'fonts too small' report
 ---
 # Block authoring has no oracle — the type scale exists and nothing points at it
 

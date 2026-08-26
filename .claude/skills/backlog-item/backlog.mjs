@@ -121,6 +121,15 @@ export function validate(items, problems = []) {
         if (i.status === 'superseded' && !i['superseded-by']) {
             p.push(`${i.rel}: status "superseded" requires superseded-by:`);
         }
+        // `gated`/`blocked` mean waiting on a NAMED thing, so name it. Found by
+        // using the tool on 2026-08-26: EDS-5 was gated with an empty `needs`, and
+        // "gated by what?" had no answer anywhere a command could reach — the real
+        // reason ("field feedback") was a sentence buried mid-file. `needs` only
+        // holds item ids, so a wait on something outside the backlog needs its own
+        // field. A status that claims a blocker must produce one.
+        if ((i.status === 'gated' || i.status === 'blocked') && !i['waiting-on'] && !i.needs.length) {
+            p.push(`${i.rel}: status "${i.status}" requires waiting-on: (free text) or a non-empty needs:`);
+        }
     }
     const ids = new Set(items.map((i) => i.id).filter(Boolean));
     const dupes = items.map((i) => i.id).filter((id, n, a) => id && a.indexOf(id) !== n);
@@ -203,7 +212,9 @@ function registryTable(items) {
         lines.push('|---|---|---|---|---|---|');
         for (const i of [...inArea].sort(byFamily)) {
             const indent = i.parent ? '└ ' : '';
-            const needs = i.needs.length ? i.needs.join(', ') : '—';
+            // A gated row whose blocker is not another item shows the free-text
+            // reason here, so the table answers "waiting on what?" on its own.
+            const needs = i.needs.length ? i.needs.join(', ') : (i['waiting-on'] ? `_${i['waiting-on']}_` : '—');
             lines.push(`| \`${i.id}\` | ${i.kind} | ${indent}[${i.title}](${i.rel}) | ${needs} | ${i.value} | ${i.status} |`);
         }
     }
@@ -360,7 +371,7 @@ function main() {
             const byId = new Map(items.map((x) => [x.id, x]));
             console.log(`${i.id}  ${i.title}`);
             console.log(`  file    ${i.path}`);
-            for (const k of ['kind', 'area', 'layer', 'value', 'status', 'parent', 'superseded-by']) {
+            for (const k of ['kind', 'area', 'layer', 'value', 'status', 'parent', 'waiting-on', 'superseded-by']) {
                 if (i[k]) console.log(`  ${k.padEnd(7)} ${i[k]}`);
             }
             const kids = items.filter((c) => c.parent === i.id).sort(byFamily);

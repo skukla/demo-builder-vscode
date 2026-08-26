@@ -53,8 +53,16 @@ parent: AI-2         # OMIT unless this is a child
 needs: []            # ids this is blocked by, or []
 value: low           # high | med | low
 status: spiked       # open | backlog | planned | active | blocked | gated | spiked
+layer: B             # A-G, the through-line grouping. OMIT if outside the agent chain
 ---
 ```
+
+**A `gated` or `blocked` item MUST name what it waits on** — either `needs:` (when
+it is another item) or `waiting-on:` (free text, when it is not). Found by using
+the tool on 2026-08-26: `EDS-5` was gated with an empty `needs`, so "gated by
+what?" had no answer any command could reach. The real reason — field feedback —
+was one sentence buried mid-file. A status that claims a blocker must produce
+one.
 
 `--check` fails if a kind, area or value is unknown, or if a `parent` or `needs`
 id does not resolve. **A dangling reference is the failure mode that hid three
