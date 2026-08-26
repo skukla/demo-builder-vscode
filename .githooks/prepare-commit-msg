@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# Pre-fill the `Backlog:` trailer and show what is currently in flight.
+#
+# The trailer is what `backlog.mjs unlogged` reads to tell whether a commit ever
+# reached the item it belongs to. Asking you to remember a convention does not
+# work: on 2026-08-26 eight commits landed with nothing recorded against their
+# items, and nothing noticed until it was asked. So the line is already in the
+# message and you answer it rather than recall it.
+#
+# `commit-msg` enforces it. This hook only makes it easy.
+
+MSG_FILE="$1"
+SOURCE="${2:-}"
+
+# A merge or squash has a message git composed; leave it alone. Same for an
+# existing commit being reworded (--amend, rebase): its trailer is already there
+# and re-prefilling would duplicate the line.
+case "$SOURCE" in
+    merge|squash|commit) exit 0 ;;
+esac
+
+# Already carries one. Nothing to do.
+grep -qiE '^Backlog:' "$MSG_FILE" && exit 0
+
+TOOL=".claude/skills/backlog-item/backlog.mjs"
+LIST=""
+if [[ -f "$TOOL" ]] && command -v node >/dev/null 2>&1; then
+    # `next` is the right list: things you could actually be working on. It is
+    # advisory here, so a failure must never block a commit.
+    LIST="$(node "$TOOL" next 2>/dev/null | grep -E '^  (high|med|low) ' | head -12 | sed 's/^  /#   /')"
+fi
+
+# Insert ABOVE git's own comment block, so the line you must fill in sits with
+# the message you are writing rather than below a screen of status comments.
+FIRST_COMMENT="$(grep -n '^#' "$MSG_FILE" | head -1 | cut -d: -f1)"
+if [[ -z "$FIRST_COMMENT" ]]; then
+    BODY_END="$(wc -l < "$MSG_FILE")"
+else
+    BODY_END=$((FIRST_COMMENT - 1))
+fi
+
+TMP="$(mktemp)"
+{
+    [[ "$BODY_END" -gt 0 ]] && head -n "$BODY_END" "$MSG_FILE"
+    echo "Backlog: "
+    echo ""
+    echo "# The line above is REQUIRED. Put the item id this commit belongs to,"
+    echo "# or the word 'none'. Anything else is refused by the commit-msg hook."
+    if [[ -n "$LIST" ]]; then
+        echo "#"
+        echo "# What you could be working on:"
+        echo "$LIST"
+    fi
+    echo "#"
+    echo "# After committing:  node .claude/skills/backlog-item/backlog.mjs unlogged"
+    [[ -n "$FIRST_COMMENT" ]] && tail -n +"$FIRST_COMMENT" "$MSG_FILE"
+} > "$TMP"
+mv "$TMP" "$MSG_FILE"

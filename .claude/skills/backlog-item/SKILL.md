@@ -35,7 +35,27 @@ Backlog: AI-1b
 `## Shipped so far`, and exits non-zero. Run it after committing; it is also part
 of `rptc-hygiene-scan`.
 
-**Opt-in, and know what that costs.** Most commits belong to no item — a lint
+**The trailer is REQUIRED, and git enforces it.** `.githooks/commit-msg` refuses
+a commit whose trailer is missing or names an id that does not exist;
+`.githooks/prepare-commit-msg` pre-fills the line and lists what is in flight, so
+you answer a prompt instead of recalling a convention. Switch them on once per
+clone or worktree:
+
+```bash
+npm run hooks:git          # git config core.hooksPath .githooks
+git config --unset core.hooksPath    # turn them off
+```
+
+`Backlog: none` is a first-class answer, not a loophole. Most commits belong to
+no item — a lint sweep, the tooling itself — and forcing a fake id would be worse
+than no rule. What the rule buys is that you ANSWERED.
+
+Test any change to them with `bash .githooks/dogfood.sh` (15 assertions, a
+throwaway repo). **The MUST-NOT-BLOCK cases matter more than the blocking ones**:
+a hook that refuses a merge, or dies mid-rebase over history that predates it,
+breaks work with nothing to do with the backlog. All three are pinned.
+
+**What the trailer still cannot do.** Most commits belong to no item — a lint
 sweep, the tooling itself — and demanding a trailer everywhere just trains people
 to write a meaningless one. So a commit with NO trailer is invisible to this: it
 catches "named it and forgot to log", not "forgot entirely". The output says so
