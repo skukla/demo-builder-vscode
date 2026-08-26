@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: med
-status: backlog
+status: dropped
 layer: C
 ---
 # The agent can query Commerce now, but has to discover the schema every time
@@ -73,3 +73,7 @@ Live Search has no `productSearch` at all, so guidance that names it
 unconditionally would be wrong there. Check both backends before writing any.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  DROPPED — the gap does not exist. Reading all nine commerce-query runs: EVERY first attempt was the correct query, { productSearch(phrase:"", page_size:1) { total_count } }, nine times out of nine. Claude never lacked the schema. The introspection this item was filed on was Claude recovering from OUR error: the tool refused its correct endpoint request, so it doubted its own query, tried products, introspected, and came back to exactly what it started with. A gap invented by misreading a recovery as a discovery.
