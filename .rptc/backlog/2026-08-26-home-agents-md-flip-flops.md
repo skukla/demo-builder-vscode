@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: built
+status: shipped
 layer: C
 ---
 # The home AGENTS.md has two different contents, and which one you get is luck
@@ -85,3 +85,4 @@ Filed 2026-08-26.
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
 - 2026-08-26  fix(ai): the home AGENTS.md tracks the current project instead of guessing (`dc0d8ab58`)
 - 2026-08-26  docs(backlog): AI-1g built — awaiting the measurement that would ship it (`f6f12e6af`)
+- 2026-08-26  MEASURED after F5: paths calling get_current_project 9/10 -> 0/10, every one flipped. Total battery calls 43 -> 32. No prompt that answered correctly stopped. Route metric, not tokens — the run was tagged warm so the 2.29M -> 1.76M billable drop is not a clean saving.

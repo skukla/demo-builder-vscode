@@ -32,7 +32,22 @@ ALLOWED.push('Bash', 'WebFetch');
 // we know the right route in advance, so "what did it actually use?" becomes a
 // score instead of an interpretation. Kept in a file, verbatim, because the
 // original six prompts were lost and their run became incomparable.
-const PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
+let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
+
+// `--only <id>` re-runs ONE prompt, and `--repeat <n>` runs the selection n times.
+// Both exist for the same reason: every result here is n=1, and agents are
+// stochastic — `datapacks` changed diagnosis between two runs and there was no
+// way to tell a regression from a coin flip. Repeating is how you tell.
+const only = process.argv[process.argv.indexOf('--only') + 1];
+if (process.argv.includes('--only')) {
+    if (!only || only.startsWith('--')) { console.error('--only needs a prompt id'); process.exit(2); }
+    PROMPTS = PROMPTS.filter((p) => p.id === only);
+    if (!PROMPTS.length) { console.error(`no prompt with id "${only}"`); process.exit(2); }
+}
+const repeat = process.argv.includes('--repeat')
+    ? Number(process.argv[process.argv.indexOf('--repeat') + 1]) : 1;
+if (!Number.isInteger(repeat) || repeat < 1) { console.error('--repeat needs a positive integer'); process.exit(2); }
+if (repeat > 1) PROMPTS = Array.from({ length: repeat }, () => PROMPTS).flat();
 
 // A prompt whose expected tool is not in the allowlist is UNANSWERABLE: the agent
 // is forbidden from calling the one thing that would score a hit, and the run

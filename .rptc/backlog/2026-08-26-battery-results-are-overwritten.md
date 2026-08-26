@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: built
+status: shipped
 layer: B
 ---
 # The battery destroys its own baseline on every run
@@ -50,3 +50,4 @@ Filed 2026-08-26.
 - 2026-08-26  fix(battery): results are immutable, and the guard that failed silently (`7008791b4`)
 - 2026-08-26  fix(backlog): `Backlog: none` is an answer, not an id (`a82af1b2a`)
 - 2026-08-26  docs(backlog): AI-1i built — the record updated itself (`b4cad6f6d`)
+- 2026-08-26  Proved by the second run: wrote results/2026-08-26T17-15-22Z.jsonl alongside the baseline instead of truncating it. Both runs on disk, comparison possible.

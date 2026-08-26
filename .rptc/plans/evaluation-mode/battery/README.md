@@ -37,6 +37,21 @@ compared to anything:
 - **Cache state**, from `BATTERY_CACHE`. Declared, never inferred: cache alone
   swung one prompt 55,236 → 8,959 in a prior measurement.
 
+## One sample is not a result
+
+```bash
+node run.mjs --only datapacks --repeat 3
+```
+
+Agents are stochastic and every figure here is n=1 by default. On 2026-08-26 the
+`datapacks` prompt changed diagnosis between two runs and read exactly like a
+regression from the fix that ran in between. Three repeats settled it: **one bad
+run in five**, all four others taking an identical clean route. Nothing had
+broken.
+
+Before believing any single-run change, repeat it. Before reporting one as a
+regression, repeat it and say how many samples you have.
+
 ## The idea
 
 **We know the right answer before we ask.** Every prompt names the tool that

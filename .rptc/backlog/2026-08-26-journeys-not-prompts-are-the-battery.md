@@ -108,3 +108,4 @@ Filed 2026-08-26.
 - 2026-08-26  fix(battery): the allowlist blocked two of its own prompts (`a5ea25e71`)
 - 2026-08-26  feat(battery): targeted prompts that declare the tool that should answer them (`ad2253ec3`)
 - 2026-08-26  docs(backlog): AI-1d — journeys, not prompts, are what the battery measures (`f13f9d080`)
+- 2026-08-26  Added --only/--repeat after a false alarm: datapacks changed diagnosis between two runs and read as a regression. 3 repeats settled it — 1 bad run in 5, the other 4 an identical clean route. It also got FASTER after AI-1g: 8 calls before, 4 in every repeat. Every battery figure is n=1 by default and that was nearly enough to send us chasing a bug that did not exist.
