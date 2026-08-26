@@ -524,7 +524,7 @@ function main() {
                     // no way to spot.
                     const touchedCode = (() => {
                         try {
-                            const files = execFileSync('git', ['show', '--name-only', '--format=', c.sha],
+                            const files = execFileSync('git', ['show', '--name-only', '--format=', m.sha],
                                 { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
                             return files.some((f) => !f.startsWith('.rptc/'));
                         } catch { return true; }   // unknown: do not silently skip the flip
