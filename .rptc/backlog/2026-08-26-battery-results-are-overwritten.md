@@ -49,3 +49,4 @@ Filed 2026-08-26.
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
 - 2026-08-26  fix(battery): results are immutable, and the guard that failed silently (`7008791b4`)
 - 2026-08-26  fix(backlog): `Backlog: none` is an answer, not an id (`a82af1b2a`)
+- 2026-08-26  docs(backlog): AI-1i built — the record updated itself (`b4cad6f6d`)

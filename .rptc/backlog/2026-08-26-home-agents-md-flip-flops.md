@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: built
 layer: C
 ---
 # The home AGENTS.md has two different contents, and which one you get is luck
@@ -83,3 +83,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
+- 2026-08-26  fix(ai): the home AGENTS.md tracks the current project instead of guessing (`dc0d8ab58`)
