@@ -206,6 +206,46 @@ git commit -qm "no trailer at all" >/dev/null 2>&1
 denies "untagged commits are invisible (the stated limit)" "no trailer at all" -- "${T[@]}" unlogged
 
 echo
+echo "UNLOGGED --write — the report becomes the fix"
+# A backlog item, a commit naming it, nothing recorded.
+"${T[@]}" set EDS-3 status=backlog >/dev/null 2>&1
+echo "q" >> f1; git add -A >/dev/null 2>&1
+git commit -q -F - >/dev/null 2>&1 <<'M'
+feat(eds): scraping spike
+
+Backlog: EDS-3
+M
+SHA_W="$(git rev-parse HEAD)"
+"${T[@]}" unlogged --write >/dev/null 2>&1
+EDS3=".rptc/backlog/2026-05-28-eds-site-scraping.md"
+if grep -q "${SHA_W:0:9}" "$EDS3"; then ok "the commit sha is written into the item"; else bad "the commit sha is written into the item" "not found"; fi
+says "  ...and status flipped backlog -> active" "active" -- "${T[@]}" show EDS-3
+# NOT "unlogged is clean" — an earlier case deliberately left a `Backlog: ZZ-9`
+# commit in history, and the tool is right to keep reporting it. Assert the
+# SPECIFIC sha is gone, or the test asserts the wrong thing and blames the tool.
+denies "  ...and that sha is no longer reported" "${SHA_W:0:9}" -- "${T[@]}" unlogged
+exits 0 "check still passes"                    -- "${T[@]}" check
+
+# REFUSALS. Both are judgement calls the tool must not make silently.
+echo "r" >> f1; git add -A >/dev/null 2>&1
+git commit -q -F - >/dev/null 2>&1 <<'M'
+chore: trailer typo
+
+Backlog: EDS-3
+M
+"${T[@]}" set EDS-3 status=shipped >/dev/null 2>&1
+says "refuses to log into a shipped item" "REFUSED" -- "${T[@]}" unlogged --write
+exits 1 "  ...and exits non-zero"                  -- "${T[@]}" unlogged --write
+"${T[@]}" set EDS-3 status=active >/dev/null 2>&1
+
+# NEGATIVE CONTROL: with nothing unlogged, --write must write NOTHING.
+"${T[@]}" unlogged --write >/dev/null 2>&1
+BEFORE="$(md5 -q "$EDS3" 2>/dev/null || md5sum "$EDS3" | cut -d" " -f1)"
+"${T[@]}" unlogged --write >/dev/null 2>&1
+AFTER="$(md5 -q "$EDS3" 2>/dev/null || md5sum "$EDS3" | cut -d" " -f1)"
+[[ "$BEFORE" == "$AFTER" ]] && ok "NEGATIVE CONTROL: a second --write is a no-op" || bad "NEGATIVE CONTROL: a second --write is a no-op" "it appended twice"
+
+echo
 echo "CONTROLS — these prove the harness can actually see a failure"
 exits 1 "a deliberately bad command fails"            -- "${T[@]}" notacommand
 printf 'x' >> "$PL4"

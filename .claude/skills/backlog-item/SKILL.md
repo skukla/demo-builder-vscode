@@ -21,6 +21,7 @@ node $B log AI-1c "Phase 1 landed (abc1234)"
 node $B sync                  # rewrite the README's generated spans
 node $B stale                 # advisory: WIP items with nothing recorded
 node $B unlogged              # commits that NAME an item but never reached it
+node $B unlogged --write      # ...and record them, no typing
 ```
 
 ## Name the item in the commit
@@ -61,6 +62,28 @@ to write a meaningless one. So a commit with NO trailer is invisible to this: it
 catches "named it and forgot to log", not "forgot entirely". The output says so
 itself when nothing carried a trailer, because "0 unlogged" and "nothing was
 scanned for it" print the same line and mean opposite things.
+
+## The record keeps itself
+
+**After committing, run `unlogged --write`.** The sha and subject are already in
+the commit, so there is nothing to type — and a step nobody has to remember is a
+step nobody forgets. Eight commits landed unlogged on 2026-08-26 before anyone
+noticed, which is the entire argument for this.
+
+It also flips `backlog`/`planned` to `active`, because a commit naming an item is
+evidence work started. **It does NOT set `built` or `shipped`** — those stay a
+human call. `built` means code landed; `shipped` means someone used it, and only
+a person knows the second one. That line is the whole design: bookkeeping is
+automatic, judgement is not.
+
+Two things it refuses rather than guess:
+
+- **A trailer naming an id that does not exist.** A typo, and writing it
+  somewhere is worse than reporting it.
+- **An item already `shipped`/`dropped`/`superseded`.** Logging into finished
+  work is a decision.
+
+Both print `REFUSED` and exit non-zero.
 
 ## Log at commit time, not at cleanup time
 

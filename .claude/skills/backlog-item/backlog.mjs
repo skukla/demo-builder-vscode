@@ -469,15 +469,15 @@ function main() {
             const range = opt.since ? `${opt.since}..HEAD` : '-40';
             let raw;
             try {
-                raw = execFileSync('git', ['log', range, '--format=%H%x1f%B%x1e'], { encoding: 'utf8' });
+                raw = execFileSync('git', ['log', range, '--format=%H%x1f%ad%x1f%B%x1e', '--date=short'], { encoding: 'utf8' });
             } catch {
                 die('git log failed — run this inside the repository');
             }
             const commits = raw.split('\x1e').map((c) => c.trim()).filter(Boolean).map((c) => {
-                const [sha, body] = c.split('\x1f');
+                const [sha, date, body] = c.split('\x1f');
                 const ids = [...body.matchAll(/^Backlog:\s*(.+)$/gm)]
                     .flatMap((m) => m[1].split(/[\s,]+/)).filter(Boolean);
-                return { sha, subject: body.trim().split('\n')[0], ids };
+                return { sha, date, subject: body.trim().split('\n')[0], ids };
             });
             const tagged = commits.filter((c) => c.ids.length);
             const byId = new Map(items.map((i) => [i.id, i]));
@@ -493,9 +493,51 @@ function main() {
                 }
             }
             if (opt.json) return console.log(JSON.stringify(missing, null, 2));
+
+            // --write turns the report into the fix. The sha and the subject are
+            // already here, so there is nothing for a human to type — and a step
+            // nobody has to remember is a step nobody forgets. Eight commits landed
+            // unlogged on 2026-08-26 before anyone noticed.
+            //
+            // It refuses the two cases it cannot get right on its own: an id that
+            // does not exist (a typo in the trailer — writing it somewhere would be
+            // worse than reporting it), and a finished item (logging into something
+            // shipped is a decision, not bookkeeping).
+            if (opt.write) {
+                let wrote = 0;
+                const refused = [];
+                for (const m of missing) {
+                    const item = byId.get(m.id);
+                    if (!item) { refused.push(`${m.id} — no such item`); continue; }
+                    if (DONE.has(item.status)) { refused.push(`${m.id} — is "${item.status}"`); continue; }
+                    appendShipped(item, `${m.subject} (\`${m.sha.slice(0, 9)}\`)`, m.date);
+                    // Evidence of work is evidence it started. `built`/`shipped` stay
+                    // a human call — only a person knows whether anyone USED it.
+                    if (item.status === 'backlog' || item.status === 'planned') {
+                        writeFrontmatter(item, { status: 'active' });
+                        console.log(`  ${m.id}: backlog -> active`);
+                    }
+                    console.log(`  ${m.id}: logged ${m.sha.slice(0, 9)}`);
+                    wrote++;
+                }
+                for (const r of refused) console.log(`  REFUSED ${r}`);
+                const after = validate(loadItems().items, loadItems().problems);
+                if (after.length) {
+                    console.error('\nthis left the backlog invalid:');
+                    for (const x of after) console.error('  ' + x);
+                    process.exitCode = 1;
+                    return;
+                }
+                console.log(`\n  ${wrote} logged, ${refused.length} refused` +
+                            `\n  control: ${commits.length} commit(s) scanned, ${tagged.length} carried a trailer`);
+                process.exitCode = refused.length ? 1 : 0;
+                return;
+            }
+
             for (const m of missing) {
                 console.log(`  ${m.sha.slice(0, 9)}  ${m.id.padEnd(6)} ${m.why.padEnd(24)} ${m.subject.slice(0, 60)}`);
             }
+            if (missing.length) console.log('\n  run with --write to record these automatically');
             // The control matters more here than anywhere else: "0 unlogged" and
             // "0 commits carried a trailer" are the same output and opposite facts.
             console.log(`\n  ${missing.length} unlogged` +
