@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: med
-status: active
+status: built
 layer: C
 ---
 # run_commerce_query — the agent finds the endpoint, then has to leave to use it

@@ -81,6 +81,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_auth_status: 'Checking who you are signed in as',
     get_block_authoring_shape: 'Looking up how the block is authored',
     get_commerce_endpoints: 'Looking up the Commerce endpoints',
+    run_commerce_query: 'Querying the Commerce backend',
     get_block_source: 'Reading the block source',
     get_component_config: 'Reading the project configuration',
     get_component_requirements: 'Looking up what the component needs',

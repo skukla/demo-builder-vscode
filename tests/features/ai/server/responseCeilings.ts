@@ -42,6 +42,17 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    run_commerce_query: {
+        bytes: 31_000,
+        why:
+            'ENFORCED, not observed. The tool truncates at `MAX_RESPONSE_CHARS` (30,000) ' +
+            'and declares the cut in the payload, so this ceiling is a bound the code ' +
+            'holds rather than a figure measured once and hoped for. It needs one: a ' +
+            'catalog query can return megabytes, and this is the only tool here whose ' +
+            'response size is chosen by the CALLER rather than by us. A truncated JSON ' +
+            'body that did not SAY it was truncated would be worse than a large one — ' +
+            'the agent would parse a fragment and believe it.',
+    },
     reload_window: {
         bytes: 400,
         why:
