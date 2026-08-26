@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: backlog
+status: active
 layer: C
 ---
 # The home AGENTS.md has two different contents, and which one you get is luck
@@ -79,3 +79,7 @@ global — it changes a file every prompt reads — so measuring it on one promp
 measures a tenth of it.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)

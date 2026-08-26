@@ -225,6 +225,16 @@ says "  ...and status flipped backlog -> active" "active" -- "${T[@]}" show EDS-
 # SPECIFIC sha is gone, or the test asserts the wrong thing and blames the tool.
 denies "  ...and that sha is no longer reported" "${SHA_W:0:9}" -- "${T[@]}" unlogged
 exits 0 "check still passes"                    -- "${T[@]}" check
+# `Backlog: none` is a valid answer, not an id. Every commit this harness makes
+# uses it, so treating it as an id made every such commit an unresolvable REFUSED
+# on the real repository and `unlogged` could never exit 0 there again.
+#
+# Assert the ABSENCE of a `none` refusal, NOT a clean exit: an earlier case in
+# this file deliberately plants a `Backlog: ZZ-9` commit, so exit 0 is impossible
+# here by design and asserting it blames the tool for the harness. That exact
+# mistake was made twice in this file before it was written down.
+denies "never reports 'none' as an item" "none — no such item" -- "${T[@]}" unlogged --write
+denies "  ...nor in the plain report" "none — no such item" -- "${T[@]}" unlogged
 
 # REFUSALS. Both are judgement calls the tool must not make silently.
 echo "r" >> f1; git add -A >/dev/null 2>&1

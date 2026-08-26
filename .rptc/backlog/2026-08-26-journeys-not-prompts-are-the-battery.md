@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: [AI-1c]
 value: high
-status: backlog
+status: active
 layer: B
 ---
 # Journeys, not prompts, are what the battery should measure
@@ -104,3 +104,7 @@ Filed 2026-08-26.
 
 - 2026-08-26  Battery reshaped: 10 targeted prompts, each declaring the tool that SHOULD answer it, scored hit/around/miss. Fixed run.mjs — it read a filename that no longer existed AND overwrote the live AGENTS.md with no backup, so it could not have been run since the rename.
 - 2026-08-26  Battery RAN, 10 prompts, 10 hits, 1 TOOL-INSUFFICIENT. Route detail rendered per prompt. Confirms the design: a plain hit/miss score would have called commerce-query a success. Limits found: results.jsonl is truncated per run (AI-1i), and this run captured tool names without arguments — runner now records args + per-step results.
+- 2026-08-26  feat(battery): say WHY the agent went around us, not just that it did (`742783b3c`)
+- 2026-08-26  fix(battery): the allowlist blocked two of its own prompts (`a5ea25e71`)
+- 2026-08-26  feat(battery): targeted prompts that declare the tool that should answer them (`ad2253ec3`)
+- 2026-08-26  docs(backlog): AI-1d — journeys, not prompts, are what the battery measures (`f13f9d080`)

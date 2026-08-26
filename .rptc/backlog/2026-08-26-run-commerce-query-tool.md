@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: med
-status: backlog
+status: active
 layer: C
 ---
 # run_commerce_query — the agent finds the endpoint, then has to leave to use it
@@ -67,3 +67,7 @@ Binary, one prompt, but run the whole battery — a new tool changes the catalog
 every prompt sees, so the check is also "nothing else moved".
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)

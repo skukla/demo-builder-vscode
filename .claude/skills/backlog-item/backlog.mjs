@@ -476,7 +476,12 @@ function main() {
             const commits = raw.split('\x1e').map((c) => c.trim()).filter(Boolean).map((c) => {
                 const [sha, date, body] = c.split('\x1f');
                 const ids = [...body.matchAll(/^Backlog:\s*(.+)$/gm)]
-                    .flatMap((m) => m[1].split(/[\s,]+/)).filter(Boolean);
+                    .flatMap((m) => m[1].split(/[\s,]+/))
+                    // `none` is a first-class answer, not an id. The commit-msg hook
+                    // accepts it for the many commits that belong to no item; treating
+                    // it as an id made every such commit an unresolvable "REFUSED" and
+                    // meant `unlogged` could never exit 0 on this repository.
+                    .filter((x) => x && x.toLowerCase() !== 'none');
                 return { sha, date, subject: body.trim().split('\n')[0], ids };
             });
             const tagged = commits.filter((c) => c.ids.length);
@@ -515,7 +520,10 @@ function main() {
                     // a human call — only a person knows whether anyone USED it.
                     if (item.status === 'backlog' || item.status === 'planned') {
                         writeFrontmatter(item, { status: 'active' });
-                        console.log(`  ${m.id}: backlog -> active`);
+                        console.log(`  ${m.id}: ${item.status} -> active`);
+                        // Keep the in-memory copy in step, or an item named by three
+                        // commits announces the same flip three times.
+                        item.status = 'active';
                     }
                     console.log(`  ${m.id}: logged ${m.sha.slice(0, 9)}`);
                     wrote++;

@@ -86,3 +86,5 @@ Three, and only the first is covered today:
 - 2026-08-26  agent-gap-scan skill built — transcripts-only, three shapes + orientation share. Reproduces the AI-1b hand pass EXACTLY (20 of 105 tools, 77% orientation) on first run.
 - 2026-08-26  Time axis added (--since/--until, per-finding first/last seen). Without it the scan reported June gaps as current: 24 of 35 curl calls predate get_commerce_endpoints, and 19 of 23 get_current_project calls were the BEFORE runs for the fix that shipped that same day.
 - 2026-08-26  First real use of agent-gap-scan's output: the battery it informed found exactly one gap (AI-1h) and one bug (AI-1g). Also exposed the scan's own limit — it reports what agents DID, and could not have found the AGENTS.md flip-flop, which only shows when you drive a known prompt and watch the route.
+- 2026-08-26  feat(skills): give agent-gap-scan a time axis (`0b023cfb5`)
+- 2026-08-26  feat(skills): agent-gap-scan — find surface gaps from what agents actually did (`5e2293260`)

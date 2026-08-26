@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: backlog
+status: active
 layer: B
 ---
 # The battery destroys its own baseline on every run
@@ -42,3 +42,8 @@ Nothing else in the AI-surface work can be shown to help until this is fixed. It
 blocks the measurement half of `AI-1g` and `AI-1h`, and it is a few lines.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-26  feat(backlog): the report becomes the fix — `unlogged --write` (`2a8eafa1a`)
+- 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
