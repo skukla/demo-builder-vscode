@@ -32,6 +32,20 @@ ALLOWED.push('Bash', 'WebFetch');
 // original six prompts were lost and their run became incomparable.
 const PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
 
+// A prompt whose expected tool is not in the allowlist is UNANSWERABLE: the agent
+// is forbidden from calling the one thing that would score a hit, and the run
+// reports `around` — which reads exactly like "the agent could not find the
+// tool". Caught before the first run: `get_commerce_endpoints` shipped the same
+// day and the allowlist predated it, so two of ten prompts were rigged to fail.
+const bad = PROMPTS.flatMap(({ id, expect }) =>
+    expect.filter((e) => !ALLOWED.includes(`mcp__demo-builder__${e}`)).map((e) => `${id} -> ${e}`));
+if (bad.length) {
+    console.error('ABORT: expected tools missing from readonly-tools.txt:');
+    for (const b of bad) console.error('  ' + b);
+    console.error('Re-extract the allowlist (mcp-live-probe `info`) or fix the prompt.');
+    process.exit(2);
+}
+
 // NO VARIANTS, and no writing to AGENTS.md.
 //
 // This was an A/B runner: it swapped `~/.demo-builder/projects/AGENTS.md` between

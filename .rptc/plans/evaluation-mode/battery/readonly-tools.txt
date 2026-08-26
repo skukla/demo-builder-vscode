@@ -8,6 +8,7 @@ find_storefront_name_mismatches
 get_auth_status
 get_block_authoring_shape
 get_block_source
+get_commerce_endpoints
 get_component_config
 get_component_requirements
 get_current_project
