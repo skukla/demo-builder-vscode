@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (24)
+### ai  (25)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -211,6 +211,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
 | `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |
 | `AI-3a` | feature | └ [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) | — | high | built |
+| `AI-3b` | feature | [Take the Prompt Workbench off develop and onto its own branch](2026-08-26-extract-prompt-workbench-from-develop.md) | — | high | backlog |
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | open |
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
 | `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
@@ -407,7 +408,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — backlog
 
-*13 item(s) sit outside the A–G chain.*
+*14 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
