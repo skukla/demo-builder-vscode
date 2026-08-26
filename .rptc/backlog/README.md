@@ -198,7 +198,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | active |
 | `AI-1f` | feature | └ [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) | — | low | backlog |
 | `AI-1g` | fix | └ [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) | — | high | shipped |
-| `AI-1h` | feature | └ [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) | — | med | built |
+| `AI-1h` | feature | └ [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) | — | med | shipped |
 | `AI-1i` | fix | └ [The battery destroys its own baseline on every run](2026-08-26-battery-results-are-overwritten.md) | — | high | shipped |
 | `AI-1j` | feature | └ [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) | — | high | shipped |
 | `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
@@ -362,7 +362,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — active
 - `AI-1f` [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) — backlog
 - `AI-1g` [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) — shipped
-- `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — built
+- `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — shipped
 - `EDS-5` [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) — gated
 
 **D** — 2 items

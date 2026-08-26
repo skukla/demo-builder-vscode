@@ -145,12 +145,29 @@ export function registerCommerceQueryTool(
                 );
             }
 
-            // `cs` headers belong to Catalog Service only — sending them elsewhere is
-            // harmless but sending them NOWHERE returns an empty result with no error.
+            // WHICH HEADERS, and why it is not "cs only for the catalogService
+            // endpoint".
+            //
+            // That was the first implementation and the live backend refused it:
+            // `productSearch` on bodea came back "Missing Magento-Website-Code
+            // Header" while every unit test passed. The reason is a shape no
+            // fixture showed — **ACCS serves Commerce Core AND Catalog Service from
+            // ONE endpoint**, so there is no separate `catalogService` to target and
+            // an endpoint-driven rule can never send the `cs` headers at all. PaaS
+            // has two endpoints; ACCS has one.
+            //
+            // So the rule is about what the endpoint SERVES, not what it is called:
+            // send `cs` when the chosen endpoint is the Catalog Service one, or when
+            // the project has no separate one and this endpoint is therefore both.
+            // Sending them to a Commerce Core query that does not need them is
+            // harmless; omitting them is a hard error on one path and a silent empty
+            // result on the other.
+            const hasSeparateCatalogService = Boolean(facts.endpoints.catalogService);
+            const needsCatalogHeaders = chosen === 'catalogService' || !hasSeparateCatalogService;
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
                 ...(facts.headers.all ?? {}),
-                ...(chosen === 'catalogService' ? (facts.headers.cs ?? {}) : {}),
+                ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
             };
 
             const controller = new AbortController();

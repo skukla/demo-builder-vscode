@@ -16,19 +16,21 @@
  * Everything before `-d` is what `get_commerce_endpoints` already returns. This
  * tool is that call with the query as its only required argument.
  *
- * ## What the agent's curl does NOT prove
+ * ## The header rule, settled by the live backend
  *
- * Its first attempt sent only `Store: bodea_us` and FAILED; its second added the
- * three `Magento-*` headers and succeeded. That looks like the headers mattering,
- * and it is not evidence of it: the second curl also changed the QUERY, from
- * `products(...)` to `productSearch(...)`, and the first failure was a GraphQL
- * syntax error — "Field products must have a selection of subfields" — which no
- * header would have fixed. Two variables, one observation.
+ * The agent's two curls did NOT settle this: the second changed the query as well
+ * as the headers, and the first failed on GraphQL syntax, so two variables moved
+ * at once. The first implementation therefore followed `generateHeaders`' split —
+ * `cs` only when targeting the `catalogService` endpoint — and every test here
+ * passed against it.
  *
- * So this follows `generateHeaders` instead, which is what the storefront's own
- * `config.json` is generated from and therefore the one classification known to
- * work in production. Whether ACCS's main endpoint ALSO wants the `Magento-*`
- * headers is genuinely open and needs a one-variable test against a live backend.
+ * The live backend refused it: `productSearch` on bodea returned **"Missing
+ * Magento-Website-Code Header"**. The reason is a shape no fixture showed —
+ * **ACCS serves Commerce Core and Catalog Service from ONE endpoint**, so there is
+ * no separate `catalogService` to target and an endpoint-driven rule can never
+ * send those headers at all. PaaS has two endpoints; ACCS has one.
+ *
+ * The rule is therefore about what an endpoint SERVES, not what it is named.
  *
  * FIXTURES ARE THE SAME REAL ONES the endpoints tests use — bodea's ACCS config,
  * read from `~/.demo-builder/projects/bodea/.demo-builder.json`.
@@ -123,13 +125,15 @@ describe('run_commerce_query', () => {
         expect(url).toBe('https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql');
         expect(init.method).toBe('POST');
         expect(init.headers['Content-Type']).toBe('application/json');
-        // `Store` is what `generateHeaders` puts in `headers.all` for ACCS — read
-        // from the function the storefront's own config.json is generated from,
-        // not from the agent's curl. The agent ALSO sent `Magento-*` headers here,
-        // which this deliberately does not: those are `headers.cs`, for Catalog
-        // Service. See the note below on why its curl proves nothing either way.
+        // ACCS gets BOTH header sets, and this is the assertion that was wrong
+        // first time round. `Store` comes from `headers.all`; the `Magento-*` from
+        // `headers.cs` — which an endpoint-driven rule would never send here,
+        // because ACCS has no separate catalogService endpoint to target. The live
+        // backend settled it: "Missing Magento-Website-Code Header" (2026-08-26),
+        // while every test in this file passed.
         expect(init.headers.Store).toBe('bodea_us');
-        expect(init.headers['Magento-Store-Code']).toBeUndefined();
+        expect(init.headers['Magento-Store-Code']).toBe('bodea_store');
+        expect(init.headers['Magento-Website-Code']).toBe('bodea');
         expect(JSON.parse(init.body).query).toBe('{ products { total_count } }');
     });
 

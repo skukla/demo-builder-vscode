@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: med
-status: built
+status: shipped
 layer: C
 ---
 # run_commerce_query — the agent finds the endpoint, then has to leave to use it
@@ -71,3 +71,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
+- 2026-08-26  VERIFIED live: { productSearch(phrase:"", page_size:1) { total_count } } returns 30 products in one call, 112 bytes — the same answer the agent hand-assembled two curls for. Mutation refused, unknown field returns the GraphQL error, missing endpoint named with what IS available.
