@@ -26,11 +26,13 @@
  *   log <id> "<text>"     append a dated line to `## Shipped so far`
  *   sync                  rewrite the README's generated spans in place
  *   stale                 advisory: work-in-progress items with nothing recorded
+ *   unlogged [--since R]  commits that NAME an item but were never logged to it
  *
  *   filters: --area X --status S --layer L --kind K --value V --grep TERM
  *   output:  --json  (every read command; this is the agent-facing form)
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const DIR = '.rptc/backlog';
@@ -452,6 +454,61 @@ function main() {
             console.log(`\n  ${unlogged.length} of ${wip} work-in-progress item(s) have nothing recorded` +
                         `\n  control: ${items.length} parsed, ${items.filter((i) => WIP.has(i.status)).length} in a working state, ` +
                         `${items.filter((i) => WIP.has(i.status) && i.kind === 'epic').length} epic(s) excluded`);
+            return;
+        }
+        case 'unlogged': {
+            // Closes the loop RPTC leaves open. A commit says which item it belongs
+            // to with a `Backlog: <id>` trailer; this finds the ones whose sha never
+            // made it into that item's `## Shipped so far`.
+            //
+            // Opt-in by design: most commits belong to no item (a lint sweep, the
+            // tooling itself), so requiring a trailer everywhere would train people
+            // to write a meaningless one. The cost of opt-in is stated plainly in the
+            // skill — a commit with NO trailer is invisible here, so this catches
+            // "named it and forgot to log", not "forgot entirely".
+            const range = opt.since ? `${opt.since}..HEAD` : '-40';
+            let raw;
+            try {
+                raw = execFileSync('git', ['log', range, '--format=%H%x1f%B%x1e'], { encoding: 'utf8' });
+            } catch {
+                die('git log failed — run this inside the repository');
+            }
+            const commits = raw.split('\x1e').map((c) => c.trim()).filter(Boolean).map((c) => {
+                const [sha, body] = c.split('\x1f');
+                const ids = [...body.matchAll(/^Backlog:\s*(.+)$/gm)]
+                    .flatMap((m) => m[1].split(/[\s,]+/)).filter(Boolean);
+                return { sha, subject: body.trim().split('\n')[0], ids };
+            });
+            const tagged = commits.filter((c) => c.ids.length);
+            const byId = new Map(items.map((i) => [i.id, i]));
+            const missing = [];
+            for (const c of tagged) {
+                for (const id of c.ids) {
+                    const item = byId.get(id);
+                    if (!item) { missing.push({ ...c, id, why: 'no such item' }); continue; }
+                    // A log line cites the short sha; match on a prefix so either form works.
+                    if (!readFileSync(item.path, 'utf8').includes(c.sha.slice(0, 7))) {
+                        missing.push({ ...c, id, why: 'not in its Shipped so far' });
+                    }
+                }
+            }
+            if (opt.json) return console.log(JSON.stringify(missing, null, 2));
+            for (const m of missing) {
+                console.log(`  ${m.sha.slice(0, 9)}  ${m.id.padEnd(6)} ${m.why.padEnd(24)} ${m.subject.slice(0, 60)}`);
+            }
+            // The control matters more here than anywhere else: "0 unlogged" and
+            // "0 commits carried a trailer" are the same output and opposite facts.
+            console.log(`\n  ${missing.length} unlogged` +
+                        `\n  control: ${commits.length} commit(s) scanned, ${tagged.length} carried a Backlog: trailer`);
+            if (tagged.length === 0 && commits.length > 0) {
+                console.log('  NOTE: nothing carried a trailer, so this proves nothing about the record.');
+            }
+            // `process.exit()` TRUNCATES stdout when it is a pipe — Node's writes to a
+            // pipe are async, and exiting drops what has not flushed. It works when
+            // you run it by hand (a TTY writes synchronously) and silently loses the
+            // report the moment anything reads it, which is how the harness caught it:
+            // the exit code was right and the output was gone.
+            process.exitCode = missing.length ? 1 : 0;
             return;
         }
         case 'sync': {

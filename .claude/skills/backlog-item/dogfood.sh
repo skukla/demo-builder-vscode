@@ -55,6 +55,24 @@ unchanged() {
   if [[ "$before" == "$after" ]]; then ok "$name"; else bad "$name" "$f was modified"; fi
 }
 
+# says <name> <pattern> -- <command...>   the command's OUTPUT must contain the pattern.
+# Captures BEFORE grepping on purpose. `if cmd | grep -q x` is wrong here: with
+# `set -o pipefail` the pipeline reports the WORST exit code, so a command that
+# legitimately exits 1 (like `unlogged` when it finds something) reads as "no
+# match" even when the match is exact. That cost two false FAILs on 2026-08-26 —
+# the harness accusing a tool that was working.
+says() {
+  local name="$1" pat="$2"; shift 3
+  local out; out="$("$@" 2>&1)" || true
+  if grep -q -- "$pat" <<<"$out"; then ok "$name"; else bad "$name" "output did not contain: $pat"; fi
+}
+# denies <name> <pattern> -- <command...>   the command's output must NOT contain it.
+denies() {
+  local name="$1" pat="$2"; shift 3
+  local out; out="$("$@" 2>&1)" || true
+  if grep -q -- "$pat" <<<"$out"; then bad "$name" "output unexpectedly contained: $pat"; else ok "$name"; fi
+}
+
 T=(node backlog.mjs)
 PL4=".rptc/backlog/2026-08-25-claude-code-disk-footprint.md"
 EPIC=".rptc/backlog/epic-ai-surface-good-enough.md"
@@ -143,6 +161,49 @@ if "${T[@]}" stale | grep -q 'EDS-3'; then ok "positive control: stale NAMES a l
 "${T[@]}" set AI-2 status=active >/dev/null 2>&1
 if "${T[@]}" stale | grep -q 'AI-2 '; then bad "epics excluded from stale" "an epic was reported"; else ok "epics excluded from stale"; fi
 "${T[@]}" set EDS-3 status=backlog >/dev/null 2>&1
+
+echo
+echo "UNLOGGED — commits that name an item but never reached its record"
+# This needs a REAL git repo, so the sandbox becomes one. Mocking git here would
+# test the mock: the thing under test is trailer parsing against `git log` output.
+git init -q . 2>/dev/null
+git config user.email dogfood@example.com; git config user.name dogfood
+git add -A >/dev/null 2>&1; git commit -qm "base" >/dev/null 2>&1
+
+# (a) a commit that names an item and IS logged -> silent
+echo "x" >> "$PL4"; git add -A >/dev/null 2>&1
+git commit -qm "work on PL-4
+
+Backlog: PL-4" >/dev/null 2>&1
+SHA_LOGGED="$(git rev-parse HEAD)"
+"${T[@]}" log PL-4 "landed (${SHA_LOGGED:0:9})" >/dev/null 2>&1
+git add -A >/dev/null 2>&1; git commit -qm "record it" >/dev/null 2>&1
+denies "a logged commit is not reported" "${SHA_LOGGED:0:9}" -- "${T[@]}" unlogged
+
+# (b) a commit that names an item and is NOT logged -> reported, exit 1
+echo "y" >> "$PL4"; git add -A >/dev/null 2>&1
+git commit -qm "more PL-4 work
+
+Backlog: PL-4" >/dev/null 2>&1
+SHA_MISSING="$(git rev-parse HEAD)"
+says "POSITIVE CONTROL: an unlogged commit IS named" "${SHA_MISSING:0:9}" -- "${T[@]}" unlogged
+exits 1 "  ...and it exits non-zero"                  -- "${T[@]}" unlogged
+
+# (c) a trailer naming an id that does not exist
+echo "z" >> "$PL4"; git add -A >/dev/null 2>&1
+git commit -qm "typo in the trailer
+
+Backlog: ZZ-9" >/dev/null 2>&1
+says "a trailer with an unknown id is caught" "no such item" -- "${T[@]}" unlogged
+
+# (d) logging it clears the report
+"${T[@]}" log PL-4 "second landing (${SHA_MISSING:0:9})" >/dev/null 2>&1
+denies "logging clears the report" "${SHA_MISSING:0:9}" -- "${T[@]}" unlogged
+
+# (e) NEGATIVE CONTROL: an untagged commit is invisible, and the tool SAYS so
+echo "w" >> "$PL4"; git add -A >/dev/null 2>&1
+git commit -qm "no trailer at all" >/dev/null 2>&1
+denies "untagged commits are invisible (the stated limit)" "no trailer at all" -- "${T[@]}" unlogged
 
 echo
 echo "CONTROLS — these prove the harness can actually see a failure"
