@@ -178,7 +178,16 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // GraphQL endpoint". Points at the TOOL rather than baking values in: the
 // endpoint, the mesh and the scope all change between regenerations, and a
 // confidently stale endpoint is worse than none.
-export const AI_CONTEXT_VERSION = 23;
+// v24: "Your MCP Servers" — the bundle names the OTHER servers a project has
+// (commerce-extensibility, playwright, dropins) and what each is for, generated
+// from ai-defaults.json so it cannot claim a server the project did not get.
+// Measured across five battery runs on three rigs: the agent used demo-builder
+// and playwright fluently and opened dropins ZERO times, while doing by hand the
+// work dropins has tools for. Every tool search was `select:mcp__<server>__<exact
+// name>` — by NAME, for something already known to exist. `playwright` is
+// guessable ("browser"); `dropins` is not. A server nobody names is a server
+// nobody uses.
+export const AI_CONTEXT_VERSION = 24;
 
 /**
  * Component IDs for standardized component instance access

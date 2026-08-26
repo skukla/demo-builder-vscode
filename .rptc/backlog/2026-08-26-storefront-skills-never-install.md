@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: backlog
+status: active
 layer: C
 ---
 # The storefront skills we mean to install have never installed, silently

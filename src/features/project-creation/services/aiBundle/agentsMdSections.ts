@@ -19,13 +19,15 @@ import {
     sanitizeBlockId,
     escapeMarkdown,
 } from '../sanitization';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
+import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesJson from '@/features/components/config/demo-packages.json';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { DemoPackagesConfig } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -467,6 +469,64 @@ export function buildConsoleApiAccess(project: Project): string {
         '',
         'See the `extend-app-builder-app` skill for the full build loop.',
     ].join('\n');
+}
+
+/**
+ * The OTHER MCP servers this project has, and what each is for.
+ *
+ * ## Why this section exists
+ *
+ * Measured 2026-08-26 across five battery runs on three measurement rigs: the
+ * agent used `demo-builder` and `playwright` fluently and opened `dropins`
+ * **zero times**, while doing by hand the work `dropins` has tools for.
+ *
+ * The cause is in how an agent looks for tools. Every search in those runs was
+ * `select:mcp__<server>__<exact-tool-name>` — searching BY NAME for something it
+ * already knows exists. It finds `playwright` because "browser" is a universal
+ * idea and the tool name is guessable. `dropins` is not guessable: you have to
+ * know the package exists before you can search for it. **A server nobody names
+ * is a server nobody uses**, however capable the agent is.
+ *
+ * Before this, the generated bundle named `demo-builder` four times and the
+ * other three servers not once.
+ *
+ * ## Why it is generated from ai-defaults.json
+ *
+ * That file already carries a `description` and a `requires` gate per server and
+ * is the same source `mcpConfigWriter` writes `.mcp.json` from. Generating from
+ * it means this section cannot claim a server the project did not get, and a new
+ * entry appears here without anyone remembering to add it — the drift that made
+ * `get_commerce_endpoints` invisible to the battery for a day.
+ *
+ * Naming a server the project does NOT have is worse than silence: it sends the
+ * agent looking for something absent. The gate is `aiDefaultsEntryApplies`, the
+ * same predicate the installer and the config writer use.
+ */
+export function buildToolServers(project: Project): string {
+    const servers = (aiDefaultsConfig as AiDefaults).mcpServers.filter((entry) =>
+        aiDefaultsEntryApplies(entry, project),
+    );
+    if (servers.length === 0) return '';
+
+    const lines = [
+        '## Your MCP Servers',
+        'This project has more than one MCP server. `demo-builder` is only the first —',
+        'reach for the others when the job is theirs, and search by SERVER NAME when you',
+        'do not know a tool\'s exact name:',
+        '',
+        '- **demo-builder** — this extension: projects, Commerce endpoints and queries,',
+        '  published pages, datapacks, Adobe I/O, deploys.',
+    ];
+    for (const entry of servers) {
+        lines.push(`- **${entry.id}** — ${entry.description}`);
+    }
+    lines.push(
+        '',
+        'A tool you cannot name is still findable: `ToolSearch` takes a server prefix',
+        '(`mcp__dropins__`) as well as an exact name, so list a server\'s tools before',
+        'deciding no tool exists and doing the job by hand.',
+    );
+    return lines.join('\n');
 }
 
 export function buildTryAskingClaude(project: Project): string {
