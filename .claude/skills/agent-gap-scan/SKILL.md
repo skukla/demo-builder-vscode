@@ -11,10 +11,36 @@ be used because nobody knows it is there — that gap is invisible to a static
 scan and obvious in a transcript.
 
 ```bash
-node .claude/skills/agent-gap-scan/scan.mjs            # the report
-node .claude/skills/agent-gap-scan/scan.mjs --json     # machine-readable
-node .claude/skills/agent-gap-scan/scan.mjs --write    # also save to .rptc/research/gap-finder/
+node .claude/skills/agent-gap-scan/scan.mjs                      # the report
+node .claude/skills/agent-gap-scan/scan.mjs --since 2026-08-01   # only that window
+node .claude/skills/agent-gap-scan/scan.mjs --json               # machine-readable
+node .claude/skills/agent-gap-scan/scan.mjs --write              # save to .rptc/research/gap-finder/
 ```
+
+## ALWAYS pass `--since`, or read the dates
+
+**A finding with no date is not a finding.** The corpus spans months, and without
+a window the scan piles a gap you closed in June next to one from yesterday and
+they look identical. Its own first run did exactly that:
+
+- 24 of 35 `curl` calls were from **June**, before `get_commerce_endpoints`
+  existed at all.
+- 19 of 23 `get_current_project` calls were from **2026-08-24** — the same day
+  `54cbd2c06` shipped the fix that stops the agent making them. They were the
+  BEFORE runs that motivated the fix, being reported as the problem.
+
+Every finding now carries `first … last` seen, and an unwindowed run prints a
+warning saying so. Comparing two windows is how you answer "did our change
+help?", which is the question the whole AI-surface effort turns on:
+
+| window | `curl` | `aio` | orientation |
+|---|---|---|---|
+| all time | 35 | 23 | 77% |
+| since 2026-08-01 | 11 | 5 | 78% |
+| since 2026-08-25 | 5 | 0 | 67% |
+
+That table is the skill earning its keep: the `curl` gap is LIVE, the `aio`
+cluster has gone quiet, and neither could be told apart before.
 
 Read-only. Runs in about a second over ~50 transcripts. Proposes; never applies.
 

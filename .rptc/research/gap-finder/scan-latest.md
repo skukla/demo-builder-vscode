@@ -2,6 +2,10 @@
 
 Scope: **demo projects only** — 50 transcript(s), 49 session(s) that called a tool, 566 user turns, 404 tool calls (171 Bash).
 
+Window: **all time → now** — calls actually span 2026-06-15 … 2026-08-26.
+
+> **This is the whole corpus, undifferentiated.** A gap you closed months ago appears here exactly like one from yesterday. Check each finding's dates below, or pass `--since` to ask about a period.
+
 ## 2. Jobs agents did WITHOUT us
 
 The strongest signal here: an agent reaching for the shell where a tool should exist.
@@ -9,6 +13,8 @@ The strongest signal here: an agent reaching for the shell where a tool should e
 ### `curl` — 35 call(s)
 
 HTTP against a project endpoint — we own the endpoints and the headers
+
+Seen **2026-06-15 … 2026-08-25** across 5 day(s): 2026-06-15, 2026-06-16, 2026-06-19, 2026-08-24, 2026-08-25
 
     curl -s -X POST 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql' \ -H 'Content-Type: application/json' 
     curl -s -X POST 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql' \ -H 'Content-Type: application/json' 
@@ -20,6 +26,8 @@ HTTP against a project endpoint — we own the endpoints and the headers
 ### `aio` — 23 call(s)
 
 Adobe I/O CLI — we own org/project/workspace context and the mesh
+
+Seen **2026-06-16 … 2026-08-24** across 2 day(s): 2026-06-16, 2026-08-24
 
     aio --version 2>&1; echo "---WHO---"; aio console where 2>&1 | head -20
     aio console org list 2>&1 | head -30
@@ -58,25 +66,25 @@ _None._
 
 ## What DID get used
 
-- `get_current_project` — 23
-- `get_project_urls` — 16
-- `get_project` — 13
-- `get_auth_status` — 9
-- `list_projects` — 8
-- `get_project_status` — 5
-- `republish` — 3
-- `find_datapacks` — 3
-- `update_project_config` — 3
-- `check_mesh` — 2
-- `sign_in` — 2
-- `open_url` — 1
-- `list_stacks` — 1
-- `check_prerequisites` — 1
-- `deploy_mesh` — 1
-- `list_adobe_projects` — 1
-- `start_demo` — 1
-- `deploy_integration` — 1
-- `get_site_access` — 1
-- `get_store_structure` — 1
+- `get_current_project` — 23  _(2026-06-15 … 2026-08-26)_
+- `get_project_urls` — 16  _(2026-08-24 … 2026-08-24)_
+- `get_project` — 13  _(2026-06-15 … 2026-08-24)_
+- `get_auth_status` — 9  _(2026-08-24 … 2026-08-24)_
+- `list_projects` — 8  _(2026-06-16 … 2026-08-25)_
+- `get_project_status` — 5  _(2026-08-24 … 2026-08-24)_
+- `republish` — 3  _(2026-08-25 … 2026-08-25)_
+- `find_datapacks` — 3  _(2026-08-24 … 2026-08-24)_
+- `update_project_config` — 3  _(2026-06-16 … 2026-06-16)_
+- `check_mesh` — 2  _(2026-08-25 … 2026-08-25)_
+- `sign_in` — 2  _(2026-08-19 … 2026-08-19)_
+- `open_url` — 1  _(2026-08-25 … 2026-08-25)_
+- `list_stacks` — 1  _(2026-08-24 … 2026-08-24)_
+- `check_prerequisites` — 1  _(2026-08-24 … 2026-08-24)_
+- `deploy_mesh` — 1  _(2026-08-24 … 2026-08-24)_
+- `list_adobe_projects` — 1  _(2026-08-11 … 2026-08-11)_
+- `start_demo` — 1  _(2026-08-24 … 2026-08-24)_
+- `deploy_integration` — 1  _(2026-08-24 … 2026-08-24)_
+- `get_site_access` — 1  _(2026-08-25 … 2026-08-25)_
+- `get_store_structure` — 1  _(2026-08-25 … 2026-08-25)_
 
 _control: 105 tool names read from src/, 36 distinct tools seen in transcripts, 20 of them ours. A zero above means nothing was found; these numbers say whether anything was LOOKED at._
