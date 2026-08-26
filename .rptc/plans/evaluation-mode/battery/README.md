@@ -81,6 +81,25 @@ That token expired mid-afternoon on 2026-08-26 and nothing said so; a signed-out
 run was compared against a signed-in baseline as though the difference were the
 fix. Same discipline as cache state: declared, never inferred.
 
+## Runs cannot change anything
+
+The battery is diagnostic and must leave nothing behind. Left alone it does not:
+run 1 of the cross-server prompt **wrote a memory file and edited MEMORY.md**, so
+run 2 began with run 1's conclusions. A repeat that inherits the previous
+repeat's notes is not a second sample.
+
+Two guards, because one is not enough:
+
+- `Write`, `Edit` and `NotebookEdit` are denied outright — no prompt here has a
+  reason to write.
+- Memory is **snapshotted before each prompt and restored after**. `Bash` is
+  allowed on purpose (it is how "went around us" is detected), and an agent told
+  it cannot use `Write` offers the shell instead — it said exactly that when the
+  deny was tested. Snapshot/restore does not depend on predicting the route.
+
+A run that tried to write prints one line saying so, rather than reverting
+silently.
+
 ## One sample is not a result
 
 ```bash

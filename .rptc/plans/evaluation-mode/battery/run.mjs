@@ -12,7 +12,10 @@
  * basis for comparing against the original per-task token figures.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync,
+         mkdtempSync, cpSync, rmSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { bare, score } from './score.mjs';
@@ -20,6 +23,42 @@ import { bare, score } from './score.mjs';
 const AB = new URL('.', import.meta.url).pathname;
 const ROOT = `${homedir()}/.demo-builder/projects`;
 const REPO = new URL('../../../..', import.meta.url).pathname;
+// The project's own MCP config — the four servers the extension provisions.
+const PROJECT_MCP = `${ROOT}/bodea/.mcp.json`;
+
+/**
+ * The agent's memory directory for these runs.
+ *
+ * Denying `Write`/`Edit` is not enough on its own: `Bash` is allowed on purpose —
+ * it is how "the agent went around us" is detected — and an agent told it cannot
+ * use Write offers to use the shell instead. It said exactly that when the deny
+ * was tested.
+ *
+ * So memory is snapshotted before each prompt and restored after, which does not
+ * depend on predicting HOW something got written. Run 1 of the cross-server
+ * prompt wrote a memory file and edited MEMORY.md, so run 2 began with run 1's
+ * conclusions — a repeat that inherits the previous repeat's notes is not a
+ * second sample.
+ */
+const MEMORY_DIR = `${homedir()}/.claude/projects/-Users-kukla--demo-builder-projects/memory`;
+
+function snapshotMemory() {
+    if (!existsSync(MEMORY_DIR)) return null;
+    const dest = mkdtempSync(join(tmpdir(), 'battery-memory-'));
+    cpSync(MEMORY_DIR, dest, { recursive: true });
+    return dest;
+}
+
+/** Restore it, and report whether the run had changed anything. */
+function restoreMemory(snap) {
+    if (!snap) return false;
+    const before = readdirSync(snap).sort().join(',');
+    const after = existsSync(MEMORY_DIR) ? readdirSync(MEMORY_DIR).sort().join(',') : '';
+    rmSync(MEMORY_DIR, { recursive: true, force: true });
+    cpSync(snap, MEMORY_DIR, { recursive: true });
+    rmSync(snap, { recursive: true, force: true });
+    return before !== after;
+}
 const ALLOWED = readFileSync(`${AB}/readonly-tools.txt`, 'utf-8').trim().split('\n')
     .map((t) => `mcp__demo-builder__${t}`);
 
@@ -51,6 +90,12 @@ let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
 // Both exist for the same reason: every result here is n=1, and agents are
 // stochastic — `datapacks` changed diagnosis between two runs and there was no
 // way to tell a regression from a coin flip. Repeating is how you tell.
+// `--live` streams the agent's narration and every call as they happen. Off by
+// default so a full battery run stays readable; on, a long run is watchable
+// instead of a black box — and WHAT it says as it goes is the evidence, "I'll
+// check the config" versus actually opening the config server.
+const LIVE = process.argv.includes('--live');
+
 const only = process.argv[process.argv.indexOf('--only') + 1];
 if (process.argv.includes('--only')) {
     if (!only || only.startsWith('--')) { console.error('--only needs a prompt id'); process.exit(2); }
@@ -172,7 +217,29 @@ function runOnce(prompt) {
     return new Promise((resolve) => {
         const args = [
             '-p', prompt,
+            // ISOLATE the surface. Without these, `claude -p` loads the user's
+            // GLOBAL MCP servers on top of the project's — this machine has eight
+            // (MCP_DOCKER, fluffyjaws, serena, ynab…) that no producer has. The
+            // first cross-server run spent 24 calls in a global browser server
+            // while the project's own `playwright` got zero, and that number
+            // described this laptop rather than the product.
+            //
+            // A producer's agent sees exactly the four servers the extension
+            // provisions. So must the battery.
+            '--mcp-config', `${PROJECT_MCP}`,
+            '--strict-mcp-config',
             '--allowed-tools', ...ALLOWED,
+            // The battery must not CHANGE anything, and left alone it does. Run 1
+            // of the cross-server prompt wrote a memory file and edited MEMORY.md
+            // — "File created successfully" — so run 2 began with run 1's notes and
+            // the two were never independent. That is the same self-measurement
+            // failure as the transcripts, one layer down: a repeat that inherits
+            // the previous repeat's conclusions is not a second sample.
+            //
+            // `--allowed-tools` does not cover the built-in writers, so they are
+            // denied explicitly. Every prompt here is diagnostic; none has a reason
+            // to write.
+            '--disallowed-tools', 'Write', 'Edit', 'NotebookEdit',
             '--permission-mode', 'dontAsk',
             '--output-format', 'stream-json',
             '--verbose',
@@ -193,12 +260,30 @@ function runOnce(prompt) {
                 try { ev = JSON.parse(line); } catch { continue; }
                 if (ev.type === 'assistant') {
                     for (const c of ev.message?.content ?? []) {
-                        if (c.type === 'tool_use') calls.push({ name: c.name, input: c.input ?? {} });
+                        if (c.type === 'tool_use') {
+                            calls.push({ name: c.name, input: c.input ?? {} });
+                            if (LIVE) {
+                                const nm = c.name.replace(/^mcp__/, '').replace('__', ':');
+                                const arg = c.name === 'Bash'
+                                    ? String(c.input?.command ?? '').replace(/\s+/g, ' ').slice(0, 88)
+                                    : Object.entries(c.input ?? {})
+                                        .map(([k, v]) => `${k}=${String(v).replace(/\s+/g, ' ').slice(0, 56)}`)
+                                        .join(' ').slice(0, 88);
+                                console.log(`    ${String(calls.length).padStart(3)}. ${nm}${arg ? '  ' + arg : ''}`);
+                            }
+                        }
                         // The agent frequently STATES the gap — "there is no tool
                         // for this, so I will use curl". That sentence is worth
                         // more than any inference we could draw from the route,
                         // and the first version threw it away.
-                        else if (c.type === 'text' && c.text?.trim()) said.push(c.text.trim());
+                        else if (c.type === 'text' && c.text?.trim()) {
+                            said.push(c.text.trim());
+                            if (LIVE) {
+                                for (const line of c.text.trim().split('\n')) {
+                                    if (line.trim()) console.log(`     | ${line.trim().slice(0, 148)}`);
+                                }
+                            }
+                        }
                     }
                 }
                 if (ev.type === 'user') {
@@ -234,9 +319,13 @@ function runOnce(prompt) {
 
 {
     const variant = 'as-shipped';
-    for (const { id: task, prompt, expect, why } of PROMPTS) {
+    for (const { id: task, prompt, expect, why, expectServers } of PROMPTS) {
         const started = Date.now();
+        const memSnap = snapshotMemory();
         const { calls, said, results, result } = await runOnce(prompt);
+        if (restoreMemory(memSnap)) {
+            console.log('    (agent wrote to memory; restored so the next run is independent)');
+        }
         const s = score(calls, results, said, expect);
         const row = {
             variant,
@@ -268,6 +357,14 @@ function runOnce(prompt) {
             shellCommands: calls.filter((c) => c.name === 'Bash')
                 .map((c) => String(c.input.command ?? '').replace(/\s+/g, ' ').slice(0, 300)),
             said,
+            // WHICH SERVERS the route touched. For a cross-server prompt the
+            // interesting answer is not whether one expected tool was hit, but
+            // whether Claude COMPOSED across servers or stayed inside the first
+            // one that looked relevant.
+            serversUsed: [...new Set(calls
+                .map((c) => /^mcp__(.+?)__/.exec(c.name)?.[1])
+                .filter(Boolean))],
+            expectServers: expectServers ?? null,
             toolResults: results.map((r) => ({ isError: r.isError, preview: r.preview })),
             calledGetCurrentProject: calls.some((c) => c.name.endsWith('get_current_project')),
             billable:
@@ -288,6 +385,9 @@ function runOnce(prompt) {
             `    got : ${row.route.join(' ') || '(nothing)'}\n` +
             (row.shellCommands.length ? `    shell: ${row.shellCommands[0]}\n` : '') +
             (s.excuse ? `    said : ${s.excuse}\n` : '') +
+            (expectServers
+                ? `    servers: want ${expectServers.join('+')} · got ${row.serversUsed.join('+') || '(none)'}\n`
+                : '') +
             `    calls=${row.calls} billable=${row.billable}`,
         );
     }

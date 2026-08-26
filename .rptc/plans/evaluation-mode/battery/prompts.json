@@ -82,5 +82,31 @@
       "get_project_status"
     ],
     "why": "From the original 2026-08-24 battery, kept verbatim so the two runs stay comparable."
+  },
+  {
+    "id": "cross-no-products",
+    "prompt": "My storefront isn't showing any products. Work out whether the problem is the catalog, the storefront configuration, or the page itself.",
+    "expect": [
+      "run_commerce_query",
+      "get_commerce_endpoints"
+    ],
+    "expectServers": [
+      "demo-builder",
+      "dropins"
+    ],
+    "why": "CROSS-SERVER. An honest diagnosis needs the catalog (ours: run_commerce_query), the storefront's dropin config (dropins: check_config / analyze_project) and ideally the rendered page (playwright). No single server can answer it. Tests whether Claude composes across servers unaided, or stays inside the first one that looks relevant."
+  },
+  {
+    "id": "cross-pdp-slots",
+    "prompt": "Look at the product detail page on my live storefront and tell me which drop-in slots it actually renders.",
+    "expect": [
+      "get_project_urls"
+    ],
+    "expectServers": [
+      "demo-builder",
+      "dropins",
+      "playwright"
+    ],
+    "why": "CROSS-SERVER. The live URL is ours, the rendered page needs a browser (playwright), and what a slot IS comes from dropins (list_slots). Three servers, none sufficient alone."
   }
 ]
