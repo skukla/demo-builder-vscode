@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
+import { bare, score } from './score.mjs';
 
 const AB = new URL('.', import.meta.url).pathname;
 const ROOT = `${homedir()}/.demo-builder/projects`;
@@ -102,9 +103,35 @@ try {
         { encoding: 'utf8', cwd: REPO }).split('\n')[0].replace(/^serving:\s*/, '').trim();
 } catch { /* probe unavailable — recorded as unknown rather than guessed */ }
 
+// Adobe auth, read at the start AND checked again at the end.
+//
+// A run that spans a sign-out is not comparable to one that does not, and
+// nothing said so: on 2026-08-26 the token expired between two runs, four
+// prompts got "Adobe sign-in required", and the results were compared to a
+// signed-in baseline as though the difference were the fix. Recorded the way
+// cache state is — declared, not inferred.
+function adobeAuth() {
+    try {
+        const out = execFileSync('node',
+            ['.claude/skills/mcp-live-probe/probe.mjs', 'call', 'get_auth_status', '{}'],
+            { encoding: 'utf8', cwd: REPO });
+        const m = out.match(/"authenticated":\s*(true|false)/);
+        const e = out.match(/"expiresInMinutes":\s*(-?\d+)/);
+        return { authenticated: m ? m[1] === 'true' : null, expiresInMinutes: e ? Number(e[1]) : null };
+    } catch {
+        return { authenticated: null, expiresInMinutes: null };
+    }
+}
+const authBefore = adobeAuth();
+if (authBefore.authenticated === false) {
+    console.log('  WARNING: Adobe is signed out. Tools that need it will answer errors,');
+    console.log('           and this run is NOT comparable to a signed-in one.\n');
+}
+
 const META = {
     startedAt: STAMP,
     serving,
+    adobeAuthBefore: authBefore,
     promptCount: PROMPTS.length,
     allowlist: ALLOWED.length,
     // Cache state alone swung one prompt 55,236 -> 8,959 in a prior measurement,
@@ -112,6 +139,20 @@ const META = {
     cache: process.env.BATTERY_CACHE ?? 'unspecified',
 };
 writeFileSync(`${RUNS}/${STAMP}.meta.json`, JSON.stringify(META, null, 2) + '\n');
+
+/** Re-read auth at the end and flag a run that crossed the boundary mid-flight. */
+function finishMeta() {
+    const authAfter = adobeAuth();
+    const crossed = authBefore.authenticated !== authAfter.authenticated;
+    writeFileSync(
+        `${RUNS}/${STAMP}.meta.json`,
+        JSON.stringify({ ...META, adobeAuthAfter: authAfter, authChangedMidRun: crossed }, null, 2) + '\n',
+    );
+    if (crossed) {
+        console.log('\n  WARNING: Adobe auth CHANGED during this run — prompts before and');
+        console.log('           after the change are not comparable to each other.');
+    }
+}
 writeFileSync(OUT, '');
 console.log(`run ${STAMP}\n  serving: ${serving}\n  results: ${OUT}\n`);
 
@@ -168,8 +209,6 @@ function runOnce(prompt) {
     });
 }
 
-/** Strip the MCP prefix so a route reads as tool names. */
-const bare = (n) => n.replace(/^mcp__demo-builder__/, '');
 
 /**
  * Score one run against what we expected.
@@ -180,41 +219,6 @@ const bare = (n) => n.replace(/^mcp__demo-builder__/, '');
  *            tool for the job, or we have one and the agent never found it.
  *   miss   — neither. It answered from something else, or not at all.
  */
-function score(calls, results, said, expect) {
-    const names = calls.map((c) => bare(c.name));
-    const hit = names.some((n) => expect.includes(n));
-    const around = names.some((n) => n === 'Bash' || n === 'WebFetch');
-    const outcome = hit ? 'hit' : around ? 'around' : 'miss';
-
-    // WHY, not just WHAT. "It did not use our tool" is one finding; the reason
-    // splits into four with completely different fixes, and only one of them is
-    // "build a new tool".
-    const searched = names.some((n) => n === 'ToolSearch');
-    const byId = new Map(results.map((r) => [r.id, r]));
-    const ourCalls = calls.filter((c) => c.name.startsWith('mcp__demo-builder__'));
-    const ourFailed = ourCalls.filter((c) => byId.get(c.id)?.isError);
-    const triedThenLeft = hit && around;
-
-    let diagnosis;
-    // ERRORED is checked before INSUFFICIENT: both look like "called ours, then
-    // left", but a tool that threw is a bug to fix and a tool that answered
-    // uselessly is a design to revisit. The more specific label wins.
-    if (outcome === 'hit' && !around) diagnosis = ourFailed.length
-        ? `TOOL-BROKEN: ${bare(ourFailed[0].name)} errored, but the answer came anyway`
-        : 'ok';
-    else if (ourFailed.length) diagnosis = `TOOL-BROKEN: ${bare(ourFailed[0].name)} was called and errored`;
-    else if (triedThenLeft) diagnosis = 'TOOL-INSUFFICIENT: called ours, still went to the shell';
-    else if (around && searched) diagnosis = 'NOT-FINDABLE: it searched for a tool and still went around';
-    else if (around && !searched) diagnosis = 'NOT-ANNOUNCED: it never looked — it did not know to';
-    else diagnosis = 'NO-ROUTE: neither our tool nor the shell';
-
-    // The agent's own account, when it gives one. Cheapest possible evidence.
-    const excuse = said.find((s) => /\bno (mcp )?tool\b|not available|isn'?t a tool|no direct tool|fall back/i.test(s));
-
-    return { hit, around, outcome, searched, triedThenLeft,
-             ourToolErrors: ourFailed.map((c) => bare(c.name)), diagnosis,
-             excuse: excuse ? excuse.slice(0, 300) : null };
-}
 
 {
     const variant = 'as-shipped';
@@ -277,3 +281,4 @@ function score(calls, results, said, expect) {
     }
 }
 console.log('done');
+finishMeta();

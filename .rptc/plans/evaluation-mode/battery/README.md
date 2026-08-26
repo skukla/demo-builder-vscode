@@ -37,6 +37,29 @@ compared to anything:
 - **Cache state**, from `BATTERY_CACHE`. Declared, never inferred: cache alone
   swung one prompt 55,236 → 8,959 in a prior measurement.
 
+## A tool can answer an error and still look fine
+
+`is_error` is not enough. `list_installed_datapacks` answers a signed-out session
+with the prose *"Error: Adobe sign-in required…"* and `is_error: false`, so the
+protocol reports success. **Four runs scored `ok` on 2026-08-26 while the tool had
+answered nothing at all** — and the conclusion drawn from them, that `datapacks`
+got faster after a fix, was wrong twice over: it had not got faster, it had
+stopped working, and the agent was giving up sooner.
+
+The scorer now reads the text as well as the flag, and a call whose result failed
+is not a hit. Both are pinned in `score.test.mjs` against a fixture lifted
+verbatim from a real run.
+
+## Auth state is recorded, not assumed
+
+Adobe auth is read before and after every run and written into the `.meta.json`,
+and a run that crosses a sign-out is flagged. A signed-out run prints a warning
+before the first prompt.
+
+That token expired mid-afternoon on 2026-08-26 and nothing said so; a signed-out
+run was compared against a signed-in baseline as though the difference were the
+fix. Same discipline as cache state: declared, never inferred.
+
 ## One sample is not a result
 
 ```bash
