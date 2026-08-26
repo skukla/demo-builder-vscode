@@ -211,7 +211,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
 | `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
 
-### eds  (9)
+### eds  (10)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -224,6 +224,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | backlog |
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | backlog |
+| `EDS-10` | fix | [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) | — | high | backlog |
 
 ### app-builder  (5)
 
@@ -359,7 +360,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-1i` [The battery destroys its own baseline on every run](2026-08-26-battery-results-are-overwritten.md) — shipped
 - `AI-1j` [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) — shipped
 
-**C** — 7 items
+**C** — 8 items
 
 - `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — active
 - `AI-1f` [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) — backlog
@@ -368,6 +369,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-1k` [The agent can query Commerce now, but has to discover the schema every time](2026-08-26-commerce-schema-guidance.md) — dropped
 - `AI-1l` [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) — open
 - `EDS-5` [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) — gated
+- `EDS-10` [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) — backlog
 
 **D** — 2 items
 
