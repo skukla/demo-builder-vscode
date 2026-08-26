@@ -74,3 +74,4 @@ has opened the panel built in step 10 and said whether it works.
 - 2026-08-26  Step 10 built and committed (`38c79205d`) — transcript rendering, the visual pass, the sidebar door. NOT verified by use.
 
 Filed 2026-08-26.
+- 2026-08-26  Backlog: trailer convention documented (6a8d8d97a) — commits can now name the item they belong to, and `unlogged` checks the record caught up.
