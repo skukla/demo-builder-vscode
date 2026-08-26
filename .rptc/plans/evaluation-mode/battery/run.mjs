@@ -166,7 +166,7 @@ function score(calls, results, said, expect) {
     const variant = 'as-shipped';
     for (const { id: task, prompt, expect, why } of PROMPTS) {
         const started = Date.now();
-        const { calls, result } = await runOnce(prompt);
+        const { calls, said, results, result } = await runOnce(prompt);
         const s = score(calls, results, said, expect);
         const row = {
             variant,
@@ -177,6 +177,21 @@ function score(calls, results, said, expect) {
             ...s,
             calls: calls.length,
             route: calls.map((c) => bare(c.name)),
+            // The route WITH arguments. Names alone say the agent called
+            // `read_page`; they do not say which page, and "what did it ask for"
+            // is most of what makes a path readable. Values are truncated, not
+            // dropped — an argument can carry a token.
+            steps: calls.map((c, i) => ({
+                n: i + 1,
+                tool: bare(c.name),
+                ours: c.name.startsWith('mcp__demo-builder__'),
+                args: Object.fromEntries(Object.entries(c.input ?? {})
+                    .map(([k, v]) => [k, String(typeof v === 'object' ? JSON.stringify(v) : v).slice(0, 160)])),
+                result: (() => {
+                    const r = results.find((x) => x.id === c.id);
+                    return r ? { isError: r.isError, preview: r.preview.slice(0, 200) } : null;
+                })(),
+            })),
             // What it ran INSTEAD. The shell command an agent writes by hand is
             // the specification for the tool it needed — that is exactly where
             // `get_commerce_endpoints` came from.

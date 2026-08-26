@@ -203,3 +203,4 @@ without asking anyone."
 ## Shipped so far
 
 - 2026-08-26  get_commerce_endpoints shipped (15428c005) — the 28-curl gap this item measured; announced via AI_CONTEXT_VERSION 23 (bbcf595a1). The 76 unannounced-and-unused tools remain the open half.
+- 2026-08-26  Battery 2026-08-26 WEAKENS the discoverability reading: all 10 prompts opened with ToolSearch and all 10 found the right tool, including read_published_page / list_blocks / list_content / list_installed_datapacks — named ZERO times in the bundle and never called in any real session. Agents find tools by searching, so the 85 unused tools look unNEEDED rather than unfindable. An announcement push would have been wasted work.

@@ -28,6 +28,7 @@ documents). Reproduce any figure with `node scripts/trace-session.mjs`.
 - 2026-08-24  Candidate 1 — the self-inflicted orientation call. The home AGENTS.md states the active project instead of ordering `get_current_project`
 
 Three candidates remain (the orientation trio, catalog preload vs `ToolSearch`, and `.strict()` on write tools). Each is measure → fix → re-measure.
+- 2026-08-26  Candidate 1 (the self-inflicted orientation call) MEASURED as still live on the headless path: 9 of 10 battery paths opened ToolSearch -> get_current_project. Cause is not this candidate being wrong but AI-1g — the home AGENTS.md carries whichever of two contents was written last, and activation writes the ordering branch.
 
 ## The finding that reorders everything
 

@@ -103,3 +103,4 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  Battery reshaped: 10 targeted prompts, each declaring the tool that SHOULD answer it, scored hit/around/miss. Fixed run.mjs — it read a filename that no longer existed AND overwrote the live AGENTS.md with no backup, so it could not have been run since the rename.
+- 2026-08-26  Battery RAN, 10 prompts, 10 hits, 1 TOOL-INSUFFICIENT. Route detail rendered per prompt. Confirms the design: a plain hit/miss score would have called commerce-query a success. Limits found: results.jsonl is truncated per run (AI-1i), and this run captured tool names without arguments — runner now records args + per-step results.
