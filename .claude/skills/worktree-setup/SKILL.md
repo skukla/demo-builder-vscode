@@ -36,9 +36,30 @@ description: Create or relocate a git worktree for this repo the way it expects 
    `node_modules` is read-only at runtime, so sharing it is free. `dist/` is WRITTEN by every
    build — sharing it means two branches compile into one directory and the last writer silently
    wins (see Gotchas). The cost of a private `dist/` is one `npm run compile` in the worktree.
-4. **Reload Claude in the worktree session** — settings/hooks/skills are read at session start, so
+4. **Switch the git hooks on if this clone has never had them** (once per CLONE,
+   not per worktree — see below):
+   ```bash
+   git -C "$WT" config core.hooksPath || (cd "$WT" && npm run hooks:git)
+   ```
+   `.githooks/commit-msg` requires every commit to name the backlog item it
+   belongs to (`Backlog: AI-3a`, or `Backlog: none`); `prepare-commit-msg`
+   pre-fills the line. Without this, commits land untagged and
+   `backlog.mjs unlogged` cannot tell whether the record kept up.
+
+   **`core.hooksPath` is SHARED by every worktree of a clone** — worktrees share
+   `.git/config` unless `extensions.worktreeConfig` is on, and it is not here.
+   Setting it in one worktree sets it everywhere, which is why the command above
+   checks before writing.
+
+   **But the path is RELATIVE**, resolved against each worktree's own root. A
+   worktree on a branch that predates `.githooks/` has no such directory — and
+   git then runs **no hooks at all, silently, exit 0** (verified 2026-08-26; a
+   missing `hooksPath` directory is not an error). So enforcement quietly
+   disappears on old branches rather than announcing itself.
+
+5. **Reload Claude in the worktree session** — settings/hooks/skills are read at session start, so
    a session opened before the copy won't see them.
-5. **Start the preview loop from the worktree** (the folder the Extension Dev Host was launched
+6. **Start the preview loop from the worktree** (the folder the Extension Dev Host was launched
    from) with Bash `run_in_background`:
    ```bash
    cd "$WT" && npm run watch:all
@@ -88,5 +109,11 @@ description: Create or relocate a git worktree for this repo the way it expects 
 3. The background `watch:all` printed `build finished, watching for changes...`; edit a webview
    file, save, and confirm a rebuild line — then Cmd+R in the Extension Dev Host picks it up (F5
    only for extension-host restarts).
+4. The commit hooks are live in THIS worktree — check the directory exists here, not just that
+   the config is set, because a missing one degrades to no enforcement without saying so:
+   ```bash
+   [ -d "$WT/.githooks" ] && git -C "$WT" config core.hooksPath && echo "hooks live" \
+     || echo "NO HOOKS — commits will not be checked"
+   ```
 
 _If this skill was wrong or incomplete, fix it before closing the task._
