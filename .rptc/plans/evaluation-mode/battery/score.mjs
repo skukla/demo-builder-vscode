@@ -7,8 +7,18 @@
  * with itself and not with the code.
  */
 
-/** Strip the MCP prefix so a route reads as tool names. */
-const bare = (n) => n.replace(/^mcp__demo-builder__/, '');
+/**
+ * Strip ANY server's MCP prefix so a route reads as tool names.
+ *
+ * It used to strip `mcp__demo-builder__` only — written when demo-builder was the
+ * only server the battery allowed. Once a prompt could expect another server's
+ * tool it silently mis-scored: `cross-pdp-slots` expects `list_slots`, the agent
+ * called `mcp__dropins__list_slots` on its FIRST call, and the run scored
+ * `NOT-FINDABLE` — "the agent could not find the tool" about a tool it went
+ * straight to. The `servers: want dropins · got dropins` line on the same output
+ * said the opposite.
+ */
+const bare = (n) => n.replace(/^mcp__[^_]+(?:[^_]|_(?!_))*__/, '');
 
 /**
  * Did this result FAIL, whatever the protocol says?

@@ -181,12 +181,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v24: "Your MCP Servers" — the bundle names the OTHER servers a project has
 // (commerce-extensibility, playwright, dropins) and what each is for, generated
 // from ai-defaults.json so it cannot claim a server the project did not get.
-// Measured across five battery runs on three rigs: the agent used demo-builder
-// and playwright fluently and opened dropins ZERO times, while doing by hand the
-// work dropins has tools for. Every tool search was `select:mcp__<server>__<exact
-// name>` — by NAME, for something already known to exist. `playwright` is
-// guessable ("browser"); `dropins` is not. A server nobody names is a server
-// nobody uses.
+// Written on a measurement that was later DISPROVEN — seven runs showing zero
+// dropins use turned out to be the wrong prompt, and given a question only
+// dropins can answer the agent reaches it on its first call unprompted. The
+// section stays because telling an agent what servers it has is reasonable on its
+// own; it is not evidence-backed. See buildToolServers for the full correction.
 export const AI_CONTEXT_VERSION = 24;
 
 /**

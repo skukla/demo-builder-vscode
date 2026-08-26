@@ -5,12 +5,29 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: backlog
 layer: C
 ---
 # The storefront skills we mean to install have never installed, silently
 
 ## Index hook
+
+> **Re-scoped 2026-08-26.** This item once carried a second claim — that the agent
+> never reaches `dropins` and must be told the server exists. **That was
+> disproven the same day.** Asked something only `dropins` can answer ("which
+> slots does the product-list block expose?"), the agent called
+> `mcp__dropins__list_slots` on its FIRST call, by name, twice out of two. The
+> seven runs showing zero `dropins` use were the wrong prompt: `cross-no-products`
+> is answerable from the catalog and the rendered page, so not reaching for
+> `dropins` was correct, not a miss.
+>
+> A "Your MCP Servers" section shipped in `AI_CONTEXT_VERSION` 24 on that
+> disproven theory. It STAYS — telling an agent what servers it has is reasonable
+> on its own merits — but it is not evidence-backed and must not be cited as a fix.
+>
+> What remains below is the half that IS verified: **the six storefront skills
+> have never installed.**
+
 
 *The item in one paragraph.*
 
@@ -105,3 +122,4 @@ Filed 2026-08-26.
 
 - 2026-08-26  Filed as EDS-10 and renumbered to AI-1m (cd5cc668f) — it is AI-surface work, not EDS: which skills an agent carries determines what prompts can be orchestrated across.
 - 2026-08-26  SIZED honestly. dropins is still used ZERO times across five runs on three rigs, so the gap is real — but on a clean rig it costs 4 shell calls, not the 43 I first reported. Build the guidance; do not quote the old number.
+- 2026-08-26  RE-SCOPED. The 'agent never reaches dropins' half is DISPROVEN — given a question only dropins can answer it calls mcp__dropins__list_slots on the first call, 2/2. The seven zeros were the wrong prompt. The AGENTS.md server section stays but is not evidence-backed. The verified half remains: the six storefront skills never install.

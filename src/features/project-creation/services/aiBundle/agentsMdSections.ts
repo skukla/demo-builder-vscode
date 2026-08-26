@@ -474,18 +474,24 @@ export function buildConsoleApiAccess(project: Project): string {
 /**
  * The OTHER MCP servers this project has, and what each is for.
  *
- * ## Why this section exists
+ * ## Why this section exists — and what it does NOT rest on
  *
- * Measured 2026-08-26 across five battery runs on three measurement rigs: the
- * agent used `demo-builder` and `playwright` fluently and opened `dropins`
- * **zero times**, while doing by hand the work `dropins` has tools for.
+ * It exists because an agent should know which servers it has. That is worth
+ * stating plainly on its own merits.
  *
- * The cause is in how an agent looks for tools. Every search in those runs was
- * `select:mcp__<server>__<exact-tool-name>` — searching BY NAME for something it
- * already knows exists. It finds `playwright` because "browser" is a universal
- * idea and the tool name is guessable. `dropins` is not guessable: you have to
- * know the package exists before you can search for it. **A server nobody names
- * is a server nobody uses**, however capable the agent is.
+ * **It is not backed by a measurement.** It was written on one: seven battery
+ * runs where the agent opened `dropins` zero times, read as "a server nobody
+ * names is a server nobody uses". Two runs of a BETTER prompt disproved that the
+ * same day — asked something only `dropins` can answer ("which slots does the
+ * product-list block expose?"), the agent called `mcp__dropins__list_slots` on
+ * its first call, by name, with no prompting and no exploration.
+ *
+ * The seven zeros were the wrong question, not a discoverability failure:
+ * `cross-no-products` is answerable from the catalog and the rendered page, so
+ * not reaching for `dropins` was the correct choice, not a missed one.
+ *
+ * So: keep this, because telling an agent what it has is reasonable. Do not cite
+ * it as a fix for a problem that has not been shown to exist.
  *
  * Before this, the generated bundle named `demo-builder` four times and the
  * other three servers not once.

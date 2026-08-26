@@ -136,8 +136,15 @@ if (repeat > 1) PROMPTS = Array.from({ length: repeat }, () => PROMPTS).flat();
 // reports `around` — which reads exactly like "the agent could not find the
 // tool". Caught before the first run: `get_commerce_endpoints` shipped the same
 // day and the allowlist predated it, so two of ten prompts were rigged to fail.
+// A prompt may expect a tool from ANY server — `cross-pdp-slots` expects
+// `list_slots`, which is dropins'. Checking only the demo-builder prefix would
+// abort on a perfectly valid expectation, so match either form against the whole
+// enumerated allowlist.
+const allowedSet = new Set(ALLOWED);
 const bad = PROMPTS.flatMap(({ id, expect }) =>
-    expect.filter((e) => !ALLOWED.includes(`mcp__demo-builder__${e}`)).map((e) => `${id} -> ${e}`));
+    expect
+        .filter((e) => !allowedSet.has(e) && ![...allowedSet].some((a) => a.endsWith(`__${e}`)))
+        .map((e) => `${id} -> ${e}`));
 if (bad.length) {
     console.error('ABORT: expected tools missing from readonly-tools.txt:');
     for (const b of bad) console.error('  ' + b);

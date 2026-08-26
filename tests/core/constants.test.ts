@@ -80,12 +80,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // v24: a "Your MCP Servers" section naming the OTHER servers a project has —
     // commerce-extensibility, playwright, dropins — and what each is for,
     // generated from ai-defaults.json so it cannot claim a server the project did
-    // not get. Measured across five battery runs on three rigs: the agent used
-    // demo-builder and playwright fluently and opened dropins ZERO times, while
-    // doing by hand the work dropins has tools for. Every tool search was
-    // `select:mcp__<server>__<exact name>` — by NAME, for something already known
-    // to exist. `playwright` is guessable ("browser"); `dropins` is not. Per-
-    // project content, so it DOES depend on the stamp.
+    // not get. The measurement it was written on was later disproven — seven runs
+    // of zero dropins use were the wrong prompt, and the agent reaches dropins on
+    // its first call when asked something only dropins can answer. The section
+    // stays on its own merits; the bump stands because it IS per-project content
+    // and without it existing projects never receive the section.
     it('is 24 (AGENTS.md names the other MCP servers)', () => {
         expect(AI_CONTEXT_VERSION).toBe(24);
     });

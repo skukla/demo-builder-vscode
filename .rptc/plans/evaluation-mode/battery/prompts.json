@@ -92,21 +92,19 @@
     ],
     "expectServers": [
       "demo-builder",
-      "dropins"
+      "playwright"
     ],
-    "why": "CROSS-SERVER. An honest diagnosis needs the catalog (ours: run_commerce_query), the storefront's dropin config (dropins: check_config / analyze_project) and ideally the rendered page (playwright). No single server can answer it. Tests whether Claude composes across servers unaided, or stays inside the first one that looks relevant."
+    "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test \u2014 it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
   },
   {
     "id": "cross-pdp-slots",
-    "prompt": "Look at the product detail page on my live storefront and tell me which drop-in slots it actually renders.",
+    "prompt": "Which drop-in slots does the product-list block expose, and what is each one for? I want the slot names, not what the page currently renders.",
     "expect": [
-      "get_project_urls"
+      "list_slots"
     ],
     "expectServers": [
-      "demo-builder",
-      "dropins",
-      "playwright"
+      "dropins"
     ],
-    "why": "CROSS-SERVER. The live URL is ours, the rendered page needs a browser (playwright), and what a slot IS comes from dropins (list_slots). Three servers, none sufficient alone."
+    "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut \u2014 which is what `cross-no-products` could never establish."
   }
 ]
