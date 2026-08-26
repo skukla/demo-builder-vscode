@@ -72,7 +72,10 @@ import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalS
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
-import { ensureHomeAiContext } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import {
+    ensureHomeAiContext,
+    refreshHomeAgentsMd,
+} from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
@@ -342,7 +345,34 @@ export async function activate(context: vscode.ExtensionContext) {
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
         const projectsRoot = resolveProjectsRoot();
-        void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
+        void (async () => {
+            const current = await stateManager.getCurrentProject();
+            await ensureHomeAiContext(
+                projectsRoot,
+                path.join(context.extensionPath, 'dist'),
+                undefined,
+                current?.name,
+            );
+        })();
+
+        // Keep the home AGENTS.md in step with the current-project pointer.
+        //
+        // Without this the file only told the truth by luck. Activation wrote one
+        // version and the Chat tile wrote another, so a headless `claude -p` run
+        // got whichever had been written last — measured 2026-08-26, 9 of 10
+        // battery prompts spent a round trip on an orientation call the file had
+        // ordered them to make.
+        //
+        // Subscribing is what makes stating the name SAFE. The objection to
+        // naming a project at activation was that the pointer moves afterwards
+        // and the file goes stale; it cannot go stale if it is rewritten whenever
+        // the pointer moves. `undefined` (no project) rewrites the fallback, so
+        // clearing the pointer never leaves a name behind that is no longer true.
+        context.subscriptions.push(
+            stateManager.onProjectChanged((project) => {
+                void refreshHomeAgentsMd(projectsRoot, project?.name);
+            }),
+        );
 
         // The publish key's SECOND trigger. The activation run happens above,
         // sequenced behind the AI-bundle sweep; this one fires on sign-in.

@@ -76,6 +76,7 @@ export async function ensureHomeAiContext(
     projectsRoot: string,
     extensionDistPath: string,
     nodePath?: string,
+    currentProjectName?: string,
 ): Promise<void> {
     try {
         const claudeDir = path.join(projectsRoot, '.claude');
@@ -103,9 +104,21 @@ export async function ensureHomeAiContext(
             ),
             fsPromises.writeFile(
                 path.join(projectsRoot, 'AGENTS.md'),
-                // No name here on purpose: activation runs once and the pointer
-                // changes freely afterwards. See buildActiveProjectDirective.
-                buildHomeAgentsMd(),
+                // Pass the name when we HAVE one. Activation used to write the
+                // no-name branch unconditionally, which meant this file said
+                // "call `get_current_project` first" while the Chat tile's
+                // `refreshHomeAgentsMd` said the opposite — same file, opposite
+                // instructions, last writer wins, and any headless run got
+                // whichever it happened to find. Measured 2026-08-26: the live
+                // file had been written by activation, and 9 of 10 battery
+                // prompts spent a round trip on the call it ordered.
+                //
+                // The old comment's reasoning — a name written at activation goes
+                // stale as the pointer moves — was correct, and is answered by
+                // subscribing to `onProjectChanged` (see extension.ts) rather
+                // than by refusing to state anything. With no pointer set there
+                // is still nothing truthful to say, so the fallback stands.
+                buildHomeAgentsMd(currentProjectName),
                 'utf-8',
             ),
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
