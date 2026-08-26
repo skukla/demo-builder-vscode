@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: active
+status: built
 layer: B
 ---
 # The battery destroys its own baseline on every run
@@ -47,3 +47,5 @@ Filed 2026-08-26.
 
 - 2026-08-26  feat(backlog): the report becomes the fix — `unlogged --write` (`2a8eafa1a`)
 - 2026-08-26  docs(backlog): what the battery found — two bugs, one gap, one theory killed (`770f7987b`)
+- 2026-08-26  fix(battery): results are immutable, and the guard that failed silently (`7008791b4`)
+- 2026-08-26  fix(backlog): `Backlog: none` is an answer, not an id (`a82af1b2a`)
