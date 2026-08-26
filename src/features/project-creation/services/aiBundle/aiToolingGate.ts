@@ -42,12 +42,21 @@ export function setThirdPartyToolsResolver(resolver: () => boolean): void {
 }
 
 /**
+ * True when the project has a checked-out EDS storefront. Gates the
+ * storefront-only surfaces: the `eds-storefront` ai-defaults entries
+ * (Playwright, dropins) and the `aem-boilerplate-commerce` skill bundle.
+ */
+export function projectHasEdsStorefront(project: Project): boolean {
+    return Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path);
+}
+
+/**
  * True when the project does App Builder-adjacent development: an EDS
  * storefront (Commerce extensibility), any mesh component, or an attached
  * App Builder component.
  */
 export function projectNeedsAppBuilderTooling(project: Project): boolean {
-    if (project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path) {
+    if (projectHasEdsStorefront(project)) {
         return true;
     }
     if (Object.keys(project.componentInstances ?? {}).some(isMeshComponentId)) {
@@ -69,7 +78,7 @@ export function aiDefaultsEntryApplies(entry: AiDefaultsMcpServer, project: Proj
         return false;
     }
     if (entry.requires === 'eds-storefront') {
-        return Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path);
+        return projectHasEdsStorefront(project);
     }
     return projectNeedsAppBuilderTooling(project);
 }

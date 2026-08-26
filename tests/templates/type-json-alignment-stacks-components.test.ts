@@ -75,9 +75,6 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
     'requiredComponents',
     'optionalComponents',
     'requiredEnvVars',
-    // Per-frontend Adobe skill bundle (typed at RawComponentDefinition.aiSkillBundle
-    // in src/types/components.ts)
-    'aiSkillBundle',
 ]);
 
 const COMPONENT_CONFIGURATION_FIELDS = new Set([

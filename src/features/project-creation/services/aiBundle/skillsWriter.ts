@@ -12,12 +12,15 @@
  *    - `diagnose-demo.md` — route a broken-demo symptom to the check that answers it
  *    - `import-datapack.md` — the six-call sample-data loop and its three traps
  *
- * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
- *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
- *    `<componentPath>/node_modules/@adobe-commerce/commerce-extensibility-tools/dist/<path>/`
+ * 2. **Adobe skill bundles**: Adobe ships every starter-kit bundle inside the
+ *    one `@adobe-commerce/commerce-extensibility-tools` package, which installs
+ *    into the project's isolated `.demo-builder-mcp/` dir. Each applicable
+ *    bundle is copied from
+ *    `<toolsDir>/node_modules/@adobe-commerce/commerce-extensibility-tools/dist/<path>/`
  *    into `<projectPath>/.claude/skills/<prefix>-<skill-name>/`, and each
  *    `*.md` file's `name:` frontmatter is rewritten to match the new folder
- *    name (so colliding skills across bundles stay unique).
+ *    name (so colliding skills across bundles stay unique — both bundles ship
+ *    a `tester`, which lands as `aem-tester` and `appbuilder-tester`).
  *
  * If the Adobe package isn't installed yet (e.g., npm install hasn't run, or
  * the component lacks a `node_modules`), the bundle copy step is skipped
@@ -46,12 +49,14 @@ import scrapeReferenceSiteContent from '../../templates/skills/scrape-reference-
 import syncChangesContent from '../../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../../templates/skills/update-credentials.md';
 import { readInstalledMcpPackages, resolveMcpToolsDir } from './aiDefaultsInstaller';
-import { projectNeedsAppBuilderTooling, resolveAvailableMcpToolIds } from './aiToolingGate';
+import {
+    projectHasEdsStorefront,
+    projectNeedsAppBuilderTooling,
+    resolveAvailableMcpToolIds,
+} from './aiToolingGate';
 import type { GeneratedFileWriter } from './generatedFileWriter';
-import componentsConfig from '@/features/components/config/components.json';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS, SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { Project } from '@/types/base';
-import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
 const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
     'node_modules',
@@ -59,18 +64,6 @@ const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
     'commerce-extensibility-tools',
     'dist',
 );
-
-const COMPONENT_CATEGORIES = [
-    'frontends',
-    'backends',
-    'mesh',
-    'dependencies',
-    'integrations',
-    'infrastructure',
-    'tools',
-] as const;
-
-const components = componentsConfig as unknown as RawComponentRegistry;
 
 /**
  * Content for each always-on skill (filename → static content imported at build
@@ -122,9 +115,11 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * they rot). Three of those skills drive Playwright and are delivery-gated
  * per `SKILL_MCP_TOOL_DEPENDENCIES` — see the gating paragraph below.
  *
- * Additionally copies any Adobe skill bundles declared by components in
- * `project.componentInstances` (via the `aiSkillBundle` field on the
- * component's definition).
+ * Additionally copies the Adobe skill bundles the project qualifies for:
+ * `aem-boilerplate-commerce` for an EDS storefront, `integration-starter-kit`
+ * for App Builder-adjacent projects. Both come from the isolated MCP tools
+ * dir, so the installer must run before this writer (it does, on the creation
+ * and regenerate paths alike).
  *
  * Every skill file — always-on, conditional, and Adobe bundle copies alike —
  * lands through the ADR-013 GeneratedFileWriter seam (hash-and-skip): a
@@ -174,17 +169,18 @@ export async function writeSkillFiles(
         ),
     );
 
-    // Copy Adobe skill bundles for components that declare aiSkillBundle.
-    const componentInstances = project.componentInstances ?? {};
-    for (const [compId, instance] of Object.entries(componentInstances)) {
-        const definition = lookupComponentDefinition(compId);
-        if (!definition?.aiSkillBundle) continue;
-        if (!instance.path) continue;
-
+    // aem-boilerplate-commerce skills (block-developer, content-modeler,
+    // dropin-developer, project-manager, researcher, tester) — Adobe ships all
+    // of its starter-kit bundles inside ONE package, so this reads from the
+    // isolated MCP tools dir like the integration kit below, NOT from the
+    // storefront checkout. The storefront IS @adobe/aem-boilerplate-commerce
+    // and carries no skills/ directory of its own; the old component-declared
+    // `aiSkillBundle` pointed there and silently ENOENT-skipped every time.
+    if (projectHasEdsStorefront(project)) {
         await copyAdobeSkillBundle(
-            instance.path,
-            definition.aiSkillBundle.path,
-            definition.aiSkillBundle.prefix,
+            resolveMcpToolsDir(projectPath),
+            path.join('aem-boilerplate-commerce', 'skills'),
+            'aem',
             writer,
         );
     }
@@ -233,36 +229,22 @@ function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
     );
 }
 
-function lookupComponentDefinition(compId: string): RawComponentDefinition | undefined {
-    const registry = components as unknown as Record<
-        string,
-        Record<string, RawComponentDefinition>
-    >;
-    for (const category of COMPONENT_CATEGORIES) {
-        const group = registry[category];
-        if (group && typeof group === 'object' && compId in group) {
-            return group[compId];
-        }
-    }
-    return undefined;
-}
-
 async function copyAdobeSkillBundle(
-    componentPath: string,
+    toolsDir: string,
     bundleSubpath: string,
     prefix: string,
     writer: GeneratedFileWriter,
 ): Promise<void> {
-    const sourceBundle = path.join(componentPath, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
+    const sourceBundle = path.join(toolsDir, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
 
     let entries: Array<{ name: string; isDirectory(): boolean }>;
     try {
         entries = await fsPromises.readdir(sourceBundle, { withFileTypes: true });
     } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-            // Bundle not present (e.g., npm install hasn't run yet, or this
-            // component doesn't have the Adobe package). Skip silently — the
-            // three Demo-Builder skills already wrote successfully.
+            // Bundle not present — the tools install hasn't run yet, or this
+            // version of the Adobe package doesn't ship this bundle. Skip; the
+            // Demo-Builder skills already wrote successfully.
             return;
         }
         throw err;

@@ -186,7 +186,14 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // dropins can answer the agent reaches it on its first call unprompted. The
 // section stays because telling an agent what servers it has is reasonable on its
 // own; it is not evidence-backed. See buildToolServers for the full correction.
-export const AI_CONTEXT_VERSION = 24;
+//
+// v25: the six aem-boilerplate-commerce skills (block-developer, content-modeler,
+// dropin-developer, project-manager, researcher, tester) now actually land. They
+// were declared via the component's `aiSkillBundle`, which resolved inside the
+// storefront checkout — a directory that has never contained them — so every
+// project silently ENOENT-skipped the copy. Sourced from the isolated MCP tools
+// dir now, like the integration-starter-kit bundle beside it.
+export const AI_CONTEXT_VERSION = 25;
 
 /**
  * Component IDs for standardized component instance access

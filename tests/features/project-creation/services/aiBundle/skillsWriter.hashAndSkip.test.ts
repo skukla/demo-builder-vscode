@@ -82,7 +82,11 @@ function writtenContentForPath(filePath: string): string | undefined {
 
 const ADOBE_BUNDLE_RELATIVE =
     'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
-const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/components/eds-storefront/${ADOBE_BUNDLE_RELATIVE}`;
+// The bundle lives in the project's isolated MCP tools dir — Adobe ships every
+// starter-kit bundle in one package and we install it there. NOT the storefront
+// checkout: this fixture named that path until 2026-08-26, matching a copy that
+// could never resolve in production, and the mock answered it happily.
+const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`;
 
 function makeDirent(
     name: string,

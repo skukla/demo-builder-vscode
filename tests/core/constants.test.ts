@@ -85,8 +85,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // its first call when asked something only dropins can answer. The section
     // stays on its own merits; the bump stands because it IS per-project content
     // and without it existing projects never receive the section.
-    it('is 24 (AGENTS.md names the other MCP servers)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(24);
+    //
+    // v25: the six aem-boilerplate-commerce skills now actually land. They were
+    // sourced from the storefront checkout, which has never held a skills/ dir,
+    // so the copy ENOENT-skipped on every project ever created. The bump is what
+    // makes existing projects pick them up on the next activation sweep.
+    it('is 25 (the aem-boilerplate-commerce skills finally install)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(25);
     });
 });
 

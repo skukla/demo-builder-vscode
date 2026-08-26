@@ -112,7 +112,11 @@ function writtenContent(filePattern: string): string | undefined {
 
 const ADOBE_BUNDLE_RELATIVE =
     'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
-const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/components/eds-storefront/${ADOBE_BUNDLE_RELATIVE}`;
+// The bundle lives in the project's isolated MCP tools dir — Adobe ships every
+// starter-kit bundle in one package and we install it there. NOT the storefront
+// checkout: this fixture named that path until 2026-08-26, matching a copy that
+// could never resolve in production, and the mock answered it happily.
+const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`;
 
 function makeDirent(
     name: string,
@@ -428,64 +432,32 @@ describe('skillsWriter', () => {
     });
 
     describe('removed skills', () => {
-        it('does not write add-block.md (Adobe extensibility tools provide this)', async () => {
+        // Each was deleted for a stated reason: Adobe's extensibility tools cover
+        // block authoring, and the three use-*-mcp skills described servers the
+        // Claude Code session supplies rather than anything we write.
+        const REMOVED = [
+            'add-block.md',
+            'add-custom-block.md',
+            'create-block.md',
+            'configure-eds.md',
+            'edit-block-library.md',
+            'modify-content.md',
+            'update-styles.md',
+            'use-da-live-mcp.md',
+            'use-aem-content-mcp.md',
+            'use-commerce-dev-mcp.md',
+        ];
+
+        it.each(REMOVED)('does not write %s for EDS projects', async (filename) => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('add-block.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
         });
 
-        it('does not write add-custom-block.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('add-custom-block.md'))).toBe(false);
-        });
-
-        it('does not write create-block.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('create-block.md'))).toBe(false);
-        });
-
-        it('does not write configure-eds.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('configure-eds.md'))).toBe(false);
-        });
-
-        it('does not write edit-block-library.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('edit-block-library.md'))).toBe(false);
-        });
-
-        it('does not write modify-content.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('modify-content.md'))).toBe(false);
-        });
-
-        it('does not write update-styles.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('update-styles.md'))).toBe(false);
-        });
-
-        it('does not write use-da-live-mcp.md (DA.live MCP comes from Claude Code session)', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('use-da-live-mcp.md'))).toBe(false);
-        });
-
-        it('does not write use-aem-content-mcp.md', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(writtenFiles().some((p) => p.endsWith('use-aem-content-mcp.md'))).toBe(false);
-        });
-
-        it('does not write use-commerce-dev-mcp.md', async () => {
+        it.each(REMOVED)('does not write %s for headless projects', async (filename) => {
             await writeSkills('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('use-commerce-dev-mcp.md'))).toBe(false);
+            expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
         });
     });
 
@@ -511,6 +483,27 @@ describe('skillsWriter', () => {
     });
 
     describe('Adobe skill bundle copy', () => {
+        // The regression that made this block worth writing: the source path was
+        // the storefront checkout, which never carries a skills/ dir, so all six
+        // skills silently ENOENT-skipped on every project ever created. Every
+        // test below still passed, because the mock answered whatever path it
+        // was handed. Assert the ARGUMENT, not just the outcome.
+        it('reads the bundle from the isolated MCP tools dir, never the storefront checkout', async () => {
+            mockAdobeSkillBundle({ 'block-developer': ['SKILL.md'] });
+
+            await writeSkills('/projects/test', makeEdsProject());
+
+            const readdirPaths = (fsPromises.readdir as jest.Mock).mock.calls.map(
+                ([dirPath]) => dirPath as string
+            );
+            expect(readdirPaths).toContain(
+                `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`
+            );
+            expect(
+                readdirPaths.filter((dirPath) => dirPath.includes('/components/eds-storefront/'))
+            ).toEqual([]);
+        });
+
         it('copies each skill folder from the bundle to .claude/skills/<prefix>-<skill>/', async () => {
             mockAdobeSkillBundle({
                 'block-developer': ['SKILL.md'],
@@ -564,7 +557,7 @@ describe('skillsWriter', () => {
             expect(content).toBe('content of helper.ts');
         });
 
-        it('does not copy Adobe skills for headless projects (no aiSkillBundle declared)', async () => {
+        it('does not copy the aem bundle for headless projects (no EDS storefront)', async () => {
             mockAdobeSkillBundle({ 'block-developer': ['SKILL.md'] });
 
             await writeSkills('/projects/test', makeHeadlessProject());

@@ -25,7 +25,9 @@ import * as path from 'path';
 
 // Measured 2026-08-21 after the first full triage. 6 `as never` +
 // 34 `as unknown as`, every one verdicted (see codebase-sweep baselines).
-const BASELINE = 31;
+// 2026-08-26: 31 → 29. Deleting the dead `aiSkillBundle` lookup in skillsWriter
+// took its two registry casts with it.
+const BASELINE = 29;
 
 const ROOT = path.join(__dirname, '../..');
 

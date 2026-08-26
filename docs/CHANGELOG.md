@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The six storefront skills have never installed, silently
+  (`AI_CONTEXT_VERSION` 24 → 25).** `aem-block-developer`, `aem-content-modeler`,
+  `aem-dropin-developer`, `aem-project-manager`, `aem-researcher` and
+  `aem-tester` were declared on the EDS storefront component via
+  `aiSkillBundle`, which resolved the bundle inside the **storefront checkout** —
+  a directory that has never contained a `skills/` folder, because the storefront
+  IS `@adobe/aem-boilerplate-commerce`. The copy hit ENOENT and skipped by
+  design, so every project ever created shipped without them and nothing
+  reported it. Adobe ships all of its starter-kit bundles inside the one
+  `@adobe-commerce/commerce-extensibility-tools` package we already install, so
+  the bundle now reads from the isolated `.demo-builder-mcp/` tools dir like the
+  `integration-starter-kit` bundle beside it. The dead `aiSkillBundle` config
+  field, its type, and its lookup helper are removed rather than left pointing at
+  a path that cannot work. Existing projects pick the skills up on the next
+  activation sweep. The suites passed throughout: the fixture named the
+  storefront path and the `readdir` mock answered whatever it was handed, so the
+  new test asserts the source path itself.
+
 ### Added
 
 - **The Prompt Workbench has a door.** The extension contributes no menus for
