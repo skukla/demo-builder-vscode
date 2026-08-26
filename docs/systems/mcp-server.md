@@ -525,6 +525,23 @@ entirely. Auth is indifferent to the order.
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
 
+`reload_window` — restart the VS Code window so the extension host picks up a
+newly compiled bundle. Confirm-gated and `destructiveHint: true`: it discards
+in-flight work in that window and drops the MCP socket.
+
+**It answers before it reloads.** `workbench.action.reloadWindow` restarts the
+host serving the call, so the response is written first and the command deferred
+by `RELOAD_DEFER_MS`. Without that the caller gets a dropped socket, which is
+indistinguishable from a crash. The response says the socket will drop and names
+`probe.mjs info` as the readiness check — whose build stamp is also how you
+confirm the new bundle is the one now serving.
+
+Exists because the fix-measure loop otherwise stalls: extension-host code cannot
+be measured until the host restarts, and nothing outside the editor could do it.
+Corrects a claim in the `mcp-live-probe` skill that only F5 can — `reloadWindow`
+reloads the window including the extension host, which is exactly how
+`extensionUpdater.ts` applies a new extension version.
+
 ### Lifecycle — `lifecycleTools.ts`
 
 | Tool | Notes |

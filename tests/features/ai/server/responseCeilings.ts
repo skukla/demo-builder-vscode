@@ -42,6 +42,16 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    reload_window: {
+        bytes: 400,
+        why:
+            'a FIXED acknowledgement — `{reloading, inMs, note}`. Measured at 263 bytes, ' +
+            'and it cannot grow: nothing in it scales with the project, the catalog or ' +
+            'anything else. The note is the largest part and it is a constant string, ' +
+            'kept because a caller that does not expect the socket to drop reads a ' +
+            'successful reload as a crash. Ceiling rather than an exemption because the ' +
+            'size is known, and rather than an IOU because there is nothing left to measure.',
+    },
     evaluate_prompt: {
         bytes: 2_000,
         why:

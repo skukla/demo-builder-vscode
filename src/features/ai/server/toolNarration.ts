@@ -196,6 +196,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     sign_in: 'Opening sign-in',
     open_url: 'Opening the page in your browser',
     open_view: 'Opening the Demo Builder view',
+    reload_window: 'Restarting the editor window',
 
     // ── Evaluation ──────────────────────────────────────────────────────
     evaluate_prompt: 'Simulating a prompt to see what it would do',

@@ -49,7 +49,8 @@ Three things it settles, each of which has produced a wrong answer before:
    `serverInfo.version` string (branch@commit + build time + worktree) is the only reliable
    answer; a trailing `+` means the build had uncommitted changes.
 2. **Whether your change is even loaded.** If the timestamp predates your last `npm run compile`,
-   you are testing the old build. **Extension-host changes need F5, not Cmd+R** — Cmd+R reloads
+   you are testing the old build. **Extension-host changes need a WINDOW RELOAD** — call the
+   `reload_window` MCP tool (confirm-gated), or press F5. Cmd+R reloads
    only the webview.
 3. **Tree provenance**, in the SAME connection as the measurement. Never run it as a separate
    invocation: a different host can rebind between two connections, and then the provenance
