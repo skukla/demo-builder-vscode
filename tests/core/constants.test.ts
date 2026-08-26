@@ -69,8 +69,16 @@ describe('AI_CONTEXT_VERSION', () => {
     // runs spent because the document told them to. Home-only, so delivery does
     // not actually depend on this stamp (the home context is rewritten on every
     // activation); bumped to keep the bundle changelog complete and honest.
-    it('is 22 (home AGENTS.md states the active project)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(22);
+    // v23: a "Querying Commerce" section naming `get_commerce_endpoints`, plus
+    // the warning that a Catalog Service query with the wrong store scope
+    // returns an EMPTY result and no error. A survey of 48 sessions run inside
+    // demo projects (2026-08-25) found agents calling 20 of 104 tools —
+    // overwhelmingly the ones this bundle NAMES — while the one long stretch of
+    // real Commerce work hand-assembled 28 `curl`s. Unlike v22 this one DOES
+    // depend on the stamp: it is per-project content, so without the bump
+    // existing projects never receive the section.
+    it('is 23 (AGENTS.md names get_commerce_endpoints)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(23);
     });
 });
 

@@ -19,6 +19,7 @@ import {
     buildConsoleApiAccess,
     buildDocumentationRouting,
     buildEndpoints,
+    buildQueryingCommerce,
     buildHeader,
     buildHowToChangeThings,
     buildNotesForAgents,
@@ -61,6 +62,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildHeader(project, stacksConfig));
     sections.push(buildHowToChangeThings());
     sections.push(buildEndpoints(project));
+    sections.push(buildQueryingCommerce(project));
     sections.push(buildStorefront(project));
     sections.push(buildPdpRouting(project));
     sections.push(buildComponentRepositories(project));

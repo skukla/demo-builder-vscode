@@ -12,8 +12,6 @@
  * injection, Markdown link injection).
  */
 
-import demoPackagesJson from '@/features/components/config/demo-packages.json';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import {
     sanitizeTemplateValue,
     sanitizeGithubSlug,
@@ -21,7 +19,9 @@ import {
     sanitizeBlockId,
     escapeMarkdown,
 } from '../sanitization';
+import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
+import demoPackagesJson from '@/features/components/config/demo-packages.json';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -128,6 +128,56 @@ export function buildEndpoints(project: Project): string {
 
     if (endpoints.length === 0) return '';
     return ['## Remote Endpoints', ...endpoints].join('\n');
+}
+
+/**
+ * How to actually SEND a Commerce query, and the failure that makes it necessary.
+ *
+ * WHY THIS SECTION EXISTS. A survey of 48 sessions run inside demo projects
+ * (2026-08-25) found the one long stretch of real Commerce work issuing **28
+ * hand-assembled `curl`s** at the GraphQL endpoint, with the `Magento-*` headers
+ * typed out each time — because nothing on a 104-tool surface answered "what is
+ * this project's GraphQL endpoint". `get_commerce_endpoints` now does, and the
+ * same survey is the reason this section exists at all: agents used 20 of 104
+ * tools, and the ones they used were overwhelmingly the ones the bundle NAMED.
+ * A tool nobody is told about is a tool nobody calls.
+ *
+ * ## It points at the tool rather than baking the values in
+ *
+ * The endpoint, the mesh and the store scope all change — deploy a mesh and the
+ * storefront's target flips; reconfigure the backend and the endpoint moves.
+ * `AGENTS.md` is regenerated on activation, so a baked value is correct at
+ * WRITE time and can be wrong by the time it is read, and a confidently wrong
+ * endpoint is worse than no endpoint: the agent curls a host that is not this
+ * project's. The tool has no staleness window.
+ *
+ * (The `Remote Endpoints` section above DOES state values. Those are display
+ * URLs — a live site, a preview, DA.live — which a person opens in a browser and
+ * which do not silently change what a query returns.)
+ *
+ * ## The warning is the load-bearing half
+ *
+ * A Catalog Service query sent without the store-scope headers reaches the wrong
+ * scope and returns an **empty result with no error**. That is not hypothetical:
+ * the surveyed session spent turns on "why is phones empty?" against a catalog
+ * that was not empty. An agent that knows the tool exists but not the failure
+ * mode will still read an empty response as "no products".
+ */
+export function buildQueryingCommerce(project: Project): string {
+    // TWO shapes, both live. `componentSelections.backend` is what a current
+    // project carries (checked against a real manifest: bodea has
+    // `adobe-commerce-accs` and NO top-level `commerce`), while `commerce` is the
+    // older shape the sibling `buildEndpoints` still reads for its Commerce URL.
+    // Keying on one alone would silently omit this section for half the corpus.
+    // Returning '' is the file's own convention for a section that does not apply.
+    if (!project.componentSelections?.backend && !project.commerce) return '';
+
+    return [
+        '## Querying Commerce',
+        'Before sending ANY Commerce or Catalog Service request — a GraphQL query, a `curl`, a Postman collection, checking what a category contains — call the `get_commerce_endpoints` tool. Do not assemble the endpoint or the headers by hand, and do not read them out of a `.env`.',
+        'It returns the backend GraphQL endpoint, the Catalog Service endpoint, the deployed API Mesh endpoint (when there is one), which of them the storefront itself queries, and the request headers with the store scope they select.',
+        '**Send the headers it gives you.** A Catalog Service query with the wrong store scope returns an EMPTY result and no error — it looks exactly like a category with no products in it. If a query comes back empty, re-check the headers before concluding the catalog is empty.',
+    ].join('\n');
 }
 
 export function buildStorefront(project: Project): string {

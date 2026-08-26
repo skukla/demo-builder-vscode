@@ -169,7 +169,16 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // Home-only, so delivery does not depend on this stamp (the home context is
 // rewritten every activation regardless); recorded here to keep the bundle
 // changelog complete.
-export const AI_CONTEXT_VERSION = 22;
+// v23: a `Querying Commerce` section naming `get_commerce_endpoints`, and the
+// warning that a Catalog Service query with the wrong store scope returns an
+// EMPTY result with no error. Added because a survey of 48 sessions run inside
+// demo projects (2026-08-25) found agents calling 20 of 104 tools, overwhelmingly
+// the ones this bundle NAMES — and the one long stretch of real Commerce work
+// hand-assembling 28 `curl`s because nothing answered "what is this project's
+// GraphQL endpoint". Points at the TOOL rather than baking values in: the
+// endpoint, the mesh and the scope all change between regenerations, and a
+// confidently stale endpoint is worse than none.
+export const AI_CONTEXT_VERSION = 23;
 
 /**
  * Component IDs for standardized component instance access

@@ -18,8 +18,8 @@
  * pinned by tests that EXECUTE it rather than grep the command string.
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 
 // ─── Claude Settings types ────────────────────────────────────────────────────
