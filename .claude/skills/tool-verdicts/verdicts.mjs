@@ -33,7 +33,7 @@ const opt = { json: argv.includes('--json'), only: null };
 if (argv.includes('--verdict')) {
     opt.only = argv[argv.indexOf('--verdict') + 1];
     if (!opt.only || opt.only.startsWith('--')) {
-        console.error('--verdict needs a value (KEEP, FIX, INVESTIGATE, UNJUDGED, DELETE?)');
+        console.error('--verdict needs a value (KEEP, FIX, INVESTIGATE, UNJUDGED, DELETE?, TOO-NEW)');
         process.exit(2);
     }
 }
@@ -81,6 +81,25 @@ const scan = scanReport();
 const prompts = batteryPrompts();
 const outcomes = batteryOutcomes();
 
+/**
+ * When did this tool first exist?
+ *
+ * A tool has to have been SHIPPED before real work could possibly have called it.
+ * Without this, anything added recently lands in `DELETE?` the moment it ships —
+ * `get_commerce_endpoints` and `run_commerce_query` both did on 2026-08-26, hours
+ * old, on the strength of "nothing has ever needed it".
+ *
+ * Absence of demand only means something if there was time for demand to appear.
+ */
+function firstSeenInGit(tool) {
+    try {
+        const out = execFileSync('git',
+            ['log', '--reverse', '--format=%ad', '--date=short', '-S', `'${tool}'`, '--', 'src'],
+            { encoding: 'utf8' });
+        return out.split('\n')[0]?.trim() || null;
+    } catch { return null; }
+}
+
 const shipped = [...new Set([
     ...scan.shape1_neverCalled.tools,
     ...scan.used.map((u) => u.tool),
@@ -114,10 +133,16 @@ function verdictFor(tool) {
     if (run.outcome === 'around') return ['INVESTIGATE', `asked for, and the agent went around it (${run.diagnosis})`];
     if (run.outcome === 'miss') return ['INVESTIGATE', `asked for, and nothing reached it (${run.diagnosis})`];
 
-    // It works when asked. Demand decides whether it earns its place.
-    return calls > 0
-        ? ['KEEP', `works when asked, and called ${calls}x in real work`]
-        : ['DELETE?', 'works when asked, but nothing has ever needed it — a question, not a decision'];
+    // It works when asked. Demand decides whether it earns its place — but only
+    // if the corpus covers a period when the tool existed.
+    if (calls > 0) return ['KEEP', `works when asked, and called ${calls}x in real work`];
+
+    const born = firstSeenInGit(tool);
+    const lastWork = scan.scanned.window?.lastCall ?? null;
+    if (born && lastWork && born >= lastWork) {
+        return ['TOO-NEW', `works when asked; shipped ${born}, and no real session postdates it`];
+    }
+    return ['DELETE?', 'works when asked, but nothing has ever needed it — a question, not a decision'];
 }
 
 const rows = shipped.map((tool) => {
@@ -130,7 +155,7 @@ const selected = opt.only ? rows.filter((r) => r.verdict === opt.only) : rows;
 if (opt.json) {
     console.log(JSON.stringify({ generated: scan.scanned, rows: selected }, null, 2));
 } else {
-    const ORDER = ['FIX', 'INVESTIGATE', 'UNJUDGED', 'DELETE?', 'KEEP'];
+    const ORDER = ['FIX', 'INVESTIGATE', 'UNJUDGED', 'DELETE?', 'TOO-NEW', 'KEEP'];
     for (const v of ORDER) {
         const group = selected.filter((r) => r.verdict === v);
         if (!group.length) continue;

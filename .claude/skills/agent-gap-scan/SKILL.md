@@ -70,6 +70,23 @@ that transcripts cannot answer.
 Plus the **orientation share** — what fraction of calls merely re-establish where
 the agent is rather than doing anything.
 
+## The battery's own runs are excluded
+
+A battery run is `claude -p` inside `~/.demo-builder/projects`, so its transcript
+lands in the very directory this scan reads as real work. Left in, the
+measurement feeds its own evidence.
+
+Measured 2026-08-26: **54 of 90 sessions were battery runs** — 60% of the corpus.
+`run_commerce_query` showed "17 calls in real work" and all seventeen were our own
+runs of a tool that had shipped that day. Excluding them put tools-ever-called
+back to **20**, which is what the original hand analysis found before the battery
+existed.
+
+They are identified exactly, not heuristically: a battery session's first user
+message is the prompt verbatim, matched against `prompts.json`. The control line
+reports how many were excluded, so a producer who happens to type one word for
+word is visible rather than silently dropped.
+
 ## Two things that make the numbers wrong if you skip them
 
 **Scope to demo projects.** Most transcripts are this repo developing ITSELF,

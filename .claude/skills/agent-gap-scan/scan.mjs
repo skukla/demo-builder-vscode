@@ -125,6 +125,47 @@ function ourToolNames() {
     return names;
 }
 
+/**
+ * The battery's own prompts, read from disk.
+ *
+ * A battery run is `claude -p <prompt>` inside `~/.demo-builder/projects`, so its
+ * transcript lands in the very directory this scan reads as REAL WORK. Left in,
+ * the measurement feeds its own evidence: on 2026-08-26 `run_commerce_query`
+ * showed "17 calls in real work" and all seventeen were battery runs of a tool
+ * that had shipped that same day.
+ *
+ * The first user message of a battery session is the prompt VERBATIM, so they can
+ * be excluded exactly rather than guessed at. A producer typing one of these word
+ * for word would be excluded too; the control line reports the count so that is
+ * visible rather than silent.
+ */
+function batteryPrompts() {
+    const f = '.rptc/plans/evaluation-mode/battery/prompts.json';
+    if (!existsSync(f)) return new Set();
+    try {
+        return new Set(JSON.parse(readFileSync(f, 'utf8')).map((p) => String(p.prompt).trim()));
+    } catch {
+        return new Set();
+    }
+}
+
+/** The first thing the human said, or null if nothing was said. */
+function firstUserText(file) {
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        let d;
+        try { d = JSON.parse(line); } catch { continue; }
+        if (d.type !== 'user') continue;
+        const c = (d.message || {}).content;
+        if (typeof c === 'string') return c.trim();
+        if (Array.isArray(c)) {
+            const t = c.find((x) => x && x.type === 'text');
+            if (t?.text) return String(t.text).trim();
+        }
+    }
+    return null;
+}
+
 /** Walk one transcript, pulling every tool call and its result. */
 function readSession(file) {
     const calls = [];
@@ -189,7 +230,15 @@ let firstDay = null, lastDay = null;
 const dayOf = new Map();   // tool -> {first, last}
 const verbDays = new Map(); // verb -> Set(day)
 
+const BATTERY_PROMPTS = batteryPrompts();
+let batterySessions = 0;
+
 for (const f of files) {
+    // Exclude the battery's own runs BEFORE anything is counted.
+    if (BATTERY_PROMPTS.size) {
+        const first = firstUserText(f);
+        if (first && BATTERY_PROMPTS.has(first)) { batterySessions++; continue; }
+    }
     const s = readSession(f);
     if (!s.calls.length) continue;
     sessions++;
@@ -265,6 +314,7 @@ const orientationShare = ourTotal ? Math.round((orientation / ourTotal) * 100) :
 const report = {
     scanned: { files: files.length, sessionsWithTools: sessions, userTurns, toolCalls: totalCalls,
                bashCalls, scope: opt.allProjects ? 'ALL projects' : 'demo projects only',
+               batterySessionsExcluded: batterySessions,
                window: { since: opt.since || null, until: opt.until || null,
                          firstCall: firstDay, lastCall: lastDay, excludedByWindow: skippedByWindow } },
     shape1_neverCalled: { count: neverCalled.length, of: ours.size, tools: neverCalled },
@@ -330,7 +380,8 @@ if (opt.json) {
         L.push(`- \`${tool}\` — ${calls}` + (d ? `  _(${d.first} … ${d.last})_` : ''));
     }
     L.push('');
-    L.push(`_control: ${ours.size} tool names read from src/, ${called.size} distinct tools seen in ` +
+    L.push(`_control: ${batterySessions} battery session(s) excluded as self-measurement; ` +
+           `${ours.size} tool names read from src/, ${called.size} distinct tools seen in ` +
            `transcripts, ${ourCalls.length} of them ours. A zero above means nothing was found; ` +
            `these numbers say whether anything was LOOKED at._`);
 
