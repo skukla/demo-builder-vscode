@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: backlog
+status: shipped
 layer: C
 ---
 # The storefront skills we mean to install have never installed, silently
@@ -123,3 +123,4 @@ Filed 2026-08-26.
 - 2026-08-26  Filed as EDS-10 and renumbered to AI-1m (cd5cc668f) — it is AI-surface work, not EDS: which skills an agent carries determines what prompts can be orchestrated across.
 - 2026-08-26  SIZED honestly. dropins is still used ZERO times across five runs on three rigs, so the gap is real — but on a clean rig it costs 4 shell calls, not the 43 I first reported. Build the guidance; do not quote the old number.
 - 2026-08-26  RE-SCOPED. The 'agent never reaches dropins' half is DISPROVEN — given a question only dropins can answer it calls mcp__dropins__list_slots on the first call, 2/2. The seven zeros were the wrong prompt. The AGENTS.md server section stays but is not evidence-backed. The verified half remains: the six storefront skills never install.
+- 2026-08-26  SHIPPED the verified half. The six aem-boilerplate-commerce skills now install: they live in the commerce-extensibility-tools package we ALREADY install, not in the storefront checkout the old aiSkillBundle pointed at. Proven on the real bodea project — new path 6 skills, old path 0, delivered 0. Open questions resolved: copy (no installer needed, package is on disk); no collision (aem-* vs appbuilder-* prefixes); EDS-storefront gate. Dead aiSkillBundle config+type+lookup deleted. AI_CONTEXT_VERSION 24 to 25.

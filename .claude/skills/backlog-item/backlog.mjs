@@ -388,7 +388,12 @@ function main() {
             return;
         }
         case 'new': {
-            const slug = pos[0] ?? die('usage: new <slug> [--area X] [--id ID]');
+            const rawSlug = pos[0] ?? die('usage: new <slug> [--area X] [--id ID]');
+            // Filenames are date-prefixed here, so a slug that already carries
+            // one produced `2026-08-26-2026-08-26-foo.md`. Every filed item
+            // starts with its date, which makes pasting one in the obvious
+            // mistake — strip it rather than emit a name nobody wants.
+            const slug = rawSlug.replace(/^\d{4}-\d{2}-\d{2}-/, '');
             const rel = `${today}-${slug}.md`;
             const path = join(DIR, rel);
             if (existsSync(path)) die(`${rel} already exists`);
