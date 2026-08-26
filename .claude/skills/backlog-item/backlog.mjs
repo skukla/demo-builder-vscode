@@ -25,6 +25,7 @@
  *   set <id> k=v ...      change frontmatter fields
  *   log <id> "<text>"     append a dated line to `## Shipped so far`
  *   sync                  rewrite the README's generated spans in place
+ *   stale                 advisory: work-in-progress items with nothing recorded
  *
  *   filters: --area X --status S --layer L --kind K --value V --grep TERM
  *   output:  --json  (every read command; this is the agent-facing form)
@@ -427,6 +428,30 @@ function main() {
             const text = pos.slice(1).join(' ') || die('usage: log <id> "<what landed>"');
             appendShipped(i, text, today);
             console.log(`${i.id}: logged "${text}"`);
+            return;
+        }
+        case 'stale': {
+            // Advisory, never a gate. An item that has been `active` or `built` for
+            // a while with NOTHING in its `## Shipped so far` is the shape of work
+            // that landed while the record stood still.
+            //
+            // Epics are excluded, and that exclusion is the whole reason this is not
+            // part of `check`: an epic is `active` because a CHILD is active, and it
+            // ships nothing itself. Measured 2026-08-26 — all three unlogged items
+            // were epics, so without this the check would have been 100% false
+            // positives on its first run.
+            const WIP = new Set(['active', 'built']);
+            const unlogged = items.filter((i) =>
+                WIP.has(i.status) && i.kind !== 'epic' &&
+                !readFileSync(i.path, 'utf8').includes('## Shipped so far'));
+            if (opt.json) return console.log(JSON.stringify(unlogged, null, 2));
+            for (const i of unlogged) {
+                console.log(`  ${i.id.padEnd(6)} ${i.status.padEnd(7)} ${i.title}`);
+            }
+            const wip = items.filter((i) => WIP.has(i.status) && i.kind !== 'epic').length;
+            console.log(`\n  ${unlogged.length} of ${wip} work-in-progress item(s) have nothing recorded` +
+                        `\n  control: ${items.length} parsed, ${items.filter((i) => WIP.has(i.status)).length} in a working state, ` +
+                        `${items.filter((i) => WIP.has(i.status) && i.kind === 'epic').length} epic(s) excluded`);
             return;
         }
         case 'sync': {

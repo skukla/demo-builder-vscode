@@ -19,7 +19,27 @@ node $B new <slug> --id AI-5  # scaffold a file with valid frontmatter
 node $B set AI-1c status=active value=high
 node $B log AI-1c "Phase 1 landed (abc1234)"
 node $B sync                  # rewrite the README's generated spans
+node $B stale                 # advisory: WIP items with nothing recorded
 ```
+
+## Log at commit time, not at cleanup time
+
+**When you commit work that belongs to an item, run `log` in the same turn.**
+That is the whole discipline, and it is not automatic: RPTC does not know the
+backlog exists (measured 2026-08-26 — zero mentions across 51 plugin files,
+against 211 for "plan"). Nothing flips an item to `active` when a plan starts,
+and nothing logs to it when you commit.
+
+`stale` is the backstop, not the mechanism. It names non-epic items sitting in
+`active`/`built` with no `## Shipped so far` at all, and it runs as part of
+`rptc-hygiene-scan` at release cuts. **Know what it cannot see:** it found
+nothing on the day eight commits landed unlogged, because the item they belonged
+to was `open`, not `active`. A gap of days it will catch; a gap of one afternoon
+it will not.
+
+Epics are excluded deliberately. An epic is `active` because a CHILD is active
+and ships nothing itself — on the first run, all three unlogged items were epics,
+so without the exclusion the check would have been pure false positives.
 
 **Every read command takes `--json`.** That is the agent-facing form — an agent
 picking up work should call `next --json`, not parse a markdown table.

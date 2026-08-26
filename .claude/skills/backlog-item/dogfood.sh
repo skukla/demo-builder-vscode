@@ -123,6 +123,28 @@ if grep -q 'BEGIN GENERATED registry' .rptc/backlog/README.md && \
    grep -qE '^\| `[A-Z]+-[0-9]' .rptc/backlog/README.md; then ok "  ...and the span has rows in it"; else bad "  ...and the span has rows in it" "span empty — sync may be a no-op"; fi
 
 echo
+echo "STALE is advisory, and can actually fire"
+exits 0 "stale runs"                                  -- "${T[@]}" stale
+# POSITIVE CONTROL. A `stale` that reports nothing because it is broken and one
+# that reports nothing because the backlog is tidy print the same zero. Make an
+# item stale on purpose and require it to be named.
+"${T[@]}" set EDS-3 status=active >/dev/null 2>&1
+python3 - <<'PYEOF'
+import re, pathlib
+p = pathlib.Path('.rptc/backlog/2026-05-28-eds-site-scraping.md')
+t = p.read_text()
+i = t.find('## Shipped so far')
+if i >= 0:
+    nxt = t.find('\n## ', i + 5)
+    p.write_text(t[:i] + (t[nxt+1:] if nxt >= 0 else ''))
+PYEOF
+if "${T[@]}" stale | grep -q 'EDS-3'; then ok "positive control: stale NAMES a logless WIP item"; else bad "positive control: stale NAMES a logless WIP item" "stale reported nothing — it cannot see"; fi
+# Epics must NOT be reported: an epic is active because a CHILD is, and ships nothing.
+"${T[@]}" set AI-2 status=active >/dev/null 2>&1
+if "${T[@]}" stale | grep -q 'AI-2 '; then bad "epics excluded from stale" "an epic was reported"; else ok "epics excluded from stale"; fi
+"${T[@]}" set EDS-3 status=backlog >/dev/null 2>&1
+
+echo
 echo "CONTROLS — these prove the harness can actually see a failure"
 exits 1 "a deliberately bad command fails"            -- "${T[@]}" notacommand
 printf 'x' >> "$PL4"

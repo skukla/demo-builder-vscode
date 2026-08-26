@@ -97,6 +97,7 @@ beats total coverage that gets switched off.
 
 ```bash
 node .claude/skills/backlog-item/backlog.mjs check
+node .claude/skills/backlog-item/backlog.mjs stale   # advisory — read it, do not obey it
 ```
 
 Exit 1 names every problem: missing or unknown `kind` / `area` / `value`, a

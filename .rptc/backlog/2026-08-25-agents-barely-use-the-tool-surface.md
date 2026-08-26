@@ -199,3 +199,7 @@ the survey, the two competing readings, and the cheap checks that tell them apar
 with the AI-bundle freshness check across real projects; it is the one that can be done
 without asking anyone."
 ```
+
+## Shipped so far
+
+- 2026-08-26  get_commerce_endpoints shipped (15428c005) — the 28-curl gap this item measured; announced via AI_CONTEXT_VERSION 23 (bbcf595a1). The 76 unannounced-and-unused tools remain the open half.

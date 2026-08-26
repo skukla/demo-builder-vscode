@@ -30,6 +30,7 @@ layer: E
 - 2026-08-26  Spike RUN — all four unknowns answered; see `.rptc/research/own-the-chat-surface/spike.md`
 
 Feasible, and more so than assumed. NOT decided: the cost is the terminal's own affordances, and the surface would sit on an undocumented API.
+- 2026-08-26  Spike RAN and is written up in .rptc/research/own-the-chat-surface/spike.md (16d6e5615) — 11 findings; slash commands mostly WORK through the CLI, contradicting the premise this item was filed on.
 
 ## Provenance
 
