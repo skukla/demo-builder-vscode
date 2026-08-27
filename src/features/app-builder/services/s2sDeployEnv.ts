@@ -29,8 +29,26 @@
 
 import type { S2SDeployCredentials } from '@/features/authentication/services/types';
 
-/** Baseline IMS scopes; the kit's lib appends what each call needs. */
-const BASELINE_IMS_SCOPES = ['AdobeID', 'openid'];
+/**
+ * The scopes the app's tokens REQUEST. Entitlement comes from the credential's
+ * service subscriptions (baseline + the kit's requiredApis: I/O Management →
+ * ent_adobeio_sdk, I/O Events → event_receiver_api, Commerce eventing →
+ * ent_eventpublisher_sdk — read from the org catalog's scopeDefinitions,
+ * 2026-08-27); the REQUEST must still name what a call needs, and a minimal
+ * ['AdobeID','openid'] request left the eventing step 403ing against
+ * api.adobe.io/events with a fully subscribed credential (measured live).
+ * This is the standard Adobe S2S set Console shows for an Events+Management
+ * credential.
+ */
+const BASELINE_IMS_SCOPES = [
+    'AdobeID',
+    'openid',
+    'read_organizations',
+    'additional_info.projectedProductContext',
+    'additional_info.roles',
+    'adobeio_api',
+    'event_receiver_api',
+];
 
 /**
  * Build the six `AIO_COMMERCE_AUTH_IMS_*` env vars from the workspace S2S

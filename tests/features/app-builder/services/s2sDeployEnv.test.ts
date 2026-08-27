@@ -33,7 +33,15 @@ describe('buildS2SDeployEnv', () => {
         expect(JSON.parse(env.AIO_COMMERCE_AUTH_IMS_CLIENT_SECRETS)).toEqual([
             'fake-test-pw-not-a-secret',
         ]);
-        expect(JSON.parse(env.AIO_COMMERCE_AUTH_IMS_SCOPES)).toEqual(['AdobeID', 'openid']);
+        expect(JSON.parse(env.AIO_COMMERCE_AUTH_IMS_SCOPES)).toEqual([
+            'AdobeID',
+            'openid',
+            'read_organizations',
+            'additional_info.projectedProductContext',
+            'additional_info.roles',
+            'adobeio_api',
+            'event_receiver_api',
+        ]);
     });
 
     it('scalar vars carry the credential values verbatim', () => {
