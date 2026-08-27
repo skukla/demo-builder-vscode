@@ -18,6 +18,10 @@
  * primary `url`. We never throw on a parseable-but-unexpected shape.
  */
 
+import * as crypto from 'crypto';
+import { promises as fsPromises } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import type { CommandExecutor } from '@/core/shell';
@@ -84,23 +88,96 @@ function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['dat
 }
 
 /**
+ * Import the targeted workspace's Console configuration into an EXTENSION
+ * app's directory (`aio app use`) so deploy's registry sync can read it.
+ *
+ * Runs inside the caller's `withOrgContext`, so the download hits the right
+ * workspace. The downloaded file holds the Runtime auth key — 0700 temp dir,
+ * deleted in `finally`. `aio app use` also writes a `.env` with those
+ * credentials INTO the app dir; it is removed immediately (this pipeline
+ * injects runtime credentials per-invocation and keeps secrets off disk) —
+ * only the non-secret `.aio` project config remains.
+ */
+async function importWorkspaceConfig(
+    componentPath: string,
+    commandManager: CommandExecutor,
+    nodeVersion: string,
+    logger: Logger,
+): Promise<void> {
+    const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-use-'));
+    const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
+    try {
+        const download = await commandManager.execute(
+            `aio console workspace download "${filePath}"`,
+            { shell: true, timeout: TIMEOUTS.LONG, useNodeVersion: nodeVersion, enhancePath: true },
+        );
+        if (download.code !== 0) {
+            const detail = extractAioErrorDetail(download.stderr) || `exit code ${download.code}`;
+            throw new Error(`Could not download workspace configuration: ${detail}`);
+        }
+
+        const use = await commandManager.execute(
+            `aio app use "${filePath}" --overwrite --no-service-sync --no-input`,
+            {
+                cwd: componentPath,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+                useNodeVersion: nodeVersion,
+                enhancePath: true,
+            },
+        );
+        if (use.code !== 0) {
+            const detail = extractAioErrorDetail(use.stderr) || `exit code ${use.code}`;
+            throw new Error(`Could not import workspace configuration: ${detail}`);
+        }
+        logger.debug('[App Builder] Workspace configuration imported for extension app');
+    } finally {
+        await fsPromises.rm(scratchDir, { recursive: true, force: true });
+        // aio app use writes runtime credentials into the app's .env — remove
+        // it; deploy receives them per-invocation instead.
+        await fsPromises.rm(path.join(componentPath, '.env'), { force: true });
+    }
+}
+
+/** Per-deploy options for {@link deployAppComponent}. */
+export interface DeployAppOptions {
+    onProgress?: ProgressCallback;
+    /** The entry's declared Node MAJOR (e.g. '24'); defaults to the CLI's. */
+    nodeVersion?: string;
+    /**
+     * The app's config layout. `'extension'` apps (App Management) need the
+     * workspace's Console configuration IMPORTED into the app directory before
+     * deploy — their registry sync reads it locally, and without it `aio app
+     * deploy` dies with "Cannot read properties of undefined (reading 'org')"
+     * (measured live 2026-08-27; the imported `.aio` fixed deploy AND publish).
+     * Standalone apps never needed this and skip it.
+     */
+    layout?: 'standalone' | 'extension';
+}
+
+/**
  * Deploy an App Builder app from a component directory.
  *
  * @param componentPath - Path to the app directory (contains app.config.yaml)
  * @param commandManager - Executor for running aio/npm commands
  * @param logger - Logger for info/debug/error messages
- * @param onProgress - Optional progress callback
+ * @param opts - progress callback, node version, config layout
  * @returns Deployment result with success status, url, deployedUrls, or error
  */
 export async function deployAppComponent(
     componentPath: string,
     commandManager: CommandExecutor,
     logger: Logger,
-    onProgress?: ProgressCallback,
-    nodeVersion?: string,
+    opts: DeployAppOptions = {},
 ): Promise<AppDeploymentResult> {
-    const node = resolveNodeVersion(nodeVersion);
+    const { onProgress } = opts;
+    const node = resolveNodeVersion(opts.nodeVersion);
     try {
+        if (opts.layout === 'extension') {
+            onProgress?.('Deploying custom integration...', 'Importing workspace configuration');
+            await importWorkspaceConfig(componentPath, commandManager, node, logger);
+        }
+
         await buildComponent(
             componentPath,
             commandManager,

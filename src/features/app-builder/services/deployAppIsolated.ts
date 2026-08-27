@@ -15,7 +15,7 @@
  */
 
 import { applyIsolatedPackages } from './appConfigPackages';
-import { deployAppComponent } from './appDeployment';
+import { deployAppComponent, type DeployAppOptions } from './appDeployment';
 import type { AppDeploymentResult } from './types';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
@@ -39,8 +39,7 @@ export async function deployAppComponentIsolated(
     owPackage: string,
     commandManager: CommandExecutor,
     logger: Logger,
-    onProgress?: (message: string, subMessage?: string) => void,
-    nodeVersion?: string,
+    opts: DeployAppOptions = {},
 ): Promise<AppDeploymentResult> {
     const applied = await applyIsolatedPackages(componentPath, owPackage);
     logger.debug(
@@ -48,5 +47,5 @@ export async function deployAppComponentIsolated(
             ? `[App Builder] applied ow.package "${owPackage}"`
             : `[App Builder] no standalone packages to isolate for "${owPackage}"`,
     );
-    return deployAppComponent(componentPath, commandManager, logger, onProgress, nodeVersion);
+    return deployAppComponent(componentPath, commandManager, logger, opts);
 }

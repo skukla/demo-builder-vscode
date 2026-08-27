@@ -137,8 +137,11 @@ export interface AppBuilderComponentRunnerDeps {
         owPackage: string,
         commandManager: CommandExecutor,
         logger: Logger,
-        onProgress?: (m: string, s?: string) => void,
-        nodeVersion?: string
+        opts?: {
+            onProgress?: (m: string, s?: string) => void;
+            nodeVersion?: string;
+            layout?: 'standalone' | 'extension';
+        }
     ) => Promise<AppDeploymentResult>;
     /**
      * Ensure a Node MAJOR version is available via fnm (installing it when
@@ -455,14 +458,11 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
-    const result = await deps.deployApp(
-        componentPath,
-        owPackage,
-        deps.commandManager,
-        deps.logger,
-        deps.onProgress,
-        entry.nodeVersion,
-    );
+    const result = await deps.deployApp(componentPath, owPackage, deps.commandManager, deps.logger, {
+        onProgress: deps.onProgress,
+        nodeVersion: entry.nodeVersion,
+        layout: entry.layout,
+    });
     return result.success
         ? { ok: true, outcome: integrationOutcome(entry, result.data) }
         : { ok: false, error: result.error || 'App deployment failed.' };
@@ -489,6 +489,9 @@ export async function addAppBuilderComponent(
 
     try {
         if (entry.nodeVersion) {
+            // Visible, not silent: a first-time fnm install takes ~30s and the
+            // progress channel is the surface every add path already has.
+            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -571,6 +574,7 @@ export async function deployAppBuilderComponent(
 
     try {
         if (entry.nodeVersion) {
+            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };

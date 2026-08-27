@@ -139,10 +139,11 @@ split — came back 31 files with working name families, under the item's own
 
 ## Walkthrough queue — one decision each
 
-1. **App Management install: automate or hand back?** Recommendation:
-   automate via the REST client with a hands-back fallback. Needs your
-   ~30-minute supervised spike first: deploy the kit once and find the
-   reachable base URL of its install API (the spec confirms it's per-app).
+1. **App Management install: automate or hand back?** DECIDED (automate,
+   hands-back fallback) and the spike is DONE: the kit deployed end-to-end
+   through the extension on 2026-08-27 evening and the install API answers at
+   the predicted per-app base URL (401 auth-required = exists and routes).
+   What remains for you: which Commerce instance to associate it with.
 2. **One-app-per-workspace:** does App Management strengthen the case for the
    per-solution-center Adobe I/O project move (its own epic)? Affects step 4's
    shape.

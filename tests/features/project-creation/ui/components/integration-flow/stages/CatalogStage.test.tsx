@@ -157,3 +157,22 @@ describe('CatalogStage', () => {
         expect(screen.getByText(/No integrations match/)).toBeInTheDocument();
     });
 });
+
+describe('node-version disclosure', () => {
+    it('appends the install disclosure for entries that declare a nodeVersion', () => {
+        renderStage({
+            catalog: [
+                {
+                    id: 'kit',
+                    name: 'Commerce Integration Starter Kit',
+                    description: 'Sync scaffolding.',
+                    kind: 'integration',
+                    nodeVersion: '24',
+                    source: { owner: 'adobe', repo: 'kit' },
+                } as never,
+            ],
+        });
+
+        expect(screen.getByText(/Installs Node 24 on first use/)).toBeInTheDocument();
+    });
+});

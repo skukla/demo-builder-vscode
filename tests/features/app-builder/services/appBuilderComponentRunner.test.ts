@@ -416,8 +416,14 @@ describe('addAppBuilderComponent partial-failure', () => {
         const seen: string[] = [];
 
         (deps.deployApp as jest.Mock).mockImplementation(
-            async (_path, _pkg, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
-                onProgress?.('Building…');
+            async (
+                _path,
+                _pkg,
+                _cmd,
+                _log,
+                opts?: { onProgress?: (m: string, s?: string) => void },
+            ) => {
+                opts?.onProgress?.('Building…');
                 return { success: true, data: { url: 'https://app/api' } };
             }
         );
@@ -687,8 +693,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
             expect.any(String),
             expect.anything(),
             expect.anything(),
-            undefined,
-            '24',
+            expect.objectContaining({ nodeVersion: '24' }),
         );
     });
 

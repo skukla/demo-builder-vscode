@@ -74,7 +74,14 @@ export function CatalogStage({
                             key={entry.id}
                             variant="tile"
                             name={entry.name}
-                            description={entry.description}
+                            // Disclose tool cost BEFORE the choice binds: the add
+                            // door auto-installs the declared Node via fnm, and a
+                            // one-time ~30s install should never be a surprise.
+                            description={
+                                entry.nodeVersion
+                                    ? `${entry.description} Installs Node ${entry.nodeVersion} on first use.`
+                                    : entry.description
+                            }
                             selected={entry.id === selectedId}
                             onSelect={() => onPick(entry.id)}
                         />

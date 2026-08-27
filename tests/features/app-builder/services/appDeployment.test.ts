@@ -24,6 +24,8 @@ jest.mock('fs', () => ({
     promises: {
         access: jest.fn(),
         readFile: jest.fn(),
+        mkdtemp: jest.fn(),
+        rm: jest.fn(),
     },
 }));
 
@@ -159,7 +161,7 @@ describe('deployAppComponent', () => {
             wireHappyPath();
             const onProgress = jest.fn();
 
-            await deployAppComponent('/app', cm as any, logger as any, onProgress);
+            await deployAppComponent('/app', cm as any, logger as any, { onProgress });
 
             expect(onProgress).toHaveBeenCalled();
         });
@@ -255,5 +257,47 @@ describe('deployAppComponent', () => {
             const commands = cm.execute.mock.calls.map((args: unknown[]) => args[0] as string);
             expect(commands).toContain(GET_URL_CMD);
         });
+    });
+});
+
+// ─── extension-layout workspace-config import (2026-08-27, measured live) ────
+describe('extension layout: workspace config import', () => {
+    let cm: ReturnType<typeof createMockCommandManager>;
+    let logger: ReturnType<typeof createMockLogger>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        cm = createMockCommandManager();
+        logger = createMockLogger();
+        mockFs.access.mockRejectedValue(new Error('ENOENT'));
+        // The import helper's scratch-dir lifecycle runs through the mocked fs.
+        mockFs.mkdtemp.mockResolvedValue('/tmp/db-use-test');
+        mockFs.rm.mockResolvedValue(undefined);
+        cm.execute.mockImplementation((command: string) => {
+            if (command.includes('get-url')) return Promise.resolve(ok(GET_URL_JSON));
+            return Promise.resolve(ok());
+        });
+    });
+
+    it('downloads and imports the workspace config before building', async () => {
+        await deployAppComponent('/app', cm as any, logger as any, { layout: 'extension' });
+
+        const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
+        const downloadIdx = commands.findIndex((c: string) =>
+            c.startsWith('aio console workspace download'),
+        );
+        const useIdx = commands.findIndex((c: string) => c.startsWith('aio app use'));
+        expect(downloadIdx).toBeGreaterThanOrEqual(0);
+        expect(useIdx).toBeGreaterThan(downloadIdx);
+        // Non-interactive, overwrite, no service sync — the measured-live shape.
+        expect(commands[useIdx]).toContain('--overwrite');
+        expect(commands[useIdx]).toContain('--no-input');
+    });
+
+    it('standalone (and default) layout never imports workspace config', async () => {
+        await deployAppComponent('/app', cm as any, logger as any, {});
+
+        const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
+        expect(commands.some((c: string) => c.startsWith('aio app use'))).toBe(false);
     });
 });

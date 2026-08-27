@@ -52,6 +52,21 @@ nothing encoded):
    limitation). RECOMMEND: surface as a guided handoff in the add flow, same
    pattern as set_setting's hands-back.
 
+## Live status (2026-08-27 evening): DEPLOYED end-to-end through the extension
+
+`deploy_integration` on bodea: Node 24 ensured at the door, workspace Console
+config imported (`importWorkspaceConfig` — the piece extension-layout deploys
+need and standalone never did), built clean, `status: deployed`, and the three
+`app-management/*` install-API URLs captured in `deployedUrls`. GET on them
+answers 401-auth-required at the predicted base — **the base-URL spike is
+done**. RETRACTION on the way there: the "kit cannot be built with Adobe's
+latest tooling" verdict was wrong — the cause was the LOCAL aio-cli's stale
+dependency tree (same version, webpack 5.107.2 locked at install time; fresh
+install pulls 5.110.0 which fixes it — filed as its own item, PL-6). Step 4
+now needs only: wire `reconcileInstallation` post-deploy (base URL from
+deployedUrls, IMS token), `requiredApis` on the entry, and the owner's choice
+of Commerce instance to associate.
+
 ## Decisions taken (owner, 2026-08-27 afternoon)
 
 - **Install is AUTOMATIC** via the REST client, with a hands-back fallback:
