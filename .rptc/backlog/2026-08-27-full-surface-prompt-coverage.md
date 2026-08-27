@@ -85,3 +85,7 @@ tier 1 is tonight's task after the orientation prompts verify.
 - 2026-08-26  docs(battery): AI-1q tier-1 queue — 30 forceless reads with no prompt (`513db71b1`)
 - 2026-08-26  docs(backlog): AI-1q — every tool and skill the modal promises gets a prompt (`01cd5fe2e`)
 - 2026-08-27  Native-competition verdicts executed. DELETED get_block_source (first deletion on the measured bar: zero corpus calls + lost its audition to ls + no differentiator over native reads). FIXED get_component_config — was returning .env and manifests VERBATIM, the exact leak stripManifestSecrets prevents one tool over; now masks SECRET_ENV_KEYS values, strips manifests, refuses unparseable JSON. KEPT list_github_repos (extension-auth fallback when gh absent) and check_repo_readiness (composite classification shared with 3 UI call sites; the gh route rebuilt it ad hoc — the drift the spine rules warn about). Surface: 106 -> 105 tools.
+- 2026-08-27  feat(battery): the two DA.live prompts run once the owner re-authed — both HIT (`e435bf245`)
+- 2026-08-27  docs(skills): tool-verdicts carries the deletion bar the first deletion set (`0b18cf590`)
+- 2026-08-27  docs(backlog): native-competition verdicts logged (`3ee63a08d`)
+- 2026-08-27  refactor(mcp): the first tool deleted on measured evidence, and the safe door locked (`0ccfb5263`)
