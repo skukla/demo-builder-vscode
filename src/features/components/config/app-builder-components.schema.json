@@ -3,7 +3,10 @@
   "title": "Demo Builder AppBuilderComponents Catalog Schema",
   "description": "Schema for the declarative catalog of pre-built appBuilderComponents (meshes and integrations)",
   "type": "object",
-  "required": ["version", "appBuilderComponents"],
+  "required": [
+    "version",
+    "appBuilderComponents"
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -26,7 +29,13 @@
   "definitions": {
     "appBuilderComponent": {
       "type": "object",
-      "required": ["id", "name", "description", "kind", "source"],
+      "required": [
+        "id",
+        "name",
+        "description",
+        "kind",
+        "source"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -44,7 +53,10 @@
         },
         "kind": {
           "type": "string",
-          "enum": ["mesh", "integration"],
+          "enum": [
+            "mesh",
+            "integration"
+          ],
           "description": "AppBuilderComponent kind"
         },
         "source": {
@@ -52,22 +64,30 @@
         },
         "compatibleBackends": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Backend ids this appBuilderComponent fits (omitted = any backend)"
         },
         "compatibleFrontends": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Frontend ids this appBuilderComponent fits (omitted = any frontend)"
         },
         "requiredApis": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Adobe API sdkCodes/names to subscribe on the workspace (e.g. GraphQLServiceSDK)"
         },
         "providesEnvVars": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Env-var names this appBuilderComponent provides to consumers (e.g. MESH_ENDPOINT)"
         },
         "envSchema": {
@@ -79,19 +99,43 @@
         },
         "nativeForPackages": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Demo package IDs this appBuilderComponent is native to (auto-included + locked, like a package-native block library). Mirrors block-libraries' nativeForPackages."
         },
         "onlyForPackages": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "If set, this appBuilderComponent is available ONLY for these demo package IDs. Mirrors block-libraries' onlyForPackages."
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "standalone",
+            "extension"
+          ],
+          "description": "App Builder app layout. Omitted = standalone (app.config.yaml declares application.runtimeManifest.packages at the root). 'extension' = the config declares extensions: (e.g. commerce/extensibility/1) with the runtime manifest in an ext.config.yaml \u2014 the App Management generation's shape; the deploy path branches on this and skips the ow-package rewrite."
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "deploy-only",
+            "app-management"
+          ],
+          "description": "What happens after aio app deploy. Omitted = deploy-only (deployed = done). 'app-management' = the app must also be installed/associated with a Commerce instance via its own generated App Management API before events flow."
         }
       }
     },
     "envVar": {
       "type": "object",
-      "required": ["name", "type", "label"],
+      "required": [
+        "name",
+        "type",
+        "label"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -100,8 +144,11 @@
         },
         "type": {
           "type": "string",
-          "enum": ["text", "secret"],
-          "description": "secret → masked + SecretStorage; text → Configure UI → .env"
+          "enum": [
+            "text",
+            "secret"
+          ],
+          "description": "secret \u2192 masked + SecretStorage; text \u2192 Configure UI \u2192 .env"
         },
         "label": {
           "type": "string",
@@ -120,7 +167,11 @@
     },
     "gitHubSource": {
       "type": "object",
-      "required": ["owner", "repo", "branch"],
+      "required": [
+        "owner",
+        "repo",
+        "branch"
+      ],
       "properties": {
         "owner": {
           "type": "string",

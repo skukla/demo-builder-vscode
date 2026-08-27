@@ -31,6 +31,26 @@ export interface AppBuilderComponentCatalogEntry {
     description: string;
     kind: AppBuilderComponentKind;
     /**
+     * App layout. Absent = 'standalone': `app.config.yaml` declares
+     * `application.runtimeManifest.packages` at the clone root — the only
+     * shape the deploy path accepted before 2026-08-27. 'extension': the root
+     * config declares `extensions:` with the runtime manifest in an
+     * `ext.config.yaml` (the App Management generation, e.g.
+     * adobe/commerce-integration-starter-kit v4). The deploy path branches on
+     * this and skips the ow-package rewrite — isolation comes from the
+     * workspace, not package renaming.
+     */
+    layout?: 'standalone' | 'extension';
+    /**
+     * Post-deploy lifecycle. Absent = 'deploy-only' (deployed = done).
+     * 'app-management': the app must also be installed/associated with a
+     * Commerce instance through its own generated REST API (POST
+     * /installation, /association — see the plan at
+     * .rptc/plans/app-management-support/) before events flow; deploy alone
+     * leaves it dormant.
+     */
+    lifecycle?: 'deploy-only' | 'app-management';
+    /**
      * A blank/starter app (the "build custom" custom-app path), NOT a
      * finished pre-built integration. Excluded from the catalog gallery and
      * reached via the kind picker's "Build custom" card instead.

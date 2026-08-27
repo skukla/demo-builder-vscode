@@ -310,6 +310,25 @@ describe('appBuilderComponentCatalogLoader', () => {
             }
         });
 
+        it('layout and lifecycle, when present, are within their enums — and the schema agrees with the type', () => {
+            // These fields gate the DEPLOY PATH (extension apps skip the
+            // ow-package rewrite; app-management apps need an install step), so
+            // a typo'd value silently routes a repo down the wrong pipeline.
+            // Enforcement in this suite is spot checks, not full validation —
+            // adding a schema field without a line here means NOTHING checks it,
+            // which is how these two nearly shipped unpinned (2026-08-27).
+            const layoutEnum: string[] =
+                schema.definitions.appBuilderComponent.properties.layout.enum;
+            const lifecycleEnum: string[] =
+                schema.definitions.appBuilderComponent.properties.lifecycle.enum;
+            expect(layoutEnum).toEqual(['standalone', 'extension']);
+            expect(lifecycleEnum).toEqual(['deploy-only', 'app-management']);
+            for (const entry of catalog.appBuilderComponents) {
+                if (entry.layout !== undefined) expect(layoutEnum).toContain(entry.layout);
+                if (entry.lifecycle !== undefined) expect(lifecycleEnum).toContain(entry.lifecycle);
+            }
+        });
+
         it('every env-schema item has {name, type} with type ∈ {text, secret}', () => {
             for (const entry of catalog.appBuilderComponents) {
                 for (const envVar of entry.envSchema ?? []) {
