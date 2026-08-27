@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (6)
+### platform  (7)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -270,6 +270,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-4` | chore | [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) | — | low | shipped |
 | `PL-5` | feature | [Adobe sign-in has no command palette entry](2026-08-26-adobe-sign-in-from-command-palette.md) | — | med | shipped |
 | `PL-6` | fix | [aio CLI tree staleness is invisible to version checks](2026-08-27-aio-cli-tree-staleness-invisible-to-version-checks.md) | — | med | backlog |
+| `PL-7` | fix | [rptc-hygiene-scan check 5 parses zero active entries](2026-08-27-rptc-hygiene-scan-section5-broken.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -415,7 +416,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*21 item(s) sit outside the A–G chain.*
+*22 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

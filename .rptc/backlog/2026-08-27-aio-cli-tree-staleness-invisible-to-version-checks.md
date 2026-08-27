@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # aio CLI tree staleness is invisible to version checks
@@ -45,3 +45,6 @@ Leaning 1: targeted, no new maintenance surface, lands where the user is.
 ## Shipped so far
 
 - 2026-08-27  Remedy SHIPPED (the bridge, owner-directed 2026-08-27 evening): consent-gated refresh-and-retry inside the deploy seam. A build failure matching the staleness signature asks once — notification prompt on wizard/dashboard paths, the refreshCli flag on the agent path (context.panel is the discriminator; a handler never parks an agent on a dialog) — then refreshes the global CLI and retries ONCE inside the same operation, so the user's first try still succeeds on machines that needed healing. LIVE EVIDENCE: detection + headless remedy-hint proven by re-planting webpack 5.107.2 into the CLI tree and calling deploy_integration (failed with the real error + the hint); refresh effectiveness proven twice (morning natural aging, evening against the plant — plain npm install -g restores 5.110.0 both times); the consent-yes orchestration pinned by 7 unit tests (a live one-run replay is confounded by aio reusing surviving build artifacts, which also means a retry can succeed for reuse reasons — fine, success is success). The extension-owned pinned CLI remains the durable answer on PR-1; this bridge is deliberately cheap enough to delete when it lands.
+- 2026-08-27  fix(app-builder): the refresh prompt declines with "Not Now" (`f0e248185`)
+- 2026-08-27  fix(app-builder): shorten the CLI-refresh prompt (`91ad66ba7`)
+- 2026-08-27  feat(app-builder): consent-gated CLI refresh-and-retry — the PL-6 bridge, live-proven (`c032008ee`)
