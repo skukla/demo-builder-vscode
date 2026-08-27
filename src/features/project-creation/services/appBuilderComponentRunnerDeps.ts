@@ -12,7 +12,7 @@
  * itself free of cross-feature deploy imports.
  */
 
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
@@ -60,11 +60,29 @@ export interface RunnerDepsContext {
 }
 
 /** Wire the runner's deps to the real deploy tails + subscriber + republish. */
+/**
+ * The UI-default toolchain-refresh consent: one notification, two buttons.
+ * Callers with NO interactive surface (the MCP handlers when `context.panel`
+ * is absent) pass their own flag-based consent instead — a handler must never
+ * park an agent on a dialog.
+ */
+async function promptForToolchainRefresh(): Promise<boolean> {
+    const choice = await vscode.window.showWarningMessage(
+        "The Adobe CLI's build toolchain is out of date and this integration can't build " +
+            'with it. Update the CLI and retry?',
+        'Update & Retry',
+        'Skip',
+    );
+    return choice === 'Update & Retry';
+}
+
 export function buildDefaultRunnerDeps(
     ctx: RunnerDepsContext,
     onProgress?: (message: string, subMessage?: string) => void,
+    confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
     return {
+        confirmToolchainRefresh: confirmToolchainRefresh ?? promptForToolchainRefresh,
         // Where the deploy tails' steps go. Callers with a progress notification
         // pass their reporter; headless/MCP callers pass nothing.
         onProgress,

@@ -38,6 +38,12 @@ const addIntegrationSchema = {
         })
         .optional()
         .describe('A custom App Builder app on GitHub. Omit when passing `id`.'),
+    refreshCli: z
+        .boolean()
+        .optional()
+        .describe(
+            'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+        ),
     name: z
         .string()
         .optional()
@@ -213,6 +219,12 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'deployAppBuilderComponent',
         inputSchema: {
             id: z.string().describe('The integration id to deploy (from get_project)'),
+            refreshCli: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+                ),
         },
     },
     {
@@ -225,6 +237,12 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'redeployAppBuilderComponent',
         inputSchema: {
             id: z.string().describe('The integration id to redeploy (from get_project)'),
+            refreshCli: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+                ),
         },
     },
     {

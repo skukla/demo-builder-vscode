@@ -28,6 +28,7 @@ import type { CommandExecutor } from '@/core/shell';
 import { buildComponent } from '@/core/shell/buildComponent';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };
@@ -153,6 +154,65 @@ export interface DeployAppOptions {
      * Standalone apps never needed this and skip it.
      */
     layout?: 'standalone' | 'extension';
+    /**
+     * Consent source for the toolchain refresh-and-retry (PL-6 bridge): asked
+     * ONCE when a build fails with a staleness signature. UI paths wire a
+     * notification prompt; the headless/MCP path wires the caller's
+     * `refreshCli` flag (a handler must never park an agent on a dialog).
+     * Absent = no consent available: the failure returns with the remedy hint.
+     */
+    confirmToolchainRefresh?: () => Promise<boolean>;
+}
+
+/**
+ * Failure signatures that mean "the CLI's frozen dependency tree, not the
+ * app" — each entry carries its provenance. Matching one triggers the
+ * consent-gated refresh-and-retry; anything else fails straight through.
+ *
+ * - Self-reference codegen: webpack 5.107.2 (frozen in a Feb-installed
+ *   aio-cli 11.1.2 tree) fails the kit's generated app-management actions;
+ *   5.110.0 from a fresh install of the SAME CLI version builds them.
+ *   Measured 2026-08-27, clean-room controlled, retraction on AB-1d.
+ */
+const TOOLCHAIN_STALENESS_PATTERNS: readonly RegExp[] = [
+    /Self-reference dependency has unused export name/,
+];
+
+/** Does this failure text carry a known toolchain-staleness signature? */
+export function isToolchainStalenessError(error: string | undefined): boolean {
+    return !!error && TOOLCHAIN_STALENESS_PATTERNS.some((pattern) => pattern.test(error));
+}
+
+/**
+ * The remedy, spoken to whichever reader hits it: a human at the error state,
+ * or an agent that can re-call with the flag.
+ */
+const TOOLCHAIN_REMEDY_HINT =
+    ' This failure is usually an out-of-date Adobe CLI toolchain (its dependencies freeze at ' +
+    'install time, so even a version-current install can carry stale internals). Update it with ' +
+    '`npm install -g @adobe/aio-cli` and retry — from an AI agent, call again with ' +
+    '`refreshCli: true` to do that automatically.'
+
+/**
+ * Refresh the global Adobe CLI — the hand-verified fix from 2026-08-27 (same
+ * CLI version, freshly resolved dependency tree). Runs under the default
+ * node deliberately: that is the silo the executor's `aio` resolves from.
+ */
+async function refreshGlobalAioCli(
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<{ ok: boolean; error?: string }> {
+    const result = await commandManager.execute('npm install -g @adobe/aio-cli --no-fund', {
+        shell: DEFAULT_SHELL,
+        timeout: TIMEOUTS.VERY_LONG,
+        enhancePath: true,
+    });
+    if (result.code !== 0) {
+        const detail = result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit ${result.code}`;
+        return { ok: false, error: detail };
+    }
+    logger.debug('[App Builder] Adobe CLI refreshed');
+    return { ok: true };
 }
 
 /**
@@ -165,6 +225,37 @@ export interface DeployAppOptions {
  * @returns Deployment result with success status, url, deployedUrls, or error
  */
 export async function deployAppComponent(
+    componentPath: string,
+    commandManager: CommandExecutor,
+    logger: Logger,
+    opts: DeployAppOptions = {},
+): Promise<AppDeploymentResult> {
+    const first = await deployAppComponentOnce(componentPath, commandManager, logger, opts);
+    if (first.success || !isToolchainStalenessError(first.error)) {
+        return first;
+    }
+
+    // Toolchain-staleness signature: ask once, refresh, retry ONCE — the
+    // whole exchange stays inside this one deploy, so the caller's first try
+    // still succeeds on machines that needed healing (PL-6 bridge).
+    const consented = await opts.confirmToolchainRefresh?.();
+    if (!consented) {
+        return { ...first, error: `${first.error}${TOOLCHAIN_REMEDY_HINT}` };
+    }
+
+    opts.onProgress?.('Updating Adobe CLI...', 'npm install -g @adobe/aio-cli');
+    const refreshed = await refreshGlobalAioCli(commandManager, logger);
+    if (!refreshed.ok) {
+        return {
+            success: false,
+            error: `Adobe CLI update failed: ${refreshed.error}. Original failure: ${first.error}`,
+        };
+    }
+    return deployAppComponentOnce(componentPath, commandManager, logger, opts);
+}
+
+/** One deploy attempt — the pre-retry body of {@link deployAppComponent}. */
+async function deployAppComponentOnce(
     componentPath: string,
     commandManager: CommandExecutor,
     logger: Logger,

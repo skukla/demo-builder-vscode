@@ -62,7 +62,10 @@ describe('handleAddAppBuilderComponent', () => {
             }),
             // The notification's reporter, so the deploy tail's steps reach the
             // user instead of one static title for the whole add.
-            expect.any(Function)
+            expect.any(Function),
+            // The toolchain consent: undefined on this interactive path (the
+            // fixture context has a panel), so the factory prompt applies.
+            undefined
         );
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             mockProject,

@@ -381,6 +381,14 @@ export interface SetProjectDestinationRequestPayload {
 export interface AddAppBuilderComponentRequestPayload {
     id?: string;
     source?: { owner: string; repo: string };
+    /**
+     * Headless consent for the toolchain refresh-and-retry: when a build
+     * fails with a CLI-staleness signature, the agent surface never prompts —
+     * the failure hint tells the agent to confirm with its human and re-call
+     * with this flag. Ignored on interactive paths (the notification prompt
+     * decides there).
+     */
+    refreshCli?: boolean;
     /** Display name for a named blank instance (the flow's naming step). */
     name?: string;
     /** Collision-checked instance id for a named blank instance. */

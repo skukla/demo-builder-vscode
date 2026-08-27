@@ -294,6 +294,24 @@ export async function postComponentsSnapshot(context: HandlerContext): Promise<v
  * Handle 'addAppBuilderComponent' — guards → (bucket-3 → Configure) → assemble deps →
  * D1 addAppBuilderComponent. The FIRST live UI-driven full add.
  */
+/**
+ * Build the toolchain-refresh consent for this invocation (PL-6 bridge).
+ *
+ * With a webview panel the answer comes from the factory's notification
+ * prompt (return undefined → the default applies). Headless — the MCP agent
+ * surface, where `context.panel` is absent — the answer IS the request's
+ * `refreshCli` flag: an agent is told by the failure hint to confirm with its
+ * human and re-call with the flag, so a handler never parks it on a dialog.
+ * Exported for its own test.
+ */
+export function buildToolchainConsent(
+    context: HandlerContext,
+    refreshCli: boolean | undefined,
+): (() => Promise<boolean>) | undefined {
+    if (context.panel) return undefined; // interactive: the factory prompt decides
+    return async () => refreshCli === true;
+}
+
 export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponentRequestPayload> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -401,6 +419,7 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
                 (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                buildToolchainConsent(context, payload?.refreshCli),
             );
             return addAppBuilderComponent(project, entry, deps);
         },
@@ -577,7 +596,11 @@ async function withComponentProgress<T extends GuardableResult>(
 }
 
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
-async function deployById(context: HandlerContext, requestedId: string | undefined) {
+async function deployById(
+    context: HandlerContext,
+    requestedId: string | undefined,
+    refreshCli?: boolean,
+) {
     const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
     const { id, project } = target;
@@ -613,6 +636,7 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
                 (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                buildToolchainConsent(context, refreshCli),
             );
             return deployAppBuilderComponent(project, id, deps);
         },
@@ -630,10 +654,10 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
 }
 
 /** Handle 'deployAppBuilderComponent' — deploy the given appBuilderComponent's tail. */
-export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string }> = (
+export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string; refreshCli?: boolean }> = (
     context,
     payload,
-) => deployById(context, payload?.id);
+) => deployById(context, payload?.id, payload?.refreshCli);
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;

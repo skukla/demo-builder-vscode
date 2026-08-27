@@ -141,8 +141,15 @@ export interface AppBuilderComponentRunnerDeps {
             onProgress?: (m: string, s?: string) => void;
             nodeVersion?: string;
             layout?: 'standalone' | 'extension';
+            confirmToolchainRefresh?: () => Promise<boolean>;
         }
     ) => Promise<AppDeploymentResult>;
+    /**
+     * Consent source for the toolchain refresh-and-retry (see
+     * DeployAppOptions.confirmToolchainRefresh). UI callers wire a prompt;
+     * headless callers wire the request's `refreshCli` flag.
+     */
+    confirmToolchainRefresh?: () => Promise<boolean>;
     /**
      * Ensure a Node MAJOR version is available via fnm (installing it when
      * absent) BEFORE a component that declares one installs/deploys. The one
@@ -462,6 +469,7 @@ async function dispatchDeploy(
         onProgress: deps.onProgress,
         nodeVersion: entry.nodeVersion,
         layout: entry.layout,
+        confirmToolchainRefresh: deps.confirmToolchainRefresh,
     });
     return result.success
         ? { ok: true, outcome: integrationOutcome(entry, result.data) }
