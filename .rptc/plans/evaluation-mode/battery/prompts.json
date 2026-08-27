@@ -111,9 +111,10 @@
     "id": "orientation",
     "prompt": "Which project am I working on right now, and is the demo running?",
     "expect": [
-      "get_current_project"
+      "get_current_project",
+      "get_project_status"
     ],
-    "why": "Pins the 2026-08-27 payload merge. Before it, get_current_project answered a name and a path, so this question COST TWO CALLS (plus get_project_status) and the corpus showed 83% of its calls chaining into a second read. One call in the route is the fix working; a second orientation read is the regression."
+    "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts \u2014 the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
   },
   {
     "id": "active-project",

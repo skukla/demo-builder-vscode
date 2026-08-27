@@ -17,7 +17,10 @@ const cases = [
  ['our tool errored', [{name:M+'list_blocks',id:'1',input:{}},{name:'Bash',id:'2',input:{}}], [{id:'1',isError:true,preview:'boom'}], [], 'TOOL-BROKEN'],
  ['searched, around', [{name:'ToolSearch',id:'1',input:{}},{name:'Bash',id:'2',input:{}}], [], [], 'NOT-FINDABLE'],
  ['never looked',     [{name:'Bash',id:'1',input:{}}], [], ['There is no tool for this, so I will use curl.'], 'NOT-ANNOUNCED'],
- ['nothing at all',   [{name:M+'get_project',id:'1',input:{}}], [], [], 'NO-ROUTE'],
+ // This case scored NO-ROUTE until 2026-08-27, and the label was a lie: our
+ // tool WAS called and answered. The live orientation runs hit this exact hole.
+ ['sibling tool',     [{name:M+'get_project',id:'1',input:{}}], [], [], 'SIBLING-TOOL'],
+ ['nothing at all',   [], [], [], 'NO-ROUTE'],
 ];
 let pass = 0, fail = 0;
 for (const [label, calls, results, said, want] of cases) {

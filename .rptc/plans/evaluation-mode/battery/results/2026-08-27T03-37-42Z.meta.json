@@ -7,5 +7,10 @@
   },
   "promptCount": 6,
   "allowlist": 175,
-  "cache": "unspecified"
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 845
+  },
+  "authChangedMidRun": false
 }

@@ -106,6 +106,15 @@ function score(calls, results, said, expect) {
     else if (triedThenLeft) diagnosis = 'TOOL-INSUFFICIENT: called ours, still went to the shell';
     else if (around && searched) diagnosis = 'NOT-FINDABLE: it searched for a tool and still went around';
     else if (around && !searched) diagnosis = 'NOT-ANNOUNCED: it never looked — it did not know to';
+    // A successful call to one of OUR tools that simply is not the expected one.
+    // The old chain fell through to NO-ROUTE, whose label ("neither our tool nor
+    // the shell") was a lie: the 2026-08-27 orientation runs answered perfectly
+    // via get_project_status — the sibling door of the very fix under test — and
+    // scored as if the agent had done nothing. A sibling is sometimes the finding
+    // (wrong routing) and sometimes the design (two doors, one answer); the label
+    // must say which tool so a human can tell.
+    else if (ourCalls.some((c) => !failed(byId.get(c.id))))
+        diagnosis = `SIBLING-TOOL: answered via ${bare(ourCalls.find((c) => !failed(byId.get(c.id))).name)} — is the expect list too narrow, or the routing wrong?`;
     else diagnosis = 'NO-ROUTE: neither our tool nor the shell';
 
     // The agent's own account, when it gives one. Cheapest possible evidence.
