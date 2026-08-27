@@ -207,7 +207,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-1n` | fix | └ [The battery measures a world that does not exist, and feeds itself](2026-08-26-battery-measures-a-world-that-does-not-exist.md) | — | high | shipped |
 | `AI-1q` | feature | └ [Every tool and skill the modal promises gets a prompt that proves it](2026-08-27-full-surface-prompt-coverage.md) | — | high | active |
 | `AI-1o` | fix | [Every project gets the App Builder skills, including projects with no App Builder app](2026-08-26-pair-skills-to-project-shape.md) | — | high | shipped |
-| `AI-1p` | feature | [Nothing checks that the AI bundle we ship is internally consistent](2026-08-26-ai-bundle-coherence-check.md) | — | high | backlog |
+| `AI-1p` | feature | [Nothing checks that the AI bundle we ship is internally consistent](2026-08-26-ai-bundle-coherence-check.md) | — | high | shipped |
 | `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
 | `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
 | `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |

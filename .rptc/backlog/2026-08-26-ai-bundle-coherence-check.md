@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: backlog
+status: shipped
 ---
 
 # Nothing checks that the AI bundle we ship is internally consistent
@@ -59,3 +59,7 @@ the other needs a second and no network.
   project, as `mcp-live-probe` is to the server tests.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-27  SHIPPED, both halves. STATIC (tests/templates/ai-bundle-coherence.test.ts, every commit): skill-to-tool dependency ids must exist in ai-defaults (a rename silently changed delivery behaviour before), the writer's bundle prefixes must match the modal's label keys (three features apart, nothing tied them), and every user-facing name carries STRUCTURAL provenance — labels moved to aiSurfaceNames.ts as {label, source} pairs, so the next naming audit reads a field instead of doing two rounds of research. LIVE (.claude/skills/ai-bundle-coherence/scan.mjs, on demand): delivered skill sets vs real project shape, bundle sources existing in the real installed package (the AI-1m class), .mcp.json + installed-package agreement per applicable ai-defaults entry. Self-test plants three defects and fails if any goes undetected. Its first two real runs each caught a defect IN THE SCAN — empty reconcile husks counted as delivered, then nested empty dirs did — both now pinned. Invariant 1's static half was already pinned in skillsWriter.toolGating (noted, not restated).

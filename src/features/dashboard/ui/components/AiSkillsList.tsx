@@ -22,6 +22,7 @@
  * with sticky headers shows everything at rest — no interaction, no jump.
  */
 
+import { BUNDLE_LABELS } from './aiSurfaceNames';
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
@@ -104,34 +105,7 @@ function isEditedSkill(skill: SkillInventoryEntry, editedFiles: string[]): boole
  * Builder skills". The starter-kit ids (`aem-boilerplate-commerce`) are CLI
  * arguments, not names.
  */
-/*
- * The SECTION heading carries the friendly grouping (Storefront / App Builder);
- * this label names WHICH starter kit's skill set actually landed. Adobe ships a
- * separate set per template — `aem-boilerplate-commerce`, `integration-starter-
- * kit`, `checkout-starter-kit` — and we copy two of the three. "App Builder
- * skills" (Adobe's own collective term) would be true and would still not
- * answer the first question anyone asks on opening this modal, which is what
- * exactly did my project get. Name the kit.
- *
- * Both read "Adobe Commerce <thing> skills", in Title Case.
- *
- * The integration kit's name comes from its own architect skill ("Adobe
- * Commerce Integration Starter Kit") and the starter-kit picker in
- * `aio commerce extensibility tools-setup` ("Integration Starter Kit", in
- * starterKits.json). Experience League lowercases it in running prose, which is
- * right for a sentence and wrong for a label.
- *
- * The storefront set is deliberately NOT "AEM Boilerplate Commerce", which is
- * the picker's id for the boilerplate REPO — accurate, and not what anyone
- * calls the thing they are building. Its two halves are both Adobe's:
- * "Adobe Commerce Storefront" titles the docs site these six are documented on,
- * and "Storefront skills" is the heading developer.adobe.com gives this exact
- * set. The joined phrase is ours; each half is theirs.
- */
-const BUNDLE_LABELS: Readonly<Record<string, string>> = {
-    aem: 'Adobe Commerce Storefront skills',
-    appbuilder: 'Adobe Commerce Integration Starter Kit skills',
-};
+// Bundle labels + provenance live in `aiSurfaceNames` — shared with the coherence suite.
 
 /**
  * Row titles as Adobe's own docs write them, keyed by the skill name with its
@@ -211,7 +185,7 @@ function groupKeyOf(skill: SkillInventoryEntry): string {
 
 function groupLabelOf(skill: SkillInventoryEntry): string {
     if (skill.source !== 'adobe' || !skill.bundle) return SOURCE_LABELS[skill.source];
-    return BUNDLE_LABELS[skill.bundle] ?? SOURCE_LABELS.adobe;
+    return BUNDLE_LABELS[skill.bundle]?.label ?? SOURCE_LABELS.adobe;
 }
 
 export function AiSkillsList({

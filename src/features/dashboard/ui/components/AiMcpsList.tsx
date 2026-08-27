@@ -8,6 +8,7 @@
  * informational, so the user can see what tools the AI can actually call.
  */
 
+import { SERVER_LABELS } from './aiSurfaceNames';
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
@@ -32,27 +33,10 @@ export interface AiMcpsListProps {
  * (`commerce-extensibility`, `dropins`) read as config plumbing in a capability
  * catalog; an id we don't recognise renders as itself rather than a guess.
  */
-const SERVER_LABELS: Record<string, string> = {
-    // Every row in this list names an MCP server, and the three Adobe/Microsoft
-    // ones carry "MCP" in their own names — so ours reads as the odd one out
-    // without it, especially under a section heading of the same words.
-    'demo-builder': 'Demo Builder MCP',
-    // Adobe's own product name for this server, from its AI-registry entry and
-    // the extensibility docs index. `commerce-extensibility` is the server KEY;
-    // "Adobe Commerce Extensibility Tools" is the npm PACKAGE. Neither is what
-    // Adobe puts in a heading, and neither is what a user searching the docs
-    // will type.
-    'commerce-extensibility': 'Adobe Commerce App Builder MCP',
-    // The heading of its own README (`@playwright/mcp`).
-    playwright: 'Playwright MCP',
-    // Experience League's H1 for this server. Note Adobe's own split: the
-    // PRODUCT is closed ("Dropins MCP", `@dropins/mcp`, `dropins:list_slots`)
-    // while PROSE hyphenates ("drop-in components"). This is a product name.
-    dropins: 'Dropins MCP',
-};
+// Labels + provenance live in `aiSurfaceNames` — shared with the coherence suite.
 
 function labelOf(entry: McpInventoryEntry): string {
-    return SERVER_LABELS[entry.id] ?? entry.id;
+    return SERVER_LABELS[entry.id]?.label ?? entry.id;
 }
 
 /** Format the right-hand side of the row based on inspection status. */
