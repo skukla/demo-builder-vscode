@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (26)
+### ai  (27)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -216,6 +216,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | open |
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
 | `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
+| `AI-5` | fix | [delete_adobe_project hangs on the headless path](2026-08-27-delete-adobe-project-headless-hang.md) | — | med | backlog |
 
 ### eds  (9)
 
@@ -411,7 +412,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*17 item(s) sit outside the A–G chain.*
+*18 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

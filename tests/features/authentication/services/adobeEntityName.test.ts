@@ -34,10 +34,11 @@ describe('deriveAdobeEntityName', () => {
         expect(deriveAdobeEntityName(undefined as unknown as string, 'ZZZZ')).toBe('AppZZZZ');
     });
 
-    it('caps the derived base so a long title cannot exceed the length limit', () => {
+    it('caps base + suffix under 20 chars — Console 400s at 20 ("Project name length must be less than 20", measured live 2026-08-27)', () => {
         const longTitle = 'a'.repeat(100);
         const result = deriveAdobeEntityName(longTitle, 'ZZZZ');
-        expect(result).toBe('a'.repeat(40) + 'ZZZZ');
+        expect(result).toBe('a'.repeat(15) + 'ZZZZ');
+        expect(result.length).toBeLessThan(20);
     });
 
     it('appends the provided suffix for uniqueness', () => {
