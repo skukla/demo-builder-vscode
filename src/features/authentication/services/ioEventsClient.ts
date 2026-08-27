@@ -36,8 +36,15 @@ export const MAX_PROVIDER_PAGES = 200;
 
 /**
  * `provider_metadata` value identifying custom (3rd-party) event providers —
- * the only kind the extension creates, and therefore the only kind teardown
- * may consider for deletion.
+ * the only kind that can exist under our Console projects, and therefore the
+ * only kind teardown may consider for deletion.
+ *
+ * NOT "the kind the extension creates": verified 2026-08-27, this extension
+ * has NO create path for event providers anywhere — this client is
+ * deliberately list/delete-only, built for teardown. Anything here was
+ * created by an app's own onboarding (or App Management) inside a project we
+ * provisioned. If a create path ever ships (the App Management work), revisit
+ * whether this filter is still the right ownership test.
  */
 export const THIRD_PARTY_PROVIDER_METADATA = '3rd_party_custom_events';
 
