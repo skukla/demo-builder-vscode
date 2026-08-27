@@ -404,6 +404,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
         expect(seen).toEqual([
+            'Subscribing Adobe APIs…',
             'Generating mesh configuration...',
             'Reading mesh configuration...',
             'Deploying...',
@@ -421,7 +422,7 @@ describe('addAppBuilderComponent partial-failure', () => {
                 _pkg,
                 _cmd,
                 _log,
-                opts?: { onProgress?: (m: string, s?: string) => void },
+                opts?: { onProgress?: (m: string, s?: string) => void }
             ) => {
                 opts?.onProgress?.('Building…');
                 return { success: true, data: { url: 'https://app/api' } };
@@ -433,7 +434,7 @@ describe('addAppBuilderComponent partial-failure', () => {
             onProgress: (m: string) => seen.push(m),
         } as never);
 
-        expect(seen).toEqual(['Building…']);
+        expect(seen).toEqual(['Subscribing Adobe APIs…', 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the
@@ -673,7 +674,11 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
             error: 'webpack said no',
         });
 
-        const result = await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+        const result = await deployAppBuilderComponent(
+            project,
+            INTEGRATION_ENTRY.id,
+            deps as never
+        );
 
         expect(result.success).toBe(false);
         const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
@@ -693,7 +698,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
             expect.any(String),
             expect.anything(),
             expect.anything(),
-            expect.objectContaining({ nodeVersion: '24' }),
+            expect.objectContaining({ nodeVersion: '24' })
         );
     });
 

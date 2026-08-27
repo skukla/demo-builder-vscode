@@ -479,7 +479,11 @@ export const handleAddAppBuilderComponent: MessageHandler<
             // static title for the ~70s of subscribe + install + build + deploy.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
-                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                // The notification title already names the operation and its object, so
+                // the step line is the SUB-step alone when one exists — joining both
+                // produced two-line cards ('Deploying custom integration... Running
+                // aio app deploy'; owner screenshot, 2026-08-27).
+                (message, subMessage) => report(subMessage || message),
                 buildToolchainConsent(context, payload?.refreshCli),
             );
             return addAppBuilderComponent(project, entry, deps);
@@ -696,7 +700,11 @@ async function deployById(
             // Same reuse as the add path: the deploy tail narrates its own steps.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
-                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                // The notification title already names the operation and its object, so
+                // the step line is the SUB-step alone when one exists — joining both
+                // produced two-line cards ('Deploying custom integration... Running
+                // aio app deploy'; owner screenshot, 2026-08-27).
+                (message, subMessage) => report(subMessage || message),
                 buildToolchainConsent(context, refreshCli),
             );
             return deployAppBuilderComponent(project, id, deps);

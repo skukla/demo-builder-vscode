@@ -193,13 +193,27 @@ function isBenignNoOp(error: unknown): boolean {
  * @param deps - wait + progress
  * @returns the final state, or undefined when the budget ran out first
  */
+/**
+ * The poll allowance for ONE WHOLE install — shared across retry rounds, so
+ * five racy rounds can never stack five full budgets (audit finding: the
+ * per-round budget made the worst case 5 × 3 minutes).
+ */
+interface PollBudget {
+    roundsLeft: number;
+}
+
+function newPollBudget(): PollBudget {
+    return { roundsLeft: Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS) };
+}
+
 async function pollInstallation(
     client: InstallerClient,
     deps: AppManagementInstallDeps,
+    budget: PollBudget,
 ): Promise<InstallationState | undefined> {
     const wait = deps.wait ?? sleep;
-    const deadlineRounds = Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS);
-    for (let round = 0; round < deadlineRounds; round++) {
+    while (budget.roundsLeft > 0) {
+        budget.roundsLeft--;
         await wait(POLL_INTERVAL_MS);
         const state = await client.getInstallationState();
         if (state && state.status !== 'in-progress') {
@@ -244,12 +258,13 @@ async function settleReconcile(
     reconciled: ReconcileResult,
     client: InstallerClient,
     deps: AppManagementInstallDeps,
+    budget: PollBudget,
 ): Promise<AppManagementInstallResult | 'retry'> {
     // A 202 queued the work: poll until it lands. A 200 answered synchronously.
     if (!reconciled.id) {
         return { status: 'installed', detail: reconciled.message };
     }
-    const finalState = await pollInstallation(client, deps);
+    const finalState = await pollInstallation(client, deps, budget);
     if (!finalState) {
         return {
             status: 'failed',
@@ -323,6 +338,7 @@ export async function installAppManagementApp(
         // itself on registration creation (the 409 signature) — so a retryable
         // failure re-runs the SAME reconcile until it converges or the rounds
         // run out. Measured live: four rounds from a dirty state, all green.
+        const budget = newPollBudget();
         for (let round = 1; round <= MAX_RECONCILE_ROUNDS; round++) {
             deps.onProgress?.(
                 round === 1
@@ -336,7 +352,7 @@ export async function installAppManagementApp(
                 commerceBaseUrl: target.commerceBaseUrl,
                 commerceEnv: target.commerceEnv,
             });
-            const settled = await settleReconcile(reconciled, client, deps);
+            const settled = await settleReconcile(reconciled, client, deps, budget);
             if (settled !== 'retry') {
                 return settled;
             }

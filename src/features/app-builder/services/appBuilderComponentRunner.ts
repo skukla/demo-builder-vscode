@@ -553,6 +553,9 @@ export async function addAppBuilderComponent(
             }
         }
 
+        // The subscribe's org-services fetch alone measured 43.5s cold — the
+        // longest silent stretch in the chain (owner audit, 2026-08-27).
+        deps.onProgress?.('Subscribing Adobe APIs…');
         await deps.subscribeRequiredApis(deps.catalog, project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -681,6 +684,7 @@ export async function deployAppBuilderComponent(
         // adobeio_api). Idempotent reconcile — a subscribed credential is a
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
+            deps.onProgress?.('Subscribing Adobe APIs…');
             await deps.subscribeRequiredApis(deps.catalog, project);
         }
 
