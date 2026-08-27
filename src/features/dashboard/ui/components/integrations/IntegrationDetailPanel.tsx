@@ -188,6 +188,13 @@ function PanelContent({
                                 {model.installation.at}
                             </span>
                         )}
+                        {/* The hands-back destination (Apps > App Management),
+                            via the SAME openAdminPanel message the dashboard's
+                            Admin tile posts — the extension already derives the
+                            admin URL for both Commerce flavors. */}
+                        <Link isQuiet onPress={() => onAction(model, 'open-admin')}>
+                            Open Commerce Admin
+                        </Link>
                     </PanelRow>
                 )}
                 {/* ONE row, not the former Kind + Source pair. They printed the same

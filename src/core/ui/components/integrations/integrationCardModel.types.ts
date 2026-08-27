@@ -29,6 +29,7 @@ export type CardAction =
     | 'update'
     | 'retry'
     | 'install'
+    | 'open-admin'
     | 'manage-apis'
     | 'remove'
     | 'sign-in'

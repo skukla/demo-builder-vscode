@@ -127,6 +127,14 @@ export function IntegrationsGrid({
                 }
                 return;
             }
+            // The Commerce-install row's link. Reuses the dashboard tile's own
+            // message: the extension side resolves the admin URL per flavor
+            // (explicit PaaS field or derived ACCS tenant URL) and already
+            // offers a jump to Configure when it cannot.
+            if (action === 'open-admin') {
+                webviewClient.postMessage('openAdminPanel', {});
+                return;
+            }
             // Remove is checked BEFORE the mesh branch. handleMeshAction treats
             // every verb it receives as "deploy", so a mesh Remove routed there
             // would DEPLOY the mesh — the exact opposite of the asked-for action.

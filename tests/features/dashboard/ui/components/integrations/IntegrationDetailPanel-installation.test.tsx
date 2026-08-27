@@ -49,15 +49,17 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
     };
 }
 
-function renderPanel(model: IntegrationCardModel | undefined): void {
+function renderPanel(model: IntegrationCardModel | undefined): { onAction: jest.Mock } {
+    const onAction = jest.fn();
     render(
         <IntegrationDetailPanel
             model={model}
             onClose={jest.fn()}
-            onAction={jest.fn()}
+            onAction={onAction}
             onRename={jest.fn(() => Promise.resolve(null))}
         />
     );
+    return { onAction };
 }
 
 describe('IntegrationDetailPanel — Commerce install row', () => {
@@ -83,6 +85,17 @@ describe('IntegrationDetailPanel — Commerce install row', () => {
         expect(screen.getByText('Installed')).toBeInTheDocument();
         expect(screen.getByText('Already installed and current.')).toBeInTheDocument();
         expect(screen.getByText('6/1/2026, 10:00:00 AM')).toBeInTheDocument();
+    });
+
+    it('offers "Open Commerce Admin" — the hands-back destination — via the shared open-admin action', () => {
+        const model = makeModel({
+            installation: { label: 'Not installed', failed: true },
+        });
+        const { onAction } = renderPanel(model);
+
+        screen.getByText('Open Commerce Admin').click();
+
+        expect(onAction).toHaveBeenCalledWith(model, 'open-admin');
     });
 
     it('a failed install wears the error treatment', () => {
