@@ -131,9 +131,19 @@ export function registerSettingsTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const requested = args?.key ? String(args.key) : undefined;
+            let requested = args?.key ? String(args.key) : undefined;
 
             if (requested) {
+                // Accept the unprefixed form. Watched live on 2026-08-27: the
+                // agent asked for `dataInstaller.enabled`, was refused, and
+                // retried with the `demoBuilder.` prefix — a wasted round trip
+                // for a key that was unambiguous the first time.
+                if (
+                    !(SETTING_KEYS as readonly string[]).includes(requested) &&
+                    (SETTING_KEYS as readonly string[]).includes(`demoBuilder.${requested}`)
+                ) {
+                    requested = `demoBuilder.${requested}`;
+                }
                 if (!(SETTING_KEYS as readonly string[]).includes(requested)) {
                     // Name what IS available rather than only what is not.
                     return asText({
