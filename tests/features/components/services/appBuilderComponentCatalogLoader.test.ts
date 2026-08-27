@@ -87,6 +87,59 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
     });
 
+    describe('buildCustomIntegrationEntry — seed recognition', () => {
+        it('inherits CAPABILITY fields when the source matches an authored entry (the kit)', () => {
+            // A custom instance built FROM the kit repo must deploy like the kit:
+            // without the inherited layout, the deploy path would rewrite its
+            // fixed package names and skip the workspace-config import.
+            const entry = buildCustomIntegrationEntry(
+                {
+                    owner: 'adobe',
+                    repo: 'commerce-integration-starter-kit',
+                    name: 'Order Sync',
+                },
+                'order-sync'
+            );
+
+            expect(entry.id).toBe('order-sync');
+            expect(entry.name).toBe('Order Sync');
+            expect(entry.layout).toBe('extension');
+            expect(entry.lifecycle).toBe('app-management');
+            expect(entry.nodeVersion).toBe('24');
+            expect(entry.compatibleBackends).toEqual([
+                'adobe-commerce-paas',
+                'adobe-commerce-accs',
+            ]);
+            // Identity stays the instance's own — never the seed's.
+            expect(entry.blank).toBeUndefined();
+        });
+
+        it('a fork of the kit under another owner inherits NOTHING (isBlankSource rule)', () => {
+            const entry = buildCustomIntegrationEntry({
+                owner: 'someone-else',
+                repo: 'commerce-integration-starter-kit',
+            });
+            expect(entry.layout).toBeUndefined();
+            expect(entry.lifecycle).toBeUndefined();
+        });
+
+        it('an unknown source synthesizes a plain entry with no capability fields', () => {
+            const entry = buildCustomIntegrationEntry({ owner: 'acme', repo: 'erp-bridge' });
+            expect(entry.layout).toBeUndefined();
+            expect(entry.nodeVersion).toBeUndefined();
+            expect(entry.kind).toBe('integration');
+        });
+
+        it('a blank-shell instance never inherits the blank flag', () => {
+            const entry = buildCustomIntegrationEntry(
+                { owner: 'skukla', repo: 'app-builder-shell', name: 'My App' },
+                'my-app'
+            );
+            expect(entry.blank).toBeUndefined();
+            expect(entry.id).toBe('my-app');
+        });
+    });
+
     describe('entryFitsProjectAxes (the add-door gate)', () => {
         it('accepts a constrained entry on a listed backend and refuses it elsewhere', () => {
             const kit = getAppBuilderComponentEntry('commerce-integration-starter-kit');

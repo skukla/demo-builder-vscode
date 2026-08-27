@@ -181,6 +181,28 @@ function assertInstanceId(value: string): void {
 }
 
 /**
+ * The capability fields a custom entry INHERITS when its source repo matches an
+ * authored catalog entry (the seed model). Identity fields (id, name,
+ * description, `blank`) and audience fields (nativeForPackages, onlyForPackages)
+ * are deliberately NOT here — a seeded instance is the user's own app, not the
+ * catalog entry wearing a new name.
+ */
+function seedCapabilityFields(
+    seed: AppBuilderComponentCatalogEntry,
+): Partial<AppBuilderComponentCatalogEntry> {
+    return {
+        layout: seed.layout,
+        lifecycle: seed.lifecycle,
+        nodeVersion: seed.nodeVersion,
+        requiredApis: seed.requiredApis,
+        compatibleBackends: seed.compatibleBackends,
+        compatibleFrontends: seed.compatibleFrontends,
+        providesEnvVars: seed.providesEnvVars,
+        envSchema: seed.envSchema,
+    };
+}
+
+/**
  * Build a custom-URL integration entry from a user-provided GitHub source.
  *
  * The custom-URL door: an integration acquired by owner/repo (optionally branch)
@@ -192,6 +214,14 @@ function assertInstanceId(value: string): void {
  * named instances share one template repo. Without it, the id derives from
  * `${owner}-${repo}` (the dashboard add door, unchanged). The display name
  * resolves from `source.name` when present, else the repo name.
+ *
+ * SEED RECOGNITION: a source matching an AUTHORED catalog entry (owner+repo,
+ * exact — a fork is deliberately not recognized, same rule as
+ * {@link isBlankSource}) inherits that entry's CAPABILITY fields —
+ * layout/lifecycle/nodeVersion/requiredApis/axes. Without this, "start a custom
+ * app from the starter kit" produced an entry the deploy path would treat as a
+ * standalone app: ow-package rewrite applied, workspace config never imported,
+ * Node version unknown — a broken deploy from a correct repo.
  *
  * @param source - The GitHub source ({owner, repo, branch?, name?})
  * @param id - Optional explicit instance id (the sources-map key)
@@ -216,7 +246,13 @@ export function buildCustomIntegrationEntry(
     if (id !== undefined) {
         assertInstanceId(id);
     }
+    // Authored entries only: derived meshes share no repos with custom adds, and
+    // matching them would be coincidence, not a seed.
+    const seed = authored.appBuilderComponents.find(
+        (entry) => entry.source.owner === source.owner && entry.source.repo === source.repo,
+    );
     return {
+        ...(seed ? seedCapabilityFields(seed) : {}),
         id: id ?? `${source.owner}-${source.repo}`,
         name: source.name ?? source.repo,
         description: `Custom App Builder component from ${source.owner}/${source.repo}`,

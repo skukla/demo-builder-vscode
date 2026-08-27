@@ -373,6 +373,34 @@ export const handleAddAppBuilderComponent: MessageHandler<
         };
     }
 
+    // Extension-layout apps (App Management generation) ship FIXED OpenWhisk
+    // package names — the deploy path deliberately skips the per-id ow-package
+    // rewrite for them, so two apps built from the same source in ONE workspace
+    // overwrite each other on Runtime no matter what ids we mint (proven live,
+    // AB-2 spike 2026-08-27). The id check above cannot catch a seeded instance
+    // under a different name, so the same-source scan here is the real gate.
+    // The same-id error-retry exemption stays: that path returned before this.
+    if (entry.layout === 'extension') {
+        const clash = Object.entries(project.appBuilderComponents ?? {}).find(
+            ([existingId, component]) =>
+                existingId !== entry.id &&
+                component.source.owner === entry.source.owner &&
+                component.source.repo === entry.source.repo,
+        );
+        if (clash) {
+            const [, component] = clash;
+            return {
+                success: false,
+                error:
+                    `"${component.name ?? clash[0]}" is already built from ${entry.source.owner}/` +
+                    `${entry.source.repo}. Apps of this kind have fixed internal package names, so a ` +
+                    'second copy in the same workspace would overwrite the first. Remove the ' +
+                    'existing one first, or use a separate project.',
+                code: ErrorCode.CONFIG_INVALID,
+            };
+        }
+    }
+
     // The guards run INSIDE the progress: runGuards does the auth check, whose
     // `aio config get` spawn costs seconds on a cold cache. Running it first left
     // the user clicking Add and staring at nothing until it returned.
