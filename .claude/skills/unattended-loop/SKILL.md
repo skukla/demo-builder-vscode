@@ -140,6 +140,17 @@ the loop verifies the ones it acts on — same rule as battery scores and named
 API fields. Misrouting judgment work to a cheap tier to save budget is a false
 economy the report would have to retract.
 
+## Narrate as you go — the owner peeks
+
+The loop's visible messages are the owner's window into it (owner,
+2026-08-27: "If I peek into it from time to time, I'd like to see your thought
+process"). Before each meaningful action, say in a sentence or two: what
+you're about to do, WHY — the reasoning, not just the verb — and what you
+expect to find or what would change your mind. Say decision points out loud as
+they're being made, not only in commit messages, which are for the record, not
+the window. Findings and direction changes get stated when they happen, then
+restated in the report.
+
 ## Time budget
 
 When the owner names one ("an hour"), reserve the last ~5 minutes for the
