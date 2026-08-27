@@ -87,6 +87,43 @@ describe('addAppBuilderComponent (mesh)', () => {
         });
     });
 
+    // AI-1o. The skill set follows what a project BUILDS, so attaching an App
+    // Builder component changes the answer — and nothing else re-asks it. The
+    // activation sweep rewrites content only when AI_CONTEXT_VERSION moves, and
+    // the freshness badge fires only on a MISSING package, which a storefront
+    // adding an integration does not produce (commerce-extensibility was
+    // already installed for the storefront). Without this the integration
+    // arrived with none of the skills Adobe wrote for building one.
+    it('re-derives the AI bundle after an add, from the project that was persisted', async () => {
+        const project = createProject();
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+
+        expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
+        const refreshed = deps.refreshAiBundle.mock.calls[0][0] as Project;
+        expect(refreshed.appBuilderComponents?.[MESH_ENTRY.id]).toBeDefined();
+    });
+
+    it('refreshes the bundle AFTER the save, never before', async () => {
+        // Order matters: the refresh derives the skill set from the project, and
+        // a refresh that ran first would derive it from the composition the
+        // project had a moment ago.
+        const order: string[] = [];
+        const deps = createDeps({
+            saveProject: jest.fn(async () => {
+                order.push('save');
+            }),
+            refreshAiBundle: jest.fn(async () => {
+                order.push('refresh');
+            }),
+        });
+
+        await addAppBuilderComponent(createProject(), MESH_ENTRY, deps as never);
+
+        expect(order).toEqual(['save', 'refresh']);
+    });
+
     it('does NOT call the integration deploy tail for a mesh entry (dispatch by kind)', async () => {
         const project = createProject();
         const deps = createDeps();

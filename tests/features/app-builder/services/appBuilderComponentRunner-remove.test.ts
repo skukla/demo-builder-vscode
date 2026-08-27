@@ -245,6 +245,39 @@ describe('removeAppBuilderComponent (integration)', () => {
         expect(persisted.appBuilderComponents?.['commerce-mesh']).toBeDefined();
     });
 
+    // AI-1o's inverse, and it was broken for longer: removing the last App
+    // Builder component left its seven skills behind forever. Nothing else
+    // re-asks the question — the activation sweep rewrites content only when
+    // AI_CONTEXT_VERSION moves, and the freshness badge fires only on a MISSING
+    // package, which a removal never produces.
+    it('re-derives the AI bundle after a removal, from the project that was persisted', async () => {
+        const project = integrationProject();
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
+        // The CLEARED project, not the caller's stale reference — the skill set
+        // is derived from composition, so refreshing off the pre-removal copy
+        // would rewrite exactly the skills we just decided it should not have.
+        const refreshed = deps.refreshAiBundle.mock.calls[0][0] as Project;
+        expect(refreshed.appBuilderComponents?.['erp-bridge']).toBeUndefined();
+    });
+
+    it('still succeeds when the bundle refresh throws', async () => {
+        // A deploy or removal that landed must not report failure because a
+        // markdown file could not be rewritten. The sweep repairs it later.
+        const project = integrationProject();
+        const deps = createDeps({
+            refreshAiBundle: jest.fn().mockRejectedValue(new Error('disk full')),
+        });
+
+        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        expect(result.success).toBe(true);
+        expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('disk full'));
+    });
+
     // Attribution only pays off if removal spends it. `componentApiPicks` records
     // WHICH integration wanted an API precisely so this moment can answer "is it
     // safe to drop?" — but nothing dropped anything: three writers, no remover.

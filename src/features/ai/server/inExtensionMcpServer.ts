@@ -25,7 +25,6 @@ import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asRawText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
-
 import {
     fingerprintArgs,
     resultByteLength,

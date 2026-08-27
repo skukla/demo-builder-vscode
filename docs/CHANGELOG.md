@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Projects that already received the bundle are reconciled on the next
   activation sweep: removal goes file by file through the ADR-013 seam, so a
   skill you have edited is kept and reported rather than deleted.
+- **Attaching or removing an integration now re-derives the skill set.** Which
+  skills a project gets follows what it builds, so composition changing is
+  exactly when that answer changes — and nothing re-asked it. The activation
+  sweep rewrites content only when `AI_CONTEXT_VERSION` moves, and the freshness
+  badge fires only when a PACKAGE is missing, which adding an integration to a
+  storefront never produces (`commerce-extensibility` was already installed for
+  the storefront). So an integration arrived with none of the skills written for
+  building one. The inverse was broken for longer: removing the last App Builder
+  component left its skills behind forever. Best-effort — a deploy that landed is
+  never reported as failed because a markdown file could not be rewritten.
 
 ### Removed
 

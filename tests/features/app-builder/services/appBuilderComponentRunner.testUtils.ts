@@ -93,6 +93,9 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
         commandManager: createCommandManager(),
         logger: createLogger(),
         saveProject: jest.fn().mockResolvedValue(undefined),
+        // Composition changed → the skill set is re-derived (AI-1o). Production
+        // wires generateAIContextFiles; suites assert it was called.
+        refreshAiBundle: jest.fn().mockResolvedValue(undefined),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
         // The two deploy tails (mocked; production wires the real ones).
         deployMesh: jest.fn().mockResolvedValue({

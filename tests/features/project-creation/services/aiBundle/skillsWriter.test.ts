@@ -9,7 +9,6 @@
  * catalog.
  */
 
-import { createHash } from 'crypto';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
@@ -49,11 +48,6 @@ jest.mock('fs/promises', () => {
  * holds unchanged. Hash-and-skip routing is pinned in
  * skillsWriter.hashAndSkip.test.ts.
  */
-/** Same digest the writer records, so a fixture can claim ownership. */
-function sha256(content: string): string {
-    return createHash('sha256').update(content, 'utf-8').digest('hex');
-}
-
 function writeSkills(projectPath: string, project: Project): ReturnType<typeof writeSkillFiles> {
     return writeSkillFiles(projectPath, project, makeTestWriter(projectPath));
 }
@@ -620,73 +614,6 @@ describe('skillsWriter', () => {
             expect(files.some((p) => p.endsWith('add-component.md'))).toBe(true);
             expect(files.some((p) => p.endsWith('sync-changes.md'))).toBe(true);
             expect(files.some((p) => p.endsWith('update-credentials.md'))).toBe(true);
-        });
-    });
-
-    // AI-1o. Until 2026-08-26 one predicate gated BOTH the MCP server and the
-    // skill set. It is right for the server — a storefront really does call
-    // search-commerce-docs — and wrong for the skills: bodea, one component
-    // instance and no App Builder app anywhere, carried seven skills whose
-    // architect opens "You are an Expert Adobe Commerce Solutions Architect
-    // specializing in ... the Adobe Commerce Integration Starter Kit".
-    describe('a storefront that builds no App Builder app (AI-1o)', () => {
-        it('gets no integration-starter-kit skills', async () => {
-            mockAdobeSkillBundle({ architect: ['SKILL.md'], developer: ['SKILL.md'] });
-
-            await writeSkills('/projects/test', makeEdsProject());
-
-            const files = writtenFiles();
-            expect(files.some((p) => p.includes('/.claude/skills/appbuilder-'))).toBe(false);
-            expect(files.some((p) => p.endsWith('extend-app-builder-app.md'))).toBe(false);
-        });
-
-        it('still gets the storefront skills — the OTHER half of the pair', async () => {
-            // The control. If this went false too, the gate would be off in the
-            // opposite direction and the test above would pass for a bad reason.
-            mockAdobeSkillBundle({ 'block-developer': ['SKILL.md'] });
-
-            await writeSkills('/projects/test', makeEdsProject());
-
-            expect(
-                writtenFiles().some((p) => p.includes('/.claude/skills/aem-block-developer/'))
-            ).toBe(true);
-        });
-
-        it('removes a bundle it delivered before the gate narrowed', async () => {
-            // Every EDS project received these, so most storefronts on disk carry
-            // them. Leaving them is worse than never having written them: they are
-            // instructions, and they are wrong. Removal goes file-by-file through
-            // the ADR-013 seam, which deletes only what still matches what we
-            // wrote — a recorded hash is the proof.
-            const ourCopy = '# what we generated last time';
-            // No bundle to COPY — this test is about the removal, and leaving
-            // the source readable would mix the two.
-            mockMissingAdobeBundle();
-            (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
-                if (p.includes('/.claude/skills/appbuilder-')) return ourCopy;
-                if (p.endsWith('.demo-builder-mcp/package.json')) {
-                    return mcpToolsManifest(['@playwright/mcp']);
-                }
-                throw enoentError();
-            });
-            // The REAL writer, with hashes matching what is on disk — which is
-            // what "provably ours" means. A fake here would prove nothing about
-            // the seam that does the deleting.
-            const writer = makeTestWriter('/projects/test', {
-                '.claude/skills/appbuilder-architect/SKILL.md': sha256(ourCopy),
-                '.claude/skills/appbuilder-developer/SKILL.md': sha256(ourCopy),
-            });
-
-            await writeSkillFiles('/projects/test', makeEdsProject(), writer);
-
-            expect(writer.report().removed).toEqual([
-                '.claude/skills/appbuilder-architect/SKILL.md',
-                '.claude/skills/appbuilder-developer/SKILL.md',
-            ]);
-            // And the hashes go with them, so a later run does not try again.
-            expect(Object.keys(writer.hashes())).not.toContain(
-                '.claude/skills/appbuilder-architect/SKILL.md'
-            );
         });
     });
 

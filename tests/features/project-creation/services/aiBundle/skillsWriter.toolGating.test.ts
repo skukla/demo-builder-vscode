@@ -378,3 +378,80 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         });
     });
 });
+
+// AI-1o. Until 2026-08-26 one predicate gated BOTH the MCP server and the skill
+// set. It is right for the server — an EDS storefront really does call
+// search-commerce-docs — and wrong for the skills: bodea, one component
+// instance and no App Builder app anywhere, carried seven whose architect opens
+// "You are an Expert Adobe Commerce Solutions Architect specializing in ... the
+// Adobe Commerce Integration Starter Kit".
+describe('skillsWriter — the App Builder skill set follows the work, not the tooling', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (fsPromises.readdir as jest.Mock).mockImplementation(async () => {
+            throw enoentError();
+        });
+        mockDisk(playwrightInstalled());
+    });
+
+    it('writes no extend-app-builder-app for a storefront that builds no app', async () => {
+        const summary = await writeSkillFiles(
+            PROJECT_PATH,
+            makeEdsProject(),
+            makeTestWriter(PROJECT_PATH)
+        );
+
+        expect(summary.written).not.toContain('extend-app-builder-app.md');
+    });
+
+    it('still writes it for a mesh project — the control', async () => {
+        // If this went false too the gate would be wrong in the other direction
+        // and the test above would pass for a bad reason.
+        const summary = await writeSkillFiles(
+            PROJECT_PATH,
+            makeMeshOnlyProject(),
+            makeTestWriter(PROJECT_PATH)
+        );
+
+        expect(summary.written).toContain('extend-app-builder-app.md');
+    });
+
+    it('removes a bundle delivered before the gate narrowed, on proof it is ours', async () => {
+        const ourCopy = '# what we generated last time';
+        mockDisk({
+            ...playwrightInstalled(),
+            [`${PROJECT_PATH}/.claude/skills/appbuilder-architect/SKILL.md`]: ourCopy,
+        });
+        const writer = makeTestWriter(PROJECT_PATH, {
+            '.claude/skills/appbuilder-architect/SKILL.md': sha256(ourCopy),
+        });
+
+        await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+
+        expect(writer.report().removed).toEqual([
+            '.claude/skills/appbuilder-architect/SKILL.md',
+        ]);
+        expect(unlinkedFiles()).toContain(
+            `${PROJECT_PATH}/.claude/skills/appbuilder-architect/SKILL.md`
+        );
+    });
+
+    it('KEEPS a bundle skill the user edited, and reports it', async () => {
+        // The removal matrix's whole point: no proof, no delete.
+        mockDisk({
+            ...playwrightInstalled(),
+            [`${PROJECT_PATH}/.claude/skills/appbuilder-architect/SKILL.md`]: '# user rewrote this',
+        });
+        const writer = makeTestWriter(PROJECT_PATH, {
+            '.claude/skills/appbuilder-architect/SKILL.md': sha256('what we wrote last time'),
+        });
+
+        await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+
+        expect(writer.report().removed).toEqual([]);
+        expect(writer.report().skipped).toContain(
+            '.claude/skills/appbuilder-architect/SKILL.md'
+        );
+        expect(unlinkedFiles()).toEqual([]);
+    });
+});

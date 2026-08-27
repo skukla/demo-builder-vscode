@@ -77,6 +77,21 @@ export interface AppBuilderComponentRunnerDeps {
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
     /**
+     * Re-generate the AI bundle after the project's COMPOSITION changed.
+     *
+     * Which skills a project gets follows what it builds — the integration
+     * starter kit's set goes to projects with an App Builder app, not to every
+     * storefront (AI-1o). Attaching or removing one changes that answer, and
+     * nothing else re-asks it: the activation sweep only rewrites content when
+     * `AI_CONTEXT_VERSION` moves, and the freshness badge only fires when a
+     * PACKAGE is missing, which it is not here. So an integration added to a
+     * storefront used to arrive with none of the skills written for it.
+     *
+     * Optional: unit tests and headless callers that only exercise deploy
+     * mechanics have no bundle to keep in step.
+     */
+    refreshAiBundle?: (project: Project) => Promise<void>;
+    /**
      * Where the deploy tails' step reports go.
      *
      * The tails already emit every step and their signatures have always declared
@@ -219,6 +234,29 @@ function findMissingProvider(
  * the one existing same-kind entry's key — which for an add means the second
  * integration lands on the first one's key and overwrites it.
  */
+/**
+ * Run the caller's bundle refresh, swallowing failures.
+ *
+ * A deploy that succeeded must not report failure because a markdown file could
+ * not be rewritten — the bundle is repaired again on the next activation sweep
+ * or by "Regenerate AI Files". The log line is the trail.
+ */
+async function refreshBundleQuietly(
+    project: Project,
+    deps: AppBuilderComponentRunnerDeps,
+    reason: 'add' | 'remove',
+): Promise<void> {
+    if (!deps.refreshAiBundle) return;
+    try {
+        await deps.refreshAiBundle(project);
+    } catch (err) {
+        deps.logger.warn(
+            `[AppBuilder] Could not refresh the AI bundle after an integration ${reason}: ` +
+                (err instanceof Error ? err.message : String(err)),
+        );
+    }
+}
+
 async function persistOutcome(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
@@ -232,6 +270,9 @@ async function persistOutcome(
     // Configure and disposable by reset.
     reconcileComponentSelections(project);
     await deps.saveProject(project);
+    // Composition changed — the skill set follows it. Best-effort: a bundle
+    // refresh must never fail a deploy that already landed.
+    await refreshBundleQuietly(project, deps, 'add');
 }
 
 /** Republish the storefront when the project carries provided env vars (else no-op). */
@@ -671,6 +712,9 @@ export async function removeAppBuilderComponent(
         project.componentConfigs = cleared.componentConfigs;
     }
     await deps.saveProject(cleared);
+    // The inverse of the add, and it has always been broken the same way:
+    // remove the last App Builder component and its skills stayed forever.
+    await refreshBundleQuietly(cleared, deps, 'remove');
 
     if (provided) {
         await deps.republishStorefront({

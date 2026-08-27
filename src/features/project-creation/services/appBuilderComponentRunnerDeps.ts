@@ -44,6 +44,8 @@ export interface RunnerDepsContext {
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
+    /** See `AppBuilderComponentRunnerDeps.refreshAiBundle`. */
+    refreshAiBundle: (project: Project) => Promise<void>;
     subscriberClient: ApiSubscriberClient;
     catalog: AppBuilderComponentCatalogEntry[];
     secrets: vscode.SecretStorage;
@@ -69,6 +71,7 @@ export function buildDefaultRunnerDeps(
         commandManager: ctx.commandManager,
         logger: ctx.logger,
         saveProject: ctx.saveProject,
+        refreshAiBundle: ctx.refreshAiBundle,
         getCachedOrganization: ctx.getCachedOrganization,
         catalog: ctx.catalog,
         secrets: ctx.secrets,
@@ -148,6 +151,20 @@ export async function buildRunnerDepsContext(
         commandManager: ServiceLocator.getCommandExecutor(),
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),
+        // Tiers 1+2 and the stamp. Package INSTALLS (tier 3) are not needed
+        // here and are not attempted: a composition change that makes a new
+        // package applicable is exactly what the freshness badge already
+        // catches, and installing during a deploy would be a surprise.
+        refreshAiBundle: async (p: Project) => {
+            const { generateAIContextFiles } = await import(
+                '@/features/project-creation/services/aiBundle/aiBundleService'
+            );
+            await generateAIContextFiles(p.path, p, context.context.extensionPath);
+            // The stamp and the file hashes were assigned to `p`; without this
+            // the manifest keeps the old ones and every later refresh misreads
+            // the files we just wrote as user-edited.
+            await context.stateManager.saveProjectConfigOnly(p);
+        },
         getCachedOrganization: () => authManager.getCachedOrganization(),
         subscriberClient: createApiSubscriberClient(authManager),
         catalog: resolveCatalog(project),
