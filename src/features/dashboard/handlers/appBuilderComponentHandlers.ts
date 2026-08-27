@@ -71,6 +71,35 @@ export interface GuardFailure {
     code?: ErrorCode;
 }
 
+/**
+ * The guard step every per-component operation opens with: report the check,
+ * run the chain, and on a refusal surface the warning and build the `blocked`
+ * result — `blocked`, not merely failed, because nothing ran, so callers must
+ * NOT take the failed-op path (error row status + snapshot).
+ *
+ * Returns undefined when all guards pass. One home for what was the same
+ * four-line block in add/deploy/remove/install (2026-08-27 sweep — the fourth
+ * copy is what tripped Rule of Three).
+ */
+export async function guardOrBlock(
+    context: HandlerContext,
+    project: Project,
+    report: (message: string) => void,
+): Promise<GuardableResult | undefined> {
+    report('Checking requirements…');
+    const guardError = await runGuards(context, project);
+    if (!guardError) {
+        return undefined;
+    }
+    vscode.window.showWarningMessage(guardError.error);
+    return {
+        success: false,
+        error: guardError.error,
+        code: guardError.code,
+        blocked: true,
+    };
+}
+
 export async function runGuards(
     context: HandlerContext,
     project: Project,
@@ -421,18 +450,9 @@ export const handleAddAppBuilderComponent: MessageHandler<
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
@@ -682,18 +702,9 @@ async function deployById(
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             report('Deploying…');
@@ -750,18 +761,9 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen

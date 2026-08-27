@@ -107,13 +107,3 @@ export interface AppBuilderComponentsCatalog {
     version: string;
     appBuilderComponents: AppBuilderComponentCatalogEntry[];
 }
-
-/** A user-provided appBuilderComponent from a GitHub URL (custom-URL acquisition mode). */
-export interface CustomAppBuilderComponent {
-    /** User-provided display name (pre-filled from repo name). */
-    name: string;
-    /** AppBuilderComponent kind. */
-    kind: AppBuilderComponentKind;
-    /** GitHub source (owner, repo, branch). */
-    source: AddonSource;
-}

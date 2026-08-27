@@ -19,10 +19,9 @@
  * @module features/dashboard/handlers/appManagementInstallHandlers
  */
 
-import * as vscode from 'vscode';
 import {
+    guardOrBlock,
     resolveComponentTarget,
-    runGuards,
     postComponentsSnapshot,
     withComponentProgress,
     type GuardableResult,
@@ -196,16 +195,9 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
             logger: context.logger,
         },
         async (report): Promise<GuardableResult & { detail?: string }> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             const deps = buildDefaultRunnerDeps(
