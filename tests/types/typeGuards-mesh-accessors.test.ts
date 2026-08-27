@@ -226,10 +226,17 @@ describe('typeGuards - Mesh Component Accessors', () => {
     describe('getMeshEndpointUrl', () => {
         const meshEndpoint = 'https://edge-sandbox-graph.adobe.io/api/12345/graphql';
 
-        it('should return endpoint from meshState (authoritative source)', () => {
+        it('should return the endpoint from the keyed mesh entry', () => {
             const project = {
                 ...createProjectWithMesh('eds-commerce-mesh'),
-                meshState: { endpoint: meshEndpoint },
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: meshEndpoint,
+                    },
+                },
             } as unknown as Project;
             expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
         });
@@ -247,7 +254,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
             expect(getMeshEndpointUrl(null)).toBeUndefined();
         });
 
-        it('should return undefined when no mesh component and no meshState', () => {
+        it('should return undefined when no mesh component and no keyed entry', () => {
             const project = {
                 componentInstances: {
                     'headless': { id: 'headless', type: 'frontend' },
@@ -256,28 +263,13 @@ describe('typeGuards - Mesh Component Accessors', () => {
             expect(getMeshEndpointUrl(project)).toBeUndefined();
         });
 
-        // ADR-011 D3 Step 06: the accessor reads the KEYED mesh entry first and
-        // falls back to the legacy meshState — every caller migrates in one place.
-        describe('keyed-first read (ADR-011 D3 Step 06)', () => {
+        // The keyed mesh entry is the only endpoint carrier (PL-1 phase 2
+        // removed the legacy meshState fallback; legacy manifests fold their
+        // endpoint into the keyed entry at load).
+        describe('keyed read', () => {
             const keyedEndpoint = 'https://edge-graph.adobe.io/api/keyed-1/graphql';
 
-            it('prefers the keyed mesh entry endpoint over meshState', () => {
-                const project = {
-                    ...createProjectWithMesh('eds-commerce-mesh'),
-                    appBuilderComponents: {
-                        'eds-commerce-mesh': {
-                            kind: 'mesh',
-                            status: 'deployed',
-                            source: { owner: '', repo: '' },
-                            endpoint: keyedEndpoint,
-                        },
-                    },
-                    meshState: { endpoint: meshEndpoint },
-                } as unknown as Project;
-                expect(getMeshEndpointUrl(project)).toBe(keyedEndpoint);
-            });
-
-            it('falls back to meshState when the keyed mesh entry has no endpoint', () => {
+            it('returns undefined when the keyed mesh entry has no endpoint', () => {
                 const project = {
                     ...createProjectWithMesh('eds-commerce-mesh'),
                     appBuilderComponents: {
@@ -287,12 +279,11 @@ describe('typeGuards - Mesh Component Accessors', () => {
                             source: { owner: '', repo: '' },
                         },
                     },
-                    meshState: { endpoint: meshEndpoint },
                 } as unknown as Project;
-                expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
+                expect(getMeshEndpointUrl(project)).toBeUndefined();
             });
 
-            it('returns the keyed endpoint for a keyed-only project (no meshState)', () => {
+            it('returns the keyed endpoint under the canonical mesh key', () => {
                 const project = {
                     ...createProjectWithMesh('eds-commerce-mesh'),
                     appBuilderComponents: {

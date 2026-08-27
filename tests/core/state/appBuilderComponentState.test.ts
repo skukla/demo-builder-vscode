@@ -1,9 +1,10 @@
 /**
- * AppBuilderComponent State Accessor Tests (Step 01)
+ * AppBuilderComponent State Accessor Tests
  *
- * Pure accessors over the keyed `project.appBuilderComponents` map. In D1 these
- * READ THROUGH to the legacy singular `meshState`/`appState` so there is
- * no behavioral change yet — legacy state stays authoritative.
+ * Pure accessors over the keyed `project.appBuilderComponents` map — the ONLY
+ * in-memory carrier since PL-1 phase 2 (the legacy `meshState`/`appState`
+ * read-through synthesis was deleted with the fields themselves; legacy
+ * manifests fold into the keyed map at load).
  */
 
 import {
@@ -12,7 +13,6 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
-    getKeyedMeshAppBuilderComponent,
     getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
     isAppBuilderComponentState,
@@ -54,97 +54,16 @@ describe('appBuilderComponentState accessors', () => {
         });
     });
 
-    describe('getMeshAppBuilderComponent (read-through)', () => {
-        it('should synthesize a mesh appBuilderComponent from meshState when appBuilderComponents absent', () => {
-            const project = makeProject({
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc123',
-                    lastDeployed: '2026-06-20T00:00:00.000Z',
-                    endpoint: 'https://edge-graph.adobe.io/api/x/graphql',
-                },
-            });
-
-            const mesh = getMeshAppBuilderComponent(project);
-
-            expect(mesh).toBeDefined();
-            expect(mesh?.kind).toBe('mesh');
-            expect(mesh?.status).toBe('deployed');
-            expect(mesh?.endpoint).toBe('https://edge-graph.adobe.io/api/x/graphql');
-            expect(mesh?.sourceHash).toBe('abc123');
-            expect(mesh?.lastDeployed).toBe('2026-06-20T00:00:00.000Z');
-        });
-
-        it('should prefer the keyed appBuilderComponents entry over meshState', () => {
-            const keyed = makeAppBuilderComponent({ endpoint: 'https://keyed.example/graphql' });
-            const project = makeProject({
-                appBuilderComponents: { mesh: keyed },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'legacy',
-                    lastDeployed: '2026-01-01T00:00:00.000Z',
-                    endpoint: 'https://legacy.example/graphql',
-                },
-            });
-
-            expect(getMeshAppBuilderComponent(project)?.endpoint).toBe('https://keyed.example/graphql');
-        });
-
-        it('should return undefined when neither appBuilderComponents nor meshState exist', () => {
-            expect(getMeshAppBuilderComponent(makeProject())).toBeUndefined();
-        });
-
-        it('should find the keyed mesh entry by KIND under a component-instance key (Step 06)', () => {
-            // recordDeployOutcome keys never-migrated projects by the mesh
-            // component instance id — the accessor must match on kind, not
-            // only the literal 'mesh' key.
-            const keyed = makeAppBuilderComponent({ endpoint: 'https://keyed.example/graphql' });
-            const project = makeProject({
-                appBuilderComponents: { 'commerce-mesh': keyed },
-            });
-
-            expect(getMeshAppBuilderComponent(project)?.endpoint).toBe('https://keyed.example/graphql');
-        });
-
-        // ADR-011 D3 Steps 07+09: readers that previously consulted meshState
-        // directly (staleness baseline, decline flags, deployment record) now go
-        // through this accessor — the legacy synthesis must carry the runtime
-        // fields or an in-memory-legacy-only project would read empty state.
-        it('should carry envVars and decline flags on the legacy synthesis (Steps 07+09)', () => {
-            const project = makeProject({
-                meshState: {
-                    envVars: { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql' },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2026-06-20T00:00:00.000Z',
-                    endpoint: 'https://mesh/graphql',
-                    userDeclinedUpdate: true,
-                    declinedAt: '2026-07-14T00:00:00.000Z',
-                },
-            });
-
-            const mesh = getMeshAppBuilderComponent(project);
-
-            expect(mesh?.envVars).toEqual({
-                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql',
-            });
-            expect(mesh?.userDeclinedUpdate).toBe(true);
-            expect(mesh?.declinedAt).toBe('2026-07-14T00:00:00.000Z');
-        });
-    });
-
-    // ADR-011 D3 Step 06: keyed-only lookup (no legacy synthesis) returning the
-    // LIVE map object, so runtime-field writes (decline flags, envVars back-fill)
-    // land on the persisted entry.
-    describe('getKeyedMeshAppBuilderComponent', () => {
+    describe('getMeshAppBuilderComponent (keyed-only)', () => {
         it('should return the entry under the migrated "mesh" key', () => {
             const keyed = makeAppBuilderComponent();
             const project = makeProject({ appBuilderComponents: { mesh: keyed } });
 
-            expect(getKeyedMeshAppBuilderComponent(project)).toBe(keyed);
+            expect(getMeshAppBuilderComponent(project)).toBe(keyed);
         });
 
-        it('should find a mesh-kind entry under any other key', () => {
-            const keyed = makeAppBuilderComponent();
+        it('should find a keyed mesh stored under a non-canonical id (matches by kind)', () => {
+            const keyed = makeAppBuilderComponent({ endpoint: 'https://keyed.example/graphql' });
             const project = makeProject({
                 appBuilderComponents: {
                     'acme-widget': makeAppBuilderComponent({ kind: 'integration' }),
@@ -152,27 +71,20 @@ describe('appBuilderComponentState accessors', () => {
                 },
             });
 
-            expect(getKeyedMeshAppBuilderComponent(project)).toBe(keyed);
+            expect(getMeshAppBuilderComponent(project)?.endpoint).toBe(
+                'https://keyed.example/graphql',
+            );
         });
 
-        it('should NOT synthesize from legacy meshState (keyed-only accessor)', () => {
-            const project = makeProject({
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc',
-                    lastDeployed: '2026-06-20T00:00:00.000Z',
-                    endpoint: 'https://legacy.example/graphql',
-                },
-            });
-
-            expect(getKeyedMeshAppBuilderComponent(project)).toBeUndefined();
+        it('should return undefined for a project with no keyed mesh', () => {
+            expect(getMeshAppBuilderComponent(makeProject())).toBeUndefined();
         });
 
         it('should return the live object (mutations land on the map entry)', () => {
             const keyed = makeAppBuilderComponent();
             const project = makeProject({ appBuilderComponents: { mesh: keyed } });
 
-            const entry = getKeyedMeshAppBuilderComponent(project);
+            const entry = getMeshAppBuilderComponent(project);
             (entry as { userDeclinedUpdate?: boolean }).userDeclinedUpdate = true;
 
             expect(
@@ -182,70 +94,44 @@ describe('appBuilderComponentState accessors', () => {
         });
     });
 
-    describe('getIntegrationAppBuilderComponents (read-through)', () => {
-        it('should synthesize an integration appBuilderComponent from appState when appBuilderComponents absent', () => {
+    describe('getIntegrationAppBuilderComponents (keyed-only)', () => {
+        it('should return keyed integration entries', () => {
             const project = makeProject({
-                appState: {
-                    appId: 'erp',
-                    url: 'https://erp.example/api',
-                    status: 'deployed',
-                    deployedUrls: { ping: 'https://erp.example/ping' },
-                    lastDeployed: '2026-06-20T00:00:00.000Z',
-                    sourceHash: 'def456',
+                appBuilderComponents: {
+                    erp: makeAppBuilderComponent({ kind: 'integration', url: 'https://erp/api' }),
+                    mesh: makeAppBuilderComponent(),
                 },
             });
 
             const integrations = getIntegrationAppBuilderComponents(project);
 
             expect(integrations).toHaveLength(1);
-            expect(integrations[0].kind).toBe('integration');
-            expect(integrations[0].status).toBe('deployed');
-            expect(integrations[0].url).toBe('https://erp.example/api');
-            expect(integrations[0].deployedUrls).toEqual({ ping: 'https://erp.example/ping' });
-            expect(integrations[0].sourceHash).toBe('def456');
+            expect(integrations[0].url).toBe('https://erp/api');
         });
 
-        it('should return an empty array when no appState and no keyed integrations', () => {
+        it('should return an empty array when no keyed integrations exist', () => {
             expect(getIntegrationAppBuilderComponents(makeProject())).toEqual([]);
         });
     });
 
     describe('listAppBuilderComponents', () => {
-        it('should merge keyed appBuilderComponents with read-through singletons without duplicate ids', () => {
+        it('should list every keyed entry with the id it is stored under', () => {
             const project = makeProject({
                 appBuilderComponents: {
-                    'erp-integration': makeAppBuilderComponent({ kind: 'integration', url: 'https://erp/api' }),
-                },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc',
-                    lastDeployed: '2026-06-20T00:00:00.000Z',
-                    endpoint: 'https://mesh/graphql',
+                    'erp-integration': makeAppBuilderComponent({
+                        kind: 'integration',
+                        url: 'https://erp/api',
+                    }),
+                    mesh: makeAppBuilderComponent({ endpoint: 'https://mesh/graphql' }),
                 },
             });
 
             const all = listAppBuilderComponents(project);
-            const ids = all.map(d => d.id);
+            const ids = all.map((d) => d.id);
 
             expect(new Set(ids).size).toBe(ids.length);
             expect(ids).toContain('erp-integration');
             expect(ids).toContain('mesh');
-        });
-
-        it('should not duplicate the mesh when both keyed and meshState exist', () => {
-            const project = makeProject({
-                appBuilderComponents: { mesh: makeAppBuilderComponent({ endpoint: 'https://keyed/graphql' }) },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'legacy',
-                    lastDeployed: '2026-01-01T00:00:00.000Z',
-                    endpoint: 'https://legacy/graphql',
-                },
-            });
-
-            const meshEntries = listAppBuilderComponents(project).filter(d => d.id === 'mesh');
-            expect(meshEntries).toHaveLength(1);
-            expect(meshEntries[0].endpoint).toBe('https://keyed/graphql');
         });
 
         it('should return an empty array for a bare project', () => {

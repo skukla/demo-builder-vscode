@@ -47,10 +47,15 @@ describe('Executor - Mesh State Population After Deployment', () => {
                     },
                 },
             },
-            meshState: {
-                envVars: {}, // Initially empty (the problem this fix addresses)
-                sourceHash: 'test-hash',
-                lastDeployed: new Date().toISOString(),
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: {}, // Initially empty (the problem this fix addresses)
+                        sourceHash: 'test-hash',
+                        lastDeployed: new Date().toISOString(),
+                            },
             },
         } as Project;
 
@@ -208,14 +213,14 @@ describe('Executor - Mesh State Population After Deployment', () => {
 
             if (config && Object.keys(config).length > 0) {
                 // This is the critical assignment in the fix
-                mockProject.meshState!.envVars = config;
+                mockProject.appBuilderComponents!.mesh!.envVars = config;
             }
 
-            // Dashboard check: Object.keys(project.meshState.envVars).length > 0
-            const hasEnvVars = Object.keys(mockProject.meshState!.envVars || {}).length > 0;
+            // Dashboard check: Object.keys(keyed mesh envVars).length > 0
+            const hasEnvVars = Object.keys(mockProject.appBuilderComponents!.mesh!.envVars || {}).length > 0;
 
             expect(hasEnvVars).toBe(true); // ✅ Dashboard will show "Deployed"
-            expect(mockProject.meshState!.envVars).toEqual(deployedConfig);
+            expect(mockProject.appBuilderComponents!.mesh!.envVars).toEqual(deployedConfig);
         });
 
         it('should show not-deployed when config fetch fails (acceptable fallback)', async () => {
@@ -225,14 +230,14 @@ describe('Executor - Mesh State Population After Deployment', () => {
             const config = await stalenessDetector.fetchDeployedMeshConfig();
 
             if (config && Object.keys(config).length > 0) {
-                mockProject.meshState!.envVars = config;
+                mockProject.appBuilderComponents!.mesh!.envVars = config;
             }
 
-            // Dashboard check: Object.keys(project.meshState.envVars).length > 0
-            const hasEnvVars = Object.keys(mockProject.meshState!.envVars || {}).length > 0;
+            // Dashboard check: Object.keys(keyed mesh envVars).length > 0
+            const hasEnvVars = Object.keys(mockProject.appBuilderComponents!.mesh!.envVars || {}).length > 0;
 
             expect(hasEnvVars).toBe(false); // Dashboard will show "Not Deployed" (fallback)
-            expect(mockProject.meshState!.envVars).toEqual({}); // Still empty
+            expect(mockProject.appBuilderComponents!.mesh!.envVars).toEqual({}); // Still empty
         });
     });
 });

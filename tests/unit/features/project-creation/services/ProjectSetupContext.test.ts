@@ -74,11 +74,16 @@ describe('ProjectSetupContext', () => {
             status: 'ready',
             created: new Date(),
             lastModified: new Date(),
-            meshState: {
-                envVars: {},
-                sourceHash: null,
-                lastDeployed: '',
-                endpoint: 'https://mesh.adobe.io/graphql',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '',
+                        endpoint: 'https://mesh.adobe.io/graphql',
+                            },
             },
         };
 
@@ -215,7 +220,7 @@ describe('ProjectSetupContext', () => {
     });
 
     describe('getMeshEndpoint()', () => {
-        it('should return meshState.endpoint when available', () => {
+        it('should return the keyed mesh endpoint when available', () => {
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 mockRegistry,
@@ -230,8 +235,8 @@ describe('ProjectSetupContext', () => {
         it('should return undefined when no mesh endpoint exists', () => {
             const projectWithoutMesh = {
                 ...mockProject,
-                meshState: undefined,
                 componentInstances: undefined,
+                appBuilderComponents: undefined,
             } as Project;
 
             const context = new ProjectSetupContext(
@@ -245,42 +250,11 @@ describe('ProjectSetupContext', () => {
             expect(endpoint).toBeUndefined();
         });
 
-        it('should prioritize the keyed mesh endpoint over legacy meshState', () => {
-            const projectWithBoth: Project = {
-                ...mockProject,
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '',
-                    endpoint: 'https://fallback-mesh.adobe.io/graphql',
-                },
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                        endpoint: 'https://priority-mesh.adobe.io/graphql',
-                    },
-                },
-            };
-
-            const context = new ProjectSetupContext(
-                mockHandlerContext,
-                mockRegistry,
-                projectWithBoth,
-                mockConfig
-            );
-
-            const endpoint = context.getMeshEndpoint();
-            expect(endpoint).toBe('https://priority-mesh.adobe.io/graphql');
-        });
-
-        // ADR-011 D3 Steps 07+09: keyed-only project (post-Step-07, no meshState)
-        // must resolve the endpoint from the keyed mesh entry.
+        // The keyed mesh entry is the only endpoint carrier (PL-1 phase 2
+        // removed the legacy meshState from Project entirely).
         it('should return the endpoint from the keyed mesh entry (keyed-only)', () => {
             const keyedOnlyProject = {
                 ...mockProject,
-                meshState: undefined,
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -364,11 +338,16 @@ describe('ProjectSetupContext', () => {
             const newProject: Project = {
                 ...mockProject,
                 name: 'updated-project',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2026-01-01T00:00:00.000Z',
-                    endpoint: 'https://updated-mesh.adobe.io/graphql',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2026-01-01T00:00:00.000Z',
+                            endpoint: 'https://updated-mesh.adobe.io/graphql',
+                                    },
                 },
             };
 
@@ -434,8 +413,8 @@ describe('ProjectSetupContext', () => {
         it('should handle null/undefined gracefully in getMeshEndpoint', () => {
             const projectWithNull = {
                 ...mockProject,
-                meshState: null,
                 componentInstances: null,
+                appBuilderComponents: null,
             } as any;
 
             const context = new ProjectSetupContext(

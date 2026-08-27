@@ -153,11 +153,16 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const correctEndpoint = 'https://correct-endpoint.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: correctEndpoint,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: correctEndpoint,
+                                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -198,11 +203,16 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const staleEndpoint = 'https://stale.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: correctEndpoint,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: correctEndpoint,
+                                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -360,11 +370,16 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const correctEndpoint = 'https://correct.adobeioruntime.net/api/mesh/graphql';
 
             const context = createMinimalContext({
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: correctEndpoint,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: correctEndpoint,
+                                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {

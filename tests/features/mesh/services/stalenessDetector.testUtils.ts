@@ -100,12 +100,17 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
                 status: 'deployed',
             },
         },
-        meshState: {
-            envVars: {
-                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
-            },
-            sourceHash: 'abc123',
-            lastDeployed: '2024-01-01T00:00:00Z',
+        appBuilderComponents: {
+            mesh: {
+                kind: 'mesh',
+                status: 'deployed',
+                source: { owner: '', repo: '' },
+                    envVars: {
+                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                    },
+                    sourceHash: 'abc123',
+                    lastDeployed: '2024-01-01T00:00:00Z',
+                    },
         },
         ...overrides,
     });

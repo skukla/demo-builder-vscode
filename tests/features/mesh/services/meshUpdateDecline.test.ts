@@ -34,19 +34,9 @@ function keyedMesh(overrides: Record<string, unknown> = {}): AppBuilderComponent
     } as AppBuilderComponentState;
 }
 
-function legacyMeshState(): NonNullable<Project['meshState']> {
-    return {
-        envVars: {},
-        sourceHash: 'abc',
-        lastDeployed: '2026-07-01T00:00:00Z',
-        endpoint: 'https://mesh/graphql',
-    };
-}
-
 describe('markMeshUpdateDeclined (keyed-only write, Step 07)', () => {
-    it('writes the decline flags to the keyed entry only — the legacy meshState write-side is retired', () => {
+    it('writes the decline flags to the keyed entry (found by kind under any key)', () => {
         const project = makeProject({
-            meshState: legacyMeshState(),
             appBuilderComponents: { 'commerce-mesh': keyedMesh() },
         });
 
@@ -59,12 +49,9 @@ describe('markMeshUpdateDeclined (keyed-only write, Step 07)', () => {
         };
         expect(keyed.userDeclinedUpdate).toBe(true);
         expect(keyed.declinedAt).toEqual(expect.any(String));
-        // ADR-011 D3 Step 07: the singular meshState write-side is retired —
-        // the in-memory legacy stays untouched (readers are keyed-first).
-        expect(project.meshState?.userDeclinedUpdate).toBeUndefined();
     });
 
-    it('writes only the keyed entry for a keyed-only project (post-Step-07 world)', () => {
+    it('writes the entry under the canonical mesh key too', () => {
         const project = makeProject({
             appBuilderComponents: { mesh: keyedMesh() },
         });
@@ -72,23 +59,21 @@ describe('markMeshUpdateDeclined (keyed-only write, Step 07)', () => {
         const marked = markMeshUpdateDeclined(project);
 
         expect(marked).toBe(true);
-        expect(project.meshState).toBeUndefined();
         const keyed = project.appBuilderComponents?.mesh as { userDeclinedUpdate?: boolean };
         expect(keyed.userDeclinedUpdate).toBe(true);
     });
 
-    it('returns false and fabricates nothing when neither state exists', () => {
+    it('returns false and fabricates nothing when no keyed mesh exists', () => {
         const project = makeProject();
 
         const marked = markMeshUpdateDeclined(project);
 
         expect(marked).toBe(false);
-        expect(project.meshState).toBeUndefined();
         expect(project.appBuilderComponents).toBeUndefined();
     });
 });
 
-describe('isMeshUpdateDeclined (keyed-first read)', () => {
+describe('isMeshUpdateDeclined (keyed-only read)', () => {
     it('reads the flag from the keyed mesh entry', () => {
         const project = makeProject({
             appBuilderComponents: {
@@ -99,18 +84,10 @@ describe('isMeshUpdateDeclined (keyed-first read)', () => {
         expect(isMeshUpdateDeclined(project)).toBe(true);
     });
 
-    it('falls back to meshState when the keyed entry lacks the flag (pre-Step-06 decline)', () => {
+    it('returns false when the keyed entry lacks the flag', () => {
+        // Legacy pre-Step-06 declines are folded into the keyed entry at load
+        // (PL-1 phase 2 removed the in-memory fallback).
         const project = makeProject({
-            meshState: { ...legacyMeshState(), userDeclinedUpdate: true },
-            appBuilderComponents: { 'commerce-mesh': keyedMesh() },
-        });
-
-        expect(isMeshUpdateDeclined(project)).toBe(true);
-    });
-
-    it('returns false when neither carries the flag', () => {
-        const project = makeProject({
-            meshState: legacyMeshState(),
             appBuilderComponents: { 'commerce-mesh': keyedMesh() },
         });
 

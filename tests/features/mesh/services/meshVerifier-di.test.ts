@@ -210,10 +210,15 @@ describe('MeshVerifierService - DI Pattern', () => {
                         status: 'ready',
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01',
+                                    },
                 },
             });
 

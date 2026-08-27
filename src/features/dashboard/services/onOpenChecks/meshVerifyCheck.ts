@@ -65,7 +65,7 @@ export function createMeshVerifyCheck<R extends MeshVerifyResultLike>(deps: Mesh
 
             if (result?.success && result.data?.exists) {
                 await deps.syncMeshStatus(project, result);
-                deps.markDirty('meshState');
+                deps.markDirty('appBuilderComponents');
                 return { status: 'ok', data: { endpoint: result.data.endpoint } };
             }
 
@@ -79,7 +79,7 @@ export function createMeshVerifyCheck<R extends MeshVerifyResultLike>(deps: Mesh
             // Verified, but the mesh is gone (deleted externally). Persist AND tell the user.
             logger.warn('[MeshVerify] Mesh not found in Adobe I/O — may have been deleted externally');
             await deps.syncMeshStatus(project, result);
-            deps.markDirty('meshState');
+            deps.markDirty('appBuilderComponents');
             return { status: 'warning', message: MESH_GONE_MESSAGE };
         },
     };

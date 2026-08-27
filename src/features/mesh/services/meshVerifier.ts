@@ -320,7 +320,6 @@ function syncMeshStatusImpl(
                 state.sourceHash = undefined;
             }
         }
-        project.meshState = undefined;
         meshComponent.status = 'ready'; // Mesh component exists but not deployed
         // Note: Endpoint is NOT cleared here - that's managed by deployMesh.ts
         // The single source of truth for endpoint writes is the deployment command

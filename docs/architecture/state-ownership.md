@@ -35,8 +35,8 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 | `componentSelections` | User choices | Which components were selected |
 | `appBuilderComponents` | App Builder deploy state (keyed) | Mesh endpoint + staleness baseline, per-integration URLs/status |
 | `additionalConsoleApis` | User-picked APIs | Extra Adobe Console APIs picked beyond the required sets |
-| `meshState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
-| `appState` | LEGACY-READ-ONLY | Nothing — migration input for old manifests |
+| `meshState` | MANIFEST-ONLY (legacy) | Nothing — migration input for old manifests; removed from `Project` by PL-1 phase 2 |
+| `appState` | MANIFEST-ONLY (legacy) | Nothing — migration input for old manifests; removed from `Project` by PL-1 phase 2 |
 | `frontendEnvState` | Config snapshot | Frontend env vars at demo start |
 | `componentVersions` | Version tracking | Component versions for updates |
 
@@ -200,18 +200,23 @@ unsubscribed them.
 
 ---
 
-### meshState / appState (LEGACY-READ-ONLY)
+### meshState / appState (MANIFEST-ONLY, legacy)
 
 **Purpose**: Load legacy manifests only. Old `.demo-builder.json` files (of
 arbitrary age) carry the singular `meshState`/`appState`; the loader reads them
-and `migrateLegacyToAppBuilderComponents` folds them into the keyed map. On the
-project's first save the manifest is forward-migrated: the keyed map is written
-and the legacy singulars are dropped.
+off the MANIFEST and `migrateLegacyToAppBuilderComponents` folds them into the
+keyed map. On the project's first save the manifest is forward-migrated: the
+keyed map is written and the legacy singulars are dropped.
 
-**Write Authority**: NONE. No production code writes these fields anymore
-(ADR-011 D3 Step 07). The only remaining assignments are *clearing* writes
-(`meshVerifier`, `stalenessDetector`) that prevent the accessors'
-legacy-synthesis fallback from resurrecting stale in-memory state.
+**PL-1 phase 2 (2026-08-27)**: the fields were removed from the in-memory
+`Project` type entirely — they exist only on `ProjectManifest`
+(`LegacyManifestMeshState`/`LegacyManifestAppState` in `projectFileLoader`),
+read by the quarantined migration, which is also the activation sweep's load
+path. The accessor-level synthesis fallbacks, per-field fallbacks, and clearing
+writes were all deleted; `singularStateAccessGuard` pins the migration as the
+one remaining reader.
+
+**Write Authority**: NONE. No production code writes these fields anywhere.
 
 **CRITICAL**: The legacy `meshState` is never authoritative — the mesh endpoint
 lives on the keyed mesh `appBuilderComponents` entry. Any endpoint stored in

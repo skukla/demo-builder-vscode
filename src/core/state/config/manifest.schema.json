@@ -104,75 +104,10 @@
           }
         },
         "meshState": {
-          "type": "object",
-          "properties": {
-            "envVars": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "sourceHash": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "lastDeployed": {
-              "type": "string"
-            },
-            "endpoint": {
-              "type": "string"
-            },
-            "userDeclinedUpdate": {
-              "type": "boolean"
-            },
-            "declinedAt": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "envVars",
-            "sourceHash",
-            "lastDeployed"
-          ]
+          "$ref": "#/definitions/LegacyManifestMeshState"
         },
         "appState": {
-          "type": "object",
-          "properties": {
-            "appId": {
-              "type": "string"
-            },
-            "url": {
-              "type": "string"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "deployed",
-                "error",
-                "not-deployed"
-              ]
-            },
-            "deployedUrls": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "lastDeployed": {
-              "type": "string"
-            },
-            "sourceHash": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          "required": [
-            "status"
-          ]
+          "$ref": "#/definitions/LegacyManifestAppState"
         },
         "appBuilderComponents": {
           "type": "object",
@@ -604,6 +539,79 @@
         "is_active"
       ],
       "description": "Commerce store view — leaf entity representing a language/locale. Maps to REST API: GET /V1/store/storeViews\n\nProperty names match the Commerce REST API response format (snake_case)."
+    },
+    "LegacyManifestMeshState": {
+      "type": "object",
+      "properties": {
+        "envVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "sourceHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastDeployed": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "userDeclinedUpdate": {
+          "type": "boolean"
+        },
+        "declinedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "envVars",
+        "sourceHash",
+        "lastDeployed"
+      ],
+      "description": "Legacy singular mesh state, MANIFEST-ONLY since PL-1 phase 2 — the in-memory `Project` no longer carries it. Read solely by the quarantined read-migration (`appBuilderComponentMigration`), which folds it into the keyed map on every load."
+    },
+    "LegacyManifestAppState": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "deployed",
+            "error",
+            "not-deployed"
+          ]
+        },
+        "deployedUrls": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "lastDeployed": {
+          "type": "string"
+        },
+        "sourceHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "description": "Legacy singular app state, MANIFEST-ONLY since PL-1 phase 2 (see above)."
     },
     "AppBuilderComponentState": {
       "type": "object",

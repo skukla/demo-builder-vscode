@@ -48,9 +48,14 @@ describe('envFileGenerator - Value Resolution', () => {
                 path: '/test/path',
                 status: 'ready',
                 created: new Date().toISOString(),
-                meshState: {
-                    endpoint: 'https://runtime-endpoint.adobe.io/graphql',
-                    workspace: 'test-workspace',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            endpoint: 'https://runtime-endpoint.adobe.io/graphql',
+                            workspace: 'test-workspace',
+                                    },
                 },
             } as any;
 

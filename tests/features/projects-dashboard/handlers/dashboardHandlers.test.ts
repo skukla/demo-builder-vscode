@@ -181,10 +181,15 @@ describe('dashboardHandlers', () => {
 
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
-                meshState: {
-                    envVars: { SOME_VAR: 'value' },
-                    sourceHash: 'abc123',
-                    lastDeployed: new Date().toISOString(),
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: { SOME_VAR: 'value' },
+                            sourceHash: 'abc123',
+                            lastDeployed: new Date().toISOString(),
+                                    },
                 },
             });
             const context = createMockHandlerContext([project]);
@@ -208,10 +213,15 @@ describe('dashboardHandlers', () => {
 
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
-                meshState: {
-                    envVars: { SOME_VAR: 'value' },
-                    sourceHash: 'abc123',
-                    lastDeployed: new Date().toISOString(),
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: { SOME_VAR: 'value' },
+                            sourceHash: 'abc123',
+                            lastDeployed: new Date().toISOString(),
+                                    },
                 },
             });
             const context = createMockHandlerContext([project]);
@@ -234,10 +244,15 @@ describe('dashboardHandlers', () => {
 
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
-                meshState: {
-                    envVars: { SOME_VAR: 'value' },
-                    sourceHash: 'abc123',
-                    lastDeployed: new Date().toISOString(),
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: { SOME_VAR: 'value' },
+                            sourceHash: 'abc123',
+                            lastDeployed: new Date().toISOString(),
+                                    },
                 },
             });
             const context = createMockHandlerContext([project]);

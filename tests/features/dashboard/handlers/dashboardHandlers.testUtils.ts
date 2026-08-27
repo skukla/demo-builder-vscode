@@ -90,12 +90,18 @@ export function createMockProject(overrides?: Partial<Project>): Project {
                 endpoint: 'https://commerce.example.com/graphql',
             },
         },
-        meshState: {
-            envVars: {
-                MESH_ID: 'mesh123',
+        appBuilderComponents: {
+            mesh: {
+                kind: 'mesh',
+                status: 'deployed',
+                source: { owner: '', repo: '' },
+                envVars: {
+                    MESH_ID: 'mesh123',
+                },
+                sourceHash: 'hash123',
+                lastDeployed: '2025-01-26T12:00:00.000Z',
+                endpoint: 'https://mesh.example.com/graphql',
             },
-            sourceHash: 'hash123',
-            lastDeployed: '2025-01-26T12:00:00.000Z',
         },
     } as unknown as Project;
 

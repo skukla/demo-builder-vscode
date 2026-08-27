@@ -1,22 +1,23 @@
 /**
  * Accessor-only guard for the retired singular mesh/app state (ADR-011 D3 Step 07).
  *
- * The keyed `project.appBuilderComponents` map is the single source of truth;
- * the legacy `meshState`/`appState` singletons are LEGACY-READ-ONLY (old
- * manifests keep loading via the loader + migration forever). This guard greps
- * the production source for `.meshState` / `.appState` property access and
- * fails when any file outside the documented allowlist touches them — the
- * failure mode it prevents is a reader silently seeing `undefined` (or a
- * writer silently losing data) after Step 07 stopped persisting the singulars.
+ * The keyed `project.appBuilderComponents` map is the single source of truth.
+ * PL-1 phase 2 removed the legacy `meshState`/`appState` fields from `Project`
+ * entirely; they survive ONLY on `ProjectManifest`, read by the quarantined
+ * legacy→keyed migration inside the load path (which is also the activation
+ * sweep's path, so a dormant machine that skipped phase 1 still migrates
+ * safely). This guard greps the production source for `.meshState` /
+ * `.appState` property access and fails when any file outside the allowlist
+ * touches them — the compiler already blocks `Project` access (the fields are
+ * gone), so what this now guards is the MANIFEST fields growing new readers
+ * outside the quarantine.
  *
  * Allowlisted files (each with a documented reason):
- * - core/state/projectFileLoader.ts               — reads manifest.meshState/appState (legacy manifests load forever)
- * - core/state/appBuilderComponentMigration.ts    — the legacy→keyed read-migration
- * - core/state/appBuilderComponentState.ts — accessor module (legacy synthesis fallback)
- * - features/mesh/services/stalenessDetector.ts   — getCurrentMeshState per-field legacy fallback + post-deploy clearing write
- * - features/mesh/services/meshUpdateDecline.ts   — isMeshUpdateDeclined per-field legacy fallback read
- * - features/mesh/services/meshVerifier.ts        — clearing write (mesh gone remotely)
- * - types/typeGuards.ts                           — getMeshEndpointUrl legacy fallback
+ * - core/state/appBuilderComponentMigration.ts — the quarantined legacy→keyed
+ *   read-migration; the ONE reader of manifest.meshState/appState.
+ *
+ * History: the allowlist held 7 files / 15 sites until phase 2 (the accessor
+ * synthesis family, per-field fallbacks, and clearing writes — all deleted).
  */
 
 import * as fs from 'fs';
@@ -30,13 +31,7 @@ const SRC_ROOT = path.join(__dirname, '../../../src');
  * deliberate re-pin here, instead of hiding behind the file's allowlisting.
  */
 const ALLOWED_FILES: ReadonlyMap<string, number> = new Map([
-    ['core/state/projectFileLoader.ts', 2],
     ['core/state/appBuilderComponentMigration.ts', 5],
-    ['core/state/appBuilderComponentState.ts', 3],
-    ['features/mesh/services/stalenessDetector.ts', 2],
-    ['features/mesh/services/meshUpdateDecline.ts', 1],
-    ['features/mesh/services/meshVerifier.ts', 1],
-    ['types/typeGuards.ts', 1],
 ]);
 
 const SINGULAR_ACCESS = /\.(meshState|appState)\b/;
@@ -44,11 +39,7 @@ const SINGULAR_ACCESS = /\.(meshState|appState)\b/;
 /** True for lines that are purely comments (no code). */
 function isCommentLine(line: string): boolean {
     const trimmed = line.trim();
-    return (
-        trimmed.startsWith('//') ||
-        trimmed.startsWith('*') ||
-        trimmed.startsWith('/*')
-    );
+    return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
 }
 
 function walkSourceFiles(dir: string, collected: string[] = []): string[] {
