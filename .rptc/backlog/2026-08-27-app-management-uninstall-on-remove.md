@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: shipped
 parent: AB-1
 ---
 
@@ -40,3 +40,7 @@ The app itself provides the clean path — its API serves `startUninstallation`
 
 Until this ships, a removed kit app leaves its event fabric behind — rely on
 project teardown or manual cleanup.
+
+## Shipped so far
+
+- 2026-08-27  2026-08-27: shipped — AppManagementClient gained the four uninstall/association ops (routes read from the generated OpenAPI); appManagementUninstaller mirrors the installer (poll budget, 409-self-race retry, best-effort record clears); removeAppBuilderComponent runs it BEFORE aio app undeploy for app-management entries (seeded kit instances recognized by source), never blocking the remove.

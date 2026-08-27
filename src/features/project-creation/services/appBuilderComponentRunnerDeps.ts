@@ -26,6 +26,7 @@ import { createApiSubscriberClient } from '@/features/app-builder/services/apiSu
 import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
+import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
@@ -86,8 +87,13 @@ async function promptForToolchainRefresh(): Promise<boolean> {
  * org CODE (`…@AdobeOrg` — the `x-gw-ims-org-id` header wants the code, not
  * the numeric Console id the manifest stores). The cached org answers when it
  * matches the project; otherwise the org list resolves the code by id.
+ *
+ * Exported for the install-status/install handlers (AB-5), which drive the
+ * same per-app API outside a deploy.
  */
-async function resolveAppManagementAuth(project: Project): Promise<AppManagementAuth | undefined> {
+export async function resolveAppManagementAuth(
+    project: Project,
+): Promise<AppManagementAuth | undefined> {
     const authManager = ServiceLocator.getAuthenticationService();
     const inspection = await authManager.getTokenManager().inspectToken();
     if (!inspection.valid || !inspection.token) {
@@ -160,6 +166,16 @@ export function buildDefaultRunnerDeps(
                 getAuth: () => resolveAppManagementAuth(project),
                 logger: ctx.logger,
                 onProgress: installProgress,
+            }),
+        // The inverse, ahead of an integration remove: the app's own uninstall
+        // API takes down what its installer created, while the API still
+        // exists to call. Best-effort — the runner logs a failure and removes
+        // anyway.
+        uninstallAppManagement: (project, deployedUrls, uninstallProgress) =>
+            uninstallAppManagementApp(project, deployedUrls, {
+                getAuth: () => resolveAppManagementAuth(project),
+                logger: ctx.logger,
+                onProgress: uninstallProgress,
             }),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the

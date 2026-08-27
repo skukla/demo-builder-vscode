@@ -182,6 +182,20 @@ export interface AppBuilderComponentRunnerDeps {
         deployedUrls: Record<string, string> | undefined,
         onProgress?: (message: string) => void
     ) => Promise<{ status: 'installed' | 'skipped' | 'failed'; detail?: string }>;
+    /**
+     * Uninstall an app-management lifecycle app from Commerce BEFORE its remove
+     * tears the actions down (appManagementUninstaller). `aio app undeploy`
+     * removes only the actions — the app's installer created I/O Events
+     * registrations, binding packages, and Commerce-side eventing config that
+     * only the app's own uninstall API removes, and once the actions are gone
+     * that API is gone with them. Best-effort: a failure logs and the remove
+     * proceeds. Optional: mesh paths and bare unit tests never need it.
+     */
+    uninstallAppManagement?: (
+        project: Project,
+        deployedUrls: Record<string, string> | undefined,
+        onProgress?: (message: string) => void
+    ) => Promise<{ status: 'uninstalled' | 'skipped' | 'failed'; detail?: string }>;
     /** Union-reconcile API subscriber (step 07). */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
@@ -750,6 +764,43 @@ function entryFromState(
     };
 }
 
+/**
+ * The pre-remove uninstall pass for `lifecycle: 'app-management'` apps.
+ *
+ * Resolves the entry the same way redeploy does (catalog first, then persisted
+ * state through source recognition) so a seeded kit instance under a custom id
+ * still identifies as app-management. No-op for every other entry, and when
+ * the caller wired no uninstaller. Never throws.
+ */
+async function uninstallIfAppManagement(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    if (!deps.uninstallAppManagement || state.kind !== 'integration') {
+        return;
+    }
+    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, state);
+    if (entry.lifecycle !== 'app-management') {
+        return;
+    }
+    try {
+        const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
+            deps.onProgress?.(message),
+        );
+        if (result.status === 'failed') {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] ${id} Commerce uninstall did not finish: ${result.detail}`,
+            );
+        }
+    } catch (error) {
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] Commerce uninstall warning: ${toError(error).message}`,
+        );
+    }
+}
+
 /** Tear down the remote artifact for an App Builder component, by kind, under org-context. */
 /**
  * Tear down a component's REMOTE artifacts, leaving the local clone and the keyed
@@ -846,6 +897,14 @@ export async function removeAppBuilderComponent(
     const provided = Boolean(
         state.providesEnvVars && Object.keys(state.providesEnvVars).length > 0,
     );
+
+    // BEFORE the undeploy, while the app's own API still exists to call: the
+    // uninstall pass removes what the installer created (event registrations,
+    // binding packages, Commerce-side eventing config, the association) —
+    // `aio app undeploy` removes only the actions and leaves all of that behind
+    // (AB-4; residue measured live 2026-08-27). Best-effort like the teardown:
+    // an uninstall failure must never block the remove the user asked for.
+    await uninstallIfAppManagement(project, id, state, deps);
 
     try {
         await teardownRemote(project, id, state, deps);

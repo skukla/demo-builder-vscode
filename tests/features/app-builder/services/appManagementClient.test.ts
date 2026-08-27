@@ -278,6 +278,83 @@ describe('appManagementClient', () => {
         });
     });
 
+    describe('uninstallation (AB-4)', () => {
+        it('GET /installation/uninstallation: 204 → undefined, 200 → state', async () => {
+            mockFetch.mockResolvedValueOnce(jsonResponse(204, undefined));
+            await expect(makeClient(mockFetch).getUninstallationState()).resolves.toBeUndefined();
+
+            const state = { id: 'u-1', status: 'succeeded', startedAt: '2026-08-27T00:00:00Z' };
+            mockFetch.mockResolvedValueOnce(jsonResponse(200, state));
+            await expect(makeClient(mockFetch).getUninstallationState()).resolves.toEqual(state);
+            expect(mockFetch).toHaveBeenLastCalledWith(
+                `${BASE_URL}/installation/uninstallation`,
+                expect.objectContaining({ method: 'GET', headers: EXPECTED_GET_HEADERS })
+            );
+        });
+
+        it('POSTs /installation/uninstallation with the full required body', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(202, { message: 'queued', id: 'u-2' }));
+
+            const result = await makeClient(mockFetch).startUninstallation(VALIDATE_REQUEST);
+
+            expect(result).toEqual({ message: 'queued', id: 'u-2' });
+            expect(mockFetch).toHaveBeenCalledWith(
+                `${BASE_URL}/installation/uninstallation`,
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: EXPECTED_POST_HEADERS,
+                    body: JSON.stringify(VALIDATE_REQUEST),
+                })
+            );
+        });
+
+        it('surfaces a 409 no-op with its parsed reason (nothing installed)', async () => {
+            mockFetch.mockResolvedValue(
+                jsonResponse(409, { reason: 'not-installed', message: 'Nothing installed.' })
+            );
+
+            try {
+                await makeClient(mockFetch).startUninstallation(VALIDATE_REQUEST);
+                throw new Error('expected a rejection');
+            } catch (error) {
+                const apiError = error as AppManagementApiError;
+                expect(apiError.status).toBe(409);
+                expect(apiError.reason).toBe('not-installed');
+            }
+        });
+
+        it('DELETEs the uninstallation record and the association (no body)', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(204, undefined));
+            const client = makeClient(mockFetch);
+
+            await client.clearUninstallationState();
+            await client.clearAssociation();
+
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                1,
+                `${BASE_URL}/installation/uninstallation`,
+                expect.objectContaining({
+                    method: 'DELETE',
+                    headers: EXPECTED_GET_HEADERS,
+                    body: undefined,
+                })
+            );
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                2,
+                `${BASE_URL}/association`,
+                expect.objectContaining({ method: 'DELETE' })
+            );
+        });
+
+        it('a non-2xx clear throws the sanitized typed error', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(500, { message: 'boom' }));
+
+            await expect(makeClient(mockFetch).clearAssociation()).rejects.toThrow(
+                'Clear association failed (HTTP 500)'
+            );
+        });
+    });
+
     describe('sanitization', () => {
         it('never leaks the access token into error messages', async () => {
             mockFetch.mockResolvedValue(jsonResponse(500, { message: 'boom' }));

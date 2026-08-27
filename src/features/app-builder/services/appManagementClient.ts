@@ -65,6 +65,19 @@ export interface ValidateInstallationRequest {
     ioEventsEnv: string;
 }
 
+/**
+ * POST /installation/uninstallation body — identical field set to validation,
+ * and every field spec-required (read from the generated OpenAPI, 2026-08-27).
+ */
+export type StartUninstallationRequest = ValidateInstallationRequest;
+
+/** POST /installation/uninstallation result: work queued (id to poll with). */
+export interface UninstallStartResult {
+    message: string;
+    /** Present on a 202 (queued); poll {@link AppManagementClient.getUninstallationState}. */
+    id?: string;
+}
+
 /** POST /association body. */
 export interface SetAssociationRequest {
     commerceBaseUrl: string;
@@ -223,6 +236,46 @@ export class AppManagementClient {
         }
     }
 
+    /**
+     * Read the uninstallation state. `undefined` means no uninstall has been
+     * started (the API's 204); the shape mirrors the installation state.
+     */
+    async getUninstallationState(): Promise<InstallationState | undefined> {
+        const response = await this.request('GET', '/installation/uninstallation');
+        if (response.status === 204) {
+            return undefined;
+        }
+        return (await this.parseJson(response, 'Get uninstallation state')) as InstallationState;
+    }
+
+    /**
+     * Start the app's own uninstaller — the inverse of reconcile: it removes
+     * what the INSTALLER created (event registrations, providers, binding
+     * packages, Commerce-side eventing config). A 202 queued the work — poll
+     * {@link getUninstallationState}. A 409 no-op (never installed / not
+     * associated) throws {@link AppManagementApiError} with its reason.
+     */
+    async startUninstallation(body: StartUninstallationRequest): Promise<UninstallStartResult> {
+        const response = await this.request('POST', '/installation/uninstallation', body);
+        return (await this.parseJson(response, 'Start uninstallation')) as UninstallStartResult;
+    }
+
+    /** Clear a finished uninstallation's state record (the API answers 204). */
+    async clearUninstallationState(): Promise<void> {
+        const response = await this.request('DELETE', '/installation/uninstallation');
+        if (!response.ok) {
+            throw await this.toError(response, 'Clear uninstallation state');
+        }
+    }
+
+    /** Remove the stored app↔Commerce association (the API answers 204). */
+    async clearAssociation(): Promise<void> {
+        const response = await this.request('DELETE', '/association');
+        if (!response.ok) {
+            throw await this.toError(response, 'Clear association');
+        }
+    }
+
     // ------------------------------------------------------
     // Internals
     // ------------------------------------------------------
@@ -240,7 +293,11 @@ export class AppManagementClient {
     }
 
     /** Issue a request; returns the raw Response (status handling is the caller's). */
-    private request(method: 'GET' | 'POST', path: string, body?: unknown): Promise<Response> {
+    private request(
+        method: 'GET' | 'POST' | 'DELETE',
+        path: string,
+        body?: unknown,
+    ): Promise<Response> {
         return this.fetchImpl(`${this.baseUrl}${path}`, {
             method,
             headers: this.buildHeaders(body !== undefined),

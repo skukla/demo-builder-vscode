@@ -42,8 +42,8 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** The kit lib's own defaults (read from aio-commerce-lib-api source, 2026-08-27). */
-const IO_EVENTS_URL = 'https://api.adobe.io/events';
-const IO_EVENTS_ENV = 'prod';
+export const IO_EVENTS_URL = 'https://api.adobe.io/events';
+export const IO_EVENTS_ENV = 'prod';
 
 /** How often to re-read a queued (202) installation's state. */
 const POLL_INTERVAL_MS = 5000;
@@ -244,8 +244,12 @@ const RETRYABLE_INSTALL_PATTERNS: readonly RegExp[] = [/HTTP 409 Conflict/];
  */
 const MAX_RECONCILE_ROUNDS = 5;
 
-/** Does this landed-failed state carry a signature retrying can clear? */
-function isRetryableInstallFailure(state: InstallationState): boolean {
+/**
+ * Does this landed-failed state carry a signature retrying can clear?
+ * Exported for the uninstaller, whose runs hit the same self-race — the
+ * uninstall deletes the registrations the install raced on creating.
+ */
+export function isRetryableInstallFailure(state: InstallationState): boolean {
     let text: string;
     try {
         text = JSON.stringify(state.error ?? '');
