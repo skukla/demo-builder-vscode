@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: shipped
 layer: G
 ---
 # The two EDS service cards are one shell rendered twice
@@ -80,3 +80,7 @@ Read .rptc/backlog/2026-08-25-eds-service-cards-are-one-shell.md first — it ha
 line ranges and what differs. Both cards' existing test suites must pass unchanged; if they
 need editing, the refactor changed behaviour and that is the bug."
 ```
+
+## Shipped so far
+
+- 2026-08-27  2026-08-27: extracted by the dedup sweep — ServiceCardShell + ServiceCardStatus (features/eds/ui/components, deliberately NOT core/ui: two consumers, one feature). DA.live's token form rides the customState slot exactly where its showInput branch sat; every difference between the copies became a prop. Success test met: both suites pass UNCHANGED (207 tests, zero edits).

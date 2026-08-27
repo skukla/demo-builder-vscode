@@ -20,10 +20,8 @@
  */
 
 import { Flex, Text, Picker, Item } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Spinner } from '@/core/ui/components/ui';
+import { ServiceCardShell, ServiceCardStatus } from './ServiceCardShell';
 
 /** Stable empty-array reference for the availableOrgs default (re-render guard). */
 const EMPTY_ORGS: readonly string[] = [];
@@ -62,33 +60,6 @@ export interface DaLiveServiceCardProps {
     githubUser?: string;
     /** GitHub orgs the user is a member of — shown as additional picker options */
     availableOrgs?: readonly string[];
-}
-
-/** Authenticated view: a compact "Connected" pill, or the verified org with a Change action. */
-function renderAuthenticatedView(
-    compact: boolean,
-    verifiedOrg: string | undefined,
-    onReset: () => void,
-): React.ReactElement {
-    if (compact) {
-        return (
-            <Flex alignItems="center" gap="size-100">
-                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                <Text UNSAFE_className="status-text">Connected</Text>
-            </Flex>
-        );
-    }
-    return (
-        <Flex alignItems="center" justifyContent="space-between">
-            <Flex alignItems="center" gap="size-100">
-                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                <Text UNSAFE_className="status-text">{verifiedOrg || 'Connected'}</Text>
-            </Flex>
-            <button className="service-action-link" onClick={onReset}>
-                Change
-            </button>
-        </Flex>
-    );
 }
 
 /**
@@ -164,95 +135,84 @@ export function DaLiveServiceCard({
         onCancelInput();
     };
 
-    return (
-        <div className="service-card" data-connected={isAuthenticated ? 'true' : 'false'}>
-            <div className="service-card-header">
-                <div className="service-icon dalive-icon">DA</div>
-                <div className="service-card-title">DA.live</div>
-            </div>
-            <div className="service-card-description">Content authoring and management</div>
-            <div className="service-card-status">
-                {isLoading ? (
-                    <Flex alignItems="center" gap="size-100">
-                        <Spinner size="S" aria-label="Checking" />
-                        <Text UNSAFE_className="status-text">
-                            {isAuthenticating ? 'Verifying...' : 'Checking...'}
-                        </Text>
-                    </Flex>
-                ) : showInput ? (
-                    <div className="dalive-input-form">
-                        <Picker
-                            label="GitHub namespace for this demo"
-                            selectedKey={selectedNamespace}
-                            onSelectionChange={(key) => setSelectedNamespace(String(key))}
-                            items={namespaceOptions}
-                            width="100%"
-                            isDisabled={namespaceOptions.length === 0}
-                            UNSAFE_className="dalive-namespace-picker"
-                        >
-                            {(item) => <Item key={item.key}>{item.label}</Item>}
-                        </Picker>
-                        <input
-                            type="password"
-                            placeholder="Token"
-                            value={tokenValue}
-                            onChange={(e) => setTokenValue(e.target.value)}
-                            className="service-input"
-                        />
-                        {error && <Text UNSAFE_className="status-text-error">{error}</Text>}
-                        <Flex justifyContent="space-between" alignItems="center">
-                            <Flex gap="size-100">
-                                <button
-                                    className="service-action-button"
-                                    onClick={handleSubmit}
-                                    disabled={!canSubmit}
-                                >
-                                    Verify
-                                </button>
-                                <button className="service-action-link" onClick={handleCancel}>
-                                    Cancel
-                                </button>
-                            </Flex>
-                            <Flex gap="size-200" alignItems="center">
-                                {onOpenBookmarkletSetup && (
-                                    <button
-                                        className="service-action-link"
-                                        onClick={onOpenBookmarkletSetup}
-                                        type="button"
-                                    >
-                                        Bookmarklet Setup
-                                    </button>
-                                )}
-                                {onOpenDaLive && (
-                                    <button
-                                        className="service-action-link"
-                                        onClick={onOpenDaLive}
-                                        type="button"
-                                    >
-                                        Open DA.live
-                                    </button>
-                                )}
-                            </Flex>
-                        </Flex>
-                    </div>
-                ) : isAuthenticated ? (
-                    renderAuthenticatedView(compact, verifiedOrg, onReset)
-                ) : error ? (
-                    <Flex direction="column" gap="size-100">
-                        <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className="status-icon-error" />
-                            <Text UNSAFE_className="status-text-error">{error}</Text>
-                        </Flex>
-                        <button className="service-action-button" onClick={onSetup}>
-                            Try Again
-                        </button>
-                    </Flex>
-                ) : (
-                    <button className="service-action-button" onClick={onSetup}>
-                        {setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
+    const inputForm = showInput ? (
+        <div className="dalive-input-form">
+            <Picker
+                label="GitHub namespace for this demo"
+                selectedKey={selectedNamespace}
+                onSelectionChange={(key) => setSelectedNamespace(String(key))}
+                items={namespaceOptions}
+                width="100%"
+                isDisabled={namespaceOptions.length === 0}
+                UNSAFE_className="dalive-namespace-picker"
+            >
+                {(item) => <Item key={item.key}>{item.label}</Item>}
+            </Picker>
+            <input
+                type="password"
+                placeholder="Token"
+                value={tokenValue}
+                onChange={(e) => setTokenValue(e.target.value)}
+                className="service-input"
+            />
+            {error && <Text UNSAFE_className="status-text-error">{error}</Text>}
+            <Flex justifyContent="space-between" alignItems="center">
+                <Flex gap="size-100">
+                    <button
+                        className="service-action-button"
+                        onClick={handleSubmit}
+                        disabled={!canSubmit}
+                    >
+                        Verify
                     </button>
-                )}
-            </div>
+                    <button className="service-action-link" onClick={handleCancel}>
+                        Cancel
+                    </button>
+                </Flex>
+                <Flex gap="size-200" alignItems="center">
+                    {onOpenBookmarkletSetup && (
+                        <button
+                            className="service-action-link"
+                            onClick={onOpenBookmarkletSetup}
+                            type="button"
+                        >
+                            Bookmarklet Setup
+                        </button>
+                    )}
+                    {onOpenDaLive && (
+                        <button
+                            className="service-action-link"
+                            onClick={onOpenDaLive}
+                            type="button"
+                        >
+                            Open DA.live
+                        </button>
+                    )}
+                </Flex>
+            </Flex>
         </div>
+    ) : undefined;
+
+    return (
+        <ServiceCardShell
+            icon="DA"
+            iconClassName="dalive-icon"
+            title="DA.live"
+            description="Content authoring and management"
+            isConnected={isAuthenticated}
+        >
+            <ServiceCardStatus
+                isLoading={isLoading}
+                loadingLabel={isAuthenticating ? 'Verifying...' : 'Checking...'}
+                customState={inputForm}
+                isConnected={isAuthenticated}
+                compact={compact}
+                connectedLabel={verifiedOrg || 'Connected'}
+                onChange={onReset}
+                error={error}
+                onAction={onSetup}
+                actionLabel={setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
+            />
+        </ServiceCardShell>
     );
 }
