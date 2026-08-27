@@ -104,7 +104,6 @@ The **MCP server** runs *in-extension* (`server/inExtensionMcpServer.ts`) on a p
 | `update_project_config` | Writes `.demo-builder.json` or a `.env` file |
 | `sync_storefront` | Git add / commit / push in the storefront directory |
 | `list_blocks` | Lists block directory names (supports `offset`/`limit`) |
-| `get_block_source` | Lists a block's files (names + sizes) by default; pass `fileName` to read one file's source |
 | `promote_block_to_library` | Registers a custom block in DA.live's authoring picker (updates `component-definition.json`, writes the doc page, appends the sheet row, commits + pushes, publishes). `unsafeHTML` is sanitized via `sanitize-html` at the MCP boundary — see `sanitizeBlockHtml()` in `src/mcp-server.ts` for the allowlist. Optional `description` (≤1,000 chars) is persisted to `component-definition.json::components[].description` and rendered as a picker-tile tooltip by the EDS authoring runtime. |
 
 Responses are shaped to keep token usage low: tool output is emitted as compact JSON (no pretty-print indentation), `get_project` collapses large arrays/metadata unless `full=true`, and `get_block_source` is progressive (manifest first, one file per fetch, with a per-file byte cap) rather than dumping every file at once.
@@ -119,9 +118,8 @@ The MCP server is convenient but every tool call spends the agent's context-wind
 
 This is the portable win: it helps regardless of which CLI version a user runs. The dominant cost is tool **response payloads**, not the tool definitions, so the server keeps responses lean:
 
-- **Compact JSON.** `get_project` and `get_block_source` emit `JSON.stringify(x)` (no indentation). Pretty-print whitespace is pure token waste for machine-consumed output.
+- **Compact JSON.** `get_project` emits `JSON.stringify(x)` (no indentation). Pretty-print whitespace is pure token waste for machine-consumed output.
 - **Summaries over full dumps.** `get_project` returns a curated summary by default — `aiPrompts` collapses to a count, `installedBlockLibraries` keeps name/source but replaces `blockIds` with a count, and `componentInstances` keeps `path` while dropping metadata blobs. Pass `full=true` for the untouched manifest.
-- **Progressive block source.** `get_block_source` without `fileName` returns only a `{ files: [{ name, bytes }] }` manifest; with `fileName` it returns one file. This bounds a response to a single file (capped at `MAX_FILE_BYTES`, 30 KB) instead of dumping up to `MAX_BLOCK_FILES × MAX_FILE_BYTES` at once. The agent uses the manifest's `bytes` to skip files that would truncate.
 - **Pagination.** `list_projects` and `list_blocks` accept `offset`/`limit`.
 
 When adding or changing a tool, keep this in mind: prefer a list-then-fetch shape over bulk dumps, return compact JSON, and cap any file/blob a tool can return.

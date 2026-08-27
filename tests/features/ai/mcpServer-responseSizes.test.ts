@@ -100,28 +100,6 @@ describe('file-based tool responses stay within their ceilings', () => {
         expectWithinCeiling('list_blocks', await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
     });
 
-    it('get_block_source — a block directory of 400 files', async () => {
-        (fsProm.readFile as jest.Mock).mockResolvedValue(
-            JSON.stringify({
-                name: PROJECT_NAME,
-                componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
-            }),
-        );
-        (fsProm.readdir as jest.Mock).mockResolvedValue(
-            Array.from({ length: 400 }, (_, i) => ({
-                name: `file-${i}.js`,
-                isFile: () => true,
-            })),
-        );
-        (fsProm.stat as jest.Mock).mockResolvedValue({ size: 1234 });
-
-        const out = await toolHandlers.getBlockSource(PROJECTS_DIR, PROJECT_NAME, 'cards');
-
-        expectWithinCeiling('get_block_source', out);
-        // Bounded by MAX_BLOCK_FILES (50), not by the fixture happening to be small.
-        expect(JSON.parse(out).files).toHaveLength(50);
-    });
-
     it('get_block_authoring_shape — index of a 300-component registry', async () => {
         const components = Array.from({ length: 300 }, (_, i) => ({
             id: `component-${i}`,
@@ -178,7 +156,6 @@ describe('the ceiling table itself', () => {
             'update_project_config',
             'sync_storefront',
             'list_blocks',
-            'get_block_source',
             'get_block_authoring_shape',
             'promote_block_to_library',
             'remove_block_from_library',

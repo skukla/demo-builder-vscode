@@ -48,7 +48,7 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 │      tool surface; file-based subset shown below:          │
 │      list_projects · get_project · get_component_config ·  │
 │      update_project_config · sync_storefront · list_blocks │
-│      · get_block_source · promote_block_to_library          │
+│      · promote_block_to_library                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 

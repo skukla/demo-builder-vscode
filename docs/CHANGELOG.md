@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`get_block_source` — the first tool deleted on measured evidence.** It read
+  a local block's files with an index/detail split and size caps; a local agent
+  does the same job with `ls` and `Read`, with fewer limits. Zero calls in the
+  recorded corpus, zero non-MCP callers, and it lost its one battery audition to
+  `ls` with a good answer. The two tools whose error messages routed agents to
+  it now point at the storefront checkout. (`get_block_authoring_shape` is
+  unrelated and stays — registry knowledge, not file reading.)
+
+### Fixed
+
+- **`get_component_config` masks secrets, which is now its whole point.** It
+  returned `.env` files and manifests VERBATIM — the same transcript leak
+  `stripManifestSecrets` exists to prevent, one tool over. Secret values are now
+  masked (keys stay visible), manifests go through the same strip `get_project`
+  uses, and a manifest that fails to parse is refused rather than returned raw.
+  The description says why an agent should prefer it over reading `.env`
+  natively: credentials never enter the transcript.
+
 ### Fixed
 
 - **Storefronts no longer carry seven skills for a job they are not doing

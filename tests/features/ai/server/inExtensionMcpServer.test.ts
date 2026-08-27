@@ -111,7 +111,6 @@ describe('InExtensionMcpServer', () => {
         expect(names.sort()).toEqual(
             [
                 'get_block_authoring_shape',
-                'get_block_source',
                 'get_component_config',
                 'get_project',
                 'list_blocks',

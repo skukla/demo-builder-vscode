@@ -1,8 +1,8 @@
 /**
  * Block-tool MCP handlers — the storefront's block surface.
  *
- * `list_blocks`, `get_block_source` (index/detail split),
- * `get_block_authoring_shape` (registry index/detail), and the DA.live
+ * `list_blocks`, `get_block_authoring_shape` (registry index/detail), and the
+ * DA.live
  * library door: `promote_block_to_library` / `remove_block_from_library`.
  * The registry/sanitizer machinery lives in `blockAuthoring`; the
  * commit-push-publish tail in `blockLibraryPublish`.
@@ -20,8 +20,6 @@ import {
     authoringConvention,
     DEFAULT_LIST_LIMIT,
     MAX_AUTHORING_INDEX_ROWS,
-    MAX_BLOCK_FILES,
-    MAX_FILE_BYTES,
     readComponentDefinition,
     readInstalledBlockLibraries,
     readPromoteBlockContext,
@@ -82,64 +80,6 @@ export const blockToolHandlers = {
     },
 
     /**
-     * Progressive block-source reader.
-     *
-     * Without `fileName`, returns a lightweight manifest — `{ files: [{ name, bytes }] }`
-     * — so an agent can pick exactly which file it needs instead of ingesting every
-     * file in the block. With `fileName`, returns that single file's source
-     * (`{ name, content }`), truncated if it exceeds {@link MAX_FILE_BYTES}.
-     *
-     * Returning one file per call keeps the aggregate response bounded by a single
-     * file's cap, rather than the old behavior of dumping up to MAX_BLOCK_FILES ×
-     * MAX_FILE_BYTES in one response.
-     */
-    async getBlockSource(
-        projectsDir: string,
-        projectName: string,
-        blockName: string,
-        fileName?: string,
-    ): Promise<string> {
-        const projectPath = resolveProjectPath(projectsDir, projectName);
-        const storefrontPath = await resolveStorefrontPath(projectPath);
-        if (!path.isAbsolute(storefrontPath)) {
-            throw new Error(`storefrontPath must be an absolute path: ${storefrontPath}`);
-        }
-        await assertInsideProject(projectPath, storefrontPath);
-        const resolved = path.resolve(path.join(storefrontPath, 'blocks'), blockName);
-        await assertInsideProject(path.join(storefrontPath, 'blocks'), resolved);
-        const entries = await fsPromises.readdir(resolved, { withFileTypes: true });
-        const files = entries.filter((e) => e.isFile());
-
-        // No fileName → return a names + sizes manifest only (cheap; lets the agent
-        // choose what to fetch). The size lets it skip files that would truncate.
-        if (!fileName) {
-            const manifest = await Promise.all(
-                files.slice(0, MAX_BLOCK_FILES).map(async (f) => {
-                    const { size } = await fsPromises.stat(path.join(resolved, f.name));
-                    return { name: f.name, bytes: size };
-                }),
-            );
-            return JSON.stringify({ files: manifest });
-        }
-
-        // fileName provided → read that single file. The fileName must name a real
-        // entry in this block directory; matching against the listing (plus the
-        // realpath check below) rules out traversal and symlink escapes.
-        const match = files.find((f) => f.name === fileName);
-        if (!match) {
-            throw new Error(`File "${fileName}" not found in block "${blockName}"`);
-        }
-        const filePath = path.resolve(resolved, fileName);
-        await assertInsideProject(resolved, filePath);
-        const { size } = await fsPromises.stat(filePath);
-        const content =
-            size > MAX_FILE_BYTES
-                ? `[truncated: ${size} bytes — file exceeds ${MAX_FILE_BYTES / 1000} KB; read it directly from disk if full contents are needed]`
-                : await fsPromises.readFile(filePath, 'utf-8');
-        return JSON.stringify({ name: fileName, content });
-    },
-
-    /**
      * Read a block's AUTHORING shape — how a DA.live author fills the block in,
      * as opposed to how its JS consumes what they filled in.
      *
@@ -165,7 +105,7 @@ export const blockToolHandlers = {
      * storefront may ship neither file.
      *
      * Omit `blockName` for the registry index (ids, titles, which convention);
-     * pass it for the full shape. Mirrors `getBlockSource`'s index/detail split.
+     * pass it for the full shape (index/detail split).
      */
     async getBlockAuthoringShape(
         projectsDir: string,
@@ -225,14 +165,14 @@ export const blockToolHandlers = {
             throw new Error(
                 `Block "${blockName}" is not registered in the authoring library. ` +
                     `Call get_block_authoring_shape with no blockName for the registered ids, ` +
-                    `or get_block_source to check whether the block exists on disk unregistered.`,
+                    `or check the block's directory in the storefront checkout unregistered.`,
             );
         }
         const authoring = entry.plugins?.da;
         if (!authoring || Object.keys(authoring).length === 0) {
             throw new Error(
                 `Block "${blockName}" is registered but declares no authoring shape ` +
-                    `(no plugins.da). Read its source with get_block_source instead.`,
+                    `(no plugins.da). Read its files from the storefront checkout instead.`,
             );
         }
 

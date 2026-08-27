@@ -285,14 +285,6 @@
     "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
   },
   {
-    "id": "block-source",
-    "prompt": "What files make up the header block in my storefront, and how big are they?",
-    "expect": [
-      "get_block_source"
-    ],
-    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
-  },
-  {
     "id": "name-mismatches",
     "prompt": "Do any of my projects have a DA.live site name that does not match their GitHub repo name?",
     "expect": [

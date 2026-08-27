@@ -27,8 +27,7 @@ const CONTENT_COPY_BATCH_SIZE = 5;
 /**
  * Default cap for {@link DaLiveSourceOperations.readSource}. A DA source path
  * can hold an arbitrarily large document, and the MCP `read_page` tool ships the
- * body to a model that pays for it as context — the same reason `get_block_source`
- * caps its reads.
+ * body to a model that pays for it as context.
  */
 const MAX_SOURCE_READ_BYTES = 30_000;
 

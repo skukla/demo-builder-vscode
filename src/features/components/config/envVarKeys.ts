@@ -177,6 +177,31 @@ export function stripSecretKeys<T>(values: Record<string, T> | undefined): Recor
 }
 
 /**
+ * Mask secret values in a raw `.env` FILE's text, keeping the keys visible.
+ *
+ * The read counterpart of {@link stripSecretKeys} for content that is not a
+ * parsed map. `get_component_config` returns `.env` files to agents, and until
+ * 2026-08-27 it returned them VERBATIM — the same transcript-leak
+ * `stripManifestSecrets` exists to prevent, one tool over. Keys stay visible
+ * (an agent needs to know a credential IS configured); values are replaced.
+ *
+ * @param content - raw .env file text
+ * @returns the text with every {@link SECRET_ENV_KEYS} value masked
+ */
+export function maskEnvFileSecrets(content: string): string {
+    return content
+        .split('\n')
+        .map((line) => {
+            const m = /^(\s*)([A-Z0-9_]+)(\s*=)/.exec(line);
+            if (m && (SECRET_ENV_KEYS as readonly string[]).includes(m[2])) {
+                return `${m[1]}${m[2]}${m[3]}[secret hidden]`;
+            }
+            return line;
+        })
+        .join('\n');
+}
+
+/**
  * Every place a project manifest keeps env values, stripped in one call.
  *
  * Callers that hand a whole manifest to something outward-facing — the

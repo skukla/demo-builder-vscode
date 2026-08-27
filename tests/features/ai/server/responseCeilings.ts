@@ -85,10 +85,6 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 8_000,
         why: 'bounded by DEFAULT_LIST_LIMIT (100 rows), not by storefront size; 2,781 live on a 53-block storefront',
     },
-    get_block_source: {
-        bytes: 32_000,
-        why: 'file manifest, or ONE file capped at MAX_FILE_BYTES (30KB) — the source is the answer',
-    },
     get_block_authoring_shape: {
         bytes: 10_000,
         why: 'index bounded by MAX_AUTHORING_INDEX_ROWS (100); a 78-block catalog is 5,577 and one block is 92 — a 300-component registry was 21,992 before the cap',

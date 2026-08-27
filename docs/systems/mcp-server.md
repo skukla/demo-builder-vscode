@@ -292,7 +292,6 @@ blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 | `update_project_config` | Write `.demo-builder.json` / `.env` (env content validated). |
 | `sync_storefront` | Git add/commit/push the storefront. Names the pushed commit in its reply, and says publishing reaches the CDN on a delay — an agent that verified against the rendered site instead of git once read that lag as discarded commits. On a `non-fast-forward` rejection it rebases onto the remote and retries **once** (`retryAfterRebase`); a conflicting rebase is aborted so the checkout is exactly as found. A `ruleset` rejection is never retried — replaying it cannot change why a rule refused it. |
 | `list_blocks` | List EDS blocks in the storefront. |
-| `get_block_source` | Read a block's files (manifest or one file, size-capped). |
 | `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
 | `promote_block_to_library` | Add a local block to the DA.live authoring library. Destructive (commits, pushes, publishes); confirm-gated. |
 | `remove_block_from_library` | The inverse. Destructive; confirm-gated. |
@@ -745,7 +744,7 @@ The agent surface is powerful, so it's deliberately constrained:
   crafted name can't escape the projects directory.
 - **`.env` content is allowlist-validated** (`validateEnvContent`) before being
   written — defense-in-depth against injecting executable content.
-- **Bounded responses.** `get_block_source` caps at 50 files / 30 KB each, since
+- **Bounded responses.** `read_page` caps its reads at 30 KB, since
   the output is paid for as context tokens. `get_block_authoring_shape` splits
   index from detail for the same reason: the index carries ids, titles and which
   authoring convention each block uses, but never the markup, selectors or field

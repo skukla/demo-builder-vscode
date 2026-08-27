@@ -178,7 +178,11 @@ describe('every tool declares', () => {
             .filter((t) => typeof t.annotations?.readOnlyHint !== 'boolean')
             .map((t) => t.name);
 
-        expect(tools.length).toBeGreaterThanOrEqual(10);
+        // 10 → 9 on 2026-08-27: get_block_source deleted (native ls/Read does
+        // its job with fewer limits; zero corpus calls, lost its battery
+        // audition). The floor guards against the extraction silently matching
+        // nothing, not against a deliberate deletion.
+        expect(tools.length).toBeGreaterThanOrEqual(9);
         expect(undeclared).toEqual([]);
     });
 

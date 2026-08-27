@@ -24,7 +24,7 @@ import {
 } from './projectSecurity';
 import { validateManifestShape } from '@/core/state/manifestValidation';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import { stripManifestSecrets } from '@/features/components/config/envVarKeys';
+import { maskEnvFileSecrets, stripManifestSecrets } from '@/features/components/config/envVarKeys';
 
 /**
  * Produce a token-lean view of a project manifest for `getProject`.
@@ -223,7 +223,24 @@ export const projectToolHandlers = {
                 `Reading ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`,
             );
         }
-        return fsPromises.readFile(resolved, 'utf-8');
+        const raw = await fsPromises.readFile(resolved, 'utf-8');
+        // SECRETS ARE MASKED, and this is the tool's whole edge. A local agent
+        // can read these files natively — the 2026-08-27 coverage run did, with
+        // a good answer — so the one reason to route through this tool is that
+        // it keeps credentials out of the transcript, the same convention
+        // get_project follows (stripManifestSecrets, after a live response
+        // carried a working ACCS_OAUTH_CLIENT_SECRET). Until today this
+        // returned .env files VERBATIM: the safe door, unlocked.
+        if (path.basename(realResolved) === '.demo-builder.json') {
+            try {
+                return JSON.stringify(stripManifestSecrets(JSON.parse(raw)), null, 2);
+            } catch {
+                throw new Error(
+                    `${configRelPath} did not parse as JSON; refusing to return unsanitized content.`,
+                );
+            }
+        }
+        return maskEnvFileSecrets(raw);
     },
 
     async updateProjectConfig(

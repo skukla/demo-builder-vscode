@@ -28,13 +28,13 @@
 import { asRawText, asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
-import type { Project } from '@/types/base';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import {
     buildStatusPayload,
     deriveMeshStatus,
 } from '@/features/dashboard/services/dashboardStatusService';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import type { Project } from '@/types/base';
 
 /**
  * The status facts for a project: name, path, running state, port, org, whether

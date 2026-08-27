@@ -468,14 +468,53 @@ describe('toolHandlers.getComponentConfig', () => {
         jest.clearAllMocks();
     });
 
-    it('reads .demo-builder.json and returns content', async () => {
-        (fsProm.readFile as jest.Mock).mockResolvedValue('{"name":"test"}');
+    it('reads .demo-builder.json and returns content — with manifest secrets STRIPPED', async () => {
+        // The tool's whole edge over native Read (see the handler comment): a
+        // verbatim manifest is the ACCS_OAUTH_CLIENT_SECRET leak, one tool over.
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                name: 'test',
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_OAUTH_CLIENT_SECRET: 'live-credential',
+                        ACCS_BASE_URL: 'https://na1.example',
+                    },
+                },
+            })
+        );
 
         const result = await toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json');
 
         const expectedPath = path.resolve(PROJECT_PATH, '.demo-builder.json');
         expect(fsProm.readFile as jest.Mock).toHaveBeenCalledWith(expectedPath, 'utf-8');
-        expect(result).toBe('{"name":"test"}');
+        const parsed = JSON.parse(result);
+        expect(parsed.name).toBe('test');
+        expect(parsed.componentConfigs['adobe-commerce-accs'].ACCS_BASE_URL).toBe('https://na1.example');
+        expect(result).not.toContain('live-credential');
+    });
+
+    it('masks secret VALUES in a .env file while keeping the keys visible', async () => {
+        // Keys stay: an agent needs to know a credential IS configured. Values
+        // go: the transcript must never carry them.
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            '# Commerce\nACCS_OAUTH_CLIENT_SECRET=shh-real-secret\nMESH_ENDPOINT=https://mesh/graphql\n'
+        );
+
+        const result = await toolHandlers.getComponentConfig(
+            PROJECTS_DIR, PROJECT_NAME, 'components/backend/.env'
+        );
+
+        expect(result).toContain('ACCS_OAUTH_CLIENT_SECRET=[secret hidden]');
+        expect(result).toContain('MESH_ENDPOINT=https://mesh/graphql');
+        expect(result).not.toContain('shh-real-secret');
+    });
+
+    it('refuses to return a manifest that does not parse, rather than leak raw content', async () => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue('{broken json ACCS_OAUTH_CLIENT_SECRET=x');
+
+        await expect(
+            toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json')
+        ).rejects.toThrow(/refusing to return unsanitized/);
     });
 
     it('reads a .env file inside projectPath', async () => {
@@ -534,7 +573,9 @@ describe('toolHandlers.getComponentConfig', () => {
         (fsProm.readFile as jest.Mock).mockResolvedValue('{"name":"test"}');
 
         const result = await toolHandlers.getComponentConfig(symlinkedProjectsDir, PROJECT_NAME, '.demo-builder.json');
-        expect(result).toBe('{"name":"test"}');
+        // Parse-and-match, not a byte pin: the handler sanitizes and
+        // pretty-prints now, and this test's subject is the SYMLINK.
+        expect(JSON.parse(result)).toMatchObject({ name: 'test' });
     });
 });
 

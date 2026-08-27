@@ -153,7 +153,7 @@ export function registerProjectTools(
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Component Config',
             description:
-                'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
+                'Read .demo-builder.json or a .env file within the project directory. Secret values are masked — prefer this over reading .env directly so credentials never enter the transcript.',
             inputSchema: {
                 projectName: projectNameSchema,
                 configRelPath: z.string().describe('Relative path to config file within project'),
@@ -236,37 +236,6 @@ export function registerProjectTools(
                     args.projectName,
                     args.offset,
                     args.limit,
-                ),
-            ),
-    );
-
-    server.registerTool(
-        'get_block_source',
-        {
-            annotations: { readOnlyHint: true, destructiveHint: false },
-            title: 'Get Block Source',
-            description:
-                "List a block's files (names + sizes) by default; pass fileName to read one file's source",
-            inputSchema: {
-                projectName: projectNameSchema,
-                blockName: z
-                    .string()
-                    .regex(/^[a-zA-Z0-9_-]+$/)
-                    .describe('Name of the block directory inside blocks/'),
-                fileName: z
-                    .string()
-                    .regex(/^[a-zA-Z0-9._-]+$/)
-                    .optional()
-                    .describe("A file within the block to read; omit to list the block's files"),
-            },
-        },
-        async (args: any) =>
-            asRawText(
-                await toolHandlers.getBlockSource(
-                    projectsDir,
-                    args.projectName,
-                    args.blockName as string,
-                    args.fileName as string | undefined,
                 ),
             ),
     );
