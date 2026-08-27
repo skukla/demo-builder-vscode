@@ -53,6 +53,19 @@ Triage at pickup, and SAY the lane in the report:
 Selection order: the owner's named item first; otherwise highest-value
 startable from `backlog.mjs next`, preferring lane 1/2 over 3.
 
+## Exhaust before bailing, and never stop at one item
+
+A supervised edge is a wall for ONE PATH, not for the item (owner, 2026-08-27:
+"exhaust every unsupervised thing you can do per backlog item"). On hitting
+one, enumerate what ELSE the item offers unattended — another slice, its
+tests, its docs, research for a later phase, the fixture a supervised step
+will need — and do that before leaving. An item is exhausted only when every
+remaining step genuinely needs the owner.
+
+When exhausted: write that item's report entry, then MOVE TO THE NEXT item
+from `backlog.mjs next` and repeat. The loop ends on the time budget or on the
+backlog running out of unattended work — never on the first wall.
+
 ## The cycle (each iteration)
 
 collect results → analyze → execute the next slice → gate (exit codes) →
@@ -77,6 +90,11 @@ Plain English, for someone who was not there. Sections, always:
 - **Retracted / corrected** — anything the loop got wrong and fixed
 - **Environment facts** — expired sessions, stale pointers, open prompts
 - **Your decisions** — merge?, the parked choices, nothing else
+
+Multi-item runs report PER ITEM, each with its own shipped/handed-off state,
+and close with a **walkthrough queue**: the items needing the owner, ordered,
+each reduced to the one decision or action required — so the return review is
+item by item, minutes each, never a re-derivation.
 
 Also written to `.rptc/handoff/<date>-loop-report.md` so it survives the
 session. Log the loop's close to the items it touched.
