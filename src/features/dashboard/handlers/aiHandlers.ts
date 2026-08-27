@@ -37,19 +37,17 @@ import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';
 
-// Prompt CRUD + merge helpers moved to aiPromptHandlers.ts; re-export so the
-// existing import sites (dashboardHandlers, showPromptsPicker,
-// defaultPromptsSeeder, tests) keep resolving through this module.
-export {
-    GLOBAL_AI_PROMPTS_KEY,
-    deleteAiPromptById,
-    handleCopyAiPrompt,
-    handleDeleteAiPrompt,
-    handleListAiPrompts,
-    handleSaveAiPrompt,
-    mergePromptsForRead,
-    readMergedAiPrompts,
-} from './aiPromptHandlers';
+// Prompt CRUD moved to aiPromptHandlers.ts; these two are re-exported because
+// call sites outside this module still reach them through here —
+// `defaultPromptsSeeder` takes the key, `showPromptsPicker` takes the reader.
+//
+// The block listed eight names until 2026-08-26 and six of them were reached by
+// nobody: the four handlers are imported ABOVE for the map (a re-export does not
+// put a name in local scope, so that import is what the map actually uses), and
+// `deleteAiPromptById` / `mergePromptsForRead` had no consumer at all. The
+// comment claimed the block existed to keep import sites resolving, which had
+// stopped being true.
+export { GLOBAL_AI_PROMPTS_KEY, readMergedAiPrompts } from './aiPromptHandlers';
 
 // ==========================================================
 // Handlers
