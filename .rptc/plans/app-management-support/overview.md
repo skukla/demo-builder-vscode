@@ -52,7 +52,24 @@ nothing encoded):
    limitation). RECOMMEND: surface as a guided handoff in the add flow, same
    pattern as set_setting's hands-back.
 
-## Live status (2026-08-27 evening): DEPLOYED end-to-end through the extension
+## Live status (2026-08-27 night): install wiring + S2S credentials SHIPPED
+
+Step 4 is built and live-proven in two rounds. Round one (install wiring):
+association POST accepted, reconcile queued (202), poll tracked it, and the
+failure landed exactly where the plan's credential caveat predicted — the
+app's `eventing` step could not authenticate (no `AIO_COMMERCE_AUTH_IMS_*`
+inputs). Round two (this section's update): the runner now resolves the
+workspace S2S credential's FULL identity (ensure → getIntegration →
+getIntegrationSecrets — shapes verified live; the plan's "does the download
+carry client_secrets" caveat is resolved: it does not need to, the secrets
+endpoint is the source) and injects the six vars per-invocation beside
+`AIO_RUNTIME_*`. Two empirical corrections along the way: Console credential
+NAMES are ORG-unique (the fixed `demo-builder-s2s` name 409'd on any second
+workspace — now workspace-suffixed, lookup stays type-based), and
+app-management REDEPLOYS re-run the union subscribe so a fresh credential
+gains its baseline entitlement (`AdobeIOManagementAPISDK` → `adobeio_api`).
+
+## Prior live status (2026-08-27 evening): DEPLOYED end-to-end through the extension
 
 `deploy_integration` on bodea: Node 24 ensured at the door, workspace Console
 config imported (`importWorkspaceConfig` — the piece extension-layout deploys
