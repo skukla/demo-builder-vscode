@@ -57,3 +57,7 @@ than the sum of "official template" plus "nicer starting code".
 
 Filed 2026-08-26 — from the naming investigation that found the skills and the
 scaffold describe different projects. See [[AI-1o]] and [[AI-1p]].
+
+## Shipped so far
+
+- 2026-08-27  OWNER DECISION (2026-08-27, live): build App Management support — option B from the research. The kit on main is the v4 App Management generation: an extension app our standalone gate refuses, with service-side provisioning declared in app.commerce.config.ts and executed by Adobe's install step, plus an S2S env contract we do not inject. Research: .rptc/research/starter-kit-integration/research.md. The entity question is settled by the decision — a NEW kind (extension app, service-managed lifecycle), not a variant catalog entry. Next: architecture phase. Also fixed in reach: ioEventsClient's false 'the extension creates' comment.
