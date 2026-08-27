@@ -70,8 +70,8 @@ export function registerLifecycleTools(
     server.registerTool(
         'open_url',
         {
-            // NOT read-only: it opens a browser tab. Nothing persists, but the user sees
-            // it happen, and a dry run promises that nothing happens.
+            // NOT read-only: it opens a browser tab. Nothing persists, but the
+            // user sees it happen, and a read is meant to be invisible.
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Open Project URL',
             description:

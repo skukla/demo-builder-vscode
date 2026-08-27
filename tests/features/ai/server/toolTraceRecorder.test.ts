@@ -59,13 +59,11 @@ describe('the recorder, driven through the real server', () => {
     let socketPath: string;
     let server: InExtensionMcpServer | undefined;
     let trace: ToolTraceRecorder;
-    let dryRun: boolean;
 
     async function start(): Promise<void> {
         server = new InExtensionMcpServer(socketPath, '/projects', makeLogger(), {
             registerExtraTools: registerProbes,
             trace,
-            dryRun: () => dryRun,
             projectShape: () => 'eds-accs',
         });
         await server.start();
@@ -73,7 +71,6 @@ describe('the recorder, driven through the real server', () => {
 
     beforeEach(() => {
         trace = new ToolTraceRecorder();
-        dryRun = false;
         dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-trace-'));
         socketPath = path.join(dir, 'srv.sock');
     });
@@ -119,17 +116,6 @@ describe('the recorder, driven through the real server', () => {
         await callToolOverSocket(socketPath, 'deploy_probe_that_fails', {});
 
         expect(trace.all()[0].outcome).toBe('error');
-    });
-
-    it('records a call the dry run blocked', async () => {
-        // A blocked call is part of the path taken. Leaving it out would make a
-        // dry run look like a shorter route than the real thing.
-        dryRun = true;
-        await start();
-
-        await callToolOverSocket(socketPath, 'deploy_probe_thing', {});
-
-        expect(trace.all()[0].outcome).toBe('blocked-by-dry-run');
     });
 
     it('stamps the project shape on every entry', async () => {

@@ -9,7 +9,7 @@
  *
  * ## Reads are recorded exactly like writes
  *
- * The dry run lets reads execute; the recorder must still see them. Every
+ * Every
  * measured win so far has been a read — the orientation call removed on
  * 2026-08-24 was a read, and it cost 25–57% of three prompts. A recorder that
  * foregrounds blocked writes and treats reads as background would be blind to
@@ -43,7 +43,7 @@ import { createHash } from 'crypto';
 export const TRACE_CAPACITY = 500;
 
 /** How a call ended. */
-export type TraceOutcome = 'ok' | 'error' | 'blocked-by-dry-run';
+export type TraceOutcome = 'ok' | 'error';
 
 /** One tool call, as the server saw it. */
 export interface TraceEntry {

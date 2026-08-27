@@ -1,9 +1,9 @@
 /**
- * Every tool declares whether it only reads — and the dry run believes the
+ * Every tool declares whether it only reads — and callers believe the
  * declaration, not the name.
  *
- * WHY THIS EXISTS. Three things gate on read-vs-write: the dry run (a mutation
- * must be impossible), the chat's opening line, and the phase sinks. All three
+ * WHY THIS EXISTS. Read-vs-write gates the chat's opening line and the phase
+ * sinks (and, until 2026-08-26, the agent dry run). All of them
  * used to gate on a REGEX over the tool's name, which cannot express "called
  * `check_` and writes anyway". `check_github_app` is exactly that — its handler
  * fires a Helix code sync on a 404 — and the guard holding it closed had to be
@@ -82,7 +82,16 @@ function registerProbes(srv: {
     srv.registerTool('get_probe_undeclared', { description: 'no annotations', inputSchema: {} }, ok);
 }
 
-describe('the gate reads the declaration, not the name', () => {
+/*
+ * Two tests here drove the DRY RUN — that a read-NAMED tool declaring a write is
+ * blocked, and that a tool declaring nothing fails CLOSED. Both left with the
+ * dry run on 2026-08-26 (AI-3b); nothing consumes the fail-closed property any
+ * more. If the dry run comes back, they come back with it — the declarations
+ * they guarded are all still here.
+ *
+ * What remains gates the CHAT's opening line, which follows the same rule.
+ */
+describe('the chat reads the declaration, not the name', () => {
     let dir: string;
     let socketPath: string;
     let server: InExtensionMcpServer | undefined;
@@ -93,7 +102,6 @@ describe('the gate reads the declaration, not the name', () => {
         socketPath = path.join(dir, 'srv.sock');
         server = new InExtensionMcpServer(socketPath, '/projects', makeLogger(), {
             registerExtraTools: registerProbes,
-            dryRun: () => true,
         });
         await server.start();
     });
@@ -104,14 +112,6 @@ describe('the gate reads the declaration, not the name', () => {
         fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    it('blocks a read-NAMED tool that declares it writes', async () => {
-        // The `check_github_app` shape. Under the old regex this ran for real.
-        const text = await callToolOverSocket(socketPath, 'get_probe_that_writes', {});
-
-        expect(ran).not.toHaveBeenCalled();
-        expect(text).toMatch(/nothing was changed/i);
-    });
-
     it('runs a write-NAMED tool that declares it only reads', async () => {
         const text = await callToolOverSocket(socketPath, 'deploy_probe_that_reads', {
             scope: 'x',
@@ -119,14 +119,6 @@ describe('the gate reads the declaration, not the name', () => {
 
         expect(ran).toHaveBeenCalledTimes(1);
         expect(text).toBe('ran for real');
-    });
-
-    it('fails CLOSED when a tool declares nothing', async () => {
-        // Safe direction: over-blocking is recoverable, a mutation during a mode
-        // that promises none is not.
-        const text = await callToolOverSocket(socketPath, 'get_probe_undeclared', {});
-
-        expect(text).toMatch(/nothing was changed/i);
     });
 
     it('says nothing in the chat for a write-NAMED tool that only reads', async () => {

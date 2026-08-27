@@ -64,10 +64,6 @@ export const SETTING_KEYS = [
     // the native consent dialog. Writing goes through set_setting's hands-back
     // handoff like every key here — an agent cannot flip its own gate off.
     'demoBuilder.ai.requireAgentConsent',
-    // Read-visible for the same reason: an agent that has just been told a
-    // deploy was "simulated" needs to be able to confirm WHY. Writing is the
-    // same hands-back handoff, so an agent cannot lift its own dry run.
-    'demoBuilder.ai.dryRun',
     'demoBuilder.daLive.aemAuthorUrl',
     'demoBuilder.daLive.IMSOrgId',
     'demoBuilder.daLive.authoringExperience',

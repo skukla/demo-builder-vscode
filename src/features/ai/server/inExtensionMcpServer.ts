@@ -180,38 +180,6 @@ function strictifyWriteSchema(name: string, schema: unknown): unknown {
 }
 
 /**
- * What a mutating tool answers while the dry run is on.
- *
- * DATA, not an error, and the distinction is the whole point: an error teaches an
- * agent to retry, while data teaches it what would have happened. Same rule the
- * datapack dry run already states — "a refusal comes back as valid:false with a
- * reason, not as an error."
- *
- * Argument KEYS only, never values. Args carry secrets (`update_project_config`
- * holds `.env` contents), which is the same reason `withToolLogging` logs keys
- * and not values one line above.
- */
-function dryRunResult(name: string, args: unknown): unknown {
-    const argumentKeys =
-        args && typeof args === 'object' ? Object.keys(args as Record<string, unknown>) : [];
-    const phrase = narrationFor(name) ?? name;
-    const withArgs = argumentKeys.length
-        ? ` It would have run with: ${argumentKeys.join(', ')}.`
-        : '';
-    // PROSE, not JSON, and the reason is what a producer SEES. Claude Code
-    // renders an MCP result verbatim in the chat, so a JSON body puts a raw
-    // object dump in their transcript — which is what the owner met on
-    // 2026-08-25 and reasonably asked about. A sentence renders as a sentence.
-    //
-    // The surface is already not all-JSON: refusals answer prose by convention
-    // (`mcpToolResult.ts`), and this is a refusal.
-    return asRawText(
-        `Nothing was changed — dry run is on. ${phrase} was simulated.${withArgs} ` +
-            'Continue as if it had succeeded, and tell the user what you would have done.',
-    );
-}
-
-/**
  * Tell the CHAT what is running, while it runs.
  *
  * The extension already surfaces agent activity — `agentOperationNotifier` puts a
@@ -294,7 +262,6 @@ function withToolLogging(
         args: unknown,
         description?: string,
     ) => Promise<ConsentVerdict>,
-    dryRun?: () => boolean,
     trace?: ToolTraceRecorder,
     projectShape?: () => string | undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -342,38 +309,7 @@ function withToolLogging(
                         }
                     };
                     logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                    // DRY RUN FIRST, before consent and before the notifier.
-                    //
-                    // Ordering is deliberate. A call carrying `confirm: true`
-                    // under dry run must be stopped HERE and must not raise a
-                    // dialog: asking someone to approve something that will not
-                    // happen is worse than not asking. The notifier is skipped
-                    // for the same reason — no progress may claim work that never
-                    // ran.
-                    //
-                    // Reads pass through untouched. The path an agent takes is
-                    // only realistic if its queries answer truthfully; a dry run
-                    // that also blinds the agent measures nothing.
-                    //
-                    // `isReadOnlyToolName` is REUSED rather than a second
-                    // classification, because two would drift.
-                    if (dryRun?.() && !readOnly) {
-                        logger.info(`[MCP] ${name} blocked by dry run (nothing was changed)`);
-                        // Narrate it. An earlier version stayed SILENT here on the
-                        // reasoning that announcing "Republishing…" for something
-                        // that will not happen is a lie — but silence is worse: the
-                        // producer sees nothing at all and cannot tell the agent
-                        // even tried. The honest form is the authored phrase plus
-                        // the fact that it was simulated.
-                        await announceToolStart(name, extra, true);
-                        const blocked = dryRunResult(name, args);
-                        // A blocked call is part of the path an agent took and
-                        // belongs in the trace. Leaving it out would make a dry
-                        // run look like a shorter route than the real thing.
-                        recordCall(blocked, 'blocked-by-dry-run');
-                        return blocked;
-                    }
-                    // Consent SECOND, notifier third: a declined operation never
+                    // Consent BEFORE the notifier: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
                     if (callRequestsConsent(name, args)) {
@@ -524,7 +460,6 @@ export interface InExtensionMcpServerOptions {
      * toggling the mode takes effect on the next tool call instead of the next
      * window reload — the same shape as `demoBuilder.ai.requireAgentConsent`.
      */
-    dryRun?: () => boolean;
     /**
      * Records every tool call for Evaluation Mode.
      *
@@ -710,7 +645,6 @@ export class InExtensionMcpServer {
             this.logger,
             this.options.longRunningNotifier,
             this.options.consentGate,
-            this.options.dryRun,
             this.options.trace,
             this.options.projectShape,
         );

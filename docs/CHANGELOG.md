@@ -19,11 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project state (nothing wrote it), and the short-lived
   `demoBuilder.ai.enableEvaluationTools` setting, which existed only to hide the
   commands and has nothing left to hide.
-- **What stayed, because it never depended on any of it:** the agent **dry run**
-  — an agent may read your projects while every write is simulated, enforced
-  before any non-read tool runs — and the **consent dialog** for destructive
-  operations. Both are standing protections. The tool-trace recorder also stays
-  wired: nothing reads it today, and it is what `AI-2` needs.
+- **The agent dry run went too** (`demoBuilder.ai.dryRun`, `Toggle Agent Dry
+  Run`). It was kept in the first pass for not depending on the workbench, which
+  is not a reason to keep something — being used is, and it was not. It defaulted
+  OFF so it protected nobody unless switched on, and its status bar item showed
+  unconditionally, giving every user a permanent "Dry run off" indicator for a
+  mode nobody had turned on.
+- **What stayed:** the **consent dialog** for destructive agent operations
+  (`demoBuilder.ai.requireAgentConsent`), which defaults ON and is therefore
+  doing work for every user right now. The tool-trace recorder also stays wired:
+  nothing reads it today, and it is what `AI-2` needs.
 
 ### Fixed
 

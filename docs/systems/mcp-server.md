@@ -797,58 +797,27 @@ extension-side in `agentOperationNotifier.ts`:
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
 
-### The dry run (Evaluation Mode, 2026-08-25)
+### The dry run — REMOVED 2026-08-26
 
-`demoBuilder.ai.dryRun` (default OFF, read live per call, injected as `dryRun`
-from `dryRunMode.ts`) makes agent mutation **impossible** rather than
-discouraged. While it is on, every tool that is not read-shaped is stopped in
-`withToolLogging` before its handler and answers what it WOULD have done:
-`{dryRun: true, wouldRun: <tool>, argumentKeys: [...]}` — argument KEYS only,
-never values, the same rule the logger follows because args carry secrets.
+`demoBuilder.ai.dryRun` made agent mutation impossible rather than discouraged:
+while on, every tool that was not read-shaped stopped in `withToolLogging`
+before its handler and answered what it WOULD have done. It left with the
+prompt-evaluation surface (AI-3b) and is on `feature/prompt-workbench`.
 
-Four things about it are load-bearing:
+It was removed for being unused, not for being wrong. It defaulted OFF, so it
+protected nobody unless switched on, and its status bar item showed
+unconditionally — every user carried a permanent "Dry run off" indicator for a
+mode nobody had turned on.
 
-- **It is DATA, not an error.** An error teaches an agent to retry; data teaches
-  it what would happen, so the rest of the path it would have taken still gets
-  measured. Same rule the datapack dry run already states.
-- **It runs BEFORE consent.** A call carrying `confirm: true` is stopped by the
-  dry run and raises no dialog — asking someone to approve something that will
-  not happen is worse than not asking.
-- **Reads pass through untouched.** A dry run that also blinds the agent
-  measures a path nobody would take.
-- **It classifies by the tool's own DECLARATION**, not by its name. Every tool
-  carries MCP's `annotations.readOnlyHint` (descriptor rows spell it
-  `readOnly`, which `ToolDescriptor` makes required, so the compiler asks).
-  Missing means "assume it writes". `toolAnnotations.test.ts` covers both
-  registration paths — the compiler for the 46 descriptor rows, a source scan
-  for the 57 direct ones.
+Two of its properties are worth keeping in mind if it returns, because both were
+learned the hard way: it answered **data, not an error** (an error teaches an
+agent to retry; data teaches it what would have happened), and it classified by
+each tool's own **declaration** rather than its name — `check_github_app` is
+read-shaped and fires a Helix code sync.
 
-  It was a regex over names until 2026-08-25. A name cannot express "called
-  `check_` and writes anyway", which is why `check_github_app`'s guard had to be
-  found by a hand audit. The regex survives only as a cross-check: a declaration
-  that disagrees with the name must be listed as deliberate, and four already
-  are — `select_org`/`select_project`/`select_workspace` (in-memory session
-  targeting) and `set_setting` (hands back to the user). Under the old rule all
-  four were blocked during an evaluation for no reason, which made the trace lie
-  about the path an agent normally takes.
-
-  Annotations also travel to the client in `tools/list`, so Claude Code learns
-  which of our tools are safe instead of guessing the same way we were.
-
-**The audit behind that trust (2026-08-25).** All 43 read-shaped tools of the 103
-were read, handler by handler, following each into its service. One genuine
-write-in-a-read exists: `check_github_app`, whose handler triggers a Helix code
-sync (`POST /code/{owner}/{repo}/main/*`) on a 404 — so an agent enumerating
-checks would fire a sync at every repo it asked about. It is neutralised by
-`argDefaults: { skipTrigger: true }`, which `runHandler` applies LAST
-(`{...args, ...argDefaults}`) so a caller cannot send the flag that turns the
-read back into a write; a test now pins that line. Everything else reads. Three
-tools have side effects that are not project or cloud changes and are therefore
-allowed under the dry run, named here so nobody rediscovers them as bugs:
-`check_mesh` writes and deletes a temp workspace config under the extension's own
-global storage; `get_auth_status` (and anything calling `isAuthenticated`) writes
-an in-memory auth cache; `check_prerequisites` spawns detection processes but
-installs nothing.
+**Consent is a different thing and stays.** `demoBuilder.ai.requireAgentConsent`
+defaults ON and asks before each destructive operation. It never depended on the
+dry run.
 
 ### `evaluate_prompt` — REMOVED 2026-08-26
 
@@ -856,16 +825,8 @@ The tool spawned a headless `claude -p` run with the dry run forced and answered
 a summary of what a prompt would cost. It left with the prompt-evaluation
 surface (AI-3b); the code is on `feature/prompt-workbench`.
 
-The **agent dry run stayed**, and is a different thing: a standing switch that
-lets an agent read while every write is simulated, enforced in
-`inExtensionMcpServer` before any non-read tool runs. It never depended on the
-workbench.
-
-While the mode is on it is pinned to the status bar in the warning colour
-(**Agent dry run**), because a mode you cannot see is a trap: the user would ask
-for a deploy, be told "done" by an agent reading the synthetic result, and
-believe it. `demoBuilder.toggleAgentDryRun` flips it; `get_settings` exposes the
-key read-only so an agent can confirm why its deploy was simulated.
+The agent dry run it forced went to the same branch — see the dry-run section
+above. The **consent dialog** stays and is unrelated to both.
 
 ---
 

@@ -36,7 +36,6 @@ import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectT
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
-import { registerDryRunMode } from '@/features/ai/server/dryRunMode';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
@@ -102,12 +101,6 @@ let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let daLiveAuthService: DaLiveAuthService;
 let inExtensionMcpServer: InExtensionMcpServer | undefined;
-/**
- * Live reader for the agent dry run, injected into every MCP server we start.
- * Registered ONCE at activation (it owns a status bar item), while
- * `startInExtensionMcpServer` runs again on every workspace-folder change.
- */
-let agentDryRun: (() => boolean) | undefined;
 /**
  * Records every agent tool call into a capped in-memory buffer.
  *
@@ -311,11 +304,6 @@ export async function activate(context: vscode.ExtensionContext) {
         HelixService.setDefaultDaLiveTokenProvider(
             createDaLiveServiceTokenProvider(getDaLiveAuthService(context)),
         );
-
-        // The agent dry run: the toggle, and the status bar item that
-        // makes the mode visible while it is on. Before the server starts, so
-        // the reader exists by the time a tool can be called.
-        agentDryRun = registerDryRunMode(context, debugLogger);
 
         // Start the in-extension MCP server (serves Claude Code via the
         // stdio→UDS proxy). Bound to the open workspace folder; restarted when
@@ -618,9 +606,6 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
-            // The user's own toggle, and ONLY that — nothing else may force this
-            // server into dry run behind the producer's back.
-            dryRun: () => agentDryRun?.() ?? false,
             trace: agentTrace,
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(

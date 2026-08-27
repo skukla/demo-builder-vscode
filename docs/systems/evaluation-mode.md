@@ -7,11 +7,15 @@
 > (backlog `AI-3b`). Nobody had opened the panel, and unfinished work should not
 > sit in the mainline.
 >
-> **What stayed, and never depended on any of it:** the agent **dry run**
-> (`demoBuilder.ai.dryRun`, `Toggle Agent Dry Run`), enforced in
-> `inExtensionMcpServer` before any non-read tool runs; and the **consent
-> dialog** (`demoBuilder.ai.requireAgentConsent`). Both are standing protections
-> for anyone driving this extension with an agent.
+> The **agent dry run** (`demoBuilder.ai.dryRun`, `Toggle Agent Dry Run`) went
+> with it. It was kept for a few hours on the grounds that it did not depend on
+> the workbench — which is not a reason to keep something. It defaulted OFF, so
+> it protected nobody unless switched on, and it showed a permanent "Dry run off"
+> status bar item to every user.
+>
+> **What stayed:** the **consent dialog** (`demoBuilder.ai.requireAgentConsent`),
+> which defaults ON and asks before each destructive agent operation. It is doing
+> work for every user right now, which is what separates it from the rest.
 >
 > This document is kept as the record of what the surface was and why it was
 > built that way. Read it as history until that decision is made.

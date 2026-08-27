@@ -141,11 +141,6 @@
         "command": "demoBuilder.manageGitHubRepos",
         "title": "Manage GitHub Repositories",
         "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.toggleAgentDryRun",
-        "title": "Toggle Agent Dry Run",
-        "category": "Demo Builder"
       }
     ],
     "configuration": [
@@ -387,11 +382,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` \u2014 publish, delete, reset, \u2026). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use \u2014 the agent-side `confirm` convention then remains the only gate."
-          },
-          "demoBuilder.ai.dryRun": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "Let AI agents read your projects, but simulate every change instead of making it. Anything that would create, deploy, publish, delete or reconfigure comes back saying what it *would* have done, and never runs. Use it to watch how an agent approaches a task without letting it touch a real project. While it is on, **Agent dry run** appears in the status bar; click there or run **Demo Builder: Toggle Agent Dry Run** to turn it off."
           },
           "demoBuilder.ai.enableThirdPartyTools": {
             "type": "boolean",
