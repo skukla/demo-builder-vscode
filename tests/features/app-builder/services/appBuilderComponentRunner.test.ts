@@ -642,6 +642,39 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
         expect(errorDuringDeploy).toBeUndefined();
     });
 
+    it('a FAILED redeploy persists the error outcome — deploying must not outlive it', async () => {
+        const project = createProject();
+        project.appBuilderComponents = {
+            [INTEGRATION_ENTRY.id]: {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'o', repo: 'r' },
+            },
+        };
+        project.componentInstances = {
+            [INTEGRATION_ENTRY.id]: {
+                id: INTEGRATION_ENTRY.id,
+                name: INTEGRATION_ENTRY.name,
+                type: 'app-builder',
+                status: 'ready',
+                path: '/proj/components/erp',
+                lastUpdated: new Date(),
+            } as never,
+        };
+        const deps = createDeps();
+        (deps.deployApp as jest.Mock).mockResolvedValue({
+            success: false,
+            error: 'webpack said no',
+        });
+
+        const result = await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+
+        expect(result.success).toBe(false);
+        const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
+        expect(entry?.status).toBe('error');
+        expect(entry?.error).toContain('webpack said no');
+    });
+
     it('threads the entry nodeVersion into the deploy tail', async () => {
         const project = createProject();
         const deps = createDeps();

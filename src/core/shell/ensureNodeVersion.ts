@@ -19,8 +19,10 @@
  */
 
 import type { CommandExecutor } from './commandExecutor';
+import { EnvironmentSetup } from './environmentSetup';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Ensure fnm can supply Node `<major>`. Returns an error string when it
@@ -39,14 +41,31 @@ export async function ensureFnmNodeVersion(
         return `Invalid Node version "${major}" — expected a major version like "24".`;
     }
 
-    const result = await executor.execute(`fnm install ${major}`, {
+    // The extension host's PATH does not carry fnm (measured live 2026-08-27:
+    // a bare `fnm install` came back "exit undefined" — spawn never found the
+    // binary). Locate it the way the executor's own node-version wrapping
+    // does: common install locations first, `which` fallback.
+    const fnmPath = new EnvironmentSetup().findFnmPath();
+    if (!fnmPath) {
+        return (
+            `Node ${major} is required but fnm was not found. Install fnm ` +
+            `(https://github.com/Schniz/fnm) — the prerequisites screen can do it — and retry.`
+        );
+    }
+
+    const result = await executor.execute(`${fnmPath} install ${major}`, {
         timeout: TIMEOUTS.LONG,
         enhancePath: true,
+        // Without a shell the executor hands the whole string to the spawner
+        // as one binary name and nothing runs (code undefined — measured live).
+        shell: DEFAULT_SHELL,
     });
 
     if (result.code !== 0) {
         const detail =
-            result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit ${result.code}`;
+            result.stderr?.trim().split('\n').slice(-3).join(' ') ||
+            result.stdout?.trim().slice(-200) ||
+            `exit code ${result.code ?? 'unknown (command did not run)'}`;
         return (
             `Node ${major} is required but could not be installed via fnm: ${detail}. ` +
             `Install it manually (\`fnm install ${major}\`) and retry.`

@@ -588,6 +588,13 @@ export async function deployAppBuilderComponent(
             dispatchDeploy(project, entry, componentPath, deps),
         );
         if (!deployed.ok) {
+            // Persist the failure — without this the transient 'deploying'
+            // marker above would outlive a FAILED redeploy and read as stuck
+            // (measured live 2026-08-27: manifest said deploying while the
+            // handler had already returned the build error). The add path has
+            // always persisted its error outcome; this makes redeploy match.
+            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, deployed.error));
+            await deps.saveProject(project);
             return { success: false, error: deployed.error };
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
