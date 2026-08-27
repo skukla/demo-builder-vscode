@@ -18,8 +18,8 @@
 
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
-import { asText } from './mcpToolResult';
 import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
+import { asText } from './mcpToolResult';
 import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -30,7 +30,6 @@ import {
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
-import { isEdsProject } from '@/types/typeGuards';
 
 /** Pull the GitHub repo + DA.live target from an EDS project's storefront metadata. */
 function edsTargets(

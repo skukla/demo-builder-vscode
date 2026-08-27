@@ -19,13 +19,12 @@ import { ServiceLocator } from '@/core/di';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     getDaLiveAuthService,
-    getGitHubServices,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /** Silent Adobe IMS auth pre-flight. */
 async function adobeAuthed(): Promise<boolean> {

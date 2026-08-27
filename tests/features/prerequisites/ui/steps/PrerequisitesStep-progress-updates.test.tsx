@@ -1,15 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import {
-    mockOnMessage,
-    baseState,
-    setupScrollMock,
-    resetAllMocks,
-} from './PrerequisitesStep.testUtils';
-import { WizardState } from '@/types/webview';
+import { renderLoadedStep, setupScrollMock, resetAllMocks } from './PrerequisitesStep.testUtils';
 
 // Mock WebviewClient
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -30,10 +21,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
  * Tests dynamic progress updates, step indexing, and multi-version integration
  */
 describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
-    const mockUpdateState = jest.fn();
-    const mockSetCanProceed = jest.fn();
-    const mockOnNext = jest.fn();
-    const mockOnBack = jest.fn();
 
     beforeAll(() => {
         setupScrollMock();
@@ -45,43 +32,10 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
     });
 
     it('should update detail text dynamically in place', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
         // First detail text - Installing Node.js 20
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -101,7 +55,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
         });
 
         // Detail text updates IN PLACE - now showing Installing Node.js 24
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -124,43 +78,10 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
     });
 
     it('should use 1-based indexing for step display', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
         // Test with step 1 (should display as 1, not 0)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -183,43 +104,10 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
     });
 
     it('should integrate with multi-version Node installation flow', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js (20, 24)', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js (20, 24)')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js (20, 24)', description: 'JavaScript runtime', optional: false }], 'Node.js (20, 24)');
 
         // Installing Node 20 (first of 2 steps)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -240,7 +128,7 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
         });
 
         // Installing Node 24 (second of 2 steps)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',

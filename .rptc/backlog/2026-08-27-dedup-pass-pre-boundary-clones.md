@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # Dedup pass over the pre-boundary clones the sweeps filed
@@ -49,3 +49,7 @@ variant (a variant is a finding too — record and leave), extract only on
 verification, and prove each extraction by the consumers' tests passing
 unchanged (the `guardOrBlock` extraction in this sweep is the reference).
 Items 2 and 6 are single-file internals — lowest risk, start there.
+
+## Shipped so far
+
+- 2026-08-27  2026-08-27: sweep executed items 1-4, 7 partially, and adjudicated the rest. FIXED: projects-dashboard resolve-project prologue (7 copies → resolveProjectFromPath; 347 tests unchanged); contentAuthoringTools path-tool opener (3 → openPathCall; delete_page and write_page stated variants); edsToolGuards module (requireEdsProject/requireGitHub/requireDaLive, each at 3 copies across republish/sync_content/reset_eds_project; 731 ai/server tests unchanged); the DA.live '35-line clone' was a facade's COPIED DOCBLOCK, not logic — now a pointer; four Octokit factories → the one dead shared helper now has all three callers (120 tests unchanged); updates' boundary cast → real narrowing. RECORDED at two instances (Rule of Three): repoOperations response-mapper pair, prerequisites check/continue (NOTE: continue lacks check's resolveRequiredMajors id-mapping refinement — possibly a real inconsistency, needs its own look), auth project/workspace create prologues, updates pre-dialog lookup guard, and the config-hook updateField pair (items 5/6/8) — the LAST is the drift-dangerous one: the PAAS_URL→GraphQL linked-field rule lives in both useComponentConfig and useConfigureFieldValues; whoever touches either next extracts buildFieldWrites FIRST.

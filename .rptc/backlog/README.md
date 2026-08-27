@@ -229,7 +229,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-4` | feature | [Rebuild BuildRight on the thin-layer model](2026-06-10-buildright-eds-disposition.md) | — | low | backlog |
 | `EDS-5` | feature | [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) | _field feedback — the next authored block, or the next 'fonts too small' report_ | med | gated |
 | `EDS-6` | fix | [Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md) | — | med | backlog |
-| `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | backlog |
+| `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | shipped |
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 
@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (8)
+### platform  (9)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -271,7 +271,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-5` | feature | [Adobe sign-in has no command palette entry](2026-08-26-adobe-sign-in-from-command-palette.md) | — | med | shipped |
 | `PL-6` | fix | [aio CLI tree staleness is invisible to version checks](2026-08-27-aio-cli-tree-staleness-invisible-to-version-checks.md) | — | med | shipped |
 | `PL-7` | fix | [rptc-hygiene-scan check 5 parses zero active entries](2026-08-27-rptc-hygiene-scan-section5-broken.md) | — | low | shipped |
-| `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | backlog |
+| `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
+| `PL-9` | chore | [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -410,14 +411,14 @@ the table cannot hold: why the layers are ordered this way.*
 
 **G** — 6 items
 
-- `EDS-7` [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) — backlog
+- `EDS-7` [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) — shipped
 - `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — backlog
 - `PL-1` [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) — active
 - `PL-2` [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) — shipped
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*23 item(s) sit outside the A–G chain.*
+*24 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
