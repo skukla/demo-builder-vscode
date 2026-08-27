@@ -66,6 +66,33 @@ When exhausted: write that item's report entry, then MOVE TO THE NEXT item
 from `backlog.mjs next` and repeat. The loop ends on the time budget or on the
 backlog running out of unattended work — never on the first wall.
 
+## The design gate — no implementation before the modeling questions
+
+Research says what is TRUE; it does not say what the thing IS in our model.
+Between research and any implementation on a feature item, the loop MUST
+produce a written design section (in the item's plan or research doc)
+answering, explicitly:
+
+- **What entity is this** in the extension's data model — a component of a
+  demo? a dependency of another component? a new kind? Name the existing
+  entity it maps to, or the reason none fits.
+- **What owns it and where does it live** — which config file, which state
+  map, which feature directory; which established pattern it extends.
+- **What were the alternatives**, and why the chosen one — one paragraph per
+  rejected shape, not a survey.
+- **Which decisions are product intent.** Per the RPTC policy, the owner owns
+  product intent and consequential trade-offs; the loop owns discoverable
+  facts and reversible execution. A modeling choice that changes what users
+  see, what the data model means, or what future items build on goes to the
+  WALKTHROUGH QUEUE with a recommendation — implementation proceeds unattended
+  only where the design unambiguously extends an established pattern.
+
+Invoke `rptc:architect-methodology` when structure/ownership is genuinely
+uncertain. The 2026-08-27 starter-kit item is the canonical example: "is the
+kit a catalog component like the blank shell, or a new entity?" is a modeling
+question with product consequences, and writing the catalog entry before
+answering it would have encoded a guess.
+
 ## The cycle (each iteration)
 
 collect results → analyze → execute the next slice → gate (exit codes) →
