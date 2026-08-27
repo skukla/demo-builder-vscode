@@ -33,7 +33,13 @@ describe('get_current_project', () => {
         jest.clearAllMocks();
     });
 
-    it('returns the current project name + path when one is selected', async () => {
+    it('answers with the project STATE, not just a name and a path', async () => {
+        // The whole point of the tool, and it used to be the opposite. It
+        // returned `{name, path}` in ~22 tokens, and `agent-gap-scan` measured
+        // 83% of its calls followed immediately by another of our reads — it
+        // said WHERE the agent was and nothing it could act on. Answering with
+        // the status payload (a strict superset, 24 more tokens) is what removes
+        // that second round trip, so a bare name+path here is a REGRESSION.
         getCurrentProject.mockResolvedValue({
             name: 'alpha',
             path: '/p/alpha',
@@ -43,11 +49,23 @@ describe('get_current_project', () => {
         const s = fakeServer();
         registerCurrentProjectTool(s, ctxFactory);
 
-        const res = await s.call({});
+        const res = (await s.call({})) as { currentProject: Record<string, unknown> };
 
-        // Only name + path are surfaced.
-        expect(res).toEqual({ currentProject: { name: 'alpha', path: '/p/alpha' } });
+        expect(res.currentProject).toMatchObject({ name: 'alpha', path: '/p/alpha' });
+        expect(Object.keys(res.currentProject).length).toBeGreaterThan(2);
         expect(getCurrentProject).toHaveBeenCalledTimes(1);
+    });
+
+    it('still answers when the auth service is not initialized', async () => {
+        // This is now the most-called read on the surface and the one an agent
+        // uses to find its feet, so it must not throw. Sharing the status payload
+        // pulled in `ServiceLocator.getAuthenticationService()`, which throws
+        // before activation completes — exactly when orientation matters most.
+        getCurrentProject.mockResolvedValue({ name: 'alpha', path: '/p/alpha', status: 'ready' });
+        const s = fakeServer();
+        registerCurrentProjectTool(s, ctxFactory);
+
+        await expect(s.call({})).resolves.toBeDefined();
     });
 
     it('returns currentProject:null when no project is selected', async () => {

@@ -797,6 +797,30 @@ extension-side in `agentOperationNotifier.ts`:
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
 
+### `get_current_project` answers with the project's STATE
+
+It returned a name and a path in ~22 tokens until 2026-08-26. `agent-gap-scan`
+measured **83% of its calls followed immediately by another of our reads** — it
+told an agent WHERE it was and nothing it could act on, so the next step always
+paid a second round trip. That is a shape problem, and no count of how often a
+tool is called can see it.
+
+`get_project_status` already returned a strict superset of those two fields for
+24 more tokens, so two tools answered the same question two ways and the thinner
+one was reached for 2.4x more often. They now share one payload
+(`resolveProjectStatus`).
+
+**Both names stay.** "Which project am I in" and "did `start_demo` take effect"
+are different questions; an agent should not route the second through a tool
+called *current project*. What they must not keep is two different answers.
+
+The **null envelope** is why this is not an alias: `get_project_status` answers a
+prose error when there is no current project, while `get_current_project`
+answers `null` — a fact an agent can branch on rather than a failure it might
+retry. And the shared resolver never throws: a `ServiceLocator` that is not
+initialized degrades the mesh to `needs-auth`, because the moment orientation
+matters most is exactly when activation may not have finished.
+
 ### The dry run — REMOVED 2026-08-26
 
 `demoBuilder.ai.dryRun` made agent mutation impossible rather than discouraged:
