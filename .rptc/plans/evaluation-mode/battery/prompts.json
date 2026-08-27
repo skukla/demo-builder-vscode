@@ -371,5 +371,35 @@
       "read_page"
     ],
     "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. Deferred while the DA.live session was expired (unattended runs never sign in); unblocked by the owner re-authenticating 2026-08-27."
+  },
+  {
+    "id": "skill-diagnose",
+    "prompt": "Something is wrong with my demo \u2014 the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
+    "expect": [],
+    "expectSkill": [
+      "diagnose-demo"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, first expectSkill prompt. Pre-v27 bundles score SKILL-AS-PROSE by construction (flat files never register); after the v27 sweep this same prompt should invoke the registered skill. The empty expect list is deliberate: the verdict under test is the skill route, not a tool."
+  },
+  {
+    "id": "skill-datapack",
+    "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about \u2014 do not actually import anything.",
+    "expect": [],
+    "expectSkill": [
+      "import-datapack"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half. Read-only by instruction; the skill is the route under test."
+  },
+  {
+    "id": "skill-aem-block",
+    "prompt": "Using your aem-block-developer skill, explain how I should structure the decorator for a new custom block on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-block-developer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half \u2014 an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
   }
 ]

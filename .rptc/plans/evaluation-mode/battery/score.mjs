@@ -92,6 +92,17 @@ function score(calls, results, said, expect) {
 
     // A blocked tool invalidates the run before anything else is judged.
     const blocked = blockedTools(calls, results);
+    if (!blocked.length && expect.length === 0) {
+        // A skill-only prompt (expectSkill, no expected tool). Without this
+        // guard the chain below labels a run that successfully invoked its
+        // skill NO-ROUTE — "neither our tool nor the shell" — which is a lie
+        // of the same shape SIBLING-TOOL was added to stop. The verdict for
+        // these prompts lives on skillDiagnosis.
+        return { hit, around, outcome: 'skill-only', searched, triedThenLeft,
+                 ourToolErrors: ourFailed.map((c) => bare(c.name)),
+                 diagnosis: 'SKILL-ONLY: no tool expectation declared — the verdict is skillDiagnosis',
+                 excuse: null };
+    }
     if (blocked.length) {
         return {
             hit, around, outcome: 'invalid', searched, triedThenLeft, blocked,

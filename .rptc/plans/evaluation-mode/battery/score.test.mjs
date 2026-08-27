@@ -104,6 +104,13 @@ for (const [label, calls, want] of skillCases) {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} skill: ${label.padEnd(10)} ${sk.skillDiagnosis.slice(0, 62)}`);
 }
 {
+  // A skill-only prompt must not earn a lying tool label.
+  const so = score([{name:'Skill',id:'1',input:{skill:'diagnose-demo'}}], [], [], []);
+  const ok = so.outcome === 'skill-only' && so.diagnosis.startsWith('SKILL-ONLY');
+  ok ? pass++ : fail++;
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} skill: empty expect -> skill-only outcome, no NO-ROUTE lie`);
+}
+{
   const none = scoreSkill([{name:'Skill',id:'1',input:{skill:'x'}}], undefined);
   const ok = none === null;
   ok ? pass++ : fail++;
