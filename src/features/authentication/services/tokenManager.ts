@@ -3,6 +3,8 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import { SingleFlight, formatMinutes } from '@/core/utils';
+import { withTimeout } from '@/core/utils/promiseUtils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
@@ -22,6 +24,58 @@ export interface StoredTokenConfig {
  * fnm warnings and emoji noise — to exercise a date comparison.
  */
 export type TokenConfigReader = () => StoredTokenConfig | undefined;
+
+/**
+ * Attempt a SILENT IMS token refresh; resolves the refreshed stored token, or
+ * undefined when no refresh is possible (no refresh credentials, network down).
+ * Injectable for the same reason as {@link TokenConfigReader}.
+ */
+export type SilentTokenRefresh = () => Promise<StoredTokenConfig | undefined>;
+
+/**
+ * The real refresh: `aio-lib-ims.getToken('cli')` — the SAME call the `aio`
+ * CLI makes on every invocation, which is why the CLI never asks anyone to
+ * re-login while this extension did. With a live refresh token it mints a new
+ * access token silently and persists it; the context read afterwards is the
+ * library's own view of what it minted.
+ *
+ * Measured 2026-08-27: with the stored access token 30+ minutes expired, the
+ * context still held a refresh token valid for ~14 DAYS, and getToken('cli')
+ * restored the session in ~2s with no interaction — while the extension,
+ * reading only the stored expiry, declared the user signed out and parked a
+ * deploy on a Sign In prompt nobody saw. The owner's question was "why would
+ * I need to log in?", and the answer was: you didn't.
+ *
+ * The refresh-token PRECHECK is load-bearing: with no live refresh token,
+ * getToken('cli') falls back to the INTERACTIVE flow and opens a browser —
+ * which a background auth check must never do. In that case this returns
+ * undefined and the caller's prompt path takes over (the human chooses).
+ *
+ * Dynamic import: aio-lib-ims is heavy and this path runs only when the
+ * stored token is already unusable.
+ */
+export const refreshStoredToken: SilentTokenRefresh = async () => {
+    const ims = await import('@adobe/aio-lib-ims');
+    const readContext = async (): Promise<
+        { access_token?: StoredTokenConfig; refresh_token?: StoredTokenConfig } | undefined
+    > =>
+        ((await ims.context.get('cli'))?.data ?? undefined) as
+            | { access_token?: StoredTokenConfig; refresh_token?: StoredTokenConfig }
+            | undefined;
+
+    const refreshToken = (await readContext())?.refresh_token;
+    const refreshable =
+        typeof refreshToken?.token === 'string' && (refreshToken.expiry ?? 0) > Date.now();
+    if (!refreshable) {
+        return undefined;
+    }
+
+    const token = await ims.getToken('cli');
+    if (typeof token !== 'string' || token.length === 0) {
+        return undefined;
+    }
+    return (await readContext())?.access_token;
+};
 
 /**
  * The real read: the same library, and the same key, the CLI itself uses.
@@ -81,6 +135,7 @@ export class TokenManager {
         cacheManager?: AuthCacheManager,
         logger?: Logger,
         private readonly readTokenConfig: TokenConfigReader = readStoredTokenConfig,
+        private readonly silentRefresh: SilentTokenRefresh = refreshStoredToken,
     ) {
         this.logger = logger ?? getLogger();
         this.cacheManager = cacheManager;
@@ -158,6 +213,50 @@ export class TokenManager {
             return { valid: false, expiresIn: 0 };
         }
 
+        const first = this.classifyStoredToken(tokenData);
+        if (first.valid) {
+            this.cacheManager?.setCachedTokenInspection(first);
+            return first;
+        }
+
+        // An unusable stored token is NOT "signed out" yet: the aio CLI itself
+        // silently refreshes via the context's stored refresh credentials on
+        // every run, which is why `aio` never re-prompts while this read did
+        // (a deploy parked on a Sign In prompt for a token the library could
+        // revive — 2026-08-27). Ask the library before asking a human.
+        const refreshed = await this.trySilentRefresh();
+        if (!refreshed) {
+            return first;
+        }
+        const second = this.classifyStoredToken(refreshed);
+        if (second.valid) {
+            this.logger.info('[Token] Silent IMS refresh restored the session');
+            this.cacheManager?.setCachedTokenInspection(second);
+            return second;
+        }
+        return first;
+    }
+
+    /** The refresh attempt, timeout-bound so it can never become the next hang. */
+    private async trySilentRefresh(): Promise<StoredTokenConfig | undefined> {
+        try {
+            this.logger.info('[Token] Stored token unusable — attempting silent IMS refresh…');
+            return await withTimeout(this.silentRefresh(), {
+                timeoutMs: TIMEOUTS.NORMAL,
+                timeoutMessage: 'IMS silent refresh timed out',
+            });
+        } catch (error) {
+            this.logger.debug(`[Token] Silent refresh unavailable: ${toError(error).message}`);
+            return undefined;
+        }
+    }
+
+    /** Classify one stored token by the semantic rules (corruption, length, expiry). */
+    private classifyStoredToken(tokenData: StoredTokenConfig | undefined): {
+        valid: boolean;
+        expiresIn: number;
+        token?: string;
+    } {
         if (!tokenData) {
             this.logger.debug('[Token] No access token found in CLI config');
             return { valid: false, expiresIn: 0 };
@@ -199,14 +298,10 @@ export class TokenManager {
         const expiresIn = Math.floor((expiry - now) / 1000 / 60);
         this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
 
-        const result = { valid: true, expiresIn, token };
-
-        // Cache the successful result (if cacheManager available)
-        if (this.cacheManager) {
-            this.cacheManager.setCachedTokenInspection(result);
-        }
-
-        return result;
+        // Caching is the CALLER's job (fetchTokenInspection): classify runs on
+        // both the stored and the refreshed token, and only the accepted one
+        // may land in the cache.
+        return { valid: true, expiresIn, token };
     }
 
     /**
@@ -217,5 +312,4 @@ export class TokenManager {
         const inspection = await this.inspectToken();
         return inspection.valid;
     }
-
 }
