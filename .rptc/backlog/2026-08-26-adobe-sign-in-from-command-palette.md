@@ -64,3 +64,4 @@ Filed 2026-08-26.
 - 2026-08-26  docs(backlog): settle the sign-in question — two commands, not a picker (`faea7a40a`)
 - 2026-08-26  docs(backlog): PL-5 and EDS-9 — sign-in is not in the command palette (`b45ceae5c`)
 - 2026-08-27  SHIPPED: demoBuilder.signInAdobe. Checks state first — a valid session offers a forced re-login (the org-switch recovery) instead of a silent no-op; expiry minutes shown in the offer. Progress notification during login.
+- 2026-08-27  Polish from first live use: the already-signed-in message now renders via formatMinutes (~487 min -> ~8h 7m). The formatter already existed and the auth handlers already used it — the command had rebuilt the raw rendering, the exact reuse-first miss. Pinned in the test. Owner verified BOTH commands working live.
