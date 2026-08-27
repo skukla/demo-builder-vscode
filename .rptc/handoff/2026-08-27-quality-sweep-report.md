@@ -110,3 +110,27 @@ needs it before merge).
    gate green, no behavior changes intended (the 371 unchanged handler tests
    are the evidence).
 2. Nothing else is parked. PL-7 is filed and can wait.
+
+## Addendum — incremental pass to the consolidation boundary (same evening)
+
+The owner set the sweep boundary at `505d5d255` (the beta.143 release bump,
+Aug 24 15:09 — the cap of the Aug 20–24 consolidation week). Expanding from
+the two-day base added 25 source files of new ground; this pass covered them.
+
+**Findings, all verified by reading:**
+
+- **Dead code**: none in the 25 files.
+- **Duplication**: eight clones touch the files; blame shows every one
+  predates the boundary (newest Aug 16 — three even survived the
+  consolidation week). Filed with the other pre-existing clones, not chased.
+- **Architecture**: the window's three new modules are all clean variants,
+  not duplicates — `toolDisplayName` IMPORTS `toolNarration` (it is the
+  vscode-free sharing seam, per its own docstring); `consentViaChat` is
+  chat-first consent with the MODAL as its injected fallback floor, a
+  documented chain, not a second consent implementation.
+- **Call path**: consent has exactly one gate — the MCP server's call
+  wrapper is the only `askChatForConsent` caller — now PINNED in
+  spine-chokepoints (16 tests). No tool can grow a private consent path
+  that skips the chat or double-prompts the modal.
+
+One commit: the consent chokepoint pin. Nothing else needed changing.
