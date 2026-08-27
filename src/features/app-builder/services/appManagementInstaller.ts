@@ -199,12 +199,41 @@ async function pollInstallation(
     return undefined;
 }
 
+/**
+ * Failure signatures that mean "run the reconcile again", not "broken".
+ *
+ * The measured one: the installer creates its I/O Events registrations
+ * concurrently and races itself on the Runtime binding package —
+ * "HTTP 409 Conflict — Error 409 from upstream (…/runtime/namespaces/…/
+ * packages?update=true)". Reconcile is idempotent desired-state, and retries
+ * CONVERGE: measured live 2026-08-27, registrations climbed 6 → 8 → 19 → 23
+ * across rounds and the fourth landed `succeeded` with every step green.
+ */
+const RETRYABLE_INSTALL_PATTERNS: readonly RegExp[] = [/HTTP 409 Conflict/];
+
+/**
+ * How many reconcile rounds to drive before handing back. The measured
+ * convergence took 4 from a residue-laden state; a fresh install needs fewer.
+ */
+const MAX_RECONCILE_ROUNDS = 5;
+
+/** Does this landed-failed state carry a signature retrying can clear? */
+function isRetryableInstallFailure(state: InstallationState): boolean {
+    let text: string;
+    try {
+        text = JSON.stringify(state.error ?? '');
+    } catch {
+        return false;
+    }
+    return RETRYABLE_INSTALL_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 /** Shape one reconcile answer (post-association) into the install result. */
 async function settleReconcile(
     reconciled: ReconcileResult,
     client: InstallerClient,
     deps: AppManagementInstallDeps,
-): Promise<AppManagementInstallResult> {
+): Promise<AppManagementInstallResult | 'retry'> {
     // A 202 queued the work: poll until it lands. A 200 answered synchronously.
     if (!reconciled.id) {
         return { status: 'installed', detail: reconciled.message };
@@ -217,6 +246,9 @@ async function settleReconcile(
         };
     }
     if (finalState.status === 'failed') {
+        if (isRetryableInstallFailure(finalState)) {
+            return 'retry';
+        }
         return {
             status: 'failed',
             detail: `The app's installer reported a failure. ${APP_MANAGEMENT_HANDS_BACK}`,
@@ -276,15 +308,29 @@ export async function installAppManagementApp(
             commerceEnv: target.commerceEnv,
         });
 
-        deps.onProgress?.('Installing into Commerce (App Management)…');
-        const reconciled = await client.reconcileInstallation({
-            appData,
-            ioEventsUrl: IO_EVENTS_URL,
-            ioEventsEnv: IO_EVENTS_ENV,
-            commerceBaseUrl: target.commerceBaseUrl,
-            commerceEnv: target.commerceEnv,
-        });
-        return await settleReconcile(reconciled, client, deps);
+        // Reconcile is idempotent desired-state, and the app's installer races
+        // itself on registration creation (the 409 signature) — so a retryable
+        // failure re-runs the SAME reconcile until it converges or the rounds
+        // run out. Measured live: four rounds from a dirty state, all green.
+        for (let round = 1; round <= MAX_RECONCILE_ROUNDS; round++) {
+            deps.onProgress?.(
+                round === 1
+                    ? 'Installing into Commerce (App Management)…'
+                    : `Retrying the install (transient conflict, round ${round})…`,
+            );
+            const reconciled = await client.reconcileInstallation({
+                appData,
+                ioEventsUrl: IO_EVENTS_URL,
+                ioEventsEnv: IO_EVENTS_ENV,
+                commerceBaseUrl: target.commerceBaseUrl,
+                commerceEnv: target.commerceEnv,
+            });
+            const settled = await settleReconcile(reconciled, client, deps);
+            if (settled !== 'retry') {
+                return settled;
+            }
+        }
+        return fail('The install kept hitting a transient conflict.');
     } catch (error) {
         if (isBenignNoOp(error)) {
             return { status: 'skipped', detail: 'Already installed and current.' };

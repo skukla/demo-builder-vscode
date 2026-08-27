@@ -69,12 +69,10 @@ function makeDeps(
     overrides: Partial<AppManagementInstallDeps> = {}
 ): AppManagementInstallDeps {
     return {
-        getAuth: jest
-            .fn()
-            .mockResolvedValue({
-                accessToken: 'fake-test-pw-not-a-secret',
-                imsOrgId: 'ABC@AdobeOrg',
-            }),
+        getAuth: jest.fn().mockResolvedValue({
+            accessToken: 'fake-test-pw-not-a-secret',
+            imsOrgId: 'ABC@AdobeOrg',
+        }),
         logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
         clientFactory: () => client,
         wait: async () => undefined,
@@ -225,6 +223,79 @@ describe('installAppManagementApp', () => {
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
+    });
+
+    it('a RETRYABLE landed failure re-reconciles until it converges (the measured 409 race)', async () => {
+        // Measured live 2026-08-27: the app's installer races itself creating
+        // registrations; each idempotent reconcile gets further and the fourth
+        // landed green (registrations 6 → 8 → 19 → 23 → succeeded).
+        const racyError = {
+            key: 'STEP_EXECUTION_FAILED',
+            message:
+                "Failed to create I/O Events registration '…': HTTP 409 Conflict — Error 409 from upstream",
+        };
+        const client = makeClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'job-1' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({ id: 'job-1', status: 'failed', error: racyError })
+                .mockResolvedValueOnce({ id: 'job-2', status: 'failed', error: racyError })
+                .mockResolvedValueOnce({ id: 'job-3', status: 'succeeded' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('installed');
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(3);
+    });
+
+    it('a NON-retryable landed failure never loops — one round, hands back', async () => {
+        const client = makeClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'job-1' }),
+            getInstallationState: jest.fn().mockResolvedValue({
+                id: 'job-1',
+                status: 'failed',
+                error: { key: 'STEP_EXECUTION_FAILED', message: 'HTTP 403 Forbidden' },
+            }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failure that stays retryable exhausts the rounds and hands back', async () => {
+        const racy = {
+            id: 'j',
+            status: 'failed',
+            error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
+        };
+        const client = makeClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
+            getInstallationState: jest.fn().mockResolvedValue(racy),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('transient conflict');
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(5);
     });
 
     it('a 409 already-current reconcile is a SKIP, not a failure', async () => {
