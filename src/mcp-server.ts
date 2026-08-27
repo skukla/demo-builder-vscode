@@ -120,7 +120,8 @@ export function registerProjectTools(
         {
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
-            description: 'List all Demo Builder projects',
+            description:
+                'List all Demo Builder projects. The active one is marked current:true — no follow-up call needed to learn which it is.',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
         async (args: any) =>
