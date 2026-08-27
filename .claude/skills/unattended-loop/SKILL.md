@@ -156,6 +156,14 @@ restated in the report.
 When the owner names one ("an hour"), reserve the last ~5 minutes for the
 report. Without one, run until work dries up or stops being verifiable.
 
+## A summary at every completed step — not only at the end
+
+When a step ships (owner, 2026-08-27), say so in the moment with a short
+plain-English summary in the same two registers as the report: the takeaway in
+a sentence or two, then the story — what it does, why, what it does NOT do
+yet, and anything found along the way. The final report then collects these
+rather than reconstructing them.
+
 ## The report (the loop's real product)
 
 Plain English, for someone who was not there — and BOTH registers, always
