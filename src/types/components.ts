@@ -147,6 +147,19 @@ export interface RawComponentDefinition {
         // Flat structure - requiredEnvVars/optionalEnvVars directly in configuration
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
+        /**
+         * BACKEND components only: the Commerce connection contract — which
+         * env key carries the base URL (and any suffix to strip), plus the
+         * App Management flavor. The registry owns these facts; consumers
+         * (the App Management installer) read them via
+         * `getBackendCommerceContract` instead of keeping private copies of
+         * the key names (the silent-rename failure mode).
+         */
+        commerce?: {
+            flavor: 'paas' | 'saas';
+            baseUrlKey: string;
+            baseUrlStripSuffix?: string;
+        };
         configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
         nodeVersion?: string;

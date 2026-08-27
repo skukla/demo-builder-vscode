@@ -37,6 +37,7 @@ import {
 } from './appManagementClient';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getBackendCommerceContract } from '@/features/components/services/backendCommerce';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -95,18 +96,15 @@ export function deriveAppManagementBaseUrl(
     return undefined;
 }
 
-/** Backend component id → the App Management API's Commerce flavor. */
-const BACKEND_FLAVOR: Record<string, CommerceEnv> = {
-    'adobe-commerce-accs': 'saas',
-    'adobe-commerce-paas': 'paas',
-};
-
 /**
  * The Commerce association target from the project's configured backend.
  *
- * The base URL is the backend's GraphQL endpoint with the trailing `/graphql`
- * stripped: for paas that recovers the instance root, for saas (ACCS) the
- * tenant API base — the two shapes the kit's lib builds REST paths onto.
+ * WHICH env key carries the base URL — and which flavor the backend is — comes
+ * from the registry's per-backend `commerce` contract
+ * ({@link getBackendCommerceContract}), never from key names kept here: a
+ * private copy is the silent-rename failure mode (rename the key in
+ * components.json and code holding the old name finds nothing, with no error
+ * pointing anywhere — owner audit, 2026-08-27).
  *
  * @param project - the current project
  * @returns the association body fields, or an error naming what is missing
@@ -115,29 +113,33 @@ export function deriveCommerceTarget(
     project: Project,
 ): { commerceBaseUrl: string; commerceEnv: CommerceEnv } | { error: string } {
     const backendId = project.componentSelections?.backend;
-    const commerceEnv = backendId ? BACKEND_FLAVOR[backendId] : undefined;
-    if (!commerceEnv) {
+    const contract = getBackendCommerceContract(backendId);
+    if (!contract) {
         return { error: `This project has no Commerce backend (found "${backendId ?? 'none'}").` };
     }
 
+    // Search every component's config — the backend's own entry is
+    // authoritative but the declared key is unique to it either way.
     const configs = project.componentConfigs ?? {};
-    const endpointKey = commerceEnv === 'saas' ? 'ACCS_GRAPHQL_ENDPOINT' : 'ADOBE_COMMERCE_URL';
-    // The paas base is configured directly; the saas base hides in the GraphQL
-    // endpoint. Search every component's config — the backend's own entry is
-    // authoritative but the key is unique to it either way.
     let value: string | undefined;
     for (const config of Object.values(configs)) {
-        const candidate = config?.[endpointKey];
+        const candidate = config?.[contract.baseUrlKey];
         if (typeof candidate === 'string' && candidate.length > 0) {
             value = candidate;
             break;
         }
     }
     if (!value) {
-        return { error: `The Commerce backend has no ${endpointKey} configured.` };
+        return { error: `The Commerce backend has no ${contract.baseUrlKey} configured.` };
     }
-    const commerceBaseUrl = value.replace(/\/graphql\/?$/, '').replace(/\/+$/, '');
-    return { commerceBaseUrl, commerceEnv };
+    // Trailing slashes first, so a '/graphql/' value still matches the suffix.
+    let commerceBaseUrl = value.replace(/\/+$/, '');
+    if (contract.baseUrlStripSuffix && commerceBaseUrl.endsWith(contract.baseUrlStripSuffix)) {
+        commerceBaseUrl = commerceBaseUrl
+            .slice(0, -contract.baseUrlStripSuffix.length)
+            .replace(/\/+$/, '');
+    }
+    return { commerceBaseUrl, commerceEnv: contract.flavor };
 }
 
 /**

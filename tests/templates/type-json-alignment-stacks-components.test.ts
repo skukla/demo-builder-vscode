@@ -78,6 +78,7 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
 ]);
 
 const COMPONENT_CONFIGURATION_FIELDS = new Set([
+    'commerce',
     'requiredEnvVars',
     'optionalEnvVars',
     'requiredServices',
@@ -188,10 +189,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
     let componentsConfig: Record<string, unknown>;
 
     beforeAll(() => {
-        const stacksPath = path.join(
-            __dirname,
-            '../../src/features/components/config/stacks.json'
-        );
+        const stacksPath = path.join(__dirname, '../../src/features/components/config/stacks.json');
         const componentsPath = path.join(
             __dirname,
             '../../src/features/components/config/components.json'
