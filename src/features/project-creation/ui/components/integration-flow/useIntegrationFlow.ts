@@ -95,6 +95,8 @@ export interface UseIntegrationFlowReturn {
     setCustomSource: (source: { owner: string; repo: string } | undefined) => void;
     /** Set the blank instance identity; undefined clears it (invalid/empty name re-disables Continue). */
     setInstance: (instance: BlankInstance | undefined) => void;
+    /** Pick the Build-custom seed (catalog entry id; undefined = blank shell). */
+    setSeed: (seedId: string | undefined) => void;
     /** Toggle a free API pick on the custom/import api-access step. */
     toggleApi: (code: string) => void;
     setPendingProject: (project: AdobeProject | undefined) => void;
@@ -235,18 +237,25 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
             return;
         }
-        // "Build custom" commits a named INSTANCE of the blank starter app (the
-        // shell repo is a template, not an identity): the source-blank gate
-        // guarantees draft.instance, and the custom-add handler selects the
-        // instance id + records the shell source with the display name. Picks key
-        // under the instance id so N instances carry independent API picks.
+        // "Build custom" commits a named INSTANCE of a template repo — the blank
+        // shell by default, or the SEED the user picked (e.g. the starter kit).
+        // Either way the repo is a template, not an identity: the custom-add
+        // handler selects the instance id + records the source with the display
+        // name, and the seed's capability fields survive through the loader's
+        // source recognition. Picks key under the instance id so N instances
+        // carry independent API picks.
         // Picks are recorded BEFORE the builder call, not after. The wizard did not
         // care — it persists its state later either way — but the dashboard host
         // POSTS the add inside that callback, so picks written afterwards missed
         // the message entirely and were dropped at the boundary.
-        if (draft.kind === 'blank' && blankComponent && draft.instance) {
+        if (draft.kind === 'blank' && draft.instance) {
+            const seed = draft.seedId
+                ? args.catalog.find((entry) => entry.id === draft.seedId)
+                : undefined;
+            const template = seed ?? blankComponent;
+            if (!template) return;
             writeApiPicks(draft.instance.id);
-            builder.onAddCustomAppBuilderComponent(blankComponent.source, draft.instance);
+            builder.onAddCustomAppBuilderComponent(template.source, draft.instance);
             return;
         }
         if (draft.kind === 'custom' && draft.customSource) {
@@ -254,7 +263,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             writeApiPicks(`${draft.customSource.owner}-${draft.customSource.repo}`);
             builder.onAddCustomAppBuilderComponent(draft.customSource);
         }
-    }, [draft, meshComponent, blankComponent, builder, writeApiPicks]);
+    }, [draft, meshComponent, blankComponent, builder, writeApiPicks, args.catalog]);
 
     const finishFlow = useCallback((): void => {
         // Re-editing an existing integration's APIs: Save writes the picks (even an
@@ -308,12 +317,14 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         [],
     );
 
-    const setInstance = useCallback(
-        (instance: BlankInstance | undefined): void => {
-            setDraft((current) => ({ ...current, instance }));
-        },
-        [],
-    );
+    const setInstance = useCallback((instance: BlankInstance | undefined): void => {
+        setDraft((current) => ({ ...current, instance }));
+    }, []);
+
+    /** Pick the Build-custom seed (a catalog entry id; undefined = blank shell). */
+    const setSeed = useCallback((seedId: string | undefined): void => {
+        setDraft((current) => ({ ...current, seedId }));
+    }, []);
 
     /** Toggle a free API pick on the custom/import api-access step (locked codes never call this). */
     const toggleApi = useCallback((code: string): void => {
@@ -355,6 +366,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         pickCatalog,
         setCustomSource,
         setInstance,
+        setSeed,
         toggleApi,
         setPendingProject,
         setPendingWorkspace,

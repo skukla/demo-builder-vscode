@@ -57,6 +57,13 @@ export interface FlowDraft {
      */
     instance?: BlankInstance;
     /**
+     * The catalog entry the Build-custom instance is SEEDED from (e.g. the
+     * Commerce starter kit) — undefined means the blank shell. The commit clones
+     * the seed's repo under the instance's name; the seed's capability fields
+     * survive via the loader's source recognition, not via this draft.
+     */
+    seedId?: string;
+    /**
      * Free Console API picks for a custom/import app's api-access step (the user
      * knows what APIs the app needs up front). Locked codes (baseline + APIs other
      * integrations already cover) are derived, never stored here. Committed to

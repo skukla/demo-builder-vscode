@@ -167,12 +167,18 @@ function StageBody({
     if (stage === 'source-blank') {
         // The instance-naming stage: a valid, non-colliding name emits the
         // {id, name} instance into the draft (the stage gate); anything else
-        // clears it and re-disables Continue.
+        // clears it and re-disables Continue. Pre-built entries double as
+        // SEEDS here — starting points a custom build clones instead of the
+        // blank shell.
         return (
             <BlankStage
                 reservedIds={props.reservedIds}
                 instance={draft.instance}
                 onInstanceChange={flow.setInstance}
+                seeds={prebuiltCatalog}
+                seedId={draft.seedId}
+                selectedIds={selectedIds}
+                onSeedChange={flow.setSeed}
             />
         );
     }

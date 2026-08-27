@@ -94,6 +94,8 @@ interface SetupOptions {
     mode?: FlowMode;
     initial?: Partial<WizardState>;
     meshComponent?: SelectableAppBuilderComponent;
+    /** Catalog entries the flow can seed a custom build from (default empty). */
+    catalog?: AppBuilderComponentCatalogEntry[];
 }
 
 interface Setup {
@@ -115,7 +117,12 @@ interface Setup {
  * (mirrors the wizard's reducer + re-render cycle).
  */
 function setup(options: SetupOptions = {}): Setup {
-    const { mode = 'add', initial = {}, meshComponent = MESH_COMPONENT } = options;
+    const {
+        mode = 'add',
+        initial = {},
+        meshComponent = MESH_COMPONENT,
+        catalog = EMPTY_CATALOG,
+    } = options;
     const stateRef: { current: WizardState } = {
         current: {
             currentStep: 'build-your-project',
@@ -142,7 +149,7 @@ function setup(options: SetupOptions = {}): Setup {
                 updateState,
                 mode,
                 meshComponent,
-                catalog: EMPTY_CATALOG,
+                catalog,
                 blankComponent: BLANK_COMPONENT,
                 builder,
                 onClose,
@@ -446,6 +453,53 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         act(() => s.result.current.setInstance(undefined));
         expect(s.result.current.draft.instance).toBeUndefined();
         expect(s.result.current.canContinue).toBe(false);
+    });
+
+    it('a SEEDED blank finish commits the seed source (not the shell) with the instance identity', () => {
+        // The seed model: "Build custom" starting from the starter kit clones the
+        // KIT's repo under the user's name; the blank shell is only the default.
+        const KIT_SEED: AppBuilderComponentCatalogEntry = {
+            id: 'commerce-integration-starter-kit',
+            name: 'Commerce Integration Starter Kit',
+            description: 'The kit',
+            kind: 'integration',
+            layout: 'extension',
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+        };
+        const s = setup({ initial: LATER_ADD, catalog: [KIT_SEED] });
+        pickKindAndContinue(s, 'blank');
+        act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
+        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.onContinue()); // Add → commit + close
+
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(KIT_SEED.source, {
+            id: 'order-sync',
+            name: 'Order Sync',
+        });
+        expect(s.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('clearing the seed returns the commit to the blank shell', () => {
+        const KIT_SEED: AppBuilderComponentCatalogEntry = {
+            id: 'commerce-integration-starter-kit',
+            name: 'Commerce Integration Starter Kit',
+            description: 'The kit',
+            kind: 'integration',
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+        };
+        const s = setup({ initial: LATER_ADD, catalog: [KIT_SEED] });
+        pickKindAndContinue(s, 'blank');
+        act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
+        act(() => s.result.current.setSeed(undefined));
+        act(() => s.result.current.setInstance({ id: 'my-app', name: 'My App' }));
+        act(() => s.result.current.onContinue());
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+            BLANK_COMPONENT.source,
+            { id: 'my-app', name: 'My App' }
+        );
     });
 
     it('a blank finish commits the INSTANCE id (not app-builder-shell) with picks keyed under it', () => {

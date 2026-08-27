@@ -24,19 +24,37 @@ const RESERVED = new Set(['app-builder-shell', 'eds-storefront', 'firefly-image-
 
 type Props = React.ComponentProps<typeof BlankStage>;
 
-function renderStage(props: Partial<Props> = {}): { onInstanceChange: jest.Mock } {
+function renderStage(props: Partial<Props> = {}): {
+    onInstanceChange: jest.Mock;
+    onSeedChange: jest.Mock;
+} {
     const onInstanceChange = jest.fn();
+    const onSeedChange = jest.fn();
     render(
         <Provider theme={defaultTheme}>
             <BlankStage
                 reservedIds={props.reservedIds ?? RESERVED}
                 instance={props.instance}
                 onInstanceChange={onInstanceChange}
+                seeds={props.seeds}
+                seedId={props.seedId}
+                selectedIds={props.selectedIds}
+                onSeedChange={onSeedChange}
             />
         </Provider>
     );
-    return { onInstanceChange };
+    return { onInstanceChange, onSeedChange };
 }
+
+/** A seedable pre-built entry (the starter kit's shape, capability fields included). */
+const KIT_SEED = {
+    id: 'commerce-integration-starter-kit',
+    name: 'Commerce Integration Starter Kit',
+    description: 'The kit',
+    kind: 'integration' as const,
+    layout: 'extension' as const,
+    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+};
 
 /**
  * The mocked TextField nests its error span inside the label, so label-text queries
@@ -115,6 +133,30 @@ describe('BlankStage', () => {
     it('prefills the field from the instance prop (returning to the stage)', () => {
         renderStage({ instance: { id: 'order-sync', name: 'Order Sync' } });
         expect(nameField()).toHaveValue('Order Sync');
+    });
+
+    it('shows NO seed row when the catalog offers no pre-built entries', () => {
+        renderStage();
+        expect(screen.queryByText('Blank')).not.toBeInTheDocument();
+    });
+
+    it('offers Blank plus each seed, and picking a seed emits its id', () => {
+        const { onSeedChange } = renderStage({ seeds: [KIT_SEED] });
+        expect(screen.getByText('Blank')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('Commerce Integration Starter Kit'));
+        expect(onSeedChange).toHaveBeenCalledWith('commerce-integration-starter-kit');
+        fireEvent.click(screen.getByText('Blank'));
+        expect(onSeedChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it('disables an already-added seed with the one-per-project note', () => {
+        const { onSeedChange } = renderStage({
+            seeds: [KIT_SEED],
+            selectedIds: ['commerce-integration-starter-kit'],
+        });
+        expect(screen.getByText('Already added — one per project')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('Commerce Integration Starter Kit'));
+        expect(onSeedChange).not.toHaveBeenCalled();
     });
 
     it('a valid edit after a collision clears the message and emits the new instance', () => {
