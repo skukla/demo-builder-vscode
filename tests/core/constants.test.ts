@@ -94,8 +94,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // v26: the App Builder skill set follows whether a project BUILDS an App
     // Builder app, not whether it needs App Builder tooling. The bump is what
     // reconciles storefronts that already received it.
-    it('is 26 (the App Builder skills follow the work, not the tooling)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(26);
+    //
+    // v27: Demo Builder skills move to the `<name>/SKILL.md` directory layout —
+    // the only shape Claude Code registers as an invocable skill (flat files
+    // were never registered; measured live 2026-08-27). The bump is what makes
+    // existing projects rewrite the layout and reconcile the flat files away.
+    it('is 27 (skills land in the registrable directory layout)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(27);
     });
 });
 

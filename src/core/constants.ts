@@ -200,7 +200,15 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // — so storefronts carried seven skills whose architect tells the agent it is
 // working on a starter-kit integration. The bump is what makes existing
 // projects reconcile: the sweep removes the bundle, file by file, on proof.
-export const AI_CONTEXT_VERSION = 26;
+//
+// v27: Demo Builder skills move from flat `.claude/skills/<name>.md` files to
+// `.claude/skills/<name>/SKILL.md` directories — the one layout Claude Code
+// registers as an invocable skill. Measured live 2026-08-27: a session
+// registered every directory-format skill (Adobe bundles, global skills) and
+// NONE of our flat files, so the modal promised "skills" that agents could
+// only reach as prose via file reads. The sweep rewrites the layout and
+// reconciles the legacy flat files away on proof.
+export const AI_CONTEXT_VERSION = 27;
 
 /**
  * Component IDs for standardized component instance access

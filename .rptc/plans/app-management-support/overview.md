@@ -100,9 +100,13 @@ nothing encoded):
    adobe/commerce-integration-starter-kit@main, 2026-08-27). S2S env
    injection MOVED to step 3 with the client (see the empirical caveat
    above — the secret source needs an interface, not a download read).
-3. `step-03` — `appManagementClient` from the OpenAPI spec (install / status /
-   validate / associate), unit-tested against spec fixtures; NOT wired to the
-   add flow yet.
+3. `step-03` — **DONE (2026-08-27)** — `appManagementClient.ts` (pure fetch,
+   ioEventsClient's pattern): getInstallationState (204→undefined),
+   reconcileInstallation (202 queued / 200 upgrade plan; 409 closed-enum
+   reason on the typed error), validateInstallation, setAssociation.
+   14 tests against spec-required fixtures. NOT wired. Spec confirmed the
+   base URL is per-app (`servers: "/"` — hosted by the app's own generated
+   actions), so it stays a constructor argument until the spike.
 4. `step-04` (post-spike) — wire install/associate per decision 1; state
    sub-record; dashboard row surfacing installation status.
 5. `step-05` — the kit catalog entry itself + node-24 prerequisite + ACCS

@@ -49,7 +49,9 @@ function setupAllOk(): void {
         return Promise.reject(new Error('unexpected readFile call'));
     });
     (fsPromises.access as jest.Mock).mockResolvedValue(undefined); // mcp-server.js exists
-    (fsPromises.readdir as jest.Mock).mockResolvedValue([{ name: 'sync-changes.md', isFile: () => true }]);
+    (fsPromises.readdir as jest.Mock).mockResolvedValue([
+        { name: 'sync-changes.md', isFile: () => true, isDirectory: () => false },
+    ]);
 }
 
 function findCheck(checks: AiCheckResult[], name: string): AiCheckResult | undefined {
@@ -193,6 +195,32 @@ describe('verifyAiSetup', () => {
 
             const check = findCheck(result.checks, 'skill-files');
             expect(check?.status).toBe('ok');
+        });
+
+        it('returns ok for the v27 directory layout (<name>/SKILL.md, no flat files)', async () => {
+            setupAllOk();
+            (fsPromises.readdir as jest.Mock).mockResolvedValue([
+                { name: 'sync-changes', isFile: () => false, isDirectory: () => true },
+            ]);
+            // access resolves (setupAllOk default) → the SKILL.md probe succeeds.
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(findCheck(result.checks, 'skill-files')?.status).toBe('ok');
+        });
+
+        it('returns warning when the only directory has no SKILL.md', async () => {
+            setupAllOk();
+            (fsPromises.readdir as jest.Mock).mockResolvedValue([
+                { name: 'empty-husk', isFile: () => false, isDirectory: () => true },
+            ]);
+            (fsPromises.access as jest.Mock).mockImplementation(async (p: string) => {
+                if (p.includes('.claude/skills/')) throw new Error('ENOENT');
+            });
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(findCheck(result.checks, 'skill-files')?.status).toBe('warning');
         });
 
         it('returns warning when .claude/skills/ is empty', async () => {

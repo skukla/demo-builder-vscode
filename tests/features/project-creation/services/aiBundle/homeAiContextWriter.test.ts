@@ -29,6 +29,7 @@ jest.mock('fs/promises', () => ({
     realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
+    rm: jest.fn().mockResolvedValue(undefined),
 }));
 
 const PROJECTS_ROOT = '/home/user/.demo-builder/projects';
@@ -309,15 +310,16 @@ describe('ensureHomeAiContext — skills', () => {
         // Spot-check a representative subset across each skill category — the
         // home Chat carries the full skill surface, not just one global skill.
         const expectedSkills = [
-            'create-eds-project.md',
-            'scrape-reference-site.md',
-            'register-custom-block.md',
-            'sync-changes.md',
-            'commerce-block-mapper.md',
+            'create-eds-project',
+            'scrape-reference-site',
+            'register-custom-block',
+            'sync-changes',
+            'commerce-block-mapper',
         ];
         for (const skill of expectedSkills) {
-            expect(wasWritten(path.join('.claude', 'skills', skill))).toBe(true);
-            const content = captureWrite(path.join('skills', skill));
+            // v27+: the registrable `<name>/SKILL.md` layout.
+            expect(wasWritten(path.join('.claude', 'skills', skill, 'SKILL.md'))).toBe(true);
+            const content = captureWrite(path.join('skills', skill, 'SKILL.md'));
             expect(content.length).toBeGreaterThan(0);
         }
     });

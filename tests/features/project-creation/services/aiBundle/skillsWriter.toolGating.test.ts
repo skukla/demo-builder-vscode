@@ -63,9 +63,9 @@ function sha256(content: string): string {
 }
 
 /** Today's template content for an always-on skill (what we would write). */
-function templateFor(filename: string): string {
-    const entry = DEMO_BUILDER_SKILLS.find((skill) => skill.filename === filename);
-    if (!entry) throw new Error(`No template for ${filename}`);
+function templateFor(name: string): string {
+    const entry = DEMO_BUILDER_SKILLS.find((skill) => skill.name === name);
+    if (!entry) throw new Error(`No template for ${name}`);
     return entry.content;
 }
 
@@ -142,9 +142,9 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
     it('the dependency map still names exactly the three playwright skills (fixture guard)', () => {
         expect([...PLAYWRIGHT_SKILLS].sort()).toEqual([
-            'connect-authenticated-site.md',
-            'refine-visual-match.md',
-            'scrape-reference-site.md',
+            'connect-authenticated-site',
+            'refine-visual-match',
+            'scrape-reference-site',
         ]);
     });
 
@@ -158,7 +158,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             // and a storefront alone is not doing any.
             expect(writtenFiles()).toHaveLength(14);
             for (const filename of PLAYWRIGHT_SKILLS) {
-                expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(true);
+                expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(true);
             }
         });
 
@@ -169,7 +169,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             expect(writtenFiles()).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
-                expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
+                expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(false);
             }
         });
 
@@ -208,8 +208,8 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            expect(summary.written).not.toContain('extend-app-builder-app.md');
-            expect(writtenFiles().some((p) => p.endsWith('extend-app-builder-app.md'))).toBe(false);
+            expect(summary.written).not.toContain('extend-app-builder-app');
+            expect(writtenFiles().some((p) => p.endsWith('extend-app-builder-app'))).toBe(false);
         });
 
         it('records no hash entries for gated-out skills', async () => {
@@ -219,7 +219,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
 
             for (const filename of PLAYWRIGHT_SKILLS) {
-                expect(writer.hashes()).not.toHaveProperty([`.claude/skills/${filename}`]);
+                expect(writer.hashes()).not.toHaveProperty([`.claude/skills/${filename}/SKILL.md`]);
             }
         });
     });
@@ -238,7 +238,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             // (a bare project needs no App Builder tooling).
             expect(writtenFiles()).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
-                expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
+                expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(false);
             }
         });
 
@@ -253,7 +253,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             // 11 gated always-on + the conditional extend-app-builder-app.
             expect(summary.written).toHaveLength(12);
-            expect(summary.written).toContain('extend-app-builder-app.md');
+            expect(summary.written).toContain('extend-app-builder-app');
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(summary.written).not.toContain(filename);
             }
@@ -261,7 +261,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
     });
 
     describe('return summary contract (moved from skillsWriter.test.ts — max-lines cap)', () => {
-        it('returns the attempted skill filenames when playwright is installed (13 always-on + conditional)', async () => {
+        it('returns the attempted skill names when playwright is installed (13 always-on + conditional)', async () => {
             mockDisk(playwrightInstalled());
 
             const summary = await writeSkillFiles(
@@ -272,21 +272,21 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             expect(summary.written).toEqual(
                 expect.arrayContaining([
-                    'add-component.md',
-                    'sync-changes.md',
-                    'update-credentials.md',
-                    'create-eds-project.md',
-                    'diagnose-demo.md',
-                    'register-custom-block.md',
+                    'add-component',
+                    'sync-changes',
+                    'update-credentials',
+                    'create-eds-project',
+                    'diagnose-demo',
+                    'register-custom-block',
                 ])
             );
             // Fourteen always-written skills; no extend-app-builder-app for a
             // storefront that builds no App Builder app (AI-1o).
             expect(summary.written).toHaveLength(14);
-            expect(summary.written).not.toContain('extend-app-builder-app.md');
+            expect(summary.written).not.toContain('extend-app-builder-app');
         });
 
-        it('returns bare filenames (basenames), not absolute paths', async () => {
+        it('returns bare skill names (no separators, no extension), not paths', async () => {
             mockDisk(playwrightInstalled());
 
             const summary = await writeSkillFiles(
@@ -297,11 +297,14 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             for (const name of summary.written) {
                 expect(path.basename(name)).toBe(name);
+                expect(name.endsWith('.md')).toBe(false);
             }
         });
     });
 
     describe('reconciling previously-delivered copies (removal matrix routing)', () => {
+        // The legacy pre-v27 flat path — gating (and every write) reconciles it
+        // alongside the current `<name>/SKILL.md` layout.
         const GATED_REL = '.claude/skills/scrape-reference-site.md';
         const GATED_ABS = `${PROJECT_PATH}/${GATED_REL}`;
 
@@ -344,7 +347,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         });
 
         it('removes a pre-ADR copy that is byte-equal to today\'s template (provably ours)', async () => {
-            mockDisk({ [GATED_ABS]: templateFor('scrape-reference-site.md') });
+            mockDisk({ [GATED_ABS]: templateFor('scrape-reference-site') });
             const writer = makeTestWriter(PROJECT_PATH); // no recorded hashes
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
@@ -401,7 +404,7 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
             makeTestWriter(PROJECT_PATH)
         );
 
-        expect(summary.written).not.toContain('extend-app-builder-app.md');
+        expect(summary.written).not.toContain('extend-app-builder-app');
     });
 
     it('still writes it for a mesh project — the control', async () => {
@@ -413,7 +416,7 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
             makeTestWriter(PROJECT_PATH)
         );
 
-        expect(summary.written).toContain('extend-app-builder-app.md');
+        expect(summary.written).toContain('extend-app-builder-app');
     });
 
     it('removes a bundle delivered before the gate narrowed, on proof it is ours', async () => {

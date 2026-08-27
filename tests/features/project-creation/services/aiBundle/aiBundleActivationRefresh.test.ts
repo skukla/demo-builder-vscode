@@ -404,7 +404,7 @@ describe('stale aiContextVersion stamp', () => {
         const paths = writtenPaths();
         expect(paths.some((p) => p.endsWith(`${PROJECT_A}/.mcp.json`))).toBe(true);
         expect(paths.some((p) => p.endsWith('/AGENTS.md'))).toBe(true);
-        expect(paths.some((p) => p.endsWith('/.claude/skills/add-component.md'))).toBe(true);
+        expect(paths.some((p) => p.endsWith('/.claude/skills/add-component/SKILL.md'))).toBe(true);
     });
 
     it('advances the stamp to AI_CONTEXT_VERSION and saves exactly once', async () => {
@@ -459,7 +459,7 @@ describe('stale aiContextVersion stamp', () => {
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
 
         expect(
-            writtenPaths().some((p) => p.endsWith('/.claude/skills/scrape-reference-site.md'))
+            writtenPaths().some((p) => p.endsWith('/.claude/skills/scrape-reference-site/SKILL.md'))
         ).toBe(true);
     });
 
@@ -467,7 +467,7 @@ describe('stale aiContextVersion stamp', () => {
         // EDS project, playwright NOT installed, and a hash-matched (provably
         // ours) playwright skill on disk → the tier-2 run reconciles it away
         // and the removal lands in the persisted hash map.
-        const skillRel = '.claude/skills/scrape-reference-site.md';
+        const skillRel = '.claude/skills/scrape-reference-site/SKILL.md';
         const skillAbs = path.join(PROJECT_A, skillRel);
         mockDisk({ [skillAbs]: 'previously generated content' });
         const project = makeEdsProject({
@@ -489,7 +489,7 @@ describe('stale aiContextVersion stamp', () => {
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
 
         expect(
-            writtenPaths().some((p) => p.endsWith('/.claude/skills/scrape-reference-site.md'))
+            writtenPaths().some((p) => p.endsWith('/.claude/skills/scrape-reference-site/SKILL.md'))
         ).toBe(false);
     });
 });

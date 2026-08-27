@@ -213,13 +213,13 @@ describe('refreshMcpConfigs', () => {
     it('leaves the other tier\'s recorded hashes intact (tier-1-only run)', async () => {
         const writer = makeTestWriter(PROJECT_PATH, {
             'AGENTS.md': 'tier2-hash-a',
-            '.claude/skills/add-component.md': 'tier2-hash-b',
+            '.claude/skills/add-component/SKILL.md': 'tier2-hash-b',
         });
 
         await refreshMcpConfigs(PROJECT_PATH, makeProject(), EXTENSION_PATH, writer, NODE_PATH);
 
         expect(writer.hashes()['AGENTS.md']).toBe('tier2-hash-a');
-        expect(writer.hashes()['.claude/skills/add-component.md']).toBe('tier2-hash-b');
+        expect(writer.hashes()['.claude/skills/add-component/SKILL.md']).toBe('tier2-hash-b');
     });
 
     it('does not shell out for the node binary when nodePath is supplied', async () => {
@@ -250,11 +250,11 @@ describe('refreshContextAndSkills', () => {
                 'AGENTS.md',
                 'CLAUDE.md',
                 '.claude/CLAUDE.md',
-                '.claude/skills/add-component.md',
+                '.claude/skills/add-component/SKILL.md',
             ])
         );
-        // Skills return contract: the attempted Demo-Builder skill filenames.
-        expect(result.skills).toContain('add-component.md');
+        // Skills return contract: the attempted Demo-Builder skill names.
+        expect(result.skills).toContain('add-component');
         expect(result.skills.length).toBeGreaterThan(0);
     });
 

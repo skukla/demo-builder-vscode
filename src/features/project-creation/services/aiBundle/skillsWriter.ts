@@ -5,12 +5,17 @@
  *
  * 1. **Demo Builder lifecycle skills** (always written): procedural guides
  *    that tell AI agents how to operate against the Demo Builder MCP server.
- *    - `add-component.md` — add or enable a component via update_project_config
- *    - `sync-changes.md` — push code changes via sync_storefront
- *    - `update-credentials.md` — edit .env credentials via update_project_config
- *    - `create-eds-project.md` — provision a new project headlessly via create_project
- *    - `diagnose-demo.md` — route a broken-demo symptom to the check that answers it
- *    - `import-datapack.md` — the six-call sample-data loop and its three traps
+ *    Each lands as `.claude/skills/<name>/SKILL.md` — the one layout Claude
+ *    Code registers as an invocable skill (measured live 2026-08-27: a session
+ *    registered every directory-format skill and none of the flat `<name>.md`
+ *    files these shipped as before v27; legacy flat copies are reconciled away
+ *    through the ADR-013 removal matrix on the next write).
+ *    - `add-component` — add or enable a component via update_project_config
+ *    - `sync-changes` — push code changes via sync_storefront
+ *    - `update-credentials` — edit .env credentials via update_project_config
+ *    - `create-eds-project` — provision a new project headlessly via create_project
+ *    - `diagnose-demo` — route a broken-demo symptom to the check that answers it
+ *    - `import-datapack` — the six-call sample-data loop and its three traps
  *
  * 2. **Adobe skill bundles**: Adobe ships every starter-kit bundle inside the
  *    one `@adobe-commerce/commerce-extensibility-tools` package, which installs
@@ -66,8 +71,8 @@ const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
 );
 
 /**
- * Content for each always-on skill (filename → static content imported at build
- * time). The LIST of filenames is not defined here — it lives in
+ * Content for each always-on skill (name → static content imported at build
+ * time). The LIST of names is not defined here — it lives in
  * `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai`), which the skill inspector also
  * reads, so the writer and the classifier cannot disagree about what counts as
  * first-party. A missing key here is a compile error.
@@ -83,26 +88,26 @@ const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
  * paragraph below it already said not to restate counts here. Merged.
  */
 const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string> = {
-    'add-component.md': addComponentContent,
-    'sync-changes.md': syncChangesContent,
-    'update-credentials.md': updateCredentialsContent,
-    'create-eds-project.md': createEdsProjectContent,
-    'diagnose-demo.md': diagnoseDemoContent,
-    'import-datapack.md': importDatapackContent,
-    'scrape-reference-site.md': scrapeReferenceSiteContent,
-    'connect-authenticated-site.md': connectAuthenticatedSiteContent,
-    'commerce-block-mapper.md': commerceBlockMapperContent,
-    'demo-data-injector.md': demoDataInjectorContent,
-    'header-nav-footer.md': headerNavFooterContent,
-    'refine-visual-match.md': refineVisualMatchContent,
-    'register-custom-block.md': registerCustomBlockContent,
-    'remove-custom-block.md': removeCustomBlockContent,
+    'add-component': addComponentContent,
+    'sync-changes': syncChangesContent,
+    'update-credentials': updateCredentialsContent,
+    'create-eds-project': createEdsProjectContent,
+    'diagnose-demo': diagnoseDemoContent,
+    'import-datapack': importDatapackContent,
+    'scrape-reference-site': scrapeReferenceSiteContent,
+    'connect-authenticated-site': connectAuthenticatedSiteContent,
+    'commerce-block-mapper': commerceBlockMapperContent,
+    'demo-data-injector': demoDataInjectorContent,
+    'header-nav-footer': headerNavFooterContent,
+    'refine-visual-match': refineVisualMatchContent,
+    'register-custom-block': registerCustomBlockContent,
+    'remove-custom-block': removeCustomBlockContent,
 };
 
-export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: string }> =
-    DEMO_BUILDER_ALWAYS_ON_SKILLS.map((filename) => ({
-        filename,
-        content: SKILL_CONTENT[filename],
+export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ name: string; content: string }> =
+    DEMO_BUILDER_ALWAYS_ON_SKILLS.map((name) => ({
+        name,
+        content: SKILL_CONTENT[name],
     }));
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -111,7 +116,7 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
  * Writes the first-party set declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS`
- * (`@/types/ai` — the ONE home for the filenames; do not restate counts here,
+ * (`@/types/ai` — the ONE home for the names; do not restate counts here,
  * they rot). Three of those skills drive Playwright and are delivery-gated
  * per `SKILL_MCP_TOOL_DEPENDENCIES` — see the gating paragraph below.
  *
@@ -126,7 +131,7 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * user-edited skill is left in place and reported on `writer.report()`
  * rather than overwritten. No bundle write outside this seam. The `written`
  * return keeps its pre-ADR contract (the attempted Demo-Builder skill
- * filenames); skip/remove visibility lives on the writer's report.
+ * names); skip/remove visibility lives on the writer's report.
  *
  * Tool-availability gating: a skill in `SKILL_MCP_TOOL_DEPENDENCIES` whose
  * MCP tool is not usable by this project — the ai-defaults entry doesn't
@@ -148,24 +153,30 @@ export async function writeSkillFiles(
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
 
-    const writeSkill = async (filename: string, content: string): Promise<void> => {
-        if (path.basename(filename) !== filename) {
-            throw new Error(`Invalid skill filename: ${filename}`);
+    // Write `<name>/SKILL.md` (the registrable layout) and reconcile away the
+    // legacy pre-v27 flat `<name>.md` the same skill used to ship as. The
+    // template content doubles as the ownership proof for a pre-ADR unhashed
+    // legacy copy (removed only when byte-equal — provably ours).
+    const writeSkill = async (name: string, content: string): Promise<void> => {
+        if (path.basename(name) !== name) {
+            throw new Error(`Invalid skill name: ${name}`);
         }
-        await writer.write(`.claude/skills/${filename}`, content);
+        await writer.write(`.claude/skills/${name}/SKILL.md`, content);
+        await writer.remove(`.claude/skills/${name}.md`, content);
+    };
+
+    /** Reconcile BOTH layouts of a skill this project must not carry. */
+    const removeSkill = async (name: string, content: string): Promise<void> => {
+        await writer.remove(`.claude/skills/${name}/SKILL.md`, content);
+        await writer.remove(`.claude/skills/${name}.md`, content);
     };
 
     const installedPackages = await readInstalledMcpPackages(projectPath);
     const gatedOut = gatedOutSkills(resolveAvailableMcpToolIds(project, installedPackages));
 
     await Promise.all(
-        DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
-            gatedOut.has(filename)
-                ? // Reconcile any previously-delivered copy. `content` is the
-                  // exact template we'd write today, so a pre-ADR unhashed
-                  // copy is removed only when byte-equal (provably ours).
-                  writer.remove(`.claude/skills/${filename}`, content)
-                : writeSkill(filename, content),
+        DEMO_BUILDER_SKILLS.map(({ name, content }) =>
+            gatedOut.has(name) ? removeSkill(name, content) : writeSkill(name, content),
         ),
     );
 
@@ -193,8 +204,8 @@ export async function writeSkillFiles(
     // extend-app-builder-app skill teaching the runtime API-access loop
     // (list_console_apis → confirm → add_console_apis → build → deploy).
     // copyAdobeSkillBundle skips silently when the package isn't there.
-    const written = DEMO_BUILDER_SKILLS.filter(({ filename }) => !gatedOut.has(filename)).map(
-        ({ filename }) => filename,
+    const written = DEMO_BUILDER_SKILLS.filter(({ name }) => !gatedOut.has(name)).map(
+        ({ name }) => name,
     );
     if (projectBuildsAppBuilderApps(project)) {
         await copyAdobeSkillBundle(
@@ -203,8 +214,8 @@ export async function writeSkillFiles(
             'appbuilder',
             writer,
         );
-        await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
-        written.push('extend-app-builder-app.md');
+        await writeSkill('extend-app-builder-app', extendAppBuilderAppContent);
+        written.push('extend-app-builder-app');
     } else {
         // Reconcile a bundle this project no longer qualifies for. Every EDS
         // project received it until 2026-08-26 (AI-1o), so most existing
@@ -212,19 +223,19 @@ export async function writeSkillFiles(
         // integration starter kit app. Leaving them is worse than never having
         // written them: they are instructions, and they are wrong.
         await removeAdobeSkillBundle('appbuilder', writer);
-        await writer.remove('.claude/skills/extend-app-builder-app.md', extendAppBuilderAppContent);
+        await removeSkill('extend-app-builder-app', extendAppBuilderAppContent);
     }
 
     // Summary for the handler boundary to log (Adobe bundle skills are copied
     // into subdirectories and aren't included here — only the written
-    // Demo-Builder skill filenames).
+    // Demo-Builder skill names).
     return { written };
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 /**
- * Always-on skill filenames whose declared MCP tool is not in the available
+ * Always-on skill names whose declared MCP tool is not in the available
  * set — gated OUT of delivery (not written; existing copies reconciled via
  * the ADR-013 removal matrix). A skill absent from
  * `SKILL_MCP_TOOL_DEPENDENCIES` depends on no tool and is never gated.
@@ -233,7 +244,7 @@ function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
     return new Set(
         Object.entries(SKILL_MCP_TOOL_DEPENDENCIES)
             .filter(([, toolId]) => !availableToolIds.has(toolId))
-            .map(([filename]) => filename),
+            .map(([name]) => name),
     );
 }
 

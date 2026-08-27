@@ -43,9 +43,9 @@ Runs the three inspectors via `Promise.allSettled` so a failing inspector degrad
 
 ### `inspectSkills(projectPath): Promise<SkillInventoryEntry[]>`
 
-Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source, bundle? }`. Classification: a top-level filename in `DEMO_BUILDER_SKILL_FILES` → `'demo-builder'`; nested in a bundle subdir → `'adobe'`, with `bundle` set to that directory's `<prefix>` (`aem`, `appbuilder`); other top-level → `'unknown'`.
+Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source, bundle? }`. Classification: a top-level DIRECTORY named in `DEMO_BUILDER_SKILL_NAMES` (the v27+ `<name>/SKILL.md` layout) → `'demo-builder'`, as is a legacy pre-v27 flat `<name>.md` whose stem matches; nested in any other subdir → `'adobe'`, with `bundle` set to that directory's `<prefix>` (`aem`, `appbuilder`); other top-level → `'unknown'`.
 
-`DEMO_BUILDER_SKILL_FILES` lives in `@/types/ai` and is the **single home** for those filenames — `skillsWriter` builds its write list from the same constant. They were separate lists once and drifted: `diagnose-demo.md` shipped in the writer without being added here, so the AI Capabilities modal filed a first-party skill under "Custom". `bundle` exists for the same class of reason — `source: 'adobe'` only means "arrived in a bundle", so the UI grouped every bundle under one hardcoded "Adobe AEM" heading and labelled App Builder skills as AEM.
+`DEMO_BUILDER_SKILL_NAMES` lives in `@/types/ai` and is the **single home** for those names — `skillsWriter` builds its write list from the same constant. They were separate lists once and drifted: `diagnose-demo.md` shipped in the writer without being added here, so the AI Capabilities modal filed a first-party skill under "Custom". `bundle` exists for the same class of reason — `source: 'adobe'` only means "arrived in a bundle", so the UI grouped every bundle under one hardcoded "Adobe AEM" heading and labelled App Builder skills as AEM.
 
 ### `inspectAllServers(projectPath): Promise<McpInventoryEntry[]>` + `clearMcpCache(serverId?)`
 
@@ -89,7 +89,7 @@ The AI context files live in the project directory, not in this feature:
 
 The three writers live in `src/features/project-creation/services/`:
 - `aiContextWriter.ts` — generates `AGENTS.md` and the `CLAUDE.md` pointers; the section builders (and the Wayfinder commit pin) live in its sibling `agentsMdSections.ts`. The "Finding Adobe Documentation" section points agents at [Wayfinder](https://github.com/adobe-commerce/wayfinder), Adobe's own routing guide across aem.live / storefront / Experience League / da.live / developer.adobe.com, so the bundle does not re-derive that map. Pinned to a reviewed commit rather than `@main` — a remote document that becomes agent instructions must not change without our review.
-- `skillsWriter.ts` — writes `.claude/skills/*.md` guides
+- `skillsWriter.ts` — writes `.claude/skills/<name>/SKILL.md` guides (the one layout Claude Code registers as invocable skills; flat `<name>.md` until v27)
 - `mcpConfigWriter.ts` — generates `.mcp.json`, `.claude/mcp.json`, `.claude/settings.json`
 
 The orchestrator is `aiBundleService.generateAIContextFiles()` (tier functions `refreshMcpConfigs` / `refreshContextAndSkills` beside it; every file goes through the `generatedFileWriter` hash-and-skip seam per ADR-013), called as Phase 6 of project creation and from `aiHandlers.ts` for on-demand regeneration.

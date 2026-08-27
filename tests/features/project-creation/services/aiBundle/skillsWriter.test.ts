@@ -121,9 +121,11 @@ function writtenFiles(): string[] {
     return writeFileMock.mock.calls.map(([p]: [string]) => p);
 }
 
-function writtenContent(filePattern: string): string | undefined {
+function writtenContent(skillName: string): string | undefined {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
-    const call = writeFileMock.mock.calls.find(([p]: [string]) => path.basename(p) === filePattern);
+    const call = writeFileMock.mock.calls.find(([p]: [string]) =>
+        p.endsWith(path.join(skillName, 'SKILL.md')),
+    );
     return call?.[1] as string | undefined;
 }
 
@@ -200,16 +202,17 @@ describe('the always-on skill list has ONE home', () => {
     // user had written it. Both sides now read the same constant — this pins that
     // the writer is still driven by it rather than by a second literal.
     it('writes exactly the canonical always-on set, in canonical order', () => {
-        expect(DEMO_BUILDER_SKILLS.map((s) => s.filename)).toEqual([
+        expect(DEMO_BUILDER_SKILLS.map((s) => s.name)).toEqual([
             ...DEMO_BUILDER_ALWAYS_ON_SKILLS,
         ]);
     });
 
-    it('pairs every canonical filename with non-empty content', () => {
-        for (const { filename, content } of DEMO_BUILDER_SKILLS) {
+    it('pairs every canonical name with non-empty content', () => {
+        for (const { name, content } of DEMO_BUILDER_SKILLS) {
             expect(typeof content).toBe('string');
             expect(content.length).toBeGreaterThan(0);
-            expect(filename.endsWith('.md')).toBe(true);
+            // Bare directory names since v27 — the .md suffix was the flat layout.
+            expect(name.endsWith('.md')).toBe(false);
         }
     });
 });
@@ -232,52 +235,52 @@ describe('skillsWriter', () => {
     });
 
     describe('core skills (always written, all project types)', () => {
-        it('writes add-component.md for EDS projects', async () => {
+        it('writes add-component for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('add-component.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('add-component/SKILL.md'))).toBe(true);
         });
 
-        it('writes add-component.md for headless projects', async () => {
+        it('writes add-component for headless projects', async () => {
             await writeSkills('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('add-component.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('add-component/SKILL.md'))).toBe(true);
         });
 
-        it('writes sync-changes.md for EDS projects', async () => {
+        it('writes sync-changes for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('sync-changes.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('sync-changes/SKILL.md'))).toBe(true);
         });
 
-        it('writes sync-changes.md for headless projects', async () => {
+        it('writes sync-changes for headless projects', async () => {
             await writeSkills('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('sync-changes.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('sync-changes/SKILL.md'))).toBe(true);
         });
 
-        it('writes update-credentials.md for EDS projects', async () => {
+        it('writes update-credentials for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('update-credentials/SKILL.md'))).toBe(true);
         });
 
-        it('writes update-credentials.md for headless projects', async () => {
+        it('writes update-credentials for headless projects', async () => {
             await writeSkills('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('update-credentials/SKILL.md'))).toBe(true);
         });
 
-        it('writes create-eds-project.md for EDS projects', async () => {
+        it('writes create-eds-project for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('create-eds-project/SKILL.md'))).toBe(true);
         });
 
-        it('writes create-eds-project.md for headless projects', async () => {
+        it('writes create-eds-project for headless projects', async () => {
             await writeSkills('/projects/test', makeHeadlessProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('create-eds-project/SKILL.md'))).toBe(true);
         });
 
         it('writes exactly fourteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
@@ -290,54 +293,54 @@ describe('skillsWriter', () => {
             expect(writtenFiles()).toHaveLength(14);
         });
 
-        it('writes scrape-reference-site.md for EDS projects', async () => {
+        it('writes scrape-reference-site for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('scrape-reference-site.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('scrape-reference-site/SKILL.md'))).toBe(true);
         });
 
-        it('writes connect-authenticated-site.md for EDS projects', async () => {
+        it('writes connect-authenticated-site for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('connect-authenticated-site.md'))).toBe(
+            expect(writtenFiles().some((p) => p.endsWith('connect-authenticated-site/SKILL.md'))).toBe(
                 true
             );
         });
 
-        it('writes commerce-block-mapper.md for EDS projects', async () => {
+        it('writes commerce-block-mapper for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('commerce-block-mapper.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('commerce-block-mapper/SKILL.md'))).toBe(true);
         });
 
-        it('writes demo-data-injector.md for EDS projects', async () => {
+        it('writes demo-data-injector for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('demo-data-injector.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('demo-data-injector/SKILL.md'))).toBe(true);
         });
 
-        it('writes header-nav-footer.md for EDS projects', async () => {
+        it('writes header-nav-footer for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('header-nav-footer.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('header-nav-footer/SKILL.md'))).toBe(true);
         });
 
-        it('writes refine-visual-match.md for EDS projects', async () => {
+        it('writes refine-visual-match for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('refine-visual-match.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('refine-visual-match/SKILL.md'))).toBe(true);
         });
 
-        it('writes register-custom-block.md for EDS projects', async () => {
+        it('writes register-custom-block for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('register-custom-block.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('register-custom-block/SKILL.md'))).toBe(true);
         });
 
-        it('writes remove-custom-block.md for EDS projects', async () => {
+        it('writes remove-custom-block for EDS projects', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            expect(writtenFiles().some((p) => p.endsWith('remove-custom-block.md'))).toBe(true);
+            expect(writtenFiles().some((p) => p.endsWith('remove-custom-block/SKILL.md'))).toBe(true);
         });
 
         it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
@@ -372,16 +375,16 @@ describe('skillsWriter', () => {
         });
     });
 
-    describe('sync-changes.md content', () => {
+    describe('sync-changes content', () => {
         it('mentions sync_storefront', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            const content = writtenContent('sync-changes.md');
+            const content = writtenContent('sync-changes');
             expect(content).toContain('sync_storefront');
         });
     });
 
-    describe('extend-app-builder-app.md content (per-integration addressing)', () => {
+    describe('extend-app-builder-app content (per-integration addressing)', () => {
         // Shell instancing: a project can hold N AI-built integrations, each
         // cloned into components/<id>/ with its own app.config.yaml and an
         // isolated OpenWhisk package. The skill must address integrations
@@ -389,14 +392,14 @@ describe('skillsWriter', () => {
         it('states that a project can hold multiple AI-built integrations', async () => {
             await writeSkills('/projects/test', makeAppBuilderProject());
 
-            const content = writtenContent('extend-app-builder-app.md');
+            const content = writtenContent('extend-app-builder-app');
             expect(content).toMatch(/multiple AI-built integrations/i);
         });
 
         it('addresses each integration by its components/<id>/ folder', async () => {
             await writeSkills('/projects/test', makeAppBuilderProject());
 
-            const content = writtenContent('extend-app-builder-app.md');
+            const content = writtenContent('extend-app-builder-app');
             expect(content).toContain('components/<id>/');
             expect(content).toContain('app.config.yaml');
         });
@@ -404,14 +407,14 @@ describe('skillsWriter', () => {
         it('instructs the agent to confirm WHICH integration before editing', async () => {
             await writeSkills('/projects/test', makeAppBuilderProject());
 
-            const content = writtenContent('extend-app-builder-app.md');
+            const content = writtenContent('extend-app-builder-app');
             expect(content).toMatch(/which integration/i);
         });
 
         it('states that deploys are per-integration (own OpenWhisk package)', async () => {
             await writeSkills('/projects/test', makeAppBuilderProject());
 
-            const content = writtenContent('extend-app-builder-app.md');
+            const content = writtenContent('extend-app-builder-app');
             expect(content).toMatch(/per-integration/i);
             expect(content).toMatch(/OpenWhisk|I\/O Runtime/i);
         });
@@ -419,16 +422,16 @@ describe('skillsWriter', () => {
         it('no longer frames the target as a single blank shell app', async () => {
             await writeSkills('/projects/test', makeAppBuilderProject());
 
-            const content = writtenContent('extend-app-builder-app.md');
+            const content = writtenContent('extend-app-builder-app');
             expect(content).not.toMatch(/the blank shell/i);
         });
     });
 
-    describe('create-eds-project.md org-context guidance', () => {
+    describe('create-eds-project org-context guidance', () => {
         it('explains per-operation org targeting and that ORG_MISMATCH is non-retryable', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            const content = writtenContent('create-eds-project.md');
+            const content = writtenContent('create-eds-project');
             // Shipped behavior: per-operation targeting, no shared global clobber.
             expect(content).toMatch(/per operation/i);
             expect(content).toContain('ORG_MISMATCH');
@@ -438,7 +441,7 @@ describe('skillsWriter', () => {
         it('tells the agent to set its target before Adobe ops and to surface ORG_MISMATCH', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            const content = writtenContent('create-eds-project.md');
+            const content = writtenContent('create-eds-project');
             expect(content).toContain('select_org');
             expect(content).toContain('select_workspace');
         });
@@ -446,7 +449,7 @@ describe('skillsWriter', () => {
         it('no longer frames org context as a shared, process-wide setting', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
-            const content = writtenContent('create-eds-project.md');
+            const content = writtenContent('create-eds-project');
             expect(content).not.toMatch(/single, process-wide setting/i);
             expect(content).not.toMatch(/global and shared/i);
         });
@@ -611,9 +614,9 @@ describe('skillsWriter', () => {
             await writeSkills('/projects/test', makeEdsProject());
 
             const files = writtenFiles();
-            expect(files.some((p) => p.endsWith('add-component.md'))).toBe(true);
-            expect(files.some((p) => p.endsWith('sync-changes.md'))).toBe(true);
-            expect(files.some((p) => p.endsWith('update-credentials.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('add-component/SKILL.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('sync-changes/SKILL.md'))).toBe(true);
+            expect(files.some((p) => p.endsWith('update-credentials/SKILL.md'))).toBe(true);
         });
     });
 

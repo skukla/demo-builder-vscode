@@ -157,9 +157,7 @@ export async function gatherInventory(projectPath: string): Promise<AiInventory>
             ? { skillsError: errorMessage(skillsResult.reason) }
             : {}),
         mcps: mcpsResult.status === 'fulfilled' ? mcpsResult.value : [],
-        ...(mcpsResult.status === 'rejected'
-            ? { mcpsError: errorMessage(mcpsResult.reason) }
-            : {}),
+        ...(mcpsResult.status === 'rejected' ? { mcpsError: errorMessage(mcpsResult.reason) } : {}),
         sessionMcps: sessionMcpsResult.status === 'fulfilled' ? sessionMcpsResult.value : [],
         ...(sessionMcpsResult.status === 'rejected'
             ? { sessionMcpsError: errorMessage(sessionMcpsResult.reason) }
@@ -182,7 +180,11 @@ async function checkAgentsMd(projectPath: string): Promise<AiCheckResult> {
     try {
         const content = await fsPromises.readFile(filePath, 'utf-8');
         if (!content.trim()) {
-            return { name: 'AGENTS.md', status: 'warning', message: 'File is empty — run Regenerate to fix' };
+            return {
+                name: 'AGENTS.md',
+                status: 'warning',
+                message: 'File is empty — run Regenerate to fix',
+            };
         }
         return { name: 'AGENTS.md', status: 'ok' };
     } catch {
@@ -196,15 +198,27 @@ async function checkMcpConfig(projectPath: string): Promise<AiCheckResult> {
     try {
         raw = await fsPromises.readFile(filePath, 'utf-8');
     } catch {
-        return { name: '.claude/mcp.json', status: 'warning', message: 'Missing — run Regenerate to fix' };
+        return {
+            name: '.claude/mcp.json',
+            status: 'warning',
+            message: 'Missing — run Regenerate to fix',
+        };
     }
 
     const parsed = parseJSON<{ mcpServers?: unknown }>(raw);
     if (parsed === null) {
-        return { name: '.claude/mcp.json', status: 'error', message: 'Invalid JSON — run Regenerate to fix' };
+        return {
+            name: '.claude/mcp.json',
+            status: 'error',
+            message: 'Invalid JSON — run Regenerate to fix',
+        };
     }
     if (!parsed.mcpServers) {
-        return { name: '.claude/mcp.json', status: 'warning', message: 'Missing mcpServers key — run Regenerate to fix' };
+        return {
+            name: '.claude/mcp.json',
+            status: 'warning',
+            message: 'Missing mcpServers key — run Regenerate to fix',
+        };
     }
     return { name: '.claude/mcp.json', status: 'ok' };
 }
@@ -230,21 +244,42 @@ async function checkSkillFiles(projectPath: string): Promise<AiCheckResult> {
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     try {
         const entries = await fsPromises.readdir(skillsDir, { withFileTypes: true });
-        const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith('.md'));
-        if (mdFiles.length === 0) {
-            return { name: 'skill-files', status: 'warning', message: 'No skill files found — run Regenerate to fix' };
+        // v27+ layout: `<name>/SKILL.md` directories. Legacy flat `<name>.md`
+        // files still count — a not-yet-regenerated project is not unhealthy.
+        const hasFlat = entries.some((e) => e.isFile() && e.name.endsWith('.md'));
+        const dirHasSkillMd = async (dirName: string): Promise<boolean> => {
+            try {
+                await fsPromises.access(path.join(skillsDir, dirName, 'SKILL.md'));
+                return true;
+            } catch {
+                return false;
+            }
+        };
+        const dirChecks = await Promise.all(
+            entries.filter((e) => e.isDirectory()).map((e) => dirHasSkillMd(e.name)),
+        );
+        if (!hasFlat && !dirChecks.some(Boolean)) {
+            return {
+                name: 'skill-files',
+                status: 'warning',
+                message: 'No skill files found — run Regenerate to fix',
+            };
         }
         return { name: 'skill-files', status: 'ok' };
     } catch {
-        return { name: 'skill-files', status: 'warning', message: 'Skills directory missing — run Regenerate to fix' };
+        return {
+            name: 'skill-files',
+            status: 'warning',
+            message: 'Skills directory missing — run Regenerate to fix',
+        };
     }
 }
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
 
 function aggregateStatus(checks: AiCheckResult[]): 'ok' | 'warning' | 'error' {
-    if (checks.some(c => c.status === 'error')) return 'error';
-    if (checks.some(c => c.status === 'warning')) return 'warning';
+    if (checks.some((c) => c.status === 'error')) return 'error';
+    if (checks.some((c) => c.status === 'warning')) return 'warning';
     return 'ok';
 }
 

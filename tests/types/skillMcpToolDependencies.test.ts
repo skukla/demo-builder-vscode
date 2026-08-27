@@ -67,7 +67,8 @@ describe('SKILL_MCP_TOOL_DEPENDENCIES', () => {
         );
 
         for (const file of DEMO_BUILDER_ALWAYS_ON_SKILLS) {
-            const body = fs.readFileSync(path.join(TEMPLATES_DIR, file), 'utf-8');
+            // The canonical list holds bare skill NAMES (v27); templates stay flat .md files.
+            const body = fs.readFileSync(path.join(TEMPLATES_DIR, `${file}.md`), 'utf-8');
             const drives = instructsPlaywright(body);
             const isDeclared = declared.has(file);
             if (drives !== isDeclared) {

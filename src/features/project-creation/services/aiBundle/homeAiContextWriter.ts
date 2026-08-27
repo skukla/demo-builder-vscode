@@ -61,8 +61,8 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  *   pushes storefront edits, scoped to repos under the root with an origin remote).
  * - `<root>/AGENTS.md` plus `<root>/CLAUDE.md` and `<root>/.claude/CLAUDE.md`
  *   `see @AGENTS.md` pointers.
- * - `<root>/.claude/skills/*.md` — ALL Demo Builder skills (the one home Chat
- *   does deep work on any project, so it needs every skill).
+ * - `<root>/.claude/skills/<name>/SKILL.md` — ALL Demo Builder skills (the one
+ *   home Chat does deep work on any project, so it needs every skill).
  *
  * Best-effort: never throws. On any failure it logs to stderr and returns.
  *
@@ -124,10 +124,18 @@ export async function ensureHomeAiContext(
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             // ALL skills — the single home Chat edits any project's files, so it
-            // needs the full skill surface, not just one global skill.
-            ...DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
-                fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8'),
-            ),
+            // needs the full skill surface, not just one global skill. Each
+            // lands as `<name>/SKILL.md` (the one layout Claude Code registers
+            // as an invocable skill — see skillsWriter); the legacy pre-v27
+            // flat `<name>.md` is unlinked best-effort, safe here because this
+            // surface is regenerated wholesale on every activation and the
+            // names are ours.
+            ...DEMO_BUILDER_SKILLS.map(async ({ name, content }) => {
+                const skillDir = path.join(skillsDir, name);
+                await fsPromises.mkdir(skillDir, { recursive: true });
+                await fsPromises.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
+                await fsPromises.rm(path.join(skillsDir, `${name}.md`), { force: true });
+            }),
         ]);
     } catch (err) {
         // Best-effort: the home AI context is a convenience, never a hard

@@ -22,10 +22,10 @@
  * with sticky headers shows everything at rest — no interaction, no jump.
  */
 
-import { BUNDLE_LABELS } from './aiSurfaceNames';
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
+import { BUNDLE_LABELS } from './aiSurfaceNames';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { SkillInventoryEntry, SkillSource } from '@/types/ai';
 
@@ -51,7 +51,11 @@ export interface AiSkillsListProps {
      * a stated reason instead of a silent omission (third-party-tooling item,
      * step 4).
      */
-    gatedSkills?: Array<{ file: string; toolId: string; reason: 'setting-disabled' | 'tool-missing' }>;
+    gatedSkills?: Array<{
+        file: string;
+        toolId: string;
+        reason: 'setting-disabled' | 'tool-missing';
+    }>;
     /**
      * Rendered INSIDE an integration section (see `aiIntegrations`), where the
      * section already carries the heading and the modal body already scrolls.
@@ -311,10 +315,7 @@ export function AiSkillsList({
                 ))}
                 {gatedSkills && gatedSkills.length > 0 && (
                     <div>
-                        <div
-                            className="ai-skills-group-header"
-                            data-testid="ai-skills-group-gated"
-                        >
+                        <div className="ai-skills-group-header" data-testid="ai-skills-group-gated">
                             Not available · {gatedSkills.length}
                         </div>
                         <Flex direction="column" gap="size-50">
@@ -324,7 +325,7 @@ export function AiSkillsList({
                                     data-testid="ai-skill-gated-row"
                                     UNSAFE_className="text-gray-600"
                                 >
-                                    {g.file.replace(/\.md$/, '')} · {gatedReasonLabel(g.reason)}
+                                    {g.file} · {gatedReasonLabel(g.reason)}
                                 </Text>
                             ))}
                         </Flex>
