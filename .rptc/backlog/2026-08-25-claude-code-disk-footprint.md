@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: backlog
+status: shipped
 layer: G
 ---
 # Claude Code's storage grows ~4 GB a year, and nothing reports it
@@ -102,3 +102,7 @@ and the reason a cleanup button is deliberately out of scope (transcripts are ho
 --continue works). Report only: total, largest subdirectories, oldest transcript, path.
 Compute on demand, never on activation."
 ```
+
+## Shipped so far
+
+- 2026-08-27  Shipped on loop/2026-08-27-starter-kit: Diagnostics now reports the ~/.claude footprint — total, largest subdirs (top 3), transcript count/size/oldest — computed only when the command runs (never activation), rendered with the resume caveat and no cleanup affordance, exactly as the item ruled. New module src/commands/claudeCodeFootprint.ts; 8 tests against a real temp tree incl. a pin that the output never offers deletion.

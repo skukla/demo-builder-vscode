@@ -11,6 +11,7 @@
  */
 
 import * as vscode from 'vscode';
+import { collectClaudeCodeFootprint } from './claudeCodeFootprint';
 import {
     checkAdobeCLI,
     checkOrphanedSettings,
@@ -188,6 +189,12 @@ export class DiagnosticsCommand {
             this.logger.debug('Probing in-extension MCP server...');
             report.mcp = await this.checkMcp();
 
+            // Claude Code's ~/.claude footprint. Local disk walk, no network —
+            // and strictly on-demand: this is the one place it may run (never
+            // activation; the tree is multi-GB).
+            this.logger.debug('Measuring Claude Code storage footprint...');
+            report.claudeCode = await collectClaudeCodeFootprint();
+
             // The four remote probes run CONCURRENTLY: each is pure HTTP against
             // a different service (GitHub/AEM, the Config Service, aem.live, and
             // the shared credential service), they share no state, and none reads
@@ -335,7 +342,7 @@ export class DiagnosticsCommand {
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
-/**
+    /**
      * Is the shared Commerce credential service configured and serving this user?
      *
      * Runs with or WITHOUT a project open, unlike the probes around it: the
