@@ -5,7 +5,6 @@
     "add_console_apis",
     "add_integration",
     "apply_updates",
-    "check_prerequisites",
     "cleanup_dalive_site",
     "configure_project",
     "connect_dalive",
@@ -24,12 +23,8 @@
     "discover_store_structure",
     "edit_project",
     "export_project_settings",
-    "get_datapack_import_status",
-    "get_datapack_import_target",
     "install_prerequisite",
     "list_dalive_sites",
-    "list_datapack_export_items",
-    "list_datapack_import_scopes",
     "migrate_storefront_name",
     "open_url",
     "open_view",
@@ -67,8 +62,6 @@
     "sync_content",
     "sync_storefront",
     "update_project_config",
-    "validate_component_selection",
-    "validate_datapack_import",
     "write_page"
   ]
 }

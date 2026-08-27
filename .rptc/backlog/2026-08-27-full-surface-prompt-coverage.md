@@ -70,3 +70,7 @@ shape, cloud resources required, owner present.
 
 Filed 2026-08-27, folded into the overnight loop as its standing work queue:
 tier 1 is tonight's task after the orientation prompts verify.
+
+## Shipped so far
+
+- 2026-08-27  Batch 2: 11 HIT, 3 AROUND across the Adobe/datapack/GitHub/block families. SHIPPED from it: list_workspaces stale-project 404 now answers a diagnosis (verified live against the real deleted project). RECORDED, not fixed: three native-competition datapoints — component-config lost to Glob+Read, block-source to ls, github-repos and repo-readiness to gh — the pattern is consistent: when the agent has local FS or an authed gh, our read tools lose to the native route and the answers were GOOD. That is tool-verdicts evidence about which reads earn their keep, not something to force. check_github_app's 401 was the expired DA.live session (environment, correctly reported by the tool). ENV facts for the morning: DA.live session expired; the selected Adobe Console project (Kukla Mesh Test) no longer exists; the kukla_adobe GitHub token is invalid; a DA.live sign-in prompt may be open in the window from the pre-hardening run.

@@ -307,5 +307,61 @@
       "list_github_repos"
     ],
     "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "prereqs",
+    "prompt": "Do I have all the tools installed that my project's stack needs \u2014 Node, aio CLI, plugins?",
+    "expect": [
+      "check_prerequisites"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-status",
+    "prompt": "Is a datapack import currently running on my project, and how far along is it?",
+    "expect": [
+      "get_datapack_import_status"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-target",
+    "prompt": "If I imported a datapack right now, which Commerce instance and store scope would it land on?",
+    "expect": [
+      "get_datapack_import_target"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "export-items",
+    "prompt": "What products does my Commerce instance hold that I could export into a datapack?",
+    "expect": [
+      "list_datapack_export_items"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-scopes",
+    "prompt": "Which websites or store views could a datapack import be scoped to on my instance?",
+    "expect": [
+      "list_datapack_import_scopes"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "validate-import",
+    "prompt": "Before actually importing: would importing the bodea datapack into my project be a valid request?",
+    "expect": [
+      "validate_datapack_import"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "validate-selection",
+    "prompt": "Would an EDS storefront on Adobe Commerce Cloud Service be a valid component combination for a new project?",
+    "expect": [
+      "validate_component_selection"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
   }
 ]
