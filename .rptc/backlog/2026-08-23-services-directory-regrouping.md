@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: backlog
+status: shipped
 layer: G
 ---
 # Regroup crowded service directories into subfolders — where measurement says so
@@ -153,3 +153,7 @@ care about depth; within-feature stays relative, cross-boundary stays aliased.
 > `core/ui/hooks`, and `core/utils` alone — the item records why. Assess
 > `project-creation/services` and `eds/handlers` only if the eds/services
 > move proves cheap.
+
+## Shipped so far
+
+- 2026-08-27  The one open thread — re-measure authentication/services after the facade split — done 2026-08-27: 31 direct files (below the item's own 38-file leave bar), clear working name families (7 adobeEntity* facade modules + 5 more adobe*, 4 auth*, ~5 org-context, 2 console-teardown, 2 token/ims). Verdict by the item's recorded criteria: LEAVE — the naming convention does the grouping. No regroup rounds remain; item complete.
