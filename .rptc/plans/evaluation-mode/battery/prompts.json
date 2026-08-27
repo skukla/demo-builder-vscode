@@ -355,5 +355,21 @@
       "validate_component_selection"
     ],
     "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "dalive-sites",
+    "prompt": "What DA.live sites exist in my organization?",
+    "expect": [
+      "list_dalive_sites"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. Deferred while the DA.live session was expired (unattended runs never sign in); unblocked by the owner re-authenticating 2026-08-27."
+  },
+  {
+    "id": "page-source",
+    "prompt": "Show me the DA.live source HTML of my storefront's home page.",
+    "expect": [
+      "read_page"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. Deferred while the DA.live session was expired (unattended runs never sign in); unblocked by the owner re-authenticating 2026-08-27."
   }
 ]

@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: built
+status: shipped
 layer: B
 ---
 # The other half of suggestions: finding holes in OUR tools
@@ -88,3 +88,4 @@ Three, and only the first is covered today:
 - 2026-08-26  First real use of agent-gap-scan's output: the battery it informed found exactly one gap (AI-1h) and one bug (AI-1g). Also exposed the scan's own limit — it reports what agents DID, and could not have found the AGENTS.md flip-flop, which only shows when you drive a known prompt and watch the route.
 - 2026-08-26  feat(skills): give agent-gap-scan a time axis (`0b023cfb5`)
 - 2026-08-26  feat(skills): agent-gap-scan — find surface gaps from what agents actually did (`5e2293260`)
+- 2026-08-27  The built-but-unproven note is stale: the scan's findings have now driven shipped work repeatedly. Its curl-against-Commerce finding became run_commerce_query; its --session journey mode found the get_current_project shape defect (fixed, 3/3 verified) and the list_projects dead field + missing marker (fixed, verified); its preamble table is a standing section; its native-competition datapoints drove the first evidence-based tool deletion (get_block_source) and the get_component_config secret-masking fix. The loop it was built for — scan, find, fix, verify — has closed several times over.

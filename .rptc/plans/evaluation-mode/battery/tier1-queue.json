@@ -1,10 +1,8 @@
 {
   "generated": "2026-08-27",
   "basis": "declared readOnlyHint:true (52)",
-  "note": "AI-1q tier 1. Batch 3 in flight; the rest are DEFERRED, each with its reason \u2014 a deferral is a finding.",
+  "note": "AI-1q tier 1. The two DA.live prompts ran once the owner re-authed (2026-08-27); the rest stay deferred with reasons.",
   "deferred": {
-    "list_dalive_sites": "DA.live session expired; unattended runs never sign in. Re-run supervised or after re-auth.",
-    "read_page": "same \u2014 DA.live auth required",
     "select_org": "annotated read-only but WRITES session state that persists across battery runs (module-level target in the shared server process) \u2014 would change measurement conditions mid-sweep. Also a tool-verdicts flag: is readOnlyHint honest here?",
     "select_project": "same as select_org",
     "select_workspace": "same as select_org",
