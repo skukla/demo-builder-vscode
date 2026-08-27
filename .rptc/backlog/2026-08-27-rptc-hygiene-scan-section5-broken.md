@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: shipped
 ---
 
 # rptc-hygiene-scan check 5 parses zero active entries
@@ -31,3 +31,7 @@ active section" is an unwatched defect class.
 Fix shape: read `.claude/skills/rptc-hygiene-scan/scan.sh` check 5's parser,
 point it at the CURRENT README format (or better, at `backlog.mjs list --json`
 so it stops parsing markdown at all), and keep the existing control.
+
+## Shipped so far
+
+- 2026-08-27  2026-08-27: rewritten — check 5 now consumes backlog.mjs list --json (one tool, one parse); signals are BODY TOMBSTONE (title-level completion claim on a live-status item; sub-section SHIPPED deliberately excluded after the first run flagged AI-1e's partial) and ARCHIVED TWIN (basename in complete/ while status live). Self-tested: planted both defect kinds, both flagged, clean after revert. Control caught a repo-path bug in the first draft.
