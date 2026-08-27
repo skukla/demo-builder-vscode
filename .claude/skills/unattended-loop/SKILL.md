@@ -161,8 +161,10 @@ report. Without one, run until work dries up or stops being verifiable.
 When a step ships (owner, 2026-08-27), say so in the moment with a short
 plain-English summary in the same two registers as the report: the takeaway in
 a sentence or two, then the story — what it does, why, what it does NOT do
-yet, and anything found along the way. The final report then collects these
-rather than reconstructing them.
+yet, and anything found along the way. SHORT: a few sentences, not a page.
+Every factual claim names its source (a doc URL, a file, a measurement) —
+an owner reading a summary must be able to check any sentence in it. The
+final report collects these rather than reconstructing them.
 
 ## The report (the loop's real product)
 
