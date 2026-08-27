@@ -96,6 +96,8 @@ interface SetupOptions {
     meshComponent?: SelectableAppBuilderComponent;
     /** Catalog entries the flow can seed a custom build from (default empty). */
     catalog?: AppBuilderComponentCatalogEntry[];
+    /** The minting collision domain (default: the blank shell's id, as buildReservedIds would). */
+    reservedIds?: Set<string>;
 }
 
 interface Setup {
@@ -122,6 +124,7 @@ function setup(options: SetupOptions = {}): Setup {
         initial = {},
         meshComponent = MESH_COMPONENT,
         catalog = EMPTY_CATALOG,
+        reservedIds = new Set(['app-builder-shell']),
     } = options;
     const stateRef: { current: WizardState } = {
         current: {
@@ -150,6 +153,7 @@ function setup(options: SetupOptions = {}): Setup {
                 mode,
                 meshComponent,
                 catalog,
+                reservedIds,
                 blankComponent: BLANK_COMPONENT,
                 builder,
                 onClose,
@@ -213,8 +217,6 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         pickKindAndContinue(s, 'catalog');
         expect(s.result.current.canContinue).toBe(false);
         act(() => s.result.current.pickCatalog('erp-sync'));
-        expect(s.result.current.canContinue).toBe(false); // pick alone: the name gate holds
-        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-project');
     });
@@ -229,7 +231,6 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         const s = setup({ initial: SIGNED_OUT });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog('erp-sync'));
-        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-signin');
         expect(s.result.current.canContinue).toBe(false);
@@ -239,7 +240,6 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         const s = setup({ initial: SIGNED_OUT });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog('erp-sync'));
-        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-signin');
         s.stateRef.current = { ...s.stateRef.current, ...SIGNED_IN } as WizardState;
@@ -427,9 +427,6 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     function walkCatalogToTerminal(s: Setup, catalogId = 'erp-sync'): void {
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog(catalogId));
-        // The stage prefills the entry's own name — its slug is the entry id,
-        // which is what keeps the classic catalog-identity commit.
-        act(() => s.result.current.setInstance({ id: catalogId, name: 'ERP Sync' }));
         expect(s.result.current.stage).toBe('source-catalog');
     }
 
@@ -459,7 +456,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
-        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.setLabel('Order Sync'));
         act(() => s.result.current.onContinue());
 
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(KIT_ENTRY.source, {
@@ -481,33 +478,19 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
-        act(() =>
-            s.result.current.setInstance({
-                id: KIT_ENTRY.id,
-                name: 'Commerce Integration Starter Kit',
-            })
-        );
+        // No label typed: the default (the entry's own name) mints the entry's
+        // own id — its id is excluded from its own collision domain.
         act(() => s.result.current.onContinue());
 
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(KIT_ENTRY.id, true);
         expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
     });
 
-    it('gates the source-blank stage until setInstance provides an identity', () => {
+    it('source-blank is answerable immediately — Blank is the default, the name optional', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
         expect(s.result.current.stage).toBe('source-blank');
-        expect(s.result.current.canContinue).toBe(false);
-        act(() => s.result.current.onContinue());
-        expect(s.result.current.stage).toBe('source-blank');
-        act(() =>
-            s.result.current.setInstance({ id: 'firefly-image-gen', name: 'Firefly Image Gen' })
-        );
         expect(s.result.current.canContinue).toBe(true);
-        // Clearing the instance (emptied/invalid name) re-disables Continue.
-        act(() => s.result.current.setInstance(undefined));
-        expect(s.result.current.draft.instance).toBeUndefined();
-        expect(s.result.current.canContinue).toBe(false);
     });
 
     it('a SEEDED blank finish commits the seed source (not the shell) with the instance identity', () => {
@@ -524,7 +507,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         const s = setup({ initial: LATER_ADD, catalog: [KIT_SEED] });
         pickKindAndContinue(s, 'blank');
         act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
-        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.setLabel('Order Sync'));
         act(() => s.result.current.onContinue()); // → api-access
         act(() => s.result.current.onContinue()); // Add → commit + close
 
@@ -547,7 +530,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         pickKindAndContinue(s, 'blank');
         act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
         act(() => s.result.current.setSeed(undefined));
-        act(() => s.result.current.setInstance({ id: 'my-app', name: 'My App' }));
+        act(() => s.result.current.setLabel('My App'));
         act(() => s.result.current.onContinue());
         act(() => s.result.current.onContinue());
 
@@ -560,9 +543,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     it('a blank finish commits the INSTANCE id (not app-builder-shell) with picks keyed under it', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
-        act(() =>
-            s.result.current.setInstance({ id: 'firefly-image-gen', name: 'Firefly Image Gen' })
-        );
+        act(() => s.result.current.setLabel('Firefly Image Gen'));
         act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
         act(() => s.result.current.onContinue()); // Add → commit + close
@@ -582,7 +563,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     it('a blank finish with no picks writes no selectedConsoleApis', () => {
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.setLabel('Order Sync'));
         act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
@@ -593,21 +574,36 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('a custom (import) finish commits the repo AND keys the picks under owner-repo', () => {
+    it('a custom (import) finish mints the repo-named instance; picks key under it', () => {
+        // Optional-name model: the import defaults to the REPO's name (the
+        // label field's placeholder), and picks key under the minted id.
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'custom');
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
         act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
         act(() => s.result.current.onContinue()); // Add → commit + close
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
-            owner: 'acme',
-            repo: 'widget',
-        });
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+            { owner: 'acme', repo: 'widget' },
+            { id: 'widget', name: 'widget' }
+        );
         expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'] },
+            selectedConsoleApis: { widget: ['FireflyServicesSDK'] },
         });
         expect(s.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('a custom (import) finish honors a typed name', () => {
+        const s = setup({ initial: LATER_ADD });
+        pickKindAndContinue(s, 'custom');
+        act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
+        act(() => s.result.current.setLabel('Order Sync'));
+        act(() => s.result.current.onContinue());
+        act(() => s.result.current.onContinue());
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+            { owner: 'acme', repo: 'widget' },
+            { id: 'order-sync', name: 'Order Sync' }
+        );
     });
 
     it('clears the draft source when setCustomSource receives undefined (cleared/invalid URL)', () => {
@@ -678,7 +674,7 @@ describe('useIntegrationFlow — cancel path (draft-only, no commits)', () => {
         act(() => s.result.current.pickKind('catalog'));
         act(() => s.result.current.pickCatalog('erp-sync'));
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.setLabel('Order Sync'));
         act(() => s.result.current.setPendingProject(PROJECT));
         act(() => s.result.current.setPendingWorkspace(WORKSPACE));
         expect(s.updateState).not.toHaveBeenCalled();

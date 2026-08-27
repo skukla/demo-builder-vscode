@@ -394,25 +394,20 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
     });
 
-    it('threads the composed reserved ids to the blank naming stage (catalog blank + mesh ids)', () => {
+    it('the optional-name stage shows NO collision errors — identity is minted at commit', () => {
+        // Optional-name model (owner, 2026-08-27): the label is a convenience;
+        // a colliding label is deduped silently at mint time, so the stage has
+        // no error affordance at all.
         renderStep(baseState());
         fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: /Build custom/ }));
         fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
-        const input = within(dialog).getByPlaceholderText(
-            'e.g. Order Sync, Salesforce CRM, Firefly Image Gen'
-        );
+        const input = within(dialog).getByLabelText(/Name \(optional\)/);
         const DUPLICATE = 'That name is already used by another part of this project.';
-        // Slugs to 'app-builder-shell' — the blank catalog entry's own id.
         fireEvent.change(input, { target: { value: 'App Builder Shell' } });
-        expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
-        // Slugs to 'eds-commerce-mesh' — the eds-paas stack's mesh id.
-        fireEvent.change(input, { target: { value: 'EDS Commerce Mesh' } });
-        expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
-        // A non-colliding name clears the error.
-        fireEvent.change(input, { target: { value: 'Order Sync' } });
         expect(within(dialog).queryByText(DUPLICATE)).not.toBeInTheDocument();
+        expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeEnabled();
     });
 });
 

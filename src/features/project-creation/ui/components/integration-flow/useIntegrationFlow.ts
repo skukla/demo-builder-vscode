@@ -29,6 +29,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import {
+    BLANK_DEFAULT_LABEL,
     canContinue as canContinueGate,
     continueLabel as continueLabelFor,
     deriveStageOrder,
@@ -41,6 +42,7 @@ import {
     type FlowStateSlice,
     type IntegrationKind,
 } from './flowStages';
+import { mintInstance } from './instanceId';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
@@ -73,6 +75,12 @@ export interface UseIntegrationFlowArgs {
     catalog: AppBuilderComponentCatalogEntry[];
     /** The blank starter app the "Build custom" kind commits, if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
+    /**
+     * The collision domain identities are minted against (buildReservedIds).
+     * Minting happens at COMMIT — silent numeric dedupe, never a user-facing
+     * error (the name is a convenience, not the machine identity).
+     */
+    reservedIds: Set<string>;
     /** The unchanged useProjectBuilder handlers the finish commits route through. */
     builder: Pick<
         UseProjectBuilderReturn,
@@ -94,7 +102,8 @@ export interface UseIntegrationFlowReturn {
     /** Set the parsed custom source; undefined clears it (cleared/invalid URL re-disables Continue). */
     setCustomSource: (source: { owner: string; repo: string } | undefined) => void;
     /** Set the blank instance identity; undefined clears it (invalid/empty name re-disables Continue). */
-    setInstance: (instance: BlankInstance | undefined) => void;
+    /** Record the optional display label (raw text; '' = use the default). */
+    setLabel: (label: string) => void;
     /** Pick the Build-custom seed (catalog entry id; undefined = blank shell). */
     setSeed: (seedId: string | undefined) => void;
     /** Toggle a free API pick on the custom/import api-access step. */
@@ -223,6 +232,21 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     }, [editTarget, draft.selectedApis, state.selectedConsoleApis, updateState]);
 
     /**
+     * Mint the committed identity from the OPTIONAL label (typed text wins,
+     * else the path's default), with the template's own catalog id excluded
+     * from the collision domain — resolving to yourself is not a collision.
+     */
+    const mintFor = useCallback(
+        (defaultLabel: string, excludeId?: string): BlankInstance => {
+            const domain = new Set(args.reservedIds);
+            if (excludeId) domain.delete(excludeId);
+            const typed = draft.label?.trim();
+            return mintInstance(typed || defaultLabel, domain);
+        },
+        [args.reservedIds, draft.label],
+    );
+
+    /**
      * Route the add finish through the unchanged useProjectBuilder handlers.
      * Mesh/catalog APIs are deterministic (subscribed at the rebuild). A custom/import
      * app carries the user's free API picks (`draft.selectedApis`) — written to
@@ -235,16 +259,21 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         }
         if (draft.kind === 'catalog' && draft.catalogId) {
             // A pre-built pick carries a NAME now (prefilled from the entry).
-            // Kept default — the slug equals the entry's own id — commits the
-            // classic catalog identity. A CUSTOM name commits a named INSTANCE
-            // of the entry's template repo, the same machinery the blank/seed
-            // path uses: capabilities survive via the loader's source
-            // recognition, and the add door's fixed-package gate still refuses
-            // an extension-layout duplicate.
+            // The label is optional: empty = the entry's own name. Identity is
+            // minted at commit (silent dedupe, the entry's own id excluded from
+            // the domain — resolving to yourself is not a collision). A kept
+            // default therefore mints the entry's id and commits the classic
+            // catalog identity; a typed name commits a named INSTANCE of the
+            // entry's template repo — capabilities survive via the loader's
+            // source recognition, and the add door's fixed-package gate still
+            // refuses an extension-layout duplicate.
             const entry = args.catalog.find((c) => c.id === draft.catalogId);
-            if (entry && draft.instance && draft.instance.id !== entry.id) {
-                builder.onAddCustomAppBuilderComponent(entry.source, draft.instance);
-                return;
+            if (entry) {
+                const instance = mintFor(entry.name, entry.id);
+                if (instance.id !== entry.id) {
+                    builder.onAddCustomAppBuilderComponent(entry.source, instance);
+                    return;
+                }
             }
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
             return;
@@ -260,22 +289,23 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         // care — it persists its state later either way — but the dashboard host
         // POSTS the add inside that callback, so picks written afterwards missed
         // the message entirely and were dropped at the boundary.
-        if (draft.kind === 'blank' && draft.instance) {
+        if (draft.kind === 'blank') {
             const seed = draft.seedId
                 ? args.catalog.find((entry) => entry.id === draft.seedId)
                 : undefined;
             const template = seed ?? blankComponent;
             if (!template) return;
-            writeApiPicks(draft.instance.id);
-            builder.onAddCustomAppBuilderComponent(template.source, draft.instance);
+            const instance = mintFor(seed?.name ?? BLANK_DEFAULT_LABEL, template.id);
+            writeApiPicks(instance.id);
+            builder.onAddCustomAppBuilderComponent(template.source, instance);
             return;
         }
         if (draft.kind === 'custom' && draft.customSource) {
-            // Mirror useProjectBuilder's id derivation so the picks key matches the row.
-            writeApiPicks(`${draft.customSource.owner}-${draft.customSource.repo}`);
-            builder.onAddCustomAppBuilderComponent(draft.customSource);
+            const instance = mintFor(draft.customSource.repo);
+            writeApiPicks(instance.id);
+            builder.onAddCustomAppBuilderComponent(draft.customSource, instance);
         }
-    }, [draft, meshComponent, blankComponent, builder, writeApiPicks, args.catalog]);
+    }, [draft, meshComponent, blankComponent, builder, writeApiPicks, args.catalog, mintFor]);
 
     const finishFlow = useCallback((): void => {
         // Re-editing an existing integration's APIs: Save writes the picks (even an
@@ -319,9 +349,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     }, []);
 
     const pickCatalog = useCallback((id: string): void => {
-        // Clearing the instance on a re-pick lets the stage re-prefill the name
-        // from the NEW entry (it would otherwise keep the previous pick's name).
-        setDraft((current) => ({ ...current, catalogId: id, instance: undefined }));
+        setDraft((current) => ({ ...current, catalogId: id }));
     }, []);
 
     const setCustomSource = useCallback(
@@ -331,8 +359,8 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         [],
     );
 
-    const setInstance = useCallback((instance: BlankInstance | undefined): void => {
-        setDraft((current) => ({ ...current, instance }));
+    const setLabel = useCallback((label: string): void => {
+        setDraft((current) => ({ ...current, label }));
     }, []);
 
     /** Pick the Build-custom seed (a catalog entry id; undefined = blank shell). */
@@ -379,7 +407,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         pickKind,
         pickCatalog,
         setCustomSource,
-        setInstance,
+        setLabel,
         setSeed,
         toggleApi,
         setPendingProject,

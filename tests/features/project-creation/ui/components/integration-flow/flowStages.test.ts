@@ -428,19 +428,10 @@ describe('canContinue', () => {
         expect(canContinue('kind', draft({ kind: 'mesh' }), slice())).toBe(true);
     });
 
-    it('source-catalog blocks until a catalogId AND a valid name are present', () => {
+    it('source-catalog blocks until a catalogId is picked — the label never gates', () => {
         expect(canContinue('source-catalog', draft({ kind: 'catalog' }), slice())).toBe(false);
-        // A pick alone no longer continues: the stage prefills + emits the
-        // name instantly, so this gate only holds while an EDIT is invalid.
         expect(
             canContinue('source-catalog', draft({ kind: 'catalog', catalogId: 'c1' }), slice())
-        ).toBe(false);
-        expect(
-            canContinue(
-                'source-catalog',
-                draft({ kind: 'catalog', catalogId: 'c1', instance: { id: 'c1', name: 'C One' } }),
-                slice()
-            )
         ).toBe(true);
     });
 
@@ -458,13 +449,11 @@ describe('canContinue', () => {
         expect(canContinue('source-custom', d, slice({ selectedIds: ['acme-app'] }))).toBe(false);
     });
 
-    it('source-blank blocks until a valid instance is set', () => {
-        expect(canContinue('source-blank', draft({ kind: 'blank' }), slice())).toBe(false);
-    });
-
-    it('source-blank passes once the draft carries an instance', () => {
-        const d = draft({ kind: 'blank', instance: { id: 'order-sync', name: 'Order Sync' } });
-        expect(canContinue('source-blank', d, slice())).toBe(true);
+    it('source-blank is always answerable — Blank is the default pick, the label optional', () => {
+        expect(canContinue('source-blank', draft({ kind: 'blank' }), slice())).toBe(true);
+        expect(
+            canContinue('source-blank', draft({ kind: 'blank', label: 'Order Sync' }), slice())
+        ).toBe(true);
     });
 
     it('dest-signin mirrors isSignedIn', () => {

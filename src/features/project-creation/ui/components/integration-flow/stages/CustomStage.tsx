@@ -12,6 +12,7 @@
 
 import { TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
+import { OptionalNameField } from '../OptionalNameField';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 
 /** A parsed custom-integration source. */
@@ -27,6 +28,10 @@ export interface CustomStageProps {
     source?: CustomSource;
     /** Emit the parsed source on a valid, non-duplicate URL; undefined otherwise. */
     onSourceChange: (source: CustomSource | undefined) => void;
+    /** The draft's raw typed label ('' / undefined = the repo's name). */
+    label?: string;
+    /** Report label keystrokes. */
+    onLabelChange: (label: string) => void;
 }
 
 const INVALID_MESSAGE = 'Enter a public GitHub repository URL (https://github.com/owner/repo).';
@@ -57,6 +62,8 @@ export function CustomStage({
     selectedIds,
     source,
     onSourceChange,
+    label,
+    onLabelChange,
 }: CustomStageProps): React.ReactElement {
     const [url, setUrl] = useState(() =>
         source ? `https://github.com/${source.owner}/${source.repo}` : '',
@@ -80,6 +87,13 @@ export function CustomStage({
                 errorMessage={message}
                 width="100%"
             />
+            {source ? (
+                <OptionalNameField
+                    label={label}
+                    defaultLabel={source.repo}
+                    onLabelChange={onLabelChange}
+                />
+            ) : null}
         </div>
     );
 }

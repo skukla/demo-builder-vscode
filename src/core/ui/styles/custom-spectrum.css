@@ -4973,6 +4973,23 @@ div[class*="spectrum"] input[type="search"] {
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-700);
 }
+/* Section label inside a stage ("Start from"): small caps over a card group,
+   making the group read as a labeled sub-choice rather than the modal's main
+   event (the unlabeled seed row was the owner's 2026-08-27 design flag). */
+.intflow-section-label {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* The optional name field sits a beat below the card group it follows. */
+.intflow-blank {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
 /* Kind picker: the (at most) three kind cards stretch equal-width across the
    modal row (default .choice-card flex: 1 1 0 / min-width 240px — NOT the
    catalog gallery's 168px tiles), wrapping only when the modal is narrow. */

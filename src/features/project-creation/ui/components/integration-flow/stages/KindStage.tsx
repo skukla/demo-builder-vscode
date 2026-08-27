@@ -79,7 +79,7 @@ export function KindStage({
             />
             <ChoiceCard
                 name="Build custom"
-                description="Start from a blank app or the Commerce starter kit and build it out with AI."
+                description="Start from a blank app or the Commerce starter kit."
                 selected={kind === 'blank'}
                 onSelect={() => onPickKind('blank')}
             />

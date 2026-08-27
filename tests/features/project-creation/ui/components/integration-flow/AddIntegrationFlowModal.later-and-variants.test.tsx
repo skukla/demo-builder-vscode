@@ -432,10 +432,11 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         // Add commits the repo + closes in a SINGLE press — no in-modal confirmation.
         click('Add Integration');
         await waitFor(() =>
-            expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
-                owner: 'acme',
-                repo: 'widget',
-            })
+            expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+                { owner: 'acme', repo: 'widget' },
+                // Optional-name model: the import mints the repo-named instance.
+                { id: 'widget', name: 'widget' }
+            )
         );
         expect(onClose).toHaveBeenCalledTimes(1);
     });

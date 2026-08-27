@@ -159,9 +159,8 @@ function StageBody({
                 catalog={prebuiltCatalog}
                 selectedId={draft.catalogId}
                 onPick={flow.pickCatalog}
-                reservedIds={props.reservedIds}
-                instance={draft.instance}
-                onInstanceChange={flow.setInstance}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }
@@ -173,6 +172,8 @@ function StageBody({
                 selectedIds={selectedIds}
                 source={draft.customSource}
                 onSourceChange={flow.setCustomSource}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }
@@ -184,13 +185,12 @@ function StageBody({
         // blank shell.
         return (
             <BlankStage
-                reservedIds={props.reservedIds}
-                instance={draft.instance}
-                onInstanceChange={flow.setInstance}
                 seeds={seedCatalog}
                 seedId={draft.seedId}
                 selectedIds={selectedIds}
                 onSeedChange={flow.setSeed}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }
