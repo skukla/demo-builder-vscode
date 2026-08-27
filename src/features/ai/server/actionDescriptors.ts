@@ -51,7 +51,9 @@ const addIntegrationSchema = {
     instanceId: z
         .string()
         .optional()
-        .describe('Explicit instance id for a custom/blank add; must not collide with an existing one'),
+        .describe(
+            'Explicit instance id for a custom/blank add; must not collide with an existing one',
+        ),
     apis: z
         .array(z.string())
         .optional()
@@ -74,7 +76,9 @@ const addIntegrationSchema = {
  * this returns `undefined` for every add available today. It is the guard that
  * has to exist before the first one is authored, not a live branch.
  */
-function addIntegrationPreflight(args: Record<string, unknown>): Record<string, unknown> | undefined {
+function addIntegrationPreflight(
+    args: Record<string, unknown>,
+): Record<string, unknown> | undefined {
     const entry = resolveAddEntry(args as Parameters<typeof resolveAddEntry>[0]);
     // An unknown id is the HANDLER's error to report; answering here would say
     // "enter values" for a component that does not exist.
@@ -148,18 +152,21 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             // optional field here would hang an agent's call on a dialog nobody is
             // watching. Anything the caller must control belongs in the schema —
             // the same reasoning as `argDefaults`, from the other direction.
-            name: z.string().min(1).describe('New display name; must not collide with another integration'),
+            name: z
+                .string()
+                .min(1)
+                .describe('New display name; must not collide with another integration'),
         },
     },
     {
         tool: 'set_console_apis',
         readOnly: false,
         description:
-            'Set the OPTIONAL Adobe API subscriptions on this project\'s Developer Console ' +
+            "Set the OPTIONAL Adobe API subscriptions on this project's Developer Console " +
             'workspace credential to EXACTLY this list — anything currently subscribed and not ' +
             'listed is REMOVED. Pass an empty array to clear the extras. Use add_console_apis to ' +
             'only add. Always-on codes (baseline + whatever the components require) are re-included ' +
-            'regardless. Pass componentId to edit one integration\'s picks rather than the union.',
+            "regardless. Pass componentId to edit one integration's picks rather than the union.",
         map: dashboardHandlers,
         type: 'setConsoleApis',
         // Gated where `add_console_apis` is not, and the tool NAME is why the
@@ -169,7 +176,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             apis: z
                 .array(z.string())
-                .describe('The complete desired list of extra sdk codes (from list_console_apis); [] clears them'),
+                .describe(
+                    'The complete desired list of extra sdk codes (from list_console_apis); [] clears them',
+                ),
             componentId: z
                 .string()
                 .optional()
@@ -192,14 +201,20 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .object({
                     id: z.string().describe('Adobe Console project id (from list_adobe_projects)'),
                     name: z.string().optional(),
-                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                    title: z
+                        .string()
+                        .optional()
+                        .describe('Display title, used in progress and the header'),
                 })
                 .describe('The Adobe Console project to deploy into'),
             workspace: z
                 .object({
                     id: z.string().describe('Workspace id (from list_workspaces)'),
                     name: z.string().optional(),
-                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                    title: z
+                        .string()
+                        .optional()
+                        .describe('Display title, used in progress and the header'),
                 })
                 .describe('The workspace within that project'),
         },
@@ -243,6 +258,22 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .describe(
                     'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
                 ),
+        },
+    },
+    {
+        tool: 'install_integration',
+        readOnly: false,
+        description:
+            'Re-run the Commerce install/associate pass for a DEPLOYED App Management ' +
+            'integration (e.g. the Commerce starter kit), without redeploying it. Use when ' +
+            'get_integration_install_status reports a failed install. Idempotent — an ' +
+            'already-current install answers skipped.',
+        map: dashboardHandlers,
+        type: 'installAppBuilderComponent',
+        // Not confirm-gated, matching deploy_integration: the install is a
+        // convergent reconcile toward the state the deploy already declared.
+        inputSchema: {
+            id: z.string().describe('The integration id to install (from get_project)'),
         },
     },
     {

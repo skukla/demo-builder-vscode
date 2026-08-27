@@ -28,6 +28,7 @@ export type CardAction =
     | 'redeploy'
     | 'update'
     | 'retry'
+    | 'install'
     | 'manage-apis'
     | 'remove'
     | 'sign-in'
@@ -88,6 +89,21 @@ export interface IntegrationCardModel {
      */
     componentId?: string;
     canRename: boolean;
+    /**
+     * The App Management install outcome (lifecycle 'app-management' apps
+     * only) — the persisted `appBuilderComponents[id].installation` record,
+     * display-ready. `failed` also drives the drawer's "Install into
+     * Commerce" retry action. Absent on every other card, so no row renders.
+     */
+    installation?: {
+        /** Display label: 'Installed' or 'Not installed'. */
+        label: string;
+        /** The no-op reason on skip, or the hands-back line on failure. */
+        detail?: string;
+        /** Preformatted locale display string of the attempt. */
+        at?: string;
+        failed: boolean;
+    };
     /**
      * The Commerce scope the mesh is DEPLOYED against, in display order.
      *

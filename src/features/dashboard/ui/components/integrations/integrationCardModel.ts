@@ -126,7 +126,11 @@ const INTEGRATION_STATUSES: readonly string[] = [
  * @param url - the integration's primary URL, when it has one
  * @returns the menu actions, in display order
  */
-function buildMenuActions(status: IntegrationStatus, url: string | undefined): CardAction[] {
+function buildMenuActions(
+    status: IntegrationStatus,
+    url: string | undefined,
+    installFailed = false,
+): CardAction[] {
     if (status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
     // first thing in the menu. Redeploy only where there is a deployment to redo —
@@ -134,8 +138,13 @@ function buildMenuActions(status: IntegrationStatus, url: string | undefined): C
     // would put two names for one intent in one menu.
     const verb = statusVerb(status);
     const redeploy: CardAction[] = status === 'deployed' ? ['redeploy'] : [];
+    // A deployed app whose Commerce install failed is dormant, and until AB-5
+    // the ONLY retry was a full redeploy round. The install verb leads for the
+    // same reason the status verb does: it is what the card needs.
+    const install: CardAction[] = status === 'deployed' && installFailed ? ['install'] : [];
     return [
         ...(verb ? [verb] : []),
+        ...install,
         ...(url ? (['open'] as CardAction[]) : []),
         ...redeploy,
         'manage-apis',
@@ -167,6 +176,25 @@ function formatLastDeployed(iso: string | undefined): string | undefined {
 /** The card's primary URL: the entry url, else the first deployedUrls value. */
 function resolvePrimaryUrl(entry: IdentifiedAppBuilderComponent): string | undefined {
     return entry.url ?? Object.values(entry.deployedUrls ?? {})[0];
+}
+
+/**
+ * The persisted App Management install record, display-ready. 'skipped' means
+ * the app's installer found everything already current — that IS installed,
+ * and rendering it as anything else would read as a problem.
+ */
+function deriveInstallation(
+    entry: IdentifiedAppBuilderComponent,
+): IntegrationCardModel['installation'] {
+    const record = entry.installation;
+    if (!record) return undefined;
+    const failed = record.status === 'failed';
+    return {
+        label: failed ? 'Not installed' : 'Installed',
+        detail: record.detail,
+        at: formatLastDeployed(record.at),
+        failed,
+    };
 }
 
 /**
@@ -270,6 +298,7 @@ export function deriveIntegrationCard(
     // leaves its reason for the drawer.
     const liveStep = status === 'deploying' ? override?.message : undefined;
     const statusLabel = liveStep ?? staticLabel;
+    const installation = deriveInstallation(entry);
 
     return {
         id: entry.id,
@@ -287,7 +316,8 @@ export function deriveIntegrationCard(
         deployedUrls: entry.deployedUrls,
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
-        menuActions: buildMenuActions(status, primaryUrl),
+        installation,
+        menuActions: buildMenuActions(status, primaryUrl, installation?.failed),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
     };
 }

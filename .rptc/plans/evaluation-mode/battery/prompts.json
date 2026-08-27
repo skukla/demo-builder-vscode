@@ -54,7 +54,7 @@
     "expect": [
       "list_content"
     ],
-    "why": "Never called. Pairs with `published` — both are content reads."
+    "why": "Never called. Pairs with `published` \u2014 both are content reads."
   },
   {
     "id": "datapacks",
@@ -94,7 +94,7 @@
       "demo-builder",
       "playwright"
     ],
-    "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test — it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
+    "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test \u2014 it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
   },
   {
     "id": "cross-pdp-slots",
@@ -105,7 +105,7 @@
     "expectServers": [
       "dropins"
     ],
-    "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut — which is what `cross-no-products` could never establish."
+    "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut \u2014 which is what `cross-no-products` could never establish."
   },
   {
     "id": "orientation",
@@ -114,7 +114,7 @@
       "get_current_project",
       "get_project_status"
     ],
-    "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts — the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
+    "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts \u2014 the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
   },
   {
     "id": "active-project",
@@ -190,7 +190,7 @@
   },
   {
     "id": "verify-setup",
-    "prompt": "Is my project's AI setup healthy — context files, MCP config, skills?",
+    "prompt": "Is my project's AI setup healthy \u2014 context files, MCP config, skills?",
     "expect": [
       "verify_ai_setup"
     ],
@@ -302,7 +302,7 @@
   },
   {
     "id": "prereqs",
-    "prompt": "Do I have all the tools installed that my project's stack needs — Node, aio CLI, plugins?",
+    "prompt": "Do I have all the tools installed that my project's stack needs \u2014 Node, aio CLI, plugins?",
     "expect": [
       "check_prerequisites"
     ],
@@ -374,7 +374,7 @@
   },
   {
     "id": "skill-diagnose",
-    "prompt": "Something is wrong with my demo — the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
+    "prompt": "Something is wrong with my demo \u2014 the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
     "expect": [],
     "expectSkill": [
       "diagnose-demo"
@@ -384,7 +384,7 @@
   },
   {
     "id": "skill-datapack",
-    "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about — do not actually import anything.",
+    "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about \u2014 do not actually import anything.",
     "expect": [],
     "expectSkill": [
       "import-datapack"
@@ -400,15 +400,33 @@
       "aem-block-developer"
     ],
     "cwd": "project",
-    "why": "AI-1q skills half — an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
+    "why": "AI-1q skills half \u2014 an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
   },
   {
     "id": "diagnose-via-debug-logs",
-    "prompt": "The last operation I ran failed with a vague error. Read the extension's own debug logs and tell me what actually went wrong — filter for errors rather than dumping everything.",
+    "prompt": "The last operation I ran failed with a vague error. Read the extension's own debug logs and tell me what actually went wrong \u2014 filter for errors rather than dumping everything.",
     "expect": [
       "read_debug_logs"
     ],
     "cwd": "project",
     "why": "AI-5 follow-on (2026-08-27): the tool exists because an opaque create failure left the agent blind while Console's real 400 sat in the Debug Logs channel. The prompt is the blindness scenario itself."
+  },
+  {
+    "id": "integration-install-status",
+    "prompt": "I deployed the Commerce starter kit integration but events aren't arriving. Check whether it actually installed into Commerce and tell me which step failed, if any.",
+    "expect": [
+      "get_integration_install_status"
+    ],
+    "cwd": "project",
+    "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader \u2014 answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
+  },
+  {
+    "id": "integration-install-retry",
+    "prompt": "The starter kit app's Commerce install failed earlier but the deploy itself was fine. Re-run just the install \u2014 don't redeploy the whole app.",
+    "expect": [
+      "install_integration"
+    ],
+    "cwd": "project",
+    "why": "AB-5 (2026-08-27): before install_integration, the only retry for a failed install was a full deploy_integration round. The prompt forbids the redeploy to prove the agent finds the narrower tool."
   }
 ]

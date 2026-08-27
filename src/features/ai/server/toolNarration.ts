@@ -163,6 +163,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     remove_integration: 'Removing the integration',
     // Display name only — "nothing redeploys".
     rename_integration: 'Renaming the integration',
+    install_integration: 'Installing the app into Commerce',
+    get_integration_install_status: 'Reading the Commerce install state',
 
     // ── Storefront and content ──────────────────────────────────────────
     republish: 'Republishing the storefront configuration',

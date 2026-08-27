@@ -353,7 +353,11 @@ Thin tools declared as data and dispatched to existing handler maps:
   for — the read that lets an agent see a project pointing at a website or store
   view that does not exist; PaaS uses the project's saved admin credentials, ACCS
   proxies through a configured discovery service and prompts Adobe sign-in ONLY
-  when the read reports it needs a token).
+  when the read reports it needs a token), `get_integration_install_status`
+  (an App Management integration's Commerce install state: the persisted
+  `installation` record plus the LIVE state from the app's own install API,
+  failed step names included — a missing sign-in answers a typed AUTH_REQUIRED,
+  never a dialog).
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `restart_demo` (owns the
   settle delay between the stop and the start, which calling the two in sequence does
   not), `set_current_project` (the pointer every project-scoped tool acts on — note this
@@ -372,8 +376,14 @@ Thin tools declared as data and dispatched to existing handler maps:
   webview path opens never opens for an agent's call),
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
-  `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
-  undeploy + local cleanup + storefront republish),
+  `deploy_mesh` / `check_mesh` / `delete_mesh`), `install_integration` (re-run the
+  Commerce install/associate pass for a DEPLOYED App Management integration without
+  a redeploy — ungated like `deploy_integration`, since the install is a convergent
+  reconcile; use after `get_integration_install_status` reports a failure),
+  `remove_integration` (confirm-gated — for App Management apps it first runs the
+  app's own uninstaller, which removes what the INSTALLER created — event
+  registrations, binding packages, the Commerce association — while the app's API
+  still exists to call, then remote undeploy + local cleanup + storefront republish),
   `rename_integration` (DISPLAY NAME only — the id, folder and Runtime package are
   immutable; local metadata write, nothing redeploys; pre-built catalog entries and the
   mesh are rejected. `name` is REQUIRED in the schema, and that is a headless-safety
@@ -683,7 +693,8 @@ removes, so the `delete_*` reading of this list would miss it. Judge against the
 not the verb.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`add_integration`, `deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
+`add_integration`, `deploy_integration`, `redeploy_integration`,
+`install_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists

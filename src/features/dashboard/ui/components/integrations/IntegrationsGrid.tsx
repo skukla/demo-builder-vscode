@@ -58,6 +58,9 @@ const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
     retry: 'deployAppBuilderComponent',
     redeploy: 'redeployAppBuilderComponent',
     update: 'redeployAppBuilderComponent',
+    // Re-run the Commerce install pass WITHOUT a redeploy (AB-5) — until this,
+    // the only retry for a failed install was a full deploy round.
+    install: 'installAppBuilderComponent',
 };
 
 /**
@@ -96,7 +99,6 @@ export function IntegrationsGrid({
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
     const selected = cards.find((card) => card.id === selectedId);
-
 
     // Drop a stale selection so a later card reusing that id cannot spring the
     // drawer open unbidden (remove-then-re-add the same catalog entry).

@@ -273,6 +273,20 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_integration_install_status',
+        readOnly: true,
+        description:
+            "Read an App Management integration's Commerce install state: the persisted " +
+            'outcome plus the LIVE state from the app’s own install API (failed step names ' +
+            'included). Use after deploy_integration to answer "did it install, and which step ' +
+            'failed" — a failed install is retried with install_integration, not a redeploy.',
+        map: dashboardHandlers,
+        type: 'getAppBuilderInstallStatus',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'list_console_apis',
         readOnly: true,
         description:

@@ -162,6 +162,34 @@ function PanelContent({
                         <span className="integration-panel-status-message">{model.message}</span>
                     )}
                 </PanelRow>
+                {/* The Commerce install outcome (App Management apps only) —
+                    the persisted record NOTHING rendered until AB-5, though it
+                    is the one thing that answers "deployed, but is it working?"
+                    A failed install's remedy is the kebab's "Install into
+                    Commerce", so the row states the fact and the detail line
+                    carries the hands-back. */}
+                {model.installation && (
+                    <PanelRow label="Commerce install">
+                        <span
+                            className={cn(
+                                'integration-card-status',
+                                model.installation.failed && 'integration-card-status--error',
+                            )}
+                        >
+                            {model.installation.label}
+                        </span>
+                        {model.installation.detail && (
+                            <span className="integration-panel-status-message">
+                                {model.installation.detail}
+                            </span>
+                        )}
+                        {model.installation.at && (
+                            <span className="integration-panel-status-message">
+                                {model.installation.at}
+                            </span>
+                        )}
+                    </PanelRow>
+                )}
                 {/* ONE row, not the former Kind + Source pair. They printed the same
                     fact in two registers — worst on the blank starter, where
                     "Custom · blank starter" sat directly above "Blank starter — build

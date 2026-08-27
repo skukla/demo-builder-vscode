@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: shipped
 parent: AB-1
 ---
 
@@ -37,3 +37,7 @@ Recommended minimal set, in value order:
 
 Also noted: `validateInstallation` (dry-run) exists on the API; low value
 until someone asks.
+
+## Shipped so far
+
+- 2026-08-27  2026-08-27: shipped recs 1-3 — drawer renders the installation record (Commerce install row, error treatment on failed); get_integration_install_status reads persisted + LIVE state with failed step names; install_integration / the drawer's Install into Commerce kebab action re-run the install pass without a redeploy. Rec 4 (Commerce Admin deep link) not built — needs per-flavor Admin URL derivation; revisit if asked.

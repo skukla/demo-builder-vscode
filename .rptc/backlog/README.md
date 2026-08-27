@@ -241,8 +241,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-1a` | feature | └ [App Builder app — package-bound apps (auto-attach to a demo template)](2026-06-17-appbuilder-app-package-bound.md) | AB-1 | low | gated |
 | `AB-1b` | feature | └ [App Builder app — app-only / no-storefront project](2026-06-17-appbuilder-app-only-project.md) | AB-1 | low | backlog |
 | `AB-1c` | feature | └ [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) | AB-1 | low | backlog |
-| `AB-4` | feature | └ [Uninstall an App Management app before removing it](2026-08-27-app-management-uninstall-on-remove.md) | — | med | backlog |
-| `AB-5` | feature | └ [Surface App Management install state to the dashboard and agents](2026-08-27-app-management-install-surface.md) | — | med | backlog |
+| `AB-4` | feature | └ [Uninstall an App Management app before removing it](2026-08-27-app-management-uninstall-on-remove.md) | — | med | shipped |
+| `AB-5` | feature | └ [Surface App Management install state to the dashboard and agents](2026-08-27-app-management-install-surface.md) | — | med | shipped |
 | `AB-1d` | feature | [Build Commerce integrations FROM the integration starter kit, not a blank shell](2026-08-26-scaffold-integrations-from-starter-kit.md) | — | med | backlog |
 | `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | backlog |
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |

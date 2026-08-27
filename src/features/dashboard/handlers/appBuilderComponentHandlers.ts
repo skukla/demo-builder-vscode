@@ -532,7 +532,7 @@ export const handleAddAppBuilderComponent: MessageHandler<
  * @param id - the payload's component id, possibly absent
  * @returns the id + project, or the error response to return as-is
  */
-async function resolveComponentTarget(
+export async function resolveComponentTarget(
     context: HandlerContext,
     id: string | undefined,
 ): Promise<{ ok: true; id: string; project: Project } | { ok: false; error: HandlerResponse }> {
@@ -562,7 +562,7 @@ async function resolveComponentTarget(
  * must not take the failed-op path (error row status + snapshot) — nothing was
  * attempted and nothing persisted.
  */
-type GuardableResult = {
+export type GuardableResult = {
     success: boolean;
     error?: string;
     /** Set when the refusal is actionable (AUTH_REQUIRED → the UI offers sign-in). */
@@ -620,7 +620,7 @@ function kindNoun(kind: AppBuilderComponentKind | undefined): string {
  * @param run - the work; call its `report` to push each step to the NOTIFICATION
  * @returns whatever `run` resolves to
  */
-async function withComponentProgress<T extends GuardableResult>(
+export async function withComponentProgress<T extends GuardableResult>(
     options: {
         title: string;
         id: string;
