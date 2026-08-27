@@ -24,22 +24,22 @@ describe('StateManager - Dirty Tracking', () => {
         it('should mark a field as dirty', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
 
             expect(stateManager.isDirty()).toBe(true);
-            expect(stateManager.getDirtyFields().has('meshState')).toBe(true);
+            expect(stateManager.getDirtyFields().has('appBuilderComponents')).toBe(true);
         });
 
         it('should mark multiple fields as dirty', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedPackage');
             stateManager.markDirty('selectedStack');
 
             expect(stateManager.isDirty()).toBe(true);
             expect(stateManager.getDirtyFields().size).toBe(3);
-            expect(stateManager.getDirtyFields().has('meshState')).toBe(true);
+            expect(stateManager.getDirtyFields().has('appBuilderComponents')).toBe(true);
             expect(stateManager.getDirtyFields().has('selectedPackage')).toBe(true);
             expect(stateManager.getDirtyFields().has('selectedStack')).toBe(true);
         });
@@ -47,9 +47,9 @@ describe('StateManager - Dirty Tracking', () => {
         it('should not duplicate dirty fields when marked multiple times', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
-            stateManager.markDirty('meshState');
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
+            stateManager.markDirty('appBuilderComponents');
+            stateManager.markDirty('appBuilderComponents');
 
             expect(stateManager.getDirtyFields().size).toBe(1);
         });
@@ -65,7 +65,7 @@ describe('StateManager - Dirty Tracking', () => {
         it('should return true when at least one field is dirty', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
 
             expect(stateManager.isDirty()).toBe(true);
         });
@@ -81,11 +81,11 @@ describe('StateManager - Dirty Tracking', () => {
         it('should return readonly set of dirty fields', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             const dirtyFields = stateManager.getDirtyFields();
 
             // ReadonlySet should not have add/delete/clear methods exposed at type level
-            expect(dirtyFields.has('meshState')).toBe(true);
+            expect(dirtyFields.has('appBuilderComponents')).toBe(true);
             expect(dirtyFields.size).toBe(1);
         });
     });
@@ -94,7 +94,7 @@ describe('StateManager - Dirty Tracking', () => {
         it('should clear all dirty fields', () => {
             const { stateManager } = testMocks;
 
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedPackage');
             expect(stateManager.isDirty()).toBe(true);
 
@@ -122,7 +122,7 @@ describe('StateManager - Dirty Tracking', () => {
             (fs.access as jest.Mock).mockResolvedValue(undefined);
 
             // Mark fields dirty
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedPackage');
             expect(stateManager.isDirty()).toBe(true);
 
@@ -143,7 +143,7 @@ describe('StateManager - Dirty Tracking', () => {
             (fs.writeFile as jest.Mock).mockRejectedValue(new Error('Write failed'));
 
             // Mark fields dirty
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             expect(stateManager.isDirty()).toBe(true);
 
             // Attempt save (should fail)
@@ -151,7 +151,7 @@ describe('StateManager - Dirty Tracking', () => {
 
             // Dirty state should NOT be cleared on failure
             expect(stateManager.isDirty()).toBe(true);
-            expect(stateManager.getDirtyFields().has('meshState')).toBe(true);
+            expect(stateManager.getDirtyFields().has('appBuilderComponents')).toBe(true);
         });
     });
 
@@ -161,11 +161,11 @@ describe('StateManager - Dirty Tracking', () => {
 
             // Simulate background mesh status update
             // (Background operations call markDirty instead of saveProject)
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
 
             // Dirty state is tracked
             expect(stateManager.isDirty()).toBe(true);
-            expect(stateManager.getDirtyFields().has('meshState')).toBe(true);
+            expect(stateManager.getDirtyFields().has('appBuilderComponents')).toBe(true);
 
             // No save was triggered (saveProject was not called)
             expect(fs.writeFile).not.toHaveBeenCalled();
@@ -175,12 +175,12 @@ describe('StateManager - Dirty Tracking', () => {
             const { stateManager } = testMocks;
 
             // Multiple background operations mark different fields
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedAddons');
 
             // All fields tracked
             expect(stateManager.getDirtyFields().size).toBe(2);
-            expect(stateManager.getDirtyFields().has('meshState')).toBe(true);
+            expect(stateManager.getDirtyFields().has('appBuilderComponents')).toBe(true);
             expect(stateManager.getDirtyFields().has('selectedAddons')).toBe(true);
         });
     });
@@ -193,7 +193,7 @@ describe('StateManager - Dirty Tracking', () => {
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
             // Mark fields dirty
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedPackage');
             expect(stateManager.isDirty()).toBe(true);
 
@@ -214,7 +214,7 @@ describe('StateManager - Dirty Tracking', () => {
             (fs.unlink as jest.Mock).mockResolvedValue(undefined);
 
             // Mark fields dirty
-            stateManager.markDirty('meshState');
+            stateManager.markDirty('appBuilderComponents');
             stateManager.markDirty('selectedStack');
             expect(stateManager.isDirty()).toBe(true);
 

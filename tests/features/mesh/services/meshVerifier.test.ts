@@ -301,10 +301,15 @@ describe('MeshVerifier', () => {
                         },
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01',
+                                    },
                 },
             });
 
@@ -336,10 +341,15 @@ describe('MeshVerifier', () => {
                         },
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01',
+                                    },
                 },
             });
 
@@ -352,7 +362,6 @@ describe('MeshVerifier', () => {
 
             await syncMeshStatus(project, verificationResult);
 
-            expect(project.meshState).toBeUndefined();
             expect(project.componentInstances?.['commerce-mesh'].status).toBe('ready');
         });
 
@@ -370,7 +379,7 @@ describe('MeshVerifier', () => {
             await syncMeshStatus(project, verificationResult);
 
             // Should not throw
-            expect(project.meshState).toBeUndefined();
+            expect(project.appBuilderComponents).toBeUndefined();
         });
 
         // ADR-011 D3 Steps 07+09: the deployment record lives on the keyed mesh

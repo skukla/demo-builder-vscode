@@ -308,7 +308,7 @@ export class StateManager {
     /**
      * Mark a project field as dirty (changed but not yet saved).
      * Background operations should use this instead of saveProject().
-     * @param field - The field that changed (e.g., 'meshState')
+     * @param field - The field that changed (e.g., 'appBuilderComponents')
      */
     public markDirty(field: keyof Project): void {
         this.dirtyFields.add(field);

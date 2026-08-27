@@ -357,27 +357,32 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.publishKeyRegisteredAt).toBeUndefined();
         });
 
-        // ADR-011 D3 Step 07: the singular meshState/appState write-side is
-        // retired — the keyed appBuilderComponents map is the single persisted
-        // authority. Legacy manifests stay READABLE (loader + migration), but
-        // the writer never emits the singular fields again, even when the
-        // in-memory legacy singletons are still populated.
-        it('should NOT write meshState/appState even when the in-memory legacy singletons exist (Step 07)', async () => {
+        // ADR-011 D3 Step 07 retired the singular meshState/appState write-side;
+        // PL-1 phase 2 removed the fields from Project entirely. The manifest
+        // the writer emits must never carry the singular keys — pinned so a
+        // regression reintroducing them fails here.
+        it('should NOT write meshState/appState (the keyed map is the only persisted model)', async () => {
             const project = createTestProject({
                 name: 'deployed-integration',
-                meshState: {
-                    envVars: { A: '1' },
-                    sourceHash: 'abc',
-                    lastDeployed: '2026-07-15T00:00:00.000Z',
-                    endpoint: 'https://mesh/graphql',
-                },
-                appState: {
-                    appId: 'acme-widget',
-                    url: 'https://acme.adobeio-static.net',
-                    status: 'deployed',
-                    deployedUrls: { main: 'https://acme.adobeio-static.net' },
-                    lastDeployed: '2026-07-15T00:00:00.000Z',
-                    sourceHash: null,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        envVars: { A: '1' },
+                        sourceHash: 'abc',
+                        lastDeployed: '2026-07-15T00:00:00.000Z',
+                        endpoint: 'https://mesh/graphql',
+                    },
+                    'acme-widget': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        url: 'https://acme.adobeio-static.net',
+                        deployedUrls: { main: 'https://acme.adobeio-static.net' },
+                        lastDeployed: '2026-07-15T00:00:00.000Z',
+                        sourceHash: null,
+                    },
                 },
             });
 

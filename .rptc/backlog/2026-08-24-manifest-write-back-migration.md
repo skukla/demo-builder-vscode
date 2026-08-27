@@ -45,6 +45,8 @@ item is the plan to remove that dependency at its source.)
 
 - 2026-07-15  Keyed writer (`9059eee29`), first release tag beta.127
 - 2026-08-24  Phase 1 — `feature/manifest-write-back-migration`
+- 2026-08-27  Phase 2 PREPARED on branch loop/2026-08-27-manifest-phase2 (off develop, unmerged — the ship gate stays the owner's beta.141 confirmation). meshState/appState removed from Project entirely; they survive only on ProjectManifest, read by the quarantined migration (also the sweep's load path, so dormant machines still migrate — the agreed safeguard). Deleted: the accessor synthesis family (getKeyedMeshAppBuilderComponent merged into getMeshAppBuilderComponent), stalenessDetector's per-field fallback + clearing write, meshUpdateDecline fallback, meshVerifier clearing write, typeGuards endpoint fallback. Guard allowlist: 7 files/15 sites -> appBuilderComponentMigration alone (5). Also caught an access the guard's dot-regex could never see: meshVerifyCheck passed 'meshState' as a markDirty STRING key — now 'appBuilderComponents'. Golden proof: the config.json snapshot recorded from the legacy shape reproduces byte-identically from the keyed shape. DECISION recorded: componentApiPicks' additionalConsoleApis conversion and the daLiveSite strip STAY in the load path — they are load-path tolerance exactly like the quarantined migration, and deleting them would break the dormant-machine safeguard the item itself added. Full gate green (1150 suites / 14972 tests, both tsc, whole-repo lint, blindspots).
+- 2026-08-27  chore(state): PL-1 phase 2 — the legacy singular mesh/app state leaves Project (`797194416`)
 
 ## Problem
 

@@ -40,7 +40,7 @@ features/app-builder/
   `providesEnvVars` are preserved; volatile fields `status`/`endpoint`/`url`/`envVars`/
   `sourceHash`/`lastDeployed` are the deploy record).
 - Readers go through the accessors (`getMeshAppBuilderComponent`,
-  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`,
+  `listAppBuilderComponents`,
   `getProvidedEnvVars`); the accessors synthesize from the in-memory legacy singletons only
   for pre-migration projects.
 - A guard test (`tests/core/state/singularStateAccessGuard.test.ts`) pins the few files

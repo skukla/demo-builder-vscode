@@ -17,7 +17,7 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
-import { getKeyedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import {
@@ -360,22 +360,18 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
  */
 function getCurrentMeshStateImpl(project: Project): MeshState | null {
     // Return the stored mesh state (from last deployment) — the DEPLOYED
-    // configuration, not the current config. Keyed-first (ADR-011 D3 Step 06):
-    // the keyed mesh appBuilderComponents entry carries the baseline; fall back
-    // per-field to the legacy meshState for entries written before the keyed
-    // model carried these fields (retired write-side in Step 07).
-    const keyed = getKeyedMeshAppBuilderComponent(project);
-    const legacy = project.meshState;
+    // configuration, not the current config. The keyed mesh
+    // appBuilderComponents entry is the only carrier (PL-1 phase 2: legacy
+    // manifests fold their baseline into the keyed entry at load).
+    const keyed = getMeshAppBuilderComponent(project);
 
-    const envVars = keyed?.envVars ?? legacy?.envVars;
-    const sourceHash = keyed?.sourceHash ?? legacy?.sourceHash;
-    const lastDeployed = keyed?.lastDeployed ?? legacy?.lastDeployed;
+    const envVars = keyed?.envVars;
+    const sourceHash = keyed?.sourceHash;
+    const lastDeployed = keyed?.lastDeployed;
 
-    // No legacy state and no deployment evidence on the keyed entry (e.g. an
-    // undeployed entry with no runtime fields) → null, preserving the
-    // "fresh deployment needed" path. Any legacy meshState keeps returning a
-    // state exactly as before.
-    if (!legacy && envVars === undefined && sourceHash == null && !lastDeployed) {
+    // No deployment evidence on the keyed entry (e.g. an undeployed entry with
+    // no runtime fields) → null, preserving the "fresh deployment needed" path.
+    if (envVars === undefined && sourceHash == null && !lastDeployed) {
         return null;
     }
 
@@ -471,7 +467,7 @@ async function detectMeshChangesImpl(
             // The fetched baseline lands on the keyed mesh entry — the single
             // durable model (ADR-011 D3 Step 07; the legacy meshState write-side
             // is retired, readers are keyed-first).
-            const keyedMesh = getKeyedMeshAppBuilderComponent(project);
+            const keyedMesh = getMeshAppBuilderComponent(project);
             if (keyedMesh) {
                 keyedMesh.envVars = deployedConfig;
             }
@@ -632,11 +628,6 @@ async function updateMeshStateImpl(
         declinedAt: undefined,
     });
 
-    // Clear the in-memory legacy singleton (a legacy-loaded project still
-    // carries it): the keyed entry above is authoritative, and a stale
-    // meshState left behind could resurface through the accessors' legacy
-    // fallbacks. Legacy manifests remain READABLE via the loader + migration.
-    project.meshState = undefined;
 }
 
 /**

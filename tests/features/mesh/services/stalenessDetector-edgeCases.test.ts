@@ -83,12 +83,17 @@ describe('StalenessDetector - Edge Cases', () => {
 
         it('should detect env var changes', async () => {
             const project = createMockProjectWithMesh({
-                meshState: {
-                    envVars: {
-                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://old.com/graphql',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {
+                                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://old.com/graphql',
+                            },
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01T00:00:00Z',
+                                    },
                 },
             });
 
@@ -112,12 +117,17 @@ describe('StalenessDetector - Edge Cases', () => {
             // are stored under the backend component (adobe-commerce-paas), not the mesh component.
             // detectMeshChanges must look across ALL componentConfigs to find changes.
             const project = createMockProjectWithMesh({
-                meshState: {
-                    envVars: {
-                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://old.com/graphql',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {
+                                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://old.com/graphql',
+                            },
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01T00:00:00Z',
+                                    },
                 },
             });
 
@@ -207,16 +217,21 @@ describe('StalenessDetector - Edge Cases', () => {
                         status: 'deployed',
                     },
                 },
-                meshState: {
-                    envVars: {
-                        ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
-                        ACCS_WEBSITE_CODE: 'base',
-                        ACCS_STORE_CODE: 'main_store',
-                        ACCS_STORE_VIEW_CODE: 'default',
-                        ACCS_CUSTOMER_GROUP: 'abc123',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {
+                                ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                                ACCS_WEBSITE_CODE: 'base',
+                                ACCS_STORE_CODE: 'main_store',
+                                ACCS_STORE_VIEW_CODE: 'default',
+                                ACCS_CUSTOMER_GROUP: 'abc123',
+                            },
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01T00:00:00Z',
+                                    },
                 },
             });
 
@@ -258,15 +273,20 @@ describe('StalenessDetector - Edge Cases', () => {
                         status: 'deployed',
                     },
                 },
-                meshState: {
-                    envVars: {
-                        ACCS_GRAPHQL_ENDPOINT: 'https://old.accs.example.com/graphql',
-                        ACCS_WEBSITE_CODE: 'base',
-                        ACCS_STORE_CODE: 'main_store',
-                        ACCS_STORE_VIEW_CODE: 'default',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {
+                                ACCS_GRAPHQL_ENDPOINT: 'https://old.accs.example.com/graphql',
+                                ACCS_WEBSITE_CODE: 'base',
+                                ACCS_STORE_CODE: 'main_store',
+                                ACCS_STORE_VIEW_CODE: 'default',
+                            },
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01T00:00:00Z',
+                                    },
                 },
             });
 
@@ -317,37 +337,6 @@ describe('StalenessDetector - Edge Cases', () => {
             });
             expect(mesh?.sourceHash).toBe('abc123');
             expect(mesh?.lastDeployed).toBeDefined();
-            // ADR-011 D3 Step 07: the singular meshState write-side is retired.
-            expect(project.meshState).toBeUndefined();
-        });
-
-        it('should clear a stale in-memory legacy meshState after a deploy (Step 07)', async () => {
-            // A legacy-loaded project carries meshState in memory. After a
-            // redeploy, the keyed entry is authoritative — the stale legacy
-            // singleton is cleared so the accessors' legacy synthesis can never
-            // resurrect the pre-deploy record.
-            const project = createMockProject({
-                componentInstances: {
-                    'commerce-mesh': {
-                        id: 'commerce-mesh',
-                        name: 'API Mesh',
-                        subType: 'mesh',
-                        path: '/test/mesh',
-                        status: 'deployed',
-                    },
-                },
-                meshState: {
-                    envVars: { OLD: 'stale' },
-                    sourceHash: 'stale-hash',
-                    lastDeployed: '2026-01-01T00:00:00.000Z',
-                    endpoint: 'https://stale-mesh/graphql',
-                },
-            });
-            setupMockFileSystemWithHash('abc123', 'A=1\n');
-
-            await updateMeshState(project, 'https://fresh-mesh/graphql');
-
-            expect(project.meshState).toBeUndefined();
         });
 
         it('should do nothing when no mesh component', async () => {
@@ -355,7 +344,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             await updateMeshState(project);
 
-            expect(project.meshState).toBeUndefined();
+            expect(project.appBuilderComponents).toBeUndefined();
         });
 
         // ADR-011 D3 Steps 07+09: updateMeshState is the single writer chokepoint

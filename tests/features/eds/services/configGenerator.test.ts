@@ -488,15 +488,19 @@ describe('configGenerator', () => {
     // ==========================================================
     //
     // These tests pin the load-bearing MESH_ENDPOINT → config.json edge. The
-    // storefront config must read the commerce/mesh endpoint from "any appBuilderComponent
-    // that provides it" (the keyed `appBuilderComponents` providesEnvVars / getProvidedEnvVars
-    // accessor) while producing BYTE-IDENTICAL output for existing mesh-backed
-    // projects whose endpoint still lives only in legacy `meshState`.
+    // storefront config must read the commerce/mesh endpoint from "any
+    // appBuilderComponent that provides it" (getProvidedEnvVars), falling back
+    // to the keyed mesh entry's endpoint — the migrated shape of every legacy
+    // project (PL-1 phase 2: meshState folds into the keyed map at load).
     describe('extractConfigParams — generalized endpoint provider (step 04)', () => {
         const MESH_ENDPOINT = 'https://mesh.example.com/graphql';
 
-        /** Representative PaaS storefront project, endpoint in legacy meshState only. */
-        function legacyMeshProject(): Project {
+        /**
+         * Representative PaaS storefront project in the MIGRATED-legacy shape:
+         * the keyed mesh entry carries the endpoint but no providesEnvVars —
+         * exactly what the load-time migration produces from an old manifest.
+         */
+        function migratedMeshProject(): Project {
             return {
                 id: 'proj-1',
                 name: 'Legacy Mesh Project',
@@ -523,16 +527,23 @@ describe('configGenerator', () => {
                         },
                     },
                 },
-                meshState: { endpoint: MESH_ENDPOINT, lastDeployed: '2026-06-20T00:00:00.000Z' },
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: MESH_ENDPOINT,
+                        lastDeployed: '2026-06-20T00:00:00.000Z',
+                    },
+                },
             } as unknown as Project;
         }
 
-        /** Forward-state: same project but endpoint lives only in keyed appBuilderComponents. */
+        /** Forward-state: the provider declares the endpoint via providesEnvVars. */
         function appBuilderComponentsOnlyProject(): Project {
-            const base = legacyMeshProject();
+            const base = migratedMeshProject();
             return {
                 ...base,
-                meshState: undefined,
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -552,19 +563,24 @@ describe('configGenerator', () => {
             } as unknown as Logger;
         });
 
-        it('GOLDEN: legacy mesh project produces byte-identical config.json (snapshot guard)', () => {
+        it('GOLDEN: migrated mesh project produces byte-identical config.json (snapshot guard)', () => {
             // The load-bearing edge. If this snapshot ever changes, the live
             // storefront republish changes — STOP and investigate, do NOT update
-            // the snapshot to match.
-            const params = buildConfigGeneratorParams(legacyMeshProject());
+            // the snapshot to match. The snapshot was recorded from the legacy
+            // meshState shape; the migrated keyed shape must reproduce it
+            // byte-for-byte (that identity IS the migration's proof).
+            const params = buildConfigGeneratorParams(migratedMeshProject());
             const result = generateConfigJson(params, mockLogger);
 
             expect(result.success).toBe(true);
+            // The snapshot bytes were recorded from the RETIRED legacy meshState
+            // shape and verified byte-identical against the keyed shape on
+            // 2026-08-27 (PL-1 phase 2) before the fixture migrated.
             expect(result.content).toMatchSnapshot('legacy-mesh-config-json');
         });
 
-        it('resolves MESH_ENDPOINT identically from legacy meshState', () => {
-            const params = extractConfigParams(legacyMeshProject());
+        it('resolves MESH_ENDPOINT from the keyed mesh endpoint (no providesEnvVars)', () => {
+            const params = extractConfigParams(migratedMeshProject());
             expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
         });
 
@@ -573,21 +589,20 @@ describe('configGenerator', () => {
             expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
         });
 
-        it('produces byte-identical config.json from appBuilderComponents-only as from legacy meshState', () => {
-            const legacyContent = generateConfigJson(
-                buildConfigGeneratorParams(legacyMeshProject()), mockLogger,
+        it('produces byte-identical config.json from the providesEnvVars arm as from the endpoint arm', () => {
+            const endpointArm = generateConfigJson(
+                buildConfigGeneratorParams(migratedMeshProject()), mockLogger,
             ).content;
-            const forwardContent = generateConfigJson(
+            const providerArm = generateConfigJson(
                 buildConfigGeneratorParams(appBuilderComponentsOnlyProject()), mockLogger,
             ).content;
 
-            expect(forwardContent).toBe(legacyContent);
+            expect(providerArm).toBe(endpointArm);
         });
 
         it('falls back to the direct backend endpoint when NO provider exists (no mesh)', () => {
             const noMesh = {
-                ...legacyMeshProject(),
-                meshState: undefined,
+                ...migratedMeshProject(),
                 appBuilderComponents: undefined,
                 componentConfigs: {
                     'eds-storefront': {
@@ -600,23 +615,5 @@ describe('configGenerator', () => {
             expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');
         });
 
-        it('resolves a consistent endpoint when both appBuilderComponents and legacy meshState are present (mid-migration)', () => {
-            const both = {
-                ...legacyMeshProject(),
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                        endpoint: MESH_ENDPOINT,
-                        providesEnvVars: { MESH_ENDPOINT },
-                    },
-                },
-            } as unknown as Project;
-
-            const params = extractConfigParams(both);
-            // Read-through means both agree — a single resolved value, no conflict.
-            expect(params.commerceEndpoint).toBe(MESH_ENDPOINT);
-        });
     });
 });

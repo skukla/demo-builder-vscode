@@ -98,10 +98,15 @@ describe('detectMeshChanges - Timeout Handling', () => {
                     path: '/test/mesh',
                 },
             },
-            meshState: {
-                envVars: {}, // Empty - no baseline
-                sourceHash: null,
-                lastDeployed: '',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: {}, // Empty - no baseline
+                        sourceHash: null,
+                        lastDeployed: '',
+                            },
             },
         } as unknown as Project;
 

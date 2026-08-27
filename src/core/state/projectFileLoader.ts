@@ -42,6 +42,31 @@ export function normalizePackageId(id: string | undefined): string | undefined {
     return id ? (RENAMED_PACKAGE_IDS[id] ?? id) : id;
 }
 
+/**
+ * Legacy singular mesh state, MANIFEST-ONLY since PL-1 phase 2 — the in-memory
+ * `Project` no longer carries it. Read solely by the quarantined
+ * read-migration (`appBuilderComponentMigration`), which folds it into the
+ * keyed map on every load.
+ */
+export interface LegacyManifestMeshState {
+    envVars: Record<string, string>;
+    sourceHash: string | null;
+    lastDeployed: string; // ISO date string
+    endpoint?: string; // mesh GraphQL endpoint URL (legacy manifests only)
+    userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
+    declinedAt?: string; // ISO date string when user declined
+}
+
+/** Legacy singular app state, MANIFEST-ONLY since PL-1 phase 2 (see above). */
+export interface LegacyManifestAppState {
+    appId?: string;
+    url?: string; // Primary deployed app URL
+    status: 'deployed' | 'error' | 'not-deployed';
+    deployedUrls?: Record<string, string>; // Per-action/runtime URLs
+    lastDeployed?: string; // ISO date string
+    sourceHash?: string | null;
+}
+
 export interface ProjectManifest {
     name?: string;
     /** Display title. Absent on every project created before it existed. */
@@ -55,8 +80,8 @@ export interface ProjectManifest {
     componentConfigs?: Project['componentConfigs'];
     commerceStoreStructure?: Project['commerceStoreStructure'];
     componentVersions?: Project['componentVersions'];
-    meshState?: Project['meshState'];
-    appState?: Project['appState'];
+    meshState?: LegacyManifestMeshState;
+    appState?: LegacyManifestAppState;
     appBuilderComponents?: Project['appBuilderComponents'];
     additionalConsoleApis?: string[];
     componentApiPicks?: Record<string, string[]>;
@@ -154,8 +179,9 @@ export class ProjectFileLoader {
                 componentConfigs: manifest.componentConfigs,
                 commerceStoreStructure: manifest.commerceStoreStructure,
                 componentVersions,
-                meshState: manifest.meshState,
-                appState: manifest.appState,
+                // The legacy singular meshState/appState are NOT copied onto the
+                // Project (PL-1 phase 2): the keyed map below is the only
+                // in-memory carrier; the migration reads them off the manifest.
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),

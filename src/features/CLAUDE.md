@@ -125,7 +125,7 @@ kind in that map; the legacy singular `meshState`/`appState` fields are legacy-r
   it was the only code maintaining `componentSelections`, so dashboard-added components went
   unselected and project RESET dropped them.
 - `appBuilderComponentState.ts` - the keyed-map accessors (`getMeshAppBuilderComponent`,
-  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`, `getProvidedEnvVars`);
+  `listAppBuilderComponents`, `getProvidedEnvVars`);
   legacy synthesis only for pre-migration in-memory projects. `appBuilderDeployOutcome.ts` -
   `recordDeployOutcome`, the one keyed deploy-record writer every deploy path lands on.
 - Every per-integration deploy — UI and AI alike — goes through the keyed runner

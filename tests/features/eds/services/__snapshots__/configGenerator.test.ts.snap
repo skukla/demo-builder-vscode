@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`configGenerator extractConfigParams — generalized endpoint provider (step 04) GOLDEN: legacy mesh project produces byte-identical config.json (snapshot guard): legacy-mesh-config-json 1`] = `
+exports[`configGenerator extractConfigParams — generalized endpoint provider (step 04) GOLDEN: migrated mesh project produces byte-identical config.json (snapshot guard): legacy-mesh-config-json 1`] = `
 "{
   "public": {
     "default": {

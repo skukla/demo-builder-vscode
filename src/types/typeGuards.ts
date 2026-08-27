@@ -7,7 +7,7 @@
 
 import { Project, ComponentInstance } from './index';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getKeyedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import {
     deriveAccsAdminUrl,
@@ -584,7 +584,7 @@ export function hasMeshComponent(project: Project | undefined | null): boolean {
  */
 export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
     if (!project) return undefined;
-    return getKeyedMeshAppBuilderComponent(project)?.endpoint ?? project.meshState?.endpoint;
+    return getMeshAppBuilderComponent(project)?.endpoint;
 }
 
 // =====================================================================
