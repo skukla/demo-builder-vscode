@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # Integration add must fail on install error
@@ -36,3 +36,7 @@ Integration install/build should run under the component's declared node
 version via fnm — fnm had v24 available on this machine the whole time; a
 catalog entry field (e.g. `nodeVersion`) plus `fnm exec` in the install/deploy
 command is the shape. This item is only the fail-fast half.
+
+## Shipped so far
+
+- 2026-08-27  Shipped same day (4ba68c8ea + 13644633d): strictInstall makes a refused npm install fatal with npm's own error; the redeploy failure path now persists errorOutcome like add always did (the deploying marker made the old silent return load-bearing). Live acceptance: the kit's persisted error is now the genuine upstream webpack failure, deploying visible for the whole run.

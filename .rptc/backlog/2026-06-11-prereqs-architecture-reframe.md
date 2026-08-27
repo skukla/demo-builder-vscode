@@ -190,3 +190,7 @@ Block on owner approval before proposing implementation.
 - **Reuse the existing install runner.** Don't build a parallel install system. The cross-validation with the Claude plan confirmed the seam.
 - **AI-first UX is a stated goal.** Designs that surface extension-wide tools only through the wizard fail this. Designs that combine welcome panel + lazy gate + wizard step succeed.
 - **No activation interrupts beyond the one-time welcome panel.** Settings-change detection (D12) does not constitute an activation interrupt — it's reactive to user action, not extension lifecycle.
+
+## Shipped so far
+
+- 2026-08-27  Owner direction (2026-08-27, during the starter-kit live test): the choice is between moving the graphical check later vs targeted reactive checks at the moment a choice binds. First instance of the targeted model SHIPPED — ensureFnmNodeVersion at the integration add door (the chokepoint the wizard's early screen structurally cannot cover: integrations are selected after it, and dashboard/MCP adds never pass it). Loop's recommendation for this epic: keep the early graphical screen for extension-wide choice-independent tools (git, aio, fnm), move every choice-DEPENDENT need to ensure-at-the-door in this pattern; a graphical late re-check is cosmetic on top, not the enforcement.
