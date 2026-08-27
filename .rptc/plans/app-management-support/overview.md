@@ -52,6 +52,31 @@ nothing encoded):
    limitation). RECOMMEND: surface as a guided handoff in the add flow, same
    pattern as set_setting's hands-back.
 
+## Decisions taken (owner, 2026-08-27 afternoon)
+
+- **Install is AUTOMATIC** via the REST client, with a hands-back fallback:
+  on failure, show where it stopped and point at Commerce Admin > Apps >
+  App Management instead of blind retries. Owner: "install should be
+  automatic unless you can think of a reason why it shouldn't" — no blocking
+  reason found (reconcile is idempotent install-or-upgrade; 409 carries a
+  closed no-op reason enum).
+- **The base-URL spike is now a CONFIRMATION, not a discovery.** Read from
+  source (adobe/aio-commerce-sdk, packages/aio-commerce-lib-app/source/
+  actions/installation/router.ts, 2026-08-27): each generated action is an
+  HttpActionRouter web action; the installation action serves `GET /` and
+  `POST /` (= the spec's /installation), `POST /validation`,
+  and the /uninstallation routes as path suffixes; association and
+  app-config are sibling actions in the same generated `app-management`
+  package (ext.config.yaml workerProcess list). Therefore the client's
+  single base URL is the WEB PACKAGE URL —
+  `https://<namespace>.adobeioruntime.net/api/v1/web/app-management` — and
+  the spec paths map onto it exactly as AppManagementClient already
+  assumes (`${base}/installation`, `${base}/installation/validation`,
+  `${base}/association`). The extension can derive it from the deployed
+  action URLs `aio app get-url --json` returns, which deployAppComponent
+  already parses. Remaining supervised step: ONE confirmation call
+  (GET /installation) after the first real kit deploy.
+
 ## What the research settled (no decision needed)
 
 - **Credentials solved by what we already build.** The six
