@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 # DA.live sign-in has no command palette entry
 
@@ -53,3 +53,4 @@ Filed 2026-08-26.
 
 - 2026-08-26  docs(backlog): settle the sign-in question — two commands, not a picker (`faea7a40a`)
 - 2026-08-26  docs(backlog): PL-5 and EDS-9 — sign-in is not in the command palette (`b45ceae5c`)
+- 2026-08-27  SHIPPED: demoBuilder.signInDaLive. Delegates to the one shared showDaLiveAuthQuickPick flow (org -> browser -> token), awaited since a palette command IS the user. No second sign-in path to drift.

@@ -229,7 +229,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-6` | fix | [Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md) | — | med | backlog |
 | `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | backlog |
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
-| `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | backlog |
+| `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 
 ### app-builder  (6)
 
@@ -263,7 +263,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | backlog |
 | `PL-3` | chore | [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) | — | low | backlog |
 | `PL-4` | chore | [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) | — | low | backlog |
-| `PL-5` | feature | [Adobe sign-in has no command palette entry](2026-08-26-adobe-sign-in-from-command-palette.md) | — | med | backlog |
+| `PL-5` | feature | [Adobe sign-in has no command palette entry](2026-08-26-adobe-sign-in-from-command-palette.md) | — | med | shipped |
 
 <!-- END GENERATED registry -->
 

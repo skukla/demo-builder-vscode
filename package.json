@@ -141,6 +141,16 @@
         "command": "demoBuilder.manageGitHubRepos",
         "title": "Manage GitHub Repositories",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.signInAdobe",
+        "title": "Sign in to Adobe",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.signInDaLive",
+        "title": "Sign in to DA.live",
+        "category": "Demo Builder"
       }
     ],
     "configuration": [

@@ -354,6 +354,66 @@ export class CommandManager {
         const diagnostics = new DiagnosticsCommand(this.context);
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
+        // Sign in to Adobe (PL-5). Until now the only doors were the wizard's
+        // auth step and an agent calling sign_in — an expired token outside a
+        // wizard flow had no human-reachable handle. Checks state FIRST: an
+        // already-valid session offers a forced re-login (the org-switch
+        // recovery) rather than silently re-running a login that would succeed
+        // without changing anything.
+        this.registerCommand('demoBuilder.signInAdobe', async () => {
+            const auth = ServiceLocator.getAuthenticationService();
+            const status = await auth.getTokenStatus();
+            let force = false;
+            if (status.isAuthenticated) {
+                const minutes = status.expiresInMinutes;
+                const pick = await vscode.window.showInformationMessage(
+                    `Already signed in to Adobe${
+                        typeof minutes === 'number' ? ` (token expires in ~${minutes} min)` : ''
+                    }.`,
+                    'Sign in again',
+                    'Cancel',
+                );
+                if (pick !== 'Sign in again') return;
+                force = true;
+            }
+            const ok = await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Signing in to Adobe…',
+                },
+                () => auth.login(force),
+            );
+            if (ok) {
+                vscode.window.setStatusBarMessage('$(check) Signed in to Adobe', 5000);
+            } else {
+                void vscode.window.showWarningMessage(
+                    'Adobe sign-in did not complete. Check the Debug Logs output channel.',
+                );
+            }
+        });
+
+        // Sign in to DA.live (EDS-9). Reuses the SAME QuickPick flow the rest of
+        // the extension drives (org → browser → token) — a second sign-in path
+        // would drift, and the drifting one would be whichever nobody watched.
+        // Awaited, unlike the agent tool's fire-and-forget: a palette command IS
+        // the user, so there is no headless client watching a timeout.
+        this.registerCommand('demoBuilder.signInDaLive', async () => {
+            const { showDaLiveAuthQuickPick } = await import(
+                '@/features/eds/handlers/daLive/daLiveAuthPrompt'
+            );
+            const result = await showDaLiveAuthQuickPick({
+                context: this.context,
+                logger: this.logger,
+            });
+            if (result.success) {
+                vscode.window.setStatusBarMessage('$(check) Signed in to DA.live', 5000);
+            } else if (!result.cancelled) {
+                void vscode.window.showWarningMessage(
+                    `DA.live sign-in failed${result.error ? `: ${result.error}` : ''}.`,
+                );
+            }
+        });
+
         // Global MCP registration (~/.claude.json) — explicit opt-in. The entry
         // points at the proxy with no pinned socket, so it discovers a running
         // extension window from any cwd (global ops like create_project work
