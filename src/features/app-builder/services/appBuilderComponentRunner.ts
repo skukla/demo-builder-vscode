@@ -31,7 +31,7 @@
  */
 
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
-import { isStandaloneApp } from './appConfigPackages';
+import { detectAppLayout, type AppConfigLayout } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -359,6 +359,30 @@ function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): D
     return { status: 'error', ...identityOf(entry), error: reason };
 }
 
+/** Add-door rejection when the cloned repo's config layout ≠ the catalog entry's. */
+function layoutMismatchError(
+    entry: AppBuilderComponentCatalogEntry,
+    expected: AppConfigLayout,
+    detected: AppConfigLayout | undefined,
+): string {
+    const found =
+        detected === undefined
+            ? 'its app.config.yaml declares neither (missing, unparseable, or empty)'
+            : `its app.config.yaml is ${detected}-shaped`;
+    if (expected === 'standalone') {
+        return (
+            `"${entry.name}" is not a standalone App Builder app — ${found}. A standalone ` +
+            `integration must declare runtime packages under application.runtimeManifest ` +
+            `so its deploy can be package-isolated in the shared workspace.`
+        );
+    }
+    return (
+        `"${entry.name}" is not an extension-layout App Builder app — ${found}. An ` +
+        `extension integration must declare a root extensions: map in app.config.yaml ` +
+        `(the App Management shape).`
+    );
+}
+
 /** Dispatch the deploy by kind; returns success + the outcome to record. */
 async function dispatchDeploy(
     project: Project,
@@ -452,19 +476,19 @@ export async function addAppBuilderComponent(
             return { success: false, error: installed.error };
         }
 
-        // Add door: an integration MUST be a standalone action app so its deploy can
-        // be package-isolated in the shared workspace. Reject an extension-shaped or
-        // malformed repo here (before any deploy) rather than silently landing it on
-        // the shared default package where it would prune sibling integrations.
-        if (entry.kind === 'integration' && !(await isStandaloneApp(installed.path))) {
-            return {
-                success: false,
-                error:
-                    `"${entry.name}" is not a standalone App Builder app — its app.config.yaml ` +
-                    `declares no runtime packages under application.runtimeManifest. Only standalone ` +
-                    `action apps can be isolated in a shared workspace; extension apps (e.g. excshell) ` +
-                    `are not supported as integrations.`,
-            };
+        // Add door: the cloned repo's config layout MUST match what the catalog
+        // entry declares (default standalone). A standalone entry needs runtime
+        // packages we can package-isolate in the shared workspace; an extension
+        // entry (App Management apps) needs a root `extensions:` map. Reject a
+        // mismatched or malformed repo here (before any deploy) rather than
+        // silently landing it on the shared default package where it would prune
+        // sibling integrations.
+        if (entry.kind === 'integration') {
+            const expected: AppConfigLayout = entry.layout ?? 'standalone';
+            const detected = await detectAppLayout(installed.path);
+            if (detected !== expected) {
+                return { success: false, error: layoutMismatchError(entry, expected, detected) };
+            }
         }
 
         const deployed = await withOrgContext(targetFor(project, deps), () =>
@@ -557,8 +581,7 @@ async function teardownRemote(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
     const componentPath = project.componentInstances?.[id]?.path;
-    const command =
-        state.kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
+    const command = state.kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
     await withOrgContext(targetFor(project, deps), () =>
         deps.commandManager.execute(command, {
             cwd: componentPath,
@@ -610,10 +633,7 @@ function withoutMeshDependencies(project: Project): Project['componentSelections
  * @param id - the integration id being removed
  * @returns componentSelections without that id
  */
-function withoutIntegrationSelection(
-    project: Project,
-    id: string,
-): Project['componentSelections'] {
+function withoutIntegrationSelection(project: Project, id: string): Project['componentSelections'] {
     const selections = project.componentSelections;
     if (!selections?.appBuilder) return selections;
     return {
@@ -689,9 +709,7 @@ export async function removeAppBuilderComponent(
         // the next publish. Same failure shape as the 2026-08-10 wrong-website
         // bug. `stripOrphanedComponentConfigs` (loader) sweeps entries older
         // removals already stranded.
-        ...(project.componentConfigs
-            ? { componentConfigs: { ...project.componentConfigs } }
-            : {}),
+        ...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),
     };
     delete cleared.appBuilderComponents[id];
     if (cleared.componentApiPicks) {

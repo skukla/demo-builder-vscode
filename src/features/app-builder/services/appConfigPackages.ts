@@ -9,9 +9,12 @@
  * `app.config.yaml` to a name derived from the deployable id.
  *
  * Renaming works ONLY for STANDALONE apps (`application.runtimeManifest.packages`).
- * Extension apps (excshell etc.) fix their package via the extension point and
- * cannot be renamed — so integrations must be standalone action apps, enforced at
- * the add door via {@link isStandaloneApp}.
+ * Extension apps (a root `extensions:` map delegating to ext.config.yaml — the
+ * shape App Management / integration-starter-kit v4 apps use) fix their packages
+ * via the extension point and cannot be renamed. The add door matches the cloned
+ * repo's detected layout against the catalog entry's declared `layout` via
+ * {@link detectAppLayout}; for extension apps the isolation rewrite is a
+ * deliberate no-op ({@link applyIsolatedPackages} finds nothing to rename).
  *
  * @module features/app-builder/services/appConfigPackages
  */
@@ -25,7 +28,11 @@ export type RuntimePackages = Record<string, unknown>;
 
 interface AppConfigDoc {
     application?: { runtimeManifest?: { packages?: RuntimePackages } };
+    extensions?: Record<string, unknown>;
 }
+
+/** How an app's `app.config.yaml` declares its runtime entities. */
+export type AppConfigLayout = 'standalone' | 'extension';
 
 /** The `app.config.yaml` path for a cloned component. */
 export function appConfigPath(componentPath: string): string {
@@ -91,12 +98,26 @@ export function isolatePackages(packages: RuntimePackages, owPackage: string): R
 }
 
 /**
- * Whether the cloned app is a standalone action app that can be package-isolated.
- * Used at the add door to reject an extension-shaped or malformed integration
- * BEFORE any deploy (rather than silently landing it on a shared package).
+ * Detect the cloned app's config layout: `'standalone'` when it declares
+ * runtime packages under `application.runtimeManifest`, `'extension'` when it
+ * declares a non-empty root `extensions:` map (packages live in the delegated
+ * ext.config.yaml), `undefined` when it declares neither (missing/unparseable/
+ * empty config). Used at the add door to match the repo against the catalog
+ * entry's declared `layout` BEFORE any deploy.
+ *
+ * A config declaring BOTH reads as standalone: the standalone packages are the
+ * ones we can and must isolate, so that is the shape that governs the deploy.
  */
-export async function isStandaloneApp(componentPath: string): Promise<boolean> {
-    return (await readStandalonePackages(componentPath)) !== undefined;
+export async function detectAppLayout(componentPath: string): Promise<AppConfigLayout | undefined> {
+    const doc = await readConfigDoc(componentPath);
+    if (standalonePackagesOf(doc) !== undefined) {
+        return 'standalone';
+    }
+    const extensions = doc?.extensions;
+    if (extensions && typeof extensions === 'object' && Object.keys(extensions).length > 0) {
+        return 'extension';
+    }
+    return undefined;
 }
 
 /**

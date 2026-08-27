@@ -60,6 +60,17 @@ nothing encoded):
   We hold every value via the Console SDK; injection extends the existing
   two-var pattern (`AIO_RUNTIME_*`) in `runtimeCredentials`. No .env on disk;
   per-invocation env, secrets never written.
+  - **Empirical caveat (2026-08-27, step 2a):** the `aio console workspace
+    download` JSON that `runtimeCredentials` already fetches carries only the
+    credentials that EXIST on that workspace — a real workspace (Kukla Bodea
+    Mesh / Stage) returned one `apikey` credential and no
+    `oauth_server_to_server` entry, because the S2S credential is created
+    on-demand and had never been needed there. So S2S injection must (1) run
+    `ensureOAuthCredentialId` first, then (2) fetch the credential's secret —
+    whether the download carries `client_secrets` for an S2S credential is
+    still unverified (no workspace with one was available to read offline).
+    Design the fetch behind a small interface in step 3; verifying the actual
+    secret source is part of the supervised spike.
 - **Init is headlessly drivable**: write `app.commerce.config.ts` first, then
   `npx @adobe/aio-commerce-lib-app init` skips prompts; `generate all` +
   `aio app build --force-build` + `aio app deploy --force-deploy --no-build`.
@@ -77,12 +88,18 @@ nothing encoded):
 
 1. `step-01` — schema + types: `layout`/`lifecycle` fields (defaults preserve
    today's entries), catalog loader passthrough, tests.
-2. `step-02` — extension-layout deploy branch: skip the packages rewrite
-   (isolation comes from the workspace, not ow-package renaming — assumption 2
-   above), still `aio app build`/`deploy`, S2S env injection alongside
-   `AIO_RUNTIME_*`. Guard flips from "reject extension apps" to "reject
-   extension apps unless entry declares layout:extension". Tests incl. a
-   real-shape fixture from the kit's app.config.yaml.
+2. `step-02` — **DONE (2026-08-27)** — extension-layout deploy branch:
+   `detectAppLayout` in `appConfigPackages` (standalone | extension |
+   undefined; replaces `isStandaloneApp`, which had no other production
+   caller); the add door now matches detected layout against
+   `entry.layout ?? 'standalone'` with shape-specific rejection messages; the
+   ow-package rewrite needed no code change — `applyIsolatedPackages` already
+   no-ops on a config with no standalone packages, now documented as the
+   deliberate extension-layout behaviour and pinned by tests. Tests include
+   the kit's real root `app.config.yaml` verbatim (fetched from
+   adobe/commerce-integration-starter-kit@main, 2026-08-27). S2S env
+   injection MOVED to step 3 with the client (see the empirical caveat
+   above — the secret source needs an interface, not a download read).
 3. `step-03` — `appManagementClient` from the OpenAPI spec (install / status /
    validate / associate), unit-tested against spec fixtures; NOT wired to the
    add flow yet.

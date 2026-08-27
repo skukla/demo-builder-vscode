@@ -34,10 +34,10 @@ jest.mock('@/core/shell', () => ({
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-const mockIsStandaloneApp = jest.fn().mockResolvedValue(true);
+const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     ...jest.requireActual('@/features/app-builder/services/appConfigPackages'),
-    isStandaloneApp: (...args: unknown[]) => mockIsStandaloneApp(...args),
+    detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
 // =============================================================================
@@ -55,7 +55,7 @@ import {
 beforeEach(() => {
     jest.clearAllMocks();
     mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
-    mockIsStandaloneApp.mockResolvedValue(true);
+    mockDetectAppLayout.mockResolvedValue('standalone');
 });
 
 /**

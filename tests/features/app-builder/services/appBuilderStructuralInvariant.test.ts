@@ -11,9 +11,9 @@
  *   `ow.package` (no two equal; none equal to the shared `application` /
  *   `dx-excshell-1`), each removable without touching the others.
  *
- * The add-door gate (`isStandaloneApp` rejects non-renameable extension apps) is
- * pinned in appBuilderComponentRunner.test.ts ("rejects a NON-standalone
- * integration at the add door").
+ * The add-door gate (`detectAppLayout` matches the repo's config shape against
+ * the entry's declared layout) is pinned in appBuilderComponentRunner.test.ts
+ * ("rejects a NON-standalone integration at the add door" and siblings).
  */
 
 import type { Project } from '@/types/base';
@@ -31,10 +31,10 @@ jest.mock('@/core/shell', () => ({
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-// Standalone-ness is filesystem-read at the add door; the invariant suite runs
+// The config layout is filesystem-read at the add door; the invariant suite runs
 // the happy path (the rejection is pinned in the runner suite).
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
-    isStandaloneApp: jest.fn().mockResolvedValue(true),
+    detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
 import {
@@ -89,7 +89,13 @@ function createDeps() {
         commandManager: {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         },
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() },
+        logger: {
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            trace: jest.fn(),
+        },
         saveProject: jest.fn().mockResolvedValue(undefined),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
         deployMesh: jest.fn().mockResolvedValue({ success: true, data: {} }),

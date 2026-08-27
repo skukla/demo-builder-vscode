@@ -34,10 +34,10 @@ jest.mock('@/core/shell', () => ({
 }));
 
 // Standalone-ness is filesystem-read at the add door; default to standalone so the
-// integration happy paths run, override to false for the rejection test.
-const mockIsStandaloneApp = jest.fn().mockResolvedValue(true);
+// integration happy paths run, override for the layout-mismatch rejection tests.
+const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
-    isStandaloneApp: (...args: unknown[]) => mockIsStandaloneApp(...args),
+    detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
 // =============================================================================
@@ -228,7 +228,7 @@ describe('addAppBuilderComponent (integration)', () => {
     });
 
     it('rejects a NON-standalone integration at the add door (no deploy)', async () => {
-        mockIsStandaloneApp.mockResolvedValueOnce(false);
+        mockDetectAppLayout.mockResolvedValueOnce(undefined);
         const project = createProject();
         const deps = createDeps();
 
@@ -241,8 +241,45 @@ describe('addAppBuilderComponent (integration)', () => {
         expect(deps.deployApp).not.toHaveBeenCalled();
     });
 
-    it('does NOT gate the mesh on the standalone check (mesh is not app-deployed)', async () => {
-        mockIsStandaloneApp.mockResolvedValue(false);
+    it('rejects a standalone entry whose repo is extension-shaped (no deploy)', async () => {
+        mockDetectAppLayout.mockResolvedValueOnce('extension');
+        const project = createProject();
+        const deps = createDeps();
+
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/not a standalone App Builder app.*extension-shaped/);
+        expect(deps.deployApp).not.toHaveBeenCalled();
+    });
+
+    it('accepts and deploys an extension-layout entry over an extension-shaped repo', async () => {
+        mockDetectAppLayout.mockResolvedValueOnce('extension');
+        const project = createProject();
+        const deps = createDeps();
+        const extensionEntry = { ...INTEGRATION_ENTRY, layout: 'extension' as const };
+
+        const result = await addAppBuilderComponent(project, extensionEntry, deps as never);
+
+        expect(result.success).toBe(true);
+        expect(deps.deployApp).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects an extension-layout entry whose repo is standalone-shaped (no deploy)', async () => {
+        // mockDetectAppLayout default resolves 'standalone'
+        const project = createProject();
+        const deps = createDeps();
+        const extensionEntry = { ...INTEGRATION_ENTRY, layout: 'extension' as const };
+
+        const result = await addAppBuilderComponent(project, extensionEntry, deps as never);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/not an extension-layout App Builder app.*standalone-shaped/);
+        expect(deps.deployApp).not.toHaveBeenCalled();
+    });
+
+    it('does NOT gate the mesh on the layout check (mesh is not app-deployed)', async () => {
+        mockDetectAppLayout.mockResolvedValue(undefined);
         const project = createProject();
         const deps = createDeps();
 
@@ -250,7 +287,7 @@ describe('addAppBuilderComponent (integration)', () => {
 
         expect(result.success).toBe(true);
         expect(deps.deployMesh).toHaveBeenCalledTimes(1);
-        mockIsStandaloneApp.mockResolvedValue(true);
+        mockDetectAppLayout.mockResolvedValue('standalone');
     });
 
     it('guards provider-before-consumer: a mesh-consuming integration with no mesh deployed errors', async () => {
