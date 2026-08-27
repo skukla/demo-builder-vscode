@@ -68,8 +68,7 @@ export interface RunnerDepsContext {
  */
 async function promptForToolchainRefresh(): Promise<boolean> {
     const choice = await vscode.window.showWarningMessage(
-        "The Adobe CLI's build toolchain is out of date and this integration can't build " +
-            'with it. Update the CLI and retry?',
+        'Adobe CLI is out of date. Update and retry?',
         'Update & Retry',
         'Skip',
     );
