@@ -291,6 +291,19 @@ export interface AppBuilderComponentState {
     error?: string;
     /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
     providesEnvVars?: Record<string, string>;
+    /**
+     * App Management install outcome (lifecycle 'app-management' apps only).
+     * Written after every deploy's automatic install/associate pass; `detail`
+     * carries the no-op reason on skip or the hands-back line on failure. A
+     * failed install does NOT mark the deploy failed — the app is deployed,
+     * merely dormant until installed (Commerce Admin > Apps > App Management).
+     */
+    installation?: {
+        status: 'installed' | 'skipped' | 'failed';
+        detail?: string;
+        /** ISO date string of the attempt. */
+        at?: string;
+    };
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.

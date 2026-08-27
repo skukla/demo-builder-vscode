@@ -45,6 +45,7 @@ import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Project, TransformedComponentDefinition } from '@/types';
@@ -159,6 +160,18 @@ export interface AppBuilderComponentRunnerDeps {
      * available; undefined = proceed.
      */
     ensureNodeVersion?: (version: string) => Promise<string | undefined>;
+    /**
+     * Install + associate an app-management lifecycle app after its deploy
+     * (appManagementInstaller). Deploy stays green when this fails — the app is
+     * deployed, merely dormant, and the outcome persists on
+     * `appBuilderComponents[id].installation` with the hands-back line.
+     * Optional: mesh/standalone paths and bare unit tests never need it.
+     */
+    installAppManagement?: (
+        project: Project,
+        deployedUrls: Record<string, string> | undefined,
+        onProgress?: (message: string) => void
+    ) => Promise<{ status: 'installed' | 'skipped' | 'failed'; detail?: string }>;
     /** Union-reconcile API subscriber (step 07). */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
@@ -465,12 +478,18 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
-    const result = await deps.deployApp(componentPath, owPackage, deps.commandManager, deps.logger, {
-        onProgress: deps.onProgress,
-        nodeVersion: entry.nodeVersion,
-        layout: entry.layout,
-        confirmToolchainRefresh: deps.confirmToolchainRefresh,
-    });
+    const result = await deps.deployApp(
+        componentPath,
+        owPackage,
+        deps.commandManager,
+        deps.logger,
+        {
+            onProgress: deps.onProgress,
+            nodeVersion: entry.nodeVersion,
+            layout: entry.layout,
+            confirmToolchainRefresh: deps.confirmToolchainRefresh,
+        },
+    );
     return result.success
         ? { ok: true, outcome: integrationOutcome(entry, result.data) }
         : { ok: false, error: result.error || 'App deployment failed.' };
@@ -555,11 +574,49 @@ export async function addAppBuilderComponent(
         }
 
         await persistOutcome(project, entry, deployed.outcome, deps);
+        await installIfAppManagement(project, entry, deps);
         await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
         return { success: false, error: toError(error).message };
+    }
+}
+
+/**
+ * The post-deploy install pass for `lifecycle: 'app-management'` apps.
+ *
+ * Runs AFTER the deploy outcome persisted, and never fails the deploy: the app
+ * IS deployed — an install failure leaves it dormant with the hands-back
+ * recorded on `installation`, which is the owner's automatic-with-hands-back
+ * decision (2026-08-27). No-op for every other entry, and when the caller
+ * wired no installer (mesh paths, bare tests).
+ */
+async function installIfAppManagement(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    if (entry.lifecycle !== 'app-management' || !deps.installAppManagement) {
+        return;
+    }
+    const state = project.appBuilderComponents?.[entry.id];
+    const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>
+        deps.onProgress?.(message),
+    );
+    if (state) {
+        state.installation = {
+            status: result.status,
+            detail: result.detail,
+            at: new Date().toISOString(),
+        };
+        await deps.saveProject(project);
+    }
+    if (result.status === 'failed') {
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] ${entry.id} deployed but not installed: ${result.detail}`,
+        );
+        deps.onProgress?.(result.detail ?? 'Install into Commerce did not finish.');
     }
 }
 
@@ -611,6 +668,7 @@ export async function deployAppBuilderComponent(
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
+        await installIfAppManagement(project, entry, deps);
         await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {
@@ -619,23 +677,33 @@ export async function deployAppBuilderComponent(
     }
 }
 
-/** Reconstruct a minimal catalog entry from persisted state (redeploy fallback). */
+/**
+ * Reconstruct a catalog entry from persisted state (redeploy fallback).
+ *
+ * Routed through {@link buildCustomIntegrationEntry} so a SEEDED instance —
+ * a kit clone under a user-chosen id — recovers its capability fields
+ * (layout/lifecycle/nodeVersion) via source recognition. Hand-building the
+ * entry here lost them, and a redeploy of such an instance ran the standalone
+ * path against an extension-layout app.
+ */
 function entryFromState(
     id: string,
     state: AppBuilderComponentState,
 ): AppBuilderComponentCatalogEntry {
-    return {
-        id,
-        // Prefer the persisted display name (shell instances carry it) so a
-        // redeploy does not clobber it with the id.
-        name: state.name ?? id,
-        description: '',
-        kind: state.kind,
-        source: {
+    const entry = buildCustomIntegrationEntry(
+        {
             owner: state.source.owner,
             repo: state.source.repo,
-            branch: state.source.branch ?? 'main',
+            branch: state.source.branch,
+            // Prefer the persisted display name (shell instances carry it) so a
+            // redeploy does not clobber it with the id.
+            name: state.name ?? id,
         },
+        id,
+    );
+    return {
+        ...entry,
+        kind: state.kind,
         providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
     };
 }

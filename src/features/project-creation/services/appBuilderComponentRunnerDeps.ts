@@ -18,9 +18,14 @@ import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
-import { subscribeRequiredApis, type ApiSubscriberClient } from '@/features/app-builder/services/apiSubscriber';
+import {
+    subscribeRequiredApis,
+    type ApiSubscriberClient,
+} from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
+import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
+import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -75,6 +80,30 @@ async function promptForToolchainRefresh(): Promise<boolean> {
     return choice === 'Update & Retry';
 }
 
+/**
+ * IMS auth for an app's own App Management API: the signed-in token + the IMS
+ * org CODE (`…@AdobeOrg` — the `x-gw-ims-org-id` header wants the code, not
+ * the numeric Console id the manifest stores). The cached org answers when it
+ * matches the project; otherwise the org list resolves the code by id.
+ */
+async function resolveAppManagementAuth(project: Project): Promise<AppManagementAuth | undefined> {
+    const authManager = ServiceLocator.getAuthenticationService();
+    const inspection = await authManager.getTokenManager().inspectToken();
+    if (!inspection.valid || !inspection.token) {
+        return undefined;
+    }
+    const orgId = project.adobe?.organization;
+    if (!orgId) {
+        return undefined;
+    }
+    const cached = authManager.getCachedOrganization();
+    const code =
+        cached?.id === orgId
+            ? cached.code
+            : (await authManager.getOrganizations()).find((org) => org.id === orgId)?.code;
+    return code ? { accessToken: inspection.token, imsOrgId: code } : undefined;
+}
+
 export function buildDefaultRunnerDeps(
     ctx: RunnerDepsContext,
     onProgress?: (message: string, subMessage?: string) => void,
@@ -122,6 +151,15 @@ export function buildDefaultRunnerDeps(
         // chokepoint the wizard's early prerequisites screen cannot cover.
         ensureNodeVersion: (version) =>
             ensureFnmNodeVersion(ctx.commandManager, version, ctx.logger),
+        // Post-deploy install for app-management lifecycle apps (automatic with
+        // hands-back — owner decision 2026-08-27). The runner records the
+        // outcome; a failure never fails the deploy.
+        installAppManagement: (project, deployedUrls, installProgress) =>
+            installAppManagementApp(project, deployedUrls, {
+                getAuth: () => resolveAppManagementAuth(project),
+                logger: ctx.logger,
+                onProgress: installProgress,
+            }),
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {
             await subscribeRequiredApis(
