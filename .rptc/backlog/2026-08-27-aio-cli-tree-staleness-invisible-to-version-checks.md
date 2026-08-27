@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # aio CLI tree staleness is invisible to version checks
@@ -48,3 +48,4 @@ Leaning 1: targeted, no new maintenance surface, lands where the user is.
 - 2026-08-27  fix(app-builder): the refresh prompt declines with "Not Now" (`f0e248185`)
 - 2026-08-27  fix(app-builder): shorten the CLI-refresh prompt (`91ad66ba7`)
 - 2026-08-27  feat(app-builder): consent-gated CLI refresh-and-retry — the PL-6 bridge, live-proven (`c032008ee`)
+- 2026-08-27  2026-08-27 reconciliation: CLOSED — the item's chosen remedy (Leaning 1, the consent-gated refresh-and-retry bridge) shipped and was live-proven; the durable answer (extension-owned pinned CLI) is explicitly PR-1's scope, where this item's evidence now lives.

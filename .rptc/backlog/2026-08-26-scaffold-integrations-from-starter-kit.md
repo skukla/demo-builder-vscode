@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # Build Commerce integrations FROM the integration starter kit, not a blank shell
@@ -94,3 +94,4 @@ scaffold describe different projects. See [[AI-1o]] and [[AI-1p]].
 - 2026-08-27  fix(auth): cap derived Adobe entity names at 19 chars — Console rejects 20+ (`dd95c6764`)
 - 2026-08-27  feat(app-builder): Commerce-gate the starter kit + axis check at the add door (`628e3005f`)
 - 2026-08-27  feat(app-builder): the starter kit deploys end-to-end — and the upstream verdict is retracted (`6847c35bd`)
+- 2026-08-27  2026-08-27 reconciliation: CLOSED — every scope point landed: the kit is a seed in Build-custom (both entries kept, the item's own 'probably both' answered by the owner), onboarding became the automatic App Management install chain (live green end-to-end), the seven kit skills now describe a shape we actually produce. Registry Commerce contract (9d6357d16) was the last block.
