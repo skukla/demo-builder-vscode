@@ -75,6 +75,26 @@ schedule the next wakeup. Background tasks are the primary wake signal;
 `ScheduleWakeup` is the long fallback heartbeat, and carries the loop contract
 so a wakeup resumes cold.
 
+## Subagent model selection — endurance is the point
+
+The loop's own turns run on the session model and cannot switch it. Subagents
+CAN run on other tiers, and routing load off the session model is what extends
+unattended runtime when access is metered. Policy:
+
+- **Inherit (omit `model`)** — synthesis, verification, adversarial review,
+  and anything whose output becomes a committed claim without the loop
+  re-verifying it. The harness's own guidance: when unsure, omit.
+- **`sonnet`** — standard research fan-outs and code exploration: repo
+  surveys, doc reads, citation gathering. Strong enough that the loop's
+  verification pass catches what it misses.
+- **`haiku`** — bulk mechanical work only: enumeration, formatting sweeps,
+  large greps summarized. Never for judgment.
+
+The quality bar does not move: a downshifted agent's findings are LEADS until
+the loop verifies the ones it acts on — same rule as battery scores and named
+API fields. Misrouting judgment work to a cheap tier to save budget is a false
+economy the report would have to retract.
+
 ## Time budget
 
 When the owner names one ("an hour"), reserve the last ~5 minutes for the
