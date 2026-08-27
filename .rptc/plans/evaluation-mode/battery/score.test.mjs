@@ -20,6 +20,9 @@ const cases = [
  // This case scored NO-ROUTE until 2026-08-27, and the label was a lie: our
  // tool WAS called and answered. The live orientation runs hit this exact hole.
  ['sibling tool',     [{name:M+'get_project',id:'1',input:{}}], [], [], 'SIBLING-TOOL'],
+ // The component-config coverage run: Glob+Read answered the question well and
+ // scored NO-ROUTE, which claims nothing happened at all.
+ ['native files',     [{name:'Glob',id:'1',input:{}},{name:'Read',id:'2',input:{}}], [], [], 'NATIVE-FILES'],
  ['nothing at all',   [], [], [], 'NO-ROUTE'],
 ];
 let pass = 0, fail = 0;

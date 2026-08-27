@@ -72,6 +72,13 @@ function score(calls, results, said, expect) {
         (c) => expect.includes(bare(c.name)) && !failed(byIdEarly.get(c.id)),
     );
     const around = names.some((n) => n === 'Bash' || n === 'WebFetch');
+    // The THIRD route around us, invisible until the component-config coverage
+    // run: the agent answered perfectly by Glob+Read against the project dir —
+    // native file tools, which are neither "our tool" nor "the shell". For a
+    // tool whose whole job is reading project files, that is the honest
+    // competition, and a scorer that cannot see it files the run under
+    // NO-ROUTE, which claims nothing happened.
+    const nativeFiles = names.some((n) => n === 'Read' || n === 'Glob' || n === 'Grep' || n === 'LS');
     const outcome = hit ? 'hit' : around ? 'around' : 'miss';
 
     // WHY, not just WHAT. "It did not use our tool" is one finding; the reason
@@ -115,6 +122,8 @@ function score(calls, results, said, expect) {
     // must say which tool so a human can tell.
     else if (ourCalls.some((c) => !failed(byId.get(c.id))))
         diagnosis = `SIBLING-TOOL: answered via ${bare(ourCalls.find((c) => !failed(byId.get(c.id))).name)} — is the expect list too narrow, or the routing wrong?`;
+    else if (nativeFiles)
+        diagnosis = 'NATIVE-FILES: answered by reading files directly (Read/Glob/Grep) — for a file-reading tool this is the real competition, and maybe the better answer';
     else diagnosis = 'NO-ROUTE: neither our tool nor the shell';
 
     // The agent's own account, when it gives one. Cheapest possible evidence.

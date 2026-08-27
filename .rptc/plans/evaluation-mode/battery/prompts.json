@@ -195,5 +195,117 @@
       "verify_ai_setup"
     ],
     "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-service",
+    "prompt": "Is the Data Installer service configured and reachable for this project?",
+    "expect": [
+      "check_datapack_service"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "find-datapacks",
+    "prompt": "What Commerce sample-data datapacks are available to install?",
+    "expect": [
+      "find_datapacks"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-types",
+    "prompt": "What data types can a datapack import process, in dependency order?",
+    "expect": [
+      "list_datapack_data_types"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-activity",
+    "prompt": "What datapack imports or exports have been run against my Commerce instance recently?",
+    "expect": [
+      "get_datapack_activity"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "orgs",
+    "prompt": "Which Adobe organizations can I work in?",
+    "expect": [
+      "list_orgs"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "adobe-projects",
+    "prompt": "What Adobe Console projects exist in my currently selected org?",
+    "expect": [
+      "list_adobe_projects"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "workspaces",
+    "prompt": "What Runtime workspaces does my currently selected Adobe project have?",
+    "expect": [
+      "list_workspaces"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "console-apis",
+    "prompt": "Which Adobe APIs could this project's Developer Console workspace subscribe to?",
+    "expect": [
+      "list_console_apis"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "repo-readiness",
+    "prompt": "Could the GitHub repo skukla/kukla-bodea serve as an EDS storefront?",
+    "expect": [
+      "check_repo_readiness"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "github-app",
+    "prompt": "Is the AEM Code Sync GitHub App installed on my storefront's repo?",
+    "expect": [
+      "check_github_app"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "block-shape",
+    "prompt": "What table structure does an author fill in for the product-teaser block?",
+    "expect": [
+      "get_block_authoring_shape"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "block-source",
+    "prompt": "What files make up the header block in my storefront, and how big are they?",
+    "expect": [
+      "get_block_source"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "name-mismatches",
+    "prompt": "Do any of my projects have a DA.live site name that does not match their GitHub repo name?",
+    "expect": [
+      "find_storefront_name_mismatches"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "github-repos",
+    "prompt": "Which GitHub repositories can I push to?",
+    "expect": [
+      "list_github_repos"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
   }
 ]
