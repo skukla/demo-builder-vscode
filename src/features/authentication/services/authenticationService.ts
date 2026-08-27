@@ -21,6 +21,7 @@ import type {
     AdobeContext,
     AuthTokenValidation,
     ConsoleOpFailure,
+    S2SDeployCredentials,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
     AdobeIdCredentialInput,
@@ -654,6 +655,20 @@ export class AuthenticationService {
     ): Promise<WorkspaceS2SCredentialIds> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+    }
+
+    /**
+     * The workspace S2S credential's full IMS identity (ensure + detail +
+     * secret) — the `AIO_COMMERCE_AUTH_IMS_*` inputs an App Management app's
+     * deploy injects. The secret is per-invocation env only.
+     */
+    async getS2SDeployCredentials(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<S2SDeployCredentials> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getS2SDeployCredentials(orgId, projectId, workspaceId);
     }
 
     /**

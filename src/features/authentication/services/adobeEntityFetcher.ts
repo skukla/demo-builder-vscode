@@ -36,6 +36,7 @@ import type {
     AdobeWorkspace,
     ConsoleOpFailure,
     OrgServiceInfo,
+    S2SDeployCredentials,
     ServiceSubscriptionInfo,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
@@ -193,6 +194,15 @@ export class AdobeEntityFetcher {
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds> {
         return this.credentials.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+    }
+
+    /** The S2S credential's full IMS identity — see {@link AdobeWorkspaceCredentials}. */
+    async getS2SDeployCredentials(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<S2SDeployCredentials> {
+        return this.credentials.getS2SDeployCredentials(orgId, projectId, workspaceId);
     }
 
     // ---- Org service catalog + subscriptions (AdobeOrgServices) ------------

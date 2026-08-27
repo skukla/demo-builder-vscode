@@ -162,6 +162,13 @@ export interface DeployAppOptions {
      * Absent = no consent available: the failure returns with the remedy hint.
      */
     confirmToolchainRefresh?: () => Promise<boolean>;
+    /**
+     * Extra env for the deploy invocation, merged beside the AIO_RUNTIME_*
+     * pair. App Management apps pass their `AIO_COMMERCE_AUTH_IMS_*` credential
+     * env here (s2sDeployEnv) — the generated actions take these as inputs at
+     * deploy time. May carry live secrets: per-invocation only, never logged.
+     */
+    extraEnv?: Record<string, string>;
 }
 
 /**
@@ -191,7 +198,7 @@ const TOOLCHAIN_REMEDY_HINT =
     ' This failure is usually an out-of-date Adobe CLI toolchain (its dependencies freeze at ' +
     'install time, so even a version-current install can carry stale internals). Update it with ' +
     '`npm install -g @adobe/aio-cli` and retry — from an AI agent, call again with ' +
-    '`refreshCli: true` to do that automatically.'
+    '`refreshCli: true` to do that automatically.';
 
 /**
  * Refresh the global Adobe CLI — the hand-verified fix from 2026-08-27 (same
@@ -208,7 +215,8 @@ async function refreshGlobalAioCli(
         enhancePath: true,
     });
     if (result.code !== 0) {
-        const detail = result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit ${result.code}`;
+        const detail =
+            result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit ${result.code}`;
         return { ok: false, error: detail };
     }
     logger.debug('[App Builder] Adobe CLI refreshed');
@@ -285,6 +293,9 @@ async function deployAppComponentOnce(
         onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
         const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
         const runtimeEnv = {
+            // Caller-supplied extra env FIRST so the Runtime pair, which this
+            // function owns, can never be overridden by it.
+            ...(opts.extraEnv ?? {}),
             AIO_RUNTIME_NAMESPACE: runtimeCreds.namespace,
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };

@@ -154,6 +154,21 @@ export interface WorkspaceS2SCredentialIds {
 }
 
 /**
+ * The workspace S2S credential's full IMS server-to-server identity — the
+ * inputs an App Management app's actions authenticate with
+ * (`AIO_COMMERCE_AUTH_IMS_*`). `clientSecret` is a live secret: per-invocation
+ * env only, never persisted or logged.
+ */
+export interface S2SDeployCredentials {
+    clientId: string;
+    clientSecret: string;
+    technicalAccountId: string;
+    technicalAccountEmail: string;
+    /** IMS org id (`…@AdobeOrg`) — the integration detail's `orgCode`. */
+    imsOrgCode: string;
+}
+
+/**
  * An org service as returned by `getServicesForOrg` (D1 API subscriber).
  * `platformList` decides the subscribe path: `apiKey`/AdobeID (e.g. API Mesh
  * `GraphQLServiceSDK`) vs `oauth_server_to_server` (e.g. `AdobeIOManagementAPISDK`).

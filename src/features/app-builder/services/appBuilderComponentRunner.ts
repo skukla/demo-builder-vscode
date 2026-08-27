@@ -143,6 +143,7 @@ export interface AppBuilderComponentRunnerDeps {
             nodeVersion?: string;
             layout?: 'standalone' | 'extension';
             confirmToolchainRefresh?: () => Promise<boolean>;
+            extraEnv?: Record<string, string>;
         }
     ) => Promise<AppDeploymentResult>;
     /**
@@ -160,6 +161,15 @@ export interface AppBuilderComponentRunnerDeps {
      * available; undefined = proceed.
      */
     ensureNodeVersion?: (version: string) => Promise<string | undefined>;
+    /**
+     * Resolve extra deploy ENV for an app-management lifecycle entry — the
+     * `AIO_COMMERCE_AUTH_IMS_*` credential vars its generated actions take as
+     * inputs (s2sDeployEnv via the workspace S2S credential). Called only for
+     * `lifecycle: 'app-management'` entries; carries a live secret, so the
+     * value goes into the per-invocation env and nowhere else. Optional:
+     * mesh/standalone paths and bare unit tests never need it.
+     */
+    resolveAppManagementEnv?: (project: Project) => Promise<Record<string, string> | undefined>;
     /**
      * Install + associate an app-management lifecycle app after its deploy
      * (appManagementInstaller). Deploy stays green when this fails — the app is
@@ -478,6 +488,23 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
+    // App Management apps authenticate their actions with the workspace S2S
+    // credential, taken as deploy-time env inputs. Resolved here — the one
+    // kind-dispatched seam — so add and redeploy cannot drift on it. A resolve
+    // failure fails the deploy: without these vars the app deploys BROKEN (its
+    // installer cannot authenticate — the first live install proved it).
+    let extraEnv: Record<string, string> | undefined;
+    if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
+        deps.onProgress?.('Resolving Commerce IMS credentials...');
+        try {
+            extraEnv = await deps.resolveAppManagementEnv(project);
+        } catch (error) {
+            return {
+                ok: false,
+                error: `Could not resolve the app's IMS credentials: ${toError(error).message}`,
+            };
+        }
+    }
     const result = await deps.deployApp(
         componentPath,
         owPackage,
@@ -488,6 +515,7 @@ async function dispatchDeploy(
             nodeVersion: entry.nodeVersion,
             layout: entry.layout,
             confirmToolchainRefresh: deps.confirmToolchainRefresh,
+            extraEnv,
         },
     );
     return result.success
@@ -644,6 +672,16 @@ export async function deployAppBuilderComponent(
             if (nodeError) {
                 return { success: false, error: nodeError };
             }
+        }
+
+        // App Management redeploys re-run the union subscribe (adds always did):
+        // the S2S credential these apps deploy with may be freshly created, and
+        // an unsubscribed credential is not ENTITLED to the IMS scopes its
+        // actions request (the baseline AdobeIOManagementAPISDK carries
+        // adobeio_api). Idempotent reconcile — a subscribed credential is a
+        // no-op PUT of the same union.
+        if (entry.lifecycle === 'app-management') {
+            await deps.subscribeRequiredApis(deps.catalog, project);
         }
 
         // Transient in-flight marker (see addAppBuilderComponent): without it

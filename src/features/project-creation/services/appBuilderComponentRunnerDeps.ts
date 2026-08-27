@@ -28,6 +28,7 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
@@ -160,6 +161,25 @@ export function buildDefaultRunnerDeps(
                 logger: ctx.logger,
                 onProgress: installProgress,
             }),
+        // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
+        // the workspace S2S credential's full identity (ensured + read via the
+        // Console SDK), mapped by s2sDeployEnv. The secret rides the
+        // per-invocation env only.
+        resolveAppManagementEnv: async (project) => {
+            const adobe = project.adobe;
+            if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {
+                throw new Error(
+                    'The project has no Adobe org/project/workspace context to resolve credentials from.',
+                );
+            }
+            const credentials =
+                await ServiceLocator.getAuthenticationService().getS2SDeployCredentials(
+                    adobe.organization,
+                    adobe.projectId,
+                    adobe.workspace,
+                );
+            return buildS2SDeployEnv(credentials);
+        },
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {
             await subscribeRequiredApis(

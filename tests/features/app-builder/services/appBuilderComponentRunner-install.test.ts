@@ -56,6 +56,106 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn(async () => 'extension'),
 }));
 
+describe('S2S deploy-env wiring', () => {
+    it('add: an app-management entry deploys WITH the resolved IMS env (args pinned)', async () => {
+        const s2sEnv = { AIO_COMMERCE_AUTH_IMS_CLIENT_ID: 'client-id-abc' };
+        const resolveAppManagementEnv = jest.fn().mockResolvedValue(s2sEnv);
+        const { deps } = kitDeps({ resolveAppManagementEnv });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+
+        expect(resolveAppManagementEnv).toHaveBeenCalledWith(project);
+        expect(deps.deployApp).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.any(String),
+            expect.anything(),
+            expect.anything(),
+            expect.objectContaining({ extraEnv: s2sEnv })
+        );
+    });
+
+    it('add: a resolve FAILURE fails the deploy — a kit without credentials deploys broken', async () => {
+        const { deps, installAppManagement } = kitDeps({
+            resolveAppManagementEnv: jest.fn().mockRejectedValue(new Error('no S2S credential')),
+        });
+        const project = createProject();
+
+        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('IMS credentials');
+        expect(deps.deployApp).not.toHaveBeenCalled();
+        expect(installAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('add: a deploy-only entry never consults the resolver and passes no extra env', async () => {
+        // The suite's layout detector answers 'extension' (the kit's shape);
+        // this standalone entry needs the matching answer to pass the door.
+        const { detectAppLayout } = jest.requireMock(
+            '@/features/app-builder/services/appConfigPackages'
+        );
+        (detectAppLayout as jest.Mock).mockResolvedValueOnce('standalone');
+        const resolveAppManagementEnv = jest.fn();
+        const { deps } = kitDeps({ resolveAppManagementEnv });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        expect(resolveAppManagementEnv).not.toHaveBeenCalled();
+        expect(deps.deployApp).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.any(String),
+            expect.anything(),
+            expect.anything(),
+            expect.objectContaining({ extraEnv: undefined })
+        );
+    });
+
+    it('redeploy: an app-management entry re-runs the union subscribe (entitlement)', async () => {
+        const { deps } = kitDeps({ catalog: [KIT_ENTRY] });
+        const project = createProject({
+            appBuilderComponents: {
+                [KIT_ENTRY.id]: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: KIT_ENTRY.source,
+                },
+            },
+            componentInstances: {
+                [KIT_ENTRY.id]: { id: KIT_ENTRY.id, path: '/proj/components/kit' },
+            } as never,
+        } as never);
+
+        await deployAppBuilderComponent(project, KIT_ENTRY.id, deps as never);
+
+        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith([KIT_ENTRY], project);
+    });
+
+    it('redeploy: a deploy-only entry still skips the subscribe (adds own it)', async () => {
+        const { deps } = kitDeps({ catalog: [INTEGRATION_ENTRY] });
+        const project = createProject({
+            appBuilderComponents: {
+                [INTEGRATION_ENTRY.id]: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: INTEGRATION_ENTRY.source,
+                },
+            },
+            componentInstances: {
+                [INTEGRATION_ENTRY.id]: {
+                    id: INTEGRATION_ENTRY.id,
+                    path: '/proj/components/erp',
+                },
+            } as never,
+        } as never);
+
+        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+
+        expect(deps.subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+});
+
 describe('install-after-deploy wiring', () => {
     it('add: an app-management entry installs after deploy, args pinned', async () => {
         const { deps, installAppManagement } = kitDeps();
@@ -90,11 +190,19 @@ describe('install-after-deploy wiring', () => {
     });
 
     it('add: a deploy-only entry never touches the installer', async () => {
+        // Match the detector to this standalone entry, or the add is refused at
+        // the layout door and "not called" would pass without the deploy ever
+        // running (a silent false pass this suite shipped with).
+        const { detectAppLayout } = jest.requireMock(
+            '@/features/app-builder/services/appConfigPackages'
+        );
+        (detectAppLayout as jest.Mock).mockResolvedValueOnce('standalone');
         const { deps, installAppManagement } = kitDeps();
         const project = createProject();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
 
+        expect(result.success).toBe(true);
         expect(installAppManagement).not.toHaveBeenCalled();
     });
 
