@@ -222,7 +222,11 @@ export function createAgentOperationNotifier(
             vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: `Demo Builder — agent: ${label(toolName)}…`,
+                    // "Agent:" and nothing more — the old "Demo Builder — agent:"
+                    // prefix plus the phase message wrapped every card onto two
+                    // lines (owner feedback, 2026-08-27). The source is already
+                    // on the card ("Source: Adobe Demo Builder").
+                    title: `Agent: ${label(toolName)}…`,
                     cancellable: false,
                 },
                 async (progress) => {

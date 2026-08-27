@@ -39,6 +39,17 @@ export function withPhaseSinks<T>(sinks: PhaseSink[], fn: () => Promise<T>): Pro
 }
 
 /**
+ * Whether the current async context is inside a tool call with live phase
+ * sinks — i.e. an AGENT operation whose notifier already shows a window
+ * progress. `withProgressRegister` consults this to open ONE notification per
+ * operation instead of stacking a second (the owner's screenshot showed three
+ * cards for one deploy, 2026-08-27 — AI-6).
+ */
+export function hasActivePhaseSinks(): boolean {
+    return (storage.getStore()?.length ?? 0) > 0;
+}
+
+/**
  * Report one phase of the operation in flight.
  *
  * A no-op outside a tool call, and never throws: a sink that fails must not cost

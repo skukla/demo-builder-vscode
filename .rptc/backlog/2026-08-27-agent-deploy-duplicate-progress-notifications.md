@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # One agent deploy, three progress notifications
@@ -27,3 +27,7 @@ Wanted: ONE notification per operation on the agent path (the notifier
 should adopt the handler's progress rather than stacking its own), and
 shorter titles. The notifier lives in `agentOperationNotifier.ts`; the
 handler progress in `withComponentProgress`.
+
+## Shipped so far
+
+- 2026-08-27  SHIPPED same-day: (1) ONE notification per agent operation — withProgressRegister now consults hasActivePhaseSinks(): inside an agent tool call (the notifier's window progress is already up and receives every step via the phase channel) it opens no second notification; the UI path is byte-identical (control test). (2) The agent notification title dropped the 'Demo Builder — agent:' prefix for 'Agent:' — the card already carries 'Source: Adobe Demo Builder', and the long prefix + phase message is what wrapped every card to two lines. Pinned: sink-routing test, card-still-told test, outside-agent control.
