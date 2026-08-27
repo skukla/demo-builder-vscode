@@ -14,6 +14,7 @@ import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { formatMinutes } from '@/core/utils';
 import { StateManager } from '@/core/state';
 import { openUrl } from '@/core/utils/browserUtils';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
@@ -368,7 +369,11 @@ export class CommandManager {
                 const minutes = status.expiresInMinutes;
                 const pick = await vscode.window.showInformationMessage(
                     `Already signed in to Adobe${
-                        typeof minutes === 'number' ? ` (token expires in ~${minutes} min)` : ''
+                        // The house formatter, not raw minutes — "~487 min" made
+                        // the owner do the arithmetic (first live use, 2026-08-27).
+                        typeof minutes === 'number'
+                            ? ` (token expires in ~${formatMinutes(minutes)})`
+                            : ''
                     }.`,
                     'Sign in again',
                     'Cancel',
