@@ -70,7 +70,7 @@ async function promptForToolchainRefresh(): Promise<boolean> {
     const choice = await vscode.window.showWarningMessage(
         'Adobe CLI is out of date. Update and retry?',
         'Update & Retry',
-        'Skip',
+        'Not Now',
     );
     return choice === 'Update & Retry';
 }
