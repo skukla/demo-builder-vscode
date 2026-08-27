@@ -315,6 +315,32 @@ describe('installAppManagementApp', () => {
         expect(result.status).toBe('skipped');
     });
 
+    it('the LIVE no-op shape — 409 with a message and NO reason — is a SKIP too', async () => {
+        // Measured 2026-08-27: the real API answers no-op reconciles with
+        // {"message": "Installation has already completed successfully."} and
+        // no `reason` field, so the spec's closed enum alone misread an
+        // installed app as a failed install.
+        const client = makeClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockRejectedValue(
+                    new AppManagementApiError(
+                        'Reconcile installation failed (HTTP 409)',
+                        409,
+                        undefined,
+                        'Installation has already completed successfully.'
+                    )
+                ),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('skipped');
+    });
+
     it('an association failure fails WITH the hands-back line, never throws', async () => {
         const client = makeClient({
             setAssociation: jest

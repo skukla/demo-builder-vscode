@@ -137,6 +137,13 @@ export class AppManagementApiError extends Error {
         message: string,
         readonly status: number,
         readonly reason?: ReconcileNoOpReason,
+        /**
+         * A 409 body's own `message`, bounded — the LIVE API answers no-op
+         * 409s with a message and NO `reason` field ("Installation has
+         * already completed successfully.", measured 2026-08-27), so the
+         * spec's closed enum alone cannot classify them.
+         */
+        readonly noOpMessage?: string,
     ) {
         super(message);
         this.name = 'AppManagementApiError';
@@ -257,12 +264,17 @@ export class AppManagementClient {
         }
     }
 
-    /** Build the sanitized error, retaining only a 409 body's closed-enum reason. */
+    /** Build the sanitized error, retaining a 409 body's reason and message. */
     private async toError(response: Response, label: string): Promise<AppManagementApiError> {
         let reason: ReconcileNoOpReason | undefined;
+        let noOpMessage: string | undefined;
         if (response.status === 409) {
             try {
-                reason = parseNoOpReason(await response.json());
+                const body = (await response.json()) as { message?: unknown };
+                reason = parseNoOpReason(body);
+                if (typeof body?.message === 'string') {
+                    noOpMessage = body.message.slice(0, 200);
+                }
             } catch {
                 reason = undefined;
             }
@@ -271,6 +283,7 @@ export class AppManagementClient {
             `${label} failed (HTTP ${response.status})`,
             response.status,
             reason,
+            noOpMessage,
         );
     }
 }

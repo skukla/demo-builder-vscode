@@ -170,9 +170,20 @@ export function buildAppData(project: Project): AppData | { error: string } {
     return candidate;
 }
 
-/** True when a reconcile 409's closed reason means "nothing to do", not "broken". */
+/**
+ * True when a reconcile 409 means "nothing to do", not "broken". The spec's
+ * closed `reason` enum says `already-current`; the LIVE API answers with a
+ * message and no reason at all ("Installation has already completed
+ * successfully." — measured 2026-08-27), so both forms count.
+ */
 function isBenignNoOp(error: unknown): boolean {
-    return error instanceof AppManagementApiError && error.reason === 'already-current';
+    if (!(error instanceof AppManagementApiError) || error.status !== 409) {
+        return false;
+    }
+    return (
+        error.reason === 'already-current' ||
+        /already completed successfully/i.test(error.noOpMessage ?? '')
+    );
 }
 
 /**
