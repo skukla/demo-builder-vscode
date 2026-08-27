@@ -234,6 +234,18 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             return;
         }
         if (draft.kind === 'catalog' && draft.catalogId) {
+            // A pre-built pick carries a NAME now (prefilled from the entry).
+            // Kept default — the slug equals the entry's own id — commits the
+            // classic catalog identity. A CUSTOM name commits a named INSTANCE
+            // of the entry's template repo, the same machinery the blank/seed
+            // path uses: capabilities survive via the loader's source
+            // recognition, and the add door's fixed-package gate still refuses
+            // an extension-layout duplicate.
+            const entry = args.catalog.find((c) => c.id === draft.catalogId);
+            if (entry && draft.instance && draft.instance.id !== entry.id) {
+                builder.onAddCustomAppBuilderComponent(entry.source, draft.instance);
+                return;
+            }
             builder.onAppBuilderComponentToggle(draft.catalogId, true);
             return;
         }
@@ -307,7 +319,9 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     }, []);
 
     const pickCatalog = useCallback((id: string): void => {
-        setDraft((current) => ({ ...current, catalogId: id }));
+        // Clearing the instance on a re-pick lets the stage re-prefill the name
+        // from the NEW entry (it would otherwise keep the previous pick's name).
+        setDraft((current) => ({ ...current, catalogId: id, instance: undefined }));
     }, []);
 
     const setCustomSource = useCallback(

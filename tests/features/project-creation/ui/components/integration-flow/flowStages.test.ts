@@ -428,10 +428,19 @@ describe('canContinue', () => {
         expect(canContinue('kind', draft({ kind: 'mesh' }), slice())).toBe(true);
     });
 
-    it('source-catalog blocks until a catalogId is picked', () => {
+    it('source-catalog blocks until a catalogId AND a valid name are present', () => {
         expect(canContinue('source-catalog', draft({ kind: 'catalog' }), slice())).toBe(false);
+        // A pick alone no longer continues: the stage prefills + emits the
+        // name instantly, so this gate only holds while an EDIT is invalid.
         expect(
             canContinue('source-catalog', draft({ kind: 'catalog', catalogId: 'c1' }), slice())
+        ).toBe(false);
+        expect(
+            canContinue(
+                'source-catalog',
+                draft({ kind: 'catalog', catalogId: 'c1', instance: { id: 'c1', name: 'C One' } }),
+                slice()
+            )
         ).toBe(true);
     });
 
@@ -557,9 +566,9 @@ describe('AddIntegrationFlowModal container type', () => {
         const source = require('fs').readFileSync(
             require('path').join(
                 __dirname,
-                '../../../../../../src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx',
+                '../../../../../../src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx'
             ),
-            'utf8',
+            'utf8'
         );
         const container = source.match(/<DialogContainer[^>]*>/);
 

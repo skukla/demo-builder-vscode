@@ -145,11 +145,17 @@ function StageBody({
         );
     }
     if (stage === 'source-catalog') {
+        // The picked entry gets the same naming field the blank path uses —
+        // prefilled with the entry's name, so a kept default commits the
+        // classic catalog identity and an edited name a named instance.
         return (
             <CatalogStage
                 catalog={prebuiltCatalog}
                 selectedId={draft.catalogId}
                 onPick={flow.pickCatalog}
+                reservedIds={props.reservedIds}
+                instance={draft.instance}
+                onInstanceChange={flow.setInstance}
             />
         );
     }

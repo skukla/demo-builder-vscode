@@ -213,6 +213,8 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         pickKindAndContinue(s, 'catalog');
         expect(s.result.current.canContinue).toBe(false);
         act(() => s.result.current.pickCatalog('erp-sync'));
+        expect(s.result.current.canContinue).toBe(false); // pick alone: the name gate holds
+        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-project');
     });
@@ -227,6 +229,7 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         const s = setup({ initial: SIGNED_OUT });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog('erp-sync'));
+        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-signin');
         expect(s.result.current.canContinue).toBe(false);
@@ -236,6 +239,7 @@ describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => 
         const s = setup({ initial: SIGNED_OUT });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog('erp-sync'));
+        act(() => s.result.current.setInstance({ id: 'erp-sync', name: 'ERP Sync' })); // stage prefill
         act(() => s.result.current.onContinue());
         expect(s.result.current.stage).toBe('dest-signin');
         s.stateRef.current = { ...s.stateRef.current, ...SIGNED_IN } as WizardState;
@@ -423,6 +427,9 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     function walkCatalogToTerminal(s: Setup, catalogId = 'erp-sync'): void {
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog(catalogId));
+        // The stage prefills the entry's own name — its slug is the entry id,
+        // which is what keeps the classic catalog-identity commit.
+        act(() => s.result.current.setInstance({ id: catalogId, name: 'ERP Sync' }));
         expect(s.result.current.stage).toBe('source-catalog');
     }
 
@@ -436,6 +443,54 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         // API access is deterministic — the add flow never merges per-integration APIs.
         expect(s.updateState).not.toHaveBeenCalled();
         expect(s.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('a RENAMED catalog pick commits a named INSTANCE of the entry source (2026-08-27)', () => {
+        // The option to name a pre-built: an edited name routes through the
+        // same custom-add machinery the blank/seed path uses, carrying the
+        // entry's repo — capabilities then survive via source recognition.
+        const KIT_ENTRY: AppBuilderComponentCatalogEntry = {
+            id: 'commerce-integration-starter-kit',
+            name: 'Commerce Integration Starter Kit',
+            description: 'The kit',
+            kind: 'integration',
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+        };
+        const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
+        act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(KIT_ENTRY.source, {
+            id: 'order-sync',
+            name: 'Order Sync',
+        });
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('control: a KEPT default name (slug = entry id) still commits the catalog identity', () => {
+        const KIT_ENTRY: AppBuilderComponentCatalogEntry = {
+            id: 'commerce-integration-starter-kit',
+            name: 'Commerce Integration Starter Kit',
+            description: 'The kit',
+            kind: 'integration',
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+        };
+        const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
+        act(() =>
+            s.result.current.setInstance({
+                id: KIT_ENTRY.id,
+                name: 'Commerce Integration Starter Kit',
+            })
+        );
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(KIT_ENTRY.id, true);
+        expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
     });
 
     it('gates the source-blank stage until setInstance provides an identity', () => {

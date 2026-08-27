@@ -206,7 +206,10 @@ function customSourceValid(draft: FlowDraft, slice: FlowStateSlice): boolean {
 
 const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSlice) => boolean> = {
     kind: (draft) => draft.kind !== undefined,
-    'source-catalog': (draft) => draft.catalogId !== undefined,
+    // A pick AND a valid name: the stage prefills the name from the picked
+    // entry (emitting immediately), so Continue enables on pick exactly as
+    // before — it only disables while an EDITED name is invalid or colliding.
+    'source-catalog': (draft) => draft.catalogId !== undefined && draft.instance !== undefined,
     // The stage emits instance only for a valid, non-colliding name (instanceId.ts).
     'source-blank': (draft) => draft.instance !== undefined,
     'source-custom': customSourceValid,

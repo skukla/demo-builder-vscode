@@ -28,8 +28,12 @@ function entry(id: string, name: string, description?: string): AppBuilderCompon
 
 type Props = React.ComponentProps<typeof CatalogStage>;
 
-function renderStage(props: Partial<Props> = {}): { onPick: jest.Mock } {
+function renderStage(props: Partial<Props> = {}): {
+    onPick: jest.Mock;
+    onInstanceChange: jest.Mock;
+} {
     const onPick = jest.fn();
+    const onInstanceChange = jest.fn();
     render(
         <Provider theme={defaultTheme}>
             <CatalogStage
@@ -38,10 +42,13 @@ function renderStage(props: Partial<Props> = {}): { onPick: jest.Mock } {
                 }
                 selectedId={props.selectedId}
                 onPick={onPick}
+                reservedIds={props.reservedIds ?? new Set(['acme-a', 'acme-b', 'taken-id'])}
+                instance={props.instance}
+                onInstanceChange={onInstanceChange}
             />
         </Provider>
     );
-    return { onPick };
+    return { onPick, onInstanceChange };
 }
 
 /** Six entries — enough to cross the search threshold (> 5). */
@@ -155,6 +162,46 @@ describe('CatalogStage', () => {
     it('shows the empty-state message for an empty catalog', () => {
         renderStage({ catalog: [] });
         expect(screen.getByText(/No integrations match/)).toBeInTheDocument();
+    });
+});
+
+describe('naming a picked entry (2026-08-27 — the option to name pre-builts)', () => {
+    it('shows NO name field until an entry is picked', () => {
+        renderStage();
+        expect(screen.queryByText('Integration name')).not.toBeInTheDocument();
+    });
+
+    it('prefills the field with the picked entry name and EMITS its instance on mount', () => {
+        // The default name's slug is the entry's own id ('Widget A' → 'widget-a'
+        // ≠ 'acme-a' here, so this fixture also proves the self-exclusion is by
+        // ID, not by name): Continue must enable on pick with no typing.
+        const { onInstanceChange } = renderStage({ selectedId: 'acme-a' });
+
+        expect(screen.getByDisplayValue('Widget A')).toBeInTheDocument();
+        expect(onInstanceChange).toHaveBeenCalledWith({ id: 'widget-a', name: 'Widget A' });
+    });
+
+    it('the picked entry cannot collide with ITSELF — a name slugging to its id is valid', () => {
+        const kit = entry('widget-a', 'Widget A'); // name slugs to 'widget-a' = its own id
+        const { onInstanceChange } = renderStage({
+            catalog: [kit],
+            selectedId: 'widget-a',
+            reservedIds: new Set(['widget-a']),
+        });
+
+        expect(onInstanceChange).toHaveBeenCalledWith({ id: 'widget-a', name: 'Widget A' });
+    });
+
+    it('an edited name emits the NEW instance; a colliding one emits undefined + message', () => {
+        const { onInstanceChange } = renderStage({ selectedId: 'acme-a' });
+        const field = screen.getByDisplayValue('Widget A');
+
+        fireEvent.change(field, { target: { value: 'Order Sync' } });
+        expect(onInstanceChange).toHaveBeenLastCalledWith({ id: 'order-sync', name: 'Order Sync' });
+
+        fireEvent.change(field, { target: { value: 'Taken Id' } });
+        expect(onInstanceChange).toHaveBeenLastCalledWith(undefined);
+        expect(screen.getByText(/already used/)).toBeInTheDocument();
     });
 });
 
