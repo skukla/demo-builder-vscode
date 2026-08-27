@@ -137,3 +137,43 @@ missing announcements; most want deleting or consolidating.
   machinery to harvest whole JOURNEYS rather than individual gaps.
 
 _If this skill was wrong or incomplete, fix it before closing the task._
+
+## Reading one journey
+
+```bash
+node .claude/skills/agent-gap-scan/scan.mjs --session <id-prefix>   # add --json for the rows
+```
+
+The aggregate answers **which tools go unused**. It cannot answer **whether the
+used ones are any good**, because that question is about a response and its
+consequence, and both are only meaningful in sequence. Journey mode pairs each
+of our calls with what it answered and what the agent did next.
+
+**Flags are LEADS, never verdicts.** `REPEAT+n` prints how many events later the
+same tool was called again: near means the answer did not stick, far means the
+agent legitimately re-oriented, and only reading tells you which. Same for
+`→BASH` — early in an arc it is a discovery gap, late it is a capability gap.
+
+`PROSE-ERROR` is the trap the battery met first: a tool answering "Adobe sign-in
+required" as ordinary text with `is_error` unset, which every count scores as a
+success.
+
+### The corpus excludes battery runs, and you must not bypass that
+
+`batterySessionsExcluded` is usually the MAJORITY of files — 78 of 120 on
+2026-08-26. Those are our own harness calling our own tools, and counting them
+measures the rig rather than the product.
+
+Reading transcripts with an ad-hoc `glob` instead of this scan silently includes
+them. That happened on 2026-08-26 and produced "32 `get_current_project` calls,
+84% chained" for what is really **12 calls, 83% chained** — right direction,
+nearly triple the magnitude. Use the scan, or reproduce its exclusion.
+
+### What it has found
+
+`get_current_project` returns a name and a path in ~100 bytes, and **83% of its
+calls are followed immediately by another of our reads**. It orients without
+answering anything actionable, so the next step pays a second round trip. The
+aggregate's *"Reads that are a preamble to another read"* section computes this
+over the corpus — reading a single session suggested `get_project` as the usual
+follow-up, and across the corpus it is not that clear-cut.

@@ -114,3 +114,4 @@ Filed 2026-08-26.
 - 2026-08-26  fix(mcp): route a catalogService request to ACCS's single endpoint (`bc0f59e03`)
 - 2026-08-26  fix(battery): an error answered as prose is a failure, and auth is recorded (`6740d2e76`)
 - 2026-08-26  feat(battery): --only and --repeat, after one sample nearly cost a day (`d4a1caeee`)
+- 2026-08-27  Slice 1 shipped: --session journey mode on agent-gap-scan, plus a corpus-wide 'reads that are a preamble to another read' section. First finding: get_current_project returns ~100 bytes (name + path) and 83% of its calls are followed immediately by another of our reads — it orients without answering anything actionable. Also fixed the scan's userTurns, which counted tool_result carriers as human turns (534 -> 139 corpus-wide). Journeys-as-EXECUTION stays parked; this answers the tool-quality question observationally and for free.

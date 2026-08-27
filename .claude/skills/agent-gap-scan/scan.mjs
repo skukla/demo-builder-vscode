@@ -44,6 +44,11 @@ const PROJECTS = join(homedir(), '.claude', 'projects');
 const DEMO_MARKER = 'demo-builder-projects';
 const OUR_PREFIX = 'mcp__demo-builder__';
 
+/** `mcp__demo-builder__get_project` → `get_project`; anything else unchanged. */
+function bare(name) {
+    return String(name || '').startsWith(OUR_PREFIX) ? String(name).slice(OUR_PREFIX.length) : String(name || '');
+}
+
 // Bash verbs that indicate a job the EXTENSION should be doing. Everything else
 // (cat, grep, ls, git) is ordinary work and is reported separately, uncounted —
 // the point is to notice `curl` against the project's own backend, not to
@@ -79,12 +84,21 @@ function flagValue(name) {
     return v;
 }
 
+/** Like `flagValue`, but the flag itself is optional; only its VALUE is required. */
+function flagValue2(name) {
+    return argv.includes(name) ? flagValue(name) : undefined;
+}
+
 const opt = {
     json: argv.includes('--json'),
     write: argv.includes('--write'),
     allProjects: argv.includes('--all-projects'),
     since: flagValue('--since'),
     until: flagValue('--until'),
+    // Journey mode: one session, read IN ORDER, with each of our calls paired to
+    // what it answered and what the agent did next. The aggregate above says
+    // which tools go unused; this says whether the used ones are any good.
+    session: flagValue2('--session'),
 };
 
 /** Every transcript, optionally scoped to demo-project sessions. */
@@ -167,8 +181,24 @@ function firstUserText(file) {
 }
 
 /** Walk one transcript, pulling every tool call and its result. */
+/** Text a person actually typed, or '' for a tool result / command marker. */
+function humanText(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return '';
+    if (content.some((c) => c && c.type === 'tool_result')) return '';
+    return content.map((c) => (c && c.type === 'text' ? c.text || '' : '')).join(' ').trim();
+}
+
+const COMMAND_MARKER = /^<(local-command|command-name|command-message|command-args)/;
+
+function isHumanTurn(content) {
+    const t = humanText(content);
+    return t.length > 0 && !COMMAND_MARKER.test(t);
+}
+
 function readSession(file) {
     const calls = [];
+    const events = [];
     const results = new Map();
     let userTurns = 0;
     let day = null;
@@ -177,7 +207,14 @@ function readSession(file) {
         let d;
         try { d = JSON.parse(line); } catch { continue; }
         const content = (d.message || {}).content;
-        if (d.type === 'user') userTurns++;
+        // A tool_result arrives as a `type:'user'` line, so counting those as user
+        // turns triples the number: the 264-turn ERP session is 171 results, and
+        // of the remaining 93 many are `/clear` markers and local-command caveats
+        // rather than anything a person typed. Count only what a human wrote.
+        if (d.type === 'user' && isHumanTurn(content)) {
+            userTurns++;
+            events.push({ kind: 'user', text: humanText(content).slice(0, 200) });
+        }
         // Timestamps are per-line and monotonic, so the last one seen before a
         // call is that call's date. WITHOUT this the scan has no time axis, and a
         // gap closed in August reports identically to one from June — which is
@@ -190,6 +227,7 @@ function readSession(file) {
             if (!c || typeof c !== 'object') continue;
             if (c.type === 'tool_use') {
                 calls.push({ id: c.id, name: c.name || '', input: c.input || {}, day });
+                events.push({ kind: 'call', id: c.id, name: c.name || '' });
             } else if (c.type === 'tool_result') {
                 let txt = c.content;
                 if (Array.isArray(txt)) txt = txt.map((x) => (x && x.text) || '').join(' ');
@@ -197,7 +235,7 @@ function readSession(file) {
             }
         }
     }
-    return { file, calls, results, userTurns, day };
+    return { file, calls, events, results, userTurns, day };
 }
 
 /** The leading binary of each segment of a shell command. */
@@ -215,6 +253,103 @@ function verbsIn(command) {
 
 const files = transcripts();
 const ours = ourToolNames();
+/** tool → (what was called next → count). See the loop below for why. */
+const followedBy = new Map();
+
+// ─── Journey mode ────────────────────────────────────────────────────────────
+
+/** An error the tool answered as PROSE while leaving `is_error` unset. */
+const PROSE_ERROR = /(sign-?in required|not signed in|no current project|unauthori[sz]ed|failed to|could not|unable to|does not exist|not found)/i;
+
+/**
+ * Read ONE session in order and pair each of our calls with what it answered and
+ * what the agent did next.
+ *
+ * The aggregate scan above answers "which tools go unused". It cannot answer
+ * "are the used ones any good", because that question is about a response and
+ * its consequence, and both are only meaningful in sequence. The first three
+ * calls of the 264-turn ERP session are `get_current_project` (104 bytes: a name
+ * and a path), then `get_project` (1.3 KB: the manifest), then `list_projects` —
+ * three orientation calls back to back, which reads as one tool answering less
+ * than the next step needs.
+ *
+ * FLAGS ARE LEADS, NOT VERDICTS. Each says what happened, not that it was wrong:
+ * a repeat after forty turns is an agent re-orienting correctly, and the same
+ * repeat three calls later is us failing to make an answer stick. The distance
+ * is printed so a human can tell those apart.
+ */
+function journey(sessionId) {
+    const file = files.find((f) => basename(f).startsWith(sessionId));
+    if (!file) {
+        console.error(`No transcript starts with "${sessionId}" in ${opt.allProjects ? 'all projects' : 'demo projects'}.`);
+        process.exit(2);
+    }
+    const { calls, events, results, userTurns } = readSession(file);
+    const ourIdx = events
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => e.kind === 'call' && ours.has(bare(e.name)));
+
+    const rows = ourIdx.map(({ e, i }, n) => {
+        const call = calls.find((c) => c.id === e.id) || {};
+        const res = results.get(e.id) || { isError: false, text: '' };
+        const tool = bare(e.name);
+        const next = events[i + 1] || null;
+        const flags = [];
+        if (res.isError) flags.push('ERROR');
+        else if (PROSE_ERROR.test(res.text.slice(0, 400))) flags.push('PROSE-ERROR');
+        if (next && next.kind === 'user') flags.push('USER-SPOKE-NEXT');
+        if (next && next.kind === 'call' && /__Bash$|^Bash$/.test(next.name)) flags.push('→BASH');
+        // A repeat, and HOW FAR AWAY — near is a stickiness problem, far is not.
+        const later = ourIdx.slice(n + 1).find(({ e: o }) => bare(o.name) === tool);
+        if (later) {
+            const gap = later.i - i;
+            flags.push(`REPEAT+${gap}`);
+        }
+        return {
+            n: n + 1, tool, bytes: res.text.length,
+            args: Object.keys(call.input || {}),
+            next: next ? (next.kind === 'user' ? 'you' : bare(next.name)) : '(end)',
+            flags,
+            preview: res.text.slice(0, 160).replace(/\s+/g, ' '),
+        };
+    });
+
+    if (opt.json) {
+        console.log(JSON.stringify({ session: basename(file), userTurns,
+            totalCalls: calls.length, ourCalls: rows.length, rows }, null, 2));
+        return;
+    }
+    const L = [];
+    L.push(`# Journey — ${basename(file)}\n`);
+    L.push(`**${userTurns}** turns you actually typed · **${calls.length}** tool calls, ` +
+           `**${rows.length}** of them ours.\n`);
+    if (!rows.length) {
+        L.push('_This session never called a Demo Builder tool._\n');
+        console.log(L.join('\n'));
+        return;
+    }
+    L.push('| # | tool | args | bytes | next | flags |');
+    L.push('|---|---|---|---|---|---|');
+    for (const r of rows) {
+        L.push(`| ${r.n} | \`${r.tool}\` | ${r.args.join(', ') || '—'} | ${r.bytes} | ` +
+               `${r.next} | ${r.flags.join(' ') || ''} |`);
+    }
+    L.push('\n## What each call answered\n');
+    for (const r of rows) {
+        L.push(`**${r.n}. ${r.tool}** → ${r.bytes} bytes${r.flags.length ? ` · ${r.flags.join(' ')}` : ''}`);
+        L.push('```');
+        L.push(r.preview || '(empty)');
+        L.push('```\n');
+    }
+    L.push('> Flags are LEADS. `REPEAT+n` is n events later — near means the answer ' +
+           'did not stick, far means the agent re-oriented, and only reading tells you which.');
+    console.log(L.join('\n'));
+}
+
+if (opt.session) {
+    journey(opt.session);
+    process.exit(0);
+}
 // A scanner that finds no tools reports "nothing is used" and looks like a
 // devastating finding. It is a broken scanner. Same guard ai-coverage-scan uses.
 if (ours.size === 0) {
@@ -243,6 +378,27 @@ for (const f of files) {
     if (!s.calls.length) continue;
     sessions++;
     userTurns += s.userTurns;
+    // WHAT EACH OF OUR READS IS A PREAMBLE TO.
+    //
+    // A read that is almost always followed by another read is answering less
+    // than the next step needs — a shape problem, invisible to any count of how
+    // often it is called. `get_current_project` returns a name and a path in
+    // ~100 bytes, and 27 of its 32 calls are followed immediately by another
+    // Demo Builder read; the commonest is `get_project_urls`, not the manifest.
+    // Reading ONE session suggested the wrong pairing, which is why this is
+    // computed over the corpus.
+    for (let i = 0; i < s.calls.length; i++) {
+        const c = s.calls[i];
+        if (!c.name.startsWith(OUR_PREFIX)) continue;
+        if (opt.since && (!c.day || c.day < opt.since)) continue;
+        if (opt.until && (!c.day || c.day > opt.until)) continue;
+        const from = bare(c.name);
+        const nxt = s.calls[i + 1];
+        const to = nxt ? bare(nxt.name) : '(nothing)';
+        if (!followedBy.has(from)) followedBy.set(from, new Map());
+        const m = followedBy.get(from);
+        m.set(to, (m.get(to) || 0) + 1);
+    }
     for (const c of s.calls) {
         // A call with no timestamp cannot be placed in time. It is COUNTED when
         // no window is asked for, and EXCLUDED when one is — silently keeping it
@@ -320,6 +476,19 @@ const report = {
     shape1_neverCalled: { count: neverCalled.length, of: ours.size, tools: neverCalled },
     shape2_doneWithoutUs: gapVerbs,
     shape3_ourToolsFailed: failures,
+    preambles: [...followedBy.entries()]
+        .map(([tool, m]) => {
+            const total = [...m.values()].reduce((a, b) => a + b, 0);
+            const toOurs = [...m.entries()]
+                .filter(([t]) => ours.has(t))
+                .sort((a, b) => b[1] - a[1]);
+            const chained = toOurs.reduce((a, [, n]) => a + n, 0);
+            return { tool, calls: total, chained,
+                     share: total ? Math.round((chained / total) * 100) : 0,
+                     next: toOurs.slice(0, 3).map(([t, n]) => ({ tool: t, calls: n })) };
+        })
+        .filter((e) => e.calls >= 3 && e.share >= 50)
+        .sort((a, b) => b.chained - a.chained),
     orientation: { share: orientationShare, calls: orientation, ofOurCalls: ourTotal,
                    topSixReads: topReads.map(([t, n]) => ({ tool: t, calls: n })) },
     used: ourCalls.map(([t, n]) => ({ tool: t, calls: n, ...(dayOf.get(t) || {}) })),
@@ -368,6 +537,19 @@ if (opt.json) {
     for (const f of failures) L.push(`- \`${f.tool}\` — ${f.text}`);
     L.push('');
 
+    if (report.preambles.length) {
+        L.push('## Reads that are a preamble to another read\n');
+        L.push('A tool whose answer is usually followed by another of ours is answering ' +
+               'less than the next step needs. That is a SHAPE problem, and no count of ' +
+               'how often a tool is called can see it.\n');
+        L.push('| tool | calls | chained | share | usually followed by |');
+        L.push('|---|---|---|---|---|');
+        for (const e of report.preambles) {
+            L.push(`| \`${e.tool}\` | ${e.calls} | ${e.chained} | ${e.share}% | ` +
+                   `${e.next.map((n) => `\`${n.tool}\` ×${n.calls}`).join(', ')} |`);
+        }
+        L.push('');
+    }
     L.push('## Orientation share\n');
     L.push(`**${orientationShare}%** of our tool calls (${orientation} of ${ourTotal}) are the top six ` +
            'READS — calls that establish where the agent is rather than do anything.\n');
