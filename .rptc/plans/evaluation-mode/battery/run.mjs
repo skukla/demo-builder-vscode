@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
-import { bare, score } from './score.mjs';
+import { bare, score, scoreSkill } from './score.mjs';
 
 const AB = new URL('.', import.meta.url).pathname;
 const ROOT = `${homedir()}/.demo-builder/projects`;
@@ -98,6 +98,11 @@ const NATIVE_TOOLS = [
     'Glob', 'Grep', 'ToolSearch',
     'WebFetch', 'WebSearch',
     'Task', 'TodoWrite', 'ExitPlanMode',
+    // Skill loads instructions into the run — it changes nothing on disk, and
+    // it is the measurement channel for `expectSkill` prompts (AI-1q skills
+    // half). Any writes a skill's body then instructs are still denied by the
+    // read-only allowlist and the Write/Edit disallow.
+    'Skill',
 ];
 ALLOWED.push(...NATIVE_TOOLS);
 
@@ -254,7 +259,7 @@ function finishMeta() {
 writeFileSync(OUT, '');
 console.log(`run ${STAMP}\n  serving: ${serving}\n  results: ${OUT}\n`);
 
-function runOnce(prompt) {
+function runOnce(prompt, cwd = ROOT) {
     return new Promise((resolve) => {
         const args = [
             '-p', prompt,
@@ -285,7 +290,7 @@ function runOnce(prompt) {
             '--output-format', 'stream-json',
             '--verbose',
         ];
-        const child = spawn('claude', args, { cwd: ROOT });
+        const child = spawn('claude', args, { cwd });
         let buf = '';
         const calls = [];       // {name, input} — the route, with arguments
         const said = [];        // the agent's OWN words
@@ -360,14 +365,20 @@ function runOnce(prompt) {
 
 {
     const variant = 'as-shipped';
-    for (const { id: task, prompt, expect, why, expectServers } of PROMPTS) {
+    for (const { id: task, prompt, expect, why, expectServers, expectSkill, cwd } of PROMPTS) {
         const started = Date.now();
         const memSnap = snapshotMemory();
-        const { calls, said, results, result } = await runOnce(prompt);
+        // `cwd: "project"` runs the prompt INSIDE the project directory — where
+        // a producer's session actually sits, and the only place project skills
+        // (`.claude/skills/<name>/SKILL.md`) are discoverable. Default stays the
+        // projects root (the home surface), matching every recorded run so far.
+        const runCwd = cwd === 'project' ? `${ROOT}/bodea` : ROOT;
+        const { calls, said, results, result } = await runOnce(prompt, runCwd);
         if (restoreMemory(memSnap)) {
             console.log('    (agent wrote to memory; restored so the next run is independent)');
         }
         const s = score(calls, results, said, expect);
+        const sk = scoreSkill(calls, expectSkill);
         const row = {
             variant,
             task,
@@ -375,6 +386,8 @@ function runOnce(prompt) {
             expect,
             why,
             ...s,
+            ...(sk ?? {}),
+            ...(cwd ? { cwd } : {}),
             calls: calls.length,
             route: calls.map((c) => bare(c.name)),
             // The route WITH arguments. Names alone say the agent called
@@ -428,6 +441,9 @@ function runOnce(prompt) {
             (s.excuse ? `    said : ${s.excuse}\n` : '') +
             (expectServers
                 ? `    servers: want ${expectServers.join('+')} · got ${row.serversUsed.join('+') || '(none)'}\n`
+                : '') +
+            (sk
+                ? `    skill: want ${sk.expectSkill.join(' | ')} · got ${sk.skillsInvoked.join(' ') || '(none)'} — ${sk.skillDiagnosis}\n`
                 : '') +
             `    calls=${row.calls} billable=${row.billable}`,
         );

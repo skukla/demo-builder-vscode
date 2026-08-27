@@ -8,7 +8,7 @@
  *
  *   node .rptc/plans/evaluation-mode/battery/score.test.mjs
  */
-import { score } from './score.mjs';
+import { score, scoreSkill } from './score.mjs';
 
 const M = 'mcp__demo-builder__';
 const cases = [
@@ -81,6 +81,33 @@ for (const [label, calls, results, said, want] of blockedCases) {
   const ok = s.diagnosis.startsWith(want);
   ok ? pass++ : fail++;
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(34)} ${s.outcome.padEnd(7)} ${s.diagnosis.slice(0, 62)}`);
+}
+
+console.log(`\n  ${pass} passed, ${fail} failed`);
+
+// ── skill coverage (AI-1q skills half) ──────────────────────────────────────
+//
+// `scoreSkill` reads the Skill tool's invocations out of the same call list.
+// The AS-PROSE case is the live probe that started this: asked to use
+// diagnose-demo, the agent Glob+Grepped `.claude/skills/diagnose-demo.md` —
+// real information, no skill invocation, because flat files never register.
+const skillCases = [
+  ['invoked',   [{name:'Skill',id:'1',input:{skill:'diagnose-demo'}}], 'ok'],
+  ['as prose',  [{name:'Glob',id:'1',input:{pattern:'.claude/skills/**'}},
+                 {name:'Grep',id:'2',input:{path:'/p/.claude/skills/diagnose-demo.md'}}], 'SKILL-AS-PROSE'],
+  ['unused',    [{name:'Bash',id:'1',input:{command:'ls'}}], 'SKILL-UNUSED'],
+];
+for (const [label, calls, want] of skillCases) {
+  const sk = scoreSkill(calls, ['diagnose-demo']);
+  const ok = sk.skillDiagnosis.startsWith(want);
+  ok ? pass++ : fail++;
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} skill: ${label.padEnd(10)} ${sk.skillDiagnosis.slice(0, 62)}`);
+}
+{
+  const none = scoreSkill([{name:'Skill',id:'1',input:{skill:'x'}}], undefined);
+  const ok = none === null;
+  ok ? pass++ : fail++;
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} skill: no expectSkill -> null (no vacuous verdict)`);
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);

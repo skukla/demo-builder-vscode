@@ -134,4 +134,38 @@ function score(calls, results, said, expect) {
              excuse: excuse ? excuse.slice(0, 300) : null };
 }
 
-export { bare, failed, score, blockedTools };
+/**
+ * Skill coverage (AI-1q, skills half): a prompt with `expectSkill` is satisfied
+ * when the transcript shows a `Skill` tool invocation of one of those names.
+ *
+ * Reaching the skill's FILE by Read/Grep/Glob is scored separately as
+ * SKILL-AS-PROSE — real information reached the agent, but not through the
+ * skill system. Before v27 that was the ONLY possible route (flat `<name>.md`
+ * files are never registered as skills — measured 2026-08-27), so on a project
+ * whose bundle predates v27 every skill prompt will score AS-PROSE at best;
+ * that is a statement about the deployed bundle, not about the prompt.
+ *
+ * Returns null when the prompt declares no expectSkill — tool-only prompts
+ * carry no skill verdict rather than a vacuous one.
+ */
+function scoreSkill(calls, expectSkill) {
+    if (!expectSkill?.length) return null;
+    const skillsInvoked = calls
+        .filter((c) => c.name === 'Skill')
+        .map((c) => c.input?.skill)
+        .filter(Boolean);
+    const skillHit = expectSkill.some((s) => skillsInvoked.includes(s));
+    const readAsProse = calls.some(
+        (c) =>
+            ['Read', 'Grep', 'Glob'].includes(c.name) &&
+            expectSkill.some((s) => JSON.stringify(c.input ?? {}).includes(`skills/${s}`)),
+    );
+    const skillDiagnosis = skillHit
+        ? 'ok'
+        : readAsProse
+          ? 'SKILL-AS-PROSE: reached the skill file by reading it, never by invocation — pre-v27 layout, or the skill system did not route'
+          : 'SKILL-UNUSED: the skill never entered the run in any form';
+    return { expectSkill, skillsInvoked, skillHit, readAsProse, skillDiagnosis };
+}
+
+export { bare, failed, score, scoreSkill, blockedTools };
