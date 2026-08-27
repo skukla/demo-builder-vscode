@@ -49,22 +49,39 @@ grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.t
   | grep -vE ':[0-9]+:\s*(//|\*|/\*)'
 ```
 
-### Baselines measured 2026-08-11 — a number at baseline is not news
+### Baselines measured 2026-08-27 (dedup sweep) — a number at baseline is not news
 
 | Scan | Baseline | What movement means |
 |---|---|---|
-| component-extraction | 4 groups | a NEW group, or one growing past 3 files |
-| code-duplication (jscpd) | 64 clones, 0.70% lines | a jump, or any clone crossing a feature boundary |
-| circular-dependency | 13 cycles | any new cycle; most existing ones are same-feature handler/phase pairs |
+| component-extraction | 3 groups (page-container-padded ×5, icon-label ×4, status-text ×3) — all adjudicated 2026-08-27: variants or shared-component internals, not rebuilds | a NEW group, or one growing past 3 files |
+| code-duplication (jscpd) | **66 clones, RATCHET** (was 74 before the 2026-08-27 dedup sweep; 64 on 2026-08-11) | **The count may only FALL.** Any rise must name its new clones with per-clone verdicts (same-job → fix; variant → record here). Zero is deliberately NOT the target: the remainder is adjudicated variants and two-instance pairs below Rule of Three, and forcing those into one shape welds together things that change independently |
+| circular-dependency | 0 cycles (the 2026-08-24 consolidation broke all 13; re-verified 2026-08-27 over 914 files) | ANY cycle is new and real |
 | dead-code doc-drift | 0 | any hit is real — it is confirmed against `git log` |
 | boundary-cast audit | 40 (6 `as never`, 34 `as unknown as`, 0 `as any`) — measured 2026-08-21 after the full first triage (all 55 original sites opened) plus the partial-HandlerContext resolution | any `as any`; any NEW cast; any existing cast on an ARGUMENT to a collaborator (see triage). Remaining sites all carry verdicts: `as never` — 1 documented Spectrum shim (CardActionsMenu), 4 in AddIntegrationFlowAdapter + 1 in stackComponentCollector (both deferred INTO the untyped-channels backlog item). `as unknown as` — ~16 bundled-JSON-to-declared-type consts (RESOLVED — the two contract suites in tests/templates/ enforce data↔schema and data↔interface; the casts stay but are check-backed; `../complete/2026-08-21-bundled-config-json-is-cast-not-validated.md`), the ~7 partial-HandlerContext casts (RESOLVED — callee parameters narrowed to the fields they read; `../complete/2026-08-21-partial-handler-contexts-cast-to-full.md`), 4 wizard-state/request launderings in createProjectTool + executor + 2 generic handler-wrapper casts in addIntegrationFlowHandlers (untyped-channels item), rest local DOM/stream/library shims. Every non-benign cluster has a backlog home — a future sweep reports MOVEMENT against this, it does not re-triage |
 
-Prior: 2026-08-05 — 9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
-drop from 9 to 4 is the `step-view`/`step-nav` shell finally being extracted, not the scan
-weakening.
+Prior: 2026-08-11 — 4 groups · 64 clones/0.70% · 13 cycles · 0 drift. 2026-08-05 —
+9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
+drop from 9 to 4 was the `step-view`/`step-nav` shell being extracted, not the scan
+weakening; 4 → 3 is the EDS-7 ServiceCardShell extraction.
 
 Re-measure and update this table whenever the sweep runs; a stale baseline turns
 every finding into noise.
+
+### The adjudicated-variant watchlist — do NOT re-litigate, DO watch for the trigger
+
+Every pair below was OPENED AND READ on 2026-08-27 (the dedup sweep) and left
+deliberately: a variant whose differences are load-bearing, or a two-instance
+pair below Rule of Three. A sweep that re-flags one of these reports "still at
+baseline" — UNLESS its trigger fired, which converts it to a finding:
+
+| Pair | Verdict | The trigger that converts it |
+|---|---|---|
+| `useComponentConfig.updateField` ↔ `useConfigureFieldValues.updateField` (wizard vs Configure) | two instances, byte-identical — carries the PAAS_URL→GraphQL linked-field rule TWICE | ANY edit to either hook: extract `buildFieldWrites` FIRST, then make the edit. The most drift-dangerous pair on the list |
+| prerequisites `checkHandler` ↔ `continueHandler` per-node variant checks + payload builders | variants: different major-resolution inputs, different message fns, continue writes shared state mid-build | a third handler joining the family, or the id-mapping question resolving as a bug (see the check's `resolveRequiredMajors` vs continue's `getNodeVersionKeys` — investigated 2026-08-27, verdict on PL-8) |
+| auth `handleCreateAdobeProject` ↔ `handleCreateAdobeWorkspace` prologues | deliberate entity mirror, noun-parameterized | a third entity-create handler |
+| updates `applyBlockLibraryUpdate` lookup ↔ `applyBlockLibraryUpdateResolved` lookup | the wrapper's copy is a pre-dialog guard; removing it prompts users for no-ops | the lookup logic itself changing (then extract `findInstalledLibrary`) |
+| `githubRepoOperations` internal response→GitHubRepo mapper ×2 | two instances | a third mapping site |
+| ai/server `write_page` + `delete_page` openers vs `openPathCall` | variants: write_page's resolve opts depend on a parsed flag; delete_page's confirm gate sits mid-prologue | either constraint dissolving |
 
 ### Reading the UI scan — shape beats count
 

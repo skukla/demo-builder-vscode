@@ -50,6 +50,36 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
 }
 
 /**
+ * Resolve the required Node major versions for a per-node-version prerequisite.
+ * Checks the prereq's requiredFor, falls back to plugin requiredFor, then all
+ * Node versions.
+ *
+ * SHARED between checkHandler and continueHandler (moved here 2026-08-27):
+ * continue used to demand the variant on EVERY major, so on stacks whose
+ * components span Node majors (headless: frontend 24, mesh 20) a green check
+ * flipped to a blocking 'error' on Continue for a major nothing required.
+ */
+export function resolveRequiredMajors(
+    prereq: { requiredFor?: string[]; plugins?: { requiredFor?: string[] }[] },
+    nodeVersionMapping: Record<string, string>,
+    nodeVersionIdMapping: Record<string, string>,
+): string[] {
+    let requiredForComponents: string[] | undefined = prereq.requiredFor;
+    if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
+        const allPluginRequired = prereq.plugins
+            .filter(p => p.requiredFor && p.requiredFor.length > 0)
+            .flatMap(p => p.requiredFor ?? []);
+        if (allPluginRequired.length > 0) {
+            requiredForComponents = [...new Set(allPluginRequired)];
+        }
+    }
+
+    return requiredForComponents && requiredForComponents.length > 0
+        ? getPluginNodeVersions(nodeVersionIdMapping, requiredForComponents)
+        : getNodeVersionKeys(nodeVersionMapping);
+}
+
+/**
  * Get Node versions that require a specific plugin
  *
  * Filters the nodeVersionIdMapping to find which Node versions are used by
