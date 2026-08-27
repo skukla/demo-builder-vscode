@@ -35,6 +35,7 @@ import {
     type InstallationState,
     type ReconcileResult,
 } from './appManagementClient';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -149,30 +150,30 @@ export function deriveCommerceTarget(
  */
 export function buildAppData(project: Project): AppData | { error: string } {
     const adobe = project.adobe ?? {};
-    const fields: Array<[keyof AppData, string | undefined]> = [
-        ['consumerOrgId', adobe.organization],
-        ['orgName', adobe.organizationName],
-        ['projectId', adobe.projectId],
-        ['projectName', adobe.projectName],
-        ['projectTitle', adobe.projectTitle ?? adobe.projectName],
-        ['workspaceId', adobe.workspace],
-        ['workspaceName', adobe.workspaceName],
-        ['workspaceTitle', adobe.workspaceTitle ?? adobe.workspaceName],
-    ];
-    const missing = fields.find(([, value]) => !value);
+    // Constructed as the declared type, empty-string for absent — then validated
+    // — rather than entries + a cast: a cast at this boundary would silence the
+    // one checker that can see a missing spec-required field.
+    const candidate: AppData = {
+        consumerOrgId: adobe.organization ?? '',
+        orgName: adobe.organizationName ?? '',
+        projectId: adobe.projectId ?? '',
+        projectName: adobe.projectName ?? '',
+        projectTitle: adobe.projectTitle ?? adobe.projectName ?? '',
+        workspaceId: adobe.workspace ?? '',
+        workspaceName: adobe.workspaceName ?? '',
+        workspaceTitle: adobe.workspaceTitle ?? adobe.workspaceName ?? '',
+    };
+    const missing = Object.entries(candidate).find(([, value]) => value === '');
     if (missing) {
         return { error: `The project's Adobe context is missing ${missing[0]}.` };
     }
-    return Object.fromEntries(fields) as unknown as AppData;
+    return candidate;
 }
 
 /** True when a reconcile 409's closed reason means "nothing to do", not "broken". */
 function isBenignNoOp(error: unknown): boolean {
     return error instanceof AppManagementApiError && error.reason === 'already-current';
 }
-
-const defaultWait = (ms: number): Promise<void> =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Poll a queued (202) installation until it lands or the budget runs out.
@@ -185,7 +186,7 @@ async function pollInstallation(
     client: InstallerClient,
     deps: AppManagementInstallDeps,
 ): Promise<InstallationState | undefined> {
-    const wait = deps.wait ?? defaultWait;
+    const wait = deps.wait ?? sleep;
     const deadlineRounds = Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS);
     for (let round = 0; round < deadlineRounds; round++) {
         await wait(POLL_INTERVAL_MS);
