@@ -107,6 +107,16 @@ Kept deliberately (decision logged on the item): the two other load-time
 conversions (Console-API picks, the DA.live site-name cleanup) stay — they
 are the same kind of load-path tolerance the quarantine exists to preserve.
 
+### Claude Code disk-footprint report — SHIPPED (`4ba0d1305`)
+
+The "storage grows ~4 GB a year and nothing reports it" item, done as
+specified: "Demo Builder: Diagnostics" now measures `~/.claude` when it runs —
+total size, the three largest subdirectories, transcript count/size/oldest —
+and says plainly that it is Claude Code's data, that nothing deletes it, and
+that deleting transcripts resets chat resume. No cleanup button, by the item's
+own rule. Eight tests against a real temp tree, including one that pins "the
+output never offers deletion". Item marked shipped.
+
 ### Maintenance triage (your default fallback lane)
 
 - **The two-EDS-cards duplication** (low): its own write-up says to fix it
