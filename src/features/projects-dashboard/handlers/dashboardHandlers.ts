@@ -397,6 +397,38 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
     return exportProjectSettings(context, project);
 };
 
+/**
+ * Resolve the target project from a `{ projectPath }` payload WITHOUT touching
+ * the current-project pointer: required-path check, the projects-directory
+ * security validation, and a non-persisting load.
+ *
+ * One home for what was the same prologue in seven handlers (2026-08-27 dedup
+ * sweep, PL-8 item 2). `handleSelectProject` deliberately does NOT use it —
+ * selecting persists the loaded project as the pointer, which is the one
+ * behavior this helper exists to not have.
+ */
+async function resolveProjectFromPath(
+    context: HandlerContext,
+    payload: { projectPath?: string } | undefined,
+): Promise<{ ok: true; project: Project } | { ok: false; error: HandlerResponse }> {
+    if (!payload?.projectPath) {
+        return { ok: false, error: { success: false, error: 'Project path is required' } };
+    }
+    // SECURITY: Validate path is within demo-builder projects directory
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { ok: false, error: { success: false, error: 'Invalid project path' } };
+    }
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
+    if (!project) {
+        return { ok: false, error: { success: false, error: 'Project not found' } };
+    }
+    return { ok: true, project };
+}
+
 // ============================================================================
 // Delete Project Handler (delegated to projectDeletionService)
 // ============================================================================
@@ -411,33 +443,11 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
     try {
-        if (!payload?.projectPath) {
-            return {
-                success: false,
-                error: 'Project path is required',
-            };
+        const resolved = await resolveProjectFromPath(context, payload);
+        if (!resolved.ok) {
+            return resolved.error;
         }
-
-        try {
-            validateProjectPath(payload.projectPath);
-        } catch {
-            return {
-                success: false,
-                error: 'Invalid project path',
-            };
-        }
-
-        const project = await context.stateManager.loadProjectFromPath(
-            payload.projectPath,
-            undefined,
-            { persistAfterLoad: false },
-        );
-        if (!project) {
-            return {
-                success: false,
-                error: 'Project not found',
-            };
-        }
+        const { project } = resolved;
 
         const result = await deleteProject(context, project);
 
@@ -475,33 +485,11 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
     try {
-        if (!payload?.projectPath) {
-            return {
-                success: false,
-                error: 'Project path is required',
-            };
+        const resolved = await resolveProjectFromPath(context, payload);
+        if (!resolved.ok) {
+            return resolved.error;
         }
-
-        try {
-            validateProjectPath(payload.projectPath);
-        } catch {
-            return {
-                success: false,
-                error: 'Invalid project path',
-            };
-        }
-
-        const project = await context.stateManager.loadProjectFromPath(
-            payload.projectPath,
-            undefined,
-            { persistAfterLoad: false },
-        );
-        if (!project) {
-            return {
-                success: false,
-                error: 'Project not found',
-            };
-        }
+        const { project } = resolved;
 
         // Note: Edit menu is only shown when project is not running (UI enforces this)
         // Extract settings for edit mode (include secrets for local edit)
@@ -665,24 +653,11 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    const resolved = await resolveProjectFromPath(context, payload);
+    if (!resolved.ok) {
+        return resolved.error;
     }
-
-    // SECURITY: Validate path is within demo-builder projects directory
-    // (this handler persists the loaded project as the current pointer).
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
+    const { project } = resolved;
 
     // Set the current-project pointer so the dashboard / state reads and the
     // home Chat's `get_current_project` tool resolve to this project. No
@@ -702,23 +677,11 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    const resolved = await resolveProjectFromPath(context, payload);
+    if (!resolved.ok) {
+        return resolved.error;
     }
-
-    // SECURITY: Validate path is within demo-builder projects directory
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
+    const { project } = resolved;
 
     const liveUrl = getEdsLiveUrl(project);
 
@@ -757,23 +720,11 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    const resolved = await resolveProjectFromPath(context, payload);
+    if (!resolved.ok) {
+        return resolved.error;
     }
-
-    // SECURITY: Validate path is within demo-builder projects directory
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
+    const { project } = resolved;
 
     const daLiveUrl = getEdsDaLiveUrl(
         project,
@@ -801,23 +752,11 @@ export const handleOpenAdminPanel: MessageHandler<{ projectPath: string }> = asy
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    const resolved = await resolveProjectFromPath(context, payload);
+    if (!resolved.ok) {
+        return resolved.error;
     }
-
-    // SECURITY: Validate path is within demo-builder projects directory
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
+    const { project } = resolved;
 
     const url = getAdminPanelUrl(project);
 
@@ -872,22 +811,11 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
+    const resolved = await resolveProjectFromPath(context, payload);
+    if (!resolved.ok) {
+        return resolved.error;
     }
-
-    try {
-        validateProjectPath(payload.projectPath);
-    } catch {
-        return { success: false, error: 'Invalid project path' };
-    }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
-    if (!project) {
-        return { success: false, error: 'Project not found' };
-    }
+    const { project } = resolved;
 
     const { isEdsProject } = await import('@/types/typeGuards');
 
@@ -962,7 +890,10 @@ export const handleSetProjectPinned: MessageHandler<{
         // answer an agent has NO other way to confirm, because nothing else
         // reported pinned state at all. `list_projects` now carries it too, so the
         // pair is a write that says what it did and a read that can check it.
-        return { success: true, pinned: { projectPath: payload.projectPath, pinned: payload.pinned } };
+        return {
+            success: true,
+            pinned: { projectPath: payload.projectPath, pinned: payload.pinned },
+        };
     } catch (error) {
         context.logger.error(
             'Failed to set project pinned state',
