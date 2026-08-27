@@ -121,7 +121,10 @@ describe('addAppBuilderComponent (mesh)', () => {
 
         await addAppBuilderComponent(createProject(), MESH_ENTRY, deps as never);
 
-        expect(order).toEqual(['save', 'refresh']);
+        // Two saves since the in-flight 'deploying' marker (2026-08-27):
+        // marker save -> outcome save -> bundle refresh. The pin's point is
+        // unchanged — refresh comes strictly AFTER the outcome save.
+        expect(order).toEqual(['save', 'save', 'refresh']);
     });
 
     it('does NOT call the integration deploy tail for a mesh entry (dispatch by kind)', async () => {
@@ -581,3 +584,92 @@ describe('deployAppBuilderComponent (redeploy)', () => {
 // =============================================================================
 // removeAppBuilderComponent
 // =============================================================================
+
+// ─── in-flight marker + per-entry node version (2026-08-27) ──────────────────
+describe('deploying marker and nodeVersion (live-test fixes)', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('writes a transient deploying entry BEFORE the deploy runs (add flow)', async () => {
+        const project = createProject();
+        const deps = createDeps();
+        let statusDuringDeploy: string | undefined;
+        (deps.deployApp as jest.Mock).mockImplementation(async () => {
+            statusDuringDeploy = project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.status;
+            return { success: true, data: { url: 'https://app' } };
+        });
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        // A poller reading mid-run sees deploying, not a stale prior outcome.
+        expect(statusDuringDeploy).toBe('deploying');
+        expect(deps.saveProject).toHaveBeenCalledTimes(2); // marker + outcome
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.status).toBe('deployed');
+    });
+
+    it('redeploy marks the existing entry deploying and clears its stale error', async () => {
+        const project = createProject();
+        project.appBuilderComponents = {
+            [INTEGRATION_ENTRY.id]: {
+                kind: 'integration',
+                status: 'error',
+                error: 'stale failure from last time',
+                source: { owner: 'o', repo: 'r' },
+            },
+        };
+        project.componentInstances = {
+            [INTEGRATION_ENTRY.id]: {
+                id: INTEGRATION_ENTRY.id,
+                name: INTEGRATION_ENTRY.name,
+                type: 'app-builder',
+                status: 'ready',
+                path: '/proj/components/erp',
+                lastUpdated: new Date(),
+            } as never,
+        };
+        const deps = createDeps();
+        let errorDuringDeploy: string | undefined = 'unset';
+        let statusDuringDeploy: string | undefined;
+        (deps.deployApp as jest.Mock).mockImplementation(async () => {
+            const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
+            statusDuringDeploy = entry?.status;
+            errorDuringDeploy = entry?.error;
+            return { success: true, data: { url: 'https://app' } };
+        });
+
+        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+
+        expect(statusDuringDeploy).toBe('deploying');
+        expect(errorDuringDeploy).toBeUndefined();
+    });
+
+    it('threads the entry nodeVersion into the deploy tail', async () => {
+        const project = createProject();
+        const deps = createDeps();
+        const entry = { ...INTEGRATION_ENTRY, nodeVersion: '24' };
+
+        await addAppBuilderComponent(project, entry, deps as never);
+
+        expect(deps.deployApp).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.any(String),
+            expect.anything(),
+            expect.anything(),
+            undefined,
+            '24',
+        );
+    });
+
+    it('an ensureNodeVersion failure aborts the add before anything else runs', async () => {
+        const project = createProject();
+        const deps = createDeps({
+            ensureNodeVersion: jest.fn().mockResolvedValue('Node 24 could not be installed'),
+        });
+        const entry = { ...INTEGRATION_ENTRY, nodeVersion: '24' };
+
+        const result = await addAppBuilderComponent(project, entry, deps as never);
+
+        expect(result).toEqual({ success: false, error: 'Node 24 could not be installed' });
+        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+        expect(deps.deployApp).not.toHaveBeenCalled();
+    });
+});

@@ -9,6 +9,7 @@
       "kind": "integration",
       "layout": "extension",
       "lifecycle": "app-management",
+      "nodeVersion": "24",
       "source": {
         "owner": "adobe",
         "repo": "commerce-integration-starter-kit",

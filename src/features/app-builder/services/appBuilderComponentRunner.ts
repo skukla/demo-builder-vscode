@@ -137,8 +137,18 @@ export interface AppBuilderComponentRunnerDeps {
         owPackage: string,
         commandManager: CommandExecutor,
         logger: Logger,
-        onProgress?: (m: string, s?: string) => void
+        onProgress?: (m: string, s?: string) => void,
+        nodeVersion?: string
     ) => Promise<AppDeploymentResult>;
+    /**
+     * Ensure a Node MAJOR version is available via fnm (installing it when
+     * absent) BEFORE a component that declares one installs/deploys. The one
+     * chokepoint every add path shares — the graphical prerequisites step runs
+     * before integrations are even selectable, and the dashboard/MCP adds
+     * never pass it. Returns an error string when the version cannot be made
+     * available; undefined = proceed.
+     */
+    ensureNodeVersion?: (version: string) => Promise<string | undefined>;
     /** Union-reconcile API subscriber (step 07). */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
@@ -170,7 +180,15 @@ function buildDefinition(entry: AppBuilderComponentCatalogEntry): TransformedCom
             url: `https://github.com/${entry.source.owner}/${entry.source.repo}.git`,
             branch,
         },
-        configuration: { requiresDeployment: true, deploymentTarget: 'adobe-io' },
+        configuration: {
+            requiresDeployment: true,
+            deploymentTarget: 'adobe-io',
+            // The entry's declared node feeds the existing fnm machinery in
+            // ComponentDependencies; strictInstall makes a refused npm install
+            // abort the add with npm's own error (AB-3).
+            nodeVersion: entry.nodeVersion,
+            strictInstall: true,
+        },
     } as TransformedComponentDefinition;
 }
 
@@ -443,6 +461,7 @@ async function dispatchDeploy(
         deps.commandManager,
         deps.logger,
         deps.onProgress,
+        entry.nodeVersion,
     );
     return result.success
         ? { ok: true, outcome: integrationOutcome(entry, result.data) }
@@ -469,6 +488,13 @@ export async function addAppBuilderComponent(
     }
 
     try {
+        if (entry.nodeVersion) {
+            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
+            if (nodeError) {
+                return { success: false, error: nodeError };
+            }
+        }
+
         await deps.subscribeRequiredApis(deps.catalog, project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -490,6 +516,23 @@ export async function addAppBuilderComponent(
                 return { success: false, error: layoutMismatchError(entry, expected, detected) };
             }
         }
+
+        // Transient in-flight marker so pollers can tell this run from a
+        // stale prior outcome; the final outcome overwrites it.
+        project.appBuilderComponents = {
+            ...(project.appBuilderComponents ?? {}),
+            [entry.id]: {
+                kind: entry.kind,
+                status: 'deploying',
+                name: entry.name,
+                source: {
+                    owner: entry.source.owner,
+                    repo: entry.source.repo,
+                    branch: entry.source.branch,
+                },
+            },
+        };
+        await deps.saveProject(project);
 
         const deployed = await withOrgContext(targetFor(project, deps), () =>
             dispatchDeploy(project, entry, installed.path, deps),
@@ -527,6 +570,20 @@ export async function deployAppBuilderComponent(
     const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
 
     try {
+        if (entry.nodeVersion) {
+            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
+            if (nodeError) {
+                return { success: false, error: nodeError };
+            }
+        }
+
+        // Transient in-flight marker (see addAppBuilderComponent): without it
+        // the PREVIOUS outcome — often an error — reads as current for the
+        // whole run.
+        existing.status = 'deploying';
+        existing.error = undefined;
+        await deps.saveProject(project);
+
         const deployed = await withOrgContext(targetFor(project, deps), () =>
             dispatchDeploy(project, entry, componentPath, deps),
         );

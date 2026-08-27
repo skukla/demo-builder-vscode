@@ -43,6 +43,11 @@ export type { AppDeploymentResult };
  */
 const APP_NODE_VERSION = 'auto';
 
+/** The entry's declared node (e.g. '24'), falling back to the CLI default. */
+function resolveNodeVersion(declared?: string): string {
+    return declared || APP_NODE_VERSION;
+}
+
 type ProgressCallback = (message: string, subMessage?: string) => void;
 
 /**
@@ -92,12 +97,14 @@ export async function deployAppComponent(
     commandManager: CommandExecutor,
     logger: Logger,
     onProgress?: ProgressCallback,
+    nodeVersion?: string,
 ): Promise<AppDeploymentResult> {
+    const node = resolveNodeVersion(nodeVersion);
     try {
         await buildComponent(
             componentPath,
             commandManager,
-            { nodeVersion: APP_NODE_VERSION, kind: 'integration', logPrefix: '[App Builder]' },
+            { nodeVersion: node, kind: 'integration', logPrefix: '[App Builder]' },
             logger,
             onProgress,
         );
@@ -108,11 +115,7 @@ export async function deployAppComponent(
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
         onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
-        const runtimeCreds = await fetchRuntimeCredentials(
-            commandManager,
-            logger,
-            APP_NODE_VERSION,
-        );
+        const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
         const runtimeEnv = {
             AIO_RUNTIME_NAMESPACE: runtimeCreds.namespace,
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
@@ -125,7 +128,7 @@ export async function deployAppComponent(
             streaming: true,
             shell: true,
             timeout: TIMEOUTS.LONG,
-            useNodeVersion: APP_NODE_VERSION,
+            useNodeVersion: node,
             enhancePath: true,
             env: runtimeEnv,
         });
@@ -147,7 +150,7 @@ export async function deployAppComponent(
             cwd: componentPath,
             shell: true,
             timeout: TIMEOUTS.LONG,
-            useNodeVersion: APP_NODE_VERSION,
+            useNodeVersion: node,
             enhancePath: true,
             env: runtimeEnv,
         });

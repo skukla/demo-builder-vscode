@@ -70,6 +70,19 @@ describe('registerDiscoveryTools', () => {
         expect(grouped.frontends[0]).toHaveProperty('name');
     });
 
+    it('list_components carries the App Builder catalog — the ids add_integration names', async () => {
+        // add_integration's description says "from list_components"; until
+        // 2026-08-27 the listing did not carry these ids (traced live: the
+        // documented discovery route dead-ended on its own instruction).
+        const server = fakeServer();
+        registerDiscoveryTools(server);
+
+        const grouped = (await server.call('list_components')) as Record<string, Array<{ id: string; name: string }>>;
+        const ids = grouped.appBuilderIntegrations.map((c) => c.id);
+        expect(ids).toContain('commerce-integration-starter-kit');
+        expect(ids).toContain('app-builder-shell');
+    });
+
     it('emits compact JSON (no pretty-print newlines)', async () => {
         const server = fakeServer();
         registerDiscoveryTools(server);

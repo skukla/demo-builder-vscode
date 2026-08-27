@@ -260,7 +260,16 @@ export type AppBuilderComponentKind = 'mesh' | 'integration';
  */
 export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
-    status: 'deployed' | 'stale' | 'error' | 'not-deployed';
+    /**
+     * `'deploying'` is TRANSIENT: written when a deploy starts so pollers
+     * (agents reading get_project, the grid) can tell an in-flight run from a
+     * stale prior outcome — the previous error used to sit there looking
+     * current for the whole deploy (measured 2026-08-27, seven minutes of
+     * misleading polling). Always overwritten by the final outcome; a crash
+     * mid-deploy leaves it behind, which reads as "still deploying" until the
+     * next deploy or verify corrects it.
+     */
+    status: 'deployed' | 'deploying' | 'stale' | 'error' | 'not-deployed';
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
     source: { owner: string; repo: string; branch?: string };

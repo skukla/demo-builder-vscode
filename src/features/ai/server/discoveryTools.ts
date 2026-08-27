@@ -11,6 +11,7 @@
  */
 
 import { asText } from './mcpToolResult';
+import appBuilderCatalog from '@/features/components/config/app-builder-components.json';
 import componentsConfig from '@/features/components/config/components.json';
 import { getSelectablePackages } from '@/features/components/services/demoPackageLoader';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
@@ -53,7 +54,8 @@ export function registerDiscoveryTools(server: any): void {
         {
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Stacks',
-            description: 'List available architecture stacks (frontend+backend) for project creation',
+            description:
+                'List available architecture stacks (frontend+backend) for project creation',
             inputSchema: {},
         },
         async () => {
@@ -75,7 +77,8 @@ export function registerDiscoveryTools(server: any): void {
         {
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Demo Packages',
-            description: 'List demo packages (brands) and the stacks each supports, for project creation',
+            description:
+                'List demo packages (brands) and the stacks each supports, for project creation',
             inputSchema: {},
         },
         async () => {
@@ -96,13 +99,23 @@ export function registerDiscoveryTools(server: any): void {
         {
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Components',
-            description: 'List available project components grouped by type (frontends, backends, mesh, etc.)',
+            description:
+                'List available project components grouped by type (frontends, backends, mesh, ' +
+                'appBuilderIntegrations for add_integration, etc.)',
             inputSchema: {},
         },
         async () => {
-            const lean = Object.fromEntries(
+            const lean: Record<string, unknown> = Object.fromEntries(
                 COMPONENT_SECTIONS.map((section) => [section, listComponentSection(section)]),
             );
+            // The App Builder catalog — where add_integration ids come from. Its
+            // own description sends agents HERE for ids, and until 2026-08-27
+            // this listing did not carry them (traced live: the documented
+            // discovery route dead-ended).
+            lean.appBuilderIntegrations = appBuilderCatalog.appBuilderComponents.map((entry) => ({
+                id: entry.id,
+                name: entry.name,
+            }));
             return asText(lean);
         },
     );

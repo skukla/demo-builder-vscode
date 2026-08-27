@@ -126,6 +126,11 @@
             "app-management"
           ],
           "description": "What happens after aio app deploy. Omitted = deploy-only (deployed = done). 'app-management' = the app must also be installed/associated with a Commerce instance via its own generated App Management API before events flow."
+        },
+        "nodeVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Node.js MAJOR version this app's install/build/deploy must run under (e.g. \"24\"). The add door ensures it via fnm before installing (measured 2026-08-27: the starter kit is engine-strict node ^24 and npm refuses to install under anything older). Omitted = the executor's default node."
         }
       }
     },

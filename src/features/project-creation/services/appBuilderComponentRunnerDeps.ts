@@ -15,6 +15,7 @@
 import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
+import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import { subscribeRequiredApis, type ApiSubscriberClient } from '@/features/app-builder/services/apiSubscriber';
@@ -100,6 +101,10 @@ export function buildDefaultRunnerDeps(
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
         // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
+        // Choice-dependent node versions resolve at the add door — the one
+        // chokepoint the wizard's early prerequisites screen cannot cover.
+        ensureNodeVersion: (version) =>
+            ensureFnmNodeVersion(ctx.commandManager, version, ctx.logger),
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {
             await subscribeRequiredApis(

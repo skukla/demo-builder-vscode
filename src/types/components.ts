@@ -150,6 +150,16 @@ export interface RawComponentDefinition {
         configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
         nodeVersion?: string;
+        /**
+         * Treat a failed `npm install` as FATAL for this component. Default
+         * (absent) keeps the historical warn-and-continue, which suits
+         * storefront components whose installs can warn yet remain usable.
+         * App Builder integrations set it: their deploy REQUIRES node_modules,
+         * and continuing past a refused install buries the real error under a
+         * downstream npx failure (measured 2026-08-27, starter kit
+         * engine-strict vs system node).
+         */
+        strictInstall?: boolean;
         buildScript?: string;
         skipNpmInstall?: boolean;
         required?: Record<

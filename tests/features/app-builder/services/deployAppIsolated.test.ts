@@ -62,7 +62,7 @@ describe('deployAppComponentIsolated', () => {
         expect(mockApply).toHaveBeenCalledWith('/proj/components/erp', 'erp-pkg');
     });
 
-    it('forwards path, command manager, logger and progress to the deploy tail', async () => {
+    it('forwards path, command manager, logger, progress and node version to the deploy tail', async () => {
         const onProgress = jest.fn();
         await deployAppComponentIsolated(
             '/proj/components/erp',
@@ -70,6 +70,7 @@ describe('deployAppComponentIsolated', () => {
             commandManager,
             logger,
             onProgress,
+            '24',
         );
 
         expect(mockDeploy).toHaveBeenCalledWith(
@@ -77,6 +78,7 @@ describe('deployAppComponentIsolated', () => {
             commandManager,
             logger,
             onProgress,
+            '24',
         );
     });
 

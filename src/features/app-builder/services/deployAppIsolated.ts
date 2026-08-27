@@ -40,6 +40,7 @@ export async function deployAppComponentIsolated(
     commandManager: CommandExecutor,
     logger: Logger,
     onProgress?: (message: string, subMessage?: string) => void,
+    nodeVersion?: string,
 ): Promise<AppDeploymentResult> {
     const applied = await applyIsolatedPackages(componentPath, owPackage);
     logger.debug(
@@ -47,5 +48,5 @@ export async function deployAppComponentIsolated(
             ? `[App Builder] applied ow.package "${owPackage}"`
             : `[App Builder] no standalone packages to isolate for "${owPackage}"`,
     );
-    return deployAppComponent(componentPath, commandManager, logger, onProgress);
+    return deployAppComponent(componentPath, commandManager, logger, onProgress, nodeVersion);
 }

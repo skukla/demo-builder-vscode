@@ -30,16 +30,20 @@ export class ComponentDependencies {
      * type, an extra `skipDependencies` gate, and a trailing log, so this holds
      * everything that was written out twice (duplication scan, 2026-07-31).
      *
-     * Neither failure is fatal: a component whose install or build warns is still
-     * usable, so both paths WARN and continue rather than throwing.
+     * By default neither failure is fatal — a storefront whose install or build
+     * warns is still usable, so both paths WARN and continue. A component with
+     * `configuration.strictInstall` (App Builder integrations) makes a FAILED
+     * install fatal instead: its deploy requires node_modules, and continuing
+     * buries the real npm error under a downstream npx failure.
      *
      * @param componentPath - the cloned component directory
      * @param componentDef - supplies the Node version, install timeout, build script
+     * @returns the fatal install error, or undefined when installation may proceed
      */
     private async runInstallAndBuild(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
-    ): Promise<void> {
+    ): Promise<string | undefined> {
         this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
 
         const commandManager = ServiceLocator.getCommandExecutor();
@@ -61,13 +65,19 @@ export class ComponentDependencies {
         });
 
         if (installResult.code !== 0) {
+            if (componentDef.configuration?.strictInstall) {
+                const detail =
+                    installResult.stderr?.trim().split('\n').slice(-6).join(' ') ||
+                    `npm install exited with code ${installResult.code}`;
+                return `npm install failed for ${componentDef.name}: ${detail}`;
+            }
             this.logger.warn(
                 `[ComponentManager] npm install had warnings for ${componentDef.name}`,
             );
         }
 
         const buildScript = componentDef.configuration?.buildScript;
-        if (!buildScript) return;
+        if (!buildScript) return undefined;
 
         const buildResult = await commandManager.execute(`npm run ${buildScript}`, {
             cwd: componentPath,
@@ -83,6 +93,7 @@ export class ComponentDependencies {
                 `[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`,
             );
         }
+        return undefined;
     }
 
     /**
@@ -103,7 +114,10 @@ export class ComponentDependencies {
             return { success: true };
         }
 
-        await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        if (fatal) {
+            return { success: false, error: fatal };
+        }
 
         this.logger.debug(`[ComponentManager] Dependencies installed for ${componentDef.name}`);
         return { success: true };
@@ -117,20 +131,21 @@ export class ComponentDependencies {
         componentPath: string,
         componentDef: TransformedComponentDefinition,
         skipDependencies: boolean,
-    ): Promise<void> {
+    ): Promise<{ success: boolean; error?: string }> {
         const packageJsonPath = path.join(componentPath, 'package.json');
 
         try {
             await fs.access(packageJsonPath);
         } catch {
             // No package.json, skip dependency installation
-            return;
+            return { success: true };
         }
 
         if (skipDependencies) {
-            return;
+            return { success: true };
         }
 
-        await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        return fatal ? { success: false, error: fatal } : { success: true };
     }
 }
