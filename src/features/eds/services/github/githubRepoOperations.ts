@@ -14,12 +14,11 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { Octokit } from '@octokit/core';
-import { retry } from '@octokit/plugin-retry';
 import type {
     GitHubRepo,
     GitHubApiError,
 } from '../types';
-import { injectTokenIntoUrl } from './githubHelpers';
+import { createAuthenticatedOctokit, injectTokenIntoUrl } from './githubHelpers';
 import type { GitHubTokenService } from './githubTokenService';
 import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
@@ -476,10 +475,7 @@ export class GitHubRepoOperations {
         }
 
         if (!this.octokit) {
-            const OctokitWithRetry = Octokit.plugin(retry);
-            this.octokit = new OctokitWithRetry({
-                auth: token.token,
-            });
+            this.octokit = createAuthenticatedOctokit(token.token);
         }
 
         return this.octokit;
