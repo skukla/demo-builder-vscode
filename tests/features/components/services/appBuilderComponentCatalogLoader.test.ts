@@ -68,7 +68,7 @@ describe('appBuilderComponentCatalogLoader', () => {
             const ids = getAvailableAppBuilderComponents('unknown-backend', 'unknown-frontend').map(
                 (d) => d.id
             );
-            expect(ids).toEqual(['app-builder-shell']);
+            expect(ids).toEqual(['commerce-integration-starter-kit', 'app-builder-shell']);
         });
     });
 
@@ -434,10 +434,10 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         expect(isPrebuiltIntegration(real)).toBe(true);
     });
 
-    it('reports ZERO pre-built entries for every real stack today', () => {
-        // The catalog genuinely has none. This is the assertion that would have
-        // caught the report, and it will fail the day a real one is authored —
-        // which is the moment to update it deliberately.
+    it('reports the starter kit as the ONE pre-built entry on every real stack', () => {
+        // Updated deliberately 2026-08-27: the day this pin anticipated arrived —
+        // the Commerce Integration Starter Kit (App Management generation) is the
+        // catalog's first genuine pre-built integration.
         for (const [b, f] of [
             ['adobe-commerce-accs', 'eds-storefront'],
             ['adobe-commerce-paas', 'eds-storefront'],
@@ -445,7 +445,9 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         ]) {
             const all = getAvailableAppBuilderComponents(b, f);
             expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
-            expect(all.filter(isPrebuiltIntegration)).toEqual([]);
+            expect(all.filter(isPrebuiltIntegration).map((e) => e.id)).toEqual([
+                'commerce-integration-starter-kit',
+            ]);
         }
     });
 });

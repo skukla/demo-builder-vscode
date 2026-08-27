@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-27T12-42-05Z",
+  "serving": "loop/2026-08-27-starter-kit@2591b40d0 built 2026-08-27T12:40:48.947Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 300
+  },
+  "promptCount": 1,
+  "allowlist": 92,
+  "cache": "warm",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 291
+  },
+  "authChangedMidRun": false
+}
