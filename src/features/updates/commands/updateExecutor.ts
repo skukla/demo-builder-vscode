@@ -475,7 +475,12 @@ async function applyBlockLibraryUpdate(
         return;
     }
 
-    let effectiveBehavior = syncBehavior;
+    // Narrowed by RESOLUTION, not by cast: 'ask' either becomes a concrete
+    // choice below or the function returns. The `as` this replaces silenced
+    // the one check that would catch a new BlockLibrarySyncBehavior member
+    // slipping through unresolved (2026-08-27 sweep; the repo's boundary-cast
+    // rule).
+    let effectiveBehavior: 'enabled' | 'disabled';
     if (syncBehavior === 'ask') {
         const choice = await vscode.window.showInformationMessage(
             `Library "${item.library.name}" has new commits upstream. ` +
@@ -488,7 +493,9 @@ async function applyBlockLibraryUpdate(
             return;
         }
         effectiveBehavior = choice === 'Update' ? 'enabled' : 'disabled';
+    } else {
+        effectiveBehavior = syncBehavior;
     }
 
-    await applyBlockLibraryUpdateResolved(item, effectiveBehavior as 'enabled' | 'disabled', ctx);
+    await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
 }
