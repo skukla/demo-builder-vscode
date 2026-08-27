@@ -210,7 +210,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
 | `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
 | `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |
-| `AI-3a` | feature | └ [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) | — | high | built |
+| `AI-3a` | feature | └ [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) | — | high | superseded |
 | `AI-3b` | feature | [Take the Prompt Workbench off develop and onto its own branch](2026-08-26-extract-prompt-workbench-from-develop.md) | — | high | shipped |
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | open |
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | — | med | backlog |
@@ -379,7 +379,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 **D** — 2 items
 
-- `AI-3a` [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) — built
+- `AI-3a` [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) — superseded
 - `AI-4b` [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) — backlog
 
 **E** — 1 item

@@ -5,8 +5,9 @@ area: ai
 parent: AI-3
 needs: []
 value: high
-status: built
+status: superseded
 layer: D
+superseded-by: AI-3b
 ---
 # The Prompt Workbench is built and nobody has opened it
 
@@ -75,3 +76,4 @@ has opened the panel built in step 10 and said whether it works.
 
 Filed 2026-08-26.
 - 2026-08-26  Backlog: trailer convention documented (6a8d8d97a) — commits can now name the item they belong to, and `unlogged` checks the record caught up.
+- 2026-08-27  Superseded by AI-3b: the Workbench is no longer on develop, so 'built and nobody has opened it' is no longer the open question. It is on feature/prompt-workbench, and the decision to make is whether to bring it back at all — which is AI-3b's job now.
