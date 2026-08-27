@@ -9,27 +9,15 @@
  * @module features/app-builder/services/appBuilderComponentState
  */
 
-import type { Project, AppBuilderComponentState, AppBuilderComponentKind } from '@/types/base';
+import type { Project, AppBuilderComponentState } from '@/types/base';
 import { hasEntries, getMeshEndpointUrl } from '@/types/typeGuards';
 
 /** The canonical key a migrated legacy mesh lands under. */
 const MESH_ID = 'mesh';
 
-const APP_BUILDER_COMPONENT_KINDS: readonly AppBuilderComponentKind[] = ['mesh', 'integration'];
-
 /** An App Builder component plus its map key, returned by listAppBuilderComponents. */
 export interface IdentifiedAppBuilderComponent extends AppBuilderComponentState {
     id: string;
-}
-
-/** Type guard: rejects malformed objects (missing/invalid `kind`). */
-export function isAppBuilderComponentState(value: unknown): value is AppBuilderComponentState {
-    if (typeof value !== 'object' || value === null) return false;
-    const kind = (value as { kind?: unknown }).kind;
-    return (
-        typeof kind === 'string' &&
-        (APP_BUILDER_COMPONENT_KINDS as readonly string[]).includes(kind)
-    );
 }
 
 /** Read a keyed appBuilderComponent by id (no read-through). */
@@ -74,13 +62,6 @@ export function getIdentifiedMeshAppBuilderComponent(
  */
 export function getMeshAppBuilderComponent(project: Project): AppBuilderComponentState | undefined {
     return getIdentifiedMeshAppBuilderComponent(project)?.state;
-}
-
-/** Get all keyed `kind:'integration'` appBuilderComponents. */
-export function getIntegrationAppBuilderComponents(project: Project): AppBuilderComponentState[] {
-    return Object.values(project.appBuilderComponents ?? {}).filter(
-        (d) => d.kind === 'integration',
-    );
 }
 
 /** List every keyed appBuilderComponent with the id it is stored under. */

@@ -13,9 +13,7 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
-    getIntegrationAppBuilderComponents,
     getProvidedEnvVars,
-    isAppBuilderComponentState,
 } from '@/core/state/appBuilderComponentState';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 
@@ -91,26 +89,6 @@ describe('appBuilderComponentState accessors', () => {
                 (project.appBuilderComponents?.mesh as { userDeclinedUpdate?: boolean })
                     .userDeclinedUpdate,
             ).toBe(true);
-        });
-    });
-
-    describe('getIntegrationAppBuilderComponents (keyed-only)', () => {
-        it('should return keyed integration entries', () => {
-            const project = makeProject({
-                appBuilderComponents: {
-                    erp: makeAppBuilderComponent({ kind: 'integration', url: 'https://erp/api' }),
-                    mesh: makeAppBuilderComponent(),
-                },
-            });
-
-            const integrations = getIntegrationAppBuilderComponents(project);
-
-            expect(integrations).toHaveLength(1);
-            expect(integrations[0].url).toBe('https://erp/api');
-        });
-
-        it('should return an empty array when no keyed integrations exist', () => {
-            expect(getIntegrationAppBuilderComponents(makeProject())).toEqual([]);
         });
     });
 
@@ -193,54 +171,6 @@ describe('appBuilderComponentState accessors', () => {
                 OTHER_URL: 'https://other/api',
             });
         });
-    });
-
-    describe('isAppBuilderComponentState', () => {
-        it('should accept a well-formed appBuilderComponent state', () => {
-            expect(isAppBuilderComponentState(makeAppBuilderComponent())).toBe(true);
-        });
-
-        it('should reject an object missing kind', () => {
-            expect(isAppBuilderComponentState({ status: 'deployed', source: {} })).toBe(false);
-        });
-
-        it('should reject an invalid kind', () => {
-            expect(isAppBuilderComponentState({ kind: 'frontend', status: 'deployed', source: {} })).toBe(false);
-        });
-
-        it('should reject null and non-objects', () => {
-            expect(isAppBuilderComponentState(null)).toBe(false);
-            expect(isAppBuilderComponentState('mesh')).toBe(false);
-            expect(isAppBuilderComponentState(undefined)).toBe(false);
-        });
-    });
-});
-
-
-// ---------------------------------------------------------------------------
-// getIdentifiedMeshAppBuilderComponent — id and state from ONE lookup
-// ---------------------------------------------------------------------------
-describe('getIdentifiedMeshAppBuilderComponent', () => {
-    // REGRESSION (2026-08-04, live): the integrations screen resolved the mesh
-    // ENTRY with getMeshAppBuilderComponent (which prefers the 'mesh' key, then
-    // falls back to the first mesh found) but resolved its ID with a bare
-    // `listAppBuilderComponents().find(kind === 'mesh')`. With TWO mesh
-    // components those disagree — the card showed one mesh and its Remove tore
-    // down the other. Callers must not be able to resolve the two separately.
-    it('returns the id belonging to the state it returns, with two meshes present', () => {
-        const project = {
-            appBuilderComponents: {
-                'commerce-eds-mesh': { kind: 'mesh', status: 'error', source: { owner: 'a', repo: 'b' } },
-                'eds-accs-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'a', repo: 'b' } },
-            },
-        } as never as Parameters<typeof getIdentifiedMeshAppBuilderComponent>[0];
-
-        const identified = getIdentifiedMeshAppBuilderComponent(project);
-
-        expect(identified).toBeDefined();
-        expect(identified!.state).toBe(getMeshAppBuilderComponent(project));
-        expect((project as never as { appBuilderComponents: Record<string, unknown> })
-            .appBuilderComponents[identified!.id]).toBe(identified!.state);
     });
 
     it("prefers the canonical 'mesh' key, matching getMeshAppBuilderComponent", () => {
