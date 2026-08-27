@@ -9,6 +9,7 @@
  * catalog.
  */
 
+import { createHash } from 'crypto';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
@@ -25,6 +26,9 @@ jest.mock('fs/promises', () => {
         lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
         realpath: jest.fn(async (p: string) => p),
         mkdir: jest.fn().mockResolvedValue(undefined),
+        // The ADR-013 removal path uses it; a bundle this project no longer
+        // qualifies for is reconciled away (AI-1o).
+        unlink: jest.fn().mockResolvedValue(undefined),
         writeFile,
         readdir: jest.fn(),
         readFile: jest.fn(),
@@ -45,6 +49,11 @@ jest.mock('fs/promises', () => {
  * holds unchanged. Hash-and-skip routing is pinned in
  * skillsWriter.hashAndSkip.test.ts.
  */
+/** Same digest the writer records, so a fixture can claim ownership. */
+function sha256(content: string): string {
+    return createHash('sha256').update(content, 'utf-8').digest('hex');
+}
+
 function writeSkills(projectPath: string, project: Project): ReturnType<typeof writeSkillFiles> {
     return writeSkillFiles(projectPath, project, makeTestWriter(projectPath));
 }
@@ -70,6 +79,24 @@ function makeEdsProject(overrides: Partial<Project> = {}): Project {
         componentInstances: { 'eds-storefront': makeEdsInstance() },
         ...overrides,
     };
+}
+
+/**
+ * A project that actually BUILDS an App Builder app — here, a mesh. Since
+ * AI-1o the integration-starter-kit bundle and `extend-app-builder-app` follow
+ * this, not a bare EDS storefront.
+ */
+function makeAppBuilderProject(): Project {
+    return makeEdsProject({
+        componentInstances: {
+            'headless-commerce-mesh': {
+                id: 'headless-commerce-mesh',
+                name: 'Headless Commerce Mesh',
+                status: 'ready',
+                path: '/projects/test/components/headless-commerce-mesh',
+            } as ComponentInstance,
+        },
+    });
 }
 
 function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
@@ -259,14 +286,14 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
         });
 
-        it('writes exactly fifteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
+        it('writes exactly fourteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
             mockMissingAdobeBundle();
             await writeSkills('/projects/test', makeEdsProject());
 
-            // 13 always-written Demo-Builder skills + extend-app-builder-app
-            // (EDS satisfies projectNeedsAppBuilderTooling).
-            // 12 → 13 always-on with diagnose-demo (AI_CONTEXT_VERSION 7).
-            expect(writtenFiles()).toHaveLength(15);
+            // 14 always-written Demo-Builder skills. 15 → 14 on 2026-08-26
+            // (AI-1o): extend-app-builder-app is App Builder work, and a
+            // storefront with no mesh and no attached component is not doing it.
+            expect(writtenFiles()).toHaveLength(14);
         });
 
         it('writes scrape-reference-site.md for EDS projects', async () => {
@@ -325,7 +352,7 @@ describe('skillsWriter', () => {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls.length).toBe(15);
+            expect(calls.length).toBe(14);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -366,14 +393,14 @@ describe('skillsWriter', () => {
         // isolated OpenWhisk package. The skill must address integrations
         // per-instance, not assume a single custom app.
         it('states that a project can hold multiple AI-built integrations', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
+            await writeSkills('/projects/test', makeAppBuilderProject());
 
             const content = writtenContent('extend-app-builder-app.md');
             expect(content).toMatch(/multiple AI-built integrations/i);
         });
 
         it('addresses each integration by its components/<id>/ folder', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
+            await writeSkills('/projects/test', makeAppBuilderProject());
 
             const content = writtenContent('extend-app-builder-app.md');
             expect(content).toContain('components/<id>/');
@@ -381,14 +408,14 @@ describe('skillsWriter', () => {
         });
 
         it('instructs the agent to confirm WHICH integration before editing', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
+            await writeSkills('/projects/test', makeAppBuilderProject());
 
             const content = writtenContent('extend-app-builder-app.md');
             expect(content).toMatch(/which integration/i);
         });
 
         it('states that deploys are per-integration (own OpenWhisk package)', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
+            await writeSkills('/projects/test', makeAppBuilderProject());
 
             const content = writtenContent('extend-app-builder-app.md');
             expect(content).toMatch(/per-integration/i);
@@ -396,7 +423,7 @@ describe('skillsWriter', () => {
         });
 
         it('no longer frames the target as a single blank shell app', async () => {
-            await writeSkills('/projects/test', makeEdsProject());
+            await writeSkills('/projects/test', makeAppBuilderProject());
 
             const content = writtenContent('extend-app-builder-app.md');
             expect(content).not.toMatch(/the blank shell/i);
@@ -577,12 +604,11 @@ describe('skillsWriter', () => {
 
             const files = writtenFiles();
             expect(files.some((p) => p.includes('/.claude/skills/aem-'))).toBe(false);
-            // Demo-Builder skills still written: 3 lifecycle + create-eds-project +
-            // diagnose-demo + 6 EDS-scraping + register-custom-block +
-            // remove-custom-block = 13, plus extend-app-builder-app = 14.
+            // 14 Demo-Builder skills, and no extend-app-builder-app: an EDS
+            // storefront alone is not App Builder work (AI-1o).
             expect(
                 files.filter((p) => p.startsWith('/projects/test/.claude/skills/'))
-            ).toHaveLength(15);
+            ).toHaveLength(14);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {
@@ -594,6 +620,73 @@ describe('skillsWriter', () => {
             expect(files.some((p) => p.endsWith('add-component.md'))).toBe(true);
             expect(files.some((p) => p.endsWith('sync-changes.md'))).toBe(true);
             expect(files.some((p) => p.endsWith('update-credentials.md'))).toBe(true);
+        });
+    });
+
+    // AI-1o. Until 2026-08-26 one predicate gated BOTH the MCP server and the
+    // skill set. It is right for the server — a storefront really does call
+    // search-commerce-docs — and wrong for the skills: bodea, one component
+    // instance and no App Builder app anywhere, carried seven skills whose
+    // architect opens "You are an Expert Adobe Commerce Solutions Architect
+    // specializing in ... the Adobe Commerce Integration Starter Kit".
+    describe('a storefront that builds no App Builder app (AI-1o)', () => {
+        it('gets no integration-starter-kit skills', async () => {
+            mockAdobeSkillBundle({ architect: ['SKILL.md'], developer: ['SKILL.md'] });
+
+            await writeSkills('/projects/test', makeEdsProject());
+
+            const files = writtenFiles();
+            expect(files.some((p) => p.includes('/.claude/skills/appbuilder-'))).toBe(false);
+            expect(files.some((p) => p.endsWith('extend-app-builder-app.md'))).toBe(false);
+        });
+
+        it('still gets the storefront skills — the OTHER half of the pair', async () => {
+            // The control. If this went false too, the gate would be off in the
+            // opposite direction and the test above would pass for a bad reason.
+            mockAdobeSkillBundle({ 'block-developer': ['SKILL.md'] });
+
+            await writeSkills('/projects/test', makeEdsProject());
+
+            expect(
+                writtenFiles().some((p) => p.includes('/.claude/skills/aem-block-developer/'))
+            ).toBe(true);
+        });
+
+        it('removes a bundle it delivered before the gate narrowed', async () => {
+            // Every EDS project received these, so most storefronts on disk carry
+            // them. Leaving them is worse than never having written them: they are
+            // instructions, and they are wrong. Removal goes file-by-file through
+            // the ADR-013 seam, which deletes only what still matches what we
+            // wrote — a recorded hash is the proof.
+            const ourCopy = '# what we generated last time';
+            // No bundle to COPY — this test is about the removal, and leaving
+            // the source readable would mix the two.
+            mockMissingAdobeBundle();
+            (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+                if (p.includes('/.claude/skills/appbuilder-')) return ourCopy;
+                if (p.endsWith('.demo-builder-mcp/package.json')) {
+                    return mcpToolsManifest(['@playwright/mcp']);
+                }
+                throw enoentError();
+            });
+            // The REAL writer, with hashes matching what is on disk — which is
+            // what "provably ours" means. A fake here would prove nothing about
+            // the seam that does the deleting.
+            const writer = makeTestWriter('/projects/test', {
+                '.claude/skills/appbuilder-architect/SKILL.md': sha256(ourCopy),
+                '.claude/skills/appbuilder-developer/SKILL.md': sha256(ourCopy),
+            });
+
+            await writeSkillFiles('/projects/test', makeEdsProject(), writer);
+
+            expect(writer.report().removed).toEqual([
+                '.claude/skills/appbuilder-architect/SKILL.md',
+                '.claude/skills/appbuilder-developer/SKILL.md',
+            ]);
+            // And the hashes go with them, so a later run does not try again.
+            expect(Object.keys(writer.hashes())).not.toContain(
+                '.claude/skills/appbuilder-architect/SKILL.md'
+            );
         });
     });
 

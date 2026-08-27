@@ -50,8 +50,8 @@ import syncChangesContent from '../../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../../templates/skills/update-credentials.md';
 import { readInstalledMcpPackages, resolveMcpToolsDir } from './aiDefaultsInstaller';
 import {
+    projectBuildsAppBuilderApps,
     projectHasEdsStorefront,
-    projectNeedsAppBuilderTooling,
     resolveAvailableMcpToolIds,
 } from './aiToolingGate';
 import type { GeneratedFileWriter } from './generatedFileWriter';
@@ -185,7 +185,7 @@ export async function writeSkillFiles(
         );
     }
 
-    // App Builder-adjacent projects (mesh or attached App Builder component,
+    // Projects that actually BUILD an App Builder app (mesh or attached component,
     // with or without a storefront) also get the Developer Agent's
     // integration-starter-kit skills, sourced from the isolated MCP tools dir
     // (`.demo-builder-mcp/` — installed by installAiDefaultsMcpTools before
@@ -196,7 +196,7 @@ export async function writeSkillFiles(
     const written = DEMO_BUILDER_SKILLS.filter(({ filename }) => !gatedOut.has(filename)).map(
         ({ filename }) => filename,
     );
-    if (projectNeedsAppBuilderTooling(project)) {
+    if (projectBuildsAppBuilderApps(project)) {
         await copyAdobeSkillBundle(
             resolveMcpToolsDir(projectPath),
             path.join('integration-starter-kit', 'skills'),
@@ -205,6 +205,14 @@ export async function writeSkillFiles(
         );
         await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
         written.push('extend-app-builder-app.md');
+    } else {
+        // Reconcile a bundle this project no longer qualifies for. Every EDS
+        // project received it until 2026-08-26 (AI-1o), so most existing
+        // storefronts carry seven skills telling the agent it is building an
+        // integration starter kit app. Leaving them is worse than never having
+        // written them: they are instructions, and they are wrong.
+        await removeAdobeSkillBundle('appbuilder', writer);
+        await writer.remove('.claude/skills/extend-app-builder-app.md', extendAppBuilderAppContent);
     }
 
     // Summary for the handler boundary to log (Adobe bundle skills are copied
@@ -227,6 +235,29 @@ function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
             .filter(([, toolId]) => !availableToolIds.has(toolId))
             .map(([filename]) => filename),
     );
+}
+
+/**
+ * Remove a previously-delivered Adobe bundle, file by file, through the ADR-013
+ * seam.
+ *
+ * Ownership comes from the manifest: every file we copied has a recorded
+ * sha-256, so `writer.remove` deletes only what still matches what we wrote and
+ * REPORTS anything the user has edited instead of destroying it. That is why
+ * this walks the recorded hashes rather than the directory — a directory walk
+ * would find files we never wrote and have no proof about.
+ *
+ * Empty directories are left behind deliberately: removing them means a
+ * recursive delete with no per-file proof, which is the one operation this seam
+ * exists to prevent.
+ */
+async function removeAdobeSkillBundle(prefix: string, writer: GeneratedFileWriter): Promise<void> {
+    const owned = Object.keys(writer.hashes()).filter((key) =>
+        key.startsWith(`.claude/skills/${prefix}-`),
+    );
+    for (const key of owned) {
+        await writer.remove(key);
+    }
 }
 
 async function copyAdobeSkillBundle(

@@ -193,7 +193,14 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // storefront checkout — a directory that has never contained them — so every
 // project silently ENOENT-skipped the copy. Sourced from the isolated MCP tools
 // dir now, like the integration-starter-kit bundle beside it.
-export const AI_CONTEXT_VERSION = 25;
+//
+// v26: the integration-starter-kit skills follow whether a project actually
+// BUILDS an App Builder app, not whether it needs App Builder tooling. Every
+// EDS project satisfied the old gate — a storefront calls search-commerce-docs
+// — so storefronts carried seven skills whose architect tells the agent it is
+// working on a starter-kit integration. The bump is what makes existing
+// projects reconcile: the sweep removes the bundle, file by file, on proof.
+export const AI_CONTEXT_VERSION = 26;
 
 /**
  * Component IDs for standardized component instance access

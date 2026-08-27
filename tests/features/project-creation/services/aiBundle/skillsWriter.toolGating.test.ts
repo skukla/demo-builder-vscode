@@ -149,12 +149,14 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
     });
 
     describe('EDS project (playwright entry applies)', () => {
-        it('writes all fifteen skills when @playwright/mcp is installed (pins hold)', async () => {
+        it('writes all fourteen skills when @playwright/mcp is installed (pins hold)', async () => {
             mockDisk(playwrightInstalled());
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(15);
+            // 15 → 14 (AI-1o): extend-app-builder-app follows App Builder work,
+            // and a storefront alone is not doing any.
+            expect(writtenFiles()).toHaveLength(14);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(true);
             }
@@ -165,7 +167,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(12);
+            expect(writtenFiles()).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
             }
@@ -176,7 +178,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(12);
+            expect(writtenFiles()).toHaveLength(11);
         });
 
         it('excludes gated-out skills from summary.written', async () => {
@@ -188,13 +190,16 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            expect(summary.written).toHaveLength(12);
+            expect(summary.written).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(summary.written).not.toContain(filename);
             }
         });
 
-        it('keeps the conditional extend-app-builder-app skill when playwright is gated out', async () => {
+        it('writes no extend-app-builder-app for a storefront with no App Builder app', async () => {
+            // AI-1o. The gate used to be "needs App Builder TOOLING", which an
+            // EDS storefront satisfies because it calls search-commerce-docs.
+            // Building an app is a different question, and this project is not.
             mockDisk();
 
             const summary = await writeSkillFiles(
@@ -203,8 +208,8 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            expect(summary.written).toContain('extend-app-builder-app.md');
-            expect(writtenFiles().some((p) => p.endsWith('extend-app-builder-app.md'))).toBe(true);
+            expect(summary.written).not.toContain('extend-app-builder-app.md');
+            expect(writtenFiles().some((p) => p.endsWith('extend-app-builder-app.md'))).toBe(false);
         });
 
         it('records no hash entries for gated-out skills', async () => {
@@ -275,9 +280,10 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                     'register-custom-block.md',
                 ])
             );
-            // Thirteen always-written skills + the conditional extend-app-builder-app.
-            expect(summary.written).toHaveLength(15);
-            expect(summary.written).toContain('extend-app-builder-app.md');
+            // Fourteen always-written skills; no extend-app-builder-app for a
+            // storefront that builds no App Builder app (AI-1o).
+            expect(summary.written).toHaveLength(14);
+            expect(summary.written).not.toContain('extend-app-builder-app.md');
         });
 
         it('returns bare filenames (basenames), not absolute paths', async () => {

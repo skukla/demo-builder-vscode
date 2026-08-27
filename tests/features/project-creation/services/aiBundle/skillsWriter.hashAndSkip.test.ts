@@ -142,7 +142,7 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         });
     });
 
-    it('skips a user-edited skill while the other fourteen still write', async () => {
+    it('skips a user-edited skill while the other thirteen still write', async () => {
         const editedAbs = '/projects/test/.claude/skills/sync-changes.md';
         (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
             if (p === editedAbs) return '# user rewrote this skill';
@@ -158,7 +158,7 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         await writeSkillFiles('/projects/test', makeEdsProject(), writer);
 
         expect(writtenFiles()).not.toContain(editedAbs);
-        expect(writtenFiles()).toHaveLength(14);
+        expect(writtenFiles()).toHaveLength(13);
         expect(writer.report().skipped).toEqual(['.claude/skills/sync-changes.md']);
     });
 
@@ -179,7 +179,7 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
 
         // The handler-boundary contract stays as-is: the attempted skill list.
         // Skip visibility lives on writer.report(), not on `written`.
-        expect(summary.written).toHaveLength(15);
+        expect(summary.written).toHaveLength(14);
         expect(summary.written).toContain('sync-changes.md');
     });
 
@@ -189,7 +189,7 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         await writeSkillFiles('/projects/test', makeEdsProject(), writer);
 
         const keys = Object.keys(writer.hashes());
-        expect(keys).toHaveLength(15);
+        expect(keys).toHaveLength(14);
         for (const key of keys) {
             expect(key.startsWith('.claude/skills/')).toBe(true);
             expect(key).not.toContain('\\');
@@ -218,6 +218,13 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         expect(
             writtenContentForPath('/projects/test/.claude/skills/aem-block-developer/SKILL.md')
         ).toBeUndefined();
-        expect(writer.report().skipped).toEqual(['.claude/skills/aem-block-developer/SKILL.md']);
+        // Scoped to bundle files. An EDS project now RECONCILES the App Builder
+        // bundle it no longer qualifies for (AI-1o), and `remove` refuses — and
+        // reports — anything it cannot prove it wrote, which in this mock is
+        // every path. That refusal is the seam working; it is not this test's
+        // subject.
+        expect(
+            writer.report().skipped.filter((k) => k.startsWith('.claude/skills/aem-'))
+        ).toEqual(['.claude/skills/aem-block-developer/SKILL.md']);
     });
 });

@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: backlog
+status: shipped
 ---
 
 # Every project gets the App Builder skills, including projects with no App Builder app
@@ -59,3 +59,7 @@ skills. Never both by default.
   makes them correct for integration projects.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-27  SHIPPED. Split projectNeedsAppBuilderTooling into two predicates: the union still gates the MCP server (a storefront really does call search-commerce-docs), and the new projectBuildsAppBuilderApps — mesh or attached component — gates the skill set. Existing storefronts reconcile on the sweep: removeAdobeSkillBundle walks the RECORDED HASHES rather than the directory, so removal only touches files we can prove we wrote; a user-edited skill is kept and reported. AI_CONTEXT_VERSION 25 to 26. Three tests added, two of which fail against the old gate (verified by reverting).

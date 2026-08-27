@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Storefronts no longer carry seven skills for a job they are not doing
+  (`AI_CONTEXT_VERSION` 25 → 26).** One predicate gated both the MCP server and
+  the skill set. It is right for the server — an EDS storefront really does call
+  `search-commerce-docs` — and wrong for the skills: Adobe ships one skill set
+  per project template, and the integration starter kit's set teaches an agent
+  to build back-office App Builder integrations. Its architect skill opens *"You
+  are an Expert Adobe Commerce Solutions Architect specializing in ... the Adobe
+  Commerce Integration Starter Kit"*, which is a false statement about a
+  storefront with no App Builder app anywhere. Every EDS project received it.
+  The skills now follow `projectBuildsAppBuilderApps` — a mesh or an attached
+  App Builder component — while the MCP server keeps the wider gate it needs.
+  Projects that already received the bundle are reconciled on the next
+  activation sweep: removal goes file by file through the ADR-013 seam, so a
+  skill you have edited is kept and reported rather than deleted.
+
 ### Removed
 
 - **The prompt-evaluation surface moved to `feature/prompt-workbench`.** The

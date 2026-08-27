@@ -90,8 +90,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // sourced from the storefront checkout, which has never held a skills/ dir,
     // so the copy ENOENT-skipped on every project ever created. The bump is what
     // makes existing projects pick them up on the next activation sweep.
-    it('is 25 (the aem-boilerplate-commerce skills finally install)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(25);
+    //
+    // v26: the App Builder skill set follows whether a project BUILDS an App
+    // Builder app, not whether it needs App Builder tooling. The bump is what
+    // reconciles storefronts that already received it.
+    it('is 26 (the App Builder skills follow the work, not the tooling)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(26);
     });
 });
 
