@@ -205,8 +205,30 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
             if (!mgr) return NEEDS_ADOBE_AUTH;
             // getWorkspaces has no org/project option, so run it under the stored
             // target's env (mirrors select_workspace). Untargeted when none set.
-            const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
-            return asText(workspaces.map(lean));
+            try {
+                const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
+                return asText(workspaces.map(lean));
+            } catch (err) {
+                // A deleted target answers a bare 404, and a bare 404 is a
+                // dead end: watched live 2026-08-27, the selected Console
+                // project no longer existed and the agent had to diagnose the
+                // stale pointer itself with the aio CLI. Name the situation
+                // and the way out instead.
+                const msg = err instanceof Error ? err.message : String(err);
+                if (/404|not.?found/i.test(msg)) {
+                    const stored = getAdobeTarget();
+                    return asText({
+                        error:
+                            'The selected Adobe Console project was not found — it may have ' +
+                            'been deleted since it was selected.',
+                        selected: stored?.projectName ?? stored?.projectId ?? '(none recorded)',
+                        recovery:
+                            'Call list_adobe_projects to see what exists now, then ' +
+                            'select_project to repoint, and try again.',
+                    });
+                }
+                throw err;
+            }
         },
     );
 
