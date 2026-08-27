@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: backlog
+status: active
 ---
 
 # Tests-tree dedup — the census after the first-ever scan
@@ -48,3 +48,7 @@ arrange ritual to the suite's testUtils (hoist-safe per
 webview-test-authoring §3), test COUNT stays identical, all green. Also
 90 files sit in the 500-750 warning zone (validate:test-file-sizes) — split
 per the playbook when touched, not as a batch.
+
+## Shipped so far
+
+- 2026-08-27  test(prerequisites): the arrange ritual lives in testUtils — because the helper was broken (`8002fe208`)
