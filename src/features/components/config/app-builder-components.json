@@ -10,6 +10,7 @@
       "layout": "extension",
       "lifecycle": "app-management",
       "nodeVersion": "24",
+      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
       "source": {
         "owner": "adobe",
         "repo": "commerce-integration-starter-kit",

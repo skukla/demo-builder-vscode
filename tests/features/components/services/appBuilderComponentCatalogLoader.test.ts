@@ -14,6 +14,7 @@ import {
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
+    entryFitsProjectAxes,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
@@ -65,10 +66,41 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
 
         it('returns only axis-unrestricted entries for an unmatched backend/frontend combo', () => {
+            // The starter kit is Commerce-gated (compatibleBackends), so an
+            // unmatched stack gets only the blank shell.
             const ids = getAvailableAppBuilderComponents('unknown-backend', 'unknown-frontend').map(
                 (d) => d.id
             );
-            expect(ids).toEqual(['commerce-integration-starter-kit', 'app-builder-shell']);
+            expect(ids).toEqual(['app-builder-shell']);
+        });
+
+        it('offers the starter kit on both Commerce backends and refuses it without one', () => {
+            for (const backend of ['adobe-commerce-paas', 'adobe-commerce-accs']) {
+                const ids = getAvailableAppBuilderComponents(backend, 'eds-storefront').map(
+                    (d) => d.id
+                );
+                expect(ids).toContain('commerce-integration-starter-kit');
+            }
+            // A project with NO backend passes '' — no constrained entry lists it.
+            const bare = getAvailableAppBuilderComponents('', '').map((d) => d.id);
+            expect(bare).not.toContain('commerce-integration-starter-kit');
+        });
+    });
+
+    describe('entryFitsProjectAxes (the add-door gate)', () => {
+        it('accepts a constrained entry on a listed backend and refuses it elsewhere', () => {
+            const kit = getAppBuilderComponentEntry('commerce-integration-starter-kit');
+            expect(kit).toBeDefined();
+            expect(entryFitsProjectAxes(kit!, 'adobe-commerce-paas', 'eds-storefront')).toBe(true);
+            expect(entryFitsProjectAxes(kit!, '', '')).toBe(false);
+            expect(entryFitsProjectAxes(kit!, 'unknown-backend', 'headless')).toBe(false);
+        });
+
+        it('accepts an unconstrained entry on any stack, including none', () => {
+            const shell = getAppBuilderComponentEntry('app-builder-shell');
+            expect(shell).toBeDefined();
+            expect(entryFitsProjectAxes(shell!, '', '')).toBe(true);
+            expect(entryFitsProjectAxes(shell!, 'unknown-backend', 'unknown-frontend')).toBe(true);
         });
     });
 

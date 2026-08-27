@@ -85,12 +85,9 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
                 'unknown-frontend',
                 'eds-paas'
             );
-            // Neither entry declares compatibleBackends/Frontends, so both are
-            // available on every stack — including this degenerate one.
-            expect(result.map((e) => e.id)).toEqual([
-                'commerce-integration-starter-kit',
-                'app-builder-shell',
-            ]);
+            // The starter kit is Commerce-gated (compatibleBackends), so only
+            // the axis-unrestricted blank shell survives this degenerate stack.
+            expect(result.map((e) => e.id)).toEqual(['app-builder-shell']);
             expect(result[0].requirement).toBe('optional');
         });
     });

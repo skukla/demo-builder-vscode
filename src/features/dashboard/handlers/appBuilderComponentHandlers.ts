@@ -40,6 +40,7 @@ import {
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     buildCustomIntegrationEntry,
+    entryFitsProjectAxes,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -312,7 +313,9 @@ export function buildToolchainConsent(
     return async () => refreshCli === true;
 }
 
-export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponentRequestPayload> = async (context, payload) => {
+export const handleAddAppBuilderComponent: MessageHandler<
+    AddAppBuilderComponentRequestPayload
+> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -323,6 +326,28 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
         return {
             success: false,
             error: 'Unknown appBuilderComponent',
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+
+    // Stack gate: galleries filter by the project's axes, but this add-by-id
+    // door resolves from the RAW catalog — without this check a Commerce-only
+    // entry (the starter kit) could be added to a project with no Commerce
+    // backend, then fail at install/association where nothing explains why.
+    if (
+        !entryFitsProjectAxes(
+            entry,
+            project.componentSelections?.backend ?? '',
+            project.componentSelections?.frontend ?? '',
+        )
+    ) {
+        return {
+            success: false,
+            error:
+                `"${entry.name ?? entry.id}" isn't compatible with this project's stack` +
+                (entry.compatibleBackends?.length
+                    ? ` — it requires one of these backends: ${entry.compatibleBackends.join(', ')}.`
+                    : '.'),
             code: ErrorCode.CONFIG_INVALID,
         };
     }
@@ -654,10 +679,10 @@ async function deployById(
 }
 
 /** Handle 'deployAppBuilderComponent' — deploy the given appBuilderComponent's tail. */
-export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string; refreshCli?: boolean }> = (
-    context,
-    payload,
-) => deployById(context, payload?.id, payload?.refreshCli);
+export const handleDeployAppBuilderComponent: MessageHandler<{
+    id?: string;
+    refreshCli?: boolean;
+}> = (context, payload) => deployById(context, payload?.id, payload?.refreshCli);
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;

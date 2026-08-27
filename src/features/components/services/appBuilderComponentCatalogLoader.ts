@@ -50,6 +50,31 @@ function fitsAxis(constraint: string[] | undefined, id: string): boolean {
 }
 
 /**
+ * Does one entry fit the project's stack? The single-entry form of
+ * {@link getAvailableAppBuilderComponents}, for the add door: galleries are
+ * already axis-filtered, but the dashboard/MCP add-by-id path resolves from
+ * the RAW catalog, so a constrained entry (the starter kit is Commerce-only)
+ * could be added to a project whose stack cannot use it. A backendless
+ * project passes `''`, which no constrained entry lists — so a Commerce-gated
+ * entry is refused there too, by the same rule the galleries use.
+ *
+ * @param entry - the resolved catalog (or synthesized custom) entry
+ * @param backendId - the project's backend id ('' when none)
+ * @param frontendId - the project's frontend id ('' when none)
+ * @returns true when both axes fit
+ */
+export function entryFitsProjectAxes(
+    entry: AppBuilderComponentCatalogEntry,
+    backendId: string,
+    frontendId: string,
+): boolean {
+    return (
+        fitsAxis(entry.compatibleBackends, backendId) &&
+        fitsAxis(entry.compatibleFrontends, frontendId)
+    );
+}
+
+/**
  * Get all pre-built appBuilderComponents compatible with the given backend + frontend.
  *
  * An entry matches when it is unconstrained on (or lists) BOTH the backend and
