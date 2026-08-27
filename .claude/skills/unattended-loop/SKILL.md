@@ -158,7 +158,17 @@ report. Without one, run until work dries up or stops being verifiable.
 
 ## The report (the loop's real product)
 
-Plain English, for someone who was not there. Sections, always:
+Plain English, for someone who was not there — and BOTH registers, always
+(owner, 2026-08-27):
+
+- **Describe**: the story of what was done and why, as prose a tired reader
+  follows without knowing the codebase — what was tried, what was found, what
+  changed direction. Not a commit-log paraphrase.
+- **Summarize**: the compressed takeaway up top — what happened and what it
+  means, in a few sentences, before any detail.
+
+Jargon, IDs, and session shorthand stay out of both; a technical term that
+must appear gets explained in the same breath. Sections, always:
 
 - **Shipped** — done, gated, verified; on the branch awaiting merge
 - **Handed off** — finished to the supervised edge; exactly what remains
