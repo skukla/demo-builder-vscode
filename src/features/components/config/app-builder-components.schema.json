@@ -131,6 +131,14 @@
           "type": "string",
           "pattern": "^[0-9]+$",
           "description": "Node.js MAJOR version this app's install/build/deploy must run under (e.g. \"24\"). The add door ensures it via fnm before installing (measured 2026-08-27: the starter kit is engine-strict node ^24 and npm refuses to install under anything older). Omitted = the executor's default node."
+        },
+        "blank": {
+          "type": "boolean",
+          "description": "A blank/starter app (the Build-custom default), NOT a finished pre-built integration. Excluded from the pre-built gallery."
+        },
+        "seed": {
+          "type": "boolean",
+          "description": "SEED scaffolding a custom app starts from (e.g. the Commerce integration starter kit), NOT a finished pre-built integration. Excluded from the pre-built gallery; offered beside 'Blank' on the Build-custom naming stage."
         }
       }
     },

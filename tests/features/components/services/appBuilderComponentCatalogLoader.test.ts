@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     isPrebuiltIntegration,
+    isSeedIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
@@ -519,10 +520,10 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         expect(isPrebuiltIntegration(real)).toBe(true);
     });
 
-    it('reports the starter kit as the ONE pre-built entry on every real stack', () => {
-        // Updated deliberately 2026-08-27: the day this pin anticipated arrived —
-        // the Commerce Integration Starter Kit (App Management generation) is the
-        // catalog's first genuine pre-built integration.
+    it('the starter kit is a SEED, never a pre-built — the gallery stays empty', () => {
+        // Flipped deliberately 2026-08-27 (owner): "It's not really a pre-built
+        // integration. It's a Custom App that's built using the starter kit."
+        // The kit lives on the Build-custom naming stage's seed row.
         for (const [b, f] of [
             ['adobe-commerce-accs', 'eds-storefront'],
             ['adobe-commerce-paas', 'eds-storefront'],
@@ -530,9 +531,19 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         ]) {
             const all = getAvailableAppBuilderComponents(b, f);
             expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
-            expect(all.filter(isPrebuiltIntegration).map((e) => e.id)).toEqual([
+            expect(all.filter(isPrebuiltIntegration)).toEqual([]);
+            expect(all.filter(isSeedIntegration).map((e) => e.id)).toEqual([
                 'commerce-integration-starter-kit',
             ]);
         }
+    });
+
+    it('a seed is never blank, and the blank shell is never a seed', () => {
+        const shell = getAppBuilderComponentEntry('app-builder-shell');
+        const kit = getAppBuilderComponentEntry('commerce-integration-starter-kit');
+        expect(shell && isSeedIntegration(shell)).toBe(false);
+        expect(shell && isPrebuiltIntegration(shell)).toBe(false);
+        expect(kit && isSeedIntegration(kit)).toBe(true);
+        expect(kit && isPrebuiltIntegration(kit)).toBe(false);
     });
 });

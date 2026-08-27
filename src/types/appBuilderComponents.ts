@@ -67,6 +67,16 @@ export interface AppBuilderComponentCatalogEntry {
      * reached via the kind picker's "Build custom" card instead.
      */
     blank?: boolean;
+    /**
+     * A SEED: scaffolding a custom app starts from (the Commerce integration
+     * starter kit), NOT a finished pre-built integration. Owner decision
+     * 2026-08-27: "It's a Custom App that's built using the starter kit."
+     * Excluded from the pre-built gallery; offered as a starting point beside
+     * "Blank" on the Build-custom naming stage instead. Seeded instances are
+     * always NAMED clones of the seed's repo — capabilities survive via the
+     * loader's source recognition.
+     */
+    seed?: boolean;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

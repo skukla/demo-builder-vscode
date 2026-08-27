@@ -110,11 +110,28 @@ export function getAvailableAppBuilderComponents(
  * kind-only filter keeps it. That rule previously lived in a prop docblock on
  * CatalogStage rather than in code, so no caller applied it.
  *
+ * SEEDS are excluded for the same reason (owner decision 2026-08-27): the
+ * starter kit "is not really a pre-built integration — it's a Custom App
+ * that's built using the starter kit", so it lives on the Build-custom naming
+ * stage's seed row ({@link isSeedIntegration}), never in this gallery.
+ *
  * @param entry - a catalog entry
  * @returns true when the entry is a finished, pickable integration
  */
 export function isPrebuiltIntegration(entry: AppBuilderComponentCatalogEntry): boolean {
-    return entry.kind === 'integration' && entry.blank !== true;
+    return entry.kind === 'integration' && entry.blank !== true && entry.seed !== true;
+}
+
+/**
+ * Is this entry a SEED — scaffolding the Build-custom flow offers beside
+ * "Blank" as a starting point? Seeded instances are always named clones of
+ * the seed's repo; the seed never appears in the pre-built gallery.
+ *
+ * @param entry - a catalog entry
+ * @returns true when the entry is a Build-custom starting point
+ */
+export function isSeedIntegration(entry: AppBuilderComponentCatalogEntry): boolean {
+    return entry.kind === 'integration' && entry.seed === true;
 }
 
 /**

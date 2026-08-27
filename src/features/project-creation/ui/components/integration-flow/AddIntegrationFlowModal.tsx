@@ -41,7 +41,10 @@ import {
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
-import { isPrebuiltIntegration } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    isPrebuiltIntegration,
+    isSeedIntegration,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 
@@ -118,14 +121,17 @@ function StageBody({
     const { state, updateState, meshComponent, catalog, onSignIn } = props;
 
     // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
-    // integrations, and the blank shell. Only the last of those three categories
-    // belongs in the Pre-built gallery — the other two already have their own card
-    // in the kind picker, so listing them here offered the same thing twice under
-    // two names (reported 2026-08-06: two options in a catalog with no pre-builts).
+    // integrations, the blank shell, and SEEDS. Only finished integrations belong
+    // in the Pre-built gallery — everything else has its own home (meshes on the
+    // kind picker, blank + seeds on the Build-custom naming stage), so listing
+    // them here offered the same thing twice under two names (reported
+    // 2026-08-06; the seed split is the owner's 2026-08-27 decision: the kit "is
+    // a Custom App that's built using the starter kit").
     //
     // Derived ONCE and used for both the tile count and the gallery, so the count
     // can never disagree with what the gallery would show.
     const prebuiltCatalog = useMemo(() => catalog.filter(isPrebuiltIntegration), [catalog]);
+    const seedCatalog = useMemo(() => catalog.filter(isSeedIntegration), [catalog]);
     const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
     if (stage === 'kind') {
         // Availability and already-added stay SEPARATE here: the tile is hidden
@@ -181,7 +187,7 @@ function StageBody({
                 reservedIds={props.reservedIds}
                 instance={draft.instance}
                 onInstanceChange={flow.setInstance}
-                seeds={prebuiltCatalog}
+                seeds={seedCatalog}
                 seedId={draft.seedId}
                 selectedIds={selectedIds}
                 onSeedChange={flow.setSeed}
