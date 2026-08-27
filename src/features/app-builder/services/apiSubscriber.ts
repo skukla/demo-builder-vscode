@@ -139,7 +139,16 @@ export function computeRequiredApis(
  * The evidence for the override is in this repo: `consoleProjectTeardown`'s
  * subscribe-on-403 PUTs exactly this service onto S2S credentials and works.
  */
-const KNOWN_S2S_SERVICES: ReadonlySet<string> = new Set([BASELINE_API]);
+const KNOWN_S2S_SERVICES: ReadonlySet<string> = new Set([
+    BASELINE_API,
+    // I/O Events + Adobe I/O Events for Adobe Commerce — the kit's eventing
+    // step calls api.adobe.io/events, and without these subscriptions it
+    // answers 403 with a valid key (measured live 2026-08-27). Both rows carry
+    // platformList null in the org catalog; Console's own UI adds both to
+    // OAuth S2S credentials.
+    'CloudIntegrationSDK',
+    'commerceeventing',
+]);
 
 /** Resolve API names → ServiceInfo via the org service list. Throws on unknown. */
 export function resolveServiceInfos(
