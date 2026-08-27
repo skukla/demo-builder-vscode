@@ -186,55 +186,57 @@ describe('AdobeEntityFetcher.createProject()', () => {
         expect(result).toEqual(expect.objectContaining({ id: 'proj-new' }));
     });
 
-    it('returns undefined for an empty name (no SDK call)', async () => {
+    it('names the failure for an empty name (no SDK call)', async () => {
         const result = await fetcher.createProject('', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
-    it('returns undefined for a name longer than 200 chars (no SDK call)', async () => {
+    it('names the failure for a name longer than 200 chars (no SDK call)', async () => {
         const result = await fetcher.createProject('x'.repeat(201), 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
-    it('returns undefined for a description longer than 500 chars (no SDK call)', async () => {
+    it('names the failure for a description longer than 500 chars (no SDK call)', async () => {
         const result = await fetcher.createProject('My Demo', 'd'.repeat(501));
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('500 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when no organization is selected', async () => {
+    it('names the failure when no organization is selected', async () => {
         mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
         const result = await fetcher.createProject('My Demo', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('No organization') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when the SDK is not initialized', async () => {
+    it('names the failure when the SDK is not initialized', async () => {
         mockSDKClient.isInitialized.mockReturnValue(false);
         mockSDKClient.ensureInitialized.mockResolvedValue(false);
         const result = await fetcher.createProject('My Demo', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('sign in to Adobe') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when the SDK throws (e.g. permission denied)', async () => {
-        createFireflyProject.mockRejectedValue(new Error('403 Forbidden'));
+    it('carries the SDK error TEXT when the SDK throws — the whole point (2026-08-27)', async () => {
+        createFireflyProject.mockRejectedValue(
+            new Error('400 - Bad Request ("Project name length must be less than 20")'),
+        );
         const result = await fetcher.createProject('My Demo', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('less than 20') });
     });
 
-    it('returns undefined on a 409 Conflict (name already taken)', async () => {
+    it('translates a 409 Conflict into the name-taken reason', async () => {
         createFireflyProject.mockRejectedValue(new Error('409 Conflict'));
         const result = await fetcher.createProject('My Demo', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('already exists') });
     });
 
-    it('returns undefined when the response has no project body', async () => {
+    it('names the failure when the response has no project body', async () => {
         createFireflyProject.mockResolvedValue({ body: undefined });
         const result = await fetcher.createProject('My Demo', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('no project id') });
     });
 
     // ── explicit target overrides the cache ─────────────────────────────────
@@ -268,7 +270,9 @@ describe('AdobeEntityFetcher.createProject()', () => {
         it('still requires an org from somewhere', async () => {
             (mockCacheManager.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
-            expect(await fetcher.createProject('My Demo', '')).toBeUndefined();
+            expect(await fetcher.createProject('My Demo', '')).toEqual({
+                error: expect.stringContaining('No organization'),
+            });
             expect(createFireflyProject).not.toHaveBeenCalled();
         });
     });

@@ -300,6 +300,14 @@ blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 `list_components`, `list_demo_packages`, `list_stacks` — read-only catalog lookups
 used while assembling a `create_project` call.
 
+### Diagnostics — `diagnosticsTools.ts`
+`read_debug_logs` — the extension's own Debug Logs (or User Logs) channel, read
+from VS Code's on-disk channel mirror under `context.logUri`. Tail-with-filter
+(case-insensitive substring, filtered before the tail). Exists because an opaque
+tool failure used to leave an agent blind while the real cause — e.g. a Console
+400 naming the exact rule — sat in the channel (measured 2026-08-27). Channel
+writes are secret-sanitized at write time, so the mirror carries no raw tokens.
+
 ### Authentication & Adobe — `authTools.ts`, `adobeTools.ts`
 `get_auth_status`, `sign_in`, `list_orgs`, `select_org`, `list_adobe_projects`,
 `select_project`, `list_workspaces`, `select_workspace`. These back the
@@ -780,7 +788,11 @@ extension-side in `agentOperationNotifier.ts`:
   reached. `demoBuilder.ai.requireAgentConsent` (default on, read live per
   call) is the headless escape hatch. The dialog shows scalar argument
   values — informed consent needs them — with secret-shaped keys masked and
-  long values elided; the keys-only rule remains for logging.
+  long values elided; the keys-only rule remains for logging. An UNANSWERED
+  dialog times out (`TIMEOUTS.LONG`) into a "nobody answered" refusal rather
+  than blocking the agent forever — before 2026-08-27 a headless call whose
+  dialog nobody saw hung indefinitely with no log line (AI-5), and the wait
+  now also announces itself in Debug Logs before the dialog opens.
 - **Mutating calls are visible** (2026-08-23). Every tool whose name is not
   declared `readOnlyHint: false` (see the dry-run section below — this was an
   allowlist over tool NAMES until 2026-08-25) runs inside

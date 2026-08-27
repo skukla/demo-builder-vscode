@@ -29,6 +29,7 @@
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
 import type { EventsAuth, IoEventsClient } from './ioEventsClient';
 import type { WorkspaceS2SCredentialIds } from './types';
+import { getLogger } from '@/core/logging';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;
@@ -63,12 +64,12 @@ export interface TeardownDeps {
     getWorkspaceS2SCredential(
         orgId: string,
         projectId: string,
-        workspaceId: string,
+        workspaceId: string
     ): Promise<WorkspaceS2SCredentialIds | undefined>;
     createWorkspaceS2SCredentialFor(
         orgId: string,
         projectId: string,
-        workspaceId: string,
+        workspaceId: string
     ): Promise<WorkspaceS2SCredentialIds>;
     /** Subscribe the credential to the baseline I/O Management API. */
     subscribeManagementApi(orgId: string, idIntegration: string): Promise<void>;
@@ -276,14 +277,22 @@ export async function teardownConsoleProject(
     onProgress?: (progress: TeardownProgress) => void,
 ): Promise<ConsoleProjectTeardownResult> {
     const items: TeardownItem[] = [];
-    const report = (step: number, message: string): void =>
+    // Phase-channel reporting reaches only a LIVE listener; these debug lines
+    // are the durable record. Added after a headless hang was invisible in
+    // Debug Logs precisely because this function logged nothing (AI-5).
+    const debugLogger = getLogger();
+    const report = (step: number, message: string): void => {
+        debugLogger.debug(`[Teardown] step ${step}/${TOTAL_STEPS}: ${message}`);
         onProgress?.({ step, totalSteps: TOTAL_STEPS, message });
+    };
 
     report(1, 'Finding workspaces…');
     const prep = await prepareTeardown(deps, target, items);
     if (!prep) {
+        debugLogger.debug('[Teardown] preparation failed — aborting before any deletion');
         return buildResult(items, false);
     }
+    debugLogger.debug(`[Teardown] found ${prep.workspaces.length} workspace(s)`);
 
     report(2, 'Checking workspace credentials…');
     const ctx: TeardownContext = {
@@ -296,9 +305,14 @@ export async function teardownConsoleProject(
     };
 
     const firstCredential = ctx.credentials.values().next().value;
+    debugLogger.debug(
+        `[Teardown] ${ctx.credentials.size} workspace credential(s) found` +
+            `${firstCredential ? '' : ' — skipping event-entity sweep'}`,
+    );
     if (firstCredential) {
         report(3, 'Removing event registrations and providers…');
         if (!(await teardownEventEntities(ctx, prep.workspaces, firstCredential))) {
+            debugLogger.debug('[Teardown] event-entity sweep failed — aborting before delete');
             return buildResult(items, false);
         }
     } else {
@@ -311,5 +325,9 @@ export async function teardownConsoleProject(
         return buildResult(items, false);
     }
     report(4, 'Deleting Adobe project…');
-    return deleteProject(deps, target, items);
+    const result = await deleteProject(deps, target, items);
+    debugLogger.debug(
+        `[Teardown] done — projectDeleted=${result.projectDeleted}, ${result.items.length} item(s)`,
+    );
+    return result;
 }

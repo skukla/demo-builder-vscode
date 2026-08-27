@@ -34,6 +34,7 @@ import type {
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
+    ConsoleOpFailure,
     OrgServiceInfo,
     ServiceSubscriptionInfo,
     WorkspaceCredential,
@@ -239,7 +240,7 @@ export class AdobeEntityFetcher {
         title: string,
         description: string,
         target?: { orgId?: string },
-    ): Promise<AdobeProject | undefined> {
+    ): Promise<AdobeProject | ConsoleOpFailure> {
         return this.projectOps.createProject(title, description, target);
     }
 
@@ -262,7 +263,7 @@ export class AdobeEntityFetcher {
         title: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | undefined> {
+    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return this.projectOps.createWorkspace(title, description, target);
     }
 

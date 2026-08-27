@@ -72,7 +72,6 @@ async function currentProjectLine(): Promise<string> {
     }
 }
 
-
 /**
  * The authored phrase for a VS Code frame, or the bare tool name if a tool has
  * somehow shipped without one. The tool NAME is the honest fallback here: it is
@@ -145,11 +144,30 @@ export function createAgentConsentGate(
         const buttons: string[] = ['Allow'];
         if (copy?.sessionGrant) buttons.push('Allow for the rest of this session');
 
-        const choice = await vscode.window.showWarningMessage(
-            prompt?.title ?? `Demo Builder: ${toolName}?`,
-            { modal: true, detail: prompt?.detail || undefined },
-            ...buttons,
-        );
+        // Name the wait BEFORE opening the dialog. When nobody was watching the
+        // window, this await was a silent indefinite hang — the tool's args line
+        // was the last log anywhere, and the hang site took a live bisection to
+        // find (AI-5, 2026-08-27).
+        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window…`);
+        // The dialog cannot be closed programmatically, so an unanswered one
+        // resolves as a timeout refusal rather than blocking the agent forever.
+        // A click that comes after the timer fires grants nothing — the call
+        // already answered "not approved". `timedOut` separates that from a real
+        // Cancel/Escape, which also resolves `undefined`.
+        let timedOut = false;
+        const choice = await Promise.race([
+            vscode.window.showWarningMessage(
+                prompt?.title ?? `Demo Builder: ${toolName}?`,
+                { modal: true, detail: prompt?.detail || undefined },
+                ...buttons,
+            ),
+            new Promise<undefined>((resolve) =>
+                setTimeout(() => {
+                    timedOut = true;
+                    resolve(undefined);
+                }, TIMEOUTS.LONG),
+            ),
+        ]);
 
         if (choice === 'Allow for the rest of this session') {
             sessionGrants.add(toolName);
@@ -159,6 +177,19 @@ export function createAgentConsentGate(
         if (choice === 'Allow') {
             logger.info(`[MCP] user allowed agent operation: ${toolName}`);
             return { allowed: true };
+        }
+        if (timedOut) {
+            logger.warn(`[MCP] ${toolName} consent dialog unanswered — treating as not approved`);
+            return {
+                allowed: false,
+                refusal: asRawText(
+                    `Nobody answered the consent dialog for "${toolName}" in the VS Code window, ` +
+                        'so the operation was NOT run. The user may be away from that window — ' +
+                        'tell them a consent dialog may still be open there, and retry only when ' +
+                        'they are ready to answer it. (For unattended use they can turn the dialog ' +
+                        'off with the demoBuilder.ai.requireAgentConsent setting.)',
+                ),
+            };
         }
         logger.info(`[MCP] user declined agent operation: ${toolName}`);
         return {
@@ -184,7 +215,7 @@ export function createAgentOperationNotifier(
     logger: Logger,
 ): (
     toolName: string,
-    run: (report: (message: string) => void) => Promise<unknown>,
+    run: (report: (message: string) => void) => Promise<unknown>
 ) => Promise<unknown> {
     return (toolName, run) =>
         Promise.resolve(

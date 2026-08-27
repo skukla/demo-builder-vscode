@@ -35,6 +35,7 @@ import { registerCreateProjectTool } from '@/features/ai/server/createProjectToo
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
@@ -619,6 +620,9 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     ctxFactory,
                 );
                 registerDiscoveryTools(mcpServer);
+                // VS Code mirrors the output channels to files under logUri —
+                // that mirror is what read_debug_logs serves.
+                registerDiagnosticsTools(mcpServer, context.logUri.fsPath);
                 registerAuthTools(mcpServer, ctxFactory);
                 registerAdobeTools(mcpServer, ctxFactory);
                 registerCreateProjectTool(mcpServer, ctxFactory);

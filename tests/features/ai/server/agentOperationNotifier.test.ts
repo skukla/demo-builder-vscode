@@ -5,9 +5,7 @@
  * report may never reach the user.
  */
 
-const mockWithProgress = jest.fn(
-    async (_opts: unknown, task: () => Promise<unknown>) => task()
-);
+const mockWithProgress = jest.fn(async (_opts: unknown, task: () => Promise<unknown>) => task());
 const mockSetStatusBarMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockGetConfiguration = jest.fn();
@@ -33,6 +31,7 @@ import {
     createAgentConsentGate,
     createAgentOperationNotifier,
 } from '@/features/ai/server/agentOperationNotifier';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 const logger = {
@@ -80,14 +79,11 @@ describe('createAgentOperationNotifier', () => {
         // "Republish" alone never said republish WHAT — the single worst line
         // the 2026-08-25 narration audit found.
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining(
-                'Republishing the storefront configuration failed: CDN said no'
-            )
+            expect.stringContaining('Republishing the storefront configuration failed: CDN said no')
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
 });
-
 
 describe('createAgentConsentGate', () => {
     /** Point the mocked config at a fixed consent-setting value. */
@@ -141,7 +137,7 @@ describe('createAgentConsentGate', () => {
         const detail = String(
             (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
         );
-        expect(detail).toContain("Deletes the repository and its history on GitHub.");
+        expect(detail).toContain('Deletes the repository and its history on GitHub.');
         expect(detail).toContain("can't be undone");
         expect(detail).not.toContain('confirm:true');
         expect(detail).not.toContain('Permanently delete a GitHub repository');
@@ -184,7 +180,6 @@ describe('createAgentConsentGate', () => {
             'Demo Builder: some_unwritten_tool?'
         );
     });
-
 
     it('shows the target the reader can CHECK, and hides the id they cannot', async () => {
         // The headline fix. This dialog used to print every scalar the schema
@@ -241,6 +236,35 @@ describe('createAgentConsentGate', () => {
         expect(text).toContain('declined');
         expect(text).toContain('reset_eds_project');
         expect(text).toContain('demoBuilder.ai.requireAgentConsent');
+    });
+
+    it('times out an unanswered dialog into a "nobody answered" refusal — never hangs (AI-5)', async () => {
+        // The measured failure: a headless agent's confirm-gated call raised a
+        // modal nobody was watching and the await blocked for four minutes of
+        // probe timeout with no log line. The gate must answer on its own.
+        jest.useFakeTimers();
+        try {
+            settingIs(true);
+            mockShowWarningMessage.mockReturnValue(new Promise(() => undefined)); // never answered
+            const gate = createAgentConsentGate(logger);
+
+            const pending = gate('reset_eds_project', { projectName: 'demo', confirm: true });
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.LONG);
+            const verdict = await pending;
+
+            expect(verdict.allowed).toBe(false);
+            const text = (verdict as { refusal: { content: Array<{ text: string }> } }).refusal
+                .content[0].text;
+            expect(text).toContain('Nobody answered');
+            expect(text).toContain('NOT run');
+            expect(text).not.toContain('declined');
+            // The wait names itself in the log BEFORE the dialog opens.
+            expect(logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('awaiting the user consent dialog')
+            );
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     it('shows nothing but the target — not secrets, not flags, not structure', async () => {

@@ -78,7 +78,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'before the aiFileHashes collapse). Secret VALUES are stripped before shaping ' +
             '(stripSecretValues), so this number can only go down',
     },
-    get_component_config: { bytes: 40_000, why: 'returns a config file verbatim — the file IS the answer' },
+    get_component_config: {
+        bytes: 40_000,
+        why: 'returns a config file verbatim — the file IS the answer',
+    },
     update_project_config: { bytes: 2_000, why: 'write confirmation' },
     sync_storefront: { bytes: 2_000, why: 'git result summary' },
     list_blocks: {
@@ -109,6 +112,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     delete_github_repo: { bytes: 1_000, why: 'delete outcome or refusal' },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
 
+    // ── Diagnostics ─────────────────────────────────────────────────────────
+    read_debug_logs: {
+        bytes: 46_000,
+        why:
+            'channel-log tail; the tool enforces its own 45KB newest-first byte cap ' +
+            '(500-line × 500-char worst case would otherwise be ~250KB)',
+    },
+
     // ── Adobe console ───────────────────────────────────────────────────────
     list_orgs: { bytes: 4_000, why: 'org list is short; 44 live' },
     list_adobe_projects: {
@@ -136,7 +147,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
 
     get_project_status: {
         bytes: 2_000,
-        why: 'one project\'s status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size',
+        why: "one project's status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size",
     },
 
     get_commerce_endpoints: {
@@ -151,7 +162,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 3_000,
         why:
             'ONE component narrowed out of a 14,931-byte catalog whose env-var registry alone is 9,236. ' +
-            'Bounded by that component\'s own env-var count, not by catalog size — a breach means the ' +
+            "Bounded by that component's own env-var count, not by catalog size — a breach means the " +
             'narrowing broke and a category is riding through',
     },
     validate_component_selection: {
@@ -163,8 +174,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 4_000,
         why: 'the applied diff (env reported as KEYS, never values) plus the still-unset list — bounded by the field count, not by config size',
     },
-    create_adobe_project: { bytes: 1_000, why: 'created project id + name, or a refusal explaining the likely cause' },
-    create_adobe_workspace: { bytes: 1_000, why: 'created workspace id + name and the project it landed in' },
+    create_adobe_project: {
+        bytes: 1_000,
+        why: 'created project id + name, or a refusal explaining the likely cause',
+    },
+    create_adobe_workspace: {
+        bytes: 1_000,
+        why: 'created workspace id + name and the project it landed in',
+    },
     delete_adobe_project: {
         bytes: 4_000,
         why: 'a delete verdict; on failure the FAILED teardown steps ride along, bounded by the step count',
@@ -249,7 +266,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why:
             '14 live for {valid:true} — the dry run answers a question, it does not describe the ' +
             'request. 47 and 80 for the two argument refusals. The headroom is for a valid:false ' +
-            'whose `reason` is the service\'s own prose',
+            "whose `reason` is the service's own prose",
     },
     list_datapack_export_items: {
         bytes: 4_000,
@@ -281,7 +298,7 @@ export function expectWithinCeiling(tool: string, response: string): void {
     if (!ceiling) {
         throw new Error(
             `No response ceiling recorded for "${tool}". Add one to responseCeilings.ts — ` +
-                `a tool with no recorded size is one nobody is watching.`,
+                `a tool with no recorded size is one nobody is watching.`
         );
     }
     const bytes = Buffer.byteLength(response, 'utf8');
@@ -290,7 +307,7 @@ export function expectWithinCeiling(tool: string, response: string): void {
             `${tool} returned ${bytes.toLocaleString()} bytes, over its ${ceiling.bytes.toLocaleString()}-byte ceiling.\n` +
                 `  Recorded basis: ${ceiling.why}\n` +
                 `  Usually this means a list lost its page size, or a field meant for the dashboard ` +
-                `entered the payload. Fix the response, or raise the ceiling WITH a new measurement.`,
+                `entered the payload. Fix the response, or raise the ceiling WITH a new measurement.`
         );
     }
 }

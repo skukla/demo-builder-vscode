@@ -14,6 +14,28 @@ export type {
     Workspace as AdobeWorkspace,
 } from '@/types/webview';
 
+/**
+ * A Console mutation failure carrying the REAL reason — the SDK's own error
+ * text when there is one. Union-returned (never thrown) so every consumer is
+ * compiler-forced to discriminate. Collapsing all causes to `undefined` is
+ * what let the tool layer invent wrong explanations while the actual cause —
+ * a 19-char name limit — sat unread in the SDK's message (2026-08-27).
+ */
+export interface ConsoleOpFailure {
+    error: string;
+}
+
+/** Discriminates a {@link ConsoleOpFailure} from a created entity. */
+export function isConsoleOpFailure(value: unknown): value is ConsoleOpFailure {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'error' in value &&
+        typeof (value as { error: unknown }).error === 'string' &&
+        !('id' in value)
+    );
+}
+
 // Raw Adobe CLI response types (not in core/ui/types)
 export interface RawAdobeOrg {
     id: string;

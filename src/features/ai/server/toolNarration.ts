@@ -112,6 +112,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     list_projects: 'Listing your projects',
     list_stacks: 'Listing the available stacks',
     list_workspaces: 'Listing the Adobe workspaces',
+    read_debug_logs: 'Reading the extension debug logs',
     read_page: 'Reading the page',
     read_published_page: 'Reading the published page',
     // Session targeting — these change nothing that outlives the session.

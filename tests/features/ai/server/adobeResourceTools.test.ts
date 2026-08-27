@@ -39,11 +39,12 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
             authManager: opts.noManager
                 ? undefined
                 : { isAuthenticated, createProject, createWorkspace },
+            logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
         }) as unknown as HandlerContext;
 
     registerAdobeResourceTools(
         { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-        ctxFactory,
+        ctxFactory
     );
     return async (name: string, args: unknown = {}) =>
         JSON.parse((await tools.get(name)!(args)).content[0].text);
@@ -85,19 +86,24 @@ describe('create_adobe_project', () => {
     });
 
     it('hands off when there is no auth manager at all', async () => {
-        expect(await serve({ noManager: true })('create_adobe_project', { name: 'x' })).toMatchObject(
-            { needsAuth: 'adobe' },
-        );
+        expect(
+            await serve({ noManager: true })('create_adobe_project', { name: 'x' })
+        ).toMatchObject({ needsAuth: 'adobe' });
     });
 
     // The service collapses quota, naming and permission failures into
     // `undefined`, so the tool says what it cannot distinguish.
-    it('explains the likely causes when Console rejects it', async () => {
-        createProject.mockResolvedValue(undefined);
+    it('surfaces the service failure REASON verbatim when Console rejects it', async () => {
+        // The service carries the SDK's own message now (ConsoleOpFailure) —
+        // the old guessing-list here named three causes and the measured live
+        // failure (a 19-char name limit) was none of them.
+        createProject.mockResolvedValue({
+            error: '400 - Bad Request ("Project name length must be less than 20")',
+        });
         const out = await serve()('create_adobe_project', { name: 'dupe' });
 
         expect(out.created).toBe(false);
-        expect(out.error).toMatch(/quota|already used|Developer role/);
+        expect(out.error).toContain('less than 20');
     });
 
     it('returns the created project', async () => {
