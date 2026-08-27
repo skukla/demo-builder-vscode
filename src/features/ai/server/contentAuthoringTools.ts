@@ -255,6 +255,33 @@ async function resolveTarget(
     return { ok: true, target, ctx };
 }
 
+/**
+ * The path-taking tools' shared opener: parse + validate the `path` argument,
+ * then resolve the storefront target with {@link resolveTarget}. One home for
+ * what was the same four-line prologue in read_page / write_page /
+ * publish_page / read_published_page (2026-08-27 dedup sweep, PL-8 item 2).
+ * delete_page deliberately does NOT use it: its confirm gate sits between the
+ * parse and the resolve, and moving the resolve ahead of the gate would change
+ * which refusal an unconfirmed call sees.
+ */
+async function openPathCall(
+    ctxFactory: () => HandlerContext,
+    args: unknown,
+    opts: { needsGitHub?: boolean; needsDaLive?: boolean } = {},
+): Promise<
+    | { ok: true; webPath: string; target: StorefrontTarget; ctx: HandlerContext }
+    | { ok: false; body: unknown }
+> {
+    const raw = String((args as { path?: unknown } | undefined)?.path ?? '').trim();
+    if (!raw) return { ok: false, body: { error: 'path is required' } };
+    const webPath = toWebPath(raw);
+    if (!webPath) return { ok: false, body: INVALID_PATH };
+    const r = await resolveTarget(ctxFactory, opts);
+    if (!r.ok) return { ok: false, body: r.body };
+    return { ok: true, webPath, target: r.target, ctx: r.ctx };
+}
+
+
 /** DA.live content operations bound to the DA.live (not Adobe) token. */
 function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
     return new DaLiveContentOperations(
@@ -308,12 +335,9 @@ export function registerContentAuthoringTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const raw = String(args?.path ?? '').trim();
-            if (!raw) return asText({ error: 'path is required' });
-            const webPath = toWebPath(raw);
-            if (!webPath) return asText(INVALID_PATH);
-            const r = await resolveTarget(ctxFactory);
+            const r = await openPathCall(ctxFactory, args);
             if (!r.ok) return asText(r.body);
+            const { webPath } = r;
 
             const sourcePath = toSourcePath(webPath);
             try {
@@ -427,12 +451,9 @@ export function registerContentAuthoringTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const raw = String(args?.path ?? '').trim();
-            if (!raw) return asText({ error: 'path is required' });
-            const webPath = toWebPath(raw);
-            if (!webPath) return asText(INVALID_PATH);
-            const r = await resolveTarget(ctxFactory, { needsGitHub: true });
+            const r = await openPathCall(ctxFactory, args, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
+            const { webPath } = r;
 
             try {
                 await runWithAdobeTarget(() =>
@@ -612,14 +633,9 @@ export function registerContentAuthoringTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const raw = String(args?.path ?? '').trim();
-            if (!raw) return asText({ error: 'path is required' });
-            const webPath = toWebPath(raw);
-            if (!webPath) return asText(INVALID_PATH);
-            // Same guards as its siblings, minus the DA.live session: this reads
-            // public CDN content.
-            const r = await resolveTarget(ctxFactory, { needsDaLive: false });
+            const r = await openPathCall(ctxFactory, args, { needsDaLive: false });
             if (!r.ok) return asText(r.body);
+            const { webPath } = r;
 
             const base = aemLiveBaseUrl(r.target.repoOwner, r.target.repoName);
             const url = buildSourceUrl(base, webPath, true);
