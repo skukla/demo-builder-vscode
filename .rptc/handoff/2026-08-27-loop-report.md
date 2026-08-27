@@ -117,13 +117,25 @@ that deleting transcripts resets chat resume. No cleanup button, by the item's
 own rule. Eight tests against a real temp tree, including one that pins "the
 output never offers deletion". Item marked shipped.
 
-### Maintenance triage (your default fallback lane)
+### Directory-regroup item closed (`a4f54c911`)
+
+Its one open thread — re-measure `authentication/services` after the facade
+split — came back 31 files with working name families, under the item's own
+38-file leave bar. Verdict: leave; item shipped.
+
+### Maintenance triage (your default fallback lane) — now exhausted
 
 - **The two-EDS-cards duplication** (low): its own write-up says to fix it
   the next time someone edits those files, not cold. Left as filed.
 - **Bodea's identical shared catalogs** (med): all its unattended work was
   already done on 2026-08-23 (re-measure + differentiation proposal). What
   remains is a data-ownership decision — see the queue.
+- **God-file candidates** (low): adjudicated 2026-08-24 — every candidate
+  deliberately left alone; the item says the next input is the structural
+  baseline, not another size pass. Respected.
+- Everything else open is blocked on a dependency, gated on you, or an epic
+  needing your direction. **The loop is standing down with nothing
+  unattended left to do.**
 
 ## Walkthrough queue — one decision each
 
