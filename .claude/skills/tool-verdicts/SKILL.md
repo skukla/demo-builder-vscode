@@ -61,6 +61,34 @@ in `unprompted-baseline.json`, a list that may only shrink.
 **Shrinking that baseline is the work.** Every prompt written moves a tool from
 UNJUDGED into a verdict that can be acted on.
 
+## The deletion bar — set by the first deletion, 2026-08-27
+
+`get_block_source` was the first tool removed on this table's evidence, and how
+it went sets the bar for the 61 still unjudged. Three parts, ALL required:
+
+1. **Zero corpus calls** — nobody has ever reached for it in real work.
+2. **A failed audition** — a battery prompt whose natural route it should have
+   been, and the agent went another way with a GOOD answer. Absence alone was
+   never enough; an audition it lost is different evidence.
+3. **No differentiator over the winning route** — verified by READING THE
+   TOOL'S SOURCE, never by the score alone.
+
+**Part 3 is the one that saved a tool the same day.** `get_component_config`
+lost its audition identically (Glob+Read answered well), and the score read as
+the same DELETE? evidence — but its source showed it was SUPPOSED to be the
+safe door (secrets masked out of the transcript) and simply wasn't doing it.
+The verdict was FIX, not delete, and the fix gave it the differentiator that
+makes future auditions fair. A native-competition loss is a lead about the
+tool's VALUE, and only the source says whether that value is absent or merely
+unimplemented.
+
+Two KEEPs from the same review, for the record of what a differentiator looks
+like: `list_github_repos` (runs on the extension's VS Code session — the
+fallback when `gh` is absent or unauthed) and `check_repo_readiness` (composite
+classification shared with three production UI call sites; the agent's `gh`
+route rebuilt it ad hoc, which is the parallel-implementation drift the spine
+rules exist to prevent — the tool IS the chokepoint).
+
 ## Related
 
 - `agent-gap-scan` — the demand half, and where jobs done WITHOUT us show up.
