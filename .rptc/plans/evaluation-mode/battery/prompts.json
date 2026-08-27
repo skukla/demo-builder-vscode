@@ -106,5 +106,21 @@
       "dropins"
     ],
     "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut \u2014 which is what `cross-no-products` could never establish."
+  },
+  {
+    "id": "orientation",
+    "prompt": "Which project am I working on right now, and is the demo running?",
+    "expect": [
+      "get_current_project"
+    ],
+    "why": "Pins the 2026-08-27 payload merge. Before it, get_current_project answered a name and a path, so this question COST TWO CALLS (plus get_project_status) and the corpus showed 83% of its calls chaining into a second read. One call in the route is the fix working; a second orientation read is the regression."
+  },
+  {
+    "id": "active-project",
+    "prompt": "List my Demo Builder projects and tell me which one is active.",
+    "expect": [
+      "list_projects"
+    ],
+    "why": "Pins the current:true marker. Before 2026-08-27 the listing could not answer the second half, so the corpus showed list_projects chaining into get_current_project half the time. list_projects alone answering both halves is the fix working."
   }
 ]

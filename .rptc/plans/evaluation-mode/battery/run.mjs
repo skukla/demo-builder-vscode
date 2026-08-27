@@ -123,8 +123,13 @@ const LIVE = process.argv.includes('--live');
 const only = process.argv[process.argv.indexOf('--only') + 1];
 if (process.argv.includes('--only')) {
     if (!only || only.startsWith('--')) { console.error('--only needs a prompt id'); process.exit(2); }
-    PROMPTS = PROMPTS.filter((p) => p.id === only);
-    if (!PROMPTS.length) { console.error(`no prompt with id "${only}"`); process.exit(2); }
+    // Comma-separated ids. The first overnight-loop cycle called
+    // `--only orientation,active-project` and the run exited having measured
+    // nothing — a rig that rejects the obvious call shape wastes a full cycle.
+    const wanted = new Set(only.split(','));
+    PROMPTS = PROMPTS.filter((p) => wanted.has(p.id));
+    const missing = [...wanted].filter((id) => !PROMPTS.some((p) => p.id === id));
+    if (missing.length) { console.error(`no prompt with id "${missing.join('", "')}"`); process.exit(2); }
 }
 const repeat = process.argv.includes('--repeat')
     ? Number(process.argv[process.argv.indexOf('--repeat') + 1]) : 1;
