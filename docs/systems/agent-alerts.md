@@ -146,7 +146,10 @@ must pass BOTH:
 Reading all sixteen consequences on 2026-08-25 left exactly **two**: `republish`
 and `sync_content`. Both fire repeatedly inside one flow and both are undone by
 running them again. `evaluate_prompt` was refused despite changing nothing — it
-SPENDS, and money does not come back.
+SPENDS, and money does not come back. (That tool left with the
+prompt-evaluation surface on 2026-08-26, AI-3b. The reasoning is kept because
+the rule it produced still governs the entries that remain: a grant is for
+harmless and frequent, never for expensive.)
 
 If a future entry makes it three, be suspicious. A grant removes friction from
 something harmless and frequent; it is not a way to reduce prompts in general.

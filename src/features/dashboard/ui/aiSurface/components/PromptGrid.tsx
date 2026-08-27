@@ -34,8 +34,6 @@ export interface PromptGridProps {
     onNew: () => void;
     /** Kebab action — copy the prompt body to clipboard. Optional. */
     onCopy?: (promptBody: string) => void;
-    /** Kebab action — open the Prompt Workbench on this prompt, by id. Optional. */
-    onOpenInWorkbench?: (id: string) => void;
 }
 
 const STYLE_NEW_TILE = {
@@ -80,7 +78,6 @@ export function PromptGrid({
     onPinToggle,
     onNew,
     onCopy,
-    onOpenInWorkbench,
 }: PromptGridProps): React.ReactElement {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -113,13 +110,6 @@ export function PromptGrid({
         (id: string) => (nextPinned: boolean) => onPinToggle(id, nextPinned),
         [onPinToggle],
     );
-    // Undefined when the surface has no workbench to open, so the card omits
-    // the row rather than offering one that does nothing.
-    const handleOpenInWorkbench = useCallback(
-        (id: string) => (onOpenInWorkbench ? () => onOpenInWorkbench(id) : undefined),
-        [onOpenInWorkbench],
-    );
-
     return (
         <View>
             <View marginBottom="size-200">
@@ -147,7 +137,6 @@ export function PromptGrid({
                         onDelete={handleDelete(prompt.id)}
                         onPinToggle={handlePinToggle(prompt.id)}
                         onCopy={onCopy}
-                        onOpenInWorkbench={handleOpenInWorkbench(prompt.id)}
                     />
                 ))}
                 <button

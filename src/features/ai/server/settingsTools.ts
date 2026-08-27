@@ -68,10 +68,6 @@ export const SETTING_KEYS = [
     // deploy was "simulated" needs to be able to confirm WHY. Writing is the
     // same hands-back handoff, so an agent cannot lift its own dry run.
     'demoBuilder.ai.dryRun',
-    // Read-visible so an agent can explain why the Prompt Workbench and the
-    // other evaluation commands are absent from the palette. Off by default:
-    // these instruments measure the extension, they do not build a demo.
-    'demoBuilder.ai.enableEvaluationTools',
     'demoBuilder.daLive.aemAuthorUrl',
     'demoBuilder.daLive.IMSOrgId',
     'demoBuilder.daLive.authoringExperience',

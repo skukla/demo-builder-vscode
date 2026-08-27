@@ -146,21 +146,6 @@
         "command": "demoBuilder.toggleAgentDryRun",
         "title": "Toggle Agent Dry Run",
         "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.evaluatePrompt",
-        "title": "Simulate a Prompt (Quick)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.showEvaluationWorkbench",
-        "title": "Prompt Workbench",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.showAgentTrace",
-        "title": "Show What The Agent Just Did",
-        "category": "Demo Builder"
       }
     ],
     "configuration": [
@@ -412,11 +397,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it \u2014 atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
-          },
-          "demoBuilder.ai.enableEvaluationTools": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "Show the prompt-evaluation tools in the Command Palette and the sidebar: **Prompt Workbench**, **Simulate a Prompt (Quick)**, **Show What The Agent Just Did**, and **Toggle Agent Dry Run**.\n\nOff by default. These measure how an AI agent uses Demo Builder's tools \u2014 useful when developing the extension, noise when building a demo. Turning this off hides the commands; it does not uninstall anything, and the MCP tools behind them stay available to an agent that asks for them by name."
           }
         }
       },
@@ -453,22 +433,6 @@
           "id": "demoBuilder.sidebar",
           "name": "Demo Builder",
           "type": "webview"
-        }
-      ]
-    },
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "demoBuilder.evaluatePrompt",
-          "when": "demoBuilder.evaluationToolsEnabled"
-        },
-        {
-          "command": "demoBuilder.showEvaluationWorkbench",
-          "when": "demoBuilder.evaluationToolsEnabled"
-        },
-        {
-          "command": "demoBuilder.showAgentTrace",
-          "when": "demoBuilder.evaluationToolsEnabled"
         }
       ]
     }

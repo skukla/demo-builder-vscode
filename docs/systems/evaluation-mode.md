@@ -1,5 +1,21 @@
 # Evaluation Mode
 
+> **MOVED 2026-08-26.** The Prompt Workbench, the trace view, the
+> `evaluate_prompt` tool and the `evaluatePrompt` / `showEvaluationWorkbench` /
+> `showAgentTrace` commands are no longer on `develop` — they live on
+> `feature/prompt-workbench`, pending a decision on whether to keep them
+> (backlog `AI-3b`). Nobody had opened the panel, and unfinished work should not
+> sit in the mainline.
+>
+> **What stayed, and never depended on any of it:** the agent **dry run**
+> (`demoBuilder.ai.dryRun`, `Toggle Agent Dry Run`), enforced in
+> `inExtensionMcpServer` before any non-read tool runs; and the **consent
+> dialog** (`demoBuilder.ai.requireAgentConsent`). Both are standing protections
+> for anyone driving this extension with an agent.
+>
+> This document is kept as the record of what the surface was and why it was
+> built that way. Read it as history until that decision is made.
+
 Simulate a prompt, see what it *would* do and what it would cost, refine it,
 and only then run it for real.
 

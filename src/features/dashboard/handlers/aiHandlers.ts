@@ -163,33 +163,6 @@ export async function handleOpenInClaude(
 }
 
 /**
- * Handle open-prompt-in-workbench — open the Prompt Workbench on a saved prompt.
- *
- * The Prompt Library's second door for a card. Launch hands the prompt to the
- * TERMINAL to run for real; this hands it to the WORKBENCH to be simulated. Two
- * destinations, deliberately different words, and the library itself stays a
- * launcher — it picks, and gets out of the way.
- *
- * Passes the ID, never the text. The command resolves the prompt from the
- * extension's own stores, so a webview cannot put words into the workbench that
- * are not in the library.
- */
-export async function handleOpenPromptInWorkbench(
-    _context: HandlerContext,
-    payload?: { promptId?: string },
-): Promise<HandlerResponse> {
-    const promptId = String(payload?.promptId ?? '').trim();
-    if (!promptId) {
-        return { success: false, error: 'No saved prompt was named.' };
-    }
-    await vscode.commands.executeCommand('demoBuilder.showEvaluationWorkbench', {
-        mode: 'prompt',
-        promptId,
-    });
-    return { success: true };
-}
-
-/**
  * Handle regenerate-ai-files — re-generate AI context files for the project.
  *
  * For EDS projects this also runs the storefront install pipeline before
@@ -328,7 +301,6 @@ export const aiHandlers = defineHandlers({
     'verify-ai-setup': handleVerifyAiSetup,
     'regenerate-ai-files': handleRegenerateAiFiles,
     openInClaude: handleOpenInClaude,
-    'open-prompt-in-workbench': handleOpenPromptInWorkbench,
     'save-ai-prompt': handleSaveAiPrompt,
     'delete-ai-prompt': handleDeleteAiPrompt,
     'list-ai-prompts': handleListAiPrompts,

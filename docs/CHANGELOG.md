@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **The prompt-evaluation surface moved to `feature/prompt-workbench`.** The
+  Prompt Workbench, the agent trace view, the `evaluate_prompt` MCP tool and the
+  `Simulate a Prompt (Quick)` / `Prompt Workbench` / `Show What The Agent Just
+  Did` commands are off `develop` pending a decision on whether to keep them
+  (backlog `AI-3b`). 33 files and ~6,400 lines; nobody had opened the panel since
+  it shipped, and unfinished work should not sit in the mainline switched off.
+  Also removes ten types it left orphaned, the `evaluationHistory` field on
+  project state (nothing wrote it), and the short-lived
+  `demoBuilder.ai.enableEvaluationTools` setting, which existed only to hide the
+  commands and has nothing left to hide.
+- **What stayed, because it never depended on any of it:** the agent **dry run**
+  — an agent may read your projects while every write is simulated, enforced
+  before any non-read tool runs — and the **consent dialog** for destructive
+  operations. Both are standing protections. The tool-trace recorder also stays
+  wired: nothing reads it today, and it is what `AI-2` needs.
+
 ### Fixed
 
 - **The six storefront skills have never installed, silently

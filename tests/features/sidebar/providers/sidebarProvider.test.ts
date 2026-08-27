@@ -271,16 +271,6 @@ describe('SidebarProvider', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
-        it('routes showPromptWorkbench to demoBuilder.showEvaluationWorkbench', async () => {
-            // The Prompt Workbench's ONLY door in the UI: the extension
-            // contributes no menus for its commands, so without this route it
-            // is reachable only by typing the command name into the palette.
-            await messageHandler({ type: 'showPromptWorkbench' });
-
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.showEvaluationWorkbench',
-            );
-        });
 
         it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
             await messageHandler({ type: 'showPrompts' });
@@ -399,38 +389,12 @@ describe('SidebarProvider', () => {
 
             await provider.updateContext(context);
 
-            // The suite's blanket mock answers `true` to every setting, so
-            // asserting either value here would pin the mock, not the gate.
-            // Drive the setting instead — the sidebar hides its Workbench tile
-            // on this flag, so which value rides along is the whole point.
             expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
                 type: 'contextUpdate',
-                data: { context, evaluationToolsEnabled: true },
+                data: { context },
             });
         });
 
-        it('sends evaluationToolsEnabled false when the setting is off', async () => {
-            const getConfig = vscode.workspace.getConfiguration as jest.Mock;
-            // mockReturnValue PERSISTS across tests in this file — leaving it
-            // set turned auto-update off for the throttle suite below and failed
-            // three unrelated tests. Restore it in a finally.
-            const restore = getConfig.getMockImplementation();
-            getConfig.mockReturnValue({ get: jest.fn().mockReturnValue(false) });
-            try {
-                const context = { type: 'projectsList' } as const;
-
-                await provider.updateContext(context);
-
-                expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
-                    type: 'contextUpdate',
-                    data: { context, evaluationToolsEnabled: false },
-                });
-            } finally {
-                getConfig.mockReset();
-                if (restore) getConfig.mockImplementation(restore);
-                else getConfig.mockReturnValue({ get: jest.fn().mockReturnValue(true) });
-            }
-        });
     });
 
     // ------------------------------------------------------------------------

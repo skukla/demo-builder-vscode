@@ -40,57 +40,6 @@ export interface AiPrompt {
 /**
  * Project - Core project definition
  */
-/**
- * One completed evaluation, as it is remembered.
- *
- * Runs are grouped by {@link EvaluationRun.threadId} — the piece of work — and
- * each run stores the prompt text VERBATIM as it was run. Verbatim matters twice
- * over: it is what makes "go back to the cheapest version" possible, and it is
- * the failure `.rptc/plans/evaluation-mode/battery/` exists to prevent, where
- * six prompts were lost and every result measured against them became
- * uncomparable.
- */
-export interface EvaluationRun {
-    /**
-     * The piece of WORK this run belongs to — "getting this prompt right".
-     *
-     * The unit that matters, and the reason this field exists. History used to
-     * key on the prompt TEXT, so improving a prompt made it a different prompt
-     * with no past: "down from $0.24" appeared only when re-running something
-     * unchanged, the one case where nothing improved. The headline feature did
-     * not fire during the loop it was built for.
-     *
-     * A thread is DECLARED, never inferred. No fuzzy matching — a producer must
-     * be able to say why two runs are in the same thread, and "the model thought
-     * they were alike" fails that.
-     */
-    threadId: string;
-    /**
-     * The saved prompt this thread belongs to, when there is one.
-     *
-     * Set when a thread is started from the library, and it does two jobs:
-     * coming back to a saved prompt resumes its history, and an anchored thread
-     * survives eviction longer than an abandoned experiment.
-     *
-     * A pinned prompt appears in every project while history is per project, so
-     * one saved prompt can anchor several threads — one per project. That is
-     * correct: the same prompt costs different amounts against different
-     * projects.
-     */
-    promptId?: string;
-    /** The prompt as it was run — this version, not the thread's latest. */
-    prompt: string;
-    /** Real dollars, from the run's own output. */
-    costUSD: number;
-    /** Demo Builder tool calls the run made. */
-    steps: number;
-    /** How many of those asked something already asked. */
-    wastedSteps: number;
-    /** Wall clock, milliseconds. */
-    durationMs: number;
-    /** When it ran (ISO 8601), so a trend reads in order. */
-    at: string;
-}
 
 export interface Project {
     /**
@@ -261,20 +210,6 @@ export interface Project {
     componentApiPicks?: Record<string, string[]>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
-    /**
-     * Past evaluations, so "is this prompt getting better" survives a reload.
-     *
-     * Project-scoped and stored here rather than in `globalState`, matching the
-     * rule `aiPrompts` already set: project-specific in the manifest, global in
-     * extension state. An evaluation is always against one project.
-     *
-     * Deliberately NOT the trace — that is the diagnostic you read once, and
-     * keeping it would recreate the unbounded-log concern the in-memory recorder
-     * was capped to avoid. Five numbers per run and nothing else.
-     *
-     * Capped and rotated; see `evaluationHistory.ts`.
-     */
-    evaluationHistory?: EvaluationRun[];
     /**
      * Version of the AI context bundle last generated into this project (stamped
      * from the `AI_CONTEXT_VERSION` constant on generate). Since v8 a stale (or

@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: backlog
+status: shipped
 ---
 
 # Take the Prompt Workbench off develop and onto its own branch
@@ -67,3 +67,7 @@ toggle after it was wrongly hidden with the evaluation commands.
   it shipped; removing it without ever looking is as uninformed as keeping it.
 
 Filed 2026-08-26.
+
+## Shipped so far
+
+- 2026-08-27  REMOVED from develop. The split turned out clean: the trace viewer has zero references to any workbench module, so the whole .rptc-style folder left together — 33 files, ~6,400 lines, plus 10 orphaned types, the evaluationHistory field nothing wrote, and the enableEvaluationTools setting that had nothing left to hide. Kept: dry run + consent (never depended on it) and the ToolTraceRecorder (nothing reads it; it is what AI-2 needs). Everything is on feature/prompt-workbench. Gate green: 1150 suites, 14989 tests.

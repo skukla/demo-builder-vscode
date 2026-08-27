@@ -287,33 +287,18 @@ describe('PromptCard', () => {
             onPinToggle: jest.fn(),
         };
 
-        it('offers BOTH destinations, and they are different places', () => {
-            // Clicking the card runs the prompt FOR REAL in the terminal;
-            // "Open in workbench" only simulates it. The whole point of the
-            // second route is that it is not the first, so a card that offered
-            // one of them would leave the workbench with no door from here.
+        it('launches, and offers no second destination', () => {
+            // Clicking the card runs the prompt FOR REAL in the terminal. A
+            // second kebab row sent it to the Prompt Workbench to be simulated
+            // instead; that surface moved to feature/prompt-workbench on
+            // 2026-08-26 (AI-3b) and the row went with it. Kept as a negative so
+            // it comes back deliberately or not at all.
             const onLaunch = jest.fn();
-            const onOpenInWorkbench = jest.fn();
-            renderCard({
-                prompt: USER_PROMPT,
-                ...ALL_HANDLERS,
-                onLaunch,
-                onOpenInWorkbench,
-            });
-
-            screen.getByLabelText(/more actions/i).click();
-            screen.getByText('Open in workbench').click();
-            expect(onOpenInWorkbench).toHaveBeenCalledTimes(1);
-            expect(onLaunch).not.toHaveBeenCalled();
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onLaunch });
 
             screen.getByTestId('ai-prompt-card').click();
             expect(onLaunch).toHaveBeenCalledTimes(1);
-            expect(onOpenInWorkbench).toHaveBeenCalledTimes(1);
-        });
 
-        it('omits the row when there is no workbench to open', () => {
-            // A menu row that does nothing is worse than a missing one.
-            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
             screen.getByLabelText(/more actions/i).click();
             expect(screen.queryByText('Open in workbench')).not.toBeInTheDocument();
         });

@@ -199,9 +199,6 @@ export const TOOL_NARRATION: Record<string, string> = {
     open_view: 'Opening the Demo Builder view',
     reload_window: 'Restarting the editor window',
 
-    // ── Evaluation ──────────────────────────────────────────────────────
-    evaluate_prompt: 'Simulating a prompt to see what it would do',
-
     // ── AI bundle ───────────────────────────────────────────────────────
     regenerate_ai_files: 'Regenerating the AI files',
     save_ai_prompt: 'Saving the prompt',

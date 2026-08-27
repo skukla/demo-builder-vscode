@@ -112,22 +112,6 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['name'],
         sessionGrant: false,
     },
-    // The one entry here that is not destructive. It earns a dialog because it
-    // SPENDS: a real paid run, 30 seconds to two minutes, started on the agent's
-    // say-so. The consequence line leads with the cost for exactly that reason.
-    evaluate_prompt: {
-        action: 'Try this prompt out',
-        consequence:
-            'Runs the prompt for real to see what it would do, which takes up to two minutes ' +
-            'and costs money. Nothing in your project is changed.',
-        // The prompt itself is the thing being approved, and it is the only
-        // argument a person can meaningfully check.
-        target: ['prompt'],
-        // Reversible - it changes nothing - but it SPENDS, and money does not
-        // come back. A standing grant would let an agent bill repeatedly on one
-        // approval.
-        sessionGrant: false,
-    },
     delete_github_repo: {
         action: 'Delete a GitHub repository',
         consequence: "Deletes the repository and its history on GitHub. This can't be undone.",

@@ -95,9 +95,6 @@ Labeled sidebar zone with THREE tiles: Chat ⌄ (a menu), Prompts, Workbench.
   resuming via `claude --continue`).
 - `onShowPrompts: () => void` — the Prompts tile. Routes to
   `demoBuilder.showPromptsPicker` (shows the prompt QuickPick).
-- `onShowWorkbench?: () => void` — OPTIONAL. Routes to
-  `demoBuilder.showEvaluationWorkbench`. Supplying it is what RENDERS the third
-  tile; without it the tile is absent, so callers predating it are unaffected.
 - `onNewAiChat?: () => void` — OPTIONAL "New chat". Routes to
   `demoBuilder.newAiChat`, which starts a FRESH conversation. Supplying it is
   what turns the Chat tile into a menu; without it the tile stays a plain
@@ -122,22 +119,18 @@ projects toolbar's `New ⌄` button (`ProjectsDashboard.tsx`). A third flat tile
 read as a third feature and pushed the six-tile stack past the panel at editor
 zoom.
 
-**Why the Prompt Workbench IS a tile (2026-08-25), after two attempts said
-otherwise.** An early flat tile was withdrawn for pushing the stack past the
-viewport at zoom. Step 10 then folded it into a `Prompts ⌄` menu, reading the
-arithmetic as "a seventh tile needs 596px against a 600px breakpoint — four
-pixels, too thin".
+**The Prompt Workbench WAS a third tile, and is not any more.** It moved to
+`feature/prompt-workbench` on 2026-08-26 (AI-3b) with the rest of the
+prompt-evaluation surface, so AiZone is back to two tiles: Chat and Prompts.
 
-**Both readings missed that the stack was CENTRED.** Centring splits the leftover
-space between top and bottom, so half of it sat above the "AI" label doing
-nothing while the stack was treated as out of room. The owner made the call:
-top-align, and the slack gathers below the last tile — which is exactly where a
-new tile extends into. The breakpoint was recomputed to 640px at the same time,
-giving the roomy layout 40px of real slack rather than four.
-
-The other half of the original objection — that a third tile "reads as a third
-feature" — was overruled deliberately: the workbench IS a third thing you do with
-an agent, beside chatting and picking a prompt.
+The argument it settled still stands and is why the breakpoint is 640px, not
+600px. Two earlier readings called a third tile impossible on the arithmetic —
+"a seventh tile needs 596px against a 600px breakpoint, four pixels, too thin".
+**Both missed that the stack was CENTRED**, so half the leftover space sat above
+the "AI" label doing nothing while the stack was treated as out of room. The
+owner made the call: top-align, and the slack gathers below the last tile, which
+is exactly where a new tile extends into. Keep that layout — the next tile,
+whatever it is, depends on it.
 
 **Why New chat exists at all.** Every launch otherwise resumes, and a resumed
 conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance

@@ -63,16 +63,6 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'successful reload as a crash. Ceiling rather than an exemption because the ' +
             'size is known, and rather than an IOU because there is nothing left to measure.',
     },
-    evaluate_prompt: {
-        bytes: 2_000,
-        why:
-            'a SUMMARY, deliberately — the run\'s cost and turn count plus deduplicated tool ' +
-            'NAMES for the repeated and blocked steps. The full trace can hold hundreds of ' +
-            'entries and goes to the workbench, which reads the recorder in-process. The first ' +
-            'version returned every entry, which is shape (1) from the header: a list with no ' +
-            'page size. Bounded by the tool SURFACE (103 names) rather than by run length, so ' +
-            'a longer run does not make it bigger',
-    },
     // ── file-based tools (mcp-server.ts) ────────────────────────────────────
     list_projects: {
         bytes: 8_000,

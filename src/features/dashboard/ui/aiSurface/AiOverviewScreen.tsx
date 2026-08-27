@@ -8,11 +8,11 @@
  * purely about prompts and never calls verify-ai-setup.
  *
  * IT IS A LAUNCHER, AND IT STAYS ONE. Clicking a card sends the prompt to the
- * terminal to run for real; "Open in workbench" in the kebab sends it to the
- * Prompt Workbench to be simulated. Both LEAVE — the library never grows a
- * transcript or a composer of its own, because one screen with two destinations
- * is worse than two screens with one each. Each surface does one thing: the
- * library PICKS, the terminal RUNS, the workbench MEASURES.
+ * terminal to run for real, and it LEAVES — the library never grows a
+ * transcript or a composer of its own. A second destination (the Prompt
+ * Workbench, which simulated rather than ran) moved to
+ * `feature/prompt-workbench` on 2026-08-26; see AI-3b. The rule it was built on
+ * still holds: each surface does one thing.
  */
 
 import { Button, DialogContainer, Flex } from '@adobe/react-spectrum';
@@ -168,13 +168,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
         webviewClient.postMessage('copyAiPrompt', { prompt: promptBody });
     }, []);
 
-    // The ID, not the text. The command resolves the prompt from the extension's
-    // own stores, so this webview cannot put words into the workbench that are
-    // not in the library.
-    const handleOpenInWorkbench = useCallback((id: string) => {
-        webviewClient.postMessage('open-prompt-in-workbench', { promptId: id });
-    }, []);
-
     return (
         <>
             <PageLayout
@@ -207,7 +200,6 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
                             onPinToggle={handlePinTogglePrompt}
                             onNew={handleNewPrompt}
                             onCopy={handleCopyPrompt}
-                            onOpenInWorkbench={handleOpenInWorkbench}
                         />
                     </Flex>
                 </div>

@@ -26,7 +26,6 @@
     "deploy_mesh",
     "discover_store_structure",
     "edit_project",
-    "evaluate_prompt",
     "export_project_settings",
     "find_datapacks",
     "find_storefront_name_mismatches",

@@ -131,7 +131,6 @@ describe('Sidebar', () => {
                     onOpenAiChat={jest.fn()}
                     onShowPrompts={jest.fn()}
                     onNewAiChat={jest.fn()}
-                    onShowWorkbench={jest.fn()}
                 />
             );
 
@@ -140,38 +139,15 @@ describe('Sidebar', () => {
                 .filter((b) =>
                     /^(chat|prompts|workbench)$/i.test(b.getAttribute('aria-label') ?? '')
                 );
-            expect(aiTiles).toHaveLength(3);
+            // Two tiles since the Workbench moved to feature/prompt-workbench
+            // on 2026-08-26 (AI-3b): Chat and Prompts.
+            expect(aiTiles).toHaveLength(2);
         });
 
-        it('gives the Prompt Workbench its own tile — the feature had no door at all', () => {
-            // The extension contributes no menus for
-            // `demoBuilder.showEvaluationWorkbench`, so before this the panel was
-            // reachable only by typing the command's name into the palette.
-            const onShowPrompts = jest.fn();
-            const onShowWorkbench = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onOpenAiChat={jest.fn()}
-                    onShowPrompts={onShowPrompts}
-                    onShowWorkbench={onShowWorkbench}
-                />
-            );
-
-            fireEvent.click(screen.getByRole('button', { name: /^workbench$/i }));
-            expect(onShowWorkbench).toHaveBeenCalledTimes(1);
-            expect(onShowPrompts).not.toHaveBeenCalled();
-
-            // Prompts is a plain button again, and still goes where it went.
-            fireEvent.click(screen.getByRole('button', { name: /^prompts$/i }));
-            expect(onShowPrompts).toHaveBeenCalledTimes(1);
-        });
-
-        it('omits the Workbench tile when no callback is supplied', () => {
-            // Callers that predate it are unaffected — the same contract the
-            // Chat tile already has for `onNewAiChat`.
+        it('renders no Workbench tile — that surface is on its own branch', () => {
+            // Kept as a NEGATIVE: the tile existed until 2026-08-26 and the
+            // AiZone docstring still explains why the wrap breakpoint is 640px.
+            // If it comes back, it should come back deliberately (AI-3b).
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}

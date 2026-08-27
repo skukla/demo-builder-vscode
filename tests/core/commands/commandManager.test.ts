@@ -148,11 +148,10 @@ describe('CommandManager', () => {
         it('should register all 34 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // 34 + 2 = 36: the previous 34, plus `showEvaluationWorkbench` (the
-            // prompt workbench panel) and `showAgentTrace` (the same panel on
-            // its other half — what the agent already did), both 2026-08-25.
+            // 36 → 34: `showEvaluationWorkbench` and `showAgentTrace` left with
+            // the prompt-evaluation surface on 2026-08-26 (AI-3b).
             // resetAll stays excluded, dev mode only.
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(36);
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(34);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -182,9 +181,7 @@ describe('CommandManager', () => {
                 'demoBuilder.openAi',
                 // Registered between openAi and openAiExperience — see
                 // commandManager.registerCommands().
-                'demoBuilder.showEvaluationWorkbench',
-                'demoBuilder.showAgentTrace',
-                'demoBuilder.openAiExperience',
+                        'demoBuilder.openAiExperience',
                 'demoBuilder.newAiChat',
                 'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',

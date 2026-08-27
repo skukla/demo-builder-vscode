@@ -21,7 +21,7 @@ Documentation about system design and high-level architecture.
 #### ⚙️ Systems
 Detailed documentation about specific subsystems.
 
-- **[Evaluation Mode](./systems/evaluation-mode.md)** - The Prompt Workbench: simulate a prompt with every change blocked and read what it would do, what it would cost, and where it wasted steps. Also the dry run that makes agent mutation impossible.
+- **[Evaluation Mode](./systems/evaluation-mode.md)** - MOVED to `feature/prompt-workbench` on 2026-08-26 (AI-3b). The agent dry run and the consent dialog stayed; the Prompt Workbench and trace view did not. Kept as the record of what the surface was and why. Simulate a prompt with every change blocked and read what it would do, what it would cost, and where it wasted steps. Also the dry run that makes agent mutation impossible.
 - **[MCP Server](./systems/mcp-server.md)** - How the in-extension Model Context Protocol server exposes the extension's capabilities as tools for AI agents (Claude Code). Start here if you're new to MCP.
 - **[Prerequisites System](./systems/prerequisites-system.md)** - Comprehensive guide to the configuration-driven prerequisites and progress tracking system
 - **[Error Logging](./systems/error-logging.md)** - Error handling, logging strategy, and notification system

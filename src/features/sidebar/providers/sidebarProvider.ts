@@ -11,7 +11,6 @@ import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
-import { isEvaluationToolsEnabled } from '@/features/ai/evaluation/evaluationGate';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import type { Logger } from '@/types/logger';
 
@@ -211,7 +210,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     public async updateContext(context: SidebarContext): Promise<void> {
         await this.sendMessage('contextUpdate', {
             context,
-            evaluationToolsEnabled: isEvaluationToolsEnabled(),
         });
     }
 
@@ -226,7 +224,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const newContext = await this.getCurrentContext();
         await this.sendMessage('contextUpdate', {
             context: newContext,
-            evaluationToolsEnabled: isEvaluationToolsEnabled(),
         });
     }
 
@@ -279,10 +276,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleNewAiChat();
                 break;
 
-            case 'showPromptWorkbench':
-                await this.handleShowPromptWorkbench();
-                break;
-
             case 'startDemo':
                 await this.handleStartDemo();
                 break;
@@ -315,7 +308,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const context = await this.getCurrentContext();
         await this.sendMessage('contextResponse', {
             context,
-            evaluationToolsEnabled: isEvaluationToolsEnabled(),
         });
     }
 
@@ -517,27 +509,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Show prompts failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle the prompt workbench request — opens the workbench panel.
-     *
-     * Backs "Prompt workbench" in the sidebar's Prompts menu, which is the
-     * feature's ONLY door in the UI: the extension contributes no menus for
-     * `demoBuilder.showEvaluationWorkbench`, so before this it was reachable
-     * only by typing the command's name into the palette.
-     */
-    private async handleShowPromptWorkbench(): Promise<void> {
-        this.logger.info('Sidebar: Show prompt workbench');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showEvaluationWorkbench');
-        } catch (error) {
-            this.logger.error(
-                'Show prompt workbench failed',
                 error instanceof Error ? error : undefined,
             );
         }

@@ -850,38 +850,16 @@ global storage; `get_auth_status` (and anything calling `isAuthenticated`) write
 an in-memory auth cache; `check_prerequisites` spawns detection processes but
 installs nothing.
 
-### `evaluate_prompt` — the agent's door into Evaluation Mode
+### `evaluate_prompt` — REMOVED 2026-08-26
 
-A producer can say "evaluate this prompt" in normal chat. The tool spawns a
-headless `claude -p --output-format json` run with the dry run forced, joins the
-CLI's own cost figures with the trace the recorder captured while it ran, and
-answers a SUMMARY — cost in dollars, turn count, step count, and the
-deduplicated NAMES of tools that were repeated or blocked. The full trace stays
-in the recorder for the workbench, which reads it in-process; returning every
-entry is the list-with-no-page-size shape that made `list_adobe_projects` 111KB.
+The tool spawned a headless `claude -p` run with the dry run forced and answered
+a summary of what a prompt would cost. It left with the prompt-evaluation
+surface (AI-3b); the code is on `feature/prompt-workbench`.
 
-Three properties, none optional:
-
-- **It refuses to recurse.** An evaluation that evaluates itself bills in a
-  loop. TWO independent guards: the service refuses while one is in flight, and
-  `runAsEvaluation` refuses to nest. The spawned run is also launched with
-  `--disallowedTools`, but a CLI flag is a string, and this repo has shipped a
-  string-asserted guard that never ran — so the guards that count are
-  server-side, and `promptEvaluationService.test.ts` drives them by execution.
-  Note it fails only when BOTH are removed.
-- **The dry run is forced**, never inherited from the status bar. The spawned
-  agent reaches this same server, so `dryRun` is `isEvaluating() || the setting`.
-  The whole window is therefore in dry run for the 30s–2min a run takes — the
-  honest trade, and the user is waiting on the run anyway.
-- **It declares `readOnly: false` and requires `confirm: true`.** Nothing it
-  does outlives the call, but it spawns a real paid process: a dry run that
-  promises "nothing happens" must not quietly spend money, and the consent
-  dialog states the cost before it is gone. The one tool here that earns a
-  dialog for spending rather than destroying.
-
-The same service backs **Demo Builder: Prompt Workbench** in the command
-palette. One implementation, because two would drift and the drifting one would
-be whichever nobody was watching.
+The **agent dry run stayed**, and is a different thing: a standing switch that
+lets an agent read while every write is simulated, enforced in
+`inExtensionMcpServer` before any non-read tool runs. It never depended on the
+workbench.
 
 While the mode is on it is pinned to the status bar in the warning colour
 (**Agent dry run**), because a mode you cannot see is a trap: the user would ask
