@@ -1,0 +1,38 @@
+# Hand-triaged read-only supplement for servers that declare NO annotations.
+#
+# enumerate-tools filters --allowed-tools to each server's DECLARED reads
+# (annotations.readOnlyHint), which is the right authority for demo-builder and
+# playwright. dropins and commerce-extensibility declare nothing, so the pure
+# filter excludes all 32 of their tools and breaks the cross-server prompts.
+# This file is the explicit exception list: every line was triaged by name AND
+# description on 2026-08-27, and anything that writes, deploys, logs in,
+# scaffolds files, or uploads stays OUT.
+#
+# Deliberately excluded, with reasons:
+#   commerce-extensibility: aio-app-deploy / aio-app-dev / aio-app-use /
+#     aio-configure-global / aio-dev-invoke (deploy, run, or reconfigure real
+#     Adobe resources), aio-login (interactive auth in the sleeping owner's
+#     window — the sign_in lesson), onboard + commerce-event-subscribe (write
+#     to the Commerce instance), upload-chat-history (sends data off-machine).
+#   dropins: scaffold_block / scaffold_extension / scaffold_slot (write files
+#     into the storefront checkout).
+mcp__commerce-extensibility__search-commerce-docs
+mcp__commerce-extensibility__aio-where
+mcp__dropins__analyze_project
+mcp__dropins__list_slots
+mcp__dropins__list_events
+mcp__dropins__list_containers
+mcp__dropins__list_api_functions
+mcp__dropins__list_design_tokens
+mcp__dropins__list_i18n_keys
+mcp__dropins__list_models
+mcp__dropins__list_init_config
+mcp__dropins__check_config
+mcp__dropins__suggest_slot_implementation
+mcp__dropins__suggest_event_handler
+mcp__dropins__explain_event_flow
+mcp__dropins__get_upgrade_diff
+mcp__dropins__search_docs
+mcp__dropins__search_commerce_docs
+mcp__dropins__list_graphql_queries
+mcp__dropins__check_block_health

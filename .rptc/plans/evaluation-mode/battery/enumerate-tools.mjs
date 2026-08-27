@@ -52,7 +52,10 @@ function toolsFor(name, spec) {
                 try { msg = JSON.parse(line); } catch { continue; }
                 if (msg.id === 1) send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
                 if (msg.id === 2) {
-                    done({ name, tools: (msg.result?.tools ?? []).map((t) => t.name) });
+                    done({ name, tools: (msg.result?.tools ?? []).map((t) => ({
+                        name: t.name,
+                        readOnly: t.annotations?.readOnlyHint === true,
+                    })) });
                 }
             }
         });
@@ -84,8 +87,22 @@ if (broken.length) {
     process.exit(1);
 }
 
+// READS ONLY, judged by each server's own declaration. The run-time
+// enumeration (2026-08-26) fixed the stale-allowlist problem and silently
+// deleted the battery's read-only property with it: every tool — republish,
+// delete_project, sign_in — landed in --allowed-tools, and on 2026-08-27 an
+// expired DA.live session was enough to make a coverage run open an
+// interactive sign-in in the sleeping owner's window. Unattended runs allow
+// what a server DECLARES read-only and nothing else; a denied write marks the
+// run INVALID, which is the honest unattended answer. Pass --all to get the
+// old behaviour for supervised use.
+const ALL = process.argv.includes('--all');
 for (const { name, tools } of results) {
-    for (const t of tools) console.log(`mcp__${name}__${t}`);
+    const kept = ALL ? tools : tools.filter((t) => t.readOnly);
+    for (const t of kept) console.log(`mcp__${name}__${t.name}`);
+    if (!ALL && kept.length === 0) {
+        console.error(`note: ${name} declares no read-only tools — all ${tools.length} excluded`);
+    }
 }
 console.error(`enumerated ${results.reduce((n, r) => n + r.tools.length, 0)} tools ` +
     `across ${results.length} server(s): ` +

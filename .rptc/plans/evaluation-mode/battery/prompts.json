@@ -123,5 +123,77 @@
       "list_projects"
     ],
     "why": "Pins the current:true marker. Before 2026-08-27 the listing could not answer the second half, so the corpus showed list_projects chaining into get_current_project half the time. list_projects alone answering both halves is the fix working."
+  },
+  {
+    "id": "stacks",
+    "prompt": "What architecture stacks could I build a new demo with?",
+    "expect": [
+      "list_stacks"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "demo-packages",
+    "prompt": "Which demo brands are available, and which stacks does each support?",
+    "expect": [
+      "list_demo_packages"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "settings",
+    "prompt": "Is the Data Installer feature turned on in my Demo Builder settings?",
+    "expect": [
+      "get_settings"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "component-reqs",
+    "prompt": "What environment variables does the EDS storefront component need, and what does each one mean?",
+    "expect": [
+      "get_component_requirements"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "component-config",
+    "prompt": "Show me what's in my project's .env file for the storefront component.",
+    "expect": [
+      "get_component_config"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "store-structure",
+    "prompt": "What websites, store groups and store views does my Commerce backend actually have?",
+    "expect": [
+      "get_store_structure"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "site-access",
+    "prompt": "Who holds the admin role on my storefront's configuration, and can I change it?",
+    "expect": [
+      "get_site_access"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "ai-prompts",
+    "prompt": "What saved AI prompts do I have in this project?",
+    "expect": [
+      "list_ai_prompts"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "verify-setup",
+    "prompt": "Is my project's AI setup healthy \u2014 context files, MCP config, skills?",
+    "expect": [
+      "verify_ai_setup"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
   }
 ]

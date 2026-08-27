@@ -72,7 +72,12 @@ function restoreMemory(snap) {
  * Asking the servers at run time removes the failure mode instead of managing it.
  */
 const ALLOWED = execFileSync('node', [`${AB}/enumerate-tools.mjs`, PROJECT_MCP], { encoding: 'utf8' })
-    .trim().split('\n').filter(Boolean);
+    .trim().split('\n').filter(Boolean)
+    // Servers that declare no annotations contribute nothing to the filtered
+    // enumeration; their hand-triaged read supplement fills the gap. See the
+    // header of third-party-reads.txt for what is excluded and why.
+    .concat(readFileSync(`${AB}/third-party-reads.txt`, 'utf8')
+        .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')));
 
 /**
  * Claude's own tools, which the allowlist ALSO gates — and inconsistently.
