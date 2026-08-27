@@ -53,6 +53,24 @@ Triage at pickup, and SAY the lane in the report:
 Selection order: the owner's named item first; otherwise highest-value
 startable from `backlog.mjs next`, preferring lane 1/2 over 3.
 
+**The owner can set the fallback priority at kickoff** ("if you hit a wall on
+this, do maintenance next"). Honor it exactly. When none is given, the default
+fallback class is **maintenance — kind:fix items first** (owner, 2026-08-27:
+"always good to knock down bug fixes"), then the value ordering.
+
+## Staleness check — every pickup, no exceptions
+
+Before working ANY item, re-verify its central factual claims against current
+reality — the code it cites, the external thing it describes, cheaply (a grep,
+a `gh` read, one probe call). The starter-kit item is the standing proof: its
+premise (onboarding scripts, a template layout) had rotted within a DAY of
+filing because Adobe shipped a new generation. Working a stale item builds the
+wrong thing carefully.
+
+If stale: updating the item IS the first unit of work — log what changed and
+why, re-triage the lane, and only then proceed (or re-queue the decision to
+the walkthrough if the staleness changes the product question).
+
 ## Exhaust before bailing, and never stop at one item
 
 A supervised edge is a wall for ONE PATH, not for the item (owner, 2026-08-27:
