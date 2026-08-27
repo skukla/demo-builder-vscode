@@ -13,7 +13,6 @@ import {
     applyIsolatedPackages,
     detectAppLayout,
     isolatePackages,
-    readStandalonePackages,
 } from '@/features/app-builder/services/appConfigPackages';
 
 const mockRead = fsPromises.readFile as jest.Mock;
@@ -44,28 +43,24 @@ describe('isolatePackages (pure)', () => {
     });
 });
 
-describe('readStandalonePackages / detectAppLayout', () => {
-    it('returns the packages and detects standalone for a standalone config', async () => {
+describe('detectAppLayout', () => {
+    it('detects standalone for a standalone config', async () => {
         mockRead.mockResolvedValue(config({ myapp: { actions: {} } }));
-        await expect(readStandalonePackages('/c')).resolves.toEqual({ myapp: { actions: {} } });
         await expect(detectAppLayout('/c')).resolves.toBe('standalone');
     });
 
     it('returns undefined for a missing config file', async () => {
         mockRead.mockRejectedValue(new Error('ENOENT'));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
         await expect(detectAppLayout('/c')).resolves.toBeUndefined();
     });
 
     it('returns undefined for unparseable YAML', async () => {
         mockRead.mockResolvedValue(':\n  - [not valid');
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
         await expect(detectAppLayout('/c')).resolves.toBeUndefined();
     });
 
     it('detects extension for an extension app (no standalone packages)', async () => {
         mockRead.mockResolvedValue(yaml.stringify({ extensions: { 'dx/excshell/1': {} } }));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
         await expect(detectAppLayout('/c')).resolves.toBe('extension');
     });
 
@@ -90,7 +85,6 @@ describe('readStandalonePackages / detectAppLayout', () => {
 
     it('returns undefined for an empty packages map with no extensions', async () => {
         mockRead.mockResolvedValue(config({}));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
         await expect(detectAppLayout('/c')).resolves.toBeUndefined();
     });
 

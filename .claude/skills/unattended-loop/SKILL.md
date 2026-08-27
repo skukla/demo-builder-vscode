@@ -120,6 +120,43 @@ schedule the next wakeup. Background tasks are the primary wake signal;
 `ScheduleWakeup` is the long fallback heartbeat, and carries the loop contract
 so a wakeup resumes cold.
 
+## The done gate — scans before "done" (owner directive, 2026-08-27)
+
+`gate` proves the code WORKS. It cannot see a second implementation of the
+same job, a second pathway to the same action, or copy-paste logic — the
+defect classes the scan skills exist for. So an item is not DONE — not logged
+shipped, not reported "Shipped" — until the scans have run over its work.
+"Especially during a loop": unattended is when nobody else will notice the
+drift, so the gate is tightest exactly there.
+
+**Mechanical trio — every item that touched `src/`** (scripted, fast; run all
+three, capture exit codes, quote the command when claiming clean):
+
+    bash .claude/skills/dead-code-scan/scan.sh src
+    bash .claude/skills/circular-dependency-scan/scan.sh src
+    bash .claude/skills/code-duplication-scan/scan.sh <touched dir or src>
+
+**Judgment scans — when the SHAPE of the work triggers them** (each is a
+guided review, not a script verdict; invoke the skill):
+
+- `architecture-duplication-scan` — the item ADDED an implementation (a new
+  service, client, walker, resolver): ask whether the job already had one.
+- `call-path-audit` — the item added or changed a way a USER ACTION reaches
+  its ground-truth primitive: prove the action still has one definitive path.
+- `component-extraction-scan` — the item added UI markup.
+
+When a trigger does NOT fire, say so in the item's summary in one line ("no
+new pathways — call-path-audit not triggered") — a skipped scan must be a
+stated decision, never an omission.
+
+**At loop close, once**: `rptc-hygiene-scan` — the record's counterpart.
+
+Findings follow the repo's standing rule verbatim: a scan hit is a LEAD;
+verified and in reach → fixed in the same turn; verified but out of reach →
+walkthrough queue with file:line; variants that turn out to be different jobs
+are findings too, stated and left. Two-instances-of-a-pattern is Rule of
+Three territory: record it on the item, do not extract at two.
+
 ## Subagent model selection — endurance is the point
 
 The loop's own turns run on the session model and cannot switch it. Subagents

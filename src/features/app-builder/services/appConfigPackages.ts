@@ -64,18 +64,6 @@ function standalonePackagesOf(doc: AppConfigDoc | undefined): RuntimePackages | 
 }
 
 /**
- * Read a cloned app's standalone runtime packages, or `undefined` when there are
- * none to isolate — a missing/unparseable config, or an app whose packages are not
- * under `application.runtimeManifest` (an extension app). `undefined` therefore
- * means "not a standalone action app we can package-isolate".
- */
-export async function readStandalonePackages(
-    componentPath: string,
-): Promise<RuntimePackages | undefined> {
-    return standalonePackagesOf(await readConfigDoc(componentPath));
-}
-
-/**
  * Map each declared runtime package to a DISTINCT name derived from `owPackage`,
  * preserving contents:
  *   - a single package  → exactly `owPackage`;
