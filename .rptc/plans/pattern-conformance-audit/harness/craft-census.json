@@ -1,0 +1,6298 @@
+{
+ "rows": [
+  {
+   "unit": "tests/cleanup/deletedFiles.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/claudeCodeFootprint.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/claudeSessionStore.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/commands/diagnostics-copyReport.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/diagnostics-credentialService.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/diagnosticsChecks-aioVersionReuse.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/commands/diagnosticsChecks-auth.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/commands/diagnosticsChecks-parallelProbes.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/commands/handlers/HandlerContext.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/migrateStorefrontNames.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/commands/openModernizationAgent.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/commands/orphanedSettings.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/commands/refreshBlockLibrary.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/auth/adobeAuthGuard.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/base/baseCommand.createTerminal-location.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/base/baseCommand.disposal.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/base/baseWebviewCommand.disposal.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/base/baseWebviewCommand.transition.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/build/buildInfo.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/build/buildStampUi.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/cache/cacheUtils.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/commands/ResetAllCommand.security.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/commands/ResetAllCommand.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/commands/commandManager.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/communication/requestTimeouts.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/communication/responseCorrelationContract.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/communication/webviewCommunicationManager.edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/communication/webviewCommunicationManager.handshake.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/communication/webviewCommunicationManager.messaging.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/communication/webviewHandlerCoverage.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/constants.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/di/diPatterns.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/di/service-logger-injection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/handlers/RegistryPatternConsistency.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/handlers/dispatchHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/handlers/errorHandling.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/logging/callTagContext.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-callTags.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-channels.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-core.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-logging.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-pathValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/debugLogger-slowCommand.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/errorLogger.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/logging/stepLogger.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/buildComponent.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-adobe-cli.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-basic-execution.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-cancellation.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-delegation.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-orgContext.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-orgTargetingGuard.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-stdinTruncation.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor-timeout.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandExecutor.security.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/core/shell/commandSequencer-helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/shell/commandSequencer.test.ts",
+   "flags": [
+    "nondeterminism",
+    "realWaits"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/ensureNodeVersion.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/environmentSetup-configuration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/environmentSetup-nodeVersion.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/environmentSetup-pathDiscovery.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/fileWatcher-branches.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/fileWatcher.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/needsOrgTargeting.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/shell/pollingService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/processCleanup-coverage.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/processCleanup.error.test.ts",
+   "flags": [
+    "realWaits",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/processCleanup.mocked.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/processCleanup.test.ts",
+   "flags": [
+    "nondeterminism",
+    "realWaits",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/processCleanup.timeout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/rateLimiter.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/resourceLocker.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/shell/retryStrategyManager.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/apiOwners.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/apiPicksParity.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/apiRowState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/appBuilderComponentMigration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/appBuilderComponentState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/componentApiPicks.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/componentSelectionReconcile.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/manifestError-investigation.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/manifestFormatSweep.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/manifestValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/projectConfigWriter-atomicWrite.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/projectDirectoryScanner.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/projectFileLoader-daLiveSite.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/projectFileLoader-orphanConfigs.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/projectFileLoader-packageMigration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/projectFileLoader-shapeWarnDedup.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/projectFileLoader.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/projectManifest-storeStructure.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/projectManifest-title.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/projectStateSync.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/sessionUIState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/singularStateAccessGuard.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/stateManager-basic.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-componentVersions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-context.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-dirtyTracking.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-errorHandling.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-getCurrentProject-diskPointer.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-getCurrentProject-reload.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-processes.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-projects.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-recentProjects.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager-utilities.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateManager.disposal.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/state/stateOwnershipAudit.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/transientStateManager-basic.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/transientStateManager-helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/state/transientStateManager-ttl.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/cardMetrics.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/ErrorBoundary.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/TimelineNav.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/WebviewApp.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/ui/components/feedback/SuccessStateDisplay.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/forms/InlineRenameField.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/forms/descriptionRenderer.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/ui/components/integrations/IntegrationCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/CenteredFeedbackContainer.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/ContentColumn.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/ContentWithSidebar.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/FullScreenSurface.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/PageFooter.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/PageHeader.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/PageLayout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/layout/StepAreaShell.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/navigation/BackButton.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/navigation/StepRail.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/selection/ApiAccessPicker.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/selection/SelectionStepContent-disabled.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/ui/CardActionsMenu.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/ui/components/ui/Drawer.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/ui/Modal.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/wizard/StatusSection.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/components/wizard/stepStatusHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/destinationRowType.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useActivateOnKey.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useAsyncOperation.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useCanProceed.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useElapsedStage.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useFocusOnMount.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useFocusTrap-overlay.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/usePollingWithTimeout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useTimerCleanup.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/hooks/useVerificationMessage.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/pageContentAlignment.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/styles/layerDeclarations.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/styles/reset.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/styles/tokens.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/WebviewClient.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/componentDataHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/frontendTimeouts.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/statusVocabulary.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/stepCompletion.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/ui/utils/validationState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/bundleUri.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/disposableStore.error.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/disposableStore.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/envVarExtraction.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/executionLock.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/getWebviewHTMLWithBundles.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/githubUrlParser.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/loadingHTML.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/maskEmail.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/mcpSocketPath.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/oneTimeTip.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/cleanup.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/commands.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/configDriven.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/nodeVersion.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/progressUnifier/strategies.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/projectDisplayName.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/projectDisplayName.types.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/promiseUtils.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/quickPickUtils.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/utils/singleFlight.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/sleep.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/timeFormatting.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/timeoutConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/utils/writeFileAtomic.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/validation/Validator.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/fieldValidation-commerceUrl.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/fieldValidation-dispatcher.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/fieldValidation-projectName.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/normalizers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-githubUrl.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-input.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-network.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-nodeVersion.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-pathSafety-async.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/validation/securityValidation-pathSafety-sync.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/vscode/envFileWatcherService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/core/vscode/progressRegister.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/core/vscode/workspaceWatcherManager.mocked.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/extension-activation-navigation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/extension-context.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/aiSetupVerifier.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpDriftDetector-globalScope.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpDriftDetector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpInspector-caching.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpInspector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-blockAuthoringShape.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-blocks.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-config.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-projects.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-promoteBlock.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-removeBlock.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/mcpServer-responseSizes.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/actionDescriptors.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/addIntegrationPreflight.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/adobeResourceTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/adobeTargetStore.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/adobeTools.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/agentAlertTargets.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/agentOperationNotifier.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/agentPhaseCoverage.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/agentSessionGrants.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/agentTraceSink.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/applyUpdatesTool.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/authTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/cloudResourceTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/commerceEndpointsTool.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/commerceQueryTool.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/componentRequirementsTool.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/configureProjectTool.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/connectionScope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/consentViaChat.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/contentAuthoringTools-sizes.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/contentAuthoringTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/createProjectTool.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/ai/server/currentProjectTool.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/dataInstallerDescriptors.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/deleteProjectTool.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/diagnosticsTools.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/discoveryTools.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/edsResetTool.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/ai/server/eventProviderTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/handoff.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/headlessHandlerContext.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/inExtensionMcpServer.socketOwnership.test.ts",
+   "flags": [
+    "nondeterminism",
+    "realWaits",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/inExtensionMcpServer.test.ts",
+   "flags": [
+    "nondeterminism",
+    "realWaits",
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/lifecycleTools.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpProxyFraming.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpProxyRetry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpSocketDiscovery.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpToolProbe.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/progressCapture.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/projectStatusTool.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/projectors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/readDescriptors.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/realSdkRegistration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/responseEnvelope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/responseSize.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/scopedStateManager.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/settingsTools.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/siteTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/storefrontTools.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/strictWriteArgs.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolAnnotations.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolDescriptors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolNarration.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolPhaseNarration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolProgressNotifications.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolPromptCoverage.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/toolTraceRecorder.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/validateSelectionTool.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/server/viewTools.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/sessionMcpDetector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/ai/skillInspector.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/allowedDomain.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/apiSubscriber.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/apiSubscriberClientAdapter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentMigration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-envFile.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-install.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-keyed-state.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-meshRecordParity.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-remove.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner-runtimeVerify.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderComponentRunner.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderDeployOutcome.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appBuilderStructuralInvariant.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appConfigPackages.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appDeployment-toolchainRetry.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appDeployment.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appManagementClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appManagementInstaller.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/appManagementUninstaller.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/deployAppIsolated.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/ensureMeshApiSubscribed.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/owPackageName.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/runtimeCredentials.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/app-builder/services/s2sDeployEnv.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/app-builder/services/secretKey.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-authenticate-edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-authenticate-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-authenticate-new-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-authenticate-re-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-checkAuth.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-messages.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/authenticationHandlers-tokenExpiry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/deleteAdobeProjectHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/orgSwitchHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/organizationHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/projectHandlers-apis.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/projectHandlers-create.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/projectHandlers-fetch.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/projectHandlers-select.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/projectHandlers-validate.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/workspaceHandlers-create.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/handlers/workspaceHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeContextResolver.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher-tokenOrgFallback.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.authDiagnostics.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.cliErrorReporting.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.createProject.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.createWorkspace.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.orgListSingleFlight.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.renameRemoteProject.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.servicesCache.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.teardown.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityFetcher.workspaces.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityName.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntitySelector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-organizations-caching.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-organizations-edgeCases.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-organizations-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-organizations-listing.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-projects.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-shared.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeEntityService-workspaces.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeOrgServices-retry.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeSDKClient.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/adobeWorkspaceCredentials.s2s.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/apiAccessCatalog.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/authCacheManager-invalidation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authCacheManager-read-write.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authCacheManager-ttl-expiry.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authPredicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationErrorFormatter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationService-checks.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationService-context.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationService-entities.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationService-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/authenticationService-subscriber.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/consoleProjectTeardown.errors.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/consoleProjectTeardown.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/detectProjectOrgMismatch.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/ensureOrgContext.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/ensureProjectAdobeContext.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/ensureProjectOrgContext.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/eventProviderLifecycle.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/imsTokenClaims.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/ioEventsClient-create.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/ioEventsClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/orgContextEnv.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/organizationValidator-permissions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/performanceTracker.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/projectOwnership.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/services/tokenManager-configRead.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/tokenManager.singleFlight.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/services/tokenManager.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/components/AdobeEntityFields.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/components/AdobeProjectPicker.delete.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/components/AdobeProjectPicker.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/components/AdobeWorkspacePicker.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useAuthStatus-core.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useAuthStatus-errorCodes.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useAuthStatus-messages.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useSelectionStep-basic.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useSelectionStep-errorCodes.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useSelectionStep-searchAndErrors.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/hooks/useSelectionStep-stateManagement.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-authentication.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-errors.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-messages.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-messaging.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-organization.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-predicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/authentication/ui/steps/components/AuthLoadingState.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/accsEndpointValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/backendOwnedScope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/credentialSectionSplit.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/secretEnvKeys.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/storeFieldSections.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/config/stripManifestSecrets.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/handlers/componentHandlers-getData.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/handlers/componentHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-appBuilder.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-configuration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-dependencies.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-initialization.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-loading.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-mesh-entries.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-nodeVersions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-registration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-retrieval.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-security.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-v3Structure.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/ComponentRegistryManager-validation.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/appBuilderComponentCatalogLoader.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/backendCommerce.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/blockLibraryLoader.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/commerceCredentialStore.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/commerceSecretMigration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/commerceSecretSweep.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/componentConfigWrites.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/componentDependencies.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-install-git-clone.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-install-git-dependencies.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-install-simple.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-install-version-detection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-installNpmDependencies.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-lifecycle.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/componentManager-query.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/services/demoPackageLoader-meshRequirement.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/envVarHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/meshCatalogDerivation.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/projectAppBuilderPredicate.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/serviceGroupTransforms.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/services/stackComponentCollector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/ui/components/BrokeredCredentialFields.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/ui/components/ConfigFieldRenderer.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/ui/components/StoreConfigFieldRow.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/ui/components/StoreSelectionRow.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/ui/components/StoreStructureSelector.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/components/ui/hooks/useAutoStoreDetect.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/components/ui/hooks/useComponentConfig-packageDefaults.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/components/ui/hooks/useComponentConfig-validation.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/components/ui/hooks/useComponentConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/configure-initialData.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/configure-storefront-notification.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/configure.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/configureEnvLoader.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/openAi.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/panelHandlerContext.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/showDashboard-autoReopen.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/showDashboard-pushTargets.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/commands/showDashboard.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-launch.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-misc.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-prompts.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-regenerate.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-setup.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers-toolingGate.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/aiHandlers.logAiVerification.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/appBuilderComponentHandlers-drawer.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/appBuilderComponentHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/buildToolchainConsent.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/configureHandlers-storeStructure.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/configureHandlers.secrets.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/configureHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/consoleApiHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-deployMesh.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-eds.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-exportProjectSettings.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-getProjectUrls.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-lifecycle.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-moreActions.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-openDataInstaller.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-openDevConsole.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-republish.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-requestStatus.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-switchOrg.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlers-unknownDeployed.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/dashboardHandlersMap.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/destinationHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/eventingHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/meshStatusHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/navigateBack.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/openIntegrations.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/refreshBlockLibrary.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/handlers/showProjectDashboard.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/services/dashboardStatusService.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/defaultPromptsSeeder.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/aiVerifyCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/mcpHealthCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/meshVerifyCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/orchestrator.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/services/onOpenChecks/orgContextCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-actions.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-aiReady.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-authoring.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-integrations.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-orgMismatch.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-rendering.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/aiSurface/AiOverviewScreen-prompts.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/aiSurface/AiOverviewScreen-rendering.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/aiSurface/components/PromptCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/aiSurface/components/PromptEditDialog.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/aiSurface/components/PromptGrid.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/ActionGrid-overflow.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/ActionGrid-zoneStatus.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/ActionGrid.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/AiCapabilitiesModal.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/AiMcpsList.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/AiSkillsList.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/DashboardTile.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/DataInstallerTile.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/IntegrationsSummaryTile.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/ManageApisModal.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/aiCapabilitiesLayout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel-commerceScope.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel-installation.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/IntegrationsGrid-actions.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/IntegrationsGrid.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel-commerceScope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel-installation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel-mesh.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel-vocabularyContract.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/components/integrations/integrationsGridLayout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-authoring-experience.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-operations.test.tsx",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-rendering.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-store-discovery.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-validation.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/ConfigureSectionBody-commerceSplit.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/appBuilderComponentConfigFields.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/configureFieldValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/configureHelpers-accessors.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/configureSections.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/hooks/useConfigureFieldValues.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/hooks/useServiceGroups.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/configure/storedSecretSavePayload.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/dashboardPredicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/aiStatusDerivations.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/dashboardCheckRouting.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useDashboardActions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useDashboardStatus-aiReady.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useDashboardStatus-statusDisplay.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useDashboardStatus.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useFieldSyncWithBackend.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useInlineRename.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useLiveDaLiveUrl.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useLiveDestination.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useOrgSwitchFlow.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/hooks/useRowStatusOverrides.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/dashboard/ui/integrationsSurface/IntegrationsScreen.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/data-installer/commands/showDataInstaller.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/brokeredCredentialOffer.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/dataInstallerHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/exportHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/importHandlers-datapackRecord.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/importHandlers.scope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/importHandlers.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/importScopesHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/importTargetHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/handlers/provisionAccsHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/data-installer/integrationPoints.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/accsCredentialProvisioner.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/commerceCredentialBroker.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/services/commerceCredentials.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerErrors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerParsers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerSettingsSchema.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/dataInstallerWriteClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/datapackCatalog.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/exportClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/importJobRunner.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/services/sampleDataInstall.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/services/sampleDataInstallDeps.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/services/workspaceConfigDownload.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/DataInstallerScreen.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/DatapackCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/DatapackDetailPanel.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ExportDatapackModal.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ImportDatapackModal.dependencies.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ImportDatapackModal.targeting.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ImportDatapackModal.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/ViewSwitcher.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/importResult.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/components/watchedActivation.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/dataTypeLabel.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/datapackGridLayout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/hooks/useDataInstallerRequest.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/hooks/useImportProgress.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/importDependencies.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/importProgress.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/views/DatapackActivityView-firstFrame.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/views/DatapackActivityView.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/views/DatapackCatalogView-firstFrame.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/data-installer/ui/views/DatapackCatalogView.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/authoringExperience-ewCanvasBranch.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/authoringExperience.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/blockLibraryPublish.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/byomOverlay.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/checkRepoReadinessHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/credentialServiceHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/daLive/daLiveSiteConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/daLive/edsDaLiveAuthHandlers-storeToken.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/edsHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/handlers/edsHelpers.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/handleDiscoverStoreStructure.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/refreshBlockLibraryHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storeStructureHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-githubAppCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase1-appGate.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase1-pin.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.placeholderStubs.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase3-confirmCodeSync.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-configService.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-customBlockLibraries.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-recovery.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-tracking.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/handlers/storefrontSetupOutcome.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/accsDiscoveryConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/authoringExperienceFlip.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/b2bReadinessDetection.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers-componentMerge.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers-discovery.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers-modelsMerge.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers-multiLibrary-dedup.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers-multiLibrary-merging.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/blockCollectionHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/brandAssetPublisher-policy.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/brandAssetPublisher.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/codeSyncErrors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/commerceStoreDiscovery.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configGenerator-configFlags.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configGenerator-goldenMeshEndpoint.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configGenerator-mergeComponentConfigs.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configGenerator.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configJsonFatalFailure.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configJsonTiming.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/configAccessRecovery.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/configServiceAccess.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/configServiceProbe.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/configurationService-updateSiteConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/configurationService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/repairSiteConfigForProject.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/repairSiteConfigHeadless.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/siteAccessManagerHeadless.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configService/siteConfigRegistrar.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/configSyncService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/contentCompleteness.smoke.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/credentialServiceProbe.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daAuthHelperToken.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveApiClient.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveAuthService-daAuthHelperFallback.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveAuthService-parseJwt.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveAuthService.security.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveAuthService.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveConfigOperations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveConfigService-mutations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveConfigService-queries.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveConstants.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentCopy-retry.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentDiscovery.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-401.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-accountOverlay.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-appendBlockToLibrary.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-applySiteConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-blockDocPages.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-enumeration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-library-cdnCopy.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-library-creation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-referenceDiscovery.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-removeBlockFromLibrary.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-tokenFactory.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-transform.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveContentOperations-utils.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/daLive/daLiveSourceOperations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/edsPipeline-integration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/edsPipeline-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/errorFormatters-pushProtection.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/ewSettingChangeListener.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/fstabGenerator.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubAppService-undeterminedStatus.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubAppService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubCredentialProbe.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubFileOperations-branchRef.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubFileOperations.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubHelpers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubOAuthService.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubRepoOperations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/github/githubTokenService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixApiClient.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixBulkJobs.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService-credentialRefused.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService-diagnostics.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/codePatchPipelineHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/codePatchRegistry.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/contentPatchRegistry.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/externalPatchFetcher.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/lkgPinHelper.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/lkgReader.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/patchMissTracker.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/patchReportHelper.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/patches/patchTargetPolicy.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/pdp/publishKeyRegistrar.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/pdp/publishKeyRenewalSweep.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/placeholderStubs.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/refreshBlockLibraryHeadless.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetMeshHelper.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetParams.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetRepoHelper.placeholderStubs.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetService-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetService-configService.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetService-customBlockLibraries.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetService-daLiveReauth.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetService-meshAuth.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetUI-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetUI-sampleData.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/eds/services/resourceCleanupHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/runtimeSurfaceInventory.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/runtimeSurfaceResolver.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/storeStructureReader.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/repoStorefrontReadiness.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/servedStorefrontConfig.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontNameMigration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontNameMigrationForProject.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontProbe.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontStalenessDetector-generatorCoupling.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontStalenessDetector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefront/storefrontSyncService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/storefrontRepublishContent.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/ui/components/DaLiveServiceCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/components/GitHubServiceCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/components/VerifiedField.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/helpers/codeSyncInstallContent.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/hooks/useDaLiveAuth.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/ui/hooks/useGitHubAuth.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/RepoSelectionInline-appCheck.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/RepoSelectionInline-createSuccess.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/RepoSelectionInline-defaultBranch.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/RepoSelectionInline-readiness.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/RepoSelectionInline.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/StorefrontSetupStep-cancelOnUnmount.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/StorefrontSetupStep-startGuard.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/codeSyncStatusView-longWait.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/codeSyncStatusView-placement.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/repoSelectionInline-codeSyncAfterCreate.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/ui/steps/repoSelectionInline-codeSyncSimplified.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/deleteProject-navigation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/deleteProject.error.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/deleteProject.lifecycle.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/deleteProject.retry.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/managedStorefrontFiles.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/openInClaude.home-context.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/openInClaude.misc.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/openInClaude.prompt-injection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/openInClaude.terminal-surface.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/startDemo.concurrency.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/startDemo.error.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/startDemo.lifecycle.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/startDemo.portConflict.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/stopDemo.error.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/stopDemo.lifecycle.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/stopDemo.process.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/commands/syncStorefront.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/lifecycle/services/lifecycleService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/lifecycle/services/projectResetService-componentList.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/lifecycle/services/projectResetService-meshContext.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/mesh/commands/deployMesh-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/mesh/commands/deployMesh-orgContext.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/mesh/commands/deployMesh-storage.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/mesh/commands/deployMesh-subscribe.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/mesh/commands/deployMesh-unify.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/checkHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/deleteHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/deployHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/meshHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/meshHandlersDI.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/shared.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/handlers/subscribeHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/deployMeshHeadless.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/mesh/services/deployMeshWithFeedback.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshCheckHelpers-apiMeshEnabled.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshCheckHelpers-fallbackCheck.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshCheckHelpers-meshExistence.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeployment-createFallback.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeployment-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeployment-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeployment-progress.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeploymentVerifier-deployment.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeploymentVerifier-edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeploymentVerifier-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshDeploymentVerifier-status.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshEndpoint.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshStatusResolver.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshUpdateDecline.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshVerifier-di.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/meshVerifier.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-edgeCases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-envFileReader.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-fileComparison.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-hashCalculation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-initialization.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-scope.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector-stateDetection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/utils/errorFormatter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/mesh/utils/meshHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/checkHandler-errorHandling.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/checkHandler-multiVersion.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/checkHandler-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/checkHandler-userSelection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/continueHandler-edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/continueHandler-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/continueHandler-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/continueHandler-perNodeScope.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-adobeCLI.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-adobeCliProgress.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-byId.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-edgeCases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-errorHandling.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-happyPath.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-nodeVersions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-sharedUtilities.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-shellOptions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler-versionSatisfaction.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/installHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/prerequisitesHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/security-validation.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/shared-dependencies.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/shared-getPluginNodeVersions.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/shared-node-mapping.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/shared-per-node-status.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/handlers/shared-required-versions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/npmFlags.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-checking.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-edgeCases.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-installation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-mockValidation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-progress.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/PrerequisitesManager-stateManagement.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-operations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-stats-versions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-ttl-eviction.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/prerequisiteRenderers.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-checking.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-edgeCases.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-installation.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-optional.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-progress-format.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-progress-updates.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/ui/steps/PrerequisitesStep-recheck.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/commands/createProject-configListener.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/commands/createProject-context.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/commands/createProject-initialData.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/commands/createProject.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/addIntegrationFlowHandlers-authGuard.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/addIntegrationFlowHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/checkGitHubAppHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/consoleApiHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/createHandler-cancellation.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/createHandler-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/createHandler-happy-path.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/createHandler-validation.test.ts",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-appBuilderComponentLoading.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-componentVersions.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-editModeMeshReuse.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-edsStandardFlow.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-initialProject.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-meshComponentLoading.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-meshDeployContext.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-meshPreflightAuth.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-meshStatePopulation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor-sampleDataPhase.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/executor.appBuilderIntegrations.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/projectCreationHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/sampleDataHandlerReach.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/validateHandler.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers-cancellation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers-initialization.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers-project-actions.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers-utilities.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-basic.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-filtering.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-formatting.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-regenerate.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-scopeOwnership.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-storeStructureExcluded.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/envFileGenerator-values.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/helpers/formatters.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh.isolation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiBundleService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiContextWriter.queryingCommerce.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiContextWriter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiContextWriter.toolServers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiContextWriter.writeAgentsMd.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiDefaultsInstaller.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiToolingGate.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/claudeSettingsWriter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/generatedFileWriter.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/globalMcpRegistration.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/homeAiContextWriter.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/mcpConfigWriter.settingsMerge.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/mcpConfigWriter.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.hashAndSkip.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.toolGating.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/appBuilderComponentSelection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/componentInstallationOrchestrator.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/customBlockLibraryUtils.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/envVarClassifier.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/generateAIContextFiles.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/index.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/projectFinalizationService-meshEndpoint.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/sanitization.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/skillGuidance.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/BlockLibrariesStepContent.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/BrandGallery.helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/BrandGallery.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/BuildYourProjectSummary.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ChoiceCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ConfigurationSummary-helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ConfigurationSummary.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.advanced.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.sections.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/commerceSectionValidity.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.later-and-variants.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/flowStages.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/instanceId.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/integrationCards.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/integrationRows.instances.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/integrationRows.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/BlankStage.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/CatalogStage.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/CustomStage.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/DestinationStage.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/stages/KindStage.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/useIntegrationFlow.apiEdit.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/components/integration-flow/useIntegrationFlow.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/helpers/buttonTextHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/helpers/stackHelpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/hooks/useProjectCreationPhases.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/hooks/useStepValidation.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/BuildYourProjectStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/CommerceStep.bridge.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/CommerceStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/IntegrationsStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/ProjectCreationStep-footer.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/ProjectCreationStep-predicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/ReviewStep-predicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/ReviewStep.helpers.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/SampleDataStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/StorefrontStep.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/WelcomeStep-brand-stack.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/WelcomeStep-edsConfigRefresh.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/WelcomeStep-projectTitle.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/areaSubSteps.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/buildSummary.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/buildYourProjectAreas.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/commerceSections.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/edsConfigFromStorefront.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/reviewPredicates.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/storefrontSections.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/tileStatus.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/useProjectBuilder.addons.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/useProjectBuilder.consoleApis.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/useProjectBuilder.instances.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/useProjectBuilder.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-errorBoundary.test.tsx",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-focus.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-hiddenPackage.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-import.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-initialization.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-layout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-navigation.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-nestedTimeline.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/WizardContainer-state.test.tsx",
+   "flags": [
+    "realWaits"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/appBuilderComponentSelectionState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/groupStepRegistration.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/hooks/useWizardState-editSeeding.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/stepFiltering.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/steps/ProjectCreationStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/steps/ReviewStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/steps/WelcomeStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/storefrontSetupRename.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/wizardHelpers-navigation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/wizardHelpers-storeStructure.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/wizard/wizardHelpers.filterSteps.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/commands/showProjectsList-sidebar.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/commands/showProjectsList.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/dashboardHandlers-adminPanel.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/dashboardHandlers-orgTargeting.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/dashboardHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/projectsListHandlers.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/handlers/selectProject-navigation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/services/exportProjectSettingsToFile.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/services/projectRenameService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/services/settingsSerializer-integrations.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/services/settingsSerializer.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/ProjectsDashboard.helpers.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/ProjectsDashboard.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/components/DashboardEmptyState.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/components/ProjectActionsMenu.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/components/ProjectCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/components/ProjectRow.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/ui/components/ProjectsGrid.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/utils/deploymentSummary.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/projects-dashboard/utils/projectStatusUtils.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/sidebar/handlers/sidebarHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/sidebar/integration/extensionActivation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/sidebar/integration/navigationCommands.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/sidebar/providers/sidebarProvider.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/sidebar/types.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/sidebar/ui/Sidebar.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/sidebar/ui/views/UtilityBar.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/sidebar/ui/views/views-removal.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/updates/commands/checkUpdates-graduation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/commands/checkUpdates.security.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/updates/commands/checkUpdates.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/commands/updateExecutor-adobeMcp.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/commands/updateExecutor-syncBehavior.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/addonUpdateChecker.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/adobeMcpUpdateChecker.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/adobeMcpUpdateCore.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/collaboratorGate.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/componentRepositoryResolver.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/updates/services/componentUpdater-core.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/services/componentUpdater-envMigration.test.ts",
+   "flags": [
+    "theater"
+   ],
+   "doubleStyle": "light-mocks",
+   "adjudication": "CONFIRMED near-theater: 4 tests, 232 lines, ONE assertion total; blocks narrate CURRENT vs DESIRED behavior in comments while verifying almost nothing \u2014 documents a known loophole (component updates do not handle env-var renames) as passing tests. Fix shape: assert CURRENT behavior (characterization), move DESIRED to a backlog item"
+  },
+  {
+   "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/services/extensionUpdater.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/forkSyncService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/githubApiClient.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/releaseTrack.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/updates/services/templateUpdateChecker.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/updateApplyService.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/services/updateChannelConfig.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/updates/services/updateManager-channels.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/updateManager-checking.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/updateManager-components.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/updates/services/updateManager-earlyAccess.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/hooks/backlogClaimDrift.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/hooks/router.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/integration/features/mesh/meshArchitectureRouting.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/scripts/check-test-file-sizes.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/scripts/dataInstallerDrift.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/scripts/edsDrift.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/scripts/traceSession.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/security/csp-nonce-security.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/setup/mcpTestSocketRoot.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/architecture-rules.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/complex-expressions.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/component-extraction.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/credential-env-vars-registered.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/credential-sink-settings-scoped.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/inline-styles.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/magic-timeouts.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/modal-hosting.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/no-bare-sleep.test.ts",
+   "flags": [
+    "realWaits",
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/no-config-leaf-mocks.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/no-lowered-test-timeout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/ai-bundle-coherence.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/cast-ratchet.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/config-contracts.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/config-interface-contracts.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/demo-packages-bodea.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/demo-packages-data.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/demo-packages-schema.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/manifest-mirrors.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/manifest-schema-freshness.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/spine-chokepoints.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/stacks.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/type-json-alignment-prereqs-logging.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/templates/type-json-alignment-stacks-components.test.ts",
+   "flags": [
+    "theater"
+   ],
+   "doubleStyle": "deps-object-or-pure",
+   "adjudication": "FALSE POSITIVE: asserts by throwing (a throwing test fails) \u2014 functional but unconventional; candidate to convert to expect() for uniformity, not theater"
+  },
+  {
+   "unit": "tests/types/demoPackages-composite.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/demoPackages.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/errorCodes-orgMismatch.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/skillMcpToolDependencies.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-appbuilder-accessors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-eds-dalive-url.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-eds-github-repo.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-mesh-accessors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-project-accessors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-utility-errors.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-utility-parsing.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/typeGuards-utility-validation.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/webview-errorCodes.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/types/webview.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/handlers/edsHandlers.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/catalogPrewarmService-failureModes.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/catalogPrewarmService-projectGuard.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/catalogPrewarmService-sampleScope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/catalogPrewarmService.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/cleanupService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/errorFormatters.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/helix/helixService-auth-keys.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/helix/helixService-persistent-keys.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/helix/helixService-preview-publish.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/helix/helixService-rate-limiting.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.eagerRedirect.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.install.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/pdp/pdpUrlEncoding.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/quickEditAnchorMatch.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/quickEditPublisher.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/eds/services/toolManager.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "wall+partial"
+  },
+  {
+   "unit": "tests/unit/features/mesh/services/stalenessDetector.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/project-creation/services/ProjectSetupContext.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/unit/features/project-creation/services/aiBundle/aiBundleService-aiContextProgress.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/project-creation/services/edsContentSetup.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/unit/features/project-creation/services/meshSetupService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/features/project-creation/services/projectFinalizationService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/prerequisites/cacheManager-invalidation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/prerequisites/cacheManager-operations.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/prerequisites/cacheManager-security.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/unit/prerequisites/parallelExecution.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/utils/autoUpdater.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/feedback/EmptyState.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/feedback/LoadingDisplay.test.tsx",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/feedback/LoadingOverlay.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/feedback/StatusCard.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/forms/ConfigSection.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/forms/FieldHelpButton.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/forms/FormField.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/layout/ControlPanelLayout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/layout/GridLayout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/layout/SingleColumnLayout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/layout/TwoColumnLayout.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/navigation/SearchHeader.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/navigation/SearchableList-display-customization.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/navigation/SearchableList-rendering-search.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/navigation/SearchableList-selection-loading.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/navigation/listScrollGeometry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/ui/Spinner.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/components/ui/StatusDot.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useAsyncData.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useAutoScroll-initialization-refs.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useAutoScroll-options-edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useAutoScroll-scrolling.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useDebouncedLoading.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useDebouncedValue.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useFocusTrap-accessibility.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useFocusTrap-edge-cases.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useFocusTrap-focus-management.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useFocusTrap-keyboard.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useLoadingState.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useSearchFilter.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useSelectableDefault.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useSelection.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useVSCodeMessage.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/webview-ui/shared/hooks/useVSCodeRequest.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/webview-ui/shared/utils/spectrumTokens.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  }
+ ]
+}
