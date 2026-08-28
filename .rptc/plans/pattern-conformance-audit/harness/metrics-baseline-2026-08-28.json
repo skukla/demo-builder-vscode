@@ -1,0 +1,47 @@
+{
+ "label": "baseline-2026-08-28",
+ "commit": "87b693dc5",
+ "takenAt": "2026-08-28T17:03:57.435Z",
+ "srcFiles": 899,
+ "srcLines": 176234,
+ "testFiles": 1276,
+ "testLines": 297726,
+ "archExemptions": {
+  "fetchBoundary": 23,
+  "constructionBoundary": 39,
+  "commandBase": 2,
+  "typesPurity": 6,
+  "hookRefs": 5,
+  "sendMessageCeiling": 147
+ },
+ "archExemptionTotal": 75,
+ "archExemptionRows": 75,
+ "suites": 1179,
+ "doubleStyles": {
+  "deps-object-or-pure": 547,
+  "light-mocks": 532,
+  "module-wall": 83,
+  "wall+partial": 17
+ },
+ "craftFlags": {
+  "logicInTests": 161,
+  "nondeterminism": 26,
+  "realWaits": 16,
+  "theater": 2
+ },
+ "testClones": 160,
+ "testClonePct": 2.44,
+ "coverage": {
+  "lines": 84.17,
+  "branches": 73.18,
+  "functions": 85.94,
+  "artifactAge": "2026-08-28T16:28:25.430Z"
+ },
+ "noise": {
+  "actWarnings": 355,
+  "propWarnings": 72,
+  "consoleErrorLines": 613,
+  "consoleWarnLines": 95,
+  "artifact": "/private/tmp/claude-503/-Users-kukla-Documents-Repositories-app-builder-adobe-demo-system-demo-builder-vscode/d78cf1ae-3c0d-43f7-bea9-03c17155eeda/scratchpad/law-full.txt"
+ }
+}

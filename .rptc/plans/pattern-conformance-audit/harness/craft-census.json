@@ -5607,8 +5607,7 @@
    "flags": [
     "theater"
    ],
-   "doubleStyle": "light-mocks",
-   "adjudication": "CONFIRMED near-theater: 4 tests, 232 lines, ONE assertion total; blocks narrate CURRENT vs DESIRED behavior in comments while verifying almost nothing \u2014 documents a known loophole (component updates do not handle env-var renames) as passing tests. Fix shape: assert CURRENT behavior (characterization), move DESIRED to a backlog item"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
@@ -5875,8 +5874,7 @@
    "flags": [
     "theater"
    ],
-   "doubleStyle": "deps-object-or-pure",
-   "adjudication": "FALSE POSITIVE: asserts by throwing (a throwing test fails) \u2014 functional but unconventional; candidate to convert to expect() for uniformity, not theater"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/types/demoPackages-composite.test.ts",
