@@ -106,8 +106,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // v30: token-first theming generalized beyond type — the design skills
     // teach the whole styles.css token system (color/spacing/shape/grid) with
     // read-the-file-first, plus the reset lifecycle stated plainly.
-    it('is 30 (token-first theming across the whole token system)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(30);
+    // v31: extend-app-builder-app routes kit knowledge to the
+    // commerce-extensibility server first (measured at zero uses across both
+    // ERP journeys while agents re-derived its rules from source).
+    it('is 31 (kit knowledge routes to the commerce-extensibility server)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(31);
     });
 });
 

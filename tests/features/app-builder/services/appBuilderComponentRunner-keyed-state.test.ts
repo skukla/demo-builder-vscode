@@ -27,6 +27,7 @@ jest.mock('@/core/shell', () => ({
 // the integration add paths run (the rejection test lives in the sibling file).
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 

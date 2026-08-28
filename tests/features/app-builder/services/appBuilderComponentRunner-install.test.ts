@@ -53,6 +53,7 @@ function kitDeps(overrides: Partial<Record<string, unknown>> = {}) {
 // The add path verifies the cloned repo's layout on disk; mock the detector to
 // agree with the entry so the door admits it.
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     detectAppLayout: jest.fn(async () => 'extension'),
 }));
 

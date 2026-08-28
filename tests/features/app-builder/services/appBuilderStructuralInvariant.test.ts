@@ -34,6 +34,7 @@ jest.mock('@/core/shell', () => ({
 // The config layout is filesystem-read at the add door; the invariant suite runs
 // the happy path (the rejection is pinned in the runner suite).
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 

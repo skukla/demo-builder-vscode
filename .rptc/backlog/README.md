@@ -250,7 +250,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-1d` | feature | [Build Commerce integrations FROM the integration starter kit, not a blank shell](2026-08-26-scaffold-integrations-from-starter-kit.md) | — | med | shipped |
 | `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | backlog |
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
-| `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | active |
+| `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | shipped |
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | backlog |
 
 ### data-installer  (2)

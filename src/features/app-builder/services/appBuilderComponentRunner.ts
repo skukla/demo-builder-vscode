@@ -31,7 +31,7 @@
  */
 
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
-import { detectAppLayout, type AppConfigLayout } from './appConfigPackages';
+import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -58,6 +58,25 @@ import { toError } from '@/types/typeGuards';
 export interface RunnerResult {
     success: boolean;
     error?: string;
+    /** Post-undeploy Runtime verification (remove only) — see AB-7. */
+    runtimeCleanup?: RuntimeCleanupSummary;
+}
+
+/**
+ * What the post-undeploy verification found and did (AB-7). `aio app undeploy`
+ * exits 0 while leaving deployed packages behind — measured live 2026-08-28:
+ * a full remove "succeeded" in 5.4s with the whole app still serving, and a
+ * kit removal left 12 packages. So removal VERIFIES: it lists the namespace
+ * and deletes leftovers it can attribute to this integration by name.
+ */
+export interface RuntimeCleanupSummary {
+    /** False when the namespace could not be listed — said, never silent. */
+    verified: boolean;
+    /** Leftover packages found after undeploy and deleted. */
+    deleted: string[];
+    /** Leftovers whose delete failed — these are STILL RUNNING. */
+    failed: string[];
+    note?: string;
 }
 
 /** Storefront republish input (mirrors the eds RepublishParams the runner needs). */
@@ -832,6 +851,81 @@ async function teardownRemote(
 }
 
 /**
+ * Package names safe to interpolate into an `aio runtime package` command.
+ * Declared names come from config FILES; a name outside the Adobe id charset
+ * is never deleted (and never quoted into a shell line).
+ */
+const RUNTIME_PACKAGE_NAME = /^[A-Za-z0-9@._-]+$/;
+
+/**
+ * Verify the undeploy actually cleared the namespace, and delete what it left
+ * (AB-7). Attribution is exact and conservative: only packages the app itself
+ * names — its declared config packages plus the derived isolation package —
+ * are candidates; anything else in the namespace is not ours to touch.
+ * Best-effort like the rest of teardown, but never SILENT: the summary lands
+ * on the result, and an unverifiable namespace says so.
+ */
+async function verifyRuntimeTeardown(
+    project: Project,
+    id: string,
+    expectedPackages: string[],
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RuntimeCleanupSummary> {
+    const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
+        RUNTIME_PACKAGE_NAME.test(name),
+    );
+    let present: string[];
+    try {
+        const listed = await withOrgContext(targetFor(project, deps), () =>
+            deps.commandManager.execute('aio runtime package list --json', {
+                useNodeVersion: 'auto',
+                enhancePath: true,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+            }),
+        );
+        const parsed = JSON.parse(listed.stdout || '[]') as Array<{ name?: string }>;
+        present = parsed.map((p) => p.name ?? '').filter(Boolean);
+    } catch (error) {
+        return {
+            verified: false,
+            deleted: [],
+            failed: [],
+            note: `Could not list the Runtime namespace to verify the undeploy: ${toError(error).message}`,
+        };
+    }
+
+    const leftovers = expected.filter((name) => present.includes(name));
+    const deleted: string[] = [];
+    const failed: string[] = [];
+    for (const name of leftovers) {
+        try {
+            await withOrgContext(targetFor(project, deps), () =>
+                deps.commandManager.execute(`aio runtime package delete ${name} --recursive`, {
+                    useNodeVersion: 'auto',
+                    enhancePath: true,
+                    shell: true,
+                    timeout: TIMEOUTS.LONG,
+                }),
+            );
+            deleted.push(name);
+        } catch (error) {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] leftover package "${name}" delete failed: ${toError(error).message}`,
+            );
+            failed.push(name);
+        }
+    }
+    if (leftovers.length > 0) {
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} package(s) running ` +
+                `(${leftovers.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
+        );
+    }
+    return { verified: true, deleted, failed };
+}
+
+/**
  * The project's selections with every mesh dependency dropped.
  *
  * Keyed by the LEGACY component ids (`eds-accs-mesh` and friends), which is what
@@ -906,6 +1000,14 @@ export async function removeAppBuilderComponent(
     // an uninstall failure must never block the remove the user asked for.
     await uninstallIfAppManagement(project, id, state, deps);
 
+    // The declared package inventory is read BEFORE the undeploy and the local
+    // delete — afterwards the config files it attributes by are gone.
+    const componentPath = project.componentInstances?.[id]?.path;
+    let declaredPackages: string[] = [];
+    if (state.kind !== 'mesh' && componentPath) {
+        declaredPackages = await listDeclaredPackageNames(componentPath).catch(() => []);
+    }
+
     try {
         await teardownRemote(project, id, state, deps);
     } catch (error) {
@@ -913,6 +1015,13 @@ export async function removeAppBuilderComponent(
             `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
         );
     }
+
+    // Trust nothing: `aio app undeploy` exits 0 with packages still deployed
+    // (AB-7, measured live). Meshes verify via their own status flow.
+    const runtimeCleanup =
+        state.kind !== 'mesh'
+            ? await verifyRuntimeTeardown(project, id, declaredPackages, deps)
+            : undefined;
 
     await deps.componentManager.removeComponent(project, id, true);
 
@@ -987,5 +1096,5 @@ export async function removeAppBuilderComponent(
         });
     }
 
-    return { success: true };
+    return { success: true, ...(runtimeCleanup ? { runtimeCleanup } : {}) };
 }

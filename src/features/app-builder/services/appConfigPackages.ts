@@ -130,3 +130,47 @@ export async function applyIsolatedPackages(
     await fsPromises.writeFile(appConfigPath(componentPath), yaml.stringify(doc), 'utf-8');
     return true;
 }
+
+/**
+ * Every runtime package NAME the app declares — the attribution ground truth
+ * the post-undeploy verification (AB-7) checks the live namespace against.
+ *
+ * Standalone layout: the `application.runtimeManifest.packages` keys (after
+ * isolation these are the derived ow.package). Extension layout: each entry in
+ * the root `extensions:` map delegates via `$include` to its own config file
+ * (the aio convention — the starter kit's shape), so the included files'
+ * `runtimeManifest.packages` keys are read too. Unresolvable includes are
+ * SKIPPED, not fatal: the verification reports what it could attribute, and a
+ * package it cannot name is left alone — same never-delete-the-unparseable
+ * rule as provider bindings.
+ */
+export async function listDeclaredPackageNames(componentPath: string): Promise<string[]> {
+    const names = new Set<string>();
+    const doc = await readConfigDoc(componentPath);
+    for (const name of Object.keys(doc?.application?.runtimeManifest?.packages ?? {})) {
+        names.add(name);
+    }
+    for (const entry of Object.values(doc?.extensions ?? {})) {
+        const include = (entry as { $include?: unknown } | undefined)?.$include;
+        if (typeof include !== 'string') {
+            continue;
+        }
+        let raw: string;
+        try {
+            raw = await fsPromises.readFile(path.join(componentPath, include), 'utf-8');
+        } catch {
+            continue;
+        }
+        try {
+            const extDoc = yaml.parse(raw) as {
+                runtimeManifest?: { packages?: RuntimePackages };
+            };
+            for (const name of Object.keys(extDoc?.runtimeManifest?.packages ?? {})) {
+                names.add(name);
+            }
+        } catch {
+            continue;
+        }
+    }
+    return [...names];
+}

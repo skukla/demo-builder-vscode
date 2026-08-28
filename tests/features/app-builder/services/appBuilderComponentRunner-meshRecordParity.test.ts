@@ -36,6 +36,7 @@ jest.mock('@/core/shell', () => ({
 
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     ...jest.requireActual('@/features/app-builder/services/appConfigPackages'),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));

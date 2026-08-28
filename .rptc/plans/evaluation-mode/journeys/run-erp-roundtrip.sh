@@ -48,4 +48,17 @@ for line in open(sys.argv[1]):
     except: continue
     if d.get('session_id'): print('session:', d['session_id']); break
 EOF
+
+# ── ZERO CHECK (journey measurement rule 6): what did this run leave behind? ──
+# Manifest components + live event entities, printed so the report never
+# relies on the agent's own account. Runtime-package verification now lives
+# INSIDE remove_integration itself (AB-7) and surfaces on its response.
+echo "=== ZERO CHECK ==="
+python3 - <<'PY'
+import json
+d = json.load(open('.demo-builder.json'))
+print('components:', sorted((d.get('componentInstances') or {}).keys()))
+print('appBuilder selections:', d.get('componentSelections', {}).get('appBuilder'))
+PY
+node "$REPO/.claude/skills/mcp-live-probe/probe.mjs" call list_event_providers '{}' 2>/dev/null | tail -1
 exit $EXIT

@@ -226,7 +226,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // read the file for the real inventory, edit tokens, literals only where no
 // token covers the property. AI-1a design axis, step 1 (constraints where
 // feedback is impossible).
-export const AI_CONTEXT_VERSION = 30;
+// v31 (2026-08-28): extend-app-builder-app routes kit knowledge to the
+// commerce-extensibility server FIRST. Both ERP journeys measured that server
+// at zero calls while the kit build re-derived its rules from source — the
+// routing lead the journey measurement's calls-by-server line exists to catch.
+export const AI_CONTEXT_VERSION = 31;
 
 /**
  * Component IDs for standardized component instance access

@@ -13,6 +13,7 @@ import {
     applyIsolatedPackages,
     detectAppLayout,
     isolatePackages,
+    listDeclaredPackageNames,
 } from '@/features/app-builder/services/appConfigPackages';
 
 const mockRead = fsPromises.readFile as jest.Mock;
@@ -123,5 +124,51 @@ describe('applyIsolatedPackages', () => {
 
         expect(applied).toBe(false);
         expect(mockWrite).not.toHaveBeenCalled();
+    });
+});
+
+describe('listDeclaredPackageNames (AB-7 attribution ground truth)', () => {
+    it('standalone: the runtimeManifest package keys', async () => {
+        mockRead.mockResolvedValueOnce(config({ 'erp-x': {}, 'erp-x-b': {} }));
+
+        await expect(listDeclaredPackageNames('/app')).resolves.toEqual(['erp-x', 'erp-x-b']);
+    });
+
+    it('extension: follows each $include to its runtimeManifest packages', async () => {
+        mockRead
+            .mockResolvedValueOnce(
+                yaml.stringify({
+                    extensions: {
+                        'commerce/backend-ui/1': { $include: 'src/ext.config.yaml' },
+                    },
+                }),
+            )
+            .mockResolvedValueOnce(
+                yaml.stringify({ runtimeManifest: { packages: { 'kit-a': {}, 'kit-b': {} } } }),
+            );
+
+        await expect(listDeclaredPackageNames('/app')).resolves.toEqual(['kit-a', 'kit-b']);
+        expect(mockRead).toHaveBeenLastCalledWith('/app/src/ext.config.yaml', 'utf-8');
+    });
+
+    it('an unresolvable include is SKIPPED, never fatal — unattributable stays untouched', async () => {
+        mockRead
+            .mockResolvedValueOnce(
+                yaml.stringify({
+                    extensions: {
+                        good: { $include: 'ok.yaml' },
+                        broken: { $include: 'missing.yaml' },
+                    },
+                }),
+            )
+            .mockResolvedValueOnce(yaml.stringify({ runtimeManifest: { packages: { ok: {} } } }))
+            .mockRejectedValueOnce(new Error('ENOENT'));
+
+        await expect(listDeclaredPackageNames('/app')).resolves.toEqual(['ok']);
+    });
+
+    it('a missing or unparseable app.config answers empty, not a throw', async () => {
+        mockRead.mockRejectedValueOnce(new Error('ENOENT'));
+        await expect(listDeclaredPackageNames('/app')).resolves.toEqual([]);
     });
 });

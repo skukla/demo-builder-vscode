@@ -12,6 +12,7 @@
  */
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     applyIsolatedPackages: jest.fn(),
 }));
 jest.mock('@/features/app-builder/services/appDeployment', () => ({

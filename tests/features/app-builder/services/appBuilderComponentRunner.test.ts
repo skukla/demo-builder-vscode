@@ -37,6 +37,7 @@ jest.mock('@/core/shell', () => ({
 // integration happy paths run, override for the layout-mismatch rejection tests.
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
