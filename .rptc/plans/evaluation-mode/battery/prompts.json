@@ -838,7 +838,7 @@
     "expect": [
       "list_graphql_queries"
     ],
-    "why": "The ERP journey's schema trial-and-error (8 discovery curls) had this answer on the dropins server the whole time it existed. Measures routing to sibling-server knowledge: the tool is allowlisted via third-party-reads.txt and documented by the aem-researcher skill. cwd:project \u2014 the first measurement ran home-cwd (project servers, HOME guidance: a mismatch no real session has) and went 2/2 to grepping vendored source without one ToolSearch.",
+    "why": "Verbatim class of the ERP journey's schema question. ADJUDICATED 2026-08-28: at project cwd, with AGENTS.md naming list_graphql_queries explicitly, the agent still answered by grepping scripts/__dropins__ \u2014 CORRECTLY, file+line, 4-5 calls, twice. Per rule 5 (grade outcomes not paths) NATIVE-FILES is an ACCEPTED outcome here: the vendored source is version-exact ground truth. A future miss+NATIVE-FILES on this prompt is fine; a WRONG answer or >8 calls is not. The dropins server wins on asks the local source cannot answer (cross-version diffs, event flows) \u2014 cross-design-tokens is that measurement and hits 2/2.",
     "cwd": "project"
   },
   {
