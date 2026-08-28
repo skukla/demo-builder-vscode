@@ -31,3 +31,18 @@ second. Read it before arguing for either.
 
 A producer can see, without going looking, what the agent just did and whether it
 wasted their quota doing it.
+
+## Clarified aim (owner, 2026-08-28)
+
+The target surface is the **Prompt Workbench** — this epic is its visibility
+layer, not just terminal/channel narration. What shipped in beta.145 (the agent
+activity record, `get_agent_trace`, call tags — AI-2c/AI-2d) is the FOUNDATION:
+the data the workbench's trace view reads. The view itself already exists as
+parked work on `feature/evaluation-mode-dry-run` (`PromptWorkbench.tsx`,
+`AgentTraceView.tsx`, `Transcript.tsx` under `src/features/ai/evaluation/ui/`),
+taken off develop by AI-3b. This epic closes when that visibility layer is in
+producers' hands — do not close it on the activity channel alone.
+
+## Shipped so far
+
+- 2026-08-28  Owner clarified the aim: this epic is the Prompt Workbench's visibility layer. beta.145's activity record + call tags are its foundation; the view components are parked on feature/evaluation-mode-dry-run (AI-3b). Stays active — not closable on the channel alone.
