@@ -1,0 +1,5951 @@
+{
+ "generatedAt": "2026-08-28T15:16:42.733Z",
+ "universes": {
+  "di-style": "src_files",
+  "envelope": "tool_registrar_files",
+  "handler-map": "handler_map_files",
+  "ui-in-services": "service_class_files"
+ },
+ "rows": [
+  {
+   "unit": "src/commands/claudeCodeFootprint.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/claudeSessionStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/commandManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/commands/configure.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/diagnostics.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 5 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/commands/diagnosticsChecks.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/commands/diagnosticsReport.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/handlerContextFactory.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/commands/manageSiteAccess.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/migrateStorefrontNames.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/openInClaude.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/openModernizationAgent.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/orphanedSettings.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/refreshBlockLibrary.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/repairSiteConfiguration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/commands/showPromptsPicker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/auth/adobeAuthGuard.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/auth/browserSignInNotice.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/base/baseCommand.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/base/baseWebviewCommand.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/base/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/base/webviewPanelManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/build/buildInfo.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/build/buildStampUi.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/cache/cacheUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/cache/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/commands/ResetAiOnboardingCommand.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/commands/ResetAllCommand.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/core/communication/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/communication/webviewCommunicationManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/core/config/ConfigurationLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/config/configFileGenerator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/constants.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/di/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/di/serviceLocator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/handlers/dispatchHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/handlers/errorHandling.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/handlers/projectCommandHelper.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/logging/callTagContext.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/logging/debugLogger.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/logging/errorLogger.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/logging/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/logging/stepLogger.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/buildComponent.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/commandExecutor.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/core/shell/commandQueue.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/commandResultCache.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/commandSequencer.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/ensureNodeVersion.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/environmentSetup.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/fileWatcher.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/core/shell/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/meshDeleteCommand.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/orgContextEnv.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/pollingService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/portChecker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/processCleanup.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/rateLimiter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/resourceLocker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/retryStrategyManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/apiOwners.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/apiRowState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/appBuilderComponentMigration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/appBuilderComponentState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/componentApiPicks.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/componentSelectionReconcile.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/manifestFormatSweep.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/manifestValidation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/projectConfigWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/projectDirectoryScanner.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/projectFileLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/projectStateSync.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/recentProjectsManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/sessionUIState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/state/stateManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/core/state/transientStateManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ErrorBoundary.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/TimelineChildren.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/TimelineNav.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/WebviewApp.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/ApiCatalogFeedback.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/CtaEmptyState.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/EmptyState.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/InlineNotice.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/LoadingDisplay.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/LoadingOverlay.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/StatusCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/StatusDisplay.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/SuccessStateDisplay.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/ConfigSection.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/FieldHelpButton.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/FormField.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/InlineRenameField.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/descriptionRenderer.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/forms/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/IntegrationActionsMenu.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/IntegrationCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/integrationCardModel.types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/CenteredFeedbackContainer.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ContentColumn.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ContentWithSidebar.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ControlPanelLayout.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/FullScreenSurface.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/GridLayout.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageFooter.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageHeader.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageLayout.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/SingleColumnLayout.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/StepAreaShell.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/TwoColumnLayout.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/layout/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/BackButton.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/SearchHeader.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/SearchableList.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/StepRail.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/listScrollGeometry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/useScrollToSelectedRow.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/selection/ApiAccessPicker.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/selection/SelectionStepContent.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/selection/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/timelineNav.helpers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/CardActionsMenu.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/CopyableText.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/DestinationContext.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Drawer.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/FadeTransition.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Modal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/NumberedInstructions.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/SelectionCheck.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Spinner.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/StatusDot.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/ui/menuIcons.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/ConfigurationSummary.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/StatusSection.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/configurationSummaryHelpers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/stepStatusHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useActivateOnKey.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useArrowKeyNavigation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAsyncData.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAsyncOperation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAutoScroll.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useCanProceed.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useDebouncedLoading.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useDebouncedValue.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useElapsedStage.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useEnterExit.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useFocusOnMount.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useFocusTrap.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useIsMounted.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useLoadingState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/usePollingWithTimeout.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSearchFilter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelectableDefault.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelection.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelectionStep.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSetToggle.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useTimerCleanup.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVSCodeMessage.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVSCodeRequest.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVerificationMessage.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/WebviewClient.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/core/ui/utils/baseUri.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/classNames.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/componentDataHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/frontendTimeouts.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/meshStatusDisplay.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/spectrumTokens.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/statusVocabulary.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/stepCompletion.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/titleHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/validationState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/vscode-api.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/ui/utils/webviewLogger.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/agentPhaseChannel.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/browserUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/bundleUri.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/disposableStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/envParser.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/envVarExtraction.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/executionLock.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/getWebviewHTMLWithBundles.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/githubUrlParser.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/loadingHTML.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/maskEmail.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/mcpSocketPath.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/meshConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/oneTimeTip.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/projectDisplayName.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/projectsRoot.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/promiseUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/quickPickUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/singleFlight.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/sleep.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/timeFormatting.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/timeoutConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/utils/writeFileAtomic.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/PathSafetyValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/SensitiveDataRedactor.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/URLValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/Validator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/fieldValidation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/normalizers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/validators/AccessTokenValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/validators/AdobeResourceValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/validators/NodeVersionValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/validators/ProjectNameValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/validation/validators/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/vscode/envFileWatcherService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/core/vscode/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/vscode/progressRegister.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/vscode/workspaceWatcherManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/features/ai/aiSetupVerifier.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/mcpDriftDetector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/mcpInspector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/actionDescriptors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/adobeResourceTools.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/adobeTargetStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/adobeTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/agentAlertCopy.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/agentOperationNotifier.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/agentTraceSink.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/agentTraceTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/applyUpdatesTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/authTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/cloudResourceTools.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/commerceEndpointsTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/commerceQueryTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/componentRequirementsTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/configureProjectTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/connectionScope.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/consentText.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/consentViaChat.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/contentAuthoringTools.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/createProjectTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/currentProjectTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/dataInstallerDescriptors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/deleteProjectTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/diagnosticsTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/discoveryTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/edsResetTool.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/edsToolGuards.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/eventProviderTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/handoff.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/headlessHandlerContext.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/ai/server/inExtensionMcpServer.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/lifecycleTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpProxyFraming.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpProxyRetry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpSocketDiscovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpToolProbe.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpToolResult.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/progressCapture.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/projectStatusTool.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/ai/server/projectors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/readDescriptors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/scopedStateManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/settingsTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/siteTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/statusDescriptors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/storefrontTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/toolDescriptors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/toolDisplayName.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/toolNarration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/toolTraceRecorder.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/validateSelectionTool.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/viewTools.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/sessionMcpDetector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/skillInspector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/allowedDomain.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiAccessRows.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiSubscriber.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiSubscriberClientAdapter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderDeployOutcome.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appConfigPackages.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appDeployment.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementClient.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementInstaller.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementUninstaller.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/app-builder/services/deployAppIsolated.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/ensureMeshApiSubscribed.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/owPackageName.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/runtimeCredentials.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/s2sDeployEnv.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/secretKey.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/app-builder/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/handlers/authenticationHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/handlers/eventLifecycleDeps.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/handlers/orgSwitchHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/handlers/organizationHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/handlers/projectHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/handlers/workspaceHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeCliFallback.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeConsoleProjectOps.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeContextResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityFetcher.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityMapper.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityName.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityReads.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntitySelector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeOrgServices.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeSDKClient.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/apiAccessCatalog.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/authCacheManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/authPredicates.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationErrorFormatter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/features/authentication/services/consoleProjectTeardown.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/consoleProjectTeardownEvents.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/detectProjectOrgMismatch.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureOrgContext.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureProjectAdobeContext.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureProjectOrgContext.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/eventProviderLifecycle.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/imsTokenClaims.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/ioEventsClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/orgContextEnv.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/organizationValidator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/performanceTracker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/projectOwnership.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/tokenManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeProjectPicker.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeWorkspacePicker.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/hooks/useAuthStatus.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/AdobeAuthStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/authHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/authPredicates.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/components/AuthLoadingState.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/config/backendOwnedScope.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/config/envVarKeys.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/config/storeFieldHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/handlers/componentHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/components/services/ComponentRegistryManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/DependencyResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/appBuilderComponentCatalogLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/backendCommerce.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/blockLibraryLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/commerceCredentialStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/commerceSecretMigration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/commerceSecretSweep.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/componentConfigWrites.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/componentDependencies.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/components/services/componentInstallation.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/components/services/componentManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/componentTransforms.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/demoPackageLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/envVarHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/meshCatalogDerivation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/projectAppBuilderPredicate.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/serviceGroupTransforms.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/stackComponentCollector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/BrokeredCredentialFields.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/ConfigFieldRenderer.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/ServiceGroupList.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreConfigFieldRow.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreSelectionRow.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreStructureSelector.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useAutoStoreDetect.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useComponentConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useCredentialService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useStoreDiscovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/commands/configure.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 2 direct construction(s)"
+  },
+  {
+   "unit": "src/features/dashboard/commands/configureEnvLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/commands/openAi.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/commands/showDashboard.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/commands/showIntegrations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/aiHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/aiPromptHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appBuilderComponentSecrets.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appManagementInstallHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/configureHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/destinationHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/edsContentHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/eventingHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/meshStatusHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/openUrlHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/panelNavigationHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/projectManagementHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/statusHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/services/dashboardStatusService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/defaultPromptsSeeder.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/aiVerifyCheck.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/orchestrator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/ProjectDashboardScreen.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/ActionGrid.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiCapabilitiesModal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiMcpsList.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiSkillsList.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DashboardStatusHeader.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DashboardTile.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DataInstallerTile.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/OrgContextNotice.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/aiIntegrations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/aiSurfaceNames.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/ConfigureSectionBody.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/SecretFieldRow.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/appBuilderComponentFieldModel.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureFieldValidation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureHelpers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureSections.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureTypes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useSelectedComponents.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/storedSecretPayload.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/dashboardPredicates.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/aiStatusDerivations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/dashboardCheckRouting.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/dashboardStatusTypes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useDashboardActions.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useInlineRename.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveAppBuilderComponents.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveDestination.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/dashboard/ui/main.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/commands/showDataInstaller.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/dataInstallerHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/exportHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/importHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 4 direct construction(s)"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/settingsHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/accsCredentialProvisioner.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/accsProvisionEligibility.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/commerceCredentialBroker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/commerceCredentials.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerErrors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerParsers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerWriteClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/datapackCatalog.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/importInstance.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/importJobRunner.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/importScopeDiscovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/sampleDataInstall.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/services/sampleDataInstallDeps.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/data-installer/services/workspaceConfigDownload.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/DataInstallerScreen.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/DatapackCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/DatapackDetailPanel.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ImportForm.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ViewSwitcher.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/importResult.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/dataInstallerFailure.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/dataTypeLabel.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useDataInstallerRequest.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useImportProgress.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useImportScopes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/importDependencies.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/importProgress.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/views/DatapackActivityView.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/commands/cleanupDaLiveSites.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 2 direct construction(s)"
+  },
+  {
+   "unit": "src/features/eds/commands/manageGitHubRepos.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/handlers/authoringExperience.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/blockLibraryPublish.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/byomOverlay.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/checkRepoReadinessHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/configServiceRegistration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/credentialServiceHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/daLiveSiteConfig.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/edsDaLiveHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsGitHubHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsServiceCache.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/features/eds/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/refreshBlockLibraryHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storeStructureHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (4 site(s))"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (4 site(s))"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupTypes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/accsDiscoveryConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/appInstallationResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/authoringExperienceFlip.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/b2bReadinessDetection.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/blockCollectionHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/brandAssetPublisher.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/catalogPrewarmService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/cleanupService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/codeSyncErrors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/commerceStoreDiscovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configGenerator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configAccessRecovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configServiceAccess.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configServiceProbe.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configurationService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/lostGrantsMessage.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/repairSiteConfigForProject.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/configService/repairSiteConfigHeadless.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteAccessManagerHeadless.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteConfigRegistrar.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteGrantPreservation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/configSyncService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/credentialServiceProbe.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daAuthHelperToken.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveApiClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveAuthRetry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveAuthService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConstants.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentDiscovery.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentOperations.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveOrgOperations.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveSpreadsheetUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/edsPipeline.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/errorFormatters.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/ewSettingChangeListener.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/fstabGenerator.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubAppService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubCredentialProbe.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubFileOperations.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubOAuthService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubRepoOperations.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubTokenService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixAdminAuth.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixAdminErrors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixApiClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixApiKeys.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixBulkJobs.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixKeyStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixSiteContent.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/inspectorHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/codePatchRegistry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/contentPatchRegistry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/externalPatchFetcher.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/lkgPinHelper.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/lkgReader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchMissTracker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchReportHelper.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchTargetPolicy.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdp404Snippet.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdpUrlEncoding.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/publishKeyRegistrar.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/publishKeyRenewalSweep.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/placeholderStubs.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/quickEditPublisher.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/refreshBlockLibraryHeadless.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetConfigStep.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetMeshHelper.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetParams.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetUI.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/eds/services/resourceCleanupHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/runtimeSurfaceInventory.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/runtimeSurfaceResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storeStructureReader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/repoStorefrontReadiness.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontNameMigration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontProbe.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontRepublishService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontSyncService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/services/toolManager.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 4 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/eds/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/DaLiveServiceCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/GitHubAppInstallDialog.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/GitHubServiceCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/ServiceCardShell.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/VerifiedField.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/components/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/helpers/bookmarkletSetupPage.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/helpers/codeSyncInstallContent.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/repoSelectionInline.helpers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/utils/daLiveTokenBookmarklet.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/deleteProject.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/managedStorefrontFiles.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/startDemo.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (3 site(s))"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/stopDemo.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/syncStorefront.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/viewStatus.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/lifecycle/services/lifecycleService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/lifecycle/services/projectResetService.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/mesh/commands/deployMesh.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/handlers/checkHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/handlers/deleteHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/handlers/deployHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/handlers/meshHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/handlers/shared.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/handlers/subscribeHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshHeadless.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshWithFeedback.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshCheckHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshDeployment.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshDeploymentVerifier.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/services/meshEndpoint.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshRedeploy.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/services/meshStatusResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshUpdateDecline.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/services/meshVerifier.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/services/stalenessDetector.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/mesh/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/utils/errorFormatter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/mesh/utils/meshHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/checkHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/continueHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/installHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/prerequisitesHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/shared.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
+  },
+  {
+   "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/prerequisites/services/installation/InstallStepBuilder.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/services/installation/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/DependencyResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (3 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/NodeVersionParser.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/commands/createProject.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/consoleApiHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/createHandler.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executor.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (3 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorComponentLoading.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorEditMode.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorEdsPhase.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorMeshPhase.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorPreflight.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorSampleDataPhase.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/shared.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/validateHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/wizardLifecycleHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/envFileGenerator.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/formatters.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/ProjectSetupContext.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/agentsMdSections.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiBundleService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiContextWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiToolingGate.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/generatedFileWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/globalMcpRegistration.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/skillsWriter.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 4 locator reach-in(s) + 2 direct construction(s)"
+  },
+  {
+   "unit": "src/features/project-creation/services/appBuilderComponentSelection.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/catalogPrewarmPhase.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/services/customBlockLibraryUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/edsContentSetup.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/services/envVarClassifier.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/meshSetupService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (4 site(s))"
+  },
+  {
+   "unit": "src/features/project-creation/services/projectFinalizationService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/services/sanitization.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BrandGallery.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BuildYourProjectSummary.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/ChoiceCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/brandGalleryHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/commerceSectionValidity.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/OptionalNameField.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/apiAccessConstants.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/flowStages.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/instanceId.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/integrationCards.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/integrationRows.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/meshApiSubscription.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/BlankStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/CatalogStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/CustomStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/DestinationStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/KindStage.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/brandStackLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/buttonTextHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/demoPackageLoader.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useSelectedStack.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useStepValidation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/BuildYourProjectStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/ReviewStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/StorefrontStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/buildSummary.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/buildYourProjectAreas.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/commerceSections.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/commerceStepBodies.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/edsConfigFromStorefront.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/projectCreationPredicates.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/reviewPredicates.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/reviewStepHelpers.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/storefrontSections.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/tileStatus.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/useProjectBuilder.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/appBuilderComponentSelectionState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/buildAreaWalk.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useMessageListeners.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardEffects.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardNavigation.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/stepFiltering.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/wizardStepRouter.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/commands/showProjectsList.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/projectsListHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/projectDeletionService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/projectRenameService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/settingsSerializer.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/settingsTransferService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/ProjectsDashboard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/DashboardEmptyState.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectCard.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectRow.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectRowList.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectsGrid.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/hooks/useProjectSelectHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/projectsDashboardHelpers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/utils/componentSummaryUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/handlers/sidebarHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/providers/sidebarProvider.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/ui/Sidebar.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/ui/components/AiZone.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/ui/index.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/ui/views/UtilityBar.tsx",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/sidebar/ui/views/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/commands/checkUpdates.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/features/updates/commands/updateExecutor.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
+  },
+  {
+   "unit": "src/features/updates/commands/updateTypes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/addonUpdateChecker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/adobeMcpUpdateChecker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/adobeMcpUpdateCore.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
+  },
+  {
+   "unit": "src/features/updates/services/collaboratorGate.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/componentRepositoryResolver.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/componentUpdater.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 3 locator reach-in(s) + 2 direct construction(s)"
+  },
+  {
+   "unit": "src/features/updates/services/extensionUpdater.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/forkSyncService.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/githubApiClient.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/releaseTrack.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/templateSyncService.ts",
+   "pattern": "di-style",
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 3 locator reach-in(s) + 2 direct construction(s)"
+  },
+  {
+   "unit": "src/features/updates/services/templateUpdateChecker.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/types.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/updates/services/updateApplyService.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (4 site(s))"
+  },
+  {
+   "unit": "src/features/updates/services/updateCore.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/updates/services/updateManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/blockAuthoring.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/blockLibraryPublish.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/blockToolHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/credentials.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/projectSecurity.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/projectToolHandlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp/storefrontSyncHandler.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/adobeApis.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/ai.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/aiDefaults.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/aio-lib-core-config.d.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/aio-lib-ims.d.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/appBuilderComponents.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/assets.d.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/base.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/blockLibraries.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/commerceStore.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/components.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/demoPackages.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/errorCodes.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/errors.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/handlers.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/index.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/logger.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/messages.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/results.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/settingsFile.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/shell.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/stacks.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/state.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/typeGuards.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/webview.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/webviewPayloads.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/webviewRequests.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/types/wizard.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/utils/autoUpdater.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp-server.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/projectStatusTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/authTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/edsResetTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/componentRequirementsTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/cloudResourceTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/applyUpdatesTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/storefrontTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/createProjectTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/deleteProjectTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/validateSelectionTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/contentAuthoringTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/settingsTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/toolDescriptors.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/adobeTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/discoveryTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/agentTraceTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/viewTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/currentProjectTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/configureProjectTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/commerceQueryTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/inExtensionMcpServer.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/adobeResourceTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/commerceEndpointsTool.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/lifecycleTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/eventProviderTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/siteTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/features/ai/server/diagnosticsTools.ts",
+   "pattern": "envelope",
+   "verdict": "conforming",
+   "evidence": "uses asText/asRawText only"
+  },
+  {
+   "unit": "src/types/handlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/core/handlers/errorHandling.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/mesh/handlers/deployHandler.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/mesh/handlers/meshHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/sidebar/handlers/sidebarHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/exportHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/dataInstallerHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/importHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/eds/handlers/refreshBlockLibraryHandler.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/eds/handlers/storeStructureHandler.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/prerequisitesHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/projectManagementHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/configureHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appManagementInstallHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/eventingHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/aiHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/destinationHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/edsContentHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/openUrlHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/panelNavigationHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/statusHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/components/handlers/componentHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/consoleApiHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/wizardLifecycleHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/projectsListHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/features/authentication/handlers/orgSwitchHandler.ts",
+   "pattern": "handler-map",
+   "verdict": "conforming",
+   "evidence": "typed MessageHandler exports / defineHandlers map"
+  },
+  {
+   "unit": "src/core/di/serviceLocator.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/shell/pollingService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/shell/retryStrategyManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/state/transientStateManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/state/stateManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/state/recentProjectsManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/communication/webviewCommunicationManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/vscode/envFileWatcherService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/vscode/workspaceWatcherManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/core/base/webviewPanelManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/mesh/services/meshVerifier.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configurationService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/toolManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveAuthService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/types.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubOAuthService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubTokenService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubAppService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/eds/services/cleanupService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/updates/services/templateSyncService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/updates/services/forkSyncService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/updates/services/updateManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/components/services/componentManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/components/services/ComponentRegistryManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationService.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeOrgServices.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/authentication/services/authCacheManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/features/authentication/services/tokenManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "conforming",
+   "evidence": "no VS Code UI from the service layer"
+  },
+  {
+   "unit": "src/commands/commandManager.ts",
+   "pattern": "ui-in-services",
+   "verdict": "deviating",
+   "evidence": "10 vscode.window.show* call(s) inside a service class"
+  }
+ ]
+}
