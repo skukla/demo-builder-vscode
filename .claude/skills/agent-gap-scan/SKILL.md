@@ -178,11 +178,34 @@ capability gap, not a discovery problem.
 required" as ordinary text with `is_error` unset, which every count scores as a
 success.
 
-## Journey efficiency audit — the rubric (owner-requested, 2026-08-28)
+## The journey measurement (owner-requested, 2026-08-28)
 
-When a journey is audited for COST (not just shape), work these five steps in
-order. The 264-turn ERP journey is the reference audit; its numbers are cited
-so future audits have a comparison point.
+**Every journey or battery analysis answers three questions, not one:** what
+happened, what SHOULD have happened, and **where the should-have-fired tool
+comes from** — so the intended journey is understood, not just the failed one.
+"Bad things found" is half an audit.
+
+A real project's agent surface has FOUR MCP servers plus two skill families
+(verified against bodea's bundle, 2026-08-28) — the provenance answer names
+one of these per should-have-fired tool:
+
+| Source | What it owns |
+|---|---|
+| **demo-builder** (our in-extension server) | Project/org/mesh/Console/commerce-query — ALL the tools that replaced the ERP journey's aio commands and curls live here |
+| **dropins** (`@dropins/mcp`) | Structured dropin knowledge: slots, events, containers, **`list_graphql_queries`** — the storefront GraphQL operations, extracted from source |
+| **commerce-extensibility** (`@adobe-commerce/commerce-extensibility-tools`) | App Builder + Integration Starter Kit rules and patterns — the ERP journey's BUILD phase guidance |
+| **playwright** | Browser verification |
+| **Demo Builder skills** (generated, 15) | Our workflows: add-component, commerce-block-mapper, diagnose-demo… |
+| **Adobe skill bundles** (aem-\* ×7, appbuilder-\* ×7) | Storefront and App Builder craft; `aem-researcher` is what ROUTES to the dropins MCP's query tools |
+
+The journey metrics' **calls-by-server** line makes the provenance question
+mechanical: a sibling server at 0 calls while its job was done by hand is a
+ROUTING gap — the knowledge existed and nothing led the agent to it — which is
+a different fix (skill/AGENTS.md routing) from a missing tool.
+
+When auditing for COST, work these five steps in order. The 264-turn ERP
+journey is the reference audit; its numbers are cited so future audits have a
+comparison point.
 
 **1. Classify every Bash call** into exactly four buckets:
    - *File-work* — reading/writing code, navigating. Bash is CORRECT here;

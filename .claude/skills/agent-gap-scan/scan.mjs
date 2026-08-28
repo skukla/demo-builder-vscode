@@ -340,6 +340,18 @@ function journey(sessionId) {
     // 4. Interventions — the user spoke right after one of our calls answered.
     //    The clearest available marker of the agent being off the path.
     const interventions = rows.filter((r) => r.flags.includes('USER-SPOKE-NEXT')).length;
+    // 5. Calls by SERVER — the tool-name prefix (mcp__<server>__) carries
+    //    provenance, so the journey says which installed surfaces it actually
+    //    used. A journey that never touches a sibling server (dropins,
+    //    commerce-extensibility, playwright) while doing that server's job by
+    //    hand is a ROUTING gap, distinct from a missing tool.
+    const byServer = {};
+    for (const e of events) {
+        if (e.kind !== 'call') continue;
+        const m = /^mcp__([^_]+(?:-[^_]+)*)__/.exec(e.name);
+        const server = m ? m[1] : (/^Bash$|__Bash$/.test(e.name) ? 'bash' : 'built-in');
+        byServer[server] = (byServer[server] || 0) + 1;
+    }
     const metrics = {
         turnsToFirstAction: firstAction
             ? { callNumber: firstAction.n, tool: firstAction.tool }
@@ -347,6 +359,7 @@ function journey(sessionId) {
         reorientations,
         bash: { total: bashIdx.length, ...bashArc },
         interventions,
+        byServer,
     };
 
     if (opt.json) {
@@ -367,7 +380,10 @@ function journey(sessionId) {
            '(a read-like tool asked again; near repeats mean the answer did not stick)');
     L.push(`- **Bash moments**: ${bashIdx.length} total — ${bashArc.early} early / ${bashArc.mid} mid / ` +
            `${bashArc.late} late (early = discovery gap, late = capability gap)`);
-    L.push(`- **Interventions**: ${interventions} — the user spoke immediately after one of our calls\n`);
+    L.push(`- **Interventions**: ${interventions} — the user spoke immediately after one of our calls`);
+    const servers = Object.entries(byServer).sort((a, b) => b[1] - a[1])
+        .map(([s2, n]) => `${s2} ${n}`).join(' · ');
+    L.push(`- **Calls by server**: ${servers || '(none)'} — a sibling server at 0 while its job was done by hand is a ROUTING gap\n`);
     if (!rows.length) {
         L.push('_This session never called a Demo Builder tool._\n');
         console.log(L.join('\n'));
