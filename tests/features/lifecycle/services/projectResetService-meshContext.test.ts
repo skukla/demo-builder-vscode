@@ -21,6 +21,8 @@ const mockGetCachedOrganization = jest.fn().mockReturnValue(undefined);
 
 /** CONVERTED 2026-08-28 (ADR-015): the executor is handed in, not fetched. */
 const executor = { execute: jest.fn() } as never;
+/** ADR-015: the auth service is handed in too. */
+const authManagerFake = { getCachedOrganization: mockGetCachedOrganization } as never;
 
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
@@ -117,7 +119,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         expect(mockWithOrgContext).toHaveBeenCalledTimes(1);
         expect(mockDeployMeshComponent).toHaveBeenCalledTimes(1);
@@ -127,7 +129,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         expect(mockWithOrgContext).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -146,7 +148,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         expect(mockWithOrgContext).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -165,7 +167,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         const target = mockWithOrgContext.mock.calls[0][0] as Record<string, unknown>;
         expect(target.orgId).toBe('org-123');
@@ -178,7 +180,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        const result = await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        const result = await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         expect(result).toEqual({ redeployed: false });
         expect(mockWithOrgContext).not.toHaveBeenCalled();
@@ -190,7 +192,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         const project = createProject();
         const context = createContext();
 
-        const result = await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor);
+        const result = await handleMeshRedeployment(project, context, '[ProjectReset]', progress, vscode, executor, authManagerFake);
 
         expect(result).toBeNull();
         expect(mockWithOrgContext).not.toHaveBeenCalled();
@@ -242,7 +244,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
 
             const project = createKeyedProject();
             const result = await handleMeshRedeployment(
-                project, createContext(), '[ProjectReset]', progress, vscode, executor,
+                project, createContext(), '[ProjectReset]', progress, vscode, executor, authManagerFake,
             );
 
             expect(result).toEqual({ redeployed: true });
@@ -258,7 +260,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             const project = createKeyedProject();
 
             await handleMeshRedeployment(
-                project, createContext(), '[ProjectReset]', progress, vscode, executor,
+                project, createContext(), '[ProjectReset]', progress, vscode, executor, authManagerFake,
             );
 
             expect(project.appBuilderComponents?.['acme-widget']).toEqual(

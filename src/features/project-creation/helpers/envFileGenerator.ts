@@ -7,7 +7,7 @@ import * as path from 'path';
 import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { resolveBackendOwnedScopeValue } from '@/features/components/config/backendOwnedScope';
 import {
@@ -320,8 +320,10 @@ export async function regenerateProjectEnvFiles(
     project: Project,
     registry: ComponentRegistry,
     logger: Logger,
+    /** ADR-015: the secret store, supplied by the boundary that starts this. */
+    secrets: SecretStorageLike | undefined,
 ): Promise<void> {
-    const context = await buildEnvGenerationContext(project, registry, logger);
+    const context = await buildEnvGenerationContext(project, registry, logger, secrets);
 
     for (const [componentId, instance] of Object.entries(project.componentInstances || {})) {
         if (!instance?.path) {
@@ -351,6 +353,7 @@ async function buildEnvGenerationContext(
     project: Project,
     registry: ComponentRegistry,
     logger: Logger,
+    secrets: SecretStorageLike | undefined,
 ): Promise<EnvGenerationContext> {
     const backendId = project.componentSelections?.backend;
 
@@ -366,7 +369,7 @@ async function buildEnvGenerationContext(
     const hydratedConfigs = (await hydrateDeclaredSecrets(
         project.componentConfigs as ConfigMap,
         project.path,
-        ServiceLocator.getSecretStorage() ?? undefined,
+        secrets,
     )) as Record<string, Record<string, string | number | boolean | undefined>> | undefined;
 
     return {
@@ -423,6 +426,8 @@ export async function regenerateComponentEnvFile(
     logger: Logger,
     componentId: string,
     componentPath: string,
+    /** ADR-015: the secret store, supplied by the boundary that starts this. */
+    secrets: SecretStorageLike | undefined,
 ): Promise<void> {
     const definition = findRegistryDefinition(registry, componentId);
     if (!definition) {
@@ -434,7 +439,7 @@ export async function regenerateComponentEnvFile(
         componentPath,
         componentId,
         definition,
-        await buildEnvGenerationContext(project, registry, logger),
+        await buildEnvGenerationContext(project, registry, logger, secrets),
     );
 }
 

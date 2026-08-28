@@ -13,6 +13,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
+import { ServiceLocator } from '@/core/di';
 
 jest.mock('vscode');
 jest.mock('@/core/state');
@@ -161,6 +162,20 @@ function captureSaveHandler(
         return result;
     };
 }
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves its collaborators from the
+ * registry, which the shared node setup empties after EVERY test — so the fakes
+ * are seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setAuthenticationService({
+        getCachedOrganization: jest.fn(),
+        getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
+    } as never);
+});
 
 describe('ConfigureProjectWebviewCommand - save-configuration authoring experience', () => {
     let command: ConfigureProjectWebviewCommand;

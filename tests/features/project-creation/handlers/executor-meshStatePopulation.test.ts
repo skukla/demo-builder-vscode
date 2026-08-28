@@ -16,6 +16,20 @@ import type { Project } from '@/types/base';
 // Mock the stalenessDetector module
 jest.mock('@/features/mesh/services/stalenessDetector');
 
+
+/**
+ * ADR-015 (2026-08-28): `fetchDeployedMeshConfig` takes a logger and its
+ * collaborators now. The spy below still intercepts it, so these fakes only
+ * satisfy the signature.
+ */
+const meshLogger = {
+    debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
+} as never;
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
+} as never;
+
 describe('Executor - Mesh State Population After Deployment', () => {
     let mockProject: Project;
     let mockUpdateMeshState: jest.SpyInstance;
@@ -81,7 +95,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             // Simulate the executor flow after mesh deployment
             await stalenessDetector.updateMeshState(mockProject);
 
-            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig();
+            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             // Verify config was fetched
             expect(mockFetchDeployedMeshConfig).toHaveBeenCalled();
@@ -103,10 +117,10 @@ describe('Executor - Mesh State Population After Deployment', () => {
             };
             mockFetchDeployedMeshConfig.mockResolvedValue(deployedConfig);
 
-            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig();
+            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(fetchedConfig).toEqual(deployedConfig);
-            expect(Object.keys(fetchedConfig!).length).toBe(4);
+            expect(Object.keys(fetchedConfig!)).toHaveLength(4);
         });
     });
 
@@ -116,7 +130,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             mockFetchDeployedMeshConfig.mockResolvedValue(null);
 
             await stalenessDetector.updateMeshState(mockProject);
-            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig();
+            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             // Verify fetch was attempted
             expect(mockFetchDeployedMeshConfig).toHaveBeenCalled();
@@ -133,10 +147,10 @@ describe('Executor - Mesh State Population After Deployment', () => {
             // Mock empty config response
             mockFetchDeployedMeshConfig.mockResolvedValue({});
 
-            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig();
+            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(fetchedConfig).toEqual({});
-            expect(Object.keys(fetchedConfig!).length).toBe(0);
+            expect(Object.keys(fetchedConfig!)).toHaveLength(0);
 
             // In the executor, this would be caught by:
             // if (deployedConfig && Object.keys(deployedConfig).length > 0)
@@ -147,7 +161,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             // Mock auth failure (fetchDeployedMeshConfig returns null when not authenticated)
             mockFetchDeployedMeshConfig.mockResolvedValue(null);
 
-            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig();
+            const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(fetchedConfig).toBeNull();
             // Graceful degradation - meshState.envVars stays empty
@@ -157,7 +171,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             // Mock network error
             mockFetchDeployedMeshConfig.mockRejectedValue(new Error('Network timeout'));
 
-            await expect(stalenessDetector.fetchDeployedMeshConfig()).rejects.toThrow('Network timeout');
+            await expect(stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps)).rejects.toThrow('Network timeout');
 
             // In the executor, this would be caught by the else block
             // and meshState.envVars would remain empty (safe fallback)
@@ -173,7 +187,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
 
             // Simulate executor flow
             await stalenessDetector.updateMeshState(mockProject);
-            await stalenessDetector.fetchDeployedMeshConfig();
+            await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             // Verify both functions were called
             expect(mockUpdateMeshState).toHaveBeenCalled();
@@ -193,7 +207,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             expect(mockProject.componentConfigs).toBeUndefined();
 
             // But fetchDeployedMeshConfig still works
-            const result = await stalenessDetector.fetchDeployedMeshConfig();
+            const result = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toEqual(deployedConfig);
             expect(result).not.toBeNull();
@@ -209,7 +223,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             mockFetchDeployedMeshConfig.mockResolvedValue(deployedConfig);
 
             // After the fix, this is what happens in executor:
-            const config = await stalenessDetector.fetchDeployedMeshConfig();
+            const config = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             if (config && Object.keys(config).length > 0) {
                 // This is the critical assignment in the fix
@@ -227,7 +241,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             mockFetchDeployedMeshConfig.mockResolvedValue(null);
 
             // After the fix with failed fetch:
-            const config = await stalenessDetector.fetchDeployedMeshConfig();
+            const config = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             if (config && Object.keys(config).length > 0) {
                 mockProject.appBuilderComponents!.mesh!.envVars = config;

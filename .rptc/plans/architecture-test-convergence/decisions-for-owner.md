@@ -1,5 +1,11 @@
 # Decisions that need the owner
 
+**Scheduled:** D-2 is the next work item once the fetching list reaches zero —
+it is not parked. The owner asked for it to be revisited rather than filed
+(2026-08-28). Until they pick an option, the loop's default is the
+recommendation below (option 2), executed the same way the fetch conversions
+were: one batch at a time, each gated, each shrinking the list.
+
 Things the conversion work surfaced that are real choices, not discoverable
 facts. Each one names what was measured, the recommendation, and what happens
 if we do nothing.

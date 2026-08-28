@@ -99,6 +99,7 @@ export const handleResetProject: MessageHandler = async (context) => {
     );
     return resetProjectWithUI({
         commandManager: ServiceLocator.getCommandExecutor(),
+        authManager: ServiceLocator.getAuthenticationService(),
         project,
         context,
         logPrefix: '[Dashboard]',

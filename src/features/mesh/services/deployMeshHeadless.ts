@@ -17,6 +17,7 @@
 
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
 import { updateMeshState } from './stalenessDetector';
+import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CommandExecutor } from '@/core/shell';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
@@ -56,6 +57,8 @@ export interface DeployMeshHeadlessDeps {
     /** ADR-015: collaborators supplied by whichever boundary starts the deploy. */
     authManager: AuthenticationService;
     commandManager: CommandExecutor;
+    /** ADR-015: the secret store, for the mesh .env regeneration step. */
+    secrets: SecretStorageLike | undefined;
     /** Status telegraph (dashboard badge). No-op for headless callers. */
     onStatus?: (
         status: MeshDeployStatus,
@@ -170,6 +173,7 @@ export async function deployMeshHeadless(
                         logger,
                         meshComponentId,
                         meshComponent.path as string,
+                        deps.secrets,
                     );
                 } catch (envError) {
                     logger.warn(

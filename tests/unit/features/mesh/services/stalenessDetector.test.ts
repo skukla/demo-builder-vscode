@@ -29,12 +29,6 @@ jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => mockLogger),
 }));
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(),
-        getAuthenticationService: jest.fn(),
-    },
-}));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         QUICK: 5000,
@@ -78,6 +72,24 @@ jest.mock('@/types/typeGuards', () => ({
     }),
 }));
 
+
+/**
+ * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
+ * suite passes the fake explicitly at each call site, so a reader sees the
+ * real signature.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
+} as never;
+
+/** The same object, typed for the per-test swap in `beforeEach`. */
+const mutableMeshDeps = meshDeps as unknown as {
+    commandManager: unknown;
+    authManager: unknown;
+};
+
+
 describe('detectMeshChanges - Timeout Handling', () => {
     let mockProject: Project;
     let mockCommandExecutor: any;
@@ -118,13 +130,15 @@ describe('detectMeshChanges - Timeout Handling', () => {
             execute: jest.fn(),
         };
 
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandExecutor);
-
-        // Mock auth service - default to authenticated
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
-        });
+        // CONVERTED 2026-08-28 (ADR-015): the collaborators are handed in, so
+        // this suite mocks the service registry NOT AT ALL — the same fakes go
+        // straight into `meshDeps` below.
+        mutableMeshDeps.commandManager = mockCommandExecutor;
+        mutableMeshDeps.authManager = {
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
+        };
     });
 
     // Test 1: Timeout during fetch
@@ -133,7 +147,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
         mockCommandExecutor.execute.mockRejectedValueOnce(new Error('Command timeout'));
 
         // When: detectMeshChanges is called
-        const result = await detectMeshChanges(mockProject, {});
+        const result = await detectMeshChanges(mockProject, {}, meshDeps);
 
         // Then: Returns unknownDeployedState but NOT hasChanges
         expect(result.hasChanges).toBe(false); // Don't force redeployment
@@ -146,13 +160,14 @@ describe('detectMeshChanges - Timeout Handling', () => {
     // Test 2: Token expired (auth service returns not authenticated)
     it('should return hasChanges: false when token expired', async () => {
         // Given: Auth check returns not authenticated (token expired)
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: false, expiresInMinutes: -5 }),
-        });
+        mutableMeshDeps.authManager = {
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: false, expiresInMinutes: -5 }),
+        };
 
         // When: detectMeshChanges is called
-        const result = await detectMeshChanges(mockProject, {});
+        const result = await detectMeshChanges(mockProject, {}, meshDeps);
 
         // Then: Returns unknownDeployedState but NOT hasChanges
         expect(result.hasChanges).toBe(false); // Don't force redeployment
@@ -189,7 +204,9 @@ describe('detectMeshChanges - Timeout Handling', () => {
             'commerce-mesh': {
                 ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql'
             }
-        });
+        },
+            meshDeps,
+        );
 
         // Then: Returns no changes and shouldSaveProject (baseline populated)
         expect(result.hasChanges).toBe(false);

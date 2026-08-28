@@ -149,6 +149,7 @@ export function buildDefaultRunnerDeps(
                 ctx.logger,
                 componentId,
                 componentPath,
+                ctx.secrets,
             );
         },
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes

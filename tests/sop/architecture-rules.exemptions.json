@@ -3,9 +3,6 @@
   "fetchBoundary": {
     "src/features/eds/services/github/githubRepoOperations.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/eds/services/reset/edsResetUI.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/lifecycle/services/projectResetService.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/mesh/services/stalenessDetector.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/project-creation/helpers/envFileGenerator.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/updates/services/componentUpdater.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/updates/services/templateSyncService.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)"

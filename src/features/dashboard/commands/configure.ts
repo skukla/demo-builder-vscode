@@ -295,7 +295,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             // happens to hold.
             const meshChanges = await withOrgContext(
                 buildOrgTargetFromProjectAdobe(project.adobe),
-                () => detectMeshChanges(project, sanitizedConfigs),
+                () =>
+                    detectMeshChanges(project, sanitizedConfigs, {
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                    authManager: ServiceLocator.getAuthenticationService(),
+                }),
             );
 
             // Detect if storefront configuration changed (EDS projects only)
@@ -592,7 +596,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
     private async regenerateEnvFiles(project: Project): Promise<void> {
         const registryManager = new ComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
-        await regenerateProjectEnvFiles(project, registry, this.logger);
+        await regenerateProjectEnvFiles(project, registry, this.logger, this.context.secrets);
     }
 
     /**

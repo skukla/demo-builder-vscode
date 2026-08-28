@@ -17,6 +17,7 @@ import {
     createMockProject,
     setupMockCommandExecutor,
     setupMockFileSystemWithHash,
+    meshDeps,
 } from './stalenessDetector.testUtils';
 import type { Project } from '@/types';
 
@@ -31,6 +32,13 @@ import type { Project } from '@/types';
  * - Handle scenarios where mesh is not deployed
  *
  * Total tests: 7
+ */
+
+
+/**
+ * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
+ * suite passes the fake explicitly at each call site, so a reader sees the
+ * real signature.
  */
 
 describe('StalenessDetector - State Detection', () => {
@@ -165,7 +173,7 @@ describe('StalenessDetector - State Detection', () => {
                 new Error('Timeout')
             );
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.unknownDeployedState).toBe(true);
             expect(result.hasChanges).toBe(false);
@@ -230,7 +238,7 @@ describe('StalenessDetector - State Detection', () => {
                 },
             };
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.shouldSaveProject).toBe(true);
             expect(result.hasChanges).toBe(false);
@@ -267,7 +275,7 @@ describe('StalenessDetector - State Detection', () => {
                 stderr: 'Not authenticated',
             });
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.unknownDeployedState).toBe(true);
             expect(result.hasChanges).toBe(false);
@@ -276,7 +284,7 @@ describe('StalenessDetector - State Detection', () => {
         it('should handle missing mesh component gracefully', async () => {
             const project = createMockProject();
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);

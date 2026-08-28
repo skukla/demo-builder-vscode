@@ -145,11 +145,27 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
 }
 
 // Mock setup functions
+/**
+ * CONVERTED 2026-08-28 (ADR-015): staleness detection receives its
+ * collaborators. This ONE object is what every suite hands in; the setup
+ * function below swaps the fakes inside it, so the suites' existing setup calls
+ * keep working unchanged and no registry mock is involved.
+ */
+export const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
+} as never;
+
+/** The same object, typed for mutation by the setup helper below. */
+const mutableDeps = meshDeps as unknown as {
+    commandManager: { execute: jest.Mock };
+    authManager: { getTokenStatus: jest.Mock };
+};
+
 export function setupMockCommandExecutor(
     authResponse: { code: number; stdout: string; stderr?: string },
     meshResponse?: { code: number; stdout: string; stderr?: string } | Error
 ) {
-    const { ServiceLocator } = require('@/core/di');
     const mockCommandManager = {
         execute: jest.fn(),
     };
@@ -163,7 +179,7 @@ export function setupMockCommandExecutor(
             expiresInMinutes: isAuthenticated ? 30 : -5,
         }),
     };
-    ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthService);
+    mutableDeps.authManager = mockAuthService as never;
 
     // Only set up command executor mock for mesh response (auth is now handled by authService)
     if (meshResponse) {
@@ -174,7 +190,7 @@ export function setupMockCommandExecutor(
         }
     }
 
-    ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
+    mutableDeps.commandManager = mockCommandManager as never;
     return mockCommandManager;
 }
 

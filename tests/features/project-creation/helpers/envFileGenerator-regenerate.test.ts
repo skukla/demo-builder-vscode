@@ -64,13 +64,20 @@ function buildProject(overrides: Partial<Project> = {}): Project {
     } as unknown as Project;
 }
 
+
+/**
+ * ADR-015 (2026-08-28): the secret store is handed in rather than fetched, so
+ * this suite passes a plain fake at each call site.
+ */
+const secretsFake = { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never;
+
 describe('regenerateProjectEnvFiles', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
     it('writes a per-component .env via the canonical generator (resolved values)', async () => {
-        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger());
+        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger(), secretsFake);
 
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
         const [filePath, content] = (fsPromises.writeFile as jest.Mock).mock.calls[0];
@@ -81,7 +88,7 @@ describe('regenerateProjectEnvFiles', () => {
     });
 
     it('does NOT write a project root .env (root is owned by ProjectConfigWriter)', async () => {
-        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger());
+        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger(), secretsFake);
 
         const rootPath = path.join('/test/acme', '.env');
         const wroteRoot = (fsPromises.writeFile as jest.Mock).mock.calls.some(([p]) => p === rootPath);
@@ -96,7 +103,7 @@ describe('regenerateProjectEnvFiles', () => {
             } as never,
         });
 
-        await regenerateProjectEnvFiles(project, buildRegistry(), createMockLogger());
+        await regenerateProjectEnvFiles(project, buildRegistry(), createMockLogger(), secretsFake);
 
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
     });
@@ -110,7 +117,7 @@ describe('regenerateProjectEnvFiles', () => {
             } as never,
         });
 
-        await regenerateProjectEnvFiles(project, buildRegistry(), logger);
+        await regenerateProjectEnvFiles(project, buildRegistry(), logger, secretsFake);
 
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('unknown-comp'));
@@ -136,7 +143,7 @@ describe('regenerateProjectEnvFiles', () => {
             },
         } as Partial<Project>);
 
-        await regenerateProjectEnvFiles(project, registry, createMockLogger());
+        await regenerateProjectEnvFiles(project, registry, createMockLogger(), secretsFake);
 
         const [, content] = (fsPromises.writeFile as jest.Mock).mock.calls[0];
         expect(content).toContain('MESH_ENDPOINT=https://keyed-mesh.adobe.io/graphql');

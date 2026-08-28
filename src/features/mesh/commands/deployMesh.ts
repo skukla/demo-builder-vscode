@@ -56,6 +56,7 @@ export class DeployMeshCommand extends BaseCommand {
                 // the lock (above), the toasts and result mapping (below).
                 const result = await deployMeshWithFeedback({
                     authManager: ServiceLocator.getAuthenticationService(),
+                    secrets: ServiceLocator.getSecretStorage() ?? undefined,
                     commandManager: ServiceLocator.getCommandExecutor(),
                     project,
                     stateManager: this.stateManager,

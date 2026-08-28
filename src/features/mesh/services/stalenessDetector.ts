@@ -16,9 +16,11 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { getFrontendEnvVars } from '@/core/state';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import {
     PAAS_URL,
@@ -188,22 +190,36 @@ export async function readMeshEnvVarsFromFile(
     return result;
 }
 
+/** ADR-015: the collaborators mesh staleness detection needs. */
+export interface MeshStalenessDeps {
+    commandManager: CommandExecutor;
+    authManager: AuthenticationService;
+}
+
 /**
- * Implementation: Fetch deployed mesh configuration from Adobe I/O
+ * Fetch deployed mesh configuration from Adobe I/O.
+ *
+ * This IS the exported function now. Until 2026-08-28 there was also a no-argument
+ * `fetchDeployedMeshConfig()` wrapper around it; that wrapper had ZERO production
+ * callers — only tests and one mock — so the suite was exercising a signature
+ * nothing shipped. The wrapper is deleted rather than deprecated, and the tests
+ * call this.
  */
-async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<string, string> | null> {
+export async function fetchDeployedMeshConfig(
+    logger: Logger,
+    deps: MeshStalenessDeps,
+): Promise<Record<string, string> | null> {
     try {
-        const { ServiceLocator } = await import('@/core/di');
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
         const { getMeshNodeVersion } = await import('@/core/utils/meshConfig');
-        const commandManager = ServiceLocator.getCommandExecutor();
+        const commandManager = deps.commandManager;
 
         logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O...');
 
         // Pre-check: Verify authentication status without triggering browser auth
         // Use getTokenStatus() which reads token file directly (no CLI call, no browser popup)
         try {
-            const authService = ServiceLocator.getAuthenticationService();
+            const authService = deps.authManager;
             const tokenStatus = await authService.getTokenStatus();
 
             if (!tokenStatus.isAuthenticated) {
@@ -276,13 +292,6 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
         logger.trace('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
         return null;
     }
-}
-
-/**
- * Module-level function export:Fetch deployed mesh configuration from Adobe I/O
- */
-export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
-    return fetchDeployedMeshConfigImpl(getDefaultLogger());
 }
 
 /**
@@ -419,6 +428,7 @@ async function detectMeshChangesImpl(
     project: Project,
     newComponentConfigs: Record<string, unknown>,
     logger: Logger,
+    deps: MeshStalenessDeps,
 ): Promise<MeshChanges> {
     const meshInstance = getMeshComponentInstance(project);
     if (!meshInstance?.path) {
@@ -456,7 +466,7 @@ async function detectMeshChangesImpl(
             '[Mesh Staleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O',
         );
 
-        const deployedConfig = await fetchDeployedMeshConfigImpl(logger);
+        const deployedConfig = await fetchDeployedMeshConfig(logger, deps);
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
@@ -581,8 +591,9 @@ async function detectMeshChangesImpl(
 export async function detectMeshChanges(
     project: Project,
     newComponentConfigs: Record<string, unknown>,
+    deps: MeshStalenessDeps,
 ): Promise<MeshChanges> {
-    return detectMeshChangesImpl(project, newComponentConfigs, getDefaultLogger());
+    return detectMeshChangesImpl(project, newComponentConfigs, getDefaultLogger(), deps);
 }
 
 /**

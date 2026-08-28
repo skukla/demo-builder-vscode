@@ -86,7 +86,10 @@ export const handleGetProjects: MessageHandler = async (
                         const status = await withOrgContext(
                             buildOrgTargetFromProjectAdobe(project.adobe),
                             async () => {
-                                const meshChanges = await detectMeshChanges(project, configs);
+                                const meshChanges = await detectMeshChanges(project, configs, {
+                                    commandManager: ServiceLocator.getCommandExecutor(),
+                                    authManager: ServiceLocator.getAuthenticationService(),
+                                });
                                 return determineMeshStatus(meshChanges, meshComponent, project);
                             },
                         );
@@ -841,6 +844,7 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     );
     return resetProjectWithUI({
         commandManager: ServiceLocator.getCommandExecutor(),
+        authManager: ServiceLocator.getAuthenticationService(),
         project,
         context,
         logPrefix: '[ProjectsList]',

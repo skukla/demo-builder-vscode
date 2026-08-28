@@ -20,9 +20,11 @@ import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,
     type OrgContextTarget,
- CommandExecutor } from '@/core/shell';
+    type CommandExecutor,
+} from '@/core/shell';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project, TransformedComponentDefinition, ComponentRegistry } from '@/types';
@@ -42,6 +44,8 @@ export interface ResetWithUIOptions {
     logPrefix?: string;
     /** ADR-015: the shell executor, supplied by the calling handler. */
     commandManager: CommandExecutor;
+    /** ADR-015: the auth service, likewise. */
+    authManager: AuthenticationService;
 }
 
 // ==========================================================
@@ -221,9 +225,8 @@ async function ensureAdobeContext(
     project: Project,
     context: HandlerContext,
     logPrefix: string,
+    authService: AuthenticationService,
 ): Promise<boolean> {
-    const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
 
     const { ensureProjectAdobeContext } = await import(
         '@/features/authentication/services/ensureProjectAdobeContext'
@@ -245,9 +248,11 @@ async function ensureAdobeContext(
  * the shared builder (enriches org code/name from the cached org only on an id
  * match). Targets per-invocation env instead of mutating the global.
  */
-async function buildProjectOrgTarget(project: Project): Promise<OrgContextTarget> {
-    const { ServiceLocator } = await import('@/core/di');
-    const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+async function buildProjectOrgTarget(
+    project: Project,
+    authService: AuthenticationService,
+): Promise<OrgContextTarget> {
+    const cachedOrg = authService.getCachedOrganization();
     return buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
 }
 
@@ -309,6 +314,7 @@ export async function handleMeshRedeployment(
     progress: { report: (value: { message: string }) => void },
     vscode: typeof import('vscode'),
     commandManager: CommandExecutor,
+    authService: AuthenticationService,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
     const meshComponent = getMeshComponentInstance(project);
@@ -316,7 +322,7 @@ export async function handleMeshRedeployment(
     if (!meshComponent?.path) return null;
 
     progress.report({ message: 'Checking Adobe organization access…' });
-    const ready = await ensureAdobeContext(project, context, logPrefix);
+    const ready = await ensureAdobeContext(project, context, logPrefix, authService);
 
     if (!ready) {
         context.logger.info(`${logPrefix} Adobe context unavailable, skipping mesh redeploy`);
@@ -325,7 +331,7 @@ export async function handleMeshRedeployment(
 
     // Target the project's KNOWN org/project/workspace via per-invocation env
     // instead of mutating the shared `aio` global with select* (racey).
-    const target = await buildProjectOrgTarget(project);
+    const target = await buildProjectOrgTarget(project, authService);
     return withOrgContext(target, () =>
         runTargetedMeshDeploy(
             project,
@@ -358,7 +364,13 @@ export async function handleMeshRedeployment(
  * 9. Restore status, show success/error notification
  */
 export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<HandlerResponse> {
-    const { project, context, logPrefix = '[ProjectReset]', commandManager } = options;
+    const {
+        project,
+        context,
+        logPrefix = '[ProjectReset]',
+        commandManager,
+        authManager,
+    } = options;
 
     const vscode = await import('vscode');
 
@@ -454,7 +466,12 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 const { regenerateProjectEnvFiles } = await import(
                     '@/features/project-creation/helpers/envFileGenerator'
                 );
-                await regenerateProjectEnvFiles(project, registry, context.logger);
+                await regenerateProjectEnvFiles(
+                    project,
+                    registry,
+                    context.logger,
+                    context.context.secrets,
+                );
 
                 // Step 6: Redeploy API Mesh (if project has mesh)
                 const meshRedeployResult = await handleMeshRedeployment(
@@ -464,6 +481,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                     progress,
                     vscode,
                     commandManager,
+                    authManager,
                 );
                 if (meshRedeployResult?.earlyReturn) return meshRedeployResult.earlyReturn;
                 const meshRedeployed = meshRedeployResult?.redeployed ?? false;

@@ -89,6 +89,7 @@ function deps(overrides: Record<string, unknown> = {}) {
         project: project(),
         authManager: currentAuthManager as never,
         commandManager: { execute: jest.fn() } as never,
+        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never,
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
         logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never,
         extensionPath: '/ext',
@@ -508,7 +509,8 @@ describe('deployMeshHeadless', () => {
                 expect.anything(),
                 expect.anything(),
                 'commerce-mesh',
-                '/p/mesh'
+                '/p/mesh',
+                expect.anything(),
             );
         });
 

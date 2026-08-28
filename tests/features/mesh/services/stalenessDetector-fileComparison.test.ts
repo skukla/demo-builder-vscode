@@ -14,6 +14,7 @@ import {
     setupMockCommandExecutor,
     MOCK_MESH_CONFIG,
     MOCK_DEPLOYED_CONFIG,
+    meshDeps,
 } from './stalenessDetector.testUtils';
 
 /**
@@ -28,6 +29,16 @@ import {
  *
  * Total tests: 6
  */
+
+
+/**
+ * ADR-015 (2026-08-28): `fetchDeployedMeshConfig` receives a logger and its
+ * collaborators now — and it IS the exported function, replacing a no-argument
+ * wrapper that had zero production callers. The suite passes both explicitly.
+ */
+const meshLogger = {
+    debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
+} as never;
 
 describe('StalenessDetector - File Comparison', () => {
     beforeEach(() => {
@@ -44,7 +55,7 @@ describe('StalenessDetector - File Comparison', () => {
                 }
             );
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toEqual(MOCK_DEPLOYED_CONFIG);
         });
@@ -56,7 +67,7 @@ describe('StalenessDetector - File Comparison', () => {
                 stderr: 'Not authenticated',
             });
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toBeNull();
         });
@@ -67,7 +78,7 @@ describe('StalenessDetector - File Comparison', () => {
                 new Error('Network error')
             );
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toBeNull();
         });
@@ -78,7 +89,7 @@ describe('StalenessDetector - File Comparison', () => {
                 { code: 0, stdout: 'invalid json' }
             );
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toBeNull();
         });
@@ -110,7 +121,7 @@ describe('StalenessDetector - File Comparison', () => {
                 }
             );
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toEqual({
                 ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com',
@@ -127,7 +138,7 @@ describe('StalenessDetector - File Comparison', () => {
                 }
             );
 
-            const result = await fetchDeployedMeshConfig();
+            const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
             expect(result).toEqual({});
         });

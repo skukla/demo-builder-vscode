@@ -32,6 +32,7 @@ import {
     createMockProjectWithMesh,
     createMockProjectWithFrontend,
     setupMockFileSystemWithHash,
+    meshDeps,
 } from './stalenessDetector.testUtils';
 
 /**
@@ -47,6 +48,13 @@ import {
  * - Handle missing frontend component
  *
  * Total tests: 9
+ */
+
+
+/**
+ * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
+ * suite passes the fake explicitly at each call site, so a reader sees the
+ * real signature.
  */
 
 describe('StalenessDetector - Edge Cases', () => {
@@ -74,7 +82,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('abc123');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);
@@ -105,7 +113,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('abc123');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(true);
             expect(result.envVarsChanged).toBe(true);
@@ -143,7 +151,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('abc123');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(true);
             expect(result.envVarsChanged).toBe(true);
@@ -161,7 +169,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('xyz789', 'different content');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(true);
             expect(result.sourceFilesChanged).toBe(true);
@@ -186,7 +194,7 @@ describe('StalenessDetector - Edge Cases', () => {
                 },
             };
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(true);
             expect(result.envVarsChanged).toBe(true);
@@ -196,7 +204,7 @@ describe('StalenessDetector - Edge Cases', () => {
         it('should return no changes when no mesh component', async () => {
             const project = createMockProject();
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);
@@ -255,7 +263,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('abc123');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);
@@ -301,7 +309,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             setupMockFileSystemWithHash('abc123');
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.hasChanges).toBe(true);
             expect(result.envVarsChanged).toBe(true);

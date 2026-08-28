@@ -41,6 +41,7 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
 
     const result = await deployMeshWithFeedback({
         authManager: ServiceLocator.getAuthenticationService(),
+        secrets: ServiceLocator.getSecretStorage() ?? undefined,
         commandManager: ServiceLocator.getCommandExecutor(),
         project,
         stateManager: context.stateManager,
