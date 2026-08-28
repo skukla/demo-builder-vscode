@@ -74,3 +74,30 @@ mostly-autonomous replay).
    check that created resources are gone.
 4. The report leads with plain English: what the journey did, what it cost,
    what it left behind (the right answer is "nothing").
+
+## RESULTS — run 2026-08-28, session eac3cb57 (unattended)
+
+**32 turns, 30 tool calls, 366 seconds, $3.27** — against the original's
+264-turn, ~3.0M-input-token, 146-call build phase.
+
+- **Built, deployed, and PROVEN live**: order-intake + order-lookup endpoints
+  on Adobe's state store, in the blank shell's isolated Runtime package. Two
+  orders accepted live, junk rejected 400, lookup returned both. Unit tests
+  4/4. Demo orders purged afterward.
+- **Provenance**: first action at call 5 (select_org); 10 demo-builder calls,
+  10 Bash (npm test, builds — legitimate file-work), 0 sibling-server calls
+  (the blank shell's embedded guidance carried the build; the
+  commerce-extensibility rules went unused — a lead, not a verdict).
+  ZERO re-orientations. The original's 15-command aio select dance: absent.
+- **The agent's own idempotency judgment**: it declined to create I/O Events
+  subscriptions ("lasting state that fights back-to-zero") and simulated
+  Commerce's delivery payload instead. No new Console projects, workspaces,
+  or APIs.
+- **Zero-state diff**: exactly one addition (app-builder-shell, deployed);
+  starter kit, storefront, and Adobe context byte-identical to the snapshot.
+- **The wall, precisely**: remove_integration was called with confirm:true
+  and answered "not approved — nothing changed": its consent is a HUMAN
+  dialog in the extension window, unanswerable unattended. The undo exists
+  and is one click away — a deliberate safety gate, not a reversibility gap.
+  Unattended journeys can prove the undo is REACHED but not that it lands;
+  completing it needs the owner (or an owner-present run).
