@@ -3,7 +3,7 @@ id: PL-13
 kind: chore
 area: platform
 needs: []
-value: med
+value: high
 status: backlog
 ---
 
@@ -34,3 +34,7 @@ The buckets, by effort:
 Not a sweep-in-one-day item: converge on touch, plus deliberate batches when
 an area is already open. Done when the ledger is empty or every remaining row
 is a RATIFIED permanent exception recorded in ADR-015.
+
+## Shipped so far
+
+- 2026-08-28  TRUE-SHAPE reconciliation (owner-led, 2026-08-28): this item and PL-11's execution are ONE interleaved batch loop — per file: strengthen the test witness (census: 7 weak files first), convert to handed-in deps, simplify the tests, delete the ledger rows; three ratchets (exemptions, tests clones, sendMessage) drop together. Sequence: PL-14's gates land first so every batch is measured; batches then run PL-13+PL-11 jointly; PL-14 group B instruments run at release cuts. God-file overlaps (EDS-8) serviced opportunistically when a batch touches one.
