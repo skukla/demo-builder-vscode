@@ -6108,3 +6108,47 @@ div[class*="spectrum"] input[type="search"] {
     border-color: var(--spectrum-global-color-blue-500);
     background: var(--spectrum-global-color-gray-75);
 }
+
+/* ── Eventing section (AB-6 headful) — integrations surface ─────────────── */
+.eventing-section {
+    margin-top: 16px;
+    border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
+    padding-top: 8px;
+}
+.eventing-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.eventing-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-left: 4px;
+}
+.eventing-section-body {
+    padding: 8px 4px 4px 24px;
+}
+.eventing-section-note {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+.eventing-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 0;
+}
+.eventing-row-label {
+    min-width: 160px;
+}
+.eventing-row-id {
+    flex: 1;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

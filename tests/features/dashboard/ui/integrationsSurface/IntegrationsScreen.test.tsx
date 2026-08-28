@@ -123,6 +123,13 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
 // internals this suite deliberately does not mock. Its own behaviour (the
 // commit callbacks, the mesh rule, reservedIds) is pinned in
 // AddIntegrationFlowAdapter.test.tsx.
+// The Eventing section has its own suite (EventingSection.test.tsx); here it
+// is a stub, same treatment as the grid — the screen's tests only care that it
+// renders when the project has an Adobe context.
+jest.mock('@/features/dashboard/ui/integrationsSurface/EventingSection', () => ({
+    EventingSection: () => <div data-testid="eventing-section" />,
+}));
+
 jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter', () => ({
     // `mode` is surfaced so the destination-control suite can assert WHICH
     // journey opened — add vs destination is the whole point of that control.

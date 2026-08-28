@@ -18,17 +18,15 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
-import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
+import { createEventLifecycleDeps } from '@/features/authentication/handlers/eventLifecycleDeps';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     createEventProvider,
     createEventRegistration,
     deleteEventEntities,
     listEventEntities,
-    type EventLifecycleDeps,
     type EventWorkspaceTarget,
 } from '@/features/authentication/services/eventProviderLifecycle';
-import { IoEventsClient } from '@/features/authentication/services/ioEventsClient';
 import type { HandlerContext } from '@/types/handlers';
 
 const NEEDS_ADOBE = {
@@ -57,18 +55,6 @@ async function projectTarget(
         orgId: adobe.organization,
         projectId: adobe.projectId,
         workspaceId: adobe.workspace,
-    };
-}
-
-/** Lifecycle deps over the SAME adapter teardown uses, with the full client. */
-function lifecycleDeps(authService: AuthenticationService): EventLifecycleDeps {
-    const teardown = createTeardownDeps(authService);
-    return {
-        getAccessToken: teardown.getAccessToken,
-        getWorkspaceS2SCredential: teardown.getWorkspaceS2SCredential,
-        createWorkspaceS2SCredentialFor: teardown.createWorkspaceS2SCredentialFor,
-        subscribeManagementApi: teardown.subscribeManagementApi,
-        createEventsClient: (auth) => new IoEventsClient(auth),
     };
 }
 
@@ -105,7 +91,7 @@ export function registerEventProviderTools(
             if ('error' in target) return asText(target);
             if (!(await authed(ctx))) return asText(NEEDS_ADOBE);
 
-            const listing = await listEventEntities(lifecycleDeps(authServiceFactory()), target);
+            const listing = await listEventEntities(createEventLifecycleDeps(authServiceFactory()), target);
             return asText({
                 ...listing,
                 note:
@@ -154,7 +140,7 @@ export function registerEventProviderTools(
             if ('error' in target) return asText(target);
             if (!(await authed(ctx))) return asText(NEEDS_ADOBE);
 
-            const result = await createEventProvider(lifecycleDeps(authServiceFactory()), target, {
+            const result = await createEventProvider(createEventLifecycleDeps(authServiceFactory()), target, {
                 providerKey: String(args.providerKey),
                 label: String(args.label),
                 description: args.description ? String(args.description) : undefined,
@@ -207,7 +193,7 @@ export function registerEventProviderTools(
             if (!(await authed(ctx))) return asText(NEEDS_ADOBE);
 
             const result = await createEventRegistration(
-                lifecycleDeps(authServiceFactory()),
+                createEventLifecycleDeps(authServiceFactory()),
                 target,
                 {
                     name: String(args.name),
@@ -246,7 +232,7 @@ export function registerEventProviderTools(
             if ('error' in target) return asText(target);
             if (!(await authed(ctx))) return asText(NEEDS_ADOBE);
 
-            const items = await deleteEventEntities(lifecycleDeps(authServiceFactory()), target, {
+            const items = await deleteEventEntities(createEventLifecycleDeps(authServiceFactory()), target, {
                 registrationIds: [String(args.registrationId)],
             });
             return asText({ items });
@@ -280,7 +266,7 @@ export function registerEventProviderTools(
             if ('error' in target) return asText(target);
             if (!(await authed(ctx))) return asText(NEEDS_ADOBE);
 
-            const items = await deleteEventEntities(lifecycleDeps(authServiceFactory()), target, {
+            const items = await deleteEventEntities(createEventLifecycleDeps(authServiceFactory()), target, {
                 registrationIds: Array.isArray(args.registrationIds)
                     ? args.registrationIds.map(String)
                     : [],

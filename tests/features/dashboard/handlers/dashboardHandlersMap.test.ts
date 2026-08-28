@@ -178,11 +178,16 @@ describe('dashboardHandlers', () => {
             // project-card kebab. setAuthoringExperience belongs to the
             // Configure webview, not this map.
             //
-            // openDataInstaller is the newest: the Build zone gained a Sample
-            // Data tile. It sits in navigation but is the one entry there that
-            // does NOT replace the tab — the datapack catalog is global to the
-            // service, so opening it leaves the dashboard where it was.
-            expect(types).toHaveLength(38);
+            // openDataInstaller: the Build zone gained a Sample Data tile. It
+            // sits in navigation but is the one entry there that does NOT
+            // replace the tab — the datapack catalog is global to the service,
+            // so opening it leaves the dashboard where it was.
+            //
+            // getEventEntities + deleteEventEntity (38 → 40, AB-6 headful):
+            // the integrations surface's Eventing section — workspace-scoped
+            // I/O event providers/registrations, same service as the MCP
+            // event tools.
+            expect(types).toHaveLength(40);
         });
 
         it('should have handlers as functions', () => {

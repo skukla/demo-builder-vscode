@@ -52,6 +52,7 @@ import {
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { handleDeleteEventEntity, handleGetEventEntities } from './eventingHandlers';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -265,6 +266,10 @@ export const dashboardHandlers = defineHandlers({
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
+    // Eventing (AB-6 headful): the workspace's I/O event providers +
+    // registrations, listed and deleted from the integrations surface.
+    getEventEntities: handleGetEventEntities,
+    deleteEventEntity: handleDeleteEventEntity,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,
