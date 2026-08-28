@@ -29,7 +29,7 @@ const TESTS_ROOT = path.resolve(__dirname, '..');
  * name has exactly one definition left.
  */
 const KNOWN_DUPLICATES: Record<string, number> = {
-    createMockContext: 11,
+    createMockContext: 10,
     createMockProject: 9,
     createMockHandlerContext: 5,
     makeContext: 3,

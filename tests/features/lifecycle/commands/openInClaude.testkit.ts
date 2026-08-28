@@ -18,6 +18,7 @@ import * as vscode from 'vscode';
 
 import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
 import type { Project } from '@/types/base';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // NOTE: each consuming test file MUST declare its own
 //   `jest.mock('@/commands/claudeSessionStore', () => ({ hasConversation: jest.fn(() => false) }))`
@@ -65,12 +66,11 @@ export function makeGlobalState(initial: Record<string, unknown> = {}): MockGlob
     };
 }
 
+/** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
 export function makeContext(globalState: MockGlobalState): vscode.ExtensionContext {
-    return {
+    return createMockExtensionContext({
         globalState,
-        subscriptions: [],
-        extensionMode: 1,
-    } as unknown as vscode.ExtensionContext;
+    } as unknown as Partial<vscode.ExtensionContext>);
 }
 
 export function makeProject(overrides: Partial<Project> = {}): Partial<Project> {

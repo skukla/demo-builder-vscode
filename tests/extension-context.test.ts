@@ -16,7 +16,7 @@ import {
     activate,
     deactivate,
     vscode,
-    createMockExtensionContext,
+    createActivationContext,
     mockHasProject,
     mockGetCurrentProject,
 } from './extension.testUtils';
@@ -42,7 +42,7 @@ describe('Extension - Context Variables Initialization', () => {
             // Given: No existing project
             mockHasProject.mockResolvedValue(false);
 
-            const context = createMockExtensionContext();
+            const context = createActivationContext();
 
             // When: Extension activates
             await activate(context);
@@ -63,7 +63,7 @@ describe('Extension - Context Variables Initialization', () => {
                 path: '/test/project',
             });
 
-            const context = createMockExtensionContext();
+            const context = createActivationContext();
 
             // When: Extension activates
             await activate(context);
@@ -80,7 +80,7 @@ describe('Extension - Context Variables Initialization', () => {
             // Given: Extension is starting up (no wizard active yet)
             mockHasProject.mockResolvedValue(false);
 
-            const context = createMockExtensionContext();
+            const context = createActivationContext();
 
             // When: Extension activates
             await activate(context);

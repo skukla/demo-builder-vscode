@@ -182,39 +182,21 @@ jest.mock('vscode', () => ({
 // register (jest hoists the mock calls over these imports within this module),
 // and re-exported so specs never bind the real ones.
 import * as vscode from 'vscode';
+import { createMockExtensionContext as createMockExtensionContextBase } from './helpers/extensionContextFake';
 export { activate, deactivate, shouldReHomeToRoot } from '../src/extension';
 export { vscode };
 
-/** Mock ExtensionContext for activation tests. */
-export function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: {} as any,
-        extension: {
-            packageJSON: { version: '1.0.0' },
-        } as any,
-        languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
+/**
+ * The activation harness's context.
+ *
+ * RENAMED from `createMockExtensionContext` 2026-08-28: it now delegates to the
+ * canonical fake, and a delegating wrapper that keeps the canonical's name is
+ * still a second definition of it.
+ *
+ * Delegates to the canonical base (ADR-016) and keeps this suite's own
+ * extensionPath — activation assertions reference '/mock/extension/path', so
+ * inheriting the canonical default would have moved them.
+ */
+export function createActivationContext(): vscode.ExtensionContext {
+    return createMockExtensionContextBase({}, '/mock/extension/path');
 }

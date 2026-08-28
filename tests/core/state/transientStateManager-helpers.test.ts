@@ -4,7 +4,7 @@
  * Tests for notification helpers and log channel preferences.
  */
 
-import { createMockContext } from './transientStateManager.testUtils';
+import { createTransientStateHarness } from './transientStateManager.testUtils';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 
 describe('TransientStateManager - Notification Helpers', () => {
@@ -14,7 +14,7 @@ describe('TransientStateManager - Notification Helpers', () => {
 
     describe('isNotificationDismissed', () => {
         it('should return false for non-dismissed notification', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const isDismissed =
@@ -24,7 +24,7 @@ describe('TransientStateManager - Notification Helpers', () => {
         });
 
         it('should return true for dismissed notification', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('notification.dismissed.update-v1.0.0', true);
 
@@ -35,7 +35,7 @@ describe('TransientStateManager - Notification Helpers', () => {
         });
 
         it('should handle multiple notification IDs independently', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('notification.dismissed.notif1', true);
 
@@ -51,7 +51,7 @@ describe('TransientStateManager - Notification Helpers', () => {
 
     describe('dismissNotification', () => {
         it('should mark notification as dismissed', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.dismissNotification('whatsNew-v1.5.0');
@@ -62,7 +62,7 @@ describe('TransientStateManager - Notification Helpers', () => {
         });
 
         it('should allow dismissing multiple notifications', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.dismissNotification('notif1');
@@ -73,7 +73,7 @@ describe('TransientStateManager - Notification Helpers', () => {
         });
 
         it('should be idempotent', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             await manager.dismissNotification('notif');
 
@@ -85,7 +85,7 @@ describe('TransientStateManager - Notification Helpers', () => {
 
     describe('isNotificationDismissed and dismissNotification integration', () => {
         it('should reflect dismissal status after dismissing', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const beforeDismissal =
@@ -107,7 +107,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
 
     describe('getPreferredLogChannel', () => {
         it('should return logs as default channel', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const channel = await manager.getPreferredLogChannel();
@@ -116,7 +116,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
         });
 
         it('should return stored channel preference', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('preferences.logChannel', 'debug');
 
@@ -126,7 +126,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
         });
 
         it('should return logs when stored preference is logs', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('preferences.logChannel', 'logs');
 
@@ -138,7 +138,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
 
     describe('setPreferredLogChannel', () => {
         it('should set channel to logs', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.setPreferredLogChannel('logs');
@@ -147,7 +147,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
         });
 
         it('should set channel to debug', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.setPreferredLogChannel('debug');
@@ -156,7 +156,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
         });
 
         it('should overwrite existing preference', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('preferences.logChannel', 'logs');
 
@@ -168,7 +168,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
 
     describe('getPreferredLogChannel and setPreferredLogChannel integration', () => {
         it('should round-trip channel preference', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.setPreferredLogChannel('debug');
@@ -178,7 +178,7 @@ describe('TransientStateManager - Log Channel Preference', () => {
         });
 
         it('should allow changing preference multiple times', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.setPreferredLogChannel('debug');

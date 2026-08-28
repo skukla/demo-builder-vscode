@@ -10,7 +10,13 @@ jest.mock('vscode');
 /**
  * Creates a mock ExtensionContext with globalState for testing
  */
-export function createMockContext(): {
+/**
+ * RENAMED from `createTransientStateHarness` 2026-08-28: this returns a HARNESS
+ * ({ context, globalState, setKeysForSyncMock }), not a context. Sharing the
+ * name with four builders that do return a context is what made nineteen
+ * different fixtures look like one duplicated helper.
+ */
+export function createTransientStateHarness(): {
     context: vscode.ExtensionContext;
     globalState: Map<string, unknown>;
     setKeysForSyncMock: jest.Mock;

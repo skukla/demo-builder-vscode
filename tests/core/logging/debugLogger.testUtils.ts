@@ -12,6 +12,7 @@
  */
 
 import * as vscode from 'vscode';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 // Mock LogOutputChannel for User Logs channel
 export const mockLogsChannel = {
@@ -86,43 +87,14 @@ jest.mock('vscode', () => {
     };
 });
 
-/**
- * Creates a mock ExtensionContext for testing
- */
+/** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
 export function createMockContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
+    return createMockExtensionContext({
         extensionPath: '/test/path',
         storagePath: '/test/storage',
         globalStoragePath: '/test/global-storage',
-        logPath: '/test/logs',
-        extensionUri: vscode.Uri.file('/test/path'),
-        globalStorageUri: vscode.Uri.file('/test/global-storage'),
-        storageUri: vscode.Uri.file('/test/storage'),
-        logUri: vscode.Uri.file('/test/logs'),
-        extensionMode: vscode.ExtensionMode.Development,
-        asAbsolutePath: jest.fn((p: string) => `/test/path/${p}`),
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn().mockReturnValue([]),
-        },
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn().mockReturnValue([]),
-            setKeysForSync: jest.fn(),
-        },
-        secrets: {
-            get: jest.fn(),
-            store: jest.fn(),
-            delete: jest.fn(),
-            onDidChange: jest.fn(),
-        },
-        environmentVariableCollection: {} as vscode.GlobalEnvironmentVariableCollection,
-        extension: {} as vscode.Extension<unknown>,
-        languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
-    } as unknown as vscode.ExtensionContext;
+        logPath: '/test/log',
+    } as Partial<vscode.ExtensionContext>);
 }
 
 /**

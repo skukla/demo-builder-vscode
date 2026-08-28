@@ -4,7 +4,7 @@
  * Tests for setWithTTL and getWithTTL operations.
  */
 
-import { createMockContext } from './transientStateManager.testUtils';
+import { createTransientStateHarness } from './transientStateManager.testUtils';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 
 describe('TransientStateManager - TTL Operations', () => {
@@ -14,7 +14,7 @@ describe('TransientStateManager - TTL Operations', () => {
 
     describe('setWithTTL', () => {
         it('should store value with expiration timestamp', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = Date.now();
             jest.spyOn(Date, 'now').mockReturnValue(now);
@@ -32,7 +32,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should store objects with TTL', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const objValue = { name: 'test', data: [1, 2, 3] };
 
@@ -48,7 +48,7 @@ describe('TransientStateManager - TTL Operations', () => {
 
     describe('getWithTTL', () => {
         it('should return value before expiry', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
             jest.spyOn(Date, 'now').mockReturnValue(now);
@@ -63,7 +63,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should return undefined after expiry', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
 
@@ -78,7 +78,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should clean up expired entries', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
 
@@ -93,7 +93,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should return undefined for non-existent key', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const value = await manager.getWithTTL<string>('nonexistent');
@@ -102,7 +102,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should return object value before expiry', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
             const objValue = { name: 'test', count: 42 };
@@ -118,7 +118,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should handle exact expiry time', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
 
@@ -135,7 +135,7 @@ describe('TransientStateManager - TTL Operations', () => {
 
     describe('setWithTTL and getWithTTL integration', () => {
         it('should round-trip a value within TTL', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const now = 1000000;
             jest.spyOn(Date, 'now').mockReturnValue(now);
@@ -149,7 +149,7 @@ describe('TransientStateManager - TTL Operations', () => {
         });
 
         it('should expire value after TTL passes', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             let now = 1000000;
             jest.spyOn(Date, 'now').mockImplementation(() => now);

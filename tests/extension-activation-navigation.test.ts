@@ -17,7 +17,7 @@ import {
     activate,
     shouldReHomeToRoot,
     vscode,
-    createMockExtensionContext,
+    createActivationContext,
     mockHasProject,
     mockGetCurrentProject,
 } from './extension.testUtils';
@@ -45,7 +45,7 @@ describe('Extension Activation - Navigation', () => {
                     status: 'stopped',
                 });
 
-                const context = createMockExtensionContext();
+                const context = createActivationContext();
 
                 // When: Extension activates
                 await activate(context);
@@ -66,7 +66,7 @@ describe('Extension Activation - Navigation', () => {
                     path: '/test/project',
                 });
 
-                const context = createMockExtensionContext();
+                const context = createActivationContext();
 
                 // When: Extension activates
                 await activate(context);
@@ -88,7 +88,7 @@ describe('Extension Activation - Navigation', () => {
                 mockHasProject.mockResolvedValue(false);
                 mockGetCurrentProject.mockResolvedValue(undefined);
 
-                const context = createMockExtensionContext();
+                const context = createActivationContext();
 
                 // When: Extension activates
                 await activate(context);
@@ -105,7 +105,7 @@ describe('Extension Activation - Navigation', () => {
                 // Given: No existing project
                 mockHasProject.mockResolvedValue(false);
 
-                const context = createMockExtensionContext();
+                const context = createActivationContext();
 
                 // When: Extension activates
                 await activate(context);
@@ -139,7 +139,7 @@ describe('Extension Activation - Navigation', () => {
             mockHasProject.mockResolvedValue(true);
             mockGetCurrentProject.mockResolvedValue({ name: 'My Demo', path: PROJECT_PATH });
 
-            const context = createMockExtensionContext();
+            const context = createActivationContext();
             await activate(context);
 
             // Cold start never opens the project dashboard, even when the window
@@ -161,7 +161,7 @@ describe('Extension Activation - Navigation', () => {
                 path: '/test/project',
             });
 
-            const context = createMockExtensionContext();
+            const context = createActivationContext();
 
             // When: Extension activates
             // Then: Should complete successfully (activation is resilient to partial failures)

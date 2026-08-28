@@ -1,3 +1,4 @@
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 /**
  * Shared test utilities for UpdateManager tests
  *
@@ -10,24 +11,20 @@
  * This file only exports helper functions.
  */
 
-/**
- * Creates a mock context with extension package info
- */
+/** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
 export function createMockContext(version: string = '1.0.0'): any {
-    return {
+    return createMockExtensionContext({
         extensionPath: '/mock/extension/path',
-        extension: {
-            packageJSON: {
-                version,
-            },
-        },
+        extension: { packageJSON: { version } },
+        // This suite's own: the GitHub token must resolve, or update checks
+        // take the unauthenticated path and the assertions change.
         secrets: {
             get: jest.fn().mockResolvedValue('mock-github-token'),
             store: jest.fn(),
             delete: jest.fn(),
             onDidChange: jest.fn(),
         },
-    };
+    } as never);
 }
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */

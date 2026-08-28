@@ -4,7 +4,7 @@
  * Tests for constructor, get, set, has, and remove operations.
  */
 
-import { createMockContext } from './transientStateManager.testUtils';
+import { createTransientStateHarness } from './transientStateManager.testUtils';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 
 describe('TransientStateManager - Constructor', () => {
@@ -13,7 +13,7 @@ describe('TransientStateManager - Constructor', () => {
     });
 
     it('should register keys for sync on initialization', () => {
-        const { context, setKeysForSyncMock } = createMockContext();
+        const { context, setKeysForSyncMock } = createTransientStateHarness();
 
         new TransientStateManager(context);
 
@@ -33,7 +33,7 @@ describe('TransientStateManager - Basic Operations', () => {
 
     describe('get', () => {
         it('should return default value when key does not exist', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const value = await manager.get('nonexistent', 'default');
@@ -42,7 +42,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should return stored value when key exists', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('existingKey', 'storedValue');
 
@@ -52,7 +52,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should return default value when stored value is null', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('nullKey', null);
 
@@ -62,7 +62,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should preserve type of stored objects', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const storedObj = { name: 'test', value: 123 };
             globalState.set('objKey', storedObj);
@@ -78,7 +78,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should preserve type of stored arrays', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const storedArray = [1, 2, 3];
             globalState.set('arrKey', storedArray);
@@ -91,7 +91,7 @@ describe('TransientStateManager - Basic Operations', () => {
 
     describe('set', () => {
         it('should store a string value', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.set('key', 'value');
@@ -100,7 +100,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should store a number value', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.set('numKey', 42);
@@ -109,7 +109,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should store a boolean value', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await manager.set('boolKey', true);
@@ -118,7 +118,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should store an object value', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             const objValue = { name: 'test', nested: { data: 123 } };
 
@@ -128,7 +128,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should overwrite existing value', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('key', 'oldValue');
 
@@ -140,7 +140,7 @@ describe('TransientStateManager - Basic Operations', () => {
 
     describe('has', () => {
         it('should return false when key does not exist', () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             const exists = manager.has('nonexistent');
@@ -149,7 +149,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should return true when key exists', () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('existingKey', 'value');
 
@@ -159,7 +159,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should return true when key exists with falsy value', () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('zeroKey', 0);
             globalState.set('emptyStringKey', '');
@@ -173,7 +173,7 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should return false after key is removed', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('key', 'value');
             await manager.remove('key');
@@ -186,7 +186,7 @@ describe('TransientStateManager - Basic Operations', () => {
 
     describe('remove', () => {
         it('should remove an existing key', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('key', 'value');
 
@@ -196,14 +196,14 @@ describe('TransientStateManager - Basic Operations', () => {
         });
 
         it('should not throw when removing non-existent key', async () => {
-            const { context } = createMockContext();
+            const { context } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
 
             await expect(manager.remove('nonexistent')).resolves.not.toThrow();
         });
 
         it('should only remove the specified key', async () => {
-            const { context, globalState } = createMockContext();
+            const { context, globalState } = createTransientStateHarness();
             const manager = new TransientStateManager(context);
             globalState.set('key1', 'value1');
             globalState.set('key2', 'value2');
