@@ -14,16 +14,17 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
 AB="$REPO/.rptc/plans/evaluation-mode/battery"
 BODEA="$HOME/.demo-builder/projects/bodea"
-OUT="${1:?usage: run-erp-roundtrip.sh <output-dir>}"
+OUT="${1:?usage: run-erp-roundtrip.sh <output-dir> [journey-doc]}"
+DOC="${2:-$REPO/.rptc/plans/evaluation-mode/journeys/erp-roundtrip.md}"
 mkdir -p "$OUT"
 
-PROMPT="$(sed -n '/^> /s/^> //p' "$REPO/.rptc/plans/evaluation-mode/journeys/erp-roundtrip.md" | tr '\n' ' ')"
+PROMPT="$(sed -n '/^> /s/^> //p' "$DOC" | tr '\n' ' ')"
 [ -n "$PROMPT" ] || { echo "RED: could not extract the prompt from erp-roundtrip.md"; exit 2; }
 echo "prompt: $PROMPT"
 
 READS=$(node "$AB/enumerate-tools.mjs" "$BODEA/.mcp.json")
 TP=$(grep -v '^#' "$AB/third-party-reads.txt" | sed '/^$/d')
-WRITES="add_integration install_integration deploy_integration redeploy_integration remove_integration configure_project set_console_apis set_project_destination get_integration_install_status"
+WRITES="add_integration install_integration deploy_integration redeploy_integration remove_integration configure_project set_console_apis set_project_destination get_integration_install_status create_event_provider create_event_registration delete_event_provider delete_event_registration"
 WRITES_PREFIXED=$(for w in $WRITES; do echo "mcp__demo-builder__$w"; done)
 NATIVE="Read Write Edit Bash Glob Grep ToolSearch WebFetch TodoWrite"
 
