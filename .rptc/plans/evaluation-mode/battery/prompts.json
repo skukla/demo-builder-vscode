@@ -428,5 +428,301 @@
     ],
     "cwd": "project",
     "why": "AB-5 (2026-08-27): before install_integration, the only retry for a failed install was a full deploy_integration round. The prompt forbids the redeploy to prove the agent finds the narrower tool."
+  },
+  {
+    "id": "skill-add-component-home",
+    "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+    "expect": [],
+    "expectSkill": [
+      "add-component"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-add-component-project",
+    "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+    "expect": [],
+    "expectSkill": [
+      "add-component"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-sync-changes-home",
+    "prompt": "I've edited some files in my demo project and I'm not sure which sync operation applies. Use your sync-changes skill to explain how it decides between the sync options, without running any of them.",
+    "expect": [],
+    "expectSkill": [
+      "sync-changes"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-sync-changes-project",
+    "prompt": "I've edited some files in my demo project and I'm not sure which sync operation applies. Use your sync-changes skill to explain how it decides between the sync options, without running any of them.",
+    "expect": [],
+    "expectSkill": [
+      "sync-changes"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-update-credentials-home",
+    "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+    "expect": [],
+    "expectSkill": [
+      "update-credentials"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-update-credentials-project",
+    "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+    "expect": [],
+    "expectSkill": [
+      "update-credentials"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-create-eds-project-home",
+    "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+    "expect": [],
+    "expectSkill": [
+      "create-eds-project"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-create-eds-project-project",
+    "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+    "expect": [],
+    "expectSkill": [
+      "create-eds-project"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-diagnose-demo-home",
+    "prompt": "Something is wrong with one of my demos \u2014 pages render but product data is missing. Use your diagnose-demo skill to tell me where it says to look first.",
+    "expect": [],
+    "expectSkill": [
+      "diagnose-demo"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-import-datapack-home",
+    "prompt": "I want to load sample data into a project. Follow your import-datapack skill and tell me the call sequence and the traps it warns about \u2014 do not import anything.",
+    "expect": [],
+    "expectSkill": [
+      "import-datapack"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-scrape-reference-site-home",
+    "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+    "expect": [],
+    "expectSkill": [
+      "scrape-reference-site"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-scrape-reference-site-project",
+    "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+    "expect": [],
+    "expectSkill": [
+      "scrape-reference-site"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-connect-authenticated-site-home",
+    "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+    "expect": [],
+    "expectSkill": [
+      "connect-authenticated-site"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-connect-authenticated-site-project",
+    "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+    "expect": [],
+    "expectSkill": [
+      "connect-authenticated-site"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-commerce-block-mapper-home",
+    "prompt": "I have scraped product-page markup from a reference site. Use your commerce-block-mapper skill to explain how it maps that markup onto Commerce drop-in components and what it treats as customizable.",
+    "expect": [],
+    "expectSkill": [
+      "commerce-block-mapper"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-commerce-block-mapper-project",
+    "prompt": "I have scraped product-page markup from a reference site. Use your commerce-block-mapper skill to explain how it maps that markup onto Commerce drop-in components and what it treats as customizable.",
+    "expect": [],
+    "expectSkill": [
+      "commerce-block-mapper"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-demo-data-injector-home",
+    "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+    "expect": [],
+    "expectSkill": [
+      "demo-data-injector"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-demo-data-injector-project",
+    "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+    "expect": [],
+    "expectSkill": [
+      "demo-data-injector"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-header-nav-footer-home",
+    "prompt": "I have a scraped reference site and need its header, navigation and footer recreated. Use your header-nav-footer skill and explain how it maps site chrome to blocks.",
+    "expect": [],
+    "expectSkill": [
+      "header-nav-footer"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-header-nav-footer-project",
+    "prompt": "I have a scraped reference site and need its header, navigation and footer recreated. Use your header-nav-footer skill and explain how it maps site chrome to blocks.",
+    "expect": [],
+    "expectSkill": [
+      "header-nav-footer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-refine-visual-match-home",
+    "prompt": "The local demo renders close to the reference screenshots but not close enough. Use your refine-visual-match skill and describe its iteration loop and where it stops.",
+    "expect": [],
+    "expectSkill": [
+      "refine-visual-match"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-refine-visual-match-project",
+    "prompt": "The local demo renders close to the reference screenshots but not close enough. Use your refine-visual-match skill and describe its iteration loop and where it stops.",
+    "expect": [],
+    "expectSkill": [
+      "refine-visual-match"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-register-custom-block-home",
+    "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+    "expect": [],
+    "expectSkill": [
+      "register-custom-block"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-register-custom-block-project",
+    "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+    "expect": [],
+    "expectSkill": [
+      "register-custom-block"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-remove-custom-block-home",
+    "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+    "expect": [],
+    "expectSkill": [
+      "remove-custom-block"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-remove-custom-block-project",
+    "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+    "expect": [],
+    "expectSkill": [
+      "remove-custom-block"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-aem-content-modeler-project",
+    "prompt": "Using your aem-content-modeler skill, explain how you would design an author-friendly content structure for a new promotional section on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-content-modeler"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-dropin-developer-project",
+    "prompt": "Using your aem-dropin-developer skill, explain how I should customize a Commerce drop-in's slots and containers on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-dropin-developer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-project-manager-project",
+    "prompt": "Using your aem-project-manager skill, describe how you would phase a complex multi-block storefront redesign on this project.",
+    "expect": [],
+    "expectSkill": [
+      "aem-project-manager"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-researcher-project",
+    "prompt": "Using your aem-researcher skill, tell me where you would look for authoritative guidance on Edge Delivery block development for this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-researcher"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-tester-project",
+    "prompt": "Using your aem-tester skill, describe how you would verify a storefront block change in the browser \u2014 planning only, do not run anything.",
+    "expect": [],
+    "expectSkill": [
+      "aem-tester"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
   }
 ]
