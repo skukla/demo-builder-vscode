@@ -194,7 +194,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | active |
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
-| `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | active |
+| `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | shipped |
 | `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | active |
 | `AI-1f` | feature | └ [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) | — | low | backlog |
 | `AI-1g` | fix | └ [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) | — | high | shipped |
@@ -373,7 +373,7 @@ the table cannot hold: why the layers are ordered this way.*
 **B** — 5 items
 
 - `AI-1c` [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) — shipped
-- `AI-1d` [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) — active
+- `AI-1d` [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) — shipped
 - `AI-1i` [The battery destroys its own baseline on every run](2026-08-26-battery-results-are-overwritten.md) — shipped
 - `AI-1j` [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) — shipped
 - `AI-1n` [The battery measures a world that does not exist, and feeds itself](2026-08-26-battery-measures-a-world-that-does-not-exist.md) — shipped
