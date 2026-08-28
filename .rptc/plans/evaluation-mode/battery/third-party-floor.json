@@ -1,0 +1,38 @@
+{
+  "_what": "THE THIRD-PARTY FLOOR: every sibling-server read tool allowlisted in third-party-reads.txt that no prompt exercises, each with its reason. Same contract as unprompted-baseline.json (may only SHRINK; every entry needs a reason), enforced by verify-coverage.mjs check 3.",
+  "_recorded": "2026-08-28",
+  "tools": [
+    "mcp__commerce-extensibility__aio-where",
+    "mcp__dropins__analyze_project",
+    "mcp__dropins__check_block_health",
+    "mcp__dropins__check_config",
+    "mcp__dropins__explain_event_flow",
+    "mcp__dropins__get_upgrade_diff",
+    "mcp__dropins__list_api_functions",
+    "mcp__dropins__list_containers",
+    "mcp__dropins__list_events",
+    "mcp__dropins__list_i18n_keys",
+    "mcp__dropins__list_init_config",
+    "mcp__dropins__list_models",
+    "mcp__dropins__search_docs",
+    "mcp__dropins__suggest_event_handler",
+    "mcp__dropins__suggest_slot_implementation"
+  ],
+  "reasons": {
+    "mcp__commerce-extensibility__aio-where": "reports aio CLI context; our tools replaced the select dance, so a producer ask for it would itself be a routing failure \u2014 kept allowlisted for diagnosis only",
+    "mcp__dropins__analyze_project": "diagnostic over a storefront checkout tree; meaningful only mid-task inside a dropin work session, no standalone producer ask",
+    "mcp__dropins__check_block_health": "diagnostic over a specific block; presupposes a block in a failing state",
+    "mcp__dropins__check_config": "config diagnostic; presupposes a dropin debugging session in flight",
+    "mcp__dropins__explain_event_flow": "same knowledge family; routing measured by cross-graphql-shapes",
+    "mcp__dropins__get_upgrade_diff": "meaningful only during a dropin version upgrade; no unattended fixture exists",
+    "mcp__dropins__list_api_functions": "same family as list_events",
+    "mcp__dropins__list_containers": "same family as list_events \u2014 one routing prompt per knowledge FAMILY, not per sibling tool",
+    "mcp__dropins__list_events": "dropin knowledge reached via aem-researcher/aem-dropin-developer mid-task; routing pattern measured by cross-graphql-shapes",
+    "mcp__dropins__list_i18n_keys": "same family as list_events",
+    "mcp__dropins__list_init_config": "same family as list_events",
+    "mcp__dropins__list_models": "same family as list_events",
+    "mcp__dropins__search_docs": "docs search; cross-starter-kit-docs measures the docs-routing pattern for siblings",
+    "mcp__dropins__suggest_event_handler": "generative suggestion tool; same as suggest_slot_implementation",
+    "mcp__dropins__suggest_slot_implementation": "generative suggestion tool; only sensible mid-implementation with a chosen slot"
+  }
+}

@@ -831,5 +831,30 @@
       "get_project_status"
     ],
     "why": "Journey's api-mesh:describe/get phase (5 aio commands with the workspace-select dance). Today one read should answer it; the select dance is eliminated by per-invocation org targeting."
+  },
+  {
+    "id": "cross-graphql-shapes",
+    "prompt": "What GraphQL query does the storefront's product listing use to fetch products, and what fields does it return?",
+    "expect": [
+      "list_graphql_queries"
+    ],
+    "why": "The ERP journey's schema trial-and-error (8 discovery curls) had this answer on the dropins server the whole time it existed. Measures routing to sibling-server knowledge: the tool is allowlisted via third-party-reads.txt and documented by the aem-researcher skill."
+  },
+  {
+    "id": "cross-design-tokens",
+    "prompt": "What design tokens do the commerce drop-ins expose for theming, and how do I see their current values?",
+    "expect": [
+      "list_design_tokens"
+    ],
+    "why": "Token-first theming's dropin half: styles.css tokens are ours, dropin tokens are the dropins MCP's. A miss here means theming guidance routes agents to only half the token surface."
+  },
+  {
+    "id": "cross-starter-kit-docs",
+    "prompt": "I'm building a Commerce integration with the integration starter kit. Where is the official guidance on its onboarding flow?",
+    "expect": [
+      "search-commerce-docs",
+      "search_commerce_docs"
+    ],
+    "why": "The ERP journey's build phase ran on general knowledge; the commerce-extensibility server ships the starter-kit rules. Measures whether a build-phase question reaches that surface at all."
   }
 ]
