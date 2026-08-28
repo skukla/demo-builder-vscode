@@ -33,7 +33,7 @@ import {
     mockAdobeCliPrereq,
     mockAdobeCliPrereqNoVersion,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
 } from './installHandler.testUtils';
 
@@ -59,7 +59,7 @@ describe('Prerequisites Install Handler - Adobe I/O CLI Unified Progress Message
             missingVariantMajors: [],
         });
 
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should have correct version placeholders in prerequisites.json config', () => {

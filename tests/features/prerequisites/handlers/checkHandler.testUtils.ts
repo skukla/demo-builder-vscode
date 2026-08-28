@@ -73,7 +73,7 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
 /**
  * Helper to create mock HandlerContext
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),

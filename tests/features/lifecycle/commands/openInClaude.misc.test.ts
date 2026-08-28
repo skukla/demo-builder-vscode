@@ -13,7 +13,7 @@ import {
     makeLogger,
     makeStateManager,
     makeGlobalState,
-    makeContext,
+    makeOpenInClaudeContext,
     makeProject,
 } from './openInClaude.testkit';
 
@@ -51,7 +51,7 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const project = makeProject({ name: 'my-demo-project' });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
                 logger as never
             );
@@ -68,7 +68,7 @@ describe('OpenInClaudeCommand', () => {
             setupVscodeMocks();
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 logger as never
             );
@@ -86,7 +86,7 @@ describe('OpenInClaudeCommand', () => {
             });
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 logger as never
             );
@@ -111,7 +111,7 @@ describe('OpenInClaudeCommand', () => {
 
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 logger as never
             );
@@ -138,7 +138,7 @@ describe('OpenInClaudeCommand', () => {
             const project = makeProject({ name: 'from-state', path: '/p/state' });
             const stateManager = makeStateManager(project);
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 stateManager as never,
                 makeLogger() as never
             );

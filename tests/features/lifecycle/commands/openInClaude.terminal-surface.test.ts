@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { OpenInClaudeCommand, isClaudeChatOpen } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
-    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeContext, makeProject,
+    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeProject,
 } from './openInClaude.testkit';
 
 // The home Chat always launches at the projects root. Pin the root to a known
@@ -46,7 +46,7 @@ describe('OpenInClaudeCommand', () => {
         it('always opens a terminal — there is no extension fallback', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -59,7 +59,7 @@ describe('OpenInClaudeCommand', () => {
         it('uses plain `claude` on cold start (no prior conversation)', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -72,7 +72,7 @@ describe('OpenInClaudeCommand', () => {
         it('uses `claude --continue` when a prior conversation exists for the cwd', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -86,7 +86,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const project = makeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
                 makeLogger() as never,
             );
@@ -101,7 +101,7 @@ describe('OpenInClaudeCommand', () => {
             const globalState = makeGlobalState();
             const project = makeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
-                makeContext(globalState),
+                makeOpenInClaudeContext(globalState),
                 makeStateManager(project) as never,
                 makeLogger() as never,
             );
@@ -133,7 +133,7 @@ describe('OpenInClaudeCommand', () => {
                 existingTerminals: [{ name: 'Claude Code', exitStatus: undefined }],
             });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -155,7 +155,7 @@ describe('OpenInClaudeCommand', () => {
                 hasClaudeConversation: true,
             });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -171,7 +171,7 @@ describe('OpenInClaudeCommand', () => {
                 existingTerminals: [{ name: 'bash', exitStatus: undefined }, { name: 'zsh', exitStatus: undefined }],
             });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -191,7 +191,7 @@ describe('OpenInClaudeCommand', () => {
         it('opens the terminal as a tab in the active editor group (ViewColumn.Active)', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -256,7 +256,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const project = makeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
                 makeLogger() as never,
             );
@@ -271,7 +271,7 @@ describe('OpenInClaudeCommand', () => {
         it('calls term.show() before sendText(launch command)', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never,
             );
@@ -286,7 +286,7 @@ describe('OpenInClaudeCommand', () => {
         it('launches the home Chat even with no project (project arg is ignored)', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(null) as never,
                 makeLogger() as never,
             );

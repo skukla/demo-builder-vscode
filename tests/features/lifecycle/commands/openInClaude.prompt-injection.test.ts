@@ -14,7 +14,7 @@ import {
     makeLogger,
     makeStateManager,
     makeGlobalState,
-    makeContext,
+    makeOpenInClaudeContext,
     makeProject,
 } from './openInClaude.testkit';
 
@@ -39,7 +39,7 @@ describe('OpenInClaudeCommand', () => {
         it('writes the prompt to the clipboard before launching the terminal', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -52,7 +52,7 @@ describe('OpenInClaudeCommand', () => {
         it('shows the soft "prompt sent + clipboard fallback" tip on first terminal-mode prompt click', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -69,7 +69,7 @@ describe('OpenInClaudeCommand', () => {
         it('does NOT write clipboard when no prompt is provided', async () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -91,7 +91,7 @@ describe('OpenInClaudeCommand', () => {
         it('launches with `--continue` and the prompt when a prior conversation exists', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -107,7 +107,7 @@ describe('OpenInClaudeCommand', () => {
         it('omits `--continue` on cold start and submits the prompt to a fresh session', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -122,7 +122,7 @@ describe('OpenInClaudeCommand', () => {
         it('escapes single quotes in the prompt so the shell receives it intact', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -140,7 +140,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const multiLine = 'line one\nline two';
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -158,7 +158,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockClear();
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -174,7 +174,7 @@ describe('OpenInClaudeCommand', () => {
         it('spawns with bare `claude` on cold start when no prompt is provided', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -187,7 +187,7 @@ describe('OpenInClaudeCommand', () => {
         it('spawns with `claude --continue` when a prior conversation exists and no prompt', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -217,7 +217,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockClear();
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -244,7 +244,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockResolvedValue(undefined);
             const multiLine = 'line one\nline two\nline three';
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -268,7 +268,7 @@ describe('OpenInClaudeCommand', () => {
             });
             const globalState = makeGlobalState();
             const command = new OpenInClaudeCommand(
-                makeContext(globalState),
+                makeOpenInClaudeContext(globalState),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );
@@ -303,7 +303,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockClear();
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
-                makeContext(makeGlobalState()),
+                makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeProject()) as never,
                 makeLogger() as never
             );

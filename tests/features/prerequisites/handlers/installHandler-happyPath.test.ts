@@ -52,7 +52,7 @@ import {
     mockAdobeCliPrereq,
     mockManualPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -64,7 +64,7 @@ describe('Install Handler - Happy Path', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should install basic prerequisite successfully', async () => {

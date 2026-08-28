@@ -34,7 +34,7 @@ export const mockVSCode = {
  * CRITICAL: Returns a FUNCTION that creates fresh mocks, not a shared object.
  * This prevents test pollution from shared references.
  */
-export function createMockContext() {
+export function createWizardLifecycleContext() {
     // Mock webview panel
     const mockPanel = {
         dispose: jest.fn()

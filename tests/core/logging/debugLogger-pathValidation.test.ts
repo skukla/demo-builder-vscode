@@ -7,7 +7,7 @@
 
 import {
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
@@ -51,7 +51,7 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
         process.env = { ...originalEnv, HOME: '/Users/testuser' };

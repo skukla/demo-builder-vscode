@@ -7,7 +7,7 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
@@ -43,7 +43,7 @@ describe('DebugLogger call-tag stamping', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        logger = new DebugLogger(createMockContext());
+        logger = new DebugLogger(createDebugLoggerContext());
         jest.clearAllMocks();
     });
 

@@ -37,7 +37,7 @@ import {
     mockAdobeCliPrereq,
     mockAdobeCliPrereqNoVersion,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -49,7 +49,7 @@ describe('Install Handler - Adobe I/O CLI Unified Progress Messages', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should have correct version placeholders in prerequisites.json config', () => {

@@ -12,7 +12,7 @@ import {
     handleCancelProjectCreation,
 } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { HandlerContext as _HandlerContext } from '@/types/handlers';
-import { createMockContext } from './wizardLifecycleHandlers.testUtils';
+import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
 jest.mock('vscode', () => ({
@@ -42,7 +42,7 @@ describe('lifecycleHandlers - Cancellation', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createWizardLifecycleContext();
     });
 
     describe('handleCancel', () => {

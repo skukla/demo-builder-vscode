@@ -10,13 +10,13 @@
 
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
+import { createAuthHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
 
 describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 	let mockContext: jest.Mocked<HandlerContext>;
 
 	beforeEach(() => {
-		mockContext = createMockHandlerContext();
+		mockContext = createAuthHandlerContext();
 		jest.clearAllMocks();
 	});
 

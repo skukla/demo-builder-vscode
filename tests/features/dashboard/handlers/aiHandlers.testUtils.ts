@@ -133,7 +133,7 @@ import { ServiceLocator } from '@/core/di';
 // Test Helpers
 // ==========================================================
 
-export function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
+export function createAiHandlerContext(overrides?: Partial<HandlerContext>): HandlerContext {
     // Honor the (key, defaultValue) overload — matches the real VS Code Memento.
     // Bare jest.fn() returns undefined for ALL args, which breaks code that
     // relies on the default; this mock falls back to the supplied default when
@@ -187,7 +187,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): HandlerC
 /**
  * Stateful Memento mock used by the global-pin-store tests. Behaves like the
  * real VS Code Memento: `update(key, val)` persists, subsequent `get(key)`
- * returns the persisted value. The bare `createMockContext` memento only
+ * returns the persisted value. The bare `createAiHandlerContext` memento only
  * echoes the default — fine for handlers that don't touch globalState, but
  * useless for handlers that read what they just wrote.
  */
@@ -233,7 +233,7 @@ export function makeScopedContext(
     const memento = makeStatefulMemento({
         'demoBuilder.ai.globalPrompts': [...(opts.globalPrompts ?? [])],
     });
-    const context = createMockContext({
+    const context = createAiHandlerContext({
         context: {
             extensionPath: '/mock/extension/path',
             secrets: {

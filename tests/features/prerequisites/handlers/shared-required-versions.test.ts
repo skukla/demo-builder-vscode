@@ -1,5 +1,5 @@
 import { getRequiredNodeVersions } from '@/features/prerequisites/handlers/shared';
-import { createMockContext, createComponentSelection } from './testHelpers';
+import { createPrereqHandlerContext, createComponentSelection } from './testHelpers';
 
 /**
  * Prerequisites Handlers - Required Node Versions Test Suite
@@ -28,7 +28,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
         const mockVersions = new Set(['20', '18', '24']);
         mockGetRequiredNodeVersions.mockResolvedValue(mockVersions);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -44,7 +44,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     });
 
     it('should return empty array if no component selection', async () => {
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
 
         const result = await getRequiredNodeVersions(context);
 
@@ -56,7 +56,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
         const mockVersions = new Set(['24', '18', '20']);
         mockGetRequiredNodeVersions.mockResolvedValue(mockVersions);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -74,7 +74,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     it('should handle ComponentRegistryManager failure', async () => {
         mockGetRequiredNodeVersions.mockRejectedValue(new Error('Failed'));
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection(),
@@ -89,7 +89,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     it('should pass all component selection parameters', async () => {
         mockGetRequiredNodeVersions.mockResolvedValue(new Set());
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({

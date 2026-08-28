@@ -40,7 +40,7 @@ import {
     mockNodePrereq,
     mockAdobeCliPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -52,7 +52,7 @@ describe('Install Handler - Error Handling', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should throw error when prerequisite state not found', async () => {

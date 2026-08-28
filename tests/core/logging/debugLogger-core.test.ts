@@ -9,7 +9,7 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
@@ -66,7 +66,7 @@ describe('DebugLogger - Core', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
     });
 
     describe('Initialization', () => {

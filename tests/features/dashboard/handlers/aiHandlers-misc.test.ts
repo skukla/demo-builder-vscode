@@ -12,7 +12,7 @@ import {
     mergePromptsForRead,
     deleteAiPromptById,
     readMergedAiPrompts,
-    createMockContext,
+    createAiHandlerContext,
     makeScopedContext,
 } from './aiHandlers.testUtils';
 
@@ -27,7 +27,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 env: { clipboard: { writeText: jest.Mock } };
                 window: { showInformationMessage: jest.Mock };
             };
-            const context = createMockContext();
+            const context = createAiHandlerContext();
 
             const result = await handleCopyAiPrompt(context, {
                 prompt: 'Build a hero block',
@@ -42,7 +42,7 @@ describe('aiHandlers — copy & module helpers', () => {
         });
 
         it('logs the prompt name only — never the prompt body', async () => {
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             const loggerInfo = context.logger.info as jest.Mock;
 
             await handleCopyAiPrompt(context, {
@@ -62,7 +62,7 @@ describe('aiHandlers — copy & module helpers', () => {
             const vscode = jest.requireMock('vscode') as {
                 env: { clipboard: { writeText: jest.Mock } };
             };
-            const context = createMockContext();
+            const context = createAiHandlerContext();
 
             const result = await handleCopyAiPrompt(context, { prompt: 'Quick prompt' });
 

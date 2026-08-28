@@ -9,7 +9,7 @@
 import {
     handleOpenProject,
 } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
-import { createMockContext } from './wizardLifecycleHandlers.testUtils';
+import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -50,7 +50,7 @@ jest.mock('@/core/validation/PathSafetyValidator', () => ({
 describe('lifecycleHandlers - Project Actions', () => {
     describe('handleOpenProject', () => {
         it('should dispose the wizard panel to return to projects list', async () => {
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
                 path: '/home/user/.demo-builder/projects/test-project',
@@ -63,7 +63,7 @@ describe('lifecycleHandlers - Project Actions', () => {
 
         it('should set dashboard reopen flag file', async () => {
             const fsPromises = require('fs/promises');
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
                 path: '/home/user/.demo-builder/projects/test-project',
@@ -80,7 +80,7 @@ describe('lifecycleHandlers - Project Actions', () => {
 
         it('should close existing Projects List webview', async () => {
             const { BaseWebviewCommand } = require('@/core/base');
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
                 path: '/home/user/.demo-builder/projects/test-project',
@@ -92,7 +92,7 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
 
         it('should log error when project is missing', async () => {
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
 
             const result = await handleOpenProject(context as any);
@@ -102,7 +102,7 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
 
         it('should log error when project path is missing', async () => {
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
                 path: undefined,
@@ -115,7 +115,7 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
 
         it('should return success', async () => {
-            const context = createMockContext();
+            const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',
                 path: '/home/user/.demo-builder/projects/test-project',

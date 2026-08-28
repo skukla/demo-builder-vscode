@@ -12,7 +12,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
  */
 
 /** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
-export function createMockContext(version: string = '1.0.0'): any {
+export function createUpdateManagerContext(version: string = '1.0.0'): any {
     return createMockExtensionContext({
         extensionPath: '/mock/extension/path',
         extension: { packageJSON: { version } },

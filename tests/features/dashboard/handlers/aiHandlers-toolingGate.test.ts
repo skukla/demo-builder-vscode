@@ -12,7 +12,7 @@ import {
     handleRegenerateAiFiles,
     generateAIContextFiles,
     installAiDefaultsMcpTools,
-    createMockContext,
+    createAiHandlerContext,
     seedCommandExecutor,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
@@ -37,7 +37,7 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
                 },
             },
         };
-        const context = createMockContext({
+        const context = createAiHandlerContext({
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(meshProject),
                 saveProjectConfigOnly: jest.fn(),

@@ -10,7 +10,7 @@ import {
     handleOpenInClaude,
     handleSaveAiPrompt,
     handleListAiPrompts,
-    createMockContext,
+    createAiHandlerContext,
     makeScopedContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
@@ -45,7 +45,7 @@ describe('aiHandlers — launch & save', () => {
             const vscode = jest.requireMock('vscode') as {
                 commands: { executeCommand: jest.Mock };
             };
-            const context = createMockContext();
+            const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context, {
                 prompt: 'Add a hero block',
@@ -62,7 +62,7 @@ describe('aiHandlers — launch & save', () => {
             const vscode = jest.requireMock('vscode') as {
                 commands: { executeCommand: jest.Mock };
             };
-            const context = createMockContext();
+            const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context);
 
@@ -76,7 +76,7 @@ describe('aiHandlers — launch & save', () => {
             const vscode = jest.requireMock('vscode') as {
                 commands: { executeCommand: jest.Mock };
             };
-            const context = createMockContext();
+            const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context, {} as never);
 
@@ -94,7 +94,7 @@ describe('aiHandlers — launch & save', () => {
             };
             setWorkspaceFolder('/some/other/repo');
             const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
+            const context = createAiHandlerContext({
                 context: {
                     extensionPath: '/mock/extension/path',
                     secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
@@ -130,7 +130,7 @@ describe('aiHandlers — launch & save', () => {
         it('appends a new prompt to project.aiPrompts when id is not already present', async () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts: [] as unknown[] };
-            const context = createMockContext({
+            const context = createAiHandlerContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
@@ -161,7 +161,7 @@ describe('aiHandlers — launch & save', () => {
                     { id: 'b', title: 'B', prompt: 'b' },
                 ],
             };
-            const context = createMockContext({
+            const context = createAiHandlerContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
@@ -183,13 +183,13 @@ describe('aiHandlers — launch & save', () => {
         });
 
         it('returns success: false when prompt payload is missing', async () => {
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             const result = await handleSaveAiPrompt(context, undefined as never);
             expect(result.success).toBe(false);
         });
 
         it('returns success: false when prompt fields are missing', async () => {
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             const result = await handleSaveAiPrompt(context, {
                 prompt: { id: 'x', title: '', prompt: '' },
             } as unknown as { prompt: { id: string; title: string; prompt: string } });
@@ -203,7 +203,7 @@ describe('aiHandlers — launch & save', () => {
                 path: '/safe/path',
                 aiPrompts: [],
             });
-            const context = createMockContext({
+            const context = createAiHandlerContext({
                 stateManager: {
                     getCurrentProject,
                     saveProject,
@@ -219,7 +219,7 @@ describe('aiHandlers — launch & save', () => {
         });
 
         it('returns project-not-found when no current project is loaded', async () => {
-            const context = createMockContext({
+            const context = createAiHandlerContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),

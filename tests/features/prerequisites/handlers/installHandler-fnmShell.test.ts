@@ -46,7 +46,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockAdobeCliPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -58,7 +58,7 @@ describe('Install Handler - FNM Shell Options', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should execute fnm list with shell option', async () => {

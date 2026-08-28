@@ -10,14 +10,14 @@
 
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext, mockOrg } from './testUtils';
+import { createAuthHandlerContext, mockOrg } from './testUtils';
 
 describe('Token Expiry Detection - handleAuthenticate()', () => {
     let mockContext: jest.Mocked<HandlerContext>;
     let mockTokenManager: any;
 
     beforeEach(() => {
-        mockContext = createMockHandlerContext();
+        mockContext = createAuthHandlerContext();
 
         // Create mock token manager
         mockTokenManager = {

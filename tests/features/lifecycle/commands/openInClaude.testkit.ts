@@ -67,7 +67,7 @@ export function makeGlobalState(initial: Record<string, unknown> = {}): MockGlob
 }
 
 /** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
-export function makeContext(globalState: MockGlobalState): vscode.ExtensionContext {
+export function makeOpenInClaudeContext(globalState: MockGlobalState): vscode.ExtensionContext {
     return createMockExtensionContext({
         globalState,
     } as unknown as Partial<vscode.ExtensionContext>);

@@ -33,7 +33,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockAdobeCliPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
 } from './installHandler.testUtils';
 
 describe('Prerequisites Install Handler - Shared Utility Usage (Steps 3 & 4 - Eliminate Duplication)', () => {
@@ -57,7 +57,7 @@ describe('Prerequisites Install Handler - Shared Utility Usage (Steps 3 & 4 - El
             missingVariantMajors: [],
         });
 
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should call checkPerNodeVersionStatus twice for per-node prerequisite (pre-check and post-check)', async () => {

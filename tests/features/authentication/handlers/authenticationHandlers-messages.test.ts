@@ -7,14 +7,14 @@
 
 import { handleCheckAuth, handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
+import { createAuthHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
 
 describe('authenticationHandlers - Message Patterns', () => {
     describe('STEP 2: Constant Message Pattern (Message Constancy During Loading)', () => {
         let mockContext: jest.Mocked<HandlerContext>;
 
         beforeEach(() => {
-            mockContext = createMockHandlerContext();
+            mockContext = createAuthHandlerContext();
             jest.clearAllMocks();
         });
 

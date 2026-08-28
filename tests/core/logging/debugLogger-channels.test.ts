@@ -7,7 +7,7 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
@@ -50,7 +50,7 @@ describe('DebugLogger - Channel Routing', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });
@@ -127,7 +127,7 @@ describe('DebugLogger - Channel Operations', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });

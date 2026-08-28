@@ -3,7 +3,7 @@ import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di';
 import {
-    createMockContext,
+    createContinueHandlerContext,
     mockNodePrereq,
     mockNpmPrereq,
     mockAdobeCliPrereq,
@@ -51,7 +51,7 @@ describe('Prerequisites Continue Handler - Operations', () => {
         });
 
         // Create mock context
-        mockContext = createMockContext();
+        mockContext = createContinueHandlerContext();
     });
 
     describe('basic operations', () => {

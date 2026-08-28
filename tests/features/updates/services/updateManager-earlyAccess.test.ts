@@ -37,7 +37,7 @@ import { UpdateManager } from '@/features/updates/services/updateManager';
 import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
 import * as vscode from 'vscode';
 import {
-    createMockContext,
+    createUpdateManagerContext,
     createMockLogger,
     createMockWorkspaceConfig,
     createMockReleasesArray,
@@ -59,7 +59,7 @@ describe('UpdateManager - Early-Access Gate', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext('1.0.0');
+        mockContext = createUpdateManagerContext('1.0.0');
         mockLogger = createMockLogger();
         mockSecurityValidationPass();
     });

@@ -19,7 +19,7 @@ export { createMockLogger };
  * Provides all essential HandlerContext properties with sensible defaults.
  * Can be overridden via the overrides parameter for specific test needs.
  */
-export function createMockHandlerContext(
+export function createEnvFileGeneratorContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
     return createMockHandlerContextBase({
@@ -59,7 +59,7 @@ export function createMockSetupContext(
         config: ProjectCreationConfig;
     }>
 ): ProjectSetupContext {
-    const mockHandlerContext = overrides?.handlerContext || createMockHandlerContext();
+    const mockHandlerContext = overrides?.handlerContext || createEnvFileGeneratorContext();
     const mockRegistry: ComponentRegistry = overrides?.registry || {
         version: '1.0.0',
         envVars: sharedEnvVars,

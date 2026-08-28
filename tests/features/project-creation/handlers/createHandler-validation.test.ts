@@ -5,7 +5,7 @@ import * as promiseUtils from '@/core/utils/promiseUtils';
 import * as _vscode from 'vscode';
 import * as _fs from 'fs';
 import {
-    createMockContext,
+    createProjectCreationContext,
     setupDefaultMocks,
     mockValidationError,
 } from './createHandler.testUtils';
@@ -24,12 +24,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Validation', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let _mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         _mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('security validation', () => {

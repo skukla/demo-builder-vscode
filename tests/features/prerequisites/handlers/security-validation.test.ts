@@ -1,6 +1,6 @@
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { createMockContext } from './testHelpers';
+import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { CommandResult } from '@/core/shell/types';
@@ -78,7 +78,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             const nodeVersions = ['18', '20'];
 
             await checkPerNodeVersionStatus(prereq, nodeVersions, context);
@@ -136,7 +136,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
             // Should parse versions correctly
@@ -175,7 +175,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult(''));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
             expect(result.perNodeVersionStatus).toHaveLength(2);
@@ -211,7 +211,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult(''));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
             // Both should be treated as not installed
@@ -242,7 +242,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
 
             // Should handle regex errors gracefully
             const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
@@ -271,7 +271,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             await checkPerNodeVersionStatus(prereq, ['18'], context);
 
             // fnm list should be called with shell option (if the implementation uses it)
@@ -305,7 +305,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
             await checkPerNodeVersionStatus(prereq, ['18'], context);
 
             // Should have reasonable timeout value

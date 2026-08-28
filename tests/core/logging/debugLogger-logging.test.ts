@@ -7,7 +7,7 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
@@ -50,7 +50,7 @@ describe('DebugLogger - Severity Level Methods', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });
@@ -150,7 +150,7 @@ describe('DebugLogger - Command Logging', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });
@@ -267,7 +267,7 @@ describe('DebugLogger - Log Buffer for Export', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });
@@ -318,7 +318,7 @@ describe('DebugLogger - Log Buffer Size Cap', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
         logger = new DebugLogger(mockContext);
         jest.clearAllMocks();
     });

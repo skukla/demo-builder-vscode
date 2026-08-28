@@ -38,7 +38,7 @@ import { ServiceLocator } from '@/core/di';
 import {
     mockAdobeCliPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -50,7 +50,7 @@ describe('Prerequisites Install Handler', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     describe('shared utility usage (Steps 3 & 4 - Eliminate Duplication)', () => {

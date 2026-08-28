@@ -26,7 +26,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import { handleGetProjects } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockHandlerContext } from '../testUtils';
+import { createMockProject, createProjectsDashboardContext } from '../testUtils';
 
 // Mock mesh staleness detection
 jest.mock('@/core/state/appBuilderComponentState', () => ({
@@ -113,7 +113,7 @@ describe('handleGetProjects — org targeting', () => {
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
@@ -147,7 +147,7 @@ describe('handleGetProjects — org targeting', () => {
                 componentConfigs: { 'api-mesh': { V: '2' } },
                 adobe: { organization: 'org-B', projectId: 'p2', projectName: 'p2', workspace: 'w2', authenticated: true },
             });
-            const context = createMockHandlerContext([projectA, projectB]);
+            const context = createProjectsDashboardContext([projectA, projectB]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: false });

@@ -40,7 +40,7 @@ export const mockOrgs: AdobeOrg[] = [
  * @param overrides - Partial overrides for specific properties
  * @returns A fully mocked HandlerContext
  */
-export function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return createMockHandlerContextBase({
         prereqManager: {} as PrerequisitesManager,
         authManager: {

@@ -88,7 +88,7 @@ jest.mock('vscode', () => {
 });
 
 /** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
-export function createMockContext(): vscode.ExtensionContext {
+export function createDebugLoggerContext(): vscode.ExtensionContext {
     return createMockExtensionContext({
         extensionPath: '/test/path',
         storagePath: '/test/storage',

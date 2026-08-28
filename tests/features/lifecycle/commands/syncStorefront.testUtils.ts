@@ -111,7 +111,7 @@ export const readFileMock = fsPromises.readFile as jest.Mock;
  * hid the silent Helix skip. Only the GitHub token service reads secrets here,
  * and it is mocked separately.
  */
-export function makeContext(): vscode.ExtensionContext {
+export function makeSyncStorefrontContext(): vscode.ExtensionContext {
     const secrets: vscode.SecretStorage = {
         get: jest.fn(async () => undefined),
         store: jest.fn(),

@@ -190,7 +190,7 @@ export function setupSharedUtilityMocks() {
 /**
  * Helper to create mock HandlerContext
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createInstallHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     const states = new Map();
     states.set(0, { prereq: mockNpmPrereq, result: mockNodeResult });
 

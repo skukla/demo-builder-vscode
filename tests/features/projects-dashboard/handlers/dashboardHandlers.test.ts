@@ -13,7 +13,7 @@ import {
     handleOpenLiveSite,
     handleOpenDaLive,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockProjects, createMockHandlerContext } from '../testUtils';
+import { createMockProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
 import { ServiceLocator } from '@/core/di';
 
 // Mock mesh staleness detection
@@ -98,7 +98,7 @@ describe('dashboardHandlers', () => {
     describe('handleGetProjects', () => {
         it('should return all projects from StateManager', async () => {
             const projects = createMockProjects(3);
-            const context = createMockHandlerContext(projects);
+            const context = createProjectsDashboardContext(projects);
 
             const result = await handleGetProjects(context as any);
 
@@ -114,7 +114,7 @@ describe('dashboardHandlers', () => {
             vscode.workspace.getConfiguration.mockReturnValue({
                 get: jest.fn().mockReturnValue('rows'),
             });
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             const result = await handleGetProjects(context as any);
 
@@ -123,7 +123,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should return empty array when no projects exist', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             const result = await handleGetProjects(context as any);
 
@@ -134,7 +134,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should handle errors gracefully', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             context.stateManager.getAllProjects.mockRejectedValue(new Error('Database error'));
 
             const result = await handleGetProjects(context as any);
@@ -148,7 +148,7 @@ describe('dashboardHandlers', () => {
 
         it('should NOT use sendMessage (Pattern B)', async () => {
             const projects = createMockProjects(2);
-            const context = createMockHandlerContext(projects);
+            const context = createProjectsDashboardContext(projects);
 
             await handleGetProjects(context as any);
 
@@ -176,7 +176,7 @@ describe('dashboardHandlers', () => {
                     path: path.join(os.homedir(), '.demo-builder', 'projects', 'buildright-eds'),
                 }),
             ];
-            const context = createMockHandlerContext(projects);
+            const context = createProjectsDashboardContext(projects);
 
             const result = await handleGetProjects(context as any);
 
@@ -207,7 +207,7 @@ describe('dashboardHandlers', () => {
                                     },
                 },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: true });
@@ -239,7 +239,7 @@ describe('dashboardHandlers', () => {
                                     },
                 },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
@@ -270,7 +270,7 @@ describe('dashboardHandlers', () => {
                                     },
                 },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockRejectedValue(new Error('Detection failed'));
@@ -289,7 +289,7 @@ describe('dashboardHandlers', () => {
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(false);
 
@@ -303,7 +303,7 @@ describe('dashboardHandlers', () => {
     describe('handleSelectProject', () => {
         it('should load and save project in StateManager', async () => {
             const project = createMockProject({ name: 'Selected Project' });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             const result = await handleSelectProject(context as any, {
                 projectPath: project.path,
@@ -316,7 +316,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should return error if project path is outside demo-builder directory', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             const result = await handleSelectProject(context as any, {
                 projectPath: '/nonexistent/path',
@@ -331,7 +331,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should return error if project not found at valid path', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const os = require('os');
             const path = require('path');
             const validButEmptyPath = path.join(
@@ -352,7 +352,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should return error if project path not provided', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             const result = await handleSelectProject(context as any, undefined);
 
@@ -364,7 +364,7 @@ describe('dashboardHandlers', () => {
 
         it('should log selection event', async () => {
             const project = createMockProject({ name: 'Logged Project' });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             await handleSelectProject(context as any, {
                 projectPath: project.path,
@@ -377,7 +377,7 @@ describe('dashboardHandlers', () => {
 
         it('should NOT use sendMessage (Pattern B)', async () => {
             const project = createMockProject();
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             await handleSelectProject(context as any, {
                 projectPath: project.path,
@@ -398,7 +398,7 @@ describe('dashboardHandlers', () => {
 
             PATH_TRAVERSAL_PAYLOADS.forEach((payload) => {
                 it(`should block path traversal attempt: ${payload}`, async () => {
-                    const context = createMockHandlerContext([]);
+                    const context = createProjectsDashboardContext([]);
 
                     const result = await handleSelectProject(context as any, {
                         projectPath: payload,
@@ -415,7 +415,7 @@ describe('dashboardHandlers', () => {
 
     describe('handleCreateProject', () => {
         it('should execute create project command', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
             const result = await handleCreateProject(context as any);
@@ -429,7 +429,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should log create event', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             await handleCreateProject(context as any);
 
@@ -439,7 +439,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should handle command execution error', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
             vscode.commands.executeCommand.mockRejectedValue(new Error('Command failed'));
 
@@ -452,7 +452,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should NOT use sendMessage (Pattern B)', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
 
             await handleCreateProject(context as any);
 
@@ -462,9 +462,9 @@ describe('dashboardHandlers', () => {
 
     describe('handleOpenAiForProject', () => {
         // The handler reads context.context.globalState + vscode.workspace.workspaceFolders;
-        // augment the mock context inline (createMockHandlerContext doesn't include them).
+        // augment the mock context inline (createProjectsDashboardContext doesn't include them).
         function makeContext(projects: Project[]): any {
-            const ctx = createMockHandlerContext(projects) as any;
+            const ctx = createProjectsDashboardContext(projects) as any;
             ctx.context = {
                 globalState: {
                     get: jest.fn(),
@@ -567,7 +567,7 @@ describe('dashboardHandlers', () => {
 
     describe('handleOpenLiveSite / handleOpenDaLive — path guard', () => {
         it('handleOpenLiveSite rejects a path outside the projects directory', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
             const result = await handleOpenLiveSite(context as any, {
@@ -581,7 +581,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('handleOpenDaLive rejects a path outside the projects directory', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
             const result = await handleOpenDaLive(context as any, {

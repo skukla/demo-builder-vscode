@@ -1,5 +1,5 @@
 import { getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
-import { createMockContext, createComponentSelection } from './testHelpers';
+import { createPrereqHandlerContext, createComponentSelection } from './testHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -29,7 +29,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
         const mockMapping = { '18': 'commerce-paas', '20': 'adobe-app-builder' };
         mockGetNodeVersionToComponentMapping.mockResolvedValue(mockMapping);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -51,7 +51,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
     });
 
     it('should return empty object if no component selection', async () => {
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
 
         const result = await getNodeVersionMapping(context);
 
@@ -63,7 +63,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
         const error = new Error('Import failed');
         mockGetNodeVersionToComponentMapping.mockRejectedValue(error);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection(),
@@ -82,7 +82,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
     it('should pass all component selection parameters', async () => {
         mockGetNodeVersionToComponentMapping.mockResolvedValue({});
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -107,7 +107,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
     it('should create ComponentRegistryManager with extension path', async () => {
         mockGetNodeVersionToComponentMapping.mockResolvedValue({});
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             context: { extensionPath: '/custom/path' } as HandlerContext['context'],
             sharedState: {
                 isAuthenticating: false,

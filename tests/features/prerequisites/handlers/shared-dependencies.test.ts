@@ -1,5 +1,5 @@
 import { areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
-import { createMockContext } from './testHelpers';
+import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
@@ -23,7 +23,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             check: { command: 'test --version' },
         } as PrerequisiteDefinition;
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
 
         const result = areDependenciesInstalled(prereq, context);
 
@@ -48,7 +48,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             result: { installed: true } as PrerequisiteStatus,
         });
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: states,
@@ -78,7 +78,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             result: { installed: false } as PrerequisiteStatus,
         });
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: states,
@@ -108,7 +108,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             ],
         });
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: states,
@@ -128,7 +128,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             check: { command: 'aio --version' },
         } as PrerequisiteDefinition;
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: new Map(),
@@ -162,7 +162,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             result: { installed: true } as PrerequisiteStatus,
         });
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: states,
@@ -196,7 +196,7 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
             result: { installed: false } as PrerequisiteStatus,
         });
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentPrerequisiteStates: states,

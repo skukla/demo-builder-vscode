@@ -6,7 +6,7 @@ import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
-import { createMockContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
+import { createProjectCreationContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
 
 // Mock all dependencies
 jest.mock('@/core/validation');
@@ -22,12 +22,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Happy Path', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let _mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         _mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('successful project creation', () => {

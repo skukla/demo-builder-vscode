@@ -1,6 +1,6 @@
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { createMockContext } from './testHelpers';
+import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { CommandResult } from '@/core/shell/types';
@@ -65,7 +65,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         // Verify fnm list was called with shell option
@@ -94,7 +94,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
 
         expect(result.perNodeVersionStatus).toEqual([
@@ -123,7 +123,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         expect(result.perNodeVersionStatus).toEqual([
@@ -149,7 +149,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
 
         expect(result.perNodeVersionStatus[0].installed).toBe(true);
@@ -170,7 +170,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.reject(new Error('Command failed'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
 
         expect(result.perNodeVersionStatus[0].installed).toBe(false);
@@ -193,7 +193,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         expect(result.perNodeVersionStatus).toHaveLength(2);
@@ -224,7 +224,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/11.2.3\nNode: v18.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
 
         expect(result.perNodeVersionStatus[0].component).toBe('11.2.3');
@@ -245,7 +245,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('version 10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         await checkPerNodeVersionStatus(prereq, ['18'], context);
 
         expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
@@ -276,7 +276,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.reject(new Error('Not found')); // 20 not installed
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         expect(result.perNodeVariantMissing).toBe(true);
@@ -298,7 +298,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.reject(new Error('Not found'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
 
         // 20 and 24 not installed as Node versions, 18 check failed
@@ -313,7 +313,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             check: { command: 'git --version' },
         } as PrerequisiteDefinition;
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         expect(result.perNodeVersionStatus).toEqual([]);
@@ -329,7 +329,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             check: { command: 'aio --version' },
         } as PrerequisiteDefinition;
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, [], context);
 
         expect(result.perNodeVersionStatus).toEqual([]);
@@ -352,7 +352,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         await checkPerNodeVersionStatus(prereq, ['20'], context);
 
         expect(context.logger.debug).toHaveBeenCalledWith(
@@ -378,7 +378,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             return Promise.resolve(createCommandResult('unexpected output format'));
         });
 
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
 
         expect(result.perNodeVersionStatus[0].component).toBe('');
@@ -407,7 +407,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
                 return Promise.resolve(createCommandResult('', 'aio: command not found', 127));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
 
             // When: Check per-node version status
             const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
@@ -445,7 +445,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
                 return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0', '', 0));
             });
 
-            const context = createMockContext();
+            const context = createPrereqHandlerContext();
 
             // When: Check per-node version status
             const result = await checkPerNodeVersionStatus(prereq, ['18'], context);

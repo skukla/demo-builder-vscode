@@ -9,7 +9,7 @@ import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { getActiveOrgContext } from '@/core/shell';
 import {
-    createMockContext,
+    createProjectCreationContext,
     setupDefaultMocks,
     mockTimeout,
     mockExecutionFailure,
@@ -32,12 +32,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Errors & Cleanup', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('timeout handling', () => {

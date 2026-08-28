@@ -4,7 +4,7 @@ import {
     mockConfig,
     mockNodeResult,
     mockNpmResult,
-    createMockContext,
+    createCheckHandlerContext,
     createComponentSelection,
     setupStandardMocks,
     cleanupTests,
@@ -59,7 +59,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
     describe('error handling', () => {
         it('should handle Node version check timeout errors', async () => {
             const timeoutError = new Error('Operation timeout');
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 [mockConfig.prerequisites[0]]
@@ -85,7 +85,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
 
         it('should handle general check errors and continue', async () => {
             const checkError = new Error('Check failed');
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
@@ -110,7 +110,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
 
         it('should handle config loading failures', async () => {
             const loadError = new Error('Config not found');
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockRejectedValue(loadError);
 
             const result = await handleCheckPrerequisites(context);
@@ -130,7 +130,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
 
         it('should handle dependency resolution failures', async () => {
             const resolveError = new Error('Circular dependency');
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockImplementation(() => {
                 throw resolveError;
@@ -147,7 +147,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
 
         it('should handle sendMessage failures gracefully', async () => {
             const sendError = new Error('WebView not ready');
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
 
             // First call (prerequisites-loaded) fails, subsequent calls succeed
             (context.sendMessage as jest.Mock)
@@ -167,7 +167,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
         it('should handle ComponentRegistryManager failures in node mapping', async () => {
             (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
 
-            const context = createMockContext({
+            const context = createCheckHandlerContext({
                 sharedState: {
                     isAuthenticating: false,
                     currentComponentSelection: createComponentSelection({ backend: 'nodejs' }),
@@ -190,7 +190,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
     describe('edge cases', () => {
         it('should handle empty prerequisites list', async () => {
             const emptyConfig = { version: '1.0', prerequisites: [] };
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(emptyConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue([]);
 
@@ -207,7 +207,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
         });
 
         it('should handle prerequisites with no component selection', async () => {
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
@@ -225,7 +225,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
         it('should handle prerequisites with unmet dependencies', async () => {
             (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(false);
 
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
@@ -247,7 +247,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
 
         it('should store component selection in sharedState from selectedStack', async () => {
             // Handler now derives componentSelection from selectedStack via stacks.json
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
@@ -279,7 +279,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
             jest.useFakeTimers();
             const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
 
-            const context = createMockContext();
+            const context = createCheckHandlerContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites

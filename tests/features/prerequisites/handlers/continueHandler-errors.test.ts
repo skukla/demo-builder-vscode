@@ -3,7 +3,7 @@ import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di';
 import {
-    createMockContext,
+    createContinueHandlerContext,
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
 
@@ -49,7 +49,7 @@ describe('Prerequisites Continue Handler - Error Handling', () => {
         });
 
         // Create mock context
-        mockContext = createMockContext();
+        mockContext = createContinueHandlerContext();
     });
 
     describe('missing state validation', () => {

@@ -13,7 +13,7 @@ import {
     DependencyResolver,
 } from '@/features/components/services/ComponentRegistryManager';
 import {
-    createMockHandlerContext,
+    createComponentHandlerContext,
     createMockRegistryManager,
     createMockDependencyResolver,
 } from './componentHandlers.testUtils';
@@ -27,7 +27,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     let mockDependencyResolver: jest.Mocked<DependencyResolver>;
 
     beforeEach(() => {
-        mockContext = createMockHandlerContext();
+        mockContext = createComponentHandlerContext();
         mockRegistryManager = createMockRegistryManager();
         mockDependencyResolver = createMockDependencyResolver();
 

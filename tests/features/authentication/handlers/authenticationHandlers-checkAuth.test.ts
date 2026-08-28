@@ -13,13 +13,13 @@
 import { handleCheckAuth } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg } from '@/features/authentication/services/types';
-import { createMockHandlerContext, mockOrg, mockProject } from './testUtils';
+import { createAuthHandlerContext, mockOrg, mockProject } from './testUtils';
 
 describe('authenticationHandlers - handleCheckAuth', () => {
     let mockContext: jest.Mocked<HandlerContext>;
 
     beforeEach(() => {
-        mockContext = createMockHandlerContext();
+        mockContext = createAuthHandlerContext();
         jest.clearAllMocks();
     });
 

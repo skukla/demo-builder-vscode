@@ -79,7 +79,7 @@ global.fetch = jest.fn() as jest.Mock;
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import * as vscode from 'vscode';
 import {
-    createMockContext,
+    createUpdateManagerContext,
     createMockLogger,
     createMockWorkspaceConfig,
     createMockProject,
@@ -95,7 +95,7 @@ describe('UpdateManager - Component Updates', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = createMockContext('1.0.0');
+        mockContext = createUpdateManagerContext('1.0.0');
         mockLogger = createMockLogger();
 
         // Setup workspace config

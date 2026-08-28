@@ -32,7 +32,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockAdobeCliPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
 } from './installHandler.testUtils';
 
@@ -61,7 +61,7 @@ describe('Prerequisites Install Handler - Shell Options for fnm list', () => {
             missingVariantMajors: [],
         });
 
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should execute fnm list with shell option', async () => {

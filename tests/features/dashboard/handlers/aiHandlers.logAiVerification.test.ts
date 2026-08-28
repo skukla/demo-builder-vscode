@@ -11,7 +11,7 @@
  */
 
 import { logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
-import { createMockContext } from './aiHandlers.testUtils';
+import { createAiHandlerContext } from './aiHandlers.testUtils';
 import type { AiVerificationResult } from '@/features/ai';
 
 function resultWithMcpError(error: string): AiVerificationResult {
@@ -32,7 +32,7 @@ function mcpWarnText(warn: jest.Mock): string {
 }
 
 it('redacts a credential-bearing env in the MCP stderr tail', () => {
-    const ctx = createMockContext();
+    const ctx = createAiHandlerContext();
     const secret = 'ghp_0123456789abcdef0123456789abcdef';
     const stderr = [
         'Error: connect ECONNREFUSED /var/folders/ab/xyz/demo-builder-mcp.sock',
@@ -48,7 +48,7 @@ it('redacts a credential-bearing env in the MCP stderr tail', () => {
 });
 
 it('preserves the multi-line connect diagnostic (does not collapse to one line)', () => {
-    const ctx = createMockContext();
+    const ctx = createAiHandlerContext();
     const stderr = [
         'Error: connect ECONNREFUSED demo-builder-mcp.sock',
         '    at TCPConnectWrap.afterConnect',
@@ -65,7 +65,7 @@ it('preserves the multi-line connect diagnostic (does not collapse to one line)'
 });
 
 it('does not throw on a missing stderr tail', () => {
-    const ctx = createMockContext();
+    const ctx = createAiHandlerContext();
     const result = {
         status: 'error',
         checks: [],

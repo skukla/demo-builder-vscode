@@ -48,7 +48,7 @@ import {
     mockNodePrereq,
     mockNpmPrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -60,7 +60,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should pass nodeVersions array for Node.js when multiple versions required', async () => {

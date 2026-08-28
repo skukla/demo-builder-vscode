@@ -3,7 +3,7 @@ import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequis
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di';
 import {
-    createMockContext,
+    createContinueHandlerContext,
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
 
@@ -49,7 +49,7 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
         });
 
         // Create mock context
-        mockContext = createMockContext();
+        mockContext = createContinueHandlerContext();
     });
 
     describe('empty and unusual states', () => {

@@ -4,7 +4,7 @@ import {
     mockConfig,
     mockNodeResult,
     mockNpmResult,
-    createMockContext,
+    createCheckHandlerContext,
     setupStandardMocks,
     cleanupTests,
 } from './checkHandler.testUtils';
@@ -54,7 +54,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should load prerequisites config and send to UI', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -78,7 +78,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should check all prerequisites in dependency order', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -102,7 +102,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should handle all prerequisites installed successfully', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -134,7 +134,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
                 { ...mockConfig.prerequisites[1], optional: true },
             ],
         };
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(optionalConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             optionalConfig.prerequisites
@@ -155,7 +155,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should send progress updates during checking', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -184,7 +184,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should complete with allInstalled=true when all required installed', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -208,7 +208,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     });
 
     it('should handle mix of installed and not-installed prerequisites', async () => {
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -269,7 +269,7 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             ],
         };
 
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         context.sharedState.currentComponentSelection = {
             frontend: undefined,
             backend: 'commerce-paas',
@@ -351,7 +351,7 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             ],
         };
 
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         context.sharedState.currentComponentSelection = {
             frontend: undefined,
             backend: undefined,
@@ -422,7 +422,7 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             ],
         };
 
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         context.sharedState.currentComponentSelection = {
             frontend: undefined,
             backend: 'commerce-paas',
@@ -488,7 +488,7 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             ],
         };
 
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         context.sharedState.currentComponentSelection = {
             frontend: undefined,
             backend: 'commerce-paas',

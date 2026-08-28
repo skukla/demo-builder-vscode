@@ -36,7 +36,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockNodePrereq,
     mockNodeResult,
-    createMockContext,
+    createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
@@ -48,7 +48,7 @@ describe('Install Handler - Version Satisfaction', () => {
         jest.clearAllMocks();
         setupMockCommandExecutor();
         setupSharedUtilityMocks();
-        mockContext = createMockContext();
+        mockContext = createInstallHandlerContext();
     });
 
     it('should skip installation when version family is satisfied', async () => {

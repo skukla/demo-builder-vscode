@@ -14,7 +14,7 @@ export { createMockLogger };
  * Creates a mock HandlerContext with sensible defaults and optional overrides.
  * All properties are properly typed without using 'as any'.
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createPrereqHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     const baseContext: HandlerContext = {
         prereqManager: {} as HandlerContext['prereqManager'],
         authManager: {} as HandlerContext['authManager'],

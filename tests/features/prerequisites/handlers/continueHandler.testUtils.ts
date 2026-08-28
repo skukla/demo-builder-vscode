@@ -48,7 +48,7 @@ export const mockNpmResult: PrerequisiteStatus = {
 
 // Helper to create mock HandlerContext
 // CRITICAL: Return a function, not the object directly, to avoid closure issues
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createContinueHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     const states = new Map();
     states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
     states.set(1, { prereq: mockNpmPrereq, result: mockNpmResult });

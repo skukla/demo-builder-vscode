@@ -6,7 +6,7 @@
  */
 
 import { handleOpenAdminPanel } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockHandlerContext } from '../testUtils';
+import { createMockProject, createProjectsDashboardContext } from '../testUtils';
 
 // Mock mesh staleness detection (module-eval safety; unused by these tests).
 jest.mock('@/core/state/appBuilderComponentState', () => ({
@@ -93,7 +93,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('returns error when projectPath is missing', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, undefined);
@@ -104,7 +104,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('rejects a path outside the projects directory before loading', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, {
@@ -117,7 +117,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('returns error when the project cannot be loaded', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
             const os = require('os');
             const path = require('path');
@@ -139,7 +139,7 @@ describe('dashboardHandlers', () => {
 
         it('opens the configured admin URL externally when set', async () => {
             const project = projectWithAdminUrl(ADMIN_URL);
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, {
@@ -157,7 +157,7 @@ describe('dashboardHandlers', () => {
             // localhost fails validateURL's SSRF guard even though http is an
             // allowed protocol (the Configure field accepts http and https).
             const project = projectWithAdminUrl('http://localhost:8080/admin');
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, {
@@ -172,7 +172,7 @@ describe('dashboardHandlers', () => {
         it('opens an http admin URL (Configure accepts http, so open-time must too)', async () => {
             const httpUrl = 'http://my-instance.example.com/admin';
             const project = projectWithAdminUrl(httpUrl);
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, {
@@ -186,7 +186,7 @@ describe('dashboardHandlers', () => {
 
         it('shows a notification with an Open Configure action when no URL is set', async () => {
             const project = createMockProject({ name: 'No Admin URL' });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context as any, {
@@ -207,7 +207,7 @@ describe('dashboardHandlers', () => {
 
         it('sets the current-project pointer then opens Configure when the action is selected', async () => {
             const project = createMockProject({ name: 'No Admin URL' });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
             vscode.window.showInformationMessage.mockResolvedValue('Open Configure');
 

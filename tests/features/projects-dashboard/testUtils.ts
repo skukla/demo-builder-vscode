@@ -129,7 +129,7 @@ export interface MockHandlerContext {
  * - getAllProjects() returns { name, path, lastModified }[]
  * - loadProjectFromPath(path) returns full Project
  */
-export function createMockHandlerContext(projects: Project[] = []): MockHandlerContext {
+export function createProjectsDashboardContext(projects: Project[] = []): MockHandlerContext {
     // Create simplified project list (what getAllProjects returns)
     const projectList = projects.map((p) => ({
         name: p.name,

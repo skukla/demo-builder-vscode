@@ -15,7 +15,7 @@ import type { ComponentRegistryManager, DependencyResolver } from '@/features/co
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 /** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
-export function createMockHandlerContext(): HandlerContext {
+export function createComponentHandlerContext(): HandlerContext {
     return createMockHandlerContextBase({
         context: {
             extensionPath: '/mock/extension/path',

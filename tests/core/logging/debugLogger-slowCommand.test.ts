@@ -47,10 +47,10 @@ jest.mock('vscode', () => {
 
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { createMockContext, mockLogsChannel, resetMocks } from './debugLogger.testUtils';
+import { createDebugLoggerContext, mockLogsChannel, resetMocks } from './debugLogger.testUtils';
 
 function logCommandTaking(command: string, durationMs: number): void {
-    const logger = new DebugLogger(createMockContext());
+    const logger = new DebugLogger(createDebugLoggerContext());
     logger.logCommand(command, { code: 0, stdout: '', stderr: '', duration: durationMs });
 }
 
