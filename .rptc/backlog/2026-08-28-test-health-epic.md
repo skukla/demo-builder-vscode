@@ -43,3 +43,7 @@ A new suite's defects surface at WRITE time, not at review or in production:
 the conventions have either a mechanical check or a documented
 accepted-variety verdict, and the census numbers (clone %, testUtils
 coverage of split families) hold or improve across two release cuts.
+
+## Shipped so far
+
+- 2026-08-28  Witness census SHIPPED (harness/test-census.mjs + .json, reconciled 54/54): before any ADR-015 convergence, each queue file's suites were classified by whether they can OBJECT to a bad refactor. Result: 47 WITNESS (argument-asserting suites already in place — the convergence can start there safely), 1 BLIND (prerequisitesCacheManager: SEVEN suites, none inspect collaborator calls), 4 UNTESTED (catalogPrewarmPhase, edsResetConfigStep, MultiVersionDetector, VersionSatisfactionChecker), 2 INDIRECT (meshRedeploy, componentInstallation — exercised through parent suites; re-read before trusting). Ordering rule ratified by the owner: strengthen-then-convert for the seven weak files; convert-then-simplify for the 47. Caveat recorded: WITNESS = the suite asserts SOME collaborator's calls, not necessarily the locator seam — per-file confirmation happens at conversion time.
