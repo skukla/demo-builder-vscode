@@ -165,7 +165,7 @@ describe('InExtensionMcpServer', () => {
 
         const debug = logger.debug as jest.Mock;
         const connectedCall = debug.mock.calls.find(([msg]) =>
-            /\[MCP\] client connected \(conn=\d+\)/.test(String(msg))
+            /\[MCP\] client connected \(conn=\d+, [a-z-]+-scoped(?: to [^)]+)?\)/.test(String(msg))
         );
         expect(connectedCall).toBeDefined();
         const resolvedCall = debug.mock.calls.find(([msg]) =>
@@ -201,7 +201,7 @@ describe('InExtensionMcpServer', () => {
 
         const debug = logger.debug as jest.Mock;
         const ids = debug.mock.calls
-            .map(([msg]) => /\[MCP\] client connected \(conn=(\d+)\)/.exec(String(msg)))
+            .map(([msg]) => /\[MCP\] client connected \(conn=(\d+), [a-z-]+-scoped(?: to [^)]+)?\)/.exec(String(msg)))
             .filter((m): m is RegExpExecArray => m !== null)
             .map((m) => Number(m[1]));
         expect(ids).toHaveLength(2);

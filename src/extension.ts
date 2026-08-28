@@ -32,6 +32,7 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
@@ -608,7 +609,18 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
             trace: agentTrace,
-            registerExtraTools: (mcpServer) => {
+            registerExtraTools: (mcpServer, scopedProjectDir) => {
+                // Per-connection scope (owner decision 2026-08-28): a session
+                // whose directory sits inside a project acts on THAT project —
+                // reads load it fresh from disk, saves never flip the
+                // dashboard pointer (scopedStateManager). The home chat and
+                // bare clients arrive unscoped and keep pointer semantics.
+                const connState = scopedProjectDir
+                    ? createScopedStateManager(stateManager, scopedProjectDir)
+                    : stateManager;
+                const connCtxFactory = scopedProjectDir
+                    ? () => createHeadlessHandlerContext(context, connState, logger)
+                    : ctxFactory;
                 registerDescriptorTools(
                     mcpServer,
                     [
@@ -617,26 +629,26 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         ...ACTION_DESCRIPTORS,
                         ...DATA_INSTALLER_DESCRIPTORS,
                     ],
-                    ctxFactory,
+                    connCtxFactory,
                 );
                 registerDiscoveryTools(mcpServer);
                 // VS Code mirrors the output channels to files under logUri —
                 // that mirror is what read_debug_logs serves.
                 registerDiagnosticsTools(mcpServer, context.logUri.fsPath);
-                registerAuthTools(mcpServer, ctxFactory);
-                registerAdobeTools(mcpServer, ctxFactory);
-                registerCreateProjectTool(mcpServer, ctxFactory);
-                registerCurrentProjectTool(mcpServer, ctxFactory);
-                registerProjectStatusTool(mcpServer, stateManager);
-                registerCommerceEndpointsTool(mcpServer, stateManager);
-                registerCommerceQueryTool(mcpServer, stateManager);
-                registerValidateSelectionTool(mcpServer, ctxFactory);
+                registerAuthTools(mcpServer, connCtxFactory);
+                registerAdobeTools(mcpServer, connCtxFactory);
+                registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
+                registerProjectStatusTool(mcpServer, connState);
+                registerCommerceEndpointsTool(mcpServer, connState);
+                registerCommerceQueryTool(mcpServer, connState);
+                registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
-                registerAdobeResourceTools(mcpServer, ctxFactory);
-                registerConfigureProjectTool(mcpServer, stateManager);
-                registerCloudResourceTools(mcpServer, ctxFactory);
-                registerStorefrontTools(mcpServer, ctxFactory);
-                registerSiteTools(mcpServer, ctxFactory);
+                registerAdobeResourceTools(mcpServer, connCtxFactory);
+                registerConfigureProjectTool(mcpServer, connState);
+                registerCloudResourceTools(mcpServer, connCtxFactory);
+                registerStorefrontTools(mcpServer, connCtxFactory);
+                registerSiteTools(mcpServer, connCtxFactory);
                 registerSettingsTools(mcpServer, (key) => {
                     // Split on the LAST dot: `workspace.getConfiguration(section)`
                     // takes the parent and the leaf separately, and these keys are
@@ -646,14 +658,14 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .getConfiguration(key.slice(0, lastDot))
                         .get(key.slice(lastDot + 1));
                 });
-                registerContentAuthoringTools(mcpServer, ctxFactory);
-                registerEdsResetTool(mcpServer, ctxFactory);
-                registerDeleteProjectTool(mcpServer, ctxFactory);
-                registerApplyUpdatesTool(mcpServer, ctxFactory);
+                registerContentAuthoringTools(mcpServer, connCtxFactory);
+                registerEdsResetTool(mcpServer, connCtxFactory);
+                registerDeleteProjectTool(mcpServer, connCtxFactory);
+                registerApplyUpdatesTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
                 );
-                registerLifecycleTools(mcpServer, ctxFactory, (url) =>
+                registerLifecycleTools(mcpServer, connCtxFactory, (url) =>
                     Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
             },

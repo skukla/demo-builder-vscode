@@ -31,6 +31,7 @@ import {
     type ToolTraceRecorder,
     type TraceOutcome,
 } from './toolTraceRecorder';
+import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
@@ -414,7 +415,13 @@ export interface InExtensionMcpServerOptions {
      * of vscode/handler-map imports.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    registerExtraTools?: (server: any) => void;
+    /**
+     * @param scopedProjectDir - absolute project path the CONNECTION is scoped
+     *   to, when its session directory sits inside a project (connectionScope);
+     *   undefined for the home chat and bare clients — the pointer governs.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerExtraTools?: (server: any, scopedProjectDir?: string) => void;
     /**
      * Visibility for agent-triggered mutations (injected — this module stays
      * vscode-free). Wraps the HANDLER CALL of every tool whose name is not
@@ -627,9 +634,23 @@ export class InExtensionMcpServer {
      * is purely a discovery mechanism for the proxy.
      */
     private handleConnection(socket: net.Socket): void {
+        // The optional '#cwd:' preamble decides the connection's project scope
+        // BEFORE the MCP transport attaches (readCwdPreamble unshifts whatever
+        // it did not consume, so the transport sees a pristine stream).
+        void readCwdPreamble(socket).then((cwd) => {
+            const scopedProjectDir = resolveScopedProjectDir(cwd, this.projectsDir);
+            this.attachConnection(socket, scopedProjectDir);
+        });
+    }
+
+    /** Build and connect the per-connection server, scope decided. */
+    private attachConnection(socket: net.Socket, scopedProjectDir?: string): void {
         const connId = ++this.connCounter;
         const startedAt = Date.now();
-        this.logger.debug(`[MCP] client connected (conn=${connId})`);
+        this.logger.debug(
+            `[MCP] client connected (conn=${connId}` +
+                (scopedProjectDir ? `, session-scoped to ${scopedProjectDir})` : ', pointer-scoped)'),
+        );
         // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const server: any = new McpServer({
@@ -648,12 +669,19 @@ export class InExtensionMcpServer {
             this.options.projectShape,
         );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
-        this.options.registerExtraTools?.(logged);
+        this.options.registerExtraTools?.(logged, scopedProjectDir);
 
         const transport = new StdioServerTransport(socket, socket);
         server
             .connect(transport)
             .then(() => {
+                // The preamble sniff EXPLICITLY paused the socket (an explicit
+                // pause is not undone by the transport adding its 'data'
+                // listener), and unshifted the MCP bytes it did not consume.
+                // Resume only now, with the transport attached — the paused
+                // stream buffered everything in between, so nothing is lost
+                // and nothing was emitted listenerless.
+                socket.resume();
                 this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
             })
             .catch((err: unknown) => {

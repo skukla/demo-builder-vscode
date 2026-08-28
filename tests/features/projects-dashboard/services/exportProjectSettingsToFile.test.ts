@@ -66,7 +66,7 @@ describe('exportProjectSettingsToFile', () => {
         expect(writeMock).toHaveBeenCalledTimes(1);
         expect(writeMock.mock.calls[0][0]).toBe(expected);
         expect(writeMock.mock.calls[0][1]).toContain('super-secret');
-        expect(result).toEqual({ path: expected, includesSecrets: true });
+        expect(result).toEqual({ path: expected, includesSecrets: true, verify: expect.stringContaining('the file exists at') });
     });
 
     it('honors includeSecrets=false (no secrets on disk, flag reflected)', async () => {

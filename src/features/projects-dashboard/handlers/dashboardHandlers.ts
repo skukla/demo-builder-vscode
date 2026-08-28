@@ -893,6 +893,13 @@ export const handleSetProjectPinned: MessageHandler<{
         return {
             success: true,
             pinned: { projectPath: payload.projectPath, pinned: payload.pinned },
+            // NAME the confirming read. The tier-2 battery run (2026-08-28)
+            // measured an agent burning 13 shell calls looking for this state
+            // on DISK after a successful pin — it lives in extension storage,
+            // where ls can never see it, and nothing said so.
+            verify:
+                'Confirmed. Pinned state lives in extension storage (not a file) — ' +
+                're-check with list_projects, never the filesystem.',
         };
     } catch (error) {
         context.logger.error(

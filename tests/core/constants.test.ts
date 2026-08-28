@@ -99,8 +99,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // the only shape Claude Code registers as an invocable skill (flat files
     // were never registered; measured live 2026-08-27). The bump is what makes
     // existing projects rewrite the layout and reconcile the flat files away.
-    it('is 27 (skills land in the registrable directory layout)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(27);
+    // v28: the project AGENTS.md states the connection-scope promise (sessions
+    // in a project directory act on THAT project; the pointer never moves).
+    it('is 28 (AGENTS.md carries the connection-scope promise)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(28);
     });
 });
 

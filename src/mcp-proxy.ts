@@ -126,6 +126,13 @@ function connect(attempt: number, isReconnect: boolean): void {
     s.once('connect', () => {
         connectedThisCycle = true;
         connected = true;
+        // Session-directory preamble — FIRST bytes on every connection
+        // (reconnects included: the fresh server end sniffs each connection
+        // anew). The server scopes current-project tools to the project this
+        // session sits in (connectionScope.ts); MCP lines all start with '{',
+        // so the '#cwd:' line is unambiguous and old/bare clients that skip
+        // it are handed to the transport untouched.
+        s.write(`#cwd:${process.cwd()}\n`);
         // Re-establish the session on the freshly-restarted server, then hide
         // the reconnection from the client by swallowing the init response.
         if (isReconnect && handshakeCaptured && initLine) {

@@ -40,9 +40,19 @@ import type { HandlerContext } from '@/types/handlers';
  * Register `get_current_project`.
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
+ * @param scopedProjectDir Set when THIS CONNECTION is scoped to the project its
+ *   session directory sits in (connectionScope) — the response then says so,
+ *   because an agent must be able to tell "the project I'm standing in" from
+ *   "whatever the dashboard points at" (the tier-2 battery run measured an
+ *   agent inspecting one project while its tools acted on another).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerCurrentProjectTool(server: any, ctxFactory: () => HandlerContext): void {
+export function registerCurrentProjectTool(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    server: any,
+    ctxFactory: () => HandlerContext,
+    scopedProjectDir?: string,
+): void {
     server.registerTool(
         'get_current_project',
         {
@@ -53,7 +63,12 @@ export function registerCurrentProjectTool(server: any, ctxFactory: () => Handle
         },
         async () => {
             const p = await ctxFactory().stateManager.getCurrentProject();
-            return asText({ currentProject: p ? await resolveProjectStatus(p) : null });
+            return asText({
+                currentProject: p ? await resolveProjectStatus(p) : null,
+                // WHY this project: the session's own directory, or the
+                // dashboard's pointer. Scoped sessions never move the pointer.
+                scope: scopedProjectDir ? 'session-directory' : 'dashboard-pointer',
+            });
         },
     );
 }

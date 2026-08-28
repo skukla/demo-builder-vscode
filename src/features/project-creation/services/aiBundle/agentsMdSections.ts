@@ -68,6 +68,16 @@ export function buildHeader(project: Project, stacksConfig: Stack[]): string {
     return [
         `# Demo Builder Project: ${name}`,
         '',
+        // Scope promise (v28): sessions started in this directory are
+        // connection-scoped by the MCP server — current-project tools act on
+        // THIS project regardless of the dashboard's pointer, and never move
+        // it (connectionScope.ts). Without this line an agent that also saw
+        // the dashboard could reasonably wonder which project its writes hit
+        // — the ambiguity the 2026-08-28 tier-2 battery run measured.
+        '> Sessions started in this directory act on THIS project: the Demo Builder',
+        "> MCP tools scope to it automatically, and never change the dashboard's",
+        '> selected project. `get_current_project` confirms (`scope: "session-directory"`).',
+        '',
         '## Project Overview',
         `- **Package:** ${packageName}`,
         `- **Stack:** ${stackName}`,

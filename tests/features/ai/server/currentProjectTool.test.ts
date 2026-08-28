@@ -75,7 +75,7 @@ describe('get_current_project', () => {
 
         const res = await s.call({});
 
-        expect(res).toEqual({ currentProject: null });
+        expect(res).toEqual({ currentProject: null, scope: 'dashboard-pointer' });
     });
 
     it('registers under the get_current_project name', () => {

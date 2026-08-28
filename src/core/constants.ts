@@ -208,7 +208,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // NONE of our flat files, so the modal promised "skills" that agents could
 // only reach as prose via file reads. The sweep rewrites the layout and
 // reconciles the legacy flat files away on proof.
-export const AI_CONTEXT_VERSION = 27;
+// v28 (2026-08-28): the project AGENTS.md states the connection-scope promise —
+// sessions started inside a project act on THAT project (the MCP server scopes
+// per connection via the proxy's cwd preamble) and never move the dashboard's
+// pointer. Owner decision after the tier-2 battery run measured an agent
+// inspecting one project while its tools acted on another.
+export const AI_CONTEXT_VERSION = 28;
 
 /**
  * Component IDs for standardized component instance access

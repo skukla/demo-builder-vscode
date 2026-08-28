@@ -284,6 +284,8 @@ export interface ExportSettingsToFileResult {
     path: string;
     /** Whether the written file includes secrets. */
     includesSecrets: boolean;
+    /** Confirmation sentence for agents — the write completed; how to re-check. */
+    verify: string;
 }
 
 /**
@@ -310,7 +312,13 @@ export async function exportProjectSettingsToFile(
     const target = resolveExportTarget(project, opts.path);
     await writeFileAtomic(target, JSON.stringify(settings, null, 2));
 
-    return { path: target, includesSecrets: settings.includesSecrets };
+    return {
+        path: target,
+        includesSecrets: settings.includesSecrets,
+        // The write is complete when this returns (writeFileAtomic) — say so,
+        // or agents ls the directory to make sure (measured, tier-2 battery).
+        verify: 'Confirmed — the file exists at `path`; Read it directly if you need the contents.',
+    };
 }
 
 /**

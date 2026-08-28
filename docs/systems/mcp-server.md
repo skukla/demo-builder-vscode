@@ -251,6 +251,30 @@ No webview, no modal, no button — but the work is identical to the UI path.
 
 ---
 
+## 7b. Connection scoping — the session's directory decides the project
+
+Two agent entries are supported: the home chat (session at the projects root;
+the dashboard's current-project pointer decides which project "this project"
+means) and a session started inside a project directory (each project's
+generated `.mcp.json`/AGENTS.md exist for exactly this). Since 2026-08-28 the
+second entry is **connection-scoped**: the proxy writes a one-line
+`#cwd:<path>` preamble as the first bytes of every connection (MCP framing is
+newline-delimited JSON-RPC, so every legitimate first byte is `{` and the
+preamble is unambiguous; bare clients — the probe, old proxies — skip it and
+are handed to the transport untouched). The server (`connectionScope.ts`)
+resolves the cwd to the containing project and, for that connection only:
+
+- current-project reads load THAT project fresh from disk per call;
+- saves route through `saveProjectConfigOnly` — a scoped session can NEVER
+  flip the dashboard's pointer (`scopedStateManager.ts`);
+- `get_current_project` answers `scope: "session-directory"` (vs
+  `"dashboard-pointer"`), so an agent can always tell why it got the project
+  it got.
+
+Decided by the owner after the battery's first tier-2 run measured an agent
+inspecting one project while its tools acted on another. The home chat and
+every unscoped client keep pointer semantics unchanged.
+
 ## 8. The headless `HandlerContext`
 
 Most of the extension's logic is written as **message handlers** that expect a
