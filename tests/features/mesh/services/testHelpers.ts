@@ -96,28 +96,8 @@ export interface MockCommandResult {
     duration: number;
 }
 
-/**
- * Creates a successful command result
- */
-export function createSuccessResult(
-    stdout: string = 'https://mesh-endpoint.adobe.io/graphql'
-): MockCommandResult {
-    return {
-        stdout,
-        stderr: '',
-        code: 0,
-        duration: 1000,
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createSuccessResult } from '../../../helpers/commandResultFake';
 
-/**
- * Creates a failed command result
- */
-export function createFailureResult(stderr: string = 'Command failed'): MockCommandResult {
-    return {
-        stdout: '',
-        stderr,
-        code: 1,
-        duration: 100,
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createFailureResult } from '../../../helpers/commandResultFake';

@@ -40,17 +40,8 @@ export function createMockCacheManager(): jest.Mocked<AuthCacheManager> {
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
 export { createMockLogger } from '../../../helpers/loggerFake';
 
-/**
- * Creates a successful command execution result.
- */
-export function createSuccessResult(data: any) {
-    return {
-        stdout: JSON.stringify(data),
-        stderr: '',
-        code: 0,
-        duration: 100
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createSuccessResult } from '../../../helpers/commandResultFake';
 
 /**
  * Creates an error command execution result.

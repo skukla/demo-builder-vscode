@@ -115,18 +115,8 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     } as jest.Mocked<HandlerContext>;
 }
 
-/**
- * Helper to create component selection for multi-version tests
- */
-export function createComponentSelection(backend: string, appBuilder: string[] = []) {
-    return {
-        frontend: 'react-app',
-        backend,
-        dependencies: [],
-        integrations: [],
-        appBuilder,
-    };
-}
+/** Canonical component-selection fixture (ADR-016). */
+export { createComponentSelection } from '../../../helpers/componentSelectionFake';
 
 /**
  * Setup standard mock implementations for shared utilities

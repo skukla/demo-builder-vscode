@@ -121,13 +121,8 @@ export function makeContext(): vscode.ExtensionContext {
     return { secrets, globalState: { get: jest.fn(), update: jest.fn() } } as never;
 }
 
-export function makeStateManager(project: Record<string, unknown> | null): {
-    getCurrentProject: jest.Mock;
-} {
-    return {
-        getCurrentProject: jest.fn().mockResolvedValue(project),
-    };
-}
+/** Canonical state-manager fake (ADR-016). */
+export { makeStateManager } from '../../../helpers/stateManagerFake';
 
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
 export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';

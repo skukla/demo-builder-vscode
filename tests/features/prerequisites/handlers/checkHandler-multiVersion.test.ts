@@ -61,7 +61,7 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
         const context = createMockContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas'),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas' }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
@@ -100,7 +100,7 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
         const context = createMockContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas'),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas' }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
@@ -168,7 +168,7 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
         const context = createMockContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas', ['action']),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas', appBuilder: ['action'] }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);

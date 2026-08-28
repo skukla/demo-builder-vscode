@@ -40,9 +40,8 @@ export interface MockLogger {
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
 export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
-export function makeStateManager(project: Partial<Project> | null): { getCurrentProject: jest.Mock } {
-    return { getCurrentProject: jest.fn().mockResolvedValue(project) };
-}
+/** Canonical state-manager fake (ADR-016). */
+export { makeStateManager } from '../../../helpers/stateManagerFake';
 
 export interface MockGlobalState {
     get: jest.Mock;

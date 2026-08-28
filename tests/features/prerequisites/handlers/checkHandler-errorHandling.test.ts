@@ -170,7 +170,7 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
             const context = createMockContext({
                 sharedState: {
                     isAuthenticating: false,
-                    currentComponentSelection: createComponentSelection('nodejs'),
+                    currentComponentSelection: createComponentSelection({ backend: 'nodejs' }),
                 },
             });
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);

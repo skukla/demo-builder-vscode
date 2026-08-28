@@ -72,7 +72,7 @@ describe('OrganizationValidator - Permissions', () => {
     describe('testDeveloperPermissions()', () => {
         it('should return true for users with Developer role', async () => {
             mockCommandExecutor.execute.mockResolvedValue(
-                createSuccessResult([{ name: 'My App' }])
+                createSuccessResult(JSON.stringify([{ name: 'My App' }]))
             );
 
             const result = await validator.testDeveloperPermissions();
@@ -217,7 +217,7 @@ describe('OrganizationValidator - Permissions', () => {
         });
 
         it('caches a confirmed-allowed result (code 0)', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult([{ name: 'My App' }]));
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(JSON.stringify([{ name: 'My App' }])));
 
             await validator.testDeveloperPermissions();
 

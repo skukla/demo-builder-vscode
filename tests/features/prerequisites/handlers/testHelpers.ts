@@ -47,19 +47,5 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     return baseContext as jest.Mocked<HandlerContext>;
 }
 
-/**
- * Creates a component selection configuration for testing.
- */
-export function createComponentSelection(overrides?: {
-    frontend?: string;
-    backend?: string;
-    dependencies?: string[];
-    integrations?: string[];
-}) {
-    return {
-        frontend: overrides?.frontend ?? 'react-app',
-        backend: overrides?.backend ?? 'commerce-paas',
-        dependencies: overrides?.dependencies ?? [],
-        integrations: overrides?.integrations ?? [],
-    };
-}
+/** Canonical component-selection fixture (ADR-016). */
+export { createComponentSelection } from '../../../helpers/componentSelectionFake';

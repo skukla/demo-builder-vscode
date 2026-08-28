@@ -49,19 +49,10 @@ export const createMockStepLogger = (): jest.Mocked<StepLogger> => ({
 } as any);
 
 // Command result helpers
-export const createSuccessResult = (stdout: string): CommandResult => ({
-    code: 0,
-    stdout,
-    stderr: '',
-    duration: 0,
-});
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+export { createSuccessResult };
 
-export const createFailureResult = (stderr: string): CommandResult => ({
-    code: 1,
-    stdout: '',
-    stderr,
-    duration: 0,
-});
+export { createFailureResult } from '../../../helpers/commandResultFake';
 
 // `createValidTokenResult` / `createInvalidTokenResult` lived here. They staged a
 // token as fake `aio config get` STDOUT, which stopped being how the token is read
