@@ -242,12 +242,10 @@ export async function buildRunnerDepsContext(
 ): Promise<RunnerDepsContext> {
     const { ComponentManager } = await import('@/features/components/services/componentManager');
     const authManager = ServiceLocator.getAuthenticationService();
+    const commandManager = ServiceLocator.getCommandExecutor();
     return {
-        componentManager: new ComponentManager(
-            context.logger,
-            ServiceLocator.getCommandExecutor(),
-        ),
-        commandManager: ServiceLocator.getCommandExecutor(),
+        componentManager: new ComponentManager(context.logger, commandManager),
+        commandManager,
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),
         // Tiers 1+2 and the stamp. Package INSTALLS (tier 3) are not needed

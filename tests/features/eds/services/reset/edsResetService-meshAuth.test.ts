@@ -171,6 +171,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -273,6 +283,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 project, redeployMesh: true,
             },
             context, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: auth runs BEFORE the targeted redeploy
@@ -297,6 +308,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 project, redeployMesh: true,
             },
             context, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: the redeploy is targeted at the project's known org/project/workspace
@@ -326,6 +338,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 project, redeployMesh: true,
             },
             context, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Should pass project context for loginAndRestoreProjectContext
@@ -357,6 +370,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 project, redeployMesh: true,
             },
             context, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Should return partial success (reset completed, mesh failed)
@@ -380,6 +394,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 project, redeployMesh: false,
             },
             context, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: ensureAdobeIOAuth should NOT be called (mesh step skipped)

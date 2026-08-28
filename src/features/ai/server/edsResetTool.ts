@@ -135,6 +135,10 @@ export function registerEdsResetTool(
                         },
                         ctx,
                         tokenProvider,
+                        {
+                            commandManager: ServiceLocator.getCommandExecutor(),
+                            authManager: ServiceLocator.getAuthenticationService(),
+                        },
                         // Collected for the RESULT and reported LIVE. Reset runs
                         // for minutes; the array is the agent's record afterwards,
                         // reportPhase is what the user sees during the wait.

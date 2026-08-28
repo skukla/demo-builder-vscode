@@ -122,6 +122,16 @@ import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // Cast imported mocks
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
 const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
@@ -226,6 +236,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             },
             context,
             mockTokenProvider,
+            meshDeps,
         );
 
         // Then: installBlockCollections (plural) called ONCE with all sources combined
@@ -264,6 +275,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             },
             context,
             mockTokenProvider,
+            meshDeps,
         );
 
         // Then: installBlockCollections (plural) called with only built-in source

@@ -41,7 +41,7 @@ import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMig
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
 import { publishConfigAndRegisterSite } from './edsResetConfigStep';
-import { redeployApiMesh } from './edsResetMeshHelper';
+import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     extractResetParams,
     type EdsResetParams,
@@ -261,6 +261,7 @@ async function finalizeReset(
     report: (step: number, message: string) => void,
     filesReset: number,
     contentCopied: number,
+    deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
     configWritten = true,
 ): Promise<EdsResetResult> {
@@ -289,6 +290,7 @@ async function finalizeReset(
             report,
             filesReset,
             contentCopied,
+            deps,
         );
         if (meshResult) return meshResult; // Partial success
     }
@@ -354,6 +356,7 @@ export async function executeEdsReset(
     params: EdsResetParams,
     context: HandlerContext,
     tokenProvider: TokenProvider,
+    deps: MeshRedeployDeps,
     onProgress?: (progress: EdsResetProgress) => void,
 ): Promise<EdsResetResult> {
     const { redeployMesh = false } = params;
@@ -432,6 +435,7 @@ export async function executeEdsReset(
             report,
             filesReset,
             contentCopied,
+            deps,
             configWritten,
         );
     } catch (error) {

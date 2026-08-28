@@ -16,6 +16,7 @@
  * @module features/eds/services/reset/edsResetUI
  */
 
+import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     executeEdsReset,
     extractResetParams,
@@ -33,15 +34,24 @@ import type { HandlerContext } from '@/types/handlers';
 // ==========================================================
 
 /**
- * Options for the full reset UI flow
+ * Options for the full EDS reset UI flow.
+ *
+ * RENAMED 2026-08-28: this was `ResetWithUIOptions`, the same name the generic
+ * reset in `lifecycle/services/projectResetService.ts` uses for a DIFFERENT
+ * shape. They are variants, not duplicates — this one carries five EDS-only
+ * toggles the generic reset must not have — but two exported types sharing a
+ * name across modules is a trap: importing the wrong one typechecks wherever
+ * the fields happen to overlap.
  */
-export interface ResetWithUIOptions {
+export interface EdsResetWithUIOptions {
     /** Project to reset */
     project: Project;
     /** Handler context */
     context: HandlerContext;
     /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
     logPrefix?: string;
+    /** ADR-015: collaborators the mesh-redeploy step needs, from the handler. */
+    meshDeps: MeshRedeployDeps;
     /** Include block library configuration (default: false) */
     includeBlockLibrary?: boolean;
     /** Verify CDN resources after publish (default: false) */
@@ -338,7 +348,7 @@ async function showResetResultNotifications(
  * @param options - Reset options
  * @returns Reset result
  */
-export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promise<EdsResetResult> {
+export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Promise<EdsResetResult> {
     const {
         project,
         context,
@@ -503,7 +513,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     await removeProjectSampleData(project, context, progress);
                 }
 
-                const result = await executeEdsReset(resetParams, context, tokenProvider, (p) => {
+                const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
                     progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
                 });
 

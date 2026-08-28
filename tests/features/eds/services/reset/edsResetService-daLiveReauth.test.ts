@@ -126,6 +126,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mo
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -236,6 +246,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -254,6 +265,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Pipeline should have been called twice
@@ -269,6 +281,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Should return failure (not crash)
@@ -284,6 +297,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then
@@ -299,6 +313,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Should have attempted re-auth twice, then failed
@@ -313,6 +328,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // When
         const result = await executeEdsReset(
             createResetParams(), mockContext, mockTokenProvider,
+            meshDeps,
         );
 
         // Then: Should not call ensureDaLiveAuth

@@ -10,15 +10,13 @@
  * exercised for real (pure given an injected org list).
  */
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-        getStateManager: jest.fn(),
-    },
-}));
-
-import { orgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
-import { ServiceLocator } from '@/core/di';
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the check is a `createOrgContextCheck(deps)`
+ * factory now, matching its mesh/mcp/ai siblings — so this suite mocks the
+ * service registry NOT AT ALL. The auth manager and state manager are plain
+ * fakes handed in. Every assertion below is unchanged.
+ */
+import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
@@ -54,21 +52,31 @@ function projectWithOrg(organization?: string, extra: Record<string, unknown> = 
     return { path: '/tmp/proj', adobe: organization ? { organization, ...extra } : undefined } as unknown as Project;
 }
 
+/** The default self-heal sink; a test that asserts on it installs its own. */
+let saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
+
+/** Build the check with a handed-in auth manager (and the current save sink). */
+function checkWith(auth: unknown) {
+    return createOrgContextCheck({
+        authManager: auth as never,
+        stateManager: () => ({ saveProjectConfigOnly }),
+    });
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
-    (ServiceLocator.getStateManager as jest.Mock).mockReturnValue({
-        saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-    });
+    saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
 });
 
 it('has the org-context id and is reRunnable (live check, opts out of the guard)', () => {
+    const orgContextCheck = checkWith(makeAuth({}));
     expect(orgContextCheck.id).toBe(CHECK_IDS.ORG_CONTEXT);
     expect(orgContextCheck.reRunnable).toBe(true);
 });
 
 it('no Adobe org → ok no-op, without touching auth at all', async () => {
     const auth = makeAuth({});
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx } = makeCtx(projectWithOrg(undefined));
 
     const outcome = await orgContextCheck.run(ctx);
@@ -85,7 +93,7 @@ it('valid token + matching org → ok with currentOrg; no CLI / no interactive p
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
         ]),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx } = makeCtx(projectWithOrg('org1'));
 
     const outcome = await orgContextCheck.run(ctx) as CheckResult<{ currentOrg?: string }>;
@@ -100,7 +108,7 @@ it('posts a pending outcome before resolving', async () => {
     const auth = makeAuth({
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue([{ id: 'org1', name: 'Org One' }]),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx, post } = makeCtx(projectWithOrg('org1'));
 
     await orgContextCheck.run(ctx);
@@ -114,7 +122,7 @@ it('valid token + mismatch → warning with orgMismatch banner data', async () =
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
         ]),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     // Project expects an org the token can't reach.
     const { ctx } = makeCtx(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
 
@@ -130,7 +138,7 @@ it('absent/expired token → unknown; SDK read NOT attempted, no interactive log
     const auth = makeAuth({
         isAuthenticated: jest.fn().mockResolvedValue(false),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx } = makeCtx(projectWithOrg('org1'));
 
     const outcome = await orgContextCheck.run(ctx);
@@ -148,7 +156,7 @@ it('SDK unavailable (undefined SDK-only read) → unknown; no CLI fallback fired
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx } = makeCtx(projectWithOrg('org1'));
 
     const outcome = await orgContextCheck.run(ctx);
@@ -168,7 +176,7 @@ it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org re
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     const { ctx } = makeCtx(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
 
     const outcome = (await orgContextCheck.run(ctx)) as CheckResult<{
@@ -184,14 +192,13 @@ it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org re
 });
 
 it('reachable + legacy/name data → self-heals project org id + name (one manifest write)', async () => {
-    const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
-    (ServiceLocator.getStateManager as jest.Mock).mockReturnValue({ saveProjectConfigOnly });
+    saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
     const auth = makeAuth({
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
         ]),
     });
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const orgContextCheck = checkWith(auth);
     // Legacy: organization holds the NAME, not the id; no organizationName yet.
     const project = projectWithOrg('Org One');
     const { ctx } = makeCtx(project);

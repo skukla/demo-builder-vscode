@@ -24,7 +24,8 @@
  */
 
 import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
-import { ServiceLocator } from '@/core/di';
+import type { StateManager } from '@/core/state/stateManager';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type {
     OrgContextResult,
     OrgMismatchInfo,
@@ -55,7 +56,12 @@ const unknownOutcome = (): CheckResult<OrgContextCheckData> => ({
  * `organization` to the canonical id (so detection matches by id next time).
  * One-time, manifest-only write; non-fatal.
  */
-async function selfHealOrgData(project: Project, result: OrgContextResult, logger: Logger): Promise<void> {
+async function selfHealOrgData(
+    project: Project,
+    result: OrgContextResult,
+    logger: Logger,
+    stateManager: OrgContextCheckDeps['stateManager'],
+): Promise<void> {
     if (!project.adobe) return;
     let healed = false;
     if (result.currentOrg && project.adobe.organizationName !== result.currentOrg) {
@@ -68,7 +74,7 @@ async function selfHealOrgData(project: Project, result: OrgContextResult, logge
     }
     if (!healed) return;
     try {
-        await ServiceLocator.getStateManager()?.saveProjectConfigOnly(project);
+        await stateManager()?.saveProjectConfigOnly(project);
     } catch (error) {
         logger.debug('[OrgContextCheck] Could not self-heal org data (non-fatal)', error);
     }
@@ -87,74 +93,90 @@ function toMismatch(project: Project, result: OrgContextResult): OrgMismatchInfo
     };
 }
 
+/** What this check needs from the host; supplied by the handler that builds it. */
+export interface OrgContextCheckDeps {
+    authManager: AuthenticationService;
+    /**
+     * Resolved lazily: the self-heal write happens well after the check is
+     * built, and the state manager may not exist at build time. Returning
+     * nothing skips the (non-fatal) write, exactly as the locator read did.
+     */
+    stateManager: () => Pick<StateManager, 'saveProjectConfigOnly'> | null | undefined;
+}
+
 /**
- * Unlike the `createXCheck(deps)` factory checks (mesh/mcp/ai), org-context is a
- * bare singleton that reaches `ServiceLocator` for the auth service + state
- * manager directly. That's deliberate: it's a `reRunnable` live check with no
- * per-request collaborator that varies, so a factory would be abstraction for
- * symmetry's sake (YAGNI). Its tests stub the locator instead of passing fakes.
+ * Now a `createXCheck(deps)` factory, matching its mesh/mcp/ai siblings.
+ *
+ * It used to be a bare singleton reaching the service registry directly, on a
+ * YAGNI argument: no per-request collaborator varies, so a factory looked like
+ * abstraction for symmetry's sake. ADR-015 settled that differently — a check
+ * is service-layer code, and service-layer code receives what it needs. The
+ * factory costs nothing here because three siblings already had one, and the
+ * tests now hand in plain fakes instead of stubbing the registry.
  */
-export const orgContextCheck: OnOpenCheck = {
-    id: CHECK_IDS.ORG_CONTEXT,
-    mode: 'background',
-    // Live check: a forced Switch IMS Org / re-auth re-invokes requestStatus to
-    // re-check, so it must run every time (not once per session).
-    reRunnable: true,
-    async run(ctx: OnOpenCheckContext): Promise<CheckResult<OrgContextCheckData>> {
-        const { project, logger, post } = ctx;
+export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
+    return {
+        id: CHECK_IDS.ORG_CONTEXT,
+        mode: 'background',
+        // Live check: a forced Switch IMS Org / re-auth re-invokes requestStatus to
+        // re-check, so it must run every time (not once per session).
+        reRunnable: true,
+        async run(ctx: OnOpenCheckContext): Promise<CheckResult<OrgContextCheckData>> {
+            const { project, logger, post } = ctx;
 
-        const expectedOrg = project.adobe?.organization;
-        if (!expectedOrg) {
-            // No Adobe org on this project — nothing to check (badge stays hidden).
-            return { status: 'ok' };
-        }
+            const expectedOrg = project.adobe?.organization;
+            if (!expectedOrg) {
+                // No Adobe org on this project — nothing to check (badge stays hidden).
+                return { status: 'ok' };
+            }
 
-        // Telegraph "Checking…" (preserves the min-display UX); resolves fast (no CLI).
-        post({ status: 'pending' });
+            // Telegraph "Checking…" (preserves the min-display UX); resolves fast (no CLI).
+            post({ status: 'pending' });
 
-        const authManager = ServiceLocator.getAuthenticationService();
+    
+            // P1: token-only check — no browser. No valid token → unknown.
+            if (!(await deps.authManager.isAuthenticated())) {
+                return unknownOutcome();
+            }
 
-        // P1: token-only check — no browser. No valid token → unknown.
-        if (!(await authManager.isAuthenticated())) {
-            return unknownOutcome();
-        }
+            // P1: SDK-only org read — never the CLI fallback. `undefined` means the
+            // SDK could not answer → unknown ("sign in to check"). An EMPTY list is a
+            // real answer — the token reaches no Console orgs — and flows into the
+            // detector below, which resolves it as unreachable → the mismatch warning
+            // whose forced "Switch IMS Org" login (account/org chooser) is the only
+            // recovery that can change the landed org (2026-08-13: the non-forced
+            // sign-in offered by `unknown` reuses the browser SSO session and loops).
+            const orgs = await deps.authManager.getOrganizationsSdkOnly();
+            if (orgs === undefined) {
+                return unknownOutcome();
+            }
 
-        // P1: SDK-only org read — never the CLI fallback. `undefined` means the
-        // SDK could not answer → unknown ("sign in to check"). An EMPTY list is a
-        // real answer — the token reaches no Console orgs — and flows into the
-        // detector below, which resolves it as unreachable → the mismatch warning
-        // whose forced "Switch IMS Org" login (account/org chooser) is the only
-        // recovery that can change the landed org (2026-08-13: the non-forced
-        // sign-in offered by `unknown` reuses the browser SSO session and loops).
-        const orgs = await authManager.getOrganizationsSdkOnly();
-        if (orgs === undefined) {
-            return unknownOutcome();
-        }
+            // Reuse the canonical detector with an SDK-only org source (no CLI path).
+            const { detectProjectOrgMismatch } = await import(
+                '@/features/authentication/services/detectProjectOrgMismatch'
+            );
+            const result = await detectProjectOrgMismatch(
+                { getOrganizations: async () => orgs },
+                project,
+                logger,
+            );
+            if (!result) {
+                // The detector saw the org list — possibly EMPTY, which is the point of this
+                // change — and still could not resolve a mismatch.
+                return unknownOutcome();
+            }
 
-        // Reuse the canonical detector with an SDK-only org source (no CLI path).
-        const { detectProjectOrgMismatch } = await import(
-            '@/features/authentication/services/detectProjectOrgMismatch'
-        );
-        const result = await detectProjectOrgMismatch(
-            { getOrganizations: async () => orgs },
-            project,
-            logger,
-        );
-        if (!result) {
-            // The detector saw the org list — possibly EMPTY, which is the point of this
-            // change — and still could not resolve a mismatch.
-            return unknownOutcome();
-        }
+            if (result.reachable) {
+                await selfHealOrgData(project, result, logger, deps.stateManager);
+                return { status: 'ok', data: { currentOrg: result.currentOrg } };
+            }
 
-        if (result.reachable) {
-            await selfHealOrgData(project, result, logger);
-            return { status: 'ok', data: { currentOrg: result.currentOrg } };
-        }
+            return {
+                status: 'warning',
+                message: ORG_MISMATCH_MESSAGE,
+                data: { orgMismatch: toMismatch(project, result), currentOrg: result.currentOrg },
+            };
+        },
+    };
+}
 
-        return {
-            status: 'warning',
-            message: ORG_MISMATCH_MESSAGE,
-            data: { orgMismatch: toMismatch(project, result), currentOrg: result.currentOrg },
-        };
-    },
-};

@@ -24,7 +24,7 @@ import {
 } from '@/features/dashboard/handlers/aiHandlers';
 import {
     runOnOpenChecks,
-    orgContextCheck,
+    createOrgContextCheck,
     createMcpHealthCheck,
     createMeshVerifyCheck,
     createAiVerifyCheck,
@@ -133,7 +133,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     //   - ai-verify: the single on-open AI verification (the hook no longer pulls it),
     //     surfacing which MCP/skill failed and why (P2). Spawns servers once.
     const checks = [
-        orgContextCheck,
+        createOrgContextCheck({
+            authManager: ServiceLocator.getAuthenticationService(),
+            stateManager: () => ServiceLocator.getStateManager(),
+        }),
         createMcpHealthCheck({
             detectDrift: detectMcpDrift,
             heal: () => handleRegenerateAiFiles(context),

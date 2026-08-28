@@ -56,7 +56,7 @@ export type {
 
 // EDS Reset UI (UI orchestration extracted from edsResetService)
 export { resetEdsProjectWithUI } from './services/reset/edsResetUI';
-export type { ResetWithUIOptions } from './services/reset/edsResetUI';
+export type { EdsResetWithUIOptions } from './services/reset/edsResetUI';
 
 // Storefront Staleness Detection (config.json republish tracking)
 export {

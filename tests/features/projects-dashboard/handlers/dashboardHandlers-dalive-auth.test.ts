@@ -74,6 +74,7 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -448,6 +449,8 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
 
         // Then: Should delegate to resetEdsProjectWithUI
         expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
+            // ADR-015: collaborators the mesh-redeploy step receives.
+            meshDeps: expect.anything(),
             project,
             context,
             logPrefix: '[ProjectsList]',

@@ -30,6 +30,7 @@ jest.mock('@/core/di', () => ({
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: mockInspectToken }),
         })),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
@@ -108,6 +109,9 @@ describe('reset_eds_project', () => {
                 _p: unknown,
                 _c: unknown,
                 _tp: unknown,
+                // ADR-015: the mesh-redeploy deps now sit between the token
+                // provider and the progress callback.
+                _deps: unknown,
                 onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
             ) => {
                 onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
@@ -232,6 +236,8 @@ describe('reset_eds_project', () => {
             }),
             expect.anything(),
             expect.anything(),
+            // ADR-015: the mesh-redeploy deps.
+            expect.anything(),
             expect.any(Function)
         );
     });
@@ -249,6 +255,9 @@ describe('reset_eds_project', () => {
                 _p: unknown,
                 _c: unknown,
                 _tp: unknown,
+                // ADR-015: the mesh-redeploy deps now sit between the token
+                // provider and the progress callback.
+                _deps: unknown,
                 onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
             ) => {
                 onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
@@ -264,7 +273,7 @@ describe('reset_eds_project', () => {
             error: 'rate limited',
             rerunSafe: true,
         });
-        expect(res.phases.length).toBe(1);
+        expect(res.phases).toHaveLength(1);
     });
 
     it('catches a thrown error as a re-runnable failure', async () => {

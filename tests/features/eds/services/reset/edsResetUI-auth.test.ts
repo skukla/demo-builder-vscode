@@ -137,6 +137,16 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
 const testPackages = [
     {
@@ -250,7 +260,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When: resetEdsProjectWithUI is called
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: ensureDaLiveAuth should have been called with context AND the
         // storefront's DA.live org, which arms the guard's server probe.
@@ -272,7 +282,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Reset should proceed
         expect(result.success).toBe(true);
@@ -285,7 +295,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should return DALIVE_AUTH_REQUIRED error
         expect(result.success).toBe(false);
@@ -306,7 +316,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should return DALIVE_AUTH_REQUIRED error with error message
         expect(result.success).toBe(false);
@@ -337,7 +347,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: ensureAdobeIOAuth should have been called
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -364,7 +374,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Reset should proceed
         expect(result.success).toBe(true);
@@ -377,7 +387,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
@@ -392,7 +402,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
@@ -406,7 +416,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Adobe auth IS checked (org-scoped resources exist), and reset proceeds
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalled();
@@ -420,7 +430,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: neither Adobe auth nor the org gate run
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
@@ -439,7 +449,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: aborted before any destructive work
         expect(result.success).toBe(false);
@@ -456,7 +466,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         const context = createMockContext();
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: org gate passes, reset proceeds
         expect(mockEnsureProjectOrgContext).toHaveBeenCalled();
@@ -471,6 +481,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         await resetEdsProjectWithUI({
+            meshDeps,
             project,
             context,
             logPrefix: '[Dashboard]',

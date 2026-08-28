@@ -823,6 +823,10 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
+        meshDeps: {
+            commandManager: ServiceLocator.getCommandExecutor(),
+            authManager: ServiceLocator.getAuthenticationService(),
+        },
             project,
             context,
             logPrefix: '[ProjectsList]',

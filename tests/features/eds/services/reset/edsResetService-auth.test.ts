@@ -115,6 +115,16 @@ jest.mock('@/features/eds/services/github/githubAppService', () => ({
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
 const testPackages = [{
     id: 'citisignal',
@@ -219,7 +229,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should call ensureAdobeIOAuth with project context
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -250,7 +260,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: ensureAdobeIOAuth is called with the org set and the ids undefined
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -277,7 +287,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             .mockResolvedValueOnce('Reset Project');
 
         // When
-        const result = await resetEdsProjectWithUI({ project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
 
         // Then: Should return auth error
         expect(result.success).toBe(false);

@@ -155,6 +155,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
     typeof surfaceOverlayRegistrationFailure
 >;
@@ -261,7 +271,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         // does: the reset genuinely did the rest of its work.
         mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'boom' });
 
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         expect(result.success).toBe(true);
         expect(result.errorType).toBe('CONFIG_WRITE_FAILED');
@@ -269,14 +279,14 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     });
 
     it('leaves errorType unset when the config write lands', async () => {
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         expect(result.success).toBe(true);
         expect(result.errorType).toBeUndefined();
     });
 
     it('calls updateSiteConfig on successful reset', async () => {
-        await executeEdsReset(createParams(), context, mockTokenProvider);
+        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
     });
@@ -284,7 +294,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('logs warning and continues when updateSiteConfig fails', async () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
 
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         const warnCalls = (context.logger.warn as jest.Mock).mock.calls;
         const hasConfigWarning = warnCalls.some(
@@ -297,7 +307,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('threads byomOverlayUrl into updateSiteConfig params when present', async () => {
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledWith(
             expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' }),
@@ -305,7 +315,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     });
 
     it('omits contentOverlayUrl from updateSiteConfig params when byomOverlayUrl absent', async () => {
-        await executeEdsReset(createParams(), context, mockTokenProvider);
+        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         const callArgs = mockUpdateSiteConfig.mock.calls[0][0];
         expect(callArgs.contentOverlayUrl).toBeUndefined();
@@ -315,7 +325,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
     });
@@ -323,7 +333,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('does NOT surface the overlay failure when overlay update succeeds', async () => {
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
     });
@@ -331,7 +341,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('does NOT surface the overlay failure when no overlay configured even if update fails', async () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
 
-        await executeEdsReset(createParams(), context, mockTokenProvider);
+        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps);
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
     });
@@ -342,7 +352,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
             .mockResolvedValueOnce({ success: true });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         // initial 403 + one retry that succeeds
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(2);
@@ -353,7 +363,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 403, error: 'Forbidden' });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         // initial + 3 propagation retries
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(4);
@@ -364,7 +374,7 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'Server error' });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
-        await executeEdsReset(params, context, mockTokenProvider);
+        await executeEdsReset(params, context, mockTokenProvider, meshDeps);
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
         expect(mockSurfaceOverlayFailure).toHaveBeenCalled();

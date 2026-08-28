@@ -5,7 +5,7 @@
  */
 
 export { runOnOpenChecks, armOnOpenChecks, _resetOnOpenChecksGuardForTests } from './orchestrator';
-export { orgContextCheck, type OrgContextCheckData } from './orgContextCheck';
+export { createOrgContextCheck, type OrgContextCheckData } from './orgContextCheck';
 export {
     createMcpHealthCheck,
     type McpHealthCheckData,

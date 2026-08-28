@@ -66,6 +66,16 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 import { redeployApiMesh } from '@/features/eds/services/reset/edsResetMeshHelper';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 // =============================================================================
 // Fixtures
 // =============================================================================
@@ -95,7 +105,7 @@ function makeContext(): HandlerContext {
 }
 
 async function run(): Promise<unknown> {
-    return redeployApiMesh(makeProject(), 'skukla', 'repo', makeContext(), jest.fn(), 1, 2);
+    return redeployApiMesh(makeProject(), 'skukla', 'repo', makeContext(), jest.fn(), 1, 2, meshDeps);
 }
 
 // =============================================================================

@@ -160,6 +160,16 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 
+/**
+ * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
+ * rather than fetching them, so the suites hand in this plain fake.
+ */
+const meshDeps = {
+    commandManager: { execute: jest.fn() },
+    authManager: { getCachedOrganization: jest.fn() },
+} as never;
+
+
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
 const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
@@ -245,7 +255,7 @@ async function flush(): Promise<void> {
 }
 
 function run(project: Project) {
-    return resetEdsProjectWithUI({ project, context: createContext(), packages: testPackages });
+    return resetEdsProjectWithUI({ meshDeps, project, context: createContext(), packages: testPackages });
 }
 
 beforeEach(() => {
