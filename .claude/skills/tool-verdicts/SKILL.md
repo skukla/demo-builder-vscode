@@ -24,8 +24,13 @@ Absence from one person's month is not evidence a tool is dead.
 
 | | source | answers |
 |---|---|---|
-| **Demand** | `agent-gap-scan` over real transcripts | did anyone ever need it? |
+| **Demand** | the agent activity record FIRST (`get_agent_trace` live, plus the per-session `agent-trace-*.jsonl` files under the extension's log storage — every real session since 2026-08-28 records itself); `agent-gap-scan` over transcripts for anything older | did anyone ever need it? |
 | **Function** | the battery, one prompt per tool | when asked, does the agent find it and does it work? |
+
+The trace is the cheaper and more structured demand reading — tool, outcome,
+sizes, repeats, per call — but it is LOCAL to each machine and starts at its
+ship date; transcripts remain the source for history before it and for
+sessions on machines whose traces you cannot read.
 
 A tool nobody called might be perfect and simply not needed yet. A tool nobody
 called might be unreachable. Those want opposite actions, and only the second
