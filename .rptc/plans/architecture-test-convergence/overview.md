@@ -70,8 +70,13 @@ keeps converging everything else while they wait.
 2026-08-28, 1:13pm ET, "priority number one, constant updates").** The owner
 is watching, so narration is continuous, not end-of-session:
 
-- **Before each step**: one or two sentences — what I'm about to do, WHY, and
-  what would change my mind. Never a bare tool call into silence.
+- **START SIGNAL, not a plan** (owner, 2026-08-28: "when you start the next
+  step of a loop, give me feedback that lets me know you've STARTED it —
+  sometimes your verb language freezes"). Say **"Starting X now"** as the step
+  begins, in the present tense. Ending a turn with "next is X" and opening the
+  following turn with X's RESULTS looks, from the owner's side, like nothing
+  happened in between. One or two sentences: what I'm doing, WHY, and what
+  would change my mind.
 - **After each step**: what actually happened, in plain English, including
   when it failed or surprised me. A step that found nothing says so.
 - **Per batch**: the one-line score — files converted, ledger rows deleted,
