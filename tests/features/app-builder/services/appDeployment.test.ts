@@ -61,7 +61,7 @@ const GET_URL_JSON = JSON.stringify({
 });
 
 function ok(stdout = '') {
-    return { code: 0, stdout, stderr: '' };
+    return { code: 0, stdout, stderr: '', duration: 0 };
 }
 
 describe('deployAppComponent', () => {
@@ -169,7 +169,9 @@ describe('deployAppComponent', () => {
 
     describe('deploy failure', () => {
         it('should return a failure result when deploy exits non-zero', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom' });
+            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
+    duration: 0,
+});
 
             const result = await deployAppComponent('/app', cm as any, logger as any);
 
@@ -179,7 +181,9 @@ describe('deployAppComponent', () => {
         });
 
         it('should NOT call get-url when deploy fails', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom' });
+            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
+    duration: 0,
+});
 
             await deployAppComponent('/app', cm as any, logger as any);
 
@@ -191,7 +195,9 @@ describe('deployAppComponent', () => {
         });
 
         it('should fall back to stdout when stderr is empty on deploy failure', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: 'stdout boom', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 1, stdout: 'stdout boom', stderr: '',
+    duration: 0,
+});
 
             const result = await deployAppComponent('/app', cm as any, logger as any);
 
@@ -204,7 +210,9 @@ describe('deployAppComponent', () => {
         it('should return best-effort success when get-url exits non-zero', async () => {
             cm.execute.mockImplementation((command: string) => {
                 if (command.includes('get-url')) {
-                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url' });
+                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url',
+    duration: 0,
+});
                 }
                 return Promise.resolve(ok('Deploy successful'));
             });

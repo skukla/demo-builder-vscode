@@ -5,6 +5,7 @@ import {
     mockSuccessfulFileRead,
     mockSuccessfulVerification,
 } from './meshDeployment.testUtils';
+import type { CommandResult } from '@/core/shell/types';
 
 /**
  * MeshDeployment — create→update fallback (regression)
@@ -57,17 +58,20 @@ describe('MeshDeployment — create→update fallback', () => {
 
     /** Route the executor mock by command: build succeeds; create/update per config. */
     function routeCommands(config: {
-        create?: { code: number; stdout?: string; stderr?: string };
-        update?: { code: number; stdout?: string; stderr?: string };
+        // Partial<CommandResult> & the code: callers supply only what they vary,
+        // and the defaults below complete it — the fake is typed now, so an
+        // incomplete result no longer slips through.
+        create?: Partial<CommandResult> & { code: number };
+        update?: Partial<CommandResult> & { code: number };
     }): void {
         mockCommandManager.execute.mockImplementation((command: string) => {
             if (command.includes('api-mesh:create')) {
-                return Promise.resolve(config.create ?? { code: 0, stdout: 'created' });
+                return Promise.resolve({ stdout: 'created', stderr: '', duration: 0, code: 0, ...config.create });
             }
             if (command.includes('api-mesh:update')) {
-                return Promise.resolve(config.update ?? { code: 0, stdout: 'updated' });
+                return Promise.resolve({ stdout: 'updated', stderr: '', duration: 0, code: 0, ...config.update });
             }
-            return Promise.resolve({ code: 0, stdout: '' }); // build etc.
+            return Promise.resolve({ code: 0, stdout: '', stderr: '', duration: 0 }); // build etc.
         });
     }
 
@@ -184,17 +188,17 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
     let mockLogger: ReturnType<typeof createMockLogger>;
 
     function routeCommands(config: {
-        create?: { code: number; stdout?: string; stderr?: string };
-        update?: { code: number; stdout?: string; stderr?: string };
+        create?: Partial<CommandResult> & { code: number };
+        update?: Partial<CommandResult> & { code: number };
     }): void {
         mockCommandManager.execute.mockImplementation((command: string) => {
             if (command.includes('api-mesh:create')) {
-                return Promise.resolve(config.create ?? { code: 0, stdout: 'created' });
+                return Promise.resolve({ stdout: 'created', stderr: '', duration: 0, code: 0, ...config.create });
             }
             if (command.includes('api-mesh:update')) {
-                return Promise.resolve(config.update ?? { code: 0, stdout: 'updated' });
+                return Promise.resolve({ stdout: 'updated', stderr: '', duration: 0, code: 0, ...config.update });
             }
-            return Promise.resolve({ code: 0, stdout: '' });
+            return Promise.resolve({ code: 0, stdout: '', stderr: '', duration: 0 });
         });
     }
 

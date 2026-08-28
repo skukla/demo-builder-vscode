@@ -8,23 +8,8 @@
 import { Project } from '@/types';
 import { CommandExecutor } from '@/core/shell';
 
-/**
- * Creates a mock CommandExecutor with all methods stubbed
- */
-export function createMockCommandExecutor(): CommandExecutor {
-    return {
-        execute: jest.fn(),
-        executeExclusive: jest.fn(),
-        pollUntilCondition: jest.fn(),
-        waitForFileSystem: jest.fn(),
-        executeSequence: jest.fn(),
-        executeParallel: jest.fn(),
-        queueCommand: jest.fn(),
-        commandExists: jest.fn(),
-        isPortAvailable: jest.fn(),
-        dispose: jest.fn()
-    } as unknown as CommandExecutor;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
 export { createMockLogger } from '../../../helpers/loggerFake';

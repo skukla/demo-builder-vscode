@@ -5,14 +5,8 @@
  * before importing this module, as Jest requires mocks to be at the top level.
  */
 
-/**
- * Creates a mock command manager for testing
- */
-export function createMockCommandManager() {
-    return {
-        execute: jest.fn(),
-    };
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor as createMockCommandManager } from '../../../helpers/commandExecutorFake';
 
 /**
  * CONVERTED 2026-08-28 (ADR-015): waitForMeshDeployment receives its executor

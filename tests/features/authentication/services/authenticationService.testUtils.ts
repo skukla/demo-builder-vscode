@@ -1,4 +1,4 @@
-import type { CommandExecutor, CommandResult } from '@/core/shell';
+import type { CommandResult } from '@/core/shell';
 import type { StepLogger } from '@/core/logging';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -26,17 +26,8 @@ export const mockWorkspace: AdobeWorkspace = {
 };
 
 // Mock factory functions
-export const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
-    execute: jest.fn(),
-    executeCommand: jest.fn(),
-    executeWithNodeVersion: jest.fn(),
-    testCommand: jest.fn(),
-    getNodeVersionForComponent: jest.fn(),
-    getCachedBinaryPath: jest.fn(),
-    invalidateBinaryPathCache: jest.fn(),
-    getCachedNodeVersion: jest.fn(),
-    invalidateNodeVersionCache: jest.fn(),
-} as any);
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /** Canonical logger fake (ADR-016). */
 export { createMockLogger } from '../../../helpers/loggerFake';

@@ -48,15 +48,24 @@ describe('projectHandlers - API Verification', () => {
                     // aio plugins --json
                     stdout: JSON.stringify([
                         { name: '@adobe/aio-cli-plugin-api-mesh' }
-                    ])
+                    ]),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio console projects get --json
-                    stdout: JSON.stringify({ id: 'proj-123' })
+                    stdout: JSON.stringify({ id: 'proj-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio api-mesh:get --active --json
-                    stdout: JSON.stringify({ meshId: 'mesh-123' })
+                    stdout: JSON.stringify({ meshId: 'mesh-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 });
 
             const result = await handleCheckProjectApis(mockContext);
@@ -74,11 +83,17 @@ describe('projectHandlers - API Verification', () => {
                     // aio plugins --json
                     stdout: JSON.stringify([
                         { name: '@adobe/aio-cli-plugin-api-mesh' }
-                    ])
+                    ]),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio console projects get --json
-                    stdout: JSON.stringify({ id: 'proj-123' })
+                    stdout: JSON.stringify({ id: 'proj-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockRejectedValueOnce({
                     // aio api-mesh:get --active --json
@@ -101,7 +116,10 @@ describe('projectHandlers - API Verification', () => {
                 // aio plugins --json
                 stdout: JSON.stringify([
                     { name: '@adobe/aio-cli-plugin-something-else' }
-                ])
+                ]),
+                stderr: '',
+                code: 0,
+                duration: 0,
             });
 
             const result = await handleCheckProjectApis(mockContext);
@@ -119,11 +137,17 @@ describe('projectHandlers - API Verification', () => {
                     // aio plugins --json
                     stdout: JSON.stringify([
                         { name: '@adobe/aio-cli-plugin-api-mesh' }
-                    ])
+                    ]),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio console projects get --json
-                    stdout: JSON.stringify({ id: 'proj-123' })
+                    stdout: JSON.stringify({ id: 'proj-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockRejectedValueOnce({
                     // aio api-mesh:get --active --json
@@ -147,11 +171,17 @@ describe('projectHandlers - API Verification', () => {
                     // aio plugins --json
                     stdout: JSON.stringify([
                         { name: '@adobe/aio-cli-plugin-api-mesh' }
-                    ])
+                    ]),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio console projects get --json
-                    stdout: JSON.stringify({ id: 'proj-123' })
+                    stdout: JSON.stringify({ id: 'proj-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockRejectedValueOnce({
                     // aio api-mesh:get --active --json fails
@@ -161,7 +191,10 @@ describe('projectHandlers - API Verification', () => {
                 })
                 .mockResolvedValueOnce({
                     // aio api-mesh:get --help succeeds
-                    stdout: 'Usage: aio api-mesh:get'
+                    stdout: 'Usage: aio api-mesh:get',
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 });
 
             const result = await handleCheckProjectApis(mockContext);
@@ -176,11 +209,17 @@ describe('projectHandlers - API Verification', () => {
                     // aio plugins --json
                     stdout: JSON.stringify([
                         { name: '@adobe/aio-cli-plugin-api-mesh' }
-                    ])
+                    ]),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockResolvedValueOnce({
                     // aio console projects get --json
-                    stdout: JSON.stringify({ id: 'proj-123' })
+                    stdout: JSON.stringify({ id: 'proj-123' }),
+                    stderr: '',
+                    code: 0,
+                    duration: 0,
                 })
                 .mockRejectedValueOnce({
                     // aio api-mesh:get --active fails
@@ -213,7 +252,10 @@ describe('projectHandlers - API Verification', () => {
         it('should handle plugin list parsing errors', async () => {
             mockCommandExecutor.execute.mockResolvedValueOnce({
                 // aio plugins --json with invalid JSON
-                stdout: 'invalid json'
+                stdout: 'invalid json',
+                stderr: '',
+                code: 0,
+                duration: 0,
             });
 
             const result = await handleCheckProjectApis(mockContext);

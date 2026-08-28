@@ -5,7 +5,6 @@
  */
 
 import { Project } from '@/types';
-import { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -32,19 +31,8 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-/**
- * Creates a mock CommandExecutor with typed methods
- */
-export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
-    return {
-        execute: jest.fn().mockResolvedValue({
-            stdout: 'https://mesh-endpoint.adobe.io/graphql',
-            stderr: '',
-            code: 0,
-            duration: 1000,
-        }),
-    } as unknown as jest.Mocked<CommandExecutor>;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Creates a real Logger instance for testing (no mocking needed)

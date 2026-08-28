@@ -1,4 +1,3 @@
-import type { CommandExecutor } from '@/core/shell';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
 /**
@@ -7,15 +6,8 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
  * Shared mocks, factories, and utilities for organizationValidator tests.
  */
 
-/**
- * Creates a mock CommandExecutor for tests.
- * CRITICAL: Returns a factory function to avoid closure issues.
- */
-export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
-    return {
-        execute: jest.fn(),
-    } as any;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Creates a mock AuthCacheManager for tests.

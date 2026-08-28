@@ -31,9 +31,7 @@ const TESTS_ROOT = path.resolve(__dirname, '..');
 const KNOWN_DUPLICATES: Record<string, number> = {
     createMockContext: 11,
     createMockProject: 9,
-    createMockCommandExecutor: 5,
     createMockHandlerContext: 5,
-    createMockCommandManager: 4,
     makeContext: 3,
     makeProject: 2,
 };

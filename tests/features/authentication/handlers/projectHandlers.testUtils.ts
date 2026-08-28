@@ -35,9 +35,8 @@ export const createMockAuthManager = () => ({
 /**
  * Creates a mock command executor
  */
-export const createMockCommandExecutor = () => ({
-    execute: jest.fn()
-});
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Creates a mock handler context with all required dependencies

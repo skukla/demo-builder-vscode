@@ -72,7 +72,9 @@ describe('buildComponent', () => {
         });
 
         it('should run npm install with the exact mesh install flags', async () => {
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
 
@@ -80,7 +82,9 @@ describe('buildComponent', () => {
         });
 
         it('should pass useNodeVersion and enhancePath to install', async () => {
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent('/p', cm as any, { nodeVersion: '22' }, logger as any);
 
@@ -99,8 +103,12 @@ describe('buildComponent', () => {
 
         it('should warn (not throw) when install exits non-zero', async () => {
             cm.execute
-                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'install warn' })
-                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' });
+                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'install warn',
+    duration: 0,
+})
+                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await expect(
                 buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -116,7 +124,9 @@ describe('buildComponent', () => {
         beforeEach(() => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_WITH_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
         });
 
         it('should issue byte-identical mesh build command with buildArgs "-- --force"', async () => {
@@ -162,8 +172,12 @@ describe('buildComponent', () => {
 
         it('should throw when build exits non-zero (using stderr)', async () => {
             cm.execute
-                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'boom' });
+                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'boom',
+    duration: 0,
+});
 
             await expect(
                 buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -172,8 +186,12 @@ describe('buildComponent', () => {
 
         it('should throw when build exits non-zero (falls back to stdout)', async () => {
             cm.execute
-                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                .mockResolvedValueOnce({ code: 1, stdout: 'stdout boom', stderr: '' });
+                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                .mockResolvedValueOnce({ code: 1, stdout: 'stdout boom', stderr: '',
+    duration: 0,
+});
 
             await expect(
                 buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -214,8 +232,12 @@ describe('buildComponent', () => {
 
             it('dumps the build output so the cause survives the message pipeline', async () => {
                 cm.execute
-                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH,
+    duration: 0,
+});
 
                 await expect(
                     buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -229,8 +251,12 @@ describe('buildComponent', () => {
 
             it('records the exit code, which survives redaction when the text does not', async () => {
                 cm.execute
-                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH,
+    duration: 0,
+});
 
                 await expect(
                     buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -241,8 +267,12 @@ describe('buildComponent', () => {
 
             it('dumps stdout too — npm puts the useful half there', async () => {
                 cm.execute
-                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                    .mockResolvedValueOnce({ code: 1, stdout: 'the real reason', stderr: '' });
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                    .mockResolvedValueOnce({ code: 1, stdout: 'the real reason', stderr: '',
+    duration: 0,
+});
 
                 await expect(
                     buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -253,8 +283,12 @@ describe('buildComponent', () => {
 
             it('names the exit code in the thrown message, which redaction cannot erase', async () => {
                 cm.execute
-                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH,
+    duration: 0,
+});
 
                 await expect(
                     buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
@@ -263,8 +297,12 @@ describe('buildComponent', () => {
 
             it('dumps nothing on a successful build', async () => {
                 cm.execute
-                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-                    .mockResolvedValueOnce({ code: 0, stdout: 'built', stderr: '' });
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+})
+                    .mockResolvedValueOnce({ code: 0, stdout: 'built', stderr: '',
+    duration: 0,
+});
 
                 await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
 
@@ -277,7 +315,9 @@ describe('buildComponent', () => {
         beforeEach(() => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_WITH_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
         });
 
         it('should invoke onProgress during install and build', async () => {
@@ -319,7 +359,9 @@ describe('buildComponent', () => {
         it('should run npm install even with NO top-level build script (THE spike-mandated test)', async () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_NO_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent(
                 '/p',
@@ -337,7 +379,9 @@ describe('buildComponent', () => {
         it('should NOT use --production for the integration install (devDeps included)', async () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_NO_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent(
                 '/p',
@@ -353,7 +397,9 @@ describe('buildComponent', () => {
         it('should install but NOT run "npm run build" even when a build script IS present', async () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_WITH_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent(
                 '/p',
@@ -373,7 +419,9 @@ describe('buildComponent', () => {
         it('should pass useNodeVersion and enhancePath to the integration install', async () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_NO_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
 
             await buildComponent(
                 '/p',
@@ -410,7 +458,9 @@ describe('buildComponent', () => {
         it('should warn (not throw) when the integration install exits non-zero', async () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_NO_BUILD);
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'install warn' });
+            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'install warn',
+    duration: 0,
+});
 
             await expect(
                 buildComponent('/p', cm as any, { nodeVersion: '20', kind: 'integration' }, logger as any),
@@ -428,7 +478,9 @@ describe('buildComponent', () => {
         beforeEach(() => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_WITH_BUILD);
-            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+            cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '',
+    duration: 0,
+});
         });
 
         it('should issue the byte-identical mesh install then build commands', async () => {
