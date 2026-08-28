@@ -149,7 +149,7 @@ export async function performTemplateUpdates(
             cancellable: false,
         },
         async (progress) => {
-            const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger);
+            const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
 
@@ -254,7 +254,7 @@ export async function performComponentUpdates(
             cancellable: false,
         },
         async (progress) => {
-            const componentUpdater = new ComponentUpdater(ctx.logger, ctx.extensionPath);
+            const componentUpdater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
 

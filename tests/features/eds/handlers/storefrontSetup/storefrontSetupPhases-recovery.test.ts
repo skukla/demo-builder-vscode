@@ -131,6 +131,7 @@ import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+import { ServiceLocator } from '@/core/di';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -199,6 +200,16 @@ function createEdsConfig() {
 // =============================================================================
 // Tests
 // =============================================================================
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+});
 
 describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
     let mockContext: HandlerContext;

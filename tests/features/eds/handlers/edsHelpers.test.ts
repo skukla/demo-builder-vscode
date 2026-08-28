@@ -18,6 +18,7 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
+import { ServiceLocator } from '@/core/di';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -134,6 +135,16 @@ function createTestJwt(payload: Record<string, unknown>): string {
     const signature = 'test_signature';
     return `${header}.${body}.${signature}`;
 }
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+});
 
 describe('edsHelpers', () => {
     beforeEach(() => {

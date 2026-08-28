@@ -15,7 +15,6 @@ import type { Project } from '@/types';
 
 // Mock dependencies
 jest.mock('@/core/logging');
-jest.mock('@/core/di');
 jest.mock('@/core/validation');
 jest.mock('fs/promises');
 jest.mock('vscode', () => ({
@@ -37,7 +36,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
@@ -67,7 +66,8 @@ describe('ComponentUpdater - Core Workflow', () => {
         };
 
         // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
+        // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor
+        // dependency now — the same fake is handed straight in.
 
         // Mock security validation
         const securityValidation = require('@/core/validation');
@@ -92,7 +92,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024))
         }) as unknown as typeof fetch;
 
-        updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+        updater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
         // Mock project
         mockProject = {
@@ -221,7 +221,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             const installCalls = executeCalls.filter((call: unknown[]) =>
                 (call[0] as string).includes('npm install')
             );
-            expect(installCalls.length).toBe(1);
+            expect(installCalls).toHaveLength(1);
         });
 
         it('should skip build step but still install deps when no buildScript configured', async () => {
@@ -236,7 +236,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             const buildCalls = executeCalls.filter((call: unknown[]) =>
                 (call[0] as string).includes('npm run')
             );
-            expect(buildCalls.length).toBe(0);
+            expect(buildCalls).toHaveLength(0);
         });
 
         it('should skip npm install when skipNpmInstall is true', async () => {
@@ -255,7 +255,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 })
             }));
 
-            const skipUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const skipUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
             const edsProject = {
                 ...mockProject,
@@ -275,7 +275,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             const npmCalls = executeCalls.filter((call: unknown[]) =>
                 (call[0] as string).includes('npm install') || (call[0] as string).includes('npm run')
             );
-            expect(npmCalls.length).toBe(0);
+            expect(npmCalls).toHaveLength(0);
         });
 
         it('should run npm install and build script when buildScript is configured', async () => {
@@ -296,7 +296,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             }));
 
             // Create new updater with fresh mock
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
             // Add commerce-mesh to project
             const meshProject = {
@@ -386,7 +386,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 })
             }));
 
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
             const meshProject = {
                 ...mockProject,
@@ -431,7 +431,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 })
             }));
 
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
             const meshProject = {
                 ...mockProject,
@@ -471,7 +471,7 @@ describe('ComponentUpdater - Core Workflow', () => {
         it('dumps the post-update build output so the cause survives the message pipeline', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
             const meshProject = {
                 ...mockProject,
                 componentInstances: {

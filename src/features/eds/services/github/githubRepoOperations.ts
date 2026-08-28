@@ -20,8 +20,8 @@ import type {
 } from '../types';
 import { createAuthenticatedOctokit, injectTokenIntoUrl } from './githubHelpers';
 import type { GitHubTokenService } from './githubTokenService';
-import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
@@ -58,7 +58,15 @@ export class GitHubRepoOperations {
     private tokenService: GitHubTokenService;
     private octokit: InstanceType<typeof Octokit> | null = null;
 
-    constructor(tokenService: GitHubTokenService, logger?: Logger) {
+    /**
+     * ADR-015: the executor precedes the optional logger — a required parameter
+     * cannot follow an optional one.
+     */
+    constructor(
+        tokenService: GitHubTokenService,
+        private commandManager: CommandExecutor,
+        logger?: Logger,
+    ) {
         this.tokenService = tokenService;
         this.logger = logger ?? getLogger();
     }
@@ -444,12 +452,11 @@ export class GitHubRepoOperations {
         this.logger.debug(`[GitHub] Cloning repository to ${localPath}`);
         this.logger.trace(`[GitHub] Executing: ${safeCommand}`);
 
-        const commandManager = ServiceLocator.getCommandExecutor();
 
         // Clone from the parent directory of localPath
         const parentDir = path.dirname(localPath);
 
-        const result = await commandManager.execute(cloneCommand, {
+        const result = await this.commandManager.execute(cloneCommand, {
             timeout: TIMEOUTS.LONG,
             enhancePath: true,
             shell: DEFAULT_SHELL,
@@ -511,7 +518,6 @@ export class GitHubRepoOperations {
         this.logger.info(`[GitHub] Resetting ${owner}/${repo} to template ${templateOwner}/${templateRepo}`);
 
         // Use git commands - much more efficient for large repos
-        const commandManager = ServiceLocator.getCommandExecutor();
 
         // Create temp directory for the operation
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'github-reset-'));
@@ -521,7 +527,7 @@ export class GitHubRepoOperations {
             // Step 1: Clone user's repo (shallow clone for speed)
             this.logger.debug(`[GitHub] Cloning user repo...`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${owner}/${repo}.git`, token.token);
-            const cloneResult = await commandManager.execute(
+            const cloneResult = await this.commandManager.execute(
                 `git clone --depth 1 --branch ${branch} "${userRepoUrl}" repo`,
                 { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
             );
@@ -534,11 +540,11 @@ export class GitHubRepoOperations {
             // Step 2: Add template as remote and fetch
             this.logger.debug(`[GitHub] Fetching template repo...`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
-            await commandManager.execute(`git remote add template "${templateUrl}"`, {
+            await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
-            const fetchResult = await commandManager.execute(`git fetch template ${branch}`, {
+            const fetchResult = await this.commandManager.execute(`git fetch template ${branch}`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (fetchResult.code !== 0) {
@@ -550,7 +556,7 @@ export class GitHubRepoOperations {
 
             // Get template's tree and create a commit with it on our branch
             // Using read-tree to replace our working tree with template's content
-            const readTreeResult = await commandManager.execute(
+            const readTreeResult = await this.commandManager.execute(
                 `git read-tree --reset -u template/${branch}`,
                 { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
             );
@@ -560,19 +566,19 @@ export class GitHubRepoOperations {
 
             // Step 4: Commit the changes
             this.logger.debug(`[GitHub] Creating reset commit...`);
-            await commandManager.execute(`git add -A`, {
+            await this.commandManager.execute(`git add -A`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
             // Check if there are changes to commit
-            const statusResult = await commandManager.execute(`git status --porcelain`, {
+            const statusResult = await this.commandManager.execute(`git status --porcelain`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
             let commitSha: string;
             if (statusResult.stdout.trim()) {
                 // There are changes, commit them
-                const commitResult = await commandManager.execute(
+                const commitResult = await this.commandManager.execute(
                     `git commit -m "${commitMessage}"`,
                     { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
                 );
@@ -581,14 +587,14 @@ export class GitHubRepoOperations {
                 }
 
                 // Get the new commit SHA
-                const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+                const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
                     cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
                 });
                 commitSha = shaResult.stdout.trim();
             } else {
                 // No changes - repo already matches template
                 this.logger.info(`[GitHub] Repository already matches template, no changes needed`);
-                const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+                const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
                     cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
                 });
                 commitSha = shaResult.stdout.trim();
@@ -596,7 +602,7 @@ export class GitHubRepoOperations {
 
             // Step 5: Push to origin
             this.logger.debug(`[GitHub] Pushing to origin...`);
-            const pushResult = await commandManager.execute(`git push origin ${branch} --force`, {
+            const pushResult = await this.commandManager.execute(`git push origin ${branch} --force`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (pushResult.code !== 0) {

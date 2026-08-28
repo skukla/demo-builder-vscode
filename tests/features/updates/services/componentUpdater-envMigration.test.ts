@@ -23,6 +23,7 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 import * as fs from 'fs/promises';
+import type { CommandExecutor } from '@/core/shell';
 
 // Mock dependencies
 jest.mock('fs/promises');
@@ -60,7 +61,9 @@ describe('ComponentUpdater - Env Variable Migration', () => {
             },
         } as Project;
 
-        _componentUpdater = new ComponentUpdater(mockLogger, '/extension/path');
+        _componentUpdater = new ComponentUpdater(mockLogger, '/extension/path', {
+            execute: jest.fn(),
+        } as unknown as CommandExecutor);
     });
 
     describe('Variable Name Changes Between Versions', () => {

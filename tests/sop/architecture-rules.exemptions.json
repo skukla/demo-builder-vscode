@@ -1,11 +1,8 @@
 {
   "_what": "ADR-015 enforcement ledger. Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
   "fetchBoundary": {
-    "src/features/eds/services/github/githubRepoOperations.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/eds/services/reset/edsResetUI.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/updates/services/componentUpdater.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/updates/services/templateSyncService.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)"
+    "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)"
   },
   "constructionBoundary": {
     "src/core/communication/webviewCommunicationManager.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",

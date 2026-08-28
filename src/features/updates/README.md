@@ -108,7 +108,7 @@ for (const [componentId, update] of componentUpdates.entries()) {
 ```typescript
 import { ComponentUpdater } from '@/features/updates';
 
-const updater = new ComponentUpdater(logger);
+const updater = new ComponentUpdater(logger, extensionPath, commandManager);
 
 try {
     await updater.updateComponent(
@@ -292,7 +292,7 @@ for (const [componentId, update] of componentUpdates.entries()) {
 
         if (install === 'Update') {
             // Trigger component update
-            const updater = new ComponentUpdater(logger);
+            const updater = new ComponentUpdater(logger, extensionPath, commandManager);
             await updater.updateComponent(
                 project,
                 componentId,
@@ -308,7 +308,7 @@ for (const [componentId, update] of componentUpdates.entries()) {
 ```typescript
 import { ComponentUpdater } from '@/features/updates';
 
-const updater = new ComponentUpdater(logger);
+const updater = new ComponentUpdater(logger, extensionPath, commandManager);
 
 try {
     await vscode.window.withProgress(

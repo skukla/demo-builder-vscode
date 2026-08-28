@@ -433,7 +433,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
 
     // Create service dependencies
     const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-    const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
+    const githubRepoOps = new GitHubRepoOperations(githubTokenService, ServiceLocator.getCommandExecutor(), context.logger);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);

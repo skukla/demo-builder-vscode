@@ -17,6 +17,7 @@ import { GitHubOAuthService } from '../services/github/githubOAuthService';
 import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { HelixService } from '../services/helix/helixService';
+import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -50,7 +51,7 @@ export function getGitHubServices(context: Pick<HandlerContext, 'context'>): Git
     if (!cachedGitHubServices) {
         logger.debug('[EDS:ServiceCache] Creating NEW GitHub services (no cache)');
         const tokenService = new GitHubTokenService(context.context.secrets, logger);
-        const repoOperations = new GitHubRepoOperations(tokenService, logger);
+        const repoOperations = new GitHubRepoOperations(tokenService, ServiceLocator.getCommandExecutor(), logger);
         const fileOperations = new GitHubFileOperations(tokenService, logger);
         const oauthService = new GitHubOAuthService(context.context.secrets, logger);
 

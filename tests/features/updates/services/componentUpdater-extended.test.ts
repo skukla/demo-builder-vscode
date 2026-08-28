@@ -15,7 +15,6 @@ import type { Project } from '@/types';
 
 // Mock dependencies
 jest.mock('@/core/logging');
-jest.mock('@/core/di');
 jest.mock('@/core/validation');
 jest.mock('fs/promises');
 jest.mock(
@@ -41,7 +40,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -68,7 +67,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
             }),
         };
 
-        (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
+        // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor
+        // dependency now — the same fake is handed straight in.
 
         const securityValidation = require('@/core/validation');
         securityValidation.validateGitHubDownloadURL = jest.fn();
@@ -89,7 +89,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
         }) as unknown as typeof fetch;
 
-        updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+        updater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
         mockProject = {
             path: '/path/to/project',
@@ -385,7 +385,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 },
             } as unknown as Project;
 
-            const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
 
             await meshUpdater.updateComponent(
                 meshProject,

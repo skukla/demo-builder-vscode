@@ -177,6 +177,7 @@ import {
     ensureDaLiveAuth,
     surfaceOverlayRegistrationFailure,
 } from '@/features/eds/handlers/edsHelpers';
+import { ServiceLocator } from '@/core/di';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
@@ -245,6 +246,16 @@ function createEdsConfig() {
 // =============================================================================
 // Tests
 // =============================================================================
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+});
 
 describe('registerConfigurationService - error handling', () => {
     let context: HandlerContext;

@@ -128,6 +128,7 @@ import { installBlockCollections } from '@/features/eds/services/blockCollection
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di';
 
 // Cast imported mocks for type-safe access
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
@@ -189,6 +190,16 @@ function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsCon
 // =============================================================================
 // Tests
 // =============================================================================
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+});
 
 describe('Storefront Setup Phases - Block Library Install Tracking', () => {
     const LIBRARY_VERSIONS = [

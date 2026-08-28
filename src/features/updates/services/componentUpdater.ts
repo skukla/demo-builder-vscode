@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { isMeshComponentId } from '@/core/constants';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
 import { toAppError, isTimeout, isNetwork } from '@/types/errors';
@@ -23,7 +24,12 @@ export class ComponentUpdater {
     private extensionPath: string;
     private updatingComponents = new Set<string>(); // Concurrent update lock
 
-    constructor(logger: Logger, extensionPath: string) {
+    /** ADR-015: the executor arrives with the logger and extension path. */
+    constructor(
+        logger: Logger,
+        extensionPath: string,
+        private commandManager: CommandExecutor,
+    ) {
         this.logger = logger;
         this.extensionPath = extensionPath;
     }
@@ -139,8 +145,6 @@ export class ComponentUpdater {
           
                     // Reinstall node_modules (not included in snapshot)
                     this.logger.debug('[Updates] Reinstalling dependencies after rollback...');
-                    const { ServiceLocator } = await import('@/core/di');
-                    const commandManager = ServiceLocator.getCommandExecutor();
                     
                     // Try to get node version from registry, but don't fail if we can't
                     // During rollback, we just want to get dependencies installed
@@ -163,7 +167,7 @@ export class ComponentUpdater {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
                     
-                    const installResult = await commandManager.execute('npm install --no-fund', {
+                    const installResult = await this.commandManager.execute('npm install --no-fund', {
                         cwd: component.path,
                         timeout: TIMEOUTS.VERY_LONG,
                         shell: DEFAULT_SHELL,
@@ -300,14 +304,12 @@ export class ComponentUpdater {
             // Otherwise fall through to run the build step only
         }
 
-        const { ServiceLocator } = await import('@/core/di');
-        const commandManager = ServiceLocator.getCommandExecutor();
 
         try {
             // 1. Install dependencies (always after zipball extraction, unless skipped)
             if (hasPackageJson && !skipNpmInstall) {
                 this.logger.debug(`[Updates] Installing dependencies for ${componentId}...`);
-                const installResult = await commandManager.execute('npm install --no-fund', {
+                const installResult = await this.commandManager.execute('npm install --no-fund', {
                     cwd: componentPath,
                     timeout: TIMEOUTS.VERY_LONG,
                     shell: DEFAULT_SHELL,
@@ -324,7 +326,7 @@ export class ComponentUpdater {
             // 2. Run configured build script (only if buildScript is set)
             if (buildScript) {
                 this.logger.debug(`[Updates] Running build script: ${buildScript}`);
-                const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
+                const buildResult = await this.commandManager.execute(`npm run ${buildScript} -- --force`, {
                     cwd: componentPath,
                     timeout: TIMEOUTS.VERY_LONG,
                     shell: DEFAULT_SHELL,
@@ -404,8 +406,6 @@ export class ComponentUpdater {
             throw new Error(`Security check failed: ${(error as Error).message}`);
         }
 
-        const { ServiceLocator } = await import('@/core/di');
-        const commandManager = ServiceLocator.getCommandExecutor();
 
         const tempZip = path.join(path.dirname(targetPath), `${componentId}-temp.zip`);
 
@@ -440,7 +440,7 @@ export class ComponentUpdater {
             // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
             // We need to: 1) extract, 2) move contents up, 3) remove the root folder
             // Uses rm -rf (not rmdir) because hidden files like .github/ may remain after mv
-            const extractResult = await commandManager.execute(
+            const extractResult = await this.commandManager.execute(
                 `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rm -rf "${targetPath}"/*/`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)

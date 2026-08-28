@@ -131,7 +131,7 @@ async function applyTemplate(
     const result = emptyResult();
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
-    const svc = new TemplateSyncService(ctx.secrets, ctx.logger);
+    const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
     for (const { project } of items) {
         onProgress?.(`Syncing template for ${project.name}...`);
         try {
@@ -171,7 +171,7 @@ async function applyComponents(
         byProject.set(item.project.path, entry);
     }
 
-    const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath);
+    const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;

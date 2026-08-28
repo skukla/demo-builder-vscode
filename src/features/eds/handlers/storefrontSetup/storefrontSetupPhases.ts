@@ -37,6 +37,7 @@ import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { ServiceLocator } from '@/core/di';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
 import type { HandlerContext } from '@/types/handlers';
@@ -57,7 +58,7 @@ function createSetupServices(context: HandlerContext): SetupServices {
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {
-        githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
+        githubRepoOps: new GitHubRepoOperations(githubTokenService, ServiceLocator.getCommandExecutor(), context.logger),
         githubFileOps: new GitHubFileOperations(githubTokenService, context.logger),
         githubAppService: new GitHubAppService(githubTokenService, context.logger, daLiveTokenProvider),
         daLiveContentOps: new DaLiveContentOperations(daLiveTokenProvider, context.logger),
