@@ -28,10 +28,6 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-    getAvailableBlockLibraries,
-    getNativeBlockLibraries,
-} from '@/features/components/services/blockLibraryLoader';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
 import { requireAreaSubSteps } from './areaSubSteps';
 import { isStorefrontConfigured } from './tileStatus';
@@ -40,6 +36,10 @@ import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import {
+    getAvailableBlockLibraries,
+    getNativeBlockLibraries,
+} from '@/features/components/services/blockLibraryLoader';
 import { GitHubServiceCard, DaLiveServiceCard } from '@/features/eds/ui/components';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { useDaLiveAuth } from '@/features/eds/ui/hooks/useDaLiveAuth';

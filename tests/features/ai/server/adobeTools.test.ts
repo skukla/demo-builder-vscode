@@ -338,6 +338,42 @@ describe('registerAdobeTools', () => {
         expect(seenContext).toMatchObject({ orgId: 'org-1', projectId: 'proj-1' });
     });
 
+    it('list_workspaces answers a diagnosis, not a bare 404, when the selected project is gone', async () => {
+        // Watched live 2026-08-27: the persisted Console project had been
+        // deleted, getWorkspaces threw a raw 404, and the agent had to diagnose
+        // the stale pointer itself with the aio CLI. The tool now names the
+        // situation and the way out (list_adobe_projects → select_project).
+        const auth = makeAuth({
+            getWorkspaces: jest.fn(async () => {
+                throw new Error('404 - Project not found');
+            }),
+        });
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(auth));
+        setAdobeTarget({ orgId: 'org-1', projectId: 'proj-gone', projectName: 'Kukla Mesh Test' });
+
+        const out = await server.call('list_workspaces');
+
+        expect(String(out.error)).toMatch(/not found.*deleted/i);
+        expect(out.selected).toBe('Kukla Mesh Test');
+        expect(String(out.recovery)).toMatch(/list_adobe_projects/);
+    });
+
+    it('list_workspaces still throws a NON-404 error unchanged', async () => {
+        // Only the stale-pointer case gets the friendly answer. A 500 or a
+        // network failure must keep failing loudly — rewriting every error into
+        // prose is how failures start scoring as answers.
+        const auth = makeAuth({
+            getWorkspaces: jest.fn(async () => {
+                throw new Error('503 upstream unavailable');
+            }),
+        });
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(auth));
+
+        await expect(server.call('list_workspaces')).rejects.toThrow(/503/);
+    });
+
     it('list_workspaces keeps untargeted behavior when no target is set', async () => {
         let seenContext: unknown = 'unset';
         const auth = makeAuth({

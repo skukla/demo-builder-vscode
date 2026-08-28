@@ -6,9 +6,9 @@
  * to eliminate code duplication.
  */
 
+import { getIdentifiedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { getStorefrontStatusDisplay, severityToVariant } from '@/core/ui/utils/statusVocabulary';
-import { getIdentifiedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 

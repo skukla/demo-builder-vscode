@@ -6,6 +6,13 @@
  * health and capability discovery (installed skills, Regenerate AI files,
  * Browse sessions) live on the Project Dashboard, not here — this surface is
  * purely about prompts and never calls verify-ai-setup.
+ *
+ * IT IS A LAUNCHER, AND IT STAYS ONE. Clicking a card sends the prompt to the
+ * terminal to run for real, and it LEAVES — the library never grows a
+ * transcript or a composer of its own. A second destination (the Prompt
+ * Workbench, which simulated rather than ran) moved to
+ * `feature/prompt-workbench` on 2026-08-26; see AI-3b. The rule it was built on
+ * still holds: each surface does one thing.
  */
 
 import { Button, DialogContainer, Flex } from '@adobe/react-spectrum';

@@ -15,6 +15,7 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 import { checkGitHubApp } from './checkGitHubAppHandler';
 import { handleCreateProject } from './createHandler';
 import { handleValidate } from './validateHandler';
+import * as lifecycle from './wizardLifecycleHandlers';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 import {
@@ -22,7 +23,6 @@ import {
     handleOpenDataInstallerSettings,
 } from '@/features/data-installer/handlers';
 import * as eds from '@/features/eds/handlers';
-import * as lifecycle from './wizardLifecycleHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import { defineHandlers } from '@/types/handlers';

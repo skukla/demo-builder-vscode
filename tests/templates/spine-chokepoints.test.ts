@@ -115,6 +115,55 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
 
+    it('app-management INSTALL: the reconcile POST lives only in the installer', () => {
+        // Audited 2026-08-27 (quality sweep): one code site issues the app's
+        // POST /installation. Doors — the deploy tail's install pass AND the
+        // install_integration retry handler — both reach it through
+        // installAppManagementApp, wired once in appBuilderComponentRunnerDeps.
+        const primitive = /\.reconcileInstallation\(/;
+        const spine = ['features/app-builder/services/appManagementInstaller.ts'];
+
+        const hits = filesTouchingPrimitive(primitive).filter(
+            (f) => f !== 'features/app-builder/services/appManagementClient.ts'
+        );
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('app-management UNINSTALL: the uninstall POST lives only in the uninstaller', () => {
+        // Audited 2026-08-27 (quality sweep): one code site starts the app's
+        // own uninstaller; the one door is integration remove, through
+        // uninstallAppManagementApp wired once in appBuilderComponentRunnerDeps
+        // — BEFORE `aio app undeploy` takes the API down with the actions.
+        const primitive = /\.startUninstallation\(/;
+        const spine = ['features/app-builder/services/appManagementUninstaller.ts'];
+
+        const hits = filesTouchingPrimitive(primitive).filter(
+            (f) => f !== 'features/app-builder/services/appManagementClient.ts'
+        );
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
+    it('agent CONSENT: the chat-elicitation ask has ONE caller, the server call wrapper', () => {
+        // Audited 2026-08-27 (incremental sweep over the post-beta.143 work):
+        // consent is chat-first (askChatForConsent) with the modal as the
+        // injected fallback floor, and the ONLY site that asks is the MCP
+        // server's call wrapper — so no tool can grow a private consent path
+        // that skips the chat or double-prompts the modal.
+        const primitive = /askChatForConsent\(/;
+        const spine = ['features/ai/server/inExtensionMcpServer.ts'];
+
+        const hits = filesTouchingPrimitive(primitive).filter(
+            (f) => f !== 'features/ai/server/consentViaChat.ts'
+        );
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
+
     it('mesh DELETE: the destructive command has ONE spelling, in meshDeleteCommand', () => {
         // Audited 2026-08-22: three legitimate doors (dashboard delete,
         // creation cancel-rollback, component removal) — three ACTIONS, one

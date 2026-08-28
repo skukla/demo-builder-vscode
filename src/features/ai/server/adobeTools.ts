@@ -137,7 +137,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     // ── Listing ────────────────────────────────────────────────────────────────
     server.registerTool(
         'list_orgs',
-        { title: 'List Orgs', description: 'List Adobe organizations available to the signed-in user', inputSchema: {} },
+        { annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Orgs', description: 'List Adobe organizations available to the signed-in user', inputSchema: {} },
         async () => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
@@ -148,6 +148,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'list_adobe_projects',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Adobe Projects',
             description:
                 'List Adobe Console projects in the currently selected org. Paged — a real org ' +
@@ -198,14 +199,36 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
 
     server.registerTool(
         'list_workspaces',
-        { title: 'List Workspaces', description: 'List Adobe Runtime workspaces in the currently selected project', inputSchema: {} },
+        { annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Workspaces', description: 'List Adobe Runtime workspaces in the currently selected project', inputSchema: {} },
         async () => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
             // getWorkspaces has no org/project option, so run it under the stored
             // target's env (mirrors select_workspace). Untargeted when none set.
-            const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
-            return asText(workspaces.map(lean));
+            try {
+                const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
+                return asText(workspaces.map(lean));
+            } catch (err) {
+                // A deleted target answers a bare 404, and a bare 404 is a
+                // dead end: watched live 2026-08-27, the selected Console
+                // project no longer existed and the agent had to diagnose the
+                // stale pointer itself with the aio CLI. Name the situation
+                // and the way out instead.
+                const msg = err instanceof Error ? err.message : String(err);
+                if (/404|not.?found/i.test(msg)) {
+                    const stored = getAdobeTarget();
+                    return asText({
+                        error:
+                            'The selected Adobe Console project was not found — it may have ' +
+                            'been deleted since it was selected.',
+                        selected: stored?.projectName ?? stored?.projectId ?? '(none recorded)',
+                        recovery:
+                            'Call list_adobe_projects to see what exists now, then ' +
+                            'select_project to repoint, and try again.',
+                    });
+                }
+                throw err;
+            }
         },
     );
 
@@ -213,6 +236,10 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_org',
         {
+            // Session targeting only — `setAdobeTarget` is an in-memory module variable,
+            // so nothing outlives this process. Blocking these would stop an agent
+            // navigating during an evaluation, for no safety gain.
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Select Org',
             description: 'Select the active Adobe organization by id',
             inputSchema: { orgId: z.string().describe('Organization id (from list_orgs)') },
@@ -236,6 +263,8 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_project',
         {
+            // Session targeting only — see select_org.
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Select Project',
             description: 'Select the active Adobe Console project by id (within the selected org)',
             inputSchema: { projectId: z.string().describe('Project id (from list_adobe_projects)') },
@@ -275,6 +304,8 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_workspace',
         {
+            // Session targeting only — see select_org.
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Select Workspace',
             description: 'Select the active Adobe Runtime workspace by id (within the selected project)',
             inputSchema: { workspaceId: z.string().describe('Workspace id (from list_workspaces)') },

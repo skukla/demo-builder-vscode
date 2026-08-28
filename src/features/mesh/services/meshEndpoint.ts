@@ -2,8 +2,8 @@
  * Mesh endpoint resolution utilities
  */
 
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import type { CommandExecutor } from '@/core/shell';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';

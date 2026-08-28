@@ -1,6 +1,5 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { hasRequiredReviewData } from './reviewPredicates';
 import {
     buildComponentInfoList,
@@ -11,6 +10,7 @@ import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';

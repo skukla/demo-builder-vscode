@@ -26,12 +26,20 @@ import {
     configureDaLivePermissions,
     getDaLiveAuthService,
 } from '../../handlers/edsHelpers';
-import { verifyCdnResources } from '../configSyncService';
 import { ConfigurationService } from '../configService/configurationService';
+import { lostGrantsMessage } from '../configService/lostGrantsMessage';
+import { verifyCdnResources } from '../configSyncService';
 import { withDaLiveAuthRetry } from '../daLive/daLiveAuthRetry';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import { executeEdsPipeline } from '../edsPipeline';
+import type { GitHubFileOperations } from '../github/githubFileOperations';
+import type { GitHubTokenService } from '../github/githubTokenService';
+import { HelixService } from '../helix/helixService';
+import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
+import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
+import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
+import { GitHubAppNotInstalledError } from '../types';
 import { publishConfigAndRegisterSite } from './edsResetConfigStep';
 import { redeployApiMesh } from './edsResetMeshHelper';
 import {
@@ -42,14 +50,6 @@ import {
     type ExtractParamsResult,
 } from './edsResetParams';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
-import type { GitHubFileOperations } from '../github/githubFileOperations';
-import type { GitHubTokenService } from '../github/githubTokenService';
-import { HelixService } from '../helix/helixService';
-import { lostGrantsMessage } from '../configService/lostGrantsMessage';
-import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
-import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
-import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
-import { GitHubAppNotInstalledError } from '../types';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 

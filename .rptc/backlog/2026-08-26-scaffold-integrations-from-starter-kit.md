@@ -1,0 +1,97 @@
+---
+id: AB-1d
+kind: feature
+area: app-builder
+needs: []
+value: med
+status: shipped
+---
+
+# Build Commerce integrations FROM the integration starter kit, not a blank shell
+
+When a demo needs an Adobe Commerce integration, scaffold it from
+`adobe/commerce-integration-starter-kit` — Adobe's own template — instead of
+the blank shell we ship today.
+
+## What we do now
+
+`app-builder-components.json` has exactly one entry:
+
+```json
+{ "id": "app-builder-shell", "name": "Custom Integration", "blank": true,
+  "source": { "owner": "skukla", "repo": "app-builder-shell", "branch": "main" } }
+```
+
+That repo is "Minimal Adobe App Builder app for Demo Builder's blank-shell
+integration". Its whole tree is `actions/hello`, `app.config.yaml`,
+`package.json`, plus AGENTS.md/CLAUDE.md.
+
+Adobe's starter kit (`adobe/commerce-integration-starter-kit`, verified via the
+GitHub API 2026-08-26) is a different shape entirely: `src/`,
+`app.commerce.config.ts`, `install.yaml`, `EVENTS_SCHEMA.json`, `test/`,
+`docker-compose.yaml`, husky hooks, CI.
+
+## Why this matters beyond "use the official thing"
+
+We already ship the starter kit's seven agent skills to these projects. They
+instruct the agent to work "following Adobe Developer App Builder patterns and
+the Integration Starter Kit blueprint" and to use "the 6-file handler
+structure" — conventions the blank shell does not have. So the guidance is
+already written for a project shape we do not produce.
+
+Scaffolding from the real kit makes those seven skills correct rather than
+aspirational. That is the reason to do it, and it is why this is worth more
+than the sum of "official template" plus "nicer starting code".
+
+## Open
+
+- **Keep the blank shell?** It exists for "starts from a working deploy, then
+  grows into whatever your demo needs". A starter-kit project is heavier and
+  opinionated. Probably both entries, with the kit as the default for anything
+  touching Commerce — but that is a product call.
+- **Onboarding.** The kit has `install.yaml` and an onboarding script that
+  registers Adobe I/O event providers. Our creation flow does its own I/O
+  provisioning (`AB-2` territory). Find out which one wins before wiring it.
+- **Does it deploy from our spine unchanged?** The deploy/subscribe guard chain
+  in `appbuilder-component-authoring` assumes the shell's layout.
+
+Filed 2026-08-26 — from the naming investigation that found the skills and the
+scaffold describe different projects. See [[AI-1o]] and [[AI-1p]].
+
+## Shipped so far
+
+- 2026-08-27  OWNER DECISION (2026-08-27, live): build App Management support — option B from the research. The kit on main is the v4 App Management generation: an extension app our standalone gate refuses, with service-side provisioning declared in app.commerce.config.ts and executed by Adobe's install step, plus an S2S env contract we do not inject. Research: .rptc/research/starter-kit-integration/research.md. The entity question is settled by the decision — a NEW kind (extension app, service-managed lifecycle), not a variant catalog entry. Next: architecture phase. Also fixed in reach: ioEventsClient's false 'the extension creates' comment.
+- 2026-08-27  LIVE TEST (owner-directed, 2026-08-27): drove the kit through the real MCP spine — set_project_destination (Kukla Bodea Mesh/Stage), catalog entry authored (layout extension, lifecycle app-management — the catalog's first pre-built integration, gallery pin updated deliberately), add_integration. RESULTS: the step-2 layout gate ACCEPTED the extension app live; clone worked; npm install refused (kit engine-strict node ^24 vs system v20 — filed as AB-3, fail-fast fix) ; with deps installed under node 24 by hand, aio app build FAILS with 3x webpack 'Self-reference dependency has unused export name' — one per generated app-management action — under BOTH node 20 and node 24, with latest released aio-cli 11.1.2 / plugin-app 14.8.1, generate step run or not. UPSTREAM BLOCKER: the kit cannot currently be built with Adobe's stock public toolchain; deploy (and the base-URL confirmation) blocked behind it. Step-5 remainder confirmed by measurement: per-component node version via fnm. Kit left attached to bodea in status:error as the test bench.
+- 2026-08-27  CORRECTION + COMPLETION (same day): the 'upstream blocker' verdict was WRONG — retracted. The webpack failure was a STALE DEPENDENCY TREE in the locally installed aio-cli: same version (11.1.2, npm latest), but its tree locked webpack 5.107.2 at install time; a fresh npm install -g pulls 5.110.0 which fixes the self-reference codegen. The clean room controlled the kit clone but not the CLI tree's age — version-number equality was the wrong test (owner's check caught it). Nothing goes to Adobe. THEN the chain completed: extension-layout deploys need the workspace Console config imported into the app dir (aio app use — without it deploy dies reading undefined.org; measured, fixed in deployAppComponent via importWorkspaceConfig, secrets-safe: downloaded file in 0700 tmp deleted in finally, the .env aio writes removed immediately). FULL LIVE ACCEPTANCE through deploy_integration: status deployed, 30 actions, the three app-management install-API URLs captured in deployedUrls, and GET on them answers 401-auth-required at the predicted base — THE BASE-URL SPIKE IS DONE, no supervised session needed. Remaining for step 4: wire reconcileInstallation post-deploy using deployedUrls + an IMS token, requiredApis on the entry, and the owner's choice of Commerce instance to associate.
+- 2026-08-27  Seed design GREENLIT by owner (2026-08-27 night): the kit becomes a second seed in the Build-custom flow (seed x intent model — 'Start blank' | 'Start from the Commerce starter kit'), the seed carrying the catalog entry's capability metadata (layout/lifecycle/nodeVersion/gate) so the layout guard admits it; per-seed gating (kit seed Commerce-gated via compatibleBackends, blank seed ungated); singleton-per-WORKSPACE constraint with an honest refusal (per the AB-2 spike: instance-level multiplicity is supported, workspace-level is the real limit). Also settled: install association derives from the project's configured Commerce backend (ACCS->saas, PaaS->paas + base URL from config) — no instance picker anywhere. Implementation queued as the loop's next block: compatibleBackends on the entry + add-door axis check first, then the seed flow.
+- 2026-08-27  Stack gate SHIPPED: the kit entry declares compatibleBackends [adobe-commerce-paas, adobe-commerce-accs], and the add door (handleAddAppBuilderComponent — the one route that resolved from the RAW catalog) now refuses an entry whose axes don't fit the project's stack, with the required backends named in the error. Galleries were already axis-filtered; a backendless project passes '' which no constrained entry lists, so 'plain App Builder app, no Commerce' can no longer acquire the kit by id (UI or MCP). New entryFitsProjectAxes predicate in the catalog loader; handler tests run the REAL predicate via requireActual; two gallery pins flipped to expect the kit gated out of unmatched stacks. Next: the seed flow in Build-custom.
+- 2026-08-27  CONSOLE-LIFECYCLE SPIKE + tool trace (owner-directed, 2026-08-27 night). Question: can we create a Console project in the proper org, programmatically? YES — with one real bug found, fixed, and re-proven live. TRACE (per-tool, for tool-verdicts): select_org x3 OK; list_adobe_projects OK but pagination (20 of 737) makes the 'check for a name clash first' advice in create_adobe_project's own error IMPRACTICAL for an agent — 37 pages, no title filter; create_adobe_project x7: 3 failures -> BUG: deriveAdobeEntityName capped the base at 40 chars but Console 400s at 20 ('Project name length must be less than 20', measured from the channel log) so any title with 16+ alphanumeric chars could NEVER create a project via wizard or agent since the provisioning shipped — FIXED (MAX_BASE_LENGTH 40->15, base+4-suffix=19), verified live post-reload: 'Kit Lifecycle Spike Final Check' -> KitLifecycleSpimhsb, created:true; delete_adobe_project x2 BOTH HANG headless (filed as AI-5); reload_window (new tonight) worked first try — compile -> reload -> new build stamp serving, closing the F5 gap for extension-host verification. COVERAGE GAPS the trace surfaced: (1) no MCP tool reads the Debug Logs channel, so when create failed with a guessing-game error the agent was blind — the real cause sat in the channel log; found only by reading VS Code's on-disk channel mirror (~/Library/Application Support/Code/logs/<session>/window*/exthost/skukla.adobe-demo-builder/Demo Builder Debug Logs.log), which is worth knowing and worth a tool; (2) createProject/createWorkspace collapse every failure to undefined, so the tool layer INVENTS causes ('name clash, quota, role') — the real 400 text never reaches the agent; error propagation through adobeConsoleProjectOps -> fetcher -> authService -> tools is the open fix (touches ~5 suites); (3) org-hygiene: every spike project was deleted same-session via SDK (three 200s + final check), org back to baseline. ALSO ANSWERED: UI offers NO workspace deletion anywhere (create only, in the builder provisioning flow); workspace LISTS are fetched live from Console on entry (only the SELECTED workspace is session-cached), so an externally deleted workspace disappears on next screen entry — no timed refresh while a screen sits open.
+- 2026-08-27  DEFECT SWEEP SHIPPED (2026-08-27 night, all four from the lifecycle spike): (1) read_debug_logs MCP tool — reads VS Code's on-disk mirror of the Debug/User Logs channels (context.logUri), tail + case-insensitive filter, 45KB newest-first byte cap; registered from extension.ts, real-SDK registration pin, response-ceiling row, narration phrase, battery prompt 49 (diagnose-via-debug-logs), doc section in mcp-server.md. Dogfooded immediately: it located the AI-5 consent-gate block in two calls. (2) AI-5 consent-dialog fix — see AI-5 (timeout + pre-dialog logging + teardown step logs; live-proven). (3) Error propagation — adobeConsoleProjectOps createProject/createWorkspace now return ConsoleOpFailure {error} instead of undefined, carrying Console's OWN message (e.g. the 19-char name rule) through fetcher -> authenticationService -> both MCP tools AND both webview handlers; the tools' invented guess-lists ('quota, name clash, role') are deleted; 18 test pins rewritten to the new contract, one asserts the measured 400 text passes through verbatim. LIVE-PROVEN: create with a 501-char description answers the real validation message. (4) list_adobe_projects 'no title filter' RETRACTED — the search param already existed and works (live: search 'Kukla Bodea' -> 1 of 735); the gap was the CALLER not reading the tool schema before calling with empty args — a tool-usage lesson for tool-verdicts, not a tool defect. Full gate green: repo lint (2 duplicate-import errors fixed), both typecheck configs, blindspots, full suite 1,156 suites / 15,059 tests.
+- 2026-08-27  AUTH ROOT-CAUSE (owner's question 'why would I need to log in?' — answered: they didn't need to). The stuck deploy was parked on ensureAdobeIOAuth's Sign In notification: shown twice, auto-collapsed into the bell in seconds while the frozen progress cards stayed visible, so the owner saw only hangs. Root cause UNDER that: the extension's in-process token read declares signed-out on stored-expiry alone, while the CLI context held a refresh token valid ~14 more days — aio-lib-ims getToken('cli') (the exact call the aio CLI makes every run, which is why aio never re-prompts) restored the session in ~2s, no interaction (measured live). THREE fixes shipped: (1) tokenManager silent refresh — classify stored token, on any unusable verdict try getToken('cli') timeout-bound BEFORE returning signed-out, with a load-bearing refresh-token PRECHECK (no live refresh token -> return undefined rather than let the lib open its interactive browser flow from a background check); injectable seam (SilentTokenRefresh) so no test can fire live IMS; (2) the sign-in prompt names its wait in Debug Logs and times out into cancelled after TIMEOUTS.LONG (third interactive-pause hang of the day, same treatment as the consent gate); (3) runGuards logs each guard step before running it — the instrumentation that localized this hang in one probe read. FOLLOW-UP filed mentally, not fixed: one agent deploy shows THREE progress notifications (agent-notifier wrapper + handler's withComponentProgress + a duplicate) and the owner flagged the notification text as too long — the duplicate-progress dedupe is its own small item.
+- 2026-08-27  LIVE INSTALL PROOF (attempt 3, post-auth-fix): guards passed in 5s (step logs working), deploy 56s, and the NEW install pass ran against the real generated API — association POST accepted, reconcile queued (202), poll drove to completion, failure persisted with the hands-back exactly as designed. The failure is the APP's own installer, and its step tree (read live via GET /installation with the IMS token + real org code 8EBB33FE5E43BA110A495EF8@AdobeOrg) names it precisely: step eventing FAILED with STEP_EXECUTION_FAILED 'Can't resolve authentication options… provide IMS options (AIO_COMMERCE_AUTH_IMS_CLIENT_ID, _CLIENT_SECRETS, _TECHNICAL_ACCOUNT_ID, _TECHNICAL_ACCOUNT_EMAIL…)' — i.e. the SIX S2S credential env vars the app-management plan already designed as the next increment (ensureOAuthCredentialId + secret fetch behind a small interface + per-invocation env injection alongside AIO_RUNTIME_*; the plan's empirical caveat about whether the workspace download carries client_secrets still stands). VERDICT: task-2 wiring complete and live-proven; S2S injection is the named next block for a first-try-green install. Tool note: read_debug_logs filter is a SUBSTRING — regex alternation silently matches nothing; consider multi-term support.
+- 2026-08-27  FIRST-TRY-GREEN INSTALL CHAIN COMPLETE (2026-08-27 evening). The live path from one deploy_integration call now runs: guards (step-logged) -> S2S credential resolve (ensure + detail + secrets) -> six AIO_COMMERCE_AUTH_IMS_* vars injected per-invocation -> deploy -> union subscribe (baseline + CloudIntegrationSDK + commerceeventing, all via the null-platformList S2S override) -> associate (saas + tenant base from ACCS_GRAPHQL_ENDPOINT) -> reconcile with retry-on-409-race -> installed. PROVEN LIVE on bodea: install step tree ALL GREEN (installation, eventing commerce+external, webhooks, subscriptions), and a subsequent extension call lands installation {skipped, 'Already installed and current'} — the honest idempotent read. FIVE empirical findings en route, each fixed+pinned: (1) org-unique credential names (fixed name 409'd every second workspace — latent since the spine shipped); (2) null platformList drops services from the union silently (73 of 98 org services!) — known-S2S override, and the suite's fixture had INVENTED the platform value; (3) minimal scope REQUEST 403s a fully entitled credential — standard Events+Management scope set now requested; (4) the installer races itself creating registrations (409 on the Runtime binding) — idempotent reconciles converge, measured 6->8->19->23->green, retry loop added; (5) the live no-op 409 carries a message and NO reason field — spec's closed enum alone misread installed as failed. Residue hygiene: cleared 8 stale registrations + bound_package/acp packages from the earlier half-installs by hand; the retry loop makes that self-healing for users. ONE MISSTEP recorded honestly: my first convergence probe used a FABRICATED tenant fallback (the 404s it produced were my own garbage input, caught by reading bodea's manifest).
+- 2026-08-27  refactor(components): the registry declares each backend's Commerce contract (`9d6357d16`)
+- 2026-08-27  feat(app-builder): the name is a convenience — optional label, minted identity (`b11bcf388`)
+- 2026-08-27  feat(app-builder): the starter kit is a SEED, not a pre-built integration (`7b968cddb`)
+- 2026-08-27  feat(app-builder): name a pre-built integration at pick time (`f101879fc`)
+- 2026-08-27  fix(app-builder): single-line agent steps + subscribe progress + shared install budget (`75793301d`)
+- 2026-08-27  docs(backlog): first-try-green install chain recorded (`67dd05a99`)
+- 2026-08-27  fix(app-builder): recognize the LIVE no-op 409 shape — message, no reason (`7630b1839`)
+- 2026-08-27  feat(app-builder): reconcile retries converge through the installer's 409 race (`85002001e`)
+- 2026-08-27  fix(app-builder): request the standard S2S events scope set (`a20840058`)
+- 2026-08-27  feat(app-builder): kit requiredApis — I/O Events + Commerce eventing (`65b8d3197`)
+- 2026-08-27  fix(app-builder): the baseline API subscribes again — null platformList override (`3a287102a`)
+- 2026-08-27  docs(plan): app-management step 4 shipped — install wiring + S2S injection (`520cf475a`)
+- 2026-08-27  feat(app-builder): S2S credential env injection — kit installs can authenticate (`e527ce68e`)
+- 2026-08-27  docs(backlog): live install proof — wiring green, S2S injection is the named next block (`2402e0c52`)
+- 2026-08-27  fix(auth): silently refresh an expired IMS token before ever prompting (`8b86df5f6`)
+- 2026-08-27  fix(auth): the sign-in prompt names its wait and times out into cancelled (`9e8988661`)
+- 2026-08-27  chore(dashboard): guard chain names each step in Debug Logs (`218fd1d54`)
+- 2026-08-27  chore(app-builder): satisfy the three new-code guards (`022631cfc`)
+- 2026-08-27  feat(app-builder): automatic App Management install after deploy (`995f4954c`)
+- 2026-08-27  feat(app-builder): kit seed in the Build-custom flow (`b4e283789`)
+- 2026-08-27  feat(app-builder): seed recognition + fixed-package singleton gate (`759b8017b`)
+- 2026-08-27  fix(auth): cap derived Adobe entity names at 19 chars — Console rejects 20+ (`dd95c6764`)
+- 2026-08-27  feat(app-builder): Commerce-gate the starter kit + axis check at the add door (`628e3005f`)
+- 2026-08-27  feat(app-builder): the starter kit deploys end-to-end — and the upstream verdict is retracted (`6847c35bd`)
+- 2026-08-27  2026-08-27 reconciliation: CLOSED — every scope point landed: the kit is a seed in Build-custom (both entries kept, the item's own 'probably both' answered by the owner), onboarding became the automatic App Management install chain (live green end-to-end), the seven kit skills now describe a shape we actually produce. Registry Commerce contract (9d6357d16) was the last block.

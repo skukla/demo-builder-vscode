@@ -57,3 +57,58 @@ describe('registerViewTools', () => {
         ]);
     });
 });
+
+// ─── reload_window ───────────────────────────────────────────────────────────
+
+describe('reload_window', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('refuses without confirm:true and does not reload', async () => {
+        const runCommand = jest.fn(async () => undefined);
+        const server = fakeServer();
+        registerViewTools(server, runCommand);
+
+        const result = await server.text('reload_window', {});
+        expect(result.content[0].text).toMatch(/requires confirm:true/);
+        jest.runAllTimers();
+        expect(runCommand).not.toHaveBeenCalled();
+    });
+
+    it('ANSWERS FIRST, then reloads — the reload tears down this very server', async () => {
+        // The whole design constraint. `workbench.action.reloadWindow` restarts the
+        // extension host, which is what serves this MCP call; reloading before the
+        // response is written means the caller sees a dropped socket instead of a
+        // result, and cannot tell success from a crash.
+        const runCommand = jest.fn(async () => undefined);
+        const server = fakeServer();
+        registerViewTools(server, runCommand);
+
+        const result = await server.text('reload_window', { confirm: true });
+
+        // Answered, and NOTHING has run yet.
+        expect(result.content[0].text).toContain('reloading');
+        expect(runCommand).not.toHaveBeenCalled();
+
+        // Only after the deferral does the host restart.
+        jest.runAllTimers();
+        expect(runCommand).toHaveBeenCalledWith('workbench.action.reloadWindow');
+    });
+
+    it('tells the caller the socket will drop and how to wait for it', async () => {
+        // A caller that does not expect the disconnect reads a normal reload as a
+        // failure. The response has to say so — it is the only chance to.
+        const server = fakeServer();
+        registerViewTools(server, jest.fn(async () => undefined));
+
+        const result = await server.text('reload_window', { confirm: true });
+        const text = result.content[0].text;
+        expect(text).toMatch(/socket/i);
+        expect(text).toContain('probe.mjs info');
+        jest.runAllTimers();
+    });
+});

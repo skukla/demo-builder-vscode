@@ -40,6 +40,7 @@ export interface AiPrompt {
 /**
  * Project - Core project definition
  */
+
 export interface Project {
     /**
      * The SLUG. Folder name under `~/.demo-builder/projects/`, the key
@@ -130,35 +131,17 @@ export interface Project {
         | 'not-deployed'
         | 'error'
         | 'unknown';
-    // LEGACY-READ-ONLY mesh deployment state (ADR-011 D3 Step 07). The
-    // authoritative home for the mesh endpoint + staleness baseline is the
-    // keyed mesh `appBuilderComponents` entry; this singleton is never written
-    // or persisted anymore. It exists so legacy manifests (of arbitrary age)
-    // keep loading: the loader reads it and the read-migration folds it into
-    // the keyed map. See docs/architecture/state-ownership.md.
-    meshState?: {
-        envVars: Record<string, string>;
-        sourceHash: string | null;
-        lastDeployed: string; // ISO date string
-        endpoint?: string; // mesh GraphQL endpoint URL (legacy manifests only)
-        userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
-        declinedAt?: string; // ISO date string when user declined
-    };
+    // The legacy singular `meshState`/`appState` fields lived here until
+    // phase 2 of the manifest write-back migration (PL-1) removed them: the
+    // in-memory model is keyed-only (`appBuilderComponents` below). Legacy
+    // MANIFESTS still load forever — their singular fields are typed on
+    // `ProjectManifest` (projectFileLoader) and folded into the keyed map by
+    // the quarantined read-migration (appBuilderComponentMigration), which is
+    // also the activation sweep's load path. See
+    // docs/architecture/state-ownership.md.
+    //
     // App Builder app status summary for card grid display
     appStatusSummary?: 'deployed' | 'stale' | 'not-deployed' | 'error' | 'unknown';
-    // LEGACY-READ-ONLY App Builder app deployment state (ADR-011 D3 Step 07).
-    // The authoritative home for integration deploy state is the keyed
-    // `appBuilderComponents` entry per integration; this singleton is never
-    // written or persisted anymore — kept only so legacy manifests load and
-    // migrate. See docs/architecture/state-ownership.md.
-    appState?: {
-        appId?: string;
-        url?: string; // Primary deployed app URL
-        status: 'deployed' | 'error' | 'not-deployed';
-        deployedUrls?: Record<string, string>; // Per-action/runtime URLs
-        lastDeployed?: string; // ISO date string
-        sourceHash?: string | null;
-    };
     // EDS Storefront config.json state (tracks changes that require republishing)
     edsStorefrontState?: {
         envVars: Record<string, string>; // Env vars at last publish
@@ -259,7 +242,16 @@ export type AppBuilderComponentKind = 'mesh' | 'integration';
  */
 export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
-    status: 'deployed' | 'stale' | 'error' | 'not-deployed';
+    /**
+     * `'deploying'` is TRANSIENT: written when a deploy starts so pollers
+     * (agents reading get_project, the grid) can tell an in-flight run from a
+     * stale prior outcome — the previous error used to sit there looking
+     * current for the whole deploy (measured 2026-08-27, seven minutes of
+     * misleading polling). Always overwritten by the final outcome; a crash
+     * mid-deploy leaves it behind, which reads as "still deploying" until the
+     * next deploy or verify corrects it.
+     */
+    status: 'deployed' | 'deploying' | 'stale' | 'error' | 'not-deployed';
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
     source: { owner: string; repo: string; branch?: string };
@@ -281,6 +273,19 @@ export interface AppBuilderComponentState {
     error?: string;
     /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
     providesEnvVars?: Record<string, string>;
+    /**
+     * App Management install outcome (lifecycle 'app-management' apps only).
+     * Written after every deploy's automatic install/associate pass; `detail`
+     * carries the no-op reason on skip or the hands-back line on failure. A
+     * failed install does NOT mark the deploy failed — the app is deployed,
+     * merely dormant until installed (Commerce Admin > Apps > App Management).
+     */
+    installation?: {
+        status: 'installed' | 'skipped' | 'failed';
+        detail?: string;
+        /** ISO date string of the attempt. */
+        at?: string;
+    };
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.

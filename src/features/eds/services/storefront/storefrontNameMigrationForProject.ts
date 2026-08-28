@@ -35,6 +35,7 @@
 
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {
     getDaLiveAuthService,
     resolveByomOverlayConfig,
@@ -44,17 +45,16 @@ import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import {
     resolveStorefrontConfig,
     type StorefrontConfigSource,
 } from '@/features/eds/services/reset/edsResetParams';
-import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import {
     migrateStorefrontNamingIfNeeded,
     type StorefrontMigrationContext,
     type StorefrontMigrationResult,
 } from '@/features/eds/services/storefront/storefrontNameMigration';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 

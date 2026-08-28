@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -61,54 +61,52 @@ export const renderPrerequisitesStep = (
 };
 
 /**
- * Setup message callbacks for prerequisites-loaded and prerequisite-status
+ * Wire the prerequisites-loaded / prerequisite-status message callbacks.
+ *
+ * Returns stable TRAMPOLINES, not the captured variables: the original
+ * version returned `loadedCallback`/`statusCallback` by value at call time,
+ * so the closure's later reassignment never reached the caller and the
+ * returned functions stayed no-ops forever. That bug is why every spec in
+ * this directory inlined its own copy of this wiring instead — 14 clones,
+ * the tests-tree's largest cluster (2026-08-27 dedup sweep). The two
+ * single-callback variants had the same bug and zero users; deleted.
  */
 export const setupMessageCallbacks = () => {
-    let loadedCallback: (data: any) => void = () => {};
-    let statusCallback: (data: any) => void = () => {};
-
+    const current = {
+        loaded: (_data: any): void => {},
+        status: (_data: any): void => {},
+    };
     mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
         if (type === 'prerequisites-loaded') {
-            loadedCallback = callback;
+            current.loaded = callback;
         } else if (type === 'prerequisite-status') {
-            statusCallback = callback;
+            current.status = callback;
         }
         return jest.fn();
     });
-
-    return { loadedCallback, statusCallback };
+    return {
+        fireLoaded: (data: any): void => current.loaded(data),
+        fireStatus: (data: any): void => current.status(data),
+    };
 };
 
 /**
- * Setup message callback for prerequisites-loaded only
+ * The arrange ritual the progress specs repeated per test: wire the message
+ * callbacks, render the step, deliver the prerequisites, and wait for the
+ * first one to appear. Returns the trampolines for the act phase.
  */
-export const setupLoadedCallback = () => {
-    let loadedCallback: (data: any) => void = () => {};
-
-    mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-        if (type === 'prerequisites-loaded') {
-            loadedCallback = callback;
-        }
-        return jest.fn();
+export const renderLoadedStep = async (
+    prerequisites: Array<Record<string, unknown>>,
+    awaitName: string,
+    state: Partial<WizardState> = baseState,
+) => {
+    const fire = setupMessageCallbacks();
+    renderPrerequisitesStep(state);
+    fire.fireLoaded({ prerequisites });
+    await waitFor(() => {
+        screen.getByText(awaitName);
     });
-
-    return loadedCallback;
-};
-
-/**
- * Setup message callback for prerequisite-status only
- */
-export const setupStatusCallback = () => {
-    let statusCallback: (data: any) => void = () => {};
-
-    mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-        if (type === 'prerequisite-status') {
-            statusCallback = callback;
-        }
-        return jest.fn();
-    });
-
-    return statusCallback;
+    return fire;
 };
 
 /**

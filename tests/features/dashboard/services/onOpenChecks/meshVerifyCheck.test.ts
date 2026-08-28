@@ -48,7 +48,7 @@ it('deployed mesh still exists → ok with endpoint; persists state', async () =
     expect(outcome.status).toBe('ok');
     expect(outcome.data?.endpoint).toBe('https://mesh.example/graphql');
     expect(deps.syncMeshStatus).toHaveBeenCalledTimes(1);
-    expect(deps.markDirty).toHaveBeenCalledWith('meshState');
+    expect(deps.markDirty).toHaveBeenCalledWith('appBuilderComponents');
 });
 
 it('mesh gone (success but !exists) → VISIBLE warning + still persists state', async () => {
@@ -62,7 +62,7 @@ it('mesh gone (success but !exists) → VISIBLE warning + still persists state',
     expect(outcome.message).toMatch(/no longer deployed/i);
     // Still updates persisted state — but now ALSO tells the user.
     expect(deps.syncMeshStatus).toHaveBeenCalledTimes(1);
-    expect(deps.markDirty).toHaveBeenCalledWith('meshState');
+    expect(deps.markDirty).toHaveBeenCalledWith('appBuilderComponents');
 });
 
 it('verify error → unknown (transient); does NOT flip persisted state', async () => {

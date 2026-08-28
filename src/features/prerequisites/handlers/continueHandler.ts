@@ -7,11 +7,11 @@
  * - Updates UI with current status
  */
 
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionIdMapping, resolveRequiredMajors } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
 import type { PrerequisiteStatusPayload, PrerequisitesCompletePayload } from '@/types/webviewPayloads';
@@ -76,9 +76,10 @@ async function checkToolForNodeMajor(
  */
 async function checkContinuePerNodeVariants(
     context: HandlerContext,
-    prereq: { id: string; name: string; perNodeVersion?: boolean; check: { command: string; parseVersion?: string } },
+    prereq: { id: string; name: string; perNodeVersion?: boolean; requiredFor?: string[]; plugins?: { requiredFor?: string[] }[]; check: { command: string; parseVersion?: string } },
     checkResult: { installed: boolean },
     nodeVersionMapping: Record<string, string>,
+    nodeVersionIdMapping: Record<string, string>,
 ): Promise<{
     perNodeVariantMissing: boolean;
     missingVariantMajors: string[];
@@ -88,7 +89,8 @@ async function checkContinuePerNodeVariants(
         return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
     }
 
-    const requiredMajors = getNodeVersionKeys(nodeVersionMapping);
+    // The SAME scope check applies — see resolveRequiredMajors' docstring.
+    const requiredMajors = resolveRequiredMajors(prereq, nodeVersionMapping, nodeVersionIdMapping);
     const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
     const missingVariantMajors: string[] = [];
 
@@ -156,6 +158,7 @@ export async function handleContinuePrerequisites(
 
         const start = typeof payload?.fromIndex === 'number' ? payload.fromIndex : 0;
         const nodeVersionMapping = await getNodeVersionMapping(context);
+        const nodeVersionIdMapping = await getNodeVersionIdMapping(context);
 
         for (let i = start; i < context.sharedState.currentPrerequisites.length; i++) {
             const prereq = context.sharedState.currentPrerequisites[i];
@@ -186,7 +189,7 @@ export async function handleContinuePrerequisites(
                 nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
             }
 
-            const variantStatus = await checkContinuePerNodeVariants(context, prereq, checkResult, nodeVersionMapping);
+            const variantStatus = await checkContinuePerNodeVariants(context, prereq, checkResult, nodeVersionMapping, nodeVersionIdMapping);
             const depsInstalled = areDependenciesInstalled(prereq, context);
             const { overallStatus, nodeMissing } = computeContinueOverallStatus(
                 prereq, checkResult, nodeVersionStatus, variantStatus.perNodeVariantMissing,

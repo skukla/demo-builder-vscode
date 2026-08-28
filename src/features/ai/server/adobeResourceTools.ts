@@ -35,6 +35,7 @@ import { ServiceLocator } from '@/core/di';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
+import { isConsoleOpFailure } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/types/handlers';
 
 const NEEDS_ADOBE = {
@@ -94,11 +95,15 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'create_adobe_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created.',
             inputSchema: {
                 name: z.string().describe('Project title, max 200 characters'),
-                description: z.string().optional().describe('Project description, max 500 characters'),
+                description: z
+                    .string()
+                    .optional()
+                    .describe('Project description, max 500 characters'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,17 +120,12 @@ export function registerAdobeResourceTools(
                 { orgId: target.orgId },
             );
 
-            // The service returns `undefined` for every failure — quota, naming,
-            // permissions — so the tool cannot name the cause. Saying that
-            // outright beats a bare `created: false` the agent would retry blindly.
-            if (!project) {
-                return asText({
-                    created: false,
-                    error:
-                        'Console rejected the project. Common causes: the name is already used in this org, ' +
-                        'the org has hit its project quota, or your account lacks the Developer role. ' +
-                        'Check list_adobe_projects for a name clash first.',
-                });
+            // The service carries the REAL reason now (the SDK's own message —
+            // e.g. Console's "Project name length must be less than 20"). The
+            // previous guessing-list here named three causes and the measured
+            // failure was none of them.
+            if (isConsoleOpFailure(project)) {
+                return asText({ created: false, error: project.error });
             }
             return asText({ created: true, project: { id: project.id, name: project.name } });
         },
@@ -134,11 +134,15 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'create_adobe_workspace',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create a workspace in the SELECTED Adobe project (select_org and select_project first).',
             inputSchema: {
                 name: z.string().describe('Workspace title, max 200 characters'),
-                description: z.string().optional().describe('Workspace description, max 500 characters'),
+                description: z
+                    .string()
+                    .optional()
+                    .describe('Workspace description, max 500 characters'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,13 +159,8 @@ export function registerAdobeResourceTools(
                 { orgId: target.orgId, projectId: target.projectId },
             );
 
-            if (!workspace) {
-                return asText({
-                    created: false,
-                    error:
-                        'Console rejected the workspace. Common causes: the name is already used in this project, ' +
-                        'or your account lacks the Developer role. Check list_workspaces for a clash first.',
-                });
+            if (isConsoleOpFailure(workspace)) {
+                return asText({ created: false, error: workspace.error });
             }
             return asText({
                 created: true,
@@ -174,6 +173,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'delete_adobe_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete an Adobe Console project and everything in it (irreversible). Requires confirm:true and confirmName equal to the project name.',
             inputSchema: {
@@ -209,7 +209,12 @@ export function registerAdobeResourceTools(
             const target = requireOrg();
             if ('error' in target) return asText(target);
 
-            if (!(await authedManager(ctxFactory()))) return asText(NEEDS_ADOBE);
+            // Step-level debug lines: when this hung headless (AI-5) the args log
+            // was the LAST line anywhere, so the hang site was unfindable.
+            const ctx = ctxFactory();
+            ctx.logger.debug('[delete_adobe_project] checking auth…');
+            if (!(await authedManager(ctx))) return asText(NEEDS_ADOBE);
+            ctx.logger.debug('[delete_adobe_project] auth ok — starting teardown');
 
             // TeardownTarget already takes orgId/projectId explicitly, so this path
             // never consulted the cache — no service change was needed for it.

@@ -9,6 +9,17 @@
  * opaque). Failure paths live in consoleProjectTeardown.errors.test.ts.
  */
 
+// The orchestrator writes step-level debug lines (AI-5); no logger singleton
+// exists under jest, so the module-level getLogger is stubbed.
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    }),
+}));
+
 import {
     teardownConsoleProject,
     type TeardownItem,
@@ -34,7 +45,7 @@ describe('teardownConsoleProject', () => {
             expect(result.projectDeleted).toBe(true);
             expect(result.shouldClearConsoleSelection).toBe(true);
             const skipped = result.items.filter(
-                (item) => item.kind === 'workspace' && item.outcome === 'skipped',
+                (item) => item.kind === 'workspace' && item.outcome === 'skipped'
             );
             expect(skipped.map((item) => item.id)).toEqual(['ws1', 'ws2']);
             expect(harness.deps.deleteConsoleProject).toHaveBeenCalledWith('org1', 'proj1');
@@ -49,7 +60,7 @@ describe('teardownConsoleProject', () => {
 
             expect(result.success).toBe(true);
             expect(
-                result.items.filter((item) => item.outcome === 'skipped').map((item) => item.id),
+                result.items.filter((item) => item.outcome === 'skipped').map((item) => item.id)
             ).toEqual(['ws1', 'ws2']);
             expect(harness.deps.createEventsClient).not.toHaveBeenCalled();
         });
@@ -72,9 +83,9 @@ describe('teardownConsoleProject', () => {
 
             expect(result.success).toBe(true);
             expect(result.projectDeleted).toBe(true);
-            expect(
-                result.items.filter((item) => item.outcome === 'skipped'),
-            ).toHaveLength(WORKSPACES.length);
+            expect(result.items.filter((item) => item.outcome === 'skipped')).toHaveLength(
+                WORKSPACES.length
+            );
         });
 
         it('should delete a project that has no workspaces at all', async () => {
@@ -187,7 +198,7 @@ describe('teardownConsoleProject', () => {
                 'org1',
                 'proj1',
                 'ws1',
-                'reg-a',
+                'reg-a'
             );
         });
 
@@ -200,13 +211,13 @@ describe('teardownConsoleProject', () => {
                 'org1',
                 'proj1',
                 'ws1',
-                'p1',
+                'p1'
             );
             expect(harness.clientFor('client-ws2').deleteProvider).toHaveBeenCalledWith(
                 'org1',
                 'proj1',
                 'ws2',
-                'p2',
+                'p2'
             );
         });
 
@@ -220,7 +231,7 @@ describe('teardownConsoleProject', () => {
             expect(harness.clientFor('client-ws2').listRegistrations).toHaveBeenCalledWith(
                 'org1',
                 'proj1',
-                'ws2',
+                'ws2'
             );
         });
     });
@@ -288,12 +299,9 @@ describe('teardownConsoleProject', () => {
             expect(harness.deps.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith(
                 'org1',
                 'proj1',
-                'ws2',
+                'ws2'
             );
-            expect(harness.deps.subscribeManagementApi).toHaveBeenCalledWith(
-                'org1',
-                'int-ws2-new',
-            );
+            expect(harness.deps.subscribeManagementApi).toHaveBeenCalledWith('org1', 'int-ws2-new');
         });
 
         it('should delete the escalated workspace providers with the new credential client', async () => {
@@ -305,7 +313,7 @@ describe('teardownConsoleProject', () => {
                 'org1',
                 'proj1',
                 'ws2',
-                'p2',
+                'p2'
             );
             expect(result.success).toBe(true);
             expect(result.projectDeleted).toBe(true);
@@ -319,7 +327,7 @@ describe('teardownConsoleProject', () => {
             expect(harness.clientFor('client-ws2-new').listRegistrations).toHaveBeenCalledWith(
                 'org1',
                 'proj1',
-                'ws2',
+                'ws2'
             );
         });
 

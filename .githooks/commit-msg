@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# Require a `Backlog:` trailer naming a real item, or the word `none`.
+#
+# This closes the gap `unlogged` leaves open. `unlogged` can only see commits
+# that NAME an item, so an untrailered commit is invisible to it: it catches
+# "named it and forgot to log", never "forgot entirely". Making the trailer
+# mandatory removes the second case, because the commit does not go through.
+#
+# `Backlog: none` is a first-class answer, not a loophole. Most commits belong to
+# no item (a lint sweep, the tooling itself), and forcing a fake id would be
+# worse than no rule. What the rule buys is that you ANSWERED.
+#
+# Turn it off with:  git config --unset core.hooksPath
+
+MSG_FILE="$1"
+
+# Never block machine-made commits: a merge, or anything git replays during a
+# rebase / cherry-pick. Commits made before this hook existed carry no trailer,
+# and a rebase over them must not fail.
+grep -qE '^Merge (branch|remote-tracking|pull request)' "$MSG_FILE" && exit 0
+GIT_DIR_PATH="$(git rev-parse --git-path . 2>/dev/null || echo .git)"
+for marker in rebase-merge rebase-apply CHERRY_PICK_HEAD REVERT_HEAD MERGE_HEAD; do
+    [[ -e "$GIT_DIR_PATH/$marker" ]] && exit 0
+done
+
+# Read the trailer from the real message, ignoring comment lines.
+VALUE="$(grep -vE '^[[:space:]]*#' "$MSG_FILE" | grep -iE '^Backlog:' | head -1 | sed -E 's/^[Bb]acklog:[[:space:]]*//' | tr -d '\r')"
+
+fail() {
+    echo "commit-msg: $1" >&2
+    echo "" >&2
+    echo "  Every commit names the backlog item it belongs to:" >&2
+    echo "" >&2
+    echo "      Backlog: AI-3a     the item this advances" >&2
+    echo "      Backlog: none      belongs to no item (lint, tooling, chores)" >&2
+    echo "" >&2
+    echo "  What is in flight:  node .claude/skills/backlog-item/backlog.mjs next" >&2
+    echo "  Turn this off:      git config --unset core.hooksPath" >&2
+    exit 1
+}
+
+[[ -z "$VALUE" ]] && fail "missing Backlog: trailer."
+[[ "$VALUE" == "none" ]] && exit 0
+
+TOOL=".claude/skills/backlog-item/backlog.mjs"
+# No tool, no node, not the repo root: do NOT block. A hook that fails closed on
+# a broken environment stops you committing the fix for it.
+if [[ ! -f "$TOOL" ]] || ! command -v node >/dev/null 2>&1; then exit 0; fi
+
+for id in $(echo "$VALUE" | tr ',' ' '); do
+    node "$TOOL" show "$id" >/dev/null 2>&1 || fail "Backlog: $id -- no item with that id."
+done
+exit 0

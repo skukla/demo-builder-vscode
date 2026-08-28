@@ -20,6 +20,8 @@ import type {
     AdobeWorkspace,
     AdobeContext,
     AuthTokenValidation,
+    ConsoleOpFailure,
+    S2SDeployCredentials,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
     AdobeIdCredentialInput,
@@ -544,13 +546,13 @@ export class AuthenticationService {
 
     /**
      * Create a new Adobe I/O App Builder project in the current organization.
-     * Returns the created project, or undefined on failure (permission, quota, etc.).
+     * Returns the created project, or a ConsoleOpFailure naming the real reason.
      */
     async createProject(
         name: string,
         description: string,
         target?: { orgId?: string },
-    ): Promise<AdobeProject | undefined> {
+    ): Promise<AdobeProject | ConsoleOpFailure> {
         return withTiming('createProject', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.createProject(name, description, target);
@@ -559,13 +561,13 @@ export class AuthenticationService {
 
     /**
      * Create a new workspace in the current organization's selected project.
-     * Returns the created workspace, or undefined on failure (permission, quota, etc.).
+     * Returns the created workspace, or a ConsoleOpFailure naming the real reason.
      */
     async createWorkspace(
         name: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | undefined> {
+    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return withTiming('createWorkspace', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.createWorkspace(name, description, target);
@@ -653,6 +655,20 @@ export class AuthenticationService {
     ): Promise<WorkspaceS2SCredentialIds> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+    }
+
+    /**
+     * The workspace S2S credential's full IMS identity (ensure + detail +
+     * secret) — the `AIO_COMMERCE_AUTH_IMS_*` inputs an App Management app's
+     * deploy injects. The secret is per-invocation env only.
+     */
+    async getS2SDeployCredentials(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<S2SDeployCredentials> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getS2SDeployCredentials(orgId, projectId, workspaceId);
     }
 
     /**

@@ -10,10 +10,11 @@
  * @module commands/diagnosticsReport
  */
 
+import { claudeFootprintLines, type ClaudeCodeFootprint } from './claudeCodeFootprint';
 import { maskEmail } from '@/core/utils/maskEmail';
-import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
+import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/storefront/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
@@ -161,6 +162,14 @@ export interface DiagnosticsReport {
      * sampled.
      */
     storefrontScope?: StorefrontScopeReport;
+    /**
+     * Claude Code's own `~/.claude` disk footprint — measured on demand because
+     * it grows ~4 GB/year with nothing reporting it, and it sits beside our
+     * storage where a producer cannot tell whose is whose. Report-only by
+     * design (see `claudeCodeFootprint.ts` for why a cleanup action is out of
+     * scope). Absent when the walk was skipped.
+     */
+    claudeCode?: ClaudeCodeFootprint;
 }
 
 /** The scope the probe sampled from, plus a disagreement when there is one. */
@@ -529,11 +538,11 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
     }
 
     lines.push(...credentialLines(report.githubCredential));
-    if (report.credentialService)
-        lines.push(...credentialServiceLines(report.credentialService));
+    if (report.credentialService) lines.push(...credentialServiceLines(report.credentialService));
     if (report.configService) lines.push(...configServiceLines(report.configService));
     if (report.storefront)
         lines.push(...storefrontLines(report.storefront, report.storefrontScope));
+    if (report.claudeCode) lines.push(...claudeFootprintLines(report.claudeCode));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;
 }

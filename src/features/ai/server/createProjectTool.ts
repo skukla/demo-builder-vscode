@@ -39,9 +39,6 @@ import {
 } from './progressCapture';
 import { dispatchHandler } from '@/core/handlers';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
-import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
     getAutoSelectedOptionalDependencies,
     getAvailableStacksForPackage,
@@ -49,6 +46,9 @@ import {
     getStorefrontForStack,
     getSelectablePackages,
 } from '@/features/components/services/demoPackageLoader';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
     buildProjectConfig,
     type ProjectConfigSource,
@@ -370,6 +370,7 @@ export function registerCreateProjectTool(server: any, ctxFactory: () => Handler
     server.registerTool(
         'create_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
                 'Create a new Demo Builder project headlessly from a package + stack. EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true',

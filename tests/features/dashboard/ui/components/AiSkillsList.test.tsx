@@ -59,7 +59,7 @@ describe('AiSkillsList', () => {
             expect(dbRow).toHaveTextContent(/2/);
 
             const adobeRow = screen.getByTestId('ai-skills-group-adobe-aem');
-            expect(adobeRow).toHaveTextContent(/Adobe AEM/);
+            expect(adobeRow).toHaveTextContent(/Adobe Commerce Storefront skills/);
             expect(adobeRow).toHaveTextContent(/1/);
         });
 
@@ -92,8 +92,8 @@ describe('AiSkillsList', () => {
             });
 
             const row = screen.getByTestId('ai-skills-group-adobe-appbuilder');
-            expect(row).toHaveTextContent('Adobe App Builder · 2');
-            expect(screen.queryByText(/Adobe AEM/)).not.toBeInTheDocument();
+            expect(row).toHaveTextContent('Adobe Commerce Integration Starter Kit skills · 2');
+            expect(screen.queryByText(/Adobe Commerce Storefront skills/)).not.toBeInTheDocument();
         });
 
         it('separates two Adobe bundles into their own groups', () => {
@@ -105,10 +105,10 @@ describe('AiSkillsList', () => {
             });
 
             expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe AEM · 1'
+                'Adobe Commerce Storefront skills · 1'
             );
             expect(screen.getByTestId('ai-skills-group-adobe-appbuilder')).toHaveTextContent(
-                'Adobe App Builder · 1'
+                'Adobe Commerce Integration Starter Kit skills · 1'
             );
         });
 
@@ -117,7 +117,7 @@ describe('AiSkillsList', () => {
             renderList({ skills: [makeSkill('x', 'adobe', 'sometool')] });
 
             const row = screen.getByTestId('ai-skills-group-adobe-sometool');
-            expect(row).toHaveTextContent('Adobe · 1');
+            expect(row).toHaveTextContent('Adobe skills · 1');
         });
 
         it('omits groups with no skills', () => {
@@ -135,8 +135,31 @@ describe('AiSkillsList', () => {
                     makeSkill('aem-tester', 'adobe', 'aem'),
                 ],
             });
-            expect(screen.getByText('add-component')).toBeInTheDocument();
-            expect(screen.getByText('aem-tester')).toBeInTheDocument();
+            const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
+            expect(rows).toEqual(['Add component · add-component', 'Tester · aem-tester']);
+        });
+
+        // The titles a user can match against Adobe's docs. The on-disk names
+        // are prefixed (`aem-`/`appbuilder-`) so two bundles that both ship a
+        // `tester` stay distinct on disk; that prefix appears nowhere in the
+        // documentation, so it must not be the thing a person reads first.
+        it('titles Adobe skills as the docs title them, keeping the literal name beside it', () => {
+            renderList({
+                skills: [
+                    makeSkill('aem-block-developer', 'adobe', 'aem'),
+                    makeSkill('aem-dropin-developer', 'adobe', 'aem'),
+                    makeSkill('appbuilder-devops-engineer', 'adobe', 'appbuilder'),
+                ],
+            });
+
+            const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
+            // Groups sort by label: "Adobe Commerce Integration Starter Kit
+            // skills" precedes "Adobe Commerce Storefront skills".
+            expect(rows).toEqual([
+                'DevOps engineer · appbuilder-devops-engineer',
+                'Block developer · aem-block-developer',
+                'Drop-in developer · aem-dropin-developer',
+            ]);
         });
     });
 
@@ -151,7 +174,7 @@ describe('AiSkillsList', () => {
             });
 
             const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
-            expect(rows).toEqual(['alpha', 'beta', 'zeta']);
+            expect(rows).toEqual(['Alpha · alpha', 'Beta · beta', 'Zeta · zeta']);
         });
 
         it('renders each group header with its label and count', () => {
@@ -164,10 +187,10 @@ describe('AiSkillsList', () => {
             });
 
             expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
-                'Demo Builder · 2'
+                'Demo Builder skills · 2'
             );
             expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe AEM · 1'
+                'Adobe Commerce Storefront skills · 1'
             );
         });
 

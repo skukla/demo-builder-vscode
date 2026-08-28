@@ -13,6 +13,7 @@
 import * as vscode from 'vscode';
 import { withBrowserSignInNotice } from './browserSignInNotice';
 import { SingleFlight } from '@/core/utils/singleFlight';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 export interface AdobeAuthResult {
@@ -79,8 +80,27 @@ async function promptAndSignIn(
 ): Promise<AdobeAuthResult> {
     logger.warn(`${logPrefix} Adobe I/O token expired or missing`);
 
-    const selection = await vscode.window.showWarningMessage(warningMessage, 'Sign In', 'Cancel');
+    // Name the wait, and never hold an operation on it forever: an agent-path
+    // deploy sat 9+ minutes on this exact prompt in a window nobody was
+    // watching (2026-08-27) — the third interactive pause of the day to hang a
+    // headless call silently (consent modal, teardown, now this). Unanswered
+    // resolves into the existing cancelled path; a late "Sign In" click grants
+    // nothing, matching the consent gate's semantics.
+    logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window…`);
+    let timedOut = false;
+    const selection = await Promise.race([
+        vscode.window.showWarningMessage(warningMessage, 'Sign In', 'Cancel'),
+        new Promise<undefined>((resolve) =>
+            setTimeout(() => {
+                timedOut = true;
+                resolve(undefined);
+            }, TIMEOUTS.LONG),
+        ),
+    ]);
     if (selection !== 'Sign In') {
+        if (timedOut) {
+            logger.warn(`${logPrefix} sign-in prompt unanswered — treating as cancelled`);
+        }
         return { authenticated: false, cancelled: true };
     }
 

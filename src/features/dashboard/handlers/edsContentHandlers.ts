@@ -104,7 +104,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
             try {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
-                report('Checking authentication...');
+                report('Checking authentication…');
                 const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
                     '@/features/eds/handlers/edsHelpers'
                 );
@@ -122,7 +122,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 const daLiveAuthService = getDaLiveAuthService(context.context);
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
-                report('Republishing content...');
+                report('Republishing content…');
                 const { republishStorefrontContent } = await import(
                     '@/features/eds/services/storefront/storefrontRepublishService'
                 );

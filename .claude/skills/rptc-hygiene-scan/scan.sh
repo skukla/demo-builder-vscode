@@ -148,87 +148,88 @@ print(f"  control: {checked} file:line citations checked "
 PY
 
 echo
-echo "== 5. Shipped work still sitting in an ACTIVE backlog section =="
+echo "== 5. Done work still registered as live (status vs body vs archive) =="
+# Rewritten 2026-08-27 (PL-7): the old parser read the README's hand-written
+# '#### ' entries, a format `backlog.mjs sync` retired — it parsed ZERO active
+# entries and its own control said CHECK BROKEN. One tool, one parse, one
+# truth: this now consumes `backlog.mjs list --json`, the same read every
+# other consumer uses, and inspects item BODIES the CLI deliberately does not.
 python3 - "$RPTC" <<'PY'
-import os, re, sys
+import json, os, re, subprocess, sys
 
-rptc = sys.argv[1]
-readme = os.path.join(rptc, 'backlog', 'README.md')
-if not os.path.exists(readme):
-    print("  (no backlog index)"); raise SystemExit(0)
-lines = open(readme, encoding='utf-8').read().split('\n')
+rptc = os.path.abspath(sys.argv[1])
+repo = os.path.dirname(rptc)
+cli = os.path.join(repo, '.claude', 'skills', 'backlog-item', 'backlog.mjs')
+try:
+    raw = subprocess.run(['node', cli, 'list', '--json'], capture_output=True,
+                         text=True, timeout=30, cwd=repo)
+    items = json.loads(raw.stdout)
+except Exception as exc:  # noqa: BLE001 - a broken read must say so, not pass
+    print(f"  control: 0 items read  ⚠️  CHECK BROKEN — {exc}")
+    raise SystemExit(0)
 
-def first(prefix, default):
-    return next((i for i, l in enumerate(lines) if l.startswith(prefix)), default)
+TERMINAL = {'shipped', 'dropped', 'superseded'}
+live = [i for i in items if i.get('status') not in TERMINAL]
 
-start = first('## Active backlog', 0)
-end = next((i for i, l in enumerate(lines[start + 1:], start + 1) if l.startswith('## ')), len(lines))
-
-section, active = None, []
-for i in range(start, end):
-    if lines[i].startswith('### '):
-        section = lines[i][4:].strip()
-    elif lines[i].startswith('#### '):
-        raw = lines[i]
-        title = re.sub(r'\s*\(\[.*', '', raw[5:])
-        title = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', title).replace('**', '').replace('~~', '').strip(' —,')
-        targets = re.findall(r'\]\(([^)]+)\)', raw)
-        active.append((section, title, targets, raw))
-
-flagged = 0
-
-# ── Signal 1: TOMBSTONE ────────────────────────────────────────────────────
-# An entry in an ACTIVE section that announces its own completion. The item is
-# done; the index still files it under work-to-do. This is the cleanup the
-# archive sections exist for, and it is what makes the active list read longer
-# than it is — 3 of these were sitting in the list on 2026-08-18.
-for section, title, targets, raw in active:
-    if not ('✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw or '~~' in raw):
-        continue
-    when = re.search(r'(\d{4}-\d{2}-\d{2})', raw)
-    print(f"  TOMBSTONE   [{(section or '?')[0]}] {title[:88]}")
-    print(f"              announces completion{' on ' + when.group(1) if when else ''}"
-          f" — move it to an archive section")
-    flagged += 1
-
-# ── Signal 2: ARCHIVED TWIN ────────────────────────────────────────────────
-# The item already lives under complete/, so it shipped AND was archived; only
-# the index still calls it active. Distinct from a tombstone: nothing in the
-# entry admits it, so only the filesystem knows.
 complete_names = set()
 cdir = os.path.join(rptc, 'complete')
 if os.path.isdir(cdir):
     complete_names = {n[:-3] if n.endswith('.md') else n for n in os.listdir(cdir)}
 
-for section, title, targets, raw in active:
-    if '✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw:
-        continue                      # already reported above
-    for t in targets:
-        base = os.path.basename(t.rstrip('/'))
-        base = base[:-3] if base.endswith('.md') else base
-        if '/complete/' not in t and base in complete_names:
-            print(f"  ARCHIVED TWIN  [{(section or '?')[0]}] {title[:80]}")
-            print(f"              index points at {t}, but complete/{base} exists")
-            flagged += 1
-            break
+flagged = 0
+
+# ── Signal 1: BODY TOMBSTONE ───────────────────────────────────────────────
+# A LIVE-status item whose body announces its own completion. The prose says
+# done; the frontmatter still files it as work-to-do — the exact rot the old
+# README check watched, relocated to where truth now lives. Only unambiguous
+# announcements count: a '## Shipped so far' log line is progress, and a
+# SUB-section marked SHIPPED is one slice of a multi-part item landing (the
+# first live run flagged AI-1e's "## 1. … — SHIPPED" candidate this way), so
+# only the H1 TITLE line and standalone status lines are signals.
+DONE_RE = re.compile(r'^# .*\b(SHIPPED|RESOLVED|SUPERSEDED)\b|^(SHIPPED|RESOLVED)\b',
+                     re.MULTILINE)
+for item in live:
+    path = os.path.join(repo, item['path'])
+    try:
+        body = open(path, encoding='utf-8').read()
+    except OSError:
+        continue
+    body = body.split('---', 2)[-1]          # skip frontmatter
+    hit = DONE_RE.search(body)
+    if hit:
+        print(f"  BODY TOMBSTONE  {item['id']:>7}  {item['title'][:70]}")
+        print(f"                  status={item['status']} but the body says "
+              f"\"{hit.group(0).strip()[:50]}\" — set a terminal status or fix the prose")
+        flagged += 1
+
+# ── Signal 2: ARCHIVED TWIN ────────────────────────────────────────────────
+# A LIVE-status item whose basename also exists under complete/ — it shipped
+# and was archived, and only the backlog copy still claims to be work.
+for item in live:
+    base = os.path.basename(item['path'])
+    base = base[:-3] if base.endswith('.md') else base
+    if base in complete_names:
+        print(f"  ARCHIVED TWIN   {item['id']:>7}  {item['title'][:70]}")
+        print(f"                  complete/{base} exists while status={item['status']}")
+        flagged += 1
 
 if not flagged:
     print("  (none)")
 
-# CONTROL. Both halves are named, because either can silently do nothing: an
-# empty active span makes signal 1 vacuous, an empty complete/ makes signal 2
-# vacuous, and both print "(none)" exactly like a clean record.
+# CONTROL. Either half can silently do nothing: zero live items makes signal 1
+# vacuous, an empty complete/ makes signal 2 vacuous — and both print "(none)"
+# exactly like a clean record.
 broken = []
-if not active:
-    broken.append("no active entries parsed")
+if not live:
+    broken.append("no live items parsed")
 if not complete_names:
     broken.append("complete/ is empty or missing")
-print(f"  control: {len(active)} active entries scanned against "
+print(f"  control: {len(live)} live item(s) of {len(items)} scanned against "
       f"{len(complete_names)} archived item(s)"
       + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
 PY
 
-echo
+
 echo "== 6. Items citing a file:line whose CODE moved after the item was last updated =="
 python3 - "$RPTC" <<'PY'
 import os, re, subprocess, sys

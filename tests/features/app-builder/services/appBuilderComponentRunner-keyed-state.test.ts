@@ -25,9 +25,9 @@ jest.mock('@/core/shell', () => ({
 
 // Standalone-ness is filesystem-read at the add door; default to standalone so
 // the integration add paths run (the rejection test lives in the sibling file).
-const mockIsStandaloneApp = jest.fn().mockResolvedValue(true);
+const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
-    isStandaloneApp: (...args: unknown[]) => mockIsStandaloneApp(...args),
+    detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
 // =============================================================================

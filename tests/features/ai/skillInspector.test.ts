@@ -302,14 +302,34 @@ describe('inspectSkills', () => {
         // the modal filed a first-party skill under "Custom".
         it.each(DEMO_BUILDER_ALWAYS_ON_SKILLS)(
             'classifies always-on skill %s as demo-builder',
-            async (filename) => {
-                setupFs({ [`${SKILLS_DIR}/${filename}`]: frontmatter('x', 'y') });
+            async (name) => {
+                // The v27+ registrable layout: `<name>/SKILL.md`.
+                setupFs({ [`${SKILLS_DIR}/${name}/SKILL.md`]: frontmatter('x', 'y') });
 
                 const result = await inspectSkills(PROJECT_PATH);
 
                 expect(result[0].source).toBe('demo-builder');
+                expect(result[0].bundle).toBeUndefined();
             }
         );
+
+        it('classifies a legacy pre-v27 flat <name>.md as demo-builder too', async () => {
+            // Projects not yet regenerated still carry the flat layout; a
+            // first-party skill must not show as "Custom" there.
+            setupFs({ [`${SKILLS_DIR}/diagnose-demo.md`]: frontmatter('x', 'y') });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].source).toBe('demo-builder');
+        });
+
+        it('falls back to the DIRECTORY name for a SKILL.md with no frontmatter name', async () => {
+            setupFs({ [`${SKILLS_DIR}/diagnose-demo/SKILL.md`]: '# no frontmatter here\n' });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].name).toBe('diagnose-demo');
+        });
 
         it('classifies the conditional extend-app-builder-app skill as demo-builder', async () => {
             // Written only for App Builder-adjacent projects, but authored here

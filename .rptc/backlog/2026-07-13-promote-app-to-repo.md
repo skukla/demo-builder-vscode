@@ -1,4 +1,20 @@
+---
+id: AB-1c
+kind: feature
+area: app-builder
+parent: AB-1
+needs: AB-1
+value: low
+status: backlog
+layer: F
+---
 # Promote a shell-built custom app to a GitHub repo
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Layer 3 of deterministic-integrations, scoped out. A dashboard action on a blank-shell-built custom app that creates a new GitHub repo (owner picker via `getUserOrgs`) and pushes the app's local dir (fresh history, `.env`/secrets excluded), recording the repo on the component — so it can later be imported via "Import a repo". Reuses `GitHubRepoOperations` / `GitHubTokenService` / the deploy-action pattern. Real forks: public-vs-private repo, secrets hygiene (non-negotiable). Gated on the shell build-out maturing.
 
 ## Provenance
 

@@ -1,6 +1,6 @@
 ---
 name: mcp-tool-authoring
-description: Add a tool to the in-extension MCP server via handler + descriptor row — headless-safety rules, read vs action descriptors, zod input schemas, guard placement, the count-pinned tests, and the doc sync. Use when exposing new functionality to AI agents (a new MCP tool), promoting an existing webview handler to the tool surface, or when a descriptor/handler-count test fails after adding one.
+description: Add a tool to the in-extension MCP server via handler + descriptor row — headless-safety rules, read vs action descriptors, the three declarations every tool needs (readOnly/annotations, a narration phrase, consent copy + target), zod input schemas, guard placement, the count-pinned tests, and the doc sync. Use when exposing new functionality to AI agents (a new MCP tool), promoting an existing webview handler to the tool surface, or when a descriptor/handler-count/annotation/narration test fails after adding one.
 ---
 
 # MCP Tool Authoring
@@ -18,8 +18,72 @@ with ~10 lines. The traps are in what qualifies and what else must move.
      destructive ops; `inputSchema` is a zod shape (validation happens at the tool-call
      layer, so the model retries on mismatch — but the HANDLER must still validate,
      it's also reachable from webviews).
+   - `readOnly: boolean` is **required** — the compiler asks. See "Three things every
+     tool declares" below.
 3. Registered from `extension.ts` (descriptor modules import handler maps, so they stay
    out of the vscode-free server module).
+
+## Three things every tool declares (added 2026-08-25)
+
+None of these can be derived from the tool's NAME, and all three were derived from it
+until an audit found what that produced. A new tool is not done without them.
+
+### 1. Read or write — `readOnly` / `annotations.readOnlyHint`
+
+Gates the Evaluation Mode dry run, the chat's opening line and the phase sinks.
+
+- **Descriptor row**: `readOnly: true | false`. Required by `ToolDescriptor`, so a
+  missing one is a compile error.
+- **Direct registration**: `annotations: { readOnlyHint: <bool>, destructiveHint: <bool> }`
+  in the config object. Enforced by a SOURCE scan in `toolAnnotations.test.ts`, because
+  most registrars cannot be booted in a unit test.
+
+Missing means "assume it writes" — over-blocked under a dry run, which is the safe
+direction. Set `destructiveHint` true when the tool is in `AGENT_ALERT_COPY`.
+
+**Declare what the tool IS AS EXPOSED, not what the handler could do.**
+`check_github_app` declares `readOnly: true` even though its handler fires a Helix code
+sync on a 404, because `argDefaults: { skipTrigger: true }` makes that unreachable. That
+forced flag is pinned by a test; do not remove either half.
+
+The old name regex (`isReadOnlyToolName`) survives only as a cross-check — a declaration
+disagreeing with the name must be listed in `RECORDED_DISAGREEMENTS`. Four tools already
+are: `select_org` / `select_project` / `select_workspace` (in-memory session targeting)
+and `set_setting` (hands back to the user, changes nothing).
+
+### 2. What the chat calls it — `TOOL_NARRATION`
+
+Add a phrase in `toolNarration.ts`. **Every** tool, reads included: the evaluation trace
+renders reads in plain language, and repeated reads are the waste it exists to show.
+
+- Completes "Demo Builder is …", so the progressive form: "Deploying the API mesh".
+- **Name the object.** "Republishing the storefront", never "Republishing".
+- Write it from the tool's DESCRIPTION, never its name. Writing from names is the same
+  derivation being removed, done by hand — it produced "Set project pinned…" and
+  "Set setting…" (a tool that changes no setting), and it missed two tools entirely.
+- There is NO fallback. A tool without a phrase narrates nothing, and four tests in
+  `toolNarration.test.ts` make that loud.
+
+### 3. If it raises a dialog — `AGENT_ALERT_COPY`
+
+Membership IS the consent gate; a tool outside the map raises none. Three authored
+fields, and the dialog shows these and nothing else, because it answers one question:
+*am I allowed to do this?*
+
+| Field | Is |
+|---|---|
+| `action` | completes "Demo Builder: ___?" |
+| `consequence` | ONE sentence: what changes, and name the blast radius |
+| `target` | argument keys naming WHICH thing, in reading order |
+
+`target` is `[]` when the tool acts on the open project and declares no argument naming
+it (`republish`, `sync_content`) — the dialog names the open project instead.
+
+**Read the schema before writing `target`.** A key that does not exist renders a BLANK
+line, not an error, so the dialog quietly stops saying which thing it is about. Two of
+the first fifteen were wrong that way. `agentAlertTargets.test.ts` now catches it.
+And show what a human can CHECK: `delete_adobe_project` declares `projectId` first and
+must show only `projectName` — nobody can verify a 19-digit id.
 
 ## The response shape — never build it by hand
 
@@ -52,7 +116,11 @@ as a side channel is tolerated; a handler that NEEDS interaction doesn't qualify
 - **No writes hiding in reads**: a read tool must not call anything that creates on
   miss (e.g. `ensureOAuthCredentialId` creates a credential — `list_console_apis`
   derives its `managed` flags from the persisted union instead of probing the live
-  credential for exactly this reason).
+  credential for exactly this reason). This rule got teeth on 2026-08-25: the dry run
+  now trusts `readOnly`, so a write hiding in a read is a real mutation during a mode
+  that promises none. If a tool must keep the write, either declare `readOnly: false`
+  or force it off with `argDefaults` (the `check_github_app` pattern) — those are the
+  only two honest answers.
 - Persist state only AFTER the side effect succeeds (`add_console_apis` pattern).
 
 ## Not every tool is a descriptor row
@@ -167,6 +235,10 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
 - `inExtensionMcpServer.test.ts` pins the `registerProjectTools` tool list BY NAME
   ("serves the N project tools over the socket") — add yours and update the count word.
 - Descriptor suites: `readDescriptors`/`actionDescriptors`/`toolDescriptors` tests.
+- **The three declarations** (see above), each with a test that fails without it:
+  `toolAnnotations.test.ts` (read/write, both registration paths),
+  `toolNarration.test.ts` (a phrase, and no orphan phrase left behind), and
+  `agentAlertTargets.test.ts` (only if the tool raises a dialog).
 - `docs/systems/mcp-server.md` — the descriptor-driven tool list (§ "Descriptor-driven
   tools") and, if agent-facing behavior changed, the flow sections.
 - If agents should DISCOVER the tool proactively, teach it: generated AGENTS.md section
@@ -174,6 +246,26 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
   AI_CONTEXT_VERSION bump).
 - Tool NAME/description are the agent's search surface: short snake_case name, one-line
   description saying WHEN to use it (deferred tool loading ranks on these).
+
+## Spawning a command: `shell: true` is NOT optional
+
+`CommandExecutor.execute(command, opts)` defaults `shell` to **false**
+(`commandExecutor.ts`: `options.shell || false`) and hands the whole string to
+execa as the **executable name**. So a command with arguments never starts — and
+because execa is called with `reject: false`, it does not throw either. The caller
+gets empty stdout and a result that looks fine.
+
+Cost on 2026-08-25: a prompt evaluation returned in **two milliseconds** and
+rendered as "Nothing was changed. 0 steps, $0.00, 0s, nothing wasted" — a total
+failure wearing the clothes of a clean result. Eleven other callers in this repo
+already pass `shell: true`; the new one did not, and nothing in the type system
+or the tests could see the difference.
+
+Two rules:
+
+1. **Pass `shell: true`** whenever the command string carries arguments.
+2. **Treat unparseable stdout as a FAILURE**, never as empty data. Defaulting
+   fields to zero is how a dead process renders as a working feature.
 
 ## Logging
 

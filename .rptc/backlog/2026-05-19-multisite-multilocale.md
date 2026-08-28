@@ -1,4 +1,19 @@
+---
+id: EDS-1
+kind: epic
+area: eds
+needs: []
+value: med
+status: backlog
+layer: F
+---
 # Multi-Locale Storefront — Implementation Plan (Phase 1)
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Serve multiple locales (eventually multiple brands) from a single project. **Re-measured 2026-08-23: the container shipped, the feature did not.** The v6 wizard rebuild delivered this item's structural proposal — a "Business Structure" sub-step exists inside the Commerce area (`commerceSections.ts:76`) — but as a SINGLE website/store/store-view scope selector feeding catalog gating and datapack import. Zero locale code anywhere in `src/` (measured with controls). So the item's "repurpose the settings step" plan is stale; what remains is adding the locale axis INSIDE the existing step. Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
 
 ## Provenance
 

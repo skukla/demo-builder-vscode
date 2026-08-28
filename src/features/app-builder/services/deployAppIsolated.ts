@@ -15,7 +15,7 @@
  */
 
 import { applyIsolatedPackages } from './appConfigPackages';
-import { deployAppComponent } from './appDeployment';
+import { deployAppComponent, type DeployAppOptions } from './appDeployment';
 import type { AppDeploymentResult } from './types';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
@@ -24,8 +24,11 @@ import type { Logger } from '@/types/logger';
  * Apply the derived distinct `ow.package` to the integration's `app.config.yaml`
  * (idempotent — a redeploy re-runs it on the previously-renamed file), then run
  * the app deploy tail. A config with no standalone packages to rename is a
- * logged no-op: standalone-ness is guaranteed at the add door, and `aio app
- * deploy` fails a truly broken config with its own error.
+ * logged no-op — which is exactly right for BOTH shapes the add door admits:
+ * a standalone app always has packages to rename (guaranteed there), and an
+ * extension-layout app (App Management) deliberately deploys unrewritten, since
+ * its packages are fixed by the extension point and live in ext.config.yaml.
+ * `aio app deploy` fails a truly broken config with its own error.
  *
  * @param componentPath - the integration's local `components/<id>/` folder
  * @param owPackage - the derived distinct package name (`deriveOwPackage(id)`)
@@ -36,7 +39,7 @@ export async function deployAppComponentIsolated(
     owPackage: string,
     commandManager: CommandExecutor,
     logger: Logger,
-    onProgress?: (message: string, subMessage?: string) => void,
+    opts: DeployAppOptions = {},
 ): Promise<AppDeploymentResult> {
     const applied = await applyIsolatedPackages(componentPath, owPackage);
     logger.debug(
@@ -44,5 +47,5 @@ export async function deployAppComponentIsolated(
             ? `[App Builder] applied ow.package "${owPackage}"`
             : `[App Builder] no standalone packages to isolate for "${owPackage}"`,
     );
-    return deployAppComponent(componentPath, commandManager, logger, onProgress);
+    return deployAppComponent(componentPath, commandManager, logger, opts);
 }

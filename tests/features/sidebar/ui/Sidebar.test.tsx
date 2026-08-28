@@ -117,9 +117,12 @@ describe('Sidebar', () => {
             expect(onOpenAiChat).toHaveBeenCalledTimes(1);
         });
 
-        it('does not add a third tile — the AI zone stays at two', () => {
-            // The density problem that sent us to a menu: a third flat tile
-            // pushed the stack past the panel at editor zoom.
+        it('renders THREE AI tiles once the workbench has a callback', () => {
+            // Reversed 2026-08-25. Two earlier readings said a third tile would
+            // not fit; both missed that the stack was CENTRED, so half the
+            // leftover space sat above the zone label doing nothing. Top-aligned
+            // (`.sidebar-view`), the slack gathers below the last tile — which is
+            // exactly where a new tile extends into.
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
@@ -133,8 +136,30 @@ describe('Sidebar', () => {
 
             const aiTiles = screen
                 .getAllByRole('button')
-                .filter((b) => /^(chat|prompts)$/i.test(b.getAttribute('aria-label') ?? ''));
+                .filter((b) =>
+                    /^(chat|prompts|workbench)$/i.test(b.getAttribute('aria-label') ?? '')
+                );
+            // Two tiles since the Workbench moved to feature/prompt-workbench
+            // on 2026-08-26 (AI-3b): Chat and Prompts.
             expect(aiTiles).toHaveLength(2);
+        });
+
+        it('renders no Workbench tile — that surface is on its own branch', () => {
+            // Kept as a NEGATIVE: the tile existed until 2026-08-26 and the
+            // AiZone docstring still explains why the wrap breakpoint is 640px.
+            // If it comes back, it should come back deliberately (AI-3b).
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /^workbench$/i })).toBeNull();
+            expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
         });
 
         it('dispatches onOpenAiChat when Chat is clicked', () => {

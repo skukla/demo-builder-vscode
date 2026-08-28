@@ -17,6 +17,26 @@ import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/
 // Mock VS Code API
 jest.mock('vscode');
 
+// The sign-in commands (PL-5 / EDS-9). The locator hands back a controllable
+// auth service; the DA.live QuickPick is a spy so the command's delegation —
+// not the flow itself — is what these tests pin.
+const mockGetTokenStatus = jest.fn();
+const mockLogin = jest.fn();
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: {
+        isSidebarInitialized: jest.fn(() => false),
+        getSidebarProvider: jest.fn(),
+        getAuthenticationService: jest.fn(() => ({
+            getTokenStatus: mockGetTokenStatus,
+            login: mockLogin,
+        })),
+    },
+}));
+const mockDaLivePick = jest.fn();
+jest.mock('@/features/eds/handlers/daLive/daLiveAuthPrompt', () => ({
+    showDaLiveAuthQuickPick: (...a: unknown[]) => mockDaLivePick(...a),
+}));
+
 // Mock all command classes with proper implementations
 jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
     const MockShowProjectsListCommand = jest.fn().mockImplementation(function (this: any) {
@@ -145,11 +165,14 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 33 commands (resetAll only in dev mode)', () => {
+        it('should register all 36 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 34 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(34);
+            // 34 → 36: `signInAdobe` (PL-5) and `signInDaLive` (EDS-9), the
+            // command-palette doors to re-auth — until now an expired token
+            // outside a wizard flow had no human-reachable handle.
+            // resetAll stays excluded, dev mode only.
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(36);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -177,11 +200,15 @@ describe('CommandManager', () => {
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',
-                'demoBuilder.openAiExperience',
+                // Registered between openAi and openAiExperience — see
+                // commandManager.registerCommands().
+                        'demoBuilder.openAiExperience',
                 'demoBuilder.newAiChat',
                 'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',
+            'demoBuilder.signInAdobe',
+            'demoBuilder.signInDaLive',
                 'demoBuilder.registerGlobalMcp',
                 'demoBuilder.migrateStorefrontNames',
                 'demoBuilder.setRecommendedZoom',
@@ -242,6 +269,71 @@ describe('CommandManager', () => {
             };
             (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(mockConfig);
         };
+
+        describe('sign-in commands (PL-5 / EDS-9)', () => {
+            const handlerFor = (commandId: string): ((...a: unknown[]) => Promise<void>) => {
+                commandManager.registerCommands();
+                const h = (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                    (call) => call[0] === commandId
+                )?.[1];
+                expect(h).toBeDefined();
+                return h;
+            };
+
+            beforeEach(() => {
+                mockGetTokenStatus.mockReset();
+                mockLogin.mockReset().mockResolvedValue(true);
+                mockDaLivePick.mockReset().mockResolvedValue({ success: true });
+                (vscode.window.withProgress as jest.Mock).mockImplementation(
+                    async (_o: unknown, fn: () => Promise<unknown>) => fn()
+                );
+            });
+
+            it('signInAdobe logs in un-forced when not signed in', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
+
+                await handlerFor('demoBuilder.signInAdobe')();
+
+                expect(mockLogin).toHaveBeenCalledWith(false);
+            });
+
+            it('signInAdobe offers a FORCED re-login when already signed in', async () => {
+                // force=true is the org-switch recovery; an un-forced login on a
+                // valid session succeeds without changing anything, which is the
+                // silent no-op this branch exists to avoid.
+                mockGetTokenStatus.mockResolvedValue({
+                    isAuthenticated: true,
+                    expiresInMinutes: 420,
+                });
+                (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(
+                    'Sign in again'
+                );
+
+                await handlerFor('demoBuilder.signInAdobe')();
+
+                expect(mockLogin).toHaveBeenCalledWith(true);
+                // Humanized, not raw: 420 minutes reads "7h", because "~420 min"
+                // makes the reader do the arithmetic (owner, first live use).
+                expect(
+                    (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]
+                ).toContain('7h');
+            });
+
+            it('signInAdobe does nothing when the user declines the re-login', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
+                (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+
+                await handlerFor('demoBuilder.signInAdobe')();
+
+                expect(mockLogin).not.toHaveBeenCalled();
+            });
+
+            it('signInDaLive delegates to the ONE shared QuickPick flow', async () => {
+                await handlerFor('demoBuilder.signInDaLive')();
+
+                expect(mockDaLivePick).toHaveBeenCalledTimes(1);
+            });
+        });
 
         const invokeZoomCommand = async (commandId: string): Promise<void> => {
             commandManager.registerCommands();

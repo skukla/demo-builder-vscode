@@ -208,7 +208,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * — the wizard timeline lives inside the wizard webview itself.
      */
     public async updateContext(context: SidebarContext): Promise<void> {
-        await this.sendMessage('contextUpdate', { context });
+        await this.sendMessage('contextUpdate', {
+            context,
+        });
     }
 
     /**
@@ -220,7 +222,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Update sidebar context
         const newContext = await this.getCurrentContext();
-        await this.sendMessage('contextUpdate', { context: newContext });
+        await this.sendMessage('contextUpdate', {
+            context: newContext,
+        });
     }
 
     /**
@@ -302,7 +306,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      */
     private async handleGetContext(): Promise<void> {
         const context = await this.getCurrentContext();
-        await this.sendMessage('contextResponse', { context });
+        await this.sendMessage('contextResponse', {
+            context,
+        });
     }
 
     /**

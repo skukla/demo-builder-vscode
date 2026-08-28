@@ -8,6 +8,7 @@
  * informational, so the user can see what tools the AI can actually call.
  */
 
+import { SERVER_LABELS } from './aiSurfaceNames';
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
@@ -32,15 +33,10 @@ export interface AiMcpsListProps {
  * (`commerce-extensibility`, `dropins`) read as config plumbing in a capability
  * catalog; an id we don't recognise renders as itself rather than a guess.
  */
-const SERVER_LABELS: Record<string, string> = {
-    'demo-builder': 'Demo Builder',
-    'commerce-extensibility': 'Adobe App Builder',
-    playwright: 'Playwright',
-    dropins: 'Adobe Commerce Dropins',
-};
+// Labels + provenance live in `aiSurfaceNames` — shared with the coherence suite.
 
 function labelOf(entry: McpInventoryEntry): string {
-    return SERVER_LABELS[entry.id] ?? entry.id;
+    return SERVER_LABELS[entry.id]?.label ?? entry.id;
 }
 
 /** Format the right-hand side of the row based on inspection status. */

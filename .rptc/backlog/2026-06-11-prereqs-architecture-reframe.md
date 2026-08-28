@@ -1,4 +1,19 @@
+---
+id: PR-1
+kind: epic
+area: prerequisites
+needs: []
+value: low
+status: backlog
+layer: F
+---
 # Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Reframe `prerequisites.json` from "project prerequisites" to two tiers (extension-wide vs. feature-specific), build a non-dismissable first-run welcome panel, repoint the wizard step at project-specific work only, share one install runner. **Research complete + 16 decisions locked; ready for `/rptc:plan`** — no plan dir or code yet. Unblocks the Claude CLI detection plan below. **Re-measured 2026-08-23: all five structural claims hold** — no `scope` discriminator, the schema drift (dead `groups`/`multiVersion`/`versionCheck`, missing `perNodeVersion`) is unchanged, all 5 entries still `optional: false`, the prereqs step survived the v6 wizard rebuild as step 2, and no welcome panel/walkthrough exists. The v6 rebuild touched nothing this item measures.
 
 **Status:** Backlog — research complete (2026-06-11), decisions locked, awaiting `/rptc:plan` cycle.
 **Filed:** 2026-06-11
@@ -175,3 +190,11 @@ Block on owner approval before proposing implementation.
 - **Reuse the existing install runner.** Don't build a parallel install system. The cross-validation with the Claude plan confirmed the seam.
 - **AI-first UX is a stated goal.** Designs that surface extension-wide tools only through the wizard fail this. Designs that combine welcome panel + lazy gate + wizard step succeed.
 - **No activation interrupts beyond the one-time welcome panel.** Settings-change detection (D12) does not constitute an activation interrupt — it's reactive to user action, not extension lifecycle.
+
+## Shipped so far
+
+- 2026-08-27  Owner direction (2026-08-27, during the starter-kit live test): the choice is between moving the graphical check later vs targeted reactive checks at the moment a choice binds. First instance of the targeted model SHIPPED — ensureFnmNodeVersion at the integration add door (the chokepoint the wizard's early screen structurally cannot cover: integrations are selected after it, and dashboard/MCP adds never pass it). Loop's recommendation for this epic: keep the early graphical screen for extension-wide choice-independent tools (git, aio, fnm), move every choice-DEPENDENT need to ensure-at-the-door in this pattern; a graphical late re-check is cosmetic on top, not the enforcement.
+- 2026-08-27  FILED here per owner (2026-08-27): the FULL visual prerequisites experience — re-host the wizard's graphical prerequisites step as a reusable on-demand panel fed a SCOPED requirement list (just the delta a choice introduces), shown as a confirmation gate on dashboard integration adds and inline in the wizard's integrations area. The cheap version shipped same day outside this epic: progress-line visibility for the add-door node ensure + a disclosure line on catalog gallery cards ('Installs Node 24 on first use').
+- 2026-08-27  FILED (owner, 2026-08-27 evening) — the third leg of this epic: scoped tool updates. Design: (1) an INSTALL LEDGER — whenever the prerequisites installer or an ensure-at-the-door installs a tool, record tool/version/method/date; only ledger entries are eligible for extension-driven updates, everything else is user-managed and gets a message with the command, never a mutation. Honest edge: provenance is forward-only — tools present before the ledger default to user-managed (the safe direction to be wrong in). (2) VERSION/FRESHNESS EXPECTATIONS on prerequisite definitions so 'needs updating' is declared data — including a freshness rule for the CLI-tree class (PL-6: version equality cannot detect a stale dependency tree). (3) updates ride the existing check/apply surface (apply_updates), not a parallel one. Node-via-fnm is the model where possible: additive side-by-side versions, never in-place. DECISION RECORDED same day: NOT pulled into the starter-kit release — the ledger is forward-looking so it cannot fix veteran machines for a first-try release moment anyway; the release gets a targeted consent-gated aio pre-flight instead (see AB-1d).
+- 2026-08-27  Research FILED: .rptc/research/extension-owned-toolchain/research.md — the owner's bare-metal-minimum principle, the five-surface classification (aio is the one misplaced tool; homebrew flagged for the bootstrap audit), the full evidence chain from the 2026-08-27 staleness incident, options A/B/C with the trigger analysis, and the staged extension-owned-CLI plan (facility + App Builder adoption -> mesh/console + plugin pinning -> retire the aio prerequisite). This document is the epic's toolchain-ownership design input.
+- 2026-08-27  docs(research): extension-owned toolchain — the bare-metal-minimum principle (`be0d906b7`)

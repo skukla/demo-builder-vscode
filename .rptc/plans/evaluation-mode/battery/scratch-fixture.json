@@ -1,0 +1,42 @@
+{
+  "formatVersion": 2,
+  "version": "1.0.0",
+  "selectedPackage": "bodea",
+  "selectedStack": "eds-accs",
+  "componentSelections": {
+    "frontend": "eds-storefront",
+    "backend": "adobe-commerce-accs",
+    "dependencies": [],
+    "integrations": [],
+    "appBuilder": [
+      "commerce-integration-starter-kit"
+    ]
+  },
+  "name": "battery-scratch",
+  "title": "Battery Scratch",
+  "created": "2026-08-28T00:00:00.000Z",
+  "lastModified": "2026-08-28T00:00:00.000Z",
+  "componentConfigs": {
+    "adobe-commerce-accs": {
+      "ACCS_WEBSITE_CODE": "fake-test-pw-not-a-secret",
+      "ACCS_STORE_CODE": "fake-test-pw-not-a-secret",
+      "ACCS_STORE_VIEW_CODE": "fake-test-pw-not-a-secret",
+      "ACCS_GRAPHQL_ENDPOINT": "fake-test-pw-not-a-secret"
+    },
+    "eds-storefront": {
+      "AEM_ASSETS_ENABLED": "fake-test-pw-not-a-secret"
+    }
+  },
+  "appBuilderComponents": {
+    "scratch-integration": {
+      "kind": "integration",
+      "status": "deployed",
+      "name": "Scratch Integration",
+      "source": {
+        "owner": "fake-owner",
+        "repo": "fake-repo",
+        "branch": "main"
+      }
+    }
+  }
+}

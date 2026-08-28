@@ -46,16 +46,6 @@ function makeLogger(): Logger {
     } as unknown as Logger;
 }
 
-/** Legacy singular meshState carrying the deployed endpoint (today's manifests). */
-function legacyMeshState(): NonNullable<Project['meshState']> {
-    return {
-        envVars: { [PAAS_GRAPHQL_ENDPOINT]: 'https://commerce.example.com/graphql' },
-        sourceHash: 'abc123',
-        lastDeployed: LAST_DEPLOYED,
-        endpoint: MESH_URL,
-    };
-}
-
 /** The same mesh expressed as a keyed appBuilderComponents entry. */
 function keyedMeshEntry(): AppBuilderComponentState {
     return {
@@ -125,57 +115,32 @@ function generate(project: Project): string {
     return result.content as string;
 }
 
-describe('GOLDEN: config.json byte-identity across mesh-state shapes (D3 Step 06)', () => {
-    // The baseline is generated fresh in each test from the LEGACY shape —
-    // generate-before vs generate-after in the same run, never hand-written.
+describe('GOLDEN: config.json byte-identity across keyed mesh keys (D3 Step 06)', () => {
+    // PL-1 phase 2 removed the legacy singular meshState from Project, so the
+    // original legacy-vs-keyed identity arms are unrepresentable. What SURVIVES
+    // to guard is the key-shape identity: recordDeployOutcome keys
+    // never-migrated projects by the mesh component-instance id, so the
+    // endpoint read must find the entry by KIND, not only under 'mesh'.
 
-    it('baseline sanity: the legacy-shape config.json embeds the deployed mesh endpoint', () => {
-        const baseline = generate(makeProject({ meshState: legacyMeshState() }));
+    it('baseline sanity: the keyed-mesh config.json embeds the deployed mesh endpoint', () => {
+        const baseline = generate(
+            makeProject({ appBuilderComponents: { mesh: keyedMeshEntry() } }),
+        );
 
         // Guard against vacuous byte-equality of two endpoint-less outputs.
         expect(baseline).toContain(MESH_URL);
         expect(JSON.parse(baseline).public?.default?.['commerce-endpoint']).toBe(MESH_URL);
     });
 
-    it('keyed mesh entry beside meshState (transition shape) → byte-identical config.json', () => {
-        const baseline = generate(makeProject({ meshState: legacyMeshState() }));
-
-        const dual = generate(
-            makeProject({
-                meshState: legacyMeshState(),
-                appBuilderComponents: { mesh: keyedMeshEntry() },
-            }),
+    it('keyed entry under a component-instance key ("commerce-mesh") → byte-identical', () => {
+        const baseline = generate(
+            makeProject({ appBuilderComponents: { mesh: keyedMeshEntry() } }),
         );
 
-        expect(dual).toBe(baseline);
-    });
-
-    it('keyed-ONLY project under the migrated "mesh" key (post-Step-07 world) → byte-identical', () => {
-        const baseline = generate(makeProject({ meshState: legacyMeshState() }));
-
-        const keyedOnly = generate(
-            makeProject({
-                meshState: undefined,
-                appBuilderComponents: { mesh: keyedMeshEntry() },
-            }),
+        const instanceKeyed = generate(
+            makeProject({ appBuilderComponents: { 'commerce-mesh': keyedMeshEntry() } }),
         );
 
-        expect(keyedOnly).toBe(baseline);
-    });
-
-    it('keyed-ONLY project under a component-instance key ("commerce-mesh") → byte-identical', () => {
-        // recordDeployOutcome keys never-migrated projects by the mesh component
-        // instance id — the endpoint read must find the mesh entry by KIND, not
-        // only under the literal 'mesh' key.
-        const baseline = generate(makeProject({ meshState: legacyMeshState() }));
-
-        const keyedOnly = generate(
-            makeProject({
-                meshState: undefined,
-                appBuilderComponents: { 'commerce-mesh': keyedMeshEntry() },
-            }),
-        );
-
-        expect(keyedOnly).toBe(baseline);
+        expect(instanceKeyed).toBe(baseline);
     });
 });

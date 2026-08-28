@@ -228,11 +228,16 @@ ACCS_STORE_VIEW_CODE=citisignal_us
                     status: 'deployed',
                 },
             },
-            meshState: {
-                envVars: {},
-                sourceHash: null,
-                lastDeployed: '2024-01-01',
-                endpoint: mockMeshEndpoint,
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                        endpoint: mockMeshEndpoint,
+                            },
             },
         };
 
@@ -450,11 +455,16 @@ ACCS_STORE_VIEW_CODE=citisignal_us
                         status: 'deployed',
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: mockMeshEndpoint,
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: mockMeshEndpoint,
+                                    },
                 },
             };
 

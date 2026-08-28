@@ -26,8 +26,8 @@
 
 import { useCallback, useRef, useState } from 'react';
 import type { EnsureResult } from '../components/integration-flow';
-import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { WizardSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** The flow's state machine. */

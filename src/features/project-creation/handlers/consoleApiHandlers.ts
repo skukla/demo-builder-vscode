@@ -14,11 +14,11 @@
  * project to guard; sign-in and org presence are the only preconditions.
  */
 
-import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { resolveApiRowStates, type ApiOwner } from '@/core/state/apiRowState';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';

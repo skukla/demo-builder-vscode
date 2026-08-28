@@ -16,10 +16,11 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,
@@ -36,7 +37,6 @@ import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringE
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import type { AuthoringExperience } from '@/types/base';
@@ -485,7 +485,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 // The shared service performs the ordering internally.
                 progress.report({ message: 'Updating the DA.live editor link…' });
                 if (experience === 'experience-workspace') {
-                    progress.report({ message: 'Wiring Quick Edit into the storefront…' });
+                    progress.report({ message: 'Adding Quick Edit to the storefront…' });
                 }
                 await applyAuthoringExperienceFlip(project, experience, {
                     context: this.context,

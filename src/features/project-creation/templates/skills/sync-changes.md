@@ -1,6 +1,6 @@
 ---
 name: sync-changes
-description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `update_project_config` (credentials), or `promote_block_to_library` (block source).
+description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (block source).
 ---
 
 # Sync Changes
@@ -14,7 +14,7 @@ Use this skill to decide which sync operation to run after making changes.
 | Page content (`.md` file in DA.live) | `sync_content` — calls Helix preview + publish |
 | Block JS or CSS in `blocks/` | `sync_storefront` — git commit + push, then Helix preview+publish when credentials are available |
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
-| Component `.env` credential | `update_project_config`, then restart demo |
+| Component `.env` credential | `configure_project`, then restart demo |
 | Block changes to push back to source library | `promote_block_to_library` |
 | Remove a block from the library | `remove_block_from_library` |
 

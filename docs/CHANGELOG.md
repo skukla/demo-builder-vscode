@@ -7,6 +7,186 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.145] - 2026-08-28
+
+### Added
+- **Commerce Integration Starter Kit, end to end.** "Build Custom" now offers Adobe's Commerce Integration Starter Kit as a starting point beside the blank app. Deploying it does the whole job automatically: workspace credentials are created and injected, the required Adobe APIs are subscribed, the app is installed into your configured Commerce instance and associated with it — with automatic retries for the platform's own race conditions. Removing the integration now uninstalls it from Commerce first, so event registrations and configuration don't pile up as residue.
+- **Install state you can see and act on.** An App Management integration's drawer shows whether it's installed into Commerce, with an "Install into Commerce" retry that doesn't redeploy, and an "Open Commerce Admin" link. Agents get the same powers (`get_integration_install_status`, `install_integration`).
+- **Name your integrations.** Every integration — pre-built or custom — takes an optional display name at pick time; naming is a convenience, never a requirement.
+- **Sign in to Adobe / Sign in to DA.live** from the Command Palette.
+- **The agent activity record.** A new "Demo Builder: Agent Activity" output channel shows one plain line per agent action as it happens; the record is kept per session (last 10) and agents can answer "what did you do?" via `get_agent_trace`. Every agent call carries a short tag (`#47`) stamped on its Debug Logs lines, so a failing call filters straight to exactly its own log story. Argument values are never recorded or written to disk.
+- **Sessions act on the project they sit in.** A chat opened inside a project directory operates on that project — and can never hijack the dashboard's selected project. The home chat is unchanged.
+- **Agents can query Commerce directly** (`run_commerce_query`, `get_commerce_endpoints`) instead of assembling curl commands.
+- **Claude Code disk-footprint report** in Diagnostics: how much disk the AI tooling's own data uses, stated plainly, with no cleanup button.
+
+### Fixed
+- **Generated agent skills actually register now.** They were written in a file layout Claude Code never recognizes, so agents could only read them as plain files; existing projects are migrated automatically.
+- **No more surprise Adobe sign-in prompts.** An expired session refreshes silently in the background where possible; when a prompt is genuinely needed, it says so and times out cleanly instead of hanging the operation.
+- **Notifications behave.** One notification per operation, single-line messages, no stuck "Checking requirements…" cards.
+- **Mixed-Node projects pass prerequisites consistently.** A stack whose components use different Node versions no longer passes the check screen and then blocks on Continue over a version nothing required.
+- **Out-of-date Adobe CLI heals in place.** A deploy that fails on a stale CLI offers a one-click update-and-retry inside the same operation.
+- A deleted Adobe Console project now produces a diagnosis instead of a bare 404; settings lookups accept the key names a person would type; derived Adobe entity names respect Console's length limit.
+
+### Changed
+- **Config-value changes route through the structured configuration tool** for agents (it validates, refuses secrets by design, and marks dependent components stale); the raw file-write tool remains for whole-file work and says so.
+- **The AI measurement battery reached full coverage**: every promised skill is proven to load (34/34), safe write-tools run against a disposable scratch project, and the whole sweep is one command at release cuts. Every deliberately-unexercised tool now carries a written reason.
+- Internal quality held by ratchet: two full deduplication sweeps this cycle, zero import cycles, duplication at its recorded floor.
+
+### Removed
+
+- **`get_block_source` — the first tool deleted on measured evidence.** It read
+  a local block's files with an index/detail split and size caps; a local agent
+  does the same job with `ls` and `Read`, with fewer limits. Zero calls in the
+  recorded corpus, zero non-MCP callers, and it lost its one battery audition to
+  `ls` with a good answer. The two tools whose error messages routed agents to
+  it now point at the storefront checkout. (`get_block_authoring_shape` is
+  unrelated and stays — registry knowledge, not file reading.)
+
+### Fixed
+
+- **`get_component_config` masks secrets, which is now its whole point.** It
+  returned `.env` files and manifests VERBATIM — the same transcript leak
+  `stripManifestSecrets` exists to prevent, one tool over. Secret values are now
+  masked (keys stay visible), manifests go through the same strip `get_project`
+  uses, and a manifest that fails to parse is refused rather than returned raw.
+  The description says why an agent should prefer it over reading `.env`
+  natively: credentials never enter the transcript.
+
+### Fixed
+
+- **Storefronts no longer carry seven skills for a job they are not doing
+  (`AI_CONTEXT_VERSION` 25 → 26).** One predicate gated both the MCP server and
+  the skill set. It is right for the server — an EDS storefront really does call
+  `search-commerce-docs` — and wrong for the skills: Adobe ships one skill set
+  per project template, and the integration starter kit's set teaches an agent
+  to build back-office App Builder integrations. Its architect skill opens *"You
+  are an Expert Adobe Commerce Solutions Architect specializing in ... the Adobe
+  Commerce Integration Starter Kit"*, which is a false statement about a
+  storefront with no App Builder app anywhere. Every EDS project received it.
+  The skills now follow `projectBuildsAppBuilderApps` — a mesh or an attached
+  App Builder component — while the MCP server keeps the wider gate it needs.
+  Projects that already received the bundle are reconciled on the next
+  activation sweep: removal goes file by file through the ADR-013 seam, so a
+  skill you have edited is kept and reported rather than deleted.
+- **Attaching or removing an integration now re-derives the skill set.** Which
+  skills a project gets follows what it builds, so composition changing is
+  exactly when that answer changes — and nothing re-asked it. The activation
+  sweep rewrites content only when `AI_CONTEXT_VERSION` moves, and the freshness
+  badge fires only when a PACKAGE is missing, which adding an integration to a
+  storefront never produces (`commerce-extensibility` was already installed for
+  the storefront). So an integration arrived with none of the skills written for
+  building one. The inverse was broken for longer: removing the last App Builder
+  component left its skills behind forever. Best-effort — a deploy that landed is
+  never reported as failed because a markdown file could not be rewritten.
+
+### Removed
+
+- **The prompt-evaluation surface moved to `feature/prompt-workbench`.** The
+  Prompt Workbench, the agent trace view, the `evaluate_prompt` MCP tool and the
+  `Simulate a Prompt (Quick)` / `Prompt Workbench` / `Show What The Agent Just
+  Did` commands are off `develop` pending a decision on whether to keep them
+  (backlog `AI-3b`). 33 files and ~6,400 lines; nobody had opened the panel since
+  it shipped, and unfinished work should not sit in the mainline switched off.
+  Also removes ten types it left orphaned, the `evaluationHistory` field on
+  project state (nothing wrote it), and the short-lived
+  `demoBuilder.ai.enableEvaluationTools` setting, which existed only to hide the
+  commands and has nothing left to hide.
+- **The agent dry run went too** (`demoBuilder.ai.dryRun`, `Toggle Agent Dry
+  Run`). It was kept in the first pass for not depending on the workbench, which
+  is not a reason to keep something — being used is, and it was not. It defaulted
+  OFF so it protected nobody unless switched on, and its status bar item showed
+  unconditionally, giving every user a permanent "Dry run off" indicator for a
+  mode nobody had turned on.
+- **What stayed:** the **consent dialog** for destructive agent operations
+  (`demoBuilder.ai.requireAgentConsent`), which defaults ON and is therefore
+  doing work for every user right now. The tool-trace recorder also stays wired:
+  nothing reads it today, and it is what `AI-2` needs.
+
+### Fixed
+
+- **The six storefront skills have never installed, silently
+  (`AI_CONTEXT_VERSION` 24 → 25).** `aem-block-developer`, `aem-content-modeler`,
+  `aem-dropin-developer`, `aem-project-manager`, `aem-researcher` and
+  `aem-tester` were declared on the EDS storefront component via
+  `aiSkillBundle`, which resolved the bundle inside the **storefront checkout** —
+  a directory that has never contained a `skills/` folder, because the storefront
+  IS `@adobe/aem-boilerplate-commerce`. The copy hit ENOENT and skipped by
+  design, so every project ever created shipped without them and nothing
+  reported it. Adobe ships all of its starter-kit bundles inside the one
+  `@adobe-commerce/commerce-extensibility-tools` package we already install, so
+  the bundle now reads from the isolated `.demo-builder-mcp/` tools dir like the
+  `integration-starter-kit` bundle beside it. The dead `aiSkillBundle` config
+  field, its type, and its lookup helper are removed rather than left pointing at
+  a path that cannot work. Existing projects pick the skills up on the next
+  activation sweep. The suites passed throughout: the fixture named the
+  storefront path and the `readdir` mock answered whatever it was handed, so the
+  new test asserts the source path itself.
+
+### Added
+
+- **The Prompt Workbench has a door.** The extension contributes no menus for
+  `showEvaluationWorkbench` / `showAgentTrace`, so the panel was reachable only
+  by typing a command name. The sidebar's Prompts tile becomes a menu —
+  **Pick a prompt** / **Prompt workbench** — following the Chat tile's
+  precedent, and a saved prompt's kebab gains **Open in workbench** beside its
+  launch. A third flat tile was measured and rejected: by the sidebar's own
+  derivation a seventh tile needs 596px against a 600px wrap breakpoint, and the
+  earlier third-tile attempt was withdrawn for exactly this.
+- **The bundle now ANNOUNCES that tool (`AI_CONTEXT_VERSION` 22 → 23).** A
+  "Querying Commerce" section in the generated `AGENTS.md` names
+  `get_commerce_endpoints` and warns that a Catalog Service query with the wrong
+  store scope returns an EMPTY result and no error — the "why is phones empty?"
+  failure, against a catalog that was not empty. The same survey is why: agents
+  called 20 of 104 tools, overwhelmingly the ones the bundle NAMES, so a tool
+  nobody is told about is a tool nobody calls. It points at the TOOL rather than
+  baking values in — the endpoint, the mesh and the scope all change between
+  regenerations, and a confidently stale endpoint is worse than none. Existing
+  projects pick it up on the next activation sweep.
+- **`get_commerce_endpoints` — the Commerce connection facts, as a tool.** Where
+  to send a query and what to send with it: the backend's GraphQL endpoint,
+  Catalog Service, the deployed mesh, the `Magento-*` headers and the store scope
+  they select. A survey of 48 sessions run inside demo projects found 77% of tool
+  calls answering four orientation questions while the one long session of real
+  Commerce work issued **28 hand-assembled `curl`s** — nothing on a 104-tool
+  surface answered "what is this project's GraphQL endpoint". Headers come from
+  `generateHeaders`, the same function that writes the storefront's `config.json`,
+  so an agent and the site it is debugging cannot query two different stores.
+  Reports the mesh and the direct endpoint separately, plus which one the
+  storefront uses. Returns nothing the registry marks `secret: true`, asserted by
+  a test.
+- **The agent's own reply.** The run's JSON carries a `result` string beside the
+  cost fields and it was being discarded. Capturing it is what turns the panel
+  from a log of tool calls into a conversation. Left out of the agent-facing
+  summary deliberately — unbounded prose against a bounded response.
+
+### Changed
+
+- **The workbench reads like a chat, not a log.** It rendered the trace as a
+  numbered list of RAW TOOL NAMES (`1. get_current_project — 5ms`) while
+  `toolNarration.ts` held 103 authored plain-English phrases for those exact
+  tools and neither view imported it. Now: a "You" turn, phase bands in the
+  tool's own words, a "Claude" reply, and the numbers once at the end. A phase is
+  a run of consecutive calls to ONE tool — the strictest rule, chosen so the
+  label is never wrong about what it contains — and a band says failed or
+  simulated **without being opened**. Tool names and argument names survive one
+  level down, for the reader who asks. Both views share the renderer
+  (`Transcript.tsx` over the pure `transcriptPhases.ts`) so they cannot drift.
+- **The composer moved to the bottom**, one box, and the panel's saved-prompt
+  Picker was deleted. It duplicated the Prompt Library's whole job. Each surface
+  does one thing: the library PICKS, the terminal RUNS, the workbench MEASURES.
+- **"Try it out" is gone from the product.** The action is **Simulate**, which is
+  the word every blocked step already used ("simulated — nothing changed") and
+  which pairs against the one control that does not: "Run this for real in the
+  chat". The command palette entry is now **Demo Builder: Prompt Workbench**.
+
+### Fixed
+
+- **Two stale layout claims in the sidebar.** `custom-spectrum.css` and
+  `sidebar/CLAUDE.md` both still derived the tile-wrap threshold from a
+  `padding-top: 80px` that was replaced by centring long ago, quoting 572px where
+  the current layout measures 524px. Found while checking whether a seventh tile
+  fits; the answer depended on the number being right.
+
 ## [1.0.0-beta.144] - 2026-08-25
 
 ### Added

@@ -14,8 +14,189 @@ measurement can only compare against itself.
 
 | File | What it is |
 |---|---|
-| `run.mjs` | The A/B runner used on 2026-08-24. Two arms, five tasks, one run each. |
-| `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info` output. |
+| `prompts.json` | The battery. Each prompt declares the tool that SHOULD answer it. |
+| `run.mjs` | Runs every prompt once and scores what the agent actually reached for. |
+| `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info`. |
+| `results/<utc>.jsonl` | One immutable file per run: a row per prompt, with the full route. |
+| `results/<utc>.meta.json` | Which build was serving, prompt count, cache state. |
+| `score.test.mjs` | Drives all six diagnoses with fabricated transcripts. No agent runs. |
+
+## The allowlist is GENERATED, never hand-kept
+
+```bash
+node enumerate-tools.mjs ~/.demo-builder/projects/bodea/.mcp.json   # 163 MCP tools
+node verify-coverage.mjs                                            # prove nothing is missing
+```
+
+The allowlist used to be a file of 45 read-only tool names. That drifts, and it
+drifts **silently**: a blocked tool and a missing tool produce identical routes,
+so the battery reports "the agent went around us" when the truth is "we refused
+it". `get_commerce_endpoints` and `run_commerce_query` both shipped and were
+blocked; the second produced a `NOT-FINDABLE` verdict for a tool the agent had
+found on first exposure.
+
+Now the four servers are asked at run time. A tool that shipped an hour ago is
+included; one that was deleted is not. **A server that fails to answer ABORTS the
+run** rather than contributing nothing, because silently contributing nothing is
+exactly how the list ends up short.
+
+## Claude's own tools are gated too, and inconsistently
+
+Measured, not assumed — the assumption was wrong:
+
+| tool | listed? | available? |
+|---|---|---|
+| `Read` `Write` `Edit` `ToolSearch` | no | **yes** — always on |
+| `Glob` `Grep` | no | **no** — refused until named |
+| `TodoWrite` | yes | **no** — absent in headless `-p` regardless |
+
+An agent denied `Glob` falls back to the shell without saying so, which then
+reads as "went around us". So `NATIVE_TOOLS` in `run.mjs` names them explicitly.
+
+**This is the one place drift can still enter**, because natives have no
+`tools/list`. `verify-coverage.mjs` checks the list against every native tool
+ever OBSERVED in a recorded run — which cannot prove completeness, only that
+nothing seen is missing. It says so in its own output rather than printing a
+reassuring tick.
+
+## The agent gets the surface a real project has
+
+Four MCP servers, not one: `demo-builder`, `commerce-extensibility`, `playwright`,
+`dropins`. The allowlist covers all of them — 74 read-only tools — because a
+battery offering only our tools cannot tell "the agent chose us" from "the agent
+had no alternative", and that distinction is the whole finding.
+
+Read-only per tool, enumerated live from each server rather than guessed:
+`commerce-extensibility` ships `aio-app-deploy`, `playwright` ships
+`browser_run_code_unsafe`, `dropins` ships three `scaffold_*` writers. Widening
+the surface must not widen what an unattended run can do. See
+`other-servers-readonly.txt` for what is excluded and why.
+
+Measured 2026-08-26 after the change: **10 of 10 hits, and zero prompts reached
+for another server** — with 29 alternatives available including direct
+competitors (`dropins` `list_slots`, `search_docs`; Playwright `browser_navigate`).
+
+The caveat that keeps that honest: these ten prompts target OUR jobs. "Why is
+this block rendering wrong?" is `dropins` territory and is not asked. The result
+says our tools win on our ground, not everywhere.
+
+## Results are never overwritten
+
+Each run writes `results/<utc-timestamp>.jsonl` and refuses to clobber an
+existing one. The first version truncated a single `results.jsonl` on startup, so
+running the "after" deleted the "before" — and before-versus-after is the only
+thing this battery is for.
+
+Two things are recorded beside every run, because without them a number cannot be
+compared to anything:
+
+- **Which build was serving.** Read live from `mcp-live-probe`. The running host
+  is routinely many commits behind the checkout — it was 22 behind during the
+  first run.
+- **Cache state**, from `BATTERY_CACHE`. Declared, never inferred: cache alone
+  swung one prompt 55,236 → 8,959 in a prior measurement.
+
+## A tool can answer an error and still look fine
+
+`is_error` is not enough. `list_installed_datapacks` answers a signed-out session
+with the prose *"Error: Adobe sign-in required…"* and `is_error: false`, so the
+protocol reports success. **Four runs scored `ok` on 2026-08-26 while the tool had
+answered nothing at all** — and the conclusion drawn from them, that `datapacks`
+got faster after a fix, was wrong twice over: it had not got faster, it had
+stopped working, and the agent was giving up sooner.
+
+The scorer now reads the text as well as the flag, and a call whose result failed
+is not a hit. Both are pinned in `score.test.mjs` against a fixture lifted
+verbatim from a real run.
+
+## Auth state is recorded, not assumed
+
+Adobe auth is read before and after every run and written into the `.meta.json`,
+and a run that crosses a sign-out is flagged. A signed-out run prints a warning
+before the first prompt.
+
+That token expired mid-afternoon on 2026-08-26 and nothing said so; a signed-out
+run was compared against a signed-in baseline as though the difference were the
+fix. Same discipline as cache state: declared, never inferred.
+
+## Runs cannot change anything
+
+The battery is diagnostic and must leave nothing behind. Left alone it does not:
+run 1 of the cross-server prompt **wrote a memory file and edited MEMORY.md**, so
+run 2 began with run 1's conclusions. A repeat that inherits the previous
+repeat's notes is not a second sample.
+
+Two guards, because one is not enough:
+
+- `Write`, `Edit` and `NotebookEdit` are denied outright — no prompt here has a
+  reason to write.
+- Memory is **snapshotted before each prompt and restored after**. `Bash` is
+  allowed on purpose (it is how "went around us" is detected), and an agent told
+  it cannot use `Write` offers the shell instead — it said exactly that when the
+  deny was tested. Snapshot/restore does not depend on predicting the route.
+
+A run that tried to write prints one line saying so, rather than reverting
+silently.
+
+## One sample is not a result
+
+```bash
+node run.mjs --only datapacks --repeat 3
+```
+
+Agents are stochastic and every figure here is n=1 by default. On 2026-08-26 the
+`datapacks` prompt changed diagnosis between two runs and read exactly like a
+regression from the fix that ran in between. Three repeats settled it: **one bad
+run in five**, all four others taking an identical clean route. Nothing had
+broken.
+
+Before believing any single-run change, repeat it. Before reporting one as a
+regression, repeat it and say how many samples you have.
+
+## The idea
+
+**We know the right answer before we ask.** Every prompt names the tool that
+should handle it, so "what did the agent use?" is a score rather than an
+interpretation. Three outcomes:
+
+| | meaning |
+|---|---|
+| **hit** | it used a tool we said should answer this |
+| **around** | it used Bash or WebFetch instead — **the finding** |
+| **miss** | neither; it answered from something else, or not at all |
+
+`around` is the one worth having, and it splits two ways that look identical
+until you check: either we have **no tool** for that job, or we have one and the
+agent **never found it**. `published` is in the battery precisely to tell those
+apart — `read_published_page` exists and does exactly that job, and on 2026-08-25
+an agent hand-wrote four `curl`s to aem.live instead.
+
+**Bash is deliberately allowed.** Deny it and every prompt is forced through our
+tools, and the battery measures nothing.
+
+## It says WHY, not just what
+
+`around` on its own tells you something is wrong and nothing about the fix. Each
+run is diagnosed, and only ONE of these means "build a new tool":
+
+| diagnosis | what it means | the fix |
+|---|---|---|
+| `NOT-ANNOUNCED` | it never even searched — it did not know to look | name the tool in the generated bundle |
+| `NOT-FINDABLE` | it searched, and still went around | the name or description is wrong |
+| `TOOL-BROKEN` | our tool was called and errored | fix the tool |
+| `TOOL-INSUFFICIENT` | it called ours, then went to the shell anyway | the tool answered, but not usefully |
+| `NO-ROUTE` | neither our tool nor the shell | there may be no way to do this at all |
+
+To tell those apart the runner records what the first version threw away: the
+agent's own words, tool results, the shell commands it ran instead, and whether
+it searched. **The agent usually says the gap out loud** — "there is no tool for
+this, so I will use curl" — and that sentence is worth more than any inference
+from the route.
+
+The shell command it ran instead is the specification for the tool it needed.
+That is exactly where `get_commerce_endpoints` came from.
+
+Test the diagnosis without spending a run: `node score.test.mjs` (6 cases).
 
 ## Running it
 

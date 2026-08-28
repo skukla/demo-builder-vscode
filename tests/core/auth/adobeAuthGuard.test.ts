@@ -15,6 +15,7 @@ import {
     type AdobeAuthManager,
     type AdobeAuthResult,
 } from '@/core/auth/adobeAuthGuard';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 // =============================================================================
@@ -171,6 +172,34 @@ describe('ensureAdobeIOAuth', () => {
 
         // Then: Should return cancelled
         expect(result).toEqual({ authenticated: false, cancelled: true });
+    });
+
+    it('times out an UNANSWERED sign-in prompt into cancelled — never hangs (2026-08-27)', async () => {
+        // The measured failure: a headless deploy sat 9+ minutes on this prompt
+        // in a window nobody was watching. Unanswered must resolve on its own.
+        jest.useFakeTimers();
+        try {
+            const authManager = createMockAuthManager({
+                isAuthenticated: jest.fn().mockResolvedValue(false),
+            });
+            (vscode.window.showWarningMessage as jest.Mock).mockReturnValue(
+                new Promise(() => undefined) // never answered
+            );
+
+            const pending = ensureAdobeIOAuth({ authManager, logger: mockLogger });
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.LONG);
+            const result = await pending;
+
+            expect(result).toEqual({ authenticated: false, cancelled: true });
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('awaiting the sign-in prompt')
+            );
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('sign-in prompt unanswered')
+            );
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     // =========================================================================

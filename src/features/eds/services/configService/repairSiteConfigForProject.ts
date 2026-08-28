@@ -35,12 +35,12 @@
 import type * as vscode from 'vscode';
 import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
-import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     repairSiteConfig,
     type RepairSiteConfigResult,
 } from '@/features/eds/services/configService/repairSiteConfigHeadless';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,

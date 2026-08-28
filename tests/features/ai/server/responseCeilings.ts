@@ -42,6 +42,36 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    get_agent_trace: {
+        bytes: 50_000,
+        why:
+            'Measured live 2026-08-28: one entry serializes to ~180-230B (446B for a ' +
+            '2-entry response); the tool caps entries at 200, so worst case is ~46KB ' +
+            'plus the envelope. The cap is this ceiling\'s basis — raising MAX_LIMIT ' +
+            'must raise this with it.',
+    },
+
+    run_commerce_query: {
+        bytes: 31_000,
+        why:
+            'ENFORCED, not observed. The tool truncates at `MAX_RESPONSE_CHARS` (30,000) ' +
+            'and declares the cut in the payload, so this ceiling is a bound the code ' +
+            'holds rather than a figure measured once and hoped for. It needs one: a ' +
+            'catalog query can return megabytes, and this is the only tool here whose ' +
+            'response size is chosen by the CALLER rather than by us. A truncated JSON ' +
+            'body that did not SAY it was truncated would be worse than a large one — ' +
+            'the agent would parse a fragment and believe it.',
+    },
+    reload_window: {
+        bytes: 400,
+        why:
+            'a FIXED acknowledgement — `{reloading, inMs, note}`. Measured at 263 bytes, ' +
+            'and it cannot grow: nothing in it scales with the project, the catalog or ' +
+            'anything else. The note is the largest part and it is a constant string, ' +
+            'kept because a caller that does not expect the socket to drop reads a ' +
+            'successful reload as a crash. Ceiling rather than an exemption because the ' +
+            'size is known, and rather than an IOU because there is nothing left to measure.',
+    },
     // ── file-based tools (mcp-server.ts) ────────────────────────────────────
     list_projects: {
         bytes: 8_000,
@@ -57,16 +87,15 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'before the aiFileHashes collapse). Secret VALUES are stripped before shaping ' +
             '(stripSecretValues), so this number can only go down',
     },
-    get_component_config: { bytes: 40_000, why: 'returns a config file verbatim — the file IS the answer' },
+    get_component_config: {
+        bytes: 40_000,
+        why: 'returns a config file verbatim — the file IS the answer',
+    },
     update_project_config: { bytes: 2_000, why: 'write confirmation' },
     sync_storefront: { bytes: 2_000, why: 'git result summary' },
     list_blocks: {
         bytes: 8_000,
         why: 'bounded by DEFAULT_LIST_LIMIT (100 rows), not by storefront size; 2,781 live on a 53-block storefront',
-    },
-    get_block_source: {
-        bytes: 32_000,
-        why: 'file manifest, or ONE file capped at MAX_FILE_BYTES (30KB) — the source is the answer',
     },
     get_block_authoring_shape: {
         bytes: 10_000,
@@ -91,6 +120,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_dalive_sites: { bytes: 8_000, why: 'paged summary; 204 live' },
     delete_github_repo: { bytes: 1_000, why: 'delete outcome or refusal' },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
+
+    // ── Diagnostics ─────────────────────────────────────────────────────────
+    read_debug_logs: {
+        bytes: 46_000,
+        why:
+            'channel-log tail; the tool enforces its own 45KB newest-first byte cap ' +
+            '(500-line × 500-char worst case would otherwise be ~250KB)',
+    },
 
     // ── Adobe console ───────────────────────────────────────────────────────
     list_orgs: { bytes: 4_000, why: 'org list is short; 44 live' },
@@ -119,14 +156,22 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
 
     get_project_status: {
         bytes: 2_000,
-        why: 'one project\'s status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size',
+        why: "one project's status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size",
+    },
+
+    get_commerce_endpoints: {
+        bytes: 2_000,
+        why:
+            'three endpoints, one header block and four scope codes — a FIXED field count. ' +
+            'Nothing here grows with catalog, store or project size, so a breach means a ' +
+            'field entered the payload rather than a project getting bigger',
     },
 
     get_component_requirements: {
         bytes: 3_000,
         why:
             'ONE component narrowed out of a 14,931-byte catalog whose env-var registry alone is 9,236. ' +
-            'Bounded by that component\'s own env-var count, not by catalog size — a breach means the ' +
+            "Bounded by that component's own env-var count, not by catalog size — a breach means the " +
             'narrowing broke and a category is riding through',
     },
     validate_component_selection: {
@@ -138,8 +183,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 4_000,
         why: 'the applied diff (env reported as KEYS, never values) plus the still-unset list — bounded by the field count, not by config size',
     },
-    create_adobe_project: { bytes: 1_000, why: 'created project id + name, or a refusal explaining the likely cause' },
-    create_adobe_workspace: { bytes: 1_000, why: 'created workspace id + name and the project it landed in' },
+    create_adobe_project: {
+        bytes: 1_000,
+        why: 'created project id + name, or a refusal explaining the likely cause',
+    },
+    create_adobe_workspace: {
+        bytes: 1_000,
+        why: 'created workspace id + name and the project it landed in',
+    },
     delete_adobe_project: {
         bytes: 4_000,
         why: 'a delete verdict; on failure the FAILED teardown steps ride along, bounded by the step count',
@@ -224,7 +275,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why:
             '14 live for {valid:true} — the dry run answers a question, it does not describe the ' +
             'request. 47 and 80 for the two argument refusals. The headroom is for a valid:false ' +
-            'whose `reason` is the service\'s own prose',
+            "whose `reason` is the service's own prose",
     },
     list_datapack_export_items: {
         bytes: 4_000,
@@ -256,7 +307,7 @@ export function expectWithinCeiling(tool: string, response: string): void {
     if (!ceiling) {
         throw new Error(
             `No response ceiling recorded for "${tool}". Add one to responseCeilings.ts — ` +
-                `a tool with no recorded size is one nobody is watching.`,
+                `a tool with no recorded size is one nobody is watching.`
         );
     }
     const bytes = Buffer.byteLength(response, 'utf8');
@@ -265,7 +316,7 @@ export function expectWithinCeiling(tool: string, response: string): void {
             `${tool} returned ${bytes.toLocaleString()} bytes, over its ${ceiling.bytes.toLocaleString()}-byte ceiling.\n` +
                 `  Recorded basis: ${ceiling.why}\n` +
                 `  Usually this means a list lost its page size, or a field meant for the dashboard ` +
-                `entered the payload. Fix the response, or raise the ceiling WITH a new measurement.`,
+                `entered the payload. Fix the response, or raise the ceiling WITH a new measurement.`
         );
     }
 }

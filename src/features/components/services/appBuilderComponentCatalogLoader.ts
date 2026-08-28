@@ -50,6 +50,31 @@ function fitsAxis(constraint: string[] | undefined, id: string): boolean {
 }
 
 /**
+ * Does one entry fit the project's stack? The single-entry form of
+ * {@link getAvailableAppBuilderComponents}, for the add door: galleries are
+ * already axis-filtered, but the dashboard/MCP add-by-id path resolves from
+ * the RAW catalog, so a constrained entry (the starter kit is Commerce-only)
+ * could be added to a project whose stack cannot use it. A backendless
+ * project passes `''`, which no constrained entry lists — so a Commerce-gated
+ * entry is refused there too, by the same rule the galleries use.
+ *
+ * @param entry - the resolved catalog (or synthesized custom) entry
+ * @param backendId - the project's backend id ('' when none)
+ * @param frontendId - the project's frontend id ('' when none)
+ * @returns true when both axes fit
+ */
+export function entryFitsProjectAxes(
+    entry: AppBuilderComponentCatalogEntry,
+    backendId: string,
+    frontendId: string,
+): boolean {
+    return (
+        fitsAxis(entry.compatibleBackends, backendId) &&
+        fitsAxis(entry.compatibleFrontends, frontendId)
+    );
+}
+
+/**
  * Get all pre-built appBuilderComponents compatible with the given backend + frontend.
  *
  * An entry matches when it is unconstrained on (or lists) BOTH the backend and
@@ -85,11 +110,28 @@ export function getAvailableAppBuilderComponents(
  * kind-only filter keeps it. That rule previously lived in a prop docblock on
  * CatalogStage rather than in code, so no caller applied it.
  *
+ * SEEDS are excluded for the same reason (owner decision 2026-08-27): the
+ * starter kit "is not really a pre-built integration — it's a Custom App
+ * that's built using the starter kit", so it lives on the Build-custom naming
+ * stage's seed row ({@link isSeedIntegration}), never in this gallery.
+ *
  * @param entry - a catalog entry
  * @returns true when the entry is a finished, pickable integration
  */
 export function isPrebuiltIntegration(entry: AppBuilderComponentCatalogEntry): boolean {
-    return entry.kind === 'integration' && entry.blank !== true;
+    return entry.kind === 'integration' && entry.blank !== true && entry.seed !== true;
+}
+
+/**
+ * Is this entry a SEED — scaffolding the Build-custom flow offers beside
+ * "Blank" as a starting point? Seeded instances are always named clones of
+ * the seed's repo; the seed never appears in the pre-built gallery.
+ *
+ * @param entry - a catalog entry
+ * @returns true when the entry is a Build-custom starting point
+ */
+export function isSeedIntegration(entry: AppBuilderComponentCatalogEntry): boolean {
+    return entry.kind === 'integration' && entry.seed === true;
 }
 
 /**
@@ -156,6 +198,28 @@ function assertInstanceId(value: string): void {
 }
 
 /**
+ * The capability fields a custom entry INHERITS when its source repo matches an
+ * authored catalog entry (the seed model). Identity fields (id, name,
+ * description, `blank`) and audience fields (nativeForPackages, onlyForPackages)
+ * are deliberately NOT here — a seeded instance is the user's own app, not the
+ * catalog entry wearing a new name.
+ */
+function seedCapabilityFields(
+    seed: AppBuilderComponentCatalogEntry,
+): Partial<AppBuilderComponentCatalogEntry> {
+    return {
+        layout: seed.layout,
+        lifecycle: seed.lifecycle,
+        nodeVersion: seed.nodeVersion,
+        requiredApis: seed.requiredApis,
+        compatibleBackends: seed.compatibleBackends,
+        compatibleFrontends: seed.compatibleFrontends,
+        providesEnvVars: seed.providesEnvVars,
+        envSchema: seed.envSchema,
+    };
+}
+
+/**
  * Build a custom-URL integration entry from a user-provided GitHub source.
  *
  * The custom-URL door: an integration acquired by owner/repo (optionally branch)
@@ -167,6 +231,14 @@ function assertInstanceId(value: string): void {
  * named instances share one template repo. Without it, the id derives from
  * `${owner}-${repo}` (the dashboard add door, unchanged). The display name
  * resolves from `source.name` when present, else the repo name.
+ *
+ * SEED RECOGNITION: a source matching an AUTHORED catalog entry (owner+repo,
+ * exact — a fork is deliberately not recognized, same rule as
+ * {@link isBlankSource}) inherits that entry's CAPABILITY fields —
+ * layout/lifecycle/nodeVersion/requiredApis/axes. Without this, "start a custom
+ * app from the starter kit" produced an entry the deploy path would treat as a
+ * standalone app: ow-package rewrite applied, workspace config never imported,
+ * Node version unknown — a broken deploy from a correct repo.
  *
  * @param source - The GitHub source ({owner, repo, branch?, name?})
  * @param id - Optional explicit instance id (the sources-map key)
@@ -191,7 +263,13 @@ export function buildCustomIntegrationEntry(
     if (id !== undefined) {
         assertInstanceId(id);
     }
+    // Authored entries only: derived meshes share no repos with custom adds, and
+    // matching them would be coincidence, not a seed.
+    const seed = authored.appBuilderComponents.find(
+        (entry) => entry.source.owner === source.owner && entry.source.repo === source.repo,
+    );
     return {
+        ...(seed ? seedCapabilityFields(seed) : {}),
         id: id ?? `${source.owner}-${source.repo}`,
         name: source.name ?? source.repo,
         description: `Custom App Builder component from ${source.owner}/${source.repo}`,

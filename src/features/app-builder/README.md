@@ -21,7 +21,8 @@ features/app-builder/
     ├── appBuilderComponentRunner.ts  # keyed runner: clone → install → subscribe → deploy per id
     ├── deployAppIsolated.ts          # package-isolated deploy (applyIsolatedPackages + deploy)
     ├── appDeployment.ts              # deployAppComponent — org-agnostic deploy helper
-    ├── appConfigPackages.ts          # app.config.yaml package rewrite (isolation)
+    ├── appConfigPackages.ts          # app.config.yaml layout detection + package rewrite (isolation)
+    ├── appManagementClient.ts        # App Management API client (install/validate/associate; unwired)
     ├── owPackageName.ts              # deriveOwPackage(instanceId) — per-instance ow.package
     ├── apiSubscriber.ts              # Console API subscription (full-union PUT)
     ├── apiSubscriberClientAdapter.ts # runner-facing subscriber adapter
@@ -39,7 +40,7 @@ features/app-builder/
   `providesEnvVars` are preserved; volatile fields `status`/`endpoint`/`url`/`envVars`/
   `sourceHash`/`lastDeployed` are the deploy record).
 - Readers go through the accessors (`getMeshAppBuilderComponent`,
-  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`,
+  `listAppBuilderComponents`,
   `getProvidedEnvVars`); the accessors synthesize from the in-memory legacy singletons only
   for pre-migration projects.
 - A guard test (`tests/core/state/singularStateAccessGuard.test.ts`) pins the few files

@@ -21,8 +21,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { raisesConsentDialog } from './agentAlertCopy';
+import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
+import { asRawText } from './mcpToolResult';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
+import {
+    fingerprintArgs,
+    resultByteLength,
+    type ToolTraceRecorder,
+    type TraceOutcome,
+} from './toolTraceRecorder';
+import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
+import { currentCallTag, nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
@@ -48,6 +58,39 @@ const SERVER_VERSION = '1.0.0';
  * straight through): a false positive costs one unnecessary notification,
  * a false negative is a live-CDN mutation running invisibly. A new tool
  * with a novel name fails CLOSED into "mutating".
+ */
+/**
+ * Does this tool's own definition say it only reads?
+ *
+ * THE classifier. Three things gate on it — the dry run, the chat's opening
+ * line, and the phase sinks — and all three used to gate on
+ * {@link isReadOnlyToolName}, a regex over the tool's name.
+ *
+ * A name cannot express "called `check_` and writes anyway". `check_github_app`
+ * is exactly that (it triggers a Helix code sync on a 404) and the guard that
+ * holds it closed had to be found by a hand audit of all 43 read-shaped tools,
+ * because nothing could state it.
+ *
+ * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
+ * over-blocked under the dry run, which is recoverable; the other direction is a
+ * real mutation during a mode that promises none. `toolAnnotations.test.ts`
+ * asserts every registered tool declares, so the fallback never runs in
+ * production.
+ */
+function declaredReadOnly(schema: unknown): boolean {
+    const annotations = (schema as { annotations?: { readOnlyHint?: unknown } } | undefined)
+        ?.annotations;
+    return annotations?.readOnlyHint === true;
+}
+
+/**
+ * Name-shape guess at read-vs-write. NOT used to gate anything any more — see
+ * {@link declaredReadOnly}, which reads the tool's own declaration.
+ *
+ * Kept as the cross-check `toolAnnotations.test.ts` runs: a declaration that
+ * disagrees with the name is either a bug or a deliberate exception, and the
+ * test makes the difference explicit rather than silent. Both `check_github_app`
+ * and the `select_*` trio are real, recorded disagreements.
  */
 export function isReadOnlyToolName(name: string): boolean {
     return /^(list|get|read|check|find|verify|inspect|show|describe)_/.test(name);
@@ -124,7 +167,7 @@ const CONSENT_FIELDS = {
  * rather than a silent mutation.
  */
 function strictifyWriteSchema(name: string, schema: unknown): unknown {
-    if (isReadOnlyToolName(name)) return schema;
+    if (declaredReadOnly(schema)) return schema;
     const shaped = schema as { inputSchema?: unknown } | undefined;
     const input = shaped?.inputSchema;
     if (input instanceof z.ZodObject) {
@@ -193,8 +236,15 @@ async function announceToolStart(
     name: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extra: any,
+    simulated = false,
 ): Promise<void> {
-    await sendProgress(extra, progressLabel(name));
+    // Silence when a tool has no authored phrase. Saying nothing is strictly
+    // better than announcing "Deploy mesh" — the derived wording is the defect
+    // `toolNarration.ts` exists to remove, so there is no fallback to it here.
+    // `toolNarration.test.ts` asserts every registered tool has a phrase, which
+    // makes this branch unreachable rather than merely unlikely.
+    const line = progressLabel(name, simulated);
+    if (line) await sendProgress(extra, line);
 }
 
 function withToolLogging(
@@ -213,45 +263,109 @@ function withToolLogging(
         args: unknown,
         description?: string,
     ) => Promise<ConsentVerdict>,
+    trace?: ToolTraceRecorder,
+    projectShape?: () => string | undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
              
+            // Read ONCE at registration: the declaration is static, and re-deriving
+            // it per call would invite someone to make it dynamic later.
+            const readOnly = declaredReadOnly(schema);
             server.registerTool(
                 name,
                 strictifyWriteSchema(name, schema),
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                async (args: any, extra: any) => {
+                async (args: any, extra: any) =>
+                    // The ambient call tag (AI-2d): everything this call does —
+                    // guards, deploys, their debug-log lines — runs inside it,
+                    // so `[Guards #47]` lines link back to trace entry #47.
+                    runWithCallTag(nextCallTag(), async () => {
+                    const callTag = currentCallTag();
                     const started = Date.now();
                     const argKeys =
                         args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                     logger.info(`[MCP] tool: ${name}`);
+                    /**
+                     * Record this call, whatever happened to it.
+                     *
+                     * Never throws: a recorder fault must not turn a working
+                     * tool call into a failure. Recording is a diagnostic, and a
+                     * diagnostic that can break the thing it observes is worse
+                     * than no diagnostic.
+                     */
+                    const recordCall = (result: unknown, outcome: TraceOutcome): void => {
+                        if (!trace) return;
+                        try {
+                            trace.record({
+                                tool: name,
+                                readOnly,
+                                argumentKeys:
+                                    args && typeof args === 'object' ? Object.keys(args) : [],
+                                argumentFingerprint: fingerprintArgs(args),
+                                resultBytes: resultByteLength(result),
+                                durationMs: Date.now() - started,
+                                outcome,
+                                projectShape: projectShape?.(),
+                                tag: callTag,
+                            });
+                        } catch {
+                            /* a trace is never worth failing a call over */
+                        }
+                    };
                     logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                    // Consent FIRST, notifier second: a declined operation never
+                    // Consent BEFORE the notifier: a declined operation never
                     // ran, so no progress notification may claim it did. The gate
                     // decides only when the call carries the destructive marker.
-                    if (consentGate && callRequestsConsent(name, args)) {
-                        // The tool's own description goes to the dialog. Reading all
-                    // 60 write tools showed the NAMES are mostly fine but several
-                    // are ambiguous alone — "Republish" (what?), "Sync content"
-                    // vs "Sync storefront" (CDN publish vs git push). Each one
-                    // already carries a description written to explain exactly
-                    // that, and the dialog was showing boilerplate instead.
-                    const description = (schema as { description?: string } | undefined)
-                        ?.description;
-                    const verdict = await consentGate(name, args, description);
-                        if (!verdict.allowed) {
-                            logger.info(`[MCP] ${name} declined by user consent dialog`);
-                            return verdict.refusal;
+                    if (callRequestsConsent(name, args)) {
+                        // ASK THE CHAT FIRST, because that is where the producer
+                        // is looking. The modal opens in the VS Code window,
+                        // which they may not be watching — and a blocking prompt
+                        // nobody sees is worse than no prompt.
+                        const caps = server.server?.getClientCapabilities?.();
+                        const chat = await askChatForConsent(
+                            name,
+                            args,
+                            extra,
+                            Boolean(caps && 'elicitation' in caps),
+                        );
+                        if (chat === 'refuse') {
+                            logger.info(`[MCP] ${name} refused in the chat`);
+                            return asRawText(
+                                `${name} was not approved. Nothing was changed. Ask the user ` +
+                                    'again only if they want to retry.',
+                            );
+                        }
+                        // 'unavailable' — the client cannot be asked, or the ask
+                        // failed. NOT a refusal: fall through to the modal, which
+                        // stays the floor. A consent gate that silently stops
+                        // working is the worst available outcome.
+                        if (chat !== 'accept' && consentGate) {
+                            // The tool's own description reaches the gate. Reading all
+                            // 60 write tools showed the NAMES are mostly fine but several
+                            // are ambiguous alone — "Republish" (what?), "Sync content"
+                            // vs "Sync storefront" (CDN publish vs git push).
+                            const description = (schema as { description?: string } | undefined)
+                                ?.description;
+                            const verdict = await consentGate(name, args, description);
+                            if (!verdict.allowed) {
+                                logger.info(`[MCP] ${name} declined by user consent dialog`);
+                                return verdict.refusal;
+                            }
                         }
                     }
                     // AFTER consent, never before: announcing "Deploying mesh…" and
                     // then raising a dialog the user declines would narrate work that
                     // never happened. Reads are skipped — they return promptly and a
                     // line per query is noise, not information.
-                    if (!isReadOnlyToolName(name)) {
+                    {
+                        // EVERY call, reads included. Reads used to be silent on
+                        // the reasoning that a line per query is noise — but the
+                        // whole point of this feature is seeing the path the agent
+                        // takes, and a path with its reads removed is not the path.
+                        // Owner correction, 2026-08-25.
                         await announceToolStart(name, extra);
                     }
                     // Fan the operation's own phase strings out to BOTH places a
@@ -270,7 +384,7 @@ function withToolLogging(
                     // the intent — caught by a test that found the first version
                     // installing sinks for reads too.
                     let invoke: () => Promise<unknown>;
-                    if (isReadOnlyToolName(name)) {
+                    if (readOnly) {
                         invoke = () => handler(args);
                     } else if (notifier) {
                         invoke = () =>
@@ -283,15 +397,17 @@ function withToolLogging(
                     try {
                         const result = await invoke();
                         logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
+                        recordCall(result, 'ok');
                         return result;
                     } catch (err) {
                         logger.error(
                             `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
                             err instanceof Error ? err : undefined,
                         );
+                        recordCall(undefined, 'error');
                         throw err;
                     }
-                },
+                }),
             );
         },
     };
@@ -306,7 +422,13 @@ export interface InExtensionMcpServerOptions {
      * of vscode/handler-map imports.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    registerExtraTools?: (server: any) => void;
+    /**
+     * @param scopedProjectDir - absolute project path the CONNECTION is scoped
+     *   to, when its session directory sits inside a project (connectionScope);
+     *   undefined for the home chat and bare clients — the pointer governs.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerExtraTools?: (server: any, scopedProjectDir?: string) => void;
     /**
      * Visibility for agent-triggered mutations (injected — this module stays
      * vscode-free). Wraps the HANDLER CALL of every tool whose name is not
@@ -316,11 +438,15 @@ export interface InExtensionMcpServerOptions {
      * client, closed chat — both observed live 2026-08-23 around a 2-minute
      * refresh that mutated the live site invisibly).
      */
-     
+    // `unknown`, not `any`: this wraps EVERY tool handler and only passes the
+    // value through, so it never needs to look inside one. The injected
+    // implementation (`createAgentOperationNotifier`) has always declared
+    // `Promise<unknown>` — the `any` here was the declaration disagreeing with
+    // its own implementation, which is exactly the silenced-type-error shape.
     longRunningNotifier?: (
         toolName: string,
-        run: (report: (message: string) => void) => Promise<any>,
-    ) => Promise<any>;
+        run: (report: (message: string) => void) => Promise<unknown>,
+    ) => Promise<unknown>;
     /**
      * Native consent for destructive calls (injected — this module stays
      * vscode-free). Consulted BEFORE the notifier for every call that carries
@@ -334,6 +460,37 @@ export interface InExtensionMcpServerOptions {
         args: unknown,
         description?: string,
     ) => Promise<ConsentVerdict>;
+    /**
+     * Evaluation Mode's dry run, read LIVE per call (injected, same reason as
+     * `consentGate` — this module stays vscode-free).
+     *
+     * While it answers true, every tool that is not read-shaped is stopped
+     * before its handler and answers with what it WOULD have done. The point is
+     * to measure the path an agent takes through the extension without a
+     * measurement run mutating a real project.
+     *
+     * Read fresh on every call rather than captured at construction, so
+     * toggling the mode takes effect on the next tool call instead of the next
+     * window reload — the same shape as `demoBuilder.ai.requireAgentConsent`.
+     */
+    /**
+     * Records every tool call for Evaluation Mode.
+     *
+     * Optional: without it the server behaves exactly as before. The recorder is
+     * owned by the extension so one instance spans reconnects — a client that
+     * drops and returns mid-task is still one path through the extension, and a
+     * per-connection recorder would cut the trace in half at the seam.
+     */
+    trace?: ToolTraceRecorder;
+    /**
+     * The kind of project calls are running against (injected — resolving it
+     * needs extension state, and this module stays vscode-free).
+     *
+     * Recorded on every entry so a trace can be read as "this tool, on this kind
+     * of project". Without it, "this tool does nothing on EDS projects" is not
+     * expressible — and that bug shipped once already.
+     */
+    projectShape?: () => string | undefined;
     /**
      * DA.live / GitHub token resolver injected by the extension so the
      * credential-needing project tools (`sync_storefront`,
@@ -484,9 +641,23 @@ export class InExtensionMcpServer {
      * is purely a discovery mechanism for the proxy.
      */
     private handleConnection(socket: net.Socket): void {
+        // The optional '#cwd:' preamble decides the connection's project scope
+        // BEFORE the MCP transport attaches (readCwdPreamble unshifts whatever
+        // it did not consume, so the transport sees a pristine stream).
+        void readCwdPreamble(socket).then((cwd) => {
+            const scopedProjectDir = resolveScopedProjectDir(cwd, this.projectsDir);
+            this.attachConnection(socket, scopedProjectDir);
+        });
+    }
+
+    /** Build and connect the per-connection server, scope decided. */
+    private attachConnection(socket: net.Socket, scopedProjectDir?: string): void {
         const connId = ++this.connCounter;
         const startedAt = Date.now();
-        this.logger.debug(`[MCP] client connected (conn=${connId})`);
+        this.logger.debug(
+            `[MCP] client connected (conn=${connId}` +
+                (scopedProjectDir ? `, session-scoped to ${scopedProjectDir})` : ', pointer-scoped)'),
+        );
         // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const server: any = new McpServer({
@@ -501,14 +672,23 @@ export class InExtensionMcpServer {
             this.logger,
             this.options.longRunningNotifier,
             this.options.consentGate,
+            this.options.trace,
+            this.options.projectShape,
         );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
-        this.options.registerExtraTools?.(logged);
+        this.options.registerExtraTools?.(logged, scopedProjectDir);
 
         const transport = new StdioServerTransport(socket, socket);
         server
             .connect(transport)
             .then(() => {
+                // The preamble sniff EXPLICITLY paused the socket (an explicit
+                // pause is not undone by the transport adding its 'data'
+                // listener), and unshifted the MCP bytes it did not consume.
+                // Resume only now, with the transport attached — the paused
+                // stream buffered everything in between, so nothing is lost
+                // and nothing was emitted listenerless.
+                socket.resume();
                 this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
             })
             .catch((err: unknown) => {

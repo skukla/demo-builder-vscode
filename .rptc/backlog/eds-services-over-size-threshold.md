@@ -1,4 +1,19 @@
+---
+id: EDS-8
+kind: chore
+area: eds
+needs: []
+value: low
+status: backlog
+layer: G
+---
 # Files over the god-file threshold
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Re-measured 2026-08-24: the candidate set rolled over.** Everything the item spent August on is cut — `executor.ts` (→ 493-line orchestrator + seven phase modules), `helixService.ts` (1845→823 over two cuts: key store, bulk-job protocol, auth seam, errors, API keys, site content), `mcp-server.ts` (1794→398 registration facade over `src/mcp/`), `adobeEntityFetcher.ts` (1769→273 facade over five services) — every cut behavior-preserving with existing suites untouched. The item's top banner carries the CURRENT table: `configure.ts` (916L, **32 non-type imports**) is the strongest candidate; `authenticationService.ts` (~42 methods) and `githubFileOperations.ts` (17) need a delegation-vs-logic read before a verdict; `projects-dashboard/dashboardHandlers.ts` is ~2× the handler threshold; and the never-examined `.tsx` tier has five components over 600 lines (`repoSelectionInline.helpers.tsx` 856 the standout). Earlier history: **re-measured 2026-08-19 and the item was pointed at the wrong files.** It was opened on `configurationService.ts` (532) and `edsResetService.ts` (343) — the two SMALLEST candidates in the repo. Ranked by the coupling signals `decompose-god-file` actually uses, the real ones are `executor.ts` (1403 code lines, **23** non-type imports, **33** functions), `adobeEntityFetcher.ts` (1232, **21** methods) and `helixService.ts` (1313, **16** methods), none of which had ever been filed. `configurationService.ts` fails the coupling test outright (2 imports, 7 methods) and should be left alone. One cut taken so far: `helixKeyStore.ts` (168 lines) lifted Admin API key persistence out of `helixService.ts` with **88 tests across 7 suites passing untouched**; the next cut there needs an auth-header provider designed rather than code moved, because `pollJobCompletion` binds to `this`. A guideline, not a gate: eslint does not flag these and CI does not fail. Re-measure before picking anything up — the lesson of this item is that it tracked files somebody touched, not files measurement condemns. Filed 2026-08-15, corrected 2026-08-19.
 
 > **ADJUDICATED 2026-08-24 (same day, after reading each candidate): the
 > rolled-over set is LEFT ALONE, deliberately.** The user asked whether

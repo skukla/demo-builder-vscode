@@ -14,7 +14,12 @@
  */
 
 import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
-import type { AppBuilderComponentState, AuthoringExperience, Project, ProjectStatus } from './base';
+import type {
+    AppBuilderComponentState,
+    AuthoringExperience,
+    Project,
+    ProjectStatus,
+} from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
@@ -116,6 +121,13 @@ export interface AiOverviewInitialData {
     project: Project;
 }
 
+/**
+ * Which half of the workbench a command asked for.
+ *
+ * `prompt` tries a prompt out; `trace` shows what the agent has already done in
+ * this window. Two commands, one panel — so the mode also travels as a push for
+ * a workbench that is already open.
+ */
 /**
  * The Configure screen's registry slice: the categorized component buckets
  * (registry entries pass through untransformed) plus the keyed env-var

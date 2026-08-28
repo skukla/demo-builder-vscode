@@ -19,16 +19,16 @@
 
 import { useCallback } from 'react';
 import { getSelectableAppBuilderComponents } from '../../services/appBuilderComponentSelection';
+import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSelectionState';
+import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
+import { isMeshComponentId } from '@/core/constants';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
     getPackageDefaultBlockLibraryIds,
 } from '@/features/components/services/blockLibraryLoader';
 import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
-import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSelectionState';
-import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
-import { isMeshComponentId } from '@/core/constants';
-import { vscode } from '@/core/ui/utils/vscode-api';
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';

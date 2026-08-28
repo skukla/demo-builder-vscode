@@ -6,11 +6,11 @@
  */
 
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { ComponentSelection } from '@/types/components';
 import { isTimeout, toAppError } from '@/types/errors';
+import { HandlerContext } from '@/types/handlers';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
@@ -47,6 +47,36 @@ export function hasNodeVersions(mapping: NodeVersionMapping): boolean {
  */
 export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
     return Object.keys(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+/**
+ * Resolve the required Node major versions for a per-node-version prerequisite.
+ * Checks the prereq's requiredFor, falls back to plugin requiredFor, then all
+ * Node versions.
+ *
+ * SHARED between checkHandler and continueHandler (moved here 2026-08-27):
+ * continue used to demand the variant on EVERY major, so on stacks whose
+ * components span Node majors (headless: frontend 24, mesh 20) a green check
+ * flipped to a blocking 'error' on Continue for a major nothing required.
+ */
+export function resolveRequiredMajors(
+    prereq: { requiredFor?: string[]; plugins?: { requiredFor?: string[] }[] },
+    nodeVersionMapping: Record<string, string>,
+    nodeVersionIdMapping: Record<string, string>,
+): string[] {
+    let requiredForComponents: string[] | undefined = prereq.requiredFor;
+    if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
+        const allPluginRequired = prereq.plugins
+            .filter(p => p.requiredFor && p.requiredFor.length > 0)
+            .flatMap(p => p.requiredFor ?? []);
+        if (allPluginRequired.length > 0) {
+            requiredForComponents = [...new Set(allPluginRequired)];
+        }
+    }
+
+    return requiredForComponents && requiredForComponents.length > 0
+        ? getPluginNodeVersions(nodeVersionIdMapping, requiredForComponents)
+        : getNodeVersionKeys(nodeVersionMapping);
 }
 
 /**

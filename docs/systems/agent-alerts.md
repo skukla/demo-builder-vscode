@@ -12,14 +12,23 @@ shown. The rule that came out of it: **alert text is authored, never transformed
 | # | Surface | When | Text comes from |
 |---|---|---|---|
 | 1 | Modal consent dialog | Before a call that cannot be undone or reaches beyond this machine | `agentAlertCopy` — authored |
-| 2 | Progress notification (VS Code) | While any non-read tool runs | Tool name, humanised |
-| 3 | Chat progress line | While any non-read tool runs, plus each phase | Tool name / the operation's own phase strings |
-| 4 | Status bar | On success | Tool name, humanised |
-| 5 | Warning toast | On failure | Tool name + the error |
+| 2 | Progress notification (VS Code) | While any tool that writes runs | `toolNarration` — authored |
+| 3 | Chat progress line | While any tool that writes runs, plus each phase | `toolNarration` + the operation's own phase strings |
+| 4 | Status bar | On success | `toolNarration` — authored |
+| 5 | Warning toast | On failure | `toolNarration` + the error |
 
-Surfaces 2–5 name an operation the user already asked for; a name is the right
-content and no copy is authored for them. Surface 1 asks a QUESTION, and a
-question needs words written for the person answering.
+**All five are authored now.** An earlier version of this page said surfaces 2–5
+merely name an operation the user already asked for, so a humanised tool name was
+the right content. A narration audit on 2026-08-25 disproved it: deriving the
+text from `deploy_mesh` produced "Deploy mesh…", a button label sitting above the
+status lines beneath it, and about ten tools got wording that was not English —
+"Set project pinned…", "Set setting…" (a tool that changes no setting), and
+"Republish…", which never said republish WHAT.
+
+So the rule at the top of this page applies to every surface, not just the
+question. Phrases live in `toolNarration.ts`, one per tool including reads, in
+the progressive form, written from each tool's DESCRIPTION rather than its name.
+There is no fallback: a tool without a phrase says nothing.
 
 ## 1. The consent dialog
 
@@ -58,6 +67,100 @@ Reaching other people
 All of these raised a dialog before 2026-08-25. They are recoverable, additive, or
 trivially reversible, and a prompt on a cheap mutation trains people to click
 Allow without reading — which costs more than it saves.
+
+## What this protects, and what it does NOT
+
+**Demo Builder's consent gate covers Demo Builder's tools.** Nothing else.
+
+When an agent deletes a project, republishes a storefront or resets a datapack
+through this extension, the gate fires. When the same agent runs a shell command,
+writes a file or edits code with Claude Code's OWN tools, **this extension never
+sees it** — no dialog, no chat prompt, no log entry of ours.
+
+That is not a bug and it is not fixable from here. Consent fires inside our tool
+calls, so it can only ever see calls made to us. `tech-case-studio` sees
+everything because it DRIVES the Claude process and intercepts its permission
+system (`--permission-prompt-tool stdio`); our extension launches `claude` into a
+terminal and steps back. Two architectures, and the mechanism available depends
+on which one you are.
+
+Claude Code has its own permission checks for those tools. **Whether they fire is
+the producer's setting, not ours** — and it was measured on 2026-08-24 that this
+machine runs `defaultMode: auto` with no allowlist, so they do not. The owner
+confirmed on 2026-08-25 that this stays: the interruption cost is real.
+
+So state it plainly rather than let the dialogs imply otherwise: **the gate makes
+Demo Builder's own destructive operations safe. It does not make an agent safe.**
+
+Comparison and what follows from it:
+`.rptc/research/consent-in-the-chat/compared-with-tech-case-studio.md`.
+
+## Where the question appears
+
+**The chat first, the VS Code modal as the floor.** The modal opens in the VS
+Code window; the producer is watching the terminal Claude session the extension
+launched. A blocking prompt nobody is looking at is worse than no prompt.
+
+MCP's elicitation lets a server ask the user directly, and Claude Code declares
+the capability. So `consentViaChat.ts` asks there, and falls back to the modal
+when it cannot.
+
+**The rule is deliberately blunt: anything that is not an explicit `accept` is a
+refusal.** A server cannot tell "nobody was there to ask" from "the user said
+no" — both arrive as `cancel`, measured 2026-08-25. The spec defines three
+actions, but only `cancel` has ever been observed here, so branching on the
+difference would be a guess dressed as a fact.
+
+**A client that cannot be ASKED is a different thing from a no.** No elicitation
+capability, a failed request, or a timeout is `unavailable`, and that falls
+through to the modal. The invariant that holds throughout: **no call is ever
+allowed without an explicit accept from somewhere.** The modal cannot auto-allow
+either, so falling back never weakens the gate.
+
+Both surfaces render the SAME authored text, built once in `consentText.ts`. Two
+surfaces phrasing one question differently is how they drift, and the one that
+drifts is whichever nobody is watching.
+
+## "Don't ask again this session"
+
+A single storefront flow raises the same prompt several times, and someone who
+clicks Allow four times has stopped reading by the fourth. That is worse than not
+asking — the gate becomes a formality.
+
+So the dialog offers a third button, **"Allow for the rest of this session"**,
+and it is offered PER TOOL rather than for the surface. A blanket grant would
+switch the gate off exactly when the agent is doing most, and
+`demoBuilder.ai.requireAgentConsent` already exists as the deliberate way to run
+unattended.
+
+**Which tools qualify is authored, not inferred** — `sessionGrant` on each
+`AGENT_ALERT_COPY` entry, required so every entry decides. Two tests, and a tool
+must pass BOTH:
+
+1. **Repeating it is recoverable.** Anything whose consequence says "can't be
+   undone" fails immediately.
+2. **It does not reach another person.** `set_site_admin` passes the first test —
+   access can be re-granted — and fails this one: a standing grant would let an
+   agent change someone else's access repeatedly on one approval.
+
+Reading all sixteen consequences on 2026-08-25 left exactly **two**: `republish`
+and `sync_content`. Both fire repeatedly inside one flow and both are undone by
+running them again. `evaluate_prompt` was refused despite changing nothing — it
+SPENDS, and money does not come back. (That tool left with the
+prompt-evaluation surface on 2026-08-26, AI-3b. The reasoning is kept because
+the rule it produced still governs the entries that remain: a grant is for
+harmless and frequent, never for expensive.)
+
+If a future entry makes it three, be suspicious. A grant removes friction from
+something harmless and frequent; it is not a way to reduce prompts in general.
+
+Grants live in module state and **die with the window**. That is what the word
+session means, and a grant that survived a reload would be a preference the user
+never set, hiding somewhere they cannot see it.
+
+`agentSessionGrants.test.ts` asserts the qualifying set against the AUTHORED
+copy, so a new entry that opts an irreversible tool into grants fails at the
+point the claim is made rather than in review.
 
 ## Writing the copy
 

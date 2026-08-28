@@ -428,7 +428,7 @@ describe('canContinue', () => {
         expect(canContinue('kind', draft({ kind: 'mesh' }), slice())).toBe(true);
     });
 
-    it('source-catalog blocks until a catalogId is picked', () => {
+    it('source-catalog blocks until a catalogId is picked — the label never gates', () => {
         expect(canContinue('source-catalog', draft({ kind: 'catalog' }), slice())).toBe(false);
         expect(
             canContinue('source-catalog', draft({ kind: 'catalog', catalogId: 'c1' }), slice())
@@ -449,13 +449,11 @@ describe('canContinue', () => {
         expect(canContinue('source-custom', d, slice({ selectedIds: ['acme-app'] }))).toBe(false);
     });
 
-    it('source-blank blocks until a valid instance is set', () => {
-        expect(canContinue('source-blank', draft({ kind: 'blank' }), slice())).toBe(false);
-    });
-
-    it('source-blank passes once the draft carries an instance', () => {
-        const d = draft({ kind: 'blank', instance: { id: 'order-sync', name: 'Order Sync' } });
-        expect(canContinue('source-blank', d, slice())).toBe(true);
+    it('source-blank is always answerable — Blank is the default pick, the label optional', () => {
+        expect(canContinue('source-blank', draft({ kind: 'blank' }), slice())).toBe(true);
+        expect(
+            canContinue('source-blank', draft({ kind: 'blank', label: 'Order Sync' }), slice())
+        ).toBe(true);
     });
 
     it('dest-signin mirrors isSignedIn', () => {
@@ -557,9 +555,9 @@ describe('AddIntegrationFlowModal container type', () => {
         const source = require('fs').readFileSync(
             require('path').join(
                 __dirname,
-                '../../../../../../src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx',
+                '../../../../../../src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx'
             ),
-            'utf8',
+            'utf8'
         );
         const container = source.match(/<DialogContainer[^>]*>/);
 

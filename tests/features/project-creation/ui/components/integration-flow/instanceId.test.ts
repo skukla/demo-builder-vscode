@@ -10,6 +10,7 @@
 
 import { COMPONENT_IDS, MESH_COMPONENT_IDS } from '@/core/constants';
 import {
+    mintInstance,
     deriveInstanceId,
     buildReservedIds,
     evaluateInstanceName,
@@ -174,5 +175,33 @@ describe('evaluateInstanceName', () => {
             id: 'order-sync',
             name: 'Order Sync',
         });
+    });
+});
+
+describe('mintInstance (optional-name model, 2026-08-27)', () => {
+    it('mints the slugged label when it is free', () => {
+        expect(mintInstance('Order Sync', new Set(['other']))).toEqual({
+            id: 'order-sync',
+            name: 'Order Sync',
+        });
+    });
+
+    it('silently suffixes BOTH id and display name on a collision — never an error', () => {
+        expect(mintInstance('Custom Integration', new Set(['custom-integration']))).toEqual({
+            id: 'custom-integration-2',
+            name: 'Custom Integration 2',
+        });
+    });
+
+    it('keeps counting past existing suffixes', () => {
+        const reserved = new Set(['custom-integration', 'custom-integration-2']);
+        expect(mintInstance('Custom Integration', reserved)).toEqual({
+            id: 'custom-integration-3',
+            name: 'Custom Integration 3',
+        });
+    });
+
+    it('a label with no usable letters falls back to the custom-integration stem', () => {
+        expect(mintInstance('123', new Set())).toEqual({ id: 'custom-integration', name: '123' });
     });
 });

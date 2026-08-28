@@ -10,7 +10,7 @@
  * @module features/mesh/services/meshUpdateDecline
  */
 
-import { getKeyedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types/base';
 
 /**
@@ -23,7 +23,7 @@ import type { Project } from '@/types/base';
  * @returns true when a decline was recorded
  */
 export function markMeshUpdateDeclined(project: Project): boolean {
-    const keyedMesh = getKeyedMeshAppBuilderComponent(project);
+    const keyedMesh = getMeshAppBuilderComponent(project);
     if (!keyedMesh) {
         return false;
     }
@@ -34,14 +34,13 @@ export function markMeshUpdateDeclined(project: Project): boolean {
 }
 
 /**
- * Whether the user declined the pending mesh update. Reads the keyed mesh
- * entry first, falling back to the legacy `meshState` for declines recorded
- * before Step 06 mirrored the write.
+ * Whether the user declined the pending mesh update. The keyed mesh entry is
+ * the only carrier (PL-1 phase 2 removed the legacy `meshState` fallback —
+ * legacy manifests fold their decline flags into the keyed entry at load).
  *
  * @param project - The project to check
- * @returns true when a decline flag is set on either state
+ * @returns true when the decline flag is set
  */
 export function isMeshUpdateDeclined(project: Project): boolean {
-    const keyed = getKeyedMeshAppBuilderComponent(project)?.userDeclinedUpdate;
-    return (keyed ?? project.meshState?.userDeclinedUpdate) === true;
+    return getMeshAppBuilderComponent(project)?.userDeclinedUpdate === true;
 }

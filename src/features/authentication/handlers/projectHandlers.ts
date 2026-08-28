@@ -9,6 +9,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
@@ -17,8 +18,7 @@ import {
     type EnsureOrgContextResult,
 } from '@/features/authentication/services/ensureOrgContext';
 import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
-import type { AdobeProject } from '@/features/authentication/services/types';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { isConsoleOpFailure, type AdobeProject } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -58,14 +58,18 @@ export async function resolveOrgContext(
 /** User-facing copy for each non-ok org-context status (NO terminal instruction). */
 function orgMismatchMessage(status: EnsureOrgContextResult['status']): string {
     if (status === 'needs_relogin') {
-        return 'This organization is not available on your current Adobe account. '
-            + 'Sign in with the correct account to continue.';
+        return (
+            'This organization is not available on your current Adobe account. ' +
+            'Sign in with the correct account to continue.'
+        );
     }
     if (status === 'access_revoked') {
         return 'Your access to this organization has changed. Choose a different organization.';
     }
-    return 'This operation needs a different Adobe organization. '
-        + 'Select the correct organization to continue.';
+    return (
+        'This operation needs a different Adobe organization. ' +
+        'Select the correct organization to continue.'
+    );
 }
 
 /**
@@ -95,7 +99,9 @@ export async function sendOrgMismatch<T>(
  * Verifies that an organization is currently selected in the
  * Adobe context.
  */
-export async function handleEnsureOrgSelected(context: HandlerContext): Promise<DataResult<{ hasOrg: boolean }>> {
+export async function handleEnsureOrgSelected(
+    context: HandlerContext,
+): Promise<DataResult<{ hasOrg: boolean }>> {
     try {
         const currentOrg = await context.authManager?.getCurrentOrganization();
         const hasOrg = !!currentOrg;
@@ -160,13 +166,10 @@ export async function handleGetProjects(
         if (!projectsPromise) {
             throw new Error('Auth manager not available');
         }
-        const projects = await withTimeout(
-            projectsPromise,
-            {
-                timeoutMs: TIMEOUTS.NORMAL,
-                timeoutMessage: 'Request timed out. Please check your connection and try again.',
-            },
-        );
+        const projects = await withTimeout(projectsPromise, {
+            timeoutMs: TIMEOUTS.NORMAL,
+            timeoutMessage: 'Request timed out. Please check your connection and try again.',
+        });
         // Stamp ownership (deletable) so the webview only offers delete on
         // projects the current token user created (fail closed on unknowns).
         const stamped = await stampProjectsDeletable(context.authManager, projects);
@@ -174,14 +177,14 @@ export async function handleGetProjects(
         return { success: true, data: stamped };
     } catch (error) {
         const appError = toAppError(error);
-        const originalMessage = (error instanceof Error) ? error.message : '';
-        const hasActionableMessage = originalMessage.includes('organization')
-            || originalMessage.includes('AUTH_EXPIRED');
+        const originalMessage = error instanceof Error ? error.message : '';
+        const hasActionableMessage =
+            originalMessage.includes('organization') || originalMessage.includes('AUTH_EXPIRED');
         const errorMessage = isTimeout(appError)
             ? appError.userMessage
             : hasActionableMessage
-                ? originalMessage.replace('AUTH_EXPIRED: ', '')
-                : 'Failed to load projects. Please try again.';
+              ? originalMessage.replace('AUTH_EXPIRED: ', '')
+              : 'Failed to load projects. Please try again.';
 
         context.logger.error('Failed to get projects:', appError);
         await context.sendMessage('get-projects', {
@@ -245,8 +248,13 @@ export async function handleSelectProject(
         try {
             await context.sendMessage('projectSelected', { projectId });
         } catch (sendError) {
-            context.debugLogger.debug('[Project] Failed to send projectSelected message:', sendError);
-            throw new Error(`Failed to send project selection response: ${toError(sendError).message}`);
+            context.debugLogger.debug(
+                '[Project] Failed to send projectSelected message:',
+                sendError,
+            );
+            throw new Error(
+                `Failed to send project selection response: ${toError(sendError).message}`,
+            );
         }
 
         return { success: true };
@@ -268,7 +276,9 @@ export async function handleSelectProject(
  * Checks if the selected project has API Mesh enabled by probing
  * the Adobe CLI api-mesh commands.
  */
-export async function handleCheckProjectApis(context: HandlerContext): Promise<DataResult<{ hasMesh: boolean }>> {
+export async function handleCheckProjectApis(
+    context: HandlerContext,
+): Promise<DataResult<{ hasMesh: boolean }>> {
     context.logger.debug('[Adobe Setup] Checking required APIs for selected project');
     context.debugLogger.debug('[Adobe Setup] handleCheckProjectApis invoked');
     try {
@@ -276,37 +286,52 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         // Step 1: Verify CLI has the API Mesh plugin installed (so commands exist)
         try {
-            const { stdout } = await commandManager.execute('aio plugins --json', { useNodeVersion: getMeshNodeVersion() });
+            const { stdout } = await commandManager.execute('aio plugins --json', {
+                useNodeVersion: getMeshNodeVersion(),
+            });
             const plugins = parseJSON<{ name?: string; id?: string }[]>(stdout || '[]');
             if (!plugins) {
                 context.logger.warn('[Adobe Setup] Failed to parse plugins list');
                 return { success: true, data: { hasMesh: false } };
             }
             const hasPlugin = Array.isArray(plugins)
-                ? plugins.some((p: { name?: string; id?: string }) => (p.name || p.id || '').includes('api-mesh'))
+                ? plugins.some((p: { name?: string; id?: string }) =>
+                      (p.name || p.id || '').includes('api-mesh'),
+                  )
                 : JSON.stringify(plugins).includes('api-mesh');
             if (!hasPlugin) {
                 context.logger.warn('[Adobe Setup] API Mesh CLI plugin not installed');
                 return { success: true, data: { hasMesh: false } };
             }
         } catch (e) {
-            context.debugLogger.debug('[Adobe Setup] Failed to verify plugins; continuing', { error: String(e) });
+            context.debugLogger.debug('[Adobe Setup] Failed to verify plugins; continuing', {
+                error: String(e),
+            });
         }
 
         // Step 2: Confirm project context is selected (best effort)
         try {
-            await commandManager.execute('aio console projects get --json', { useNodeVersion: getMeshNodeVersion() });
+            await commandManager.execute('aio console projects get --json', {
+                useNodeVersion: getMeshNodeVersion(),
+            });
         } catch (e) {
-            context.debugLogger.debug('[Adobe Setup] Could not confirm project context (non-fatal)', { error: String(e) });
+            context.debugLogger.debug(
+                '[Adobe Setup] Could not confirm project context (non-fatal)',
+                { error: String(e) },
+            );
         }
 
         // Step 3: Probe access by calling a safe mesh command that lists or describes
         // CLI variants differ; try a few options and infer permissions from errors
         // Preferred probe: get active mesh (succeeds only if API enabled; returns 404-style when none exists)
         try {
-            const { stdout } = await commandManager.execute('aio api-mesh:get --active --json', { useNodeVersion: getMeshNodeVersion() });
+            const { stdout } = await commandManager.execute('aio api-mesh:get --active --json', {
+                useNodeVersion: getMeshNodeVersion(),
+            });
             context.debugLogger.trace('[Adobe Setup] api-mesh:get --active output', { stdout });
-            context.logger.debug('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
+            context.logger.debug(
+                '[Adobe Setup] API Mesh access confirmed (active mesh or readable config)',
+            );
             return { success: true, data: { hasMesh: true } };
         } catch (cliError) {
             const err = cliError as { message?: string; stderr?: string; stdout?: string };
@@ -325,10 +350,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
             }
         }
 
-        const probes = [
-            'aio api-mesh:get --help',
-            'aio api-mesh --help',
-        ];
+        const probes = ['aio api-mesh:get --help', 'aio api-mesh --help'];
 
         for (const cmd of probes) {
             try {
@@ -341,19 +363,26 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
                 const err = cliError as { message?: string; stderr?: string; stdout?: string };
                 const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
                 context.debugLogger.trace('[Adobe Setup] Mesh probe error', { cmd, combined });
-                const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
+                const forbidden =
+                    /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(
+                        combined,
+                    );
                 if (forbidden) {
                     context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
                     return { success: true, data: { hasMesh: false } };
                 }
                 // If the error indicates unknown command, try next variant
-                const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(combined);
+                const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(
+                    combined,
+                );
                 if (unknown) continue;
             }
         }
 
         // If all probes failed without a definitive permission error, return false to prompt user
-        context.logger.warn('[Adobe Setup] Unable to confirm API Mesh access (CLI variant mismatch)');
+        context.logger.warn(
+            '[Adobe Setup] Unable to confirm API Mesh access (CLI variant mismatch)',
+        );
         return { success: true, data: { hasMesh: false } };
     } catch (error) {
         context.logger.error('[Adobe Setup] Failed to check project APIs', error as Error);
@@ -383,13 +412,15 @@ export async function handleCreateAdobeProject(
 
     try {
         // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
-        const { hasPermissions, error: permError } = await context.authManager.testDeveloperPermissions();
+        const { hasPermissions, error: permError } =
+            await context.authManager.testDeveloperPermissions();
         if (!hasPermissions) {
             return {
                 success: false,
                 code: ErrorCode.AUTH_FORBIDDEN,
-                error: permError
-                    || 'You do not have permission to create projects in this organization. Select an existing project instead.',
+                error:
+                    permError ||
+                    'You do not have permission to create projects in this organization. Select an existing project instead.',
             };
         }
 
@@ -398,12 +429,10 @@ export async function handleCreateAdobeProject(
         }
 
         const project = await context.authManager.createProject(name, description);
-        if (!project) {
-            return {
-                success: false,
-                error: "Could not create the project. You may have hit your organization's project quota — "
-                    + 'select an existing project instead.',
-            };
+        if (isConsoleOpFailure(project)) {
+            // The service carries Console's own reason now — surface it instead
+            // of the old quota guess, which the measured failure never matched.
+            return { success: false, error: `Could not create the project: ${project.error}` };
         }
 
         // Refresh the project list and return it ON THIS RESPONSE (best-effort).

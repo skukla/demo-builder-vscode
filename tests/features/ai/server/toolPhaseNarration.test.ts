@@ -40,9 +40,16 @@ function registerProbes(srv: {
 }): void {
     // A tool that reports phases from DEEP inside its work — no reporter is
     // threaded through its signature, which is the whole point of the channel.
+    // A REAL tool name: the opening line comes from an authored table with no
+    // name-derived fallback, so a fictional tool would narrate nothing and this
+    // suite would be asserting against silence.
     srv.registerTool(
-        'deploy_probe',
-        { description: 'write with phases', inputSchema: {} },
+        'deploy_mesh',
+        {
+            description: 'write with phases',
+            inputSchema: {},
+            annotations: { readOnlyHint: false },
+        },
         async () => {
             await Promise.resolve();
             reportPhase('Reading mesh configuration…');
@@ -51,10 +58,17 @@ function registerProbes(srv: {
         }
     );
 
-    srv.registerTool('get_probe_thing', { description: 'read', inputSchema: {} }, async () => {
-        reportPhase('should never be seen');
-        return { content: [{ type: 'text' as const, text: 'read' }] };
-    });
+    srv.registerTool(
+        'get_probe_thing',
+        // Probes must DECLARE, exactly as real tools now do — the gate reads the
+        // declaration, not the name. Without this the probe is treated as a
+        // write, which is the fail-closed behaviour working.
+        { description: 'read', inputSchema: {}, annotations: { readOnlyHint: true } },
+        async () => {
+            reportPhase('should never be seen');
+            return { content: [{ type: 'text' as const, text: 'read' }] };
+        }
+    );
 }
 
 async function callWithProgress(socketPath: string, name: string): Promise<string[]> {
@@ -107,9 +121,9 @@ describe('phases reach the chat', () => {
     it('sends each phase, attributed, after the opening line', async () => {
         await start(false);
 
-        const messages = await callWithProgress(socketPath, 'deploy_probe');
+        const messages = await callWithProgress(socketPath, 'deploy_mesh');
 
-        expect(messages[0]).toBe('Demo Builder · Deploy probe…');
+        expect(messages[0]).toBe('Demo Builder · Deploying the API mesh…');
         expect(messages).toContain('Demo Builder · Reading mesh configuration…');
         expect(messages).toContain('Demo Builder · Deploying to Runtime…');
     });
@@ -119,7 +133,7 @@ describe('phases reach the chat', () => {
         // notification only for UI-triggered work, and nowhere at all for agents.
         await start(true);
 
-        await callWithProgress(socketPath, 'deploy_probe');
+        await callWithProgress(socketPath, 'deploy_mesh');
 
         expect(notifierPhases).toEqual([
             'Reading mesh configuration…',
@@ -127,7 +141,12 @@ describe('phases reach the chat', () => {
         ]);
     });
 
-    it('stays silent for read tools', async () => {
+    // NOTE: this suite's read probe is an INVENTED tool name, so it has no
+    // authored phrase and narrates nothing regardless of the rule. What it
+    // still proves is that a read emits no PHASE lines — which remains true.
+    // Opening-line behaviour for reads is covered in
+    // toolProgressNotifications.test.ts against a real tool name.
+    it('emits no PHASE lines for read tools', async () => {
         await start(false);
 
         expect(await callWithProgress(socketPath, 'get_probe_thing')).toEqual([]);
@@ -138,7 +157,7 @@ describe('phases reach the chat', () => {
         // would narrate an earlier one's steps.
         await start(false);
 
-        await callWithProgress(socketPath, 'deploy_probe');
+        await callWithProgress(socketPath, 'deploy_mesh');
         const second = await callWithProgress(socketPath, 'get_probe_thing');
 
         expect(second).toEqual([]);

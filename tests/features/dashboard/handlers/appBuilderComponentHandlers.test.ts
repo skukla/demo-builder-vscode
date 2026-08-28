@@ -62,7 +62,10 @@ describe('handleAddAppBuilderComponent', () => {
             }),
             // The notification's reporter, so the deploy tail's steps reach the
             // user instead of one static title for the whole add.
-            expect.any(Function)
+            expect.any(Function),
+            // The toolchain consent: undefined on this interactive path (the
+            // fixture context has a panel), so the factory prompt applies.
+            undefined
         );
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             mockProject,
@@ -115,6 +118,92 @@ describe('handleAddAppBuilderComponent', () => {
 
         expect(result.success).toBe(false);
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('refuses a backend-constrained entry when the project has no matching backend', async () => {
+        // The stack gate: galleries filter by axes, but this add-by-id door
+        // resolves from the raw catalog — a Commerce-only entry (the starter
+        // kit) must be refused on a project whose stack cannot use it. The
+        // testUtils project carries no componentSelections, so both axes are ''.
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            compatibleBackends: ['adobe-commerce-paas', 'adobe-commerce-accs'],
+        });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('adobe-commerce-paas');
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('control: the same constrained entry adds on a project with a listed backend', async () => {
+        const { mockContext } = setupMocks({
+            componentSelections: { backend: 'adobe-commerce-paas' },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            compatibleBackends: ['adobe-commerce-paas', 'adobe-commerce-accs'],
+        });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
+    });
+
+    it('refuses a SECOND extension-layout app from the same source (fixed package names)', async () => {
+        // Extension-layout deploys skip the per-id ow-package rewrite, so two
+        // apps from one source in one workspace overwrite each other on Runtime
+        // whatever ids we mint (AB-2 spike). The id-collision check cannot see a
+        // seeded instance under a new name; the same-source scan must.
+        const { mockContext } = setupMocks({
+            componentSelections: { backend: 'adobe-commerce-paas' },
+            appBuilderComponents: {
+                'order-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Order Sync',
+                    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
+                },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            id: 'stock-sync',
+            layout: 'extension',
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
+        });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'stock-sync' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('fixed internal package names');
+        expect(result.error).toContain('Order Sync');
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('control: a second STANDALONE app from the same source still adds (ids isolate it)', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'my-app-a': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, id: 'my-app-b' });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'my-app-b' });
+
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 
     it('routes a custom GitHub URL into an integration entry and deploys it', async () => {

@@ -205,7 +205,18 @@ export async function handleSaveAiPrompt(
         await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
     }
 
-    return { success: true, aiPrompts: mergePromptsForRead(nextGlobal, nextProject) };
+    return {
+        success: true,
+        aiPrompts: mergePromptsForRead(nextGlobal, nextProject),
+        // The returned list ALREADY contains the saved prompt, but the tier-2
+        // battery run measured an agent shell-hunting for a prompt FILE after
+        // a successful save — the store is the manifest / extension storage,
+        // not a file, and nothing said so.
+        verify:
+            'Confirmed — the returned aiPrompts list includes the saved prompt. Prompts ' +
+            'live in the project manifest (extension storage when pinned), not standalone ' +
+            'files — re-check with list_ai_prompts, never the filesystem.',
+    };
 }
 
 /**

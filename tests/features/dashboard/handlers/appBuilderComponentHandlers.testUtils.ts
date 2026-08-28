@@ -48,11 +48,18 @@ export const mockBuildCustomIntegrationEntry = jest.fn(
         description: `Custom App Builder component from ${source.owner}/${source.repo}`,
         kind: 'integration' as const,
         source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },
-    }),
+    })
 );
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...(a as [never])),
+    buildCustomIntegrationEntry: (...a: unknown[]) =>
+        mockBuildCustomIntegrationEntry(...(a as [never])),
+    // Pure predicate — run the REAL one so the add-door stack gate is tested
+    // against the actual axis semantics, not a mock's opinion of them.
+    entryFitsProjectAxes: (...a: unknown[]) =>
+        jest
+            .requireActual('@/features/components/services/appBuilderComponentCatalogLoader')
+            .entryFitsProjectAxes(...a),
 }));
 
 // ---- guards (auth → org-mismatch → permission) ------------------------------

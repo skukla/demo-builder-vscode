@@ -16,13 +16,6 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import sanitizeHtml from 'sanitize-html';
 
-// Maximum number of file entries listed in a getBlockSource manifest — prevents
-// unbounded responses when a block directory contains many assets.
-export const MAX_BLOCK_FILES = 50;
-// Maximum bytes returned for a single file read via getBlockSource. Kept small
-// because the response is consumed as LLM context tokens, not by a human — large
-// vendored/minified assets should be read from disk directly, not through MCP.
-export const MAX_FILE_BYTES = 30_000; // 30 KB
 // Rows in a get_block_authoring_shape INDEX. A 78-block catalog is 5,577 bytes;
 // a 300-component one measured 21,992. The index/detail split bounds the detail
 // call, not a catalog that keeps growing.

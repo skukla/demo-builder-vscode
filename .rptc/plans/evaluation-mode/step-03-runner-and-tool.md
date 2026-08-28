@@ -28,6 +28,14 @@ total_cost_usd   real dollars
 num_turns, duration_ms, permission_denials, session_id
 ```
 
+
+> **SUPERSEDED 2026-08-26 — the metric is TOKENS, not dollars.** Dollars measure
+> OUR cost; tokens measure the producer's remaining ability to work, and a quota
+> that runs out costs them the afternoon. A probe also showed the premise was
+> wrong: 33,819 tokens to answer "pong", of which the prompt was 10 — wording is
+> not the lever, ROUND TRIPS are. Full reasoning and the replacement headline:
+> `step-11-two-tools.md`, "The metric changes".
+
 **Report cost in DOLLARS.** "$0.21" means something to a demo builder; "47,550
 tokens" does not. Tokens belong on expand, beside the tool names.
 

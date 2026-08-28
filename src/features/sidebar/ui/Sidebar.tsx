@@ -1,7 +1,7 @@
 /**
  * Sidebar Component
  *
- * Single layout across all contexts: AiZone (Chat + Prompts) above UtilityBar
+ * Single layout across all contexts: AiZone (Chat ⌄ + Prompts ⌄) above UtilityBar
  * (Tools + Help + Settings), vertically centered as one group. AI is globally
  * available — MCP is wired at the extension level, not per project — so the
  * AiZone renders in every sidebar context.

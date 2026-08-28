@@ -57,7 +57,7 @@ NOT a fifth seam: it lives inside `aiDefaultsEntryApplies` via an injected resol
 
 | Writer | Output | Gating pattern |
 |---|---|---|
-| `skillsWriter.writeSkillFiles` | `.claude/skills/*.md` | 13 filenames in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (3 delivery-gated via `SKILL_MCP_TOOL_DEPENDENCIES`); conditional skills append to the `written` list (e.g. `extend-app-builder-app` on the predicate) |
+| `skillsWriter.writeSkillFiles` | `.claude/skills/<name>/SKILL.md` dirs | names in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (v27 moved them off flat `<name>.md` — the flat layout is never REGISTERED as a skill by Claude Code, measured 2026-08-27) (3 delivery-gated via `SKILL_MCP_TOOL_DEPENDENCIES`); conditional skills append to the `written` list (e.g. `extend-app-builder-app` on the predicate) |
 | same, Adobe bundles | prefixed skill DIRS | Two SOURCES: component `aiSkillBundle` copies from the component's own `node_modules` (EDS/aem); the integration-starter-kit copies from `resolveMcpToolsDir()` (installed by the installer — ordering matters, install precedes writers on both paths). `copyAdobeSkillBundle` ENOENT-skips silently |
 | `aiContextWriter.generateAgentsMd` | `AGENTS.md` | Section builders returning `''` when not applicable (e.g. `buildConsoleApiAccess`; builders live in `agentsMdSections.ts`); sanitize every interpolated project value |
 | `mcpConfigWriter` | `.mcp.json`, `.claude/mcp.json`, settings merge | demo-builder entry + per-entry ai-defaults gating; args anchored to the isolated tools dir |

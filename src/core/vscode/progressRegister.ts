@@ -31,7 +31,7 @@
  */
 
 import * as vscode from 'vscode';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 
 /**
  * Build the card's in-flight line: verb + kind.
@@ -88,6 +88,17 @@ export async function withProgressRegister<T>(
 ): Promise<T> {
     const { title, cardLabel, pushCardStatus } = options;
 
+    // AGENT calls already show a window notification (the agent-operation
+    // notifier's), and every step reported here reaches it through the phase
+    // channel — so opening a second notification for the same operation only
+    // stacks cards (the owner counted three for one deploy, 2026-08-27; AI-6).
+    // One notification per operation: agent path = the notifier's, UI path =
+    // this one.
+    if (hasActivePhaseSinks()) {
+        if (pushCardStatus) pushCardStatus(cardLabel ?? '');
+        return run((message) => reportPhase(message));
+    }
+
     // Captured from the task rather than taken from withProgress's return value,
     // so a caller still gets a result whatever the notification does.
     let result!: T;
@@ -102,11 +113,8 @@ export async function withProgressRegister<T>(
             if (pushCardStatus) pushCardStatus(cardLabel ?? '');
             result = await run((message) => {
                 progress.report({ message });
-                // Same step, second destination. When an AGENT triggered this
-                // operation the user is reading the chat, not the VS Code
-                // notification — and every phase string computed here used to
-                // reach only the window they were not looking at. A no-op
-                // outside an agent tool call, so the UI path is unchanged.
+                // Same step, second destination — the chat, via the MCP sink.
+                // A no-op outside an agent tool call.
                 reportPhase(message);
             });
         },

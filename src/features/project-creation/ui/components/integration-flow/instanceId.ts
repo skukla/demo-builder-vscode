@@ -87,3 +87,34 @@ export function evaluateInstanceName(
     if (reservedIds.has(id)) return { message: DUPLICATE_MESSAGE };
     return { instance: { id, name: trimmed } };
 }
+
+/** The fallback stem when a label has no usable letters (emoji-only, digits-only). */
+const FALLBACK_LABEL_STEM = 'custom-integration';
+
+/**
+ * Mint an instance from a convenience LABEL — the collision-free counterpart
+ * to {@link evaluateInstanceName} for the optional-name model (owner decision
+ * 2026-08-27: "The name is a convenience measure for the end user").
+ *
+ * The machine identity is never the user's problem here: a taken slug gets a
+ * numeric suffix silently, and the DISPLAY name gets the same suffix so two
+ * default-named additions read "Custom Integration" / "Custom Integration 2"
+ * rather than as identical twins. Callers exclude the picked template's own
+ * catalog id from the domain — resolving to yourself is not a collision.
+ *
+ * @param label - the display label (typed, or the caller's default)
+ * @param reservedIds - the collision domain from {@link buildReservedIds}
+ * @returns the minted `{id, name}` — always succeeds
+ */
+export function mintInstance(label: string, reservedIds: Set<string>): BlankInstance {
+    const name = label.trim();
+    const base = deriveInstanceId(name) || FALLBACK_LABEL_STEM;
+    if (!reservedIds.has(base)) {
+        return { id: base, name };
+    }
+    let suffix = 2;
+    while (reservedIds.has(`${base}-${suffix}`)) {
+        suffix++;
+    }
+    return { id: `${base}-${suffix}`, name: `${name} ${suffix}` };
+}

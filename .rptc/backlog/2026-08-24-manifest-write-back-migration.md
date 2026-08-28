@@ -1,4 +1,19 @@
+---
+id: PL-1
+kind: chore
+area: platform
+needs: []
+value: med
+status: active
+layer: G
+---
 # Manifest write-back migration — retire the legacy-format read layer
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Old project manifests are converted in memory on every load but never rewritten, so the legacy-read code (~half the repo's remaining `legacy` mentions, incl. the whole `meshState`/`appState` synthesis family) is load-bearing forever. Two phases: (1) an idempotent activation sweep step — joining the SEQUENCED upkeep chain in `extension.ts`, never beside it — loads and saves each unstamped manifest, plus a real format stamp (`version: '1.0.0'` today is static) and a pinned rollback floor; (2) two releases later, delete the converters — done = the `singularStateAccessGuard` allowlist (7 files) is empty. Settings export files and external-system shapes are explicitly out of scope. ~1 day per phase. Filed 2026-08-24 from the trim-cycle 4 sweep.
 
 > **Phase 1 SHIPPED 2026-08-24** (`feature/manifest-write-back-migration` →
 > develop): `MANIFEST_FORMAT_VERSION = 2` stamped by every save
@@ -26,6 +41,12 @@
 **Filed:** 2026-08-24 (from the trim-cycle 4 legacy sweep — the sweep kept these
 layers because they are compatibility with DATA on disk, not with code; this
 item is the plan to remove that dependency at its source.)
+## Shipped so far
+
+- 2026-07-15  Keyed writer (`9059eee29`), first release tag beta.127
+- 2026-08-24  Phase 1 — `feature/manifest-write-back-migration`
+- 2026-08-27  Phase 2 PREPARED on branch loop/2026-08-27-manifest-phase2 (off develop, unmerged — the ship gate stays the owner's beta.141 confirmation). meshState/appState removed from Project entirely; they survive only on ProjectManifest, read by the quarantined migration (also the sweep's load path, so dormant machines still migrate — the agreed safeguard). Deleted: the accessor synthesis family (getKeyedMeshAppBuilderComponent merged into getMeshAppBuilderComponent), stalenessDetector's per-field fallback + clearing write, meshUpdateDecline fallback, meshVerifier clearing write, typeGuards endpoint fallback. Guard allowlist: 7 files/15 sites -> appBuilderComponentMigration alone (5). Also caught an access the guard's dot-regex could never see: meshVerifyCheck passed 'meshState' as a markDirty STRING key — now 'appBuilderComponents'. Golden proof: the config.json snapshot recorded from the legacy shape reproduces byte-identically from the keyed shape. DECISION recorded: componentApiPicks' additionalConsoleApis conversion and the daLiveSite strip STAY in the load path — they are load-path tolerance exactly like the quarantined migration, and deleting them would break the dormant-machine safeguard the item itself added. Full gate green (1150 suites / 14972 tests, both tsc, whole-repo lint, blindspots).
+- 2026-08-27  chore(state): PL-1 phase 2 — the legacy singular mesh/app state leaves Project (`797194416`)
 
 ## Problem
 

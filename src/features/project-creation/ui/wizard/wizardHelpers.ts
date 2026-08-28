@@ -2,9 +2,9 @@
  * Helper functions for WizardContainer component (SOP §3, §4 compliance)
  */
 
-import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { isMeshComponentId } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';

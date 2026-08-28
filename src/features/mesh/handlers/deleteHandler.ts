@@ -4,19 +4,19 @@
  * Handles deleting API Mesh instances.
  */
 
-import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,
     type OrgContextTarget,
 } from '@/core/shell';
+import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 /**

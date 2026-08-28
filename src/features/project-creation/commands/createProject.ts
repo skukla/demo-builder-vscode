@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { HandlerContext, SharedState } from '@/types/handlers';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
@@ -13,14 +12,15 @@ import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
+import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers';
-import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
 import {
     formatGroupName as formatGroupNameHelper,
 } from '@/features/project-creation/helpers';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
+import { HandlerContext, SharedState } from '@/types/handlers';
 import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';

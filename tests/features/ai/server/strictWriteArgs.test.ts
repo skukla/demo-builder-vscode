@@ -62,7 +62,7 @@ function registerProbes(srv: {
     // A read tool, deliberately left permissive.
     srv.registerTool(
         'get_probe_value',
-        { description: 'probe read', inputSchema: { scope: z.string() } },
+        { description: 'probe read', inputSchema: { scope: z.string() }, annotations: { readOnlyHint: true } },
         ok('get_probe_value')
     );
 }

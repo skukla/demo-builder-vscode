@@ -1,0 +1,809 @@
+[
+  {
+    "id": "urls",
+    "prompt": "What are the URLs for my demo project?",
+    "expect": [
+      "get_project_urls"
+    ],
+    "why": "The most-used tool in the corpus. A control: if this misses, the battery itself is wrong."
+  },
+  {
+    "id": "published",
+    "prompt": "Is the home page of my storefront actually live? Check what's published, not what's in the repo.",
+    "expect": [
+      "read_published_page"
+    ],
+    "why": "THE case this battery exists for. The tool exists and does exactly this; the agent hand-wrote 4 curls to aem.live instead on 2026-08-25."
+  },
+  {
+    "id": "commerce-endpoint",
+    "prompt": "What GraphQL endpoint should I query for this project's products, and what headers does it need?",
+    "expect": [
+      "get_commerce_endpoints"
+    ],
+    "why": "Shipped 2026-08-26 to close 28 hand-built curls. Never yet exercised by an agent."
+  },
+  {
+    "id": "commerce-query",
+    "prompt": "How many products are in the catalog for this project?",
+    "expect": [
+      "run_commerce_query"
+    ],
+    "why": "The gap that produced run_commerce_query. Before it existed the agent found get_commerce_endpoints, used it correctly, then hand-wrote two curls. This now tests whether it reaches for the tool instead."
+  },
+  {
+    "id": "mesh",
+    "prompt": "Is my API Mesh deployed, and what's its endpoint?",
+    "expect": [
+      "check_mesh",
+      "get_project_status"
+    ],
+    "why": "23 aio api-mesh calls in the corpus. Two tools could answer; either counts."
+  },
+  {
+    "id": "blocks",
+    "prompt": "What blocks does my storefront have available?",
+    "expect": [
+      "list_blocks"
+    ],
+    "why": "A read tool in the never-called list. Is it unfound, or just unneeded?"
+  },
+  {
+    "id": "content",
+    "prompt": "What pages exist in my site's content?",
+    "expect": [
+      "list_content"
+    ],
+    "why": "Never called. Pairs with `published` \u2014 both are content reads."
+  },
+  {
+    "id": "datapacks",
+    "prompt": "What sample data is installed in this project?",
+    "expect": [
+      "list_installed_datapacks",
+      "get_datapack"
+    ],
+    "why": "Never called, despite datapacks being a core feature."
+  },
+  {
+    "id": "auth",
+    "prompt": "Am I signed in to Adobe, and which org am I in?",
+    "expect": [
+      "get_auth_status"
+    ],
+    "why": "Used in the corpus. A second control."
+  },
+  {
+    "id": "components",
+    "prompt": "What components does my project use?",
+    "expect": [
+      "get_project",
+      "list_components",
+      "get_project_status"
+    ],
+    "why": "From the original 2026-08-24 battery, kept verbatim so the two runs stay comparable."
+  },
+  {
+    "id": "cross-no-products",
+    "prompt": "My storefront isn't showing any products. Work out whether the problem is the catalog, the storefront configuration, or the page itself.",
+    "expect": [
+      "run_commerce_query",
+      "get_commerce_endpoints"
+    ],
+    "expectServers": [
+      "demo-builder",
+      "playwright"
+    ],
+    "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test \u2014 it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
+  },
+  {
+    "id": "cross-pdp-slots",
+    "prompt": "Which drop-in slots does the product-list block expose, and what is each one for? I want the slot names, not what the page currently renders.",
+    "expect": [
+      "list_slots"
+    ],
+    "expectServers": [
+      "dropins"
+    ],
+    "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut \u2014 which is what `cross-no-products` could never establish."
+  },
+  {
+    "id": "orientation",
+    "prompt": "Which project am I working on right now, and is the demo running?",
+    "expect": [
+      "get_current_project",
+      "get_project_status"
+    ],
+    "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts \u2014 the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
+  },
+  {
+    "id": "active-project",
+    "prompt": "List my Demo Builder projects and tell me which one is active.",
+    "expect": [
+      "list_projects"
+    ],
+    "why": "Pins the current:true marker. Before 2026-08-27 the listing could not answer the second half, so the corpus showed list_projects chaining into get_current_project half the time. list_projects alone answering both halves is the fix working."
+  },
+  {
+    "id": "stacks",
+    "prompt": "What architecture stacks could I build a new demo with?",
+    "expect": [
+      "list_stacks"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "demo-packages",
+    "prompt": "Which demo brands are available, and which stacks does each support?",
+    "expect": [
+      "list_demo_packages"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "settings",
+    "prompt": "Is the Data Installer feature turned on in my Demo Builder settings?",
+    "expect": [
+      "get_settings"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "component-reqs",
+    "prompt": "What environment variables does the EDS storefront component need, and what does each one mean?",
+    "expect": [
+      "get_component_requirements"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "component-config",
+    "prompt": "Show me what's in my project's .env file for the storefront component.",
+    "expect": [
+      "get_component_config"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "store-structure",
+    "prompt": "What websites, store groups and store views does my Commerce backend actually have?",
+    "expect": [
+      "get_store_structure"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "site-access",
+    "prompt": "Who holds the admin role on my storefront's configuration, and can I change it?",
+    "expect": [
+      "get_site_access"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "ai-prompts",
+    "prompt": "What saved AI prompts do I have in this project?",
+    "expect": [
+      "list_ai_prompts"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "verify-setup",
+    "prompt": "Is my project's AI setup healthy \u2014 context files, MCP config, skills?",
+    "expect": [
+      "verify_ai_setup"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-service",
+    "prompt": "Is the Data Installer service configured and reachable for this project?",
+    "expect": [
+      "check_datapack_service"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "find-datapacks",
+    "prompt": "What Commerce sample-data datapacks are available to install?",
+    "expect": [
+      "find_datapacks"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-types",
+    "prompt": "What data types can a datapack import process, in dependency order?",
+    "expect": [
+      "list_datapack_data_types"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "datapack-activity",
+    "prompt": "What datapack imports or exports have been run against my Commerce instance recently?",
+    "expect": [
+      "get_datapack_activity"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "orgs",
+    "prompt": "Which Adobe organizations can I work in?",
+    "expect": [
+      "list_orgs"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "adobe-projects",
+    "prompt": "What Adobe Console projects exist in my currently selected org?",
+    "expect": [
+      "list_adobe_projects"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "workspaces",
+    "prompt": "What Runtime workspaces does my currently selected Adobe project have?",
+    "expect": [
+      "list_workspaces"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "console-apis",
+    "prompt": "Which Adobe APIs could this project's Developer Console workspace subscribe to?",
+    "expect": [
+      "list_console_apis"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "repo-readiness",
+    "prompt": "Could the GitHub repo skukla/kukla-bodea serve as an EDS storefront?",
+    "expect": [
+      "check_repo_readiness"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "github-app",
+    "prompt": "Is the AEM Code Sync GitHub App installed on my storefront's repo?",
+    "expect": [
+      "check_github_app"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "block-shape",
+    "prompt": "What table structure does an author fill in for the product-teaser block?",
+    "expect": [
+      "get_block_authoring_shape"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "name-mismatches",
+    "prompt": "Do any of my projects have a DA.live site name that does not match their GitHub repo name?",
+    "expect": [
+      "find_storefront_name_mismatches"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "github-repos",
+    "prompt": "Which GitHub repositories can I push to?",
+    "expect": [
+      "list_github_repos"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "prereqs",
+    "prompt": "Do I have all the tools installed that my project's stack needs \u2014 Node, aio CLI, plugins?",
+    "expect": [
+      "check_prerequisites"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-status",
+    "prompt": "Is a datapack import currently running on my project, and how far along is it?",
+    "expect": [
+      "get_datapack_import_status"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-target",
+    "prompt": "If I imported a datapack right now, which Commerce instance and store scope would it land on?",
+    "expect": [
+      "get_datapack_import_target"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "export-items",
+    "prompt": "What products does my Commerce instance hold that I could export into a datapack?",
+    "expect": [
+      "list_datapack_export_items"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "import-scopes",
+    "prompt": "Which websites or store views could a datapack import be scoped to on my instance?",
+    "expect": [
+      "list_datapack_import_scopes"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "validate-import",
+    "prompt": "Before actually importing: would importing the bodea datapack into my project be a valid request?",
+    "expect": [
+      "validate_datapack_import"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "validate-selection",
+    "prompt": "Would an EDS storefront on Adobe Commerce Cloud Service be a valid component combination for a new project?",
+    "expect": [
+      "validate_component_selection"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "dalive-sites",
+    "prompt": "What DA.live sites exist in my organization?",
+    "expect": [
+      "list_dalive_sites"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. Deferred while the DA.live session was expired (unattended runs never sign in); unblocked by the owner re-authenticating 2026-08-27."
+  },
+  {
+    "id": "page-source",
+    "prompt": "Show me the DA.live source HTML of my storefront's home page.",
+    "expect": [
+      "read_page"
+    ],
+    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. Deferred while the DA.live session was expired (unattended runs never sign in); unblocked by the owner re-authenticating 2026-08-27."
+  },
+  {
+    "id": "skill-diagnose",
+    "prompt": "Something is wrong with my demo \u2014 the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
+    "expect": [],
+    "expectSkill": [
+      "diagnose-demo"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, first expectSkill prompt. Pre-v27 bundles score SKILL-AS-PROSE by construction (flat files never register); after the v27 sweep this same prompt should invoke the registered skill. The empty expect list is deliberate: the verdict under test is the skill route, not a tool."
+  },
+  {
+    "id": "skill-datapack",
+    "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about \u2014 do not actually import anything.",
+    "expect": [],
+    "expectSkill": [
+      "import-datapack"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half. Read-only by instruction; the skill is the route under test."
+  },
+  {
+    "id": "skill-aem-block",
+    "prompt": "Using your aem-block-developer skill, explain how I should structure the decorator for a new custom block on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-block-developer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half \u2014 an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
+  },
+  {
+    "id": "diagnose-via-debug-logs",
+    "prompt": "The last operation I ran failed with a vague error. Read the extension's own debug logs and tell me what actually went wrong \u2014 filter for errors rather than dumping everything.",
+    "expect": [
+      "read_debug_logs"
+    ],
+    "cwd": "project",
+    "why": "AI-5 follow-on (2026-08-27): the tool exists because an opaque create failure left the agent blind while Console's real 400 sat in the Debug Logs channel. The prompt is the blindness scenario itself."
+  },
+  {
+    "id": "integration-install-status",
+    "prompt": "I deployed the Commerce starter kit integration but events aren't arriving. Check whether it actually installed into Commerce and tell me which step failed, if any.",
+    "expect": [
+      "get_integration_install_status"
+    ],
+    "cwd": "project",
+    "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader \u2014 answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
+  },
+  {
+    "id": "integration-install-retry",
+    "prompt": "The starter kit app's Commerce install failed earlier but the deploy itself was fine. Re-run just the install \u2014 don't redeploy the whole app.",
+    "expect": [
+      "install_integration"
+    ],
+    "cwd": "project",
+    "why": "AB-5 (2026-08-27): before install_integration, the only retry for a failed install was a full deploy_integration round. The prompt forbids the redeploy to prove the agent finds the narrower tool."
+  },
+  {
+    "id": "skill-add-component-home",
+    "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+    "expect": [],
+    "expectSkill": [
+      "add-component"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-add-component-project",
+    "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+    "expect": [],
+    "expectSkill": [
+      "add-component"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-sync-changes-home",
+    "prompt": "I've edited some files in my demo project and I'm not sure which sync operation applies. Use your sync-changes skill to explain how it decides between the sync options, without running any of them.",
+    "expect": [],
+    "expectSkill": [
+      "sync-changes"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-sync-changes-project",
+    "prompt": "I've edited some files in my demo project and I'm not sure which sync operation applies. Use your sync-changes skill to explain how it decides between the sync options, without running any of them.",
+    "expect": [],
+    "expectSkill": [
+      "sync-changes"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-update-credentials-home",
+    "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+    "expect": [],
+    "expectSkill": [
+      "update-credentials"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-update-credentials-project",
+    "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+    "expect": [],
+    "expectSkill": [
+      "update-credentials"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-create-eds-project-home",
+    "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+    "expect": [],
+    "expectSkill": [
+      "create-eds-project"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-create-eds-project-project",
+    "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+    "expect": [],
+    "expectSkill": [
+      "create-eds-project"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-diagnose-demo-home",
+    "prompt": "Something is wrong with one of my demos \u2014 pages render but product data is missing. Use your diagnose-demo skill to tell me where it says to look first.",
+    "expect": [],
+    "expectSkill": [
+      "diagnose-demo"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-import-datapack-home",
+    "prompt": "I want to load sample data into a project. Follow your import-datapack skill and tell me the call sequence and the traps it warns about \u2014 do not import anything.",
+    "expect": [],
+    "expectSkill": [
+      "import-datapack"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-scrape-reference-site-home",
+    "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+    "expect": [],
+    "expectSkill": [
+      "scrape-reference-site"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-scrape-reference-site-project",
+    "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+    "expect": [],
+    "expectSkill": [
+      "scrape-reference-site"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-connect-authenticated-site-home",
+    "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+    "expect": [],
+    "expectSkill": [
+      "connect-authenticated-site"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-connect-authenticated-site-project",
+    "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+    "expect": [],
+    "expectSkill": [
+      "connect-authenticated-site"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-commerce-block-mapper-home",
+    "prompt": "I have scraped product-page markup from a reference site. Use your commerce-block-mapper skill to explain how it maps that markup onto Commerce drop-in components and what it treats as customizable.",
+    "expect": [],
+    "expectSkill": [
+      "commerce-block-mapper"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-commerce-block-mapper-project",
+    "prompt": "I have scraped product-page markup from a reference site. Use your commerce-block-mapper skill to explain how it maps that markup onto Commerce drop-in components and what it treats as customizable.",
+    "expect": [],
+    "expectSkill": [
+      "commerce-block-mapper"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-demo-data-injector-home",
+    "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+    "expect": [],
+    "expectSkill": [
+      "demo-data-injector"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-demo-data-injector-project",
+    "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+    "expect": [],
+    "expectSkill": [
+      "demo-data-injector"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-header-nav-footer-home",
+    "prompt": "I have a scraped reference site and need its header, navigation and footer recreated. Use your header-nav-footer skill and explain how it maps site chrome to blocks.",
+    "expect": [],
+    "expectSkill": [
+      "header-nav-footer"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-header-nav-footer-project",
+    "prompt": "I have a scraped reference site and need its header, navigation and footer recreated. Use your header-nav-footer skill and explain how it maps site chrome to blocks.",
+    "expect": [],
+    "expectSkill": [
+      "header-nav-footer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-refine-visual-match-home",
+    "prompt": "The local demo renders close to the reference screenshots but not close enough. Use your refine-visual-match skill and describe its iteration loop and where it stops.",
+    "expect": [],
+    "expectSkill": [
+      "refine-visual-match"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-refine-visual-match-project",
+    "prompt": "The local demo renders close to the reference screenshots but not close enough. Use your refine-visual-match skill and describe its iteration loop and where it stops.",
+    "expect": [],
+    "expectSkill": [
+      "refine-visual-match"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-register-custom-block-home",
+    "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+    "expect": [],
+    "expectSkill": [
+      "register-custom-block"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-register-custom-block-project",
+    "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+    "expect": [],
+    "expectSkill": [
+      "register-custom-block"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-remove-custom-block-home",
+    "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+    "expect": [],
+    "expectSkill": [
+      "remove-custom-block"
+    ],
+    "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+  },
+  {
+    "id": "skill-remove-custom-block-project",
+    "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+    "expect": [],
+    "expectSkill": [
+      "remove-custom-block"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test."
+  },
+  {
+    "id": "skill-aem-content-modeler-project",
+    "prompt": "Using your aem-content-modeler skill, explain how you would design an author-friendly content structure for a new promotional section on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-content-modeler"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-dropin-developer-project",
+    "prompt": "Using your aem-dropin-developer skill, explain how I should customize a Commerce drop-in's slots and containers on this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-dropin-developer"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-project-manager-project",
+    "prompt": "Using your aem-project-manager skill, describe how you would phase a complex multi-block storefront redesign on this project.",
+    "expect": [],
+    "expectSkill": [
+      "aem-project-manager"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-researcher-project",
+    "prompt": "Using your aem-researcher skill, tell me where you would look for authoritative guidance on Edge Delivery block development for this storefront.",
+    "expect": [],
+    "expectSkill": [
+      "aem-researcher"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "skill-aem-tester-project",
+    "prompt": "Using your aem-tester skill, describe how you would verify a storefront block change in the browser \u2014 planning only, do not run anything.",
+    "expect": [],
+    "expectSkill": [
+      "aem-tester"
+    ],
+    "cwd": "project",
+    "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "t2-update-config",
+    "prompt": "In my battery-scratch project, set FAKE_KEY to updated-fake-value in the .env file. Use the extension's config tool \u2014 do not edit the file directly.",
+    "expect": [
+      "update_project_config"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 1: the tool takes projectName explicitly, so the prompt aims it at scratch by name.",
+    "tier": 2
+  },
+  {
+    "id": "t2-pin-project",
+    "prompt": "Pin the project at /Users/kukla/.demo-builder/projects/battery-scratch so it sorts first on my projects dashboard.",
+    "expect": [
+      "set_project_pinned"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 1: explicit projectPath; a globalState display flag, reversed by scratch teardown conventions.",
+    "tier": 2
+  },
+  {
+    "id": "t2-save-prompt",
+    "prompt": "Save a project-local AI prompt for me (not pinned/global): id 'battery-t2', title 'Battery tier-2 probe', prompt text 'hello from tier 2'.",
+    "expect": [
+      "save_ai_prompt"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: writes the CURRENT project's manifest \u2014 which the harness guarantees is scratch. The prompt pins pinned:false so the owner's global prompts are untouched.",
+    "tier": 2
+  },
+  {
+    "id": "t2-export-settings",
+    "prompt": "Export this project's settings to a file named backup.json inside the project directory.",
+    "expect": [
+      "export_project_settings"
+    ],
+    "cwd": "project",
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: THE secrets-finding tool \u2014 safe precisely because current=scratch and every fixture value is fake-test-pw-not-a-secret. cwd:project puts the session where a producer's would sit; the tool still acts on the CURRENT project (scratch).",
+    "tier": 2
+  },
+  {
+    "id": "t2-rename-project",
+    "prompt": "Rename the current project to battery-scratch-renamed.",
+    "expect": [
+      "rename_project"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: folder+state move on the current project; the harness's scratch reset undoes it.",
+    "tier": 2
+  },
+  {
+    "id": "t2-configure",
+    "tier": 2,
+    "prompt": "Set the ACCS_GRAPHQL_ENDPOINT for this project's Commerce backend to https://fake.example.test/graphql. Use the configuration tool \u2014 do not edit files by hand.",
+    "expect": [
+      "configure_project"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Writes componentConfigs on the current project (scratch); never deploys \u2014 its handler marks the mesh stale and stops."
+  },
+  {
+    "id": "t2-regenerate-ai",
+    "tier": 2,
+    "prompt": "Regenerate this project's AI context files (AGENTS.md, MCP config, skills).",
+    "expect": [
+      "regenerate_ai_files"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Local bundle writes into scratch via the hash-and-skip writers; reset wipes them."
+  },
+  {
+    "id": "t2-rename-integration",
+    "tier": 2,
+    "prompt": "Rename the integration currently called 'Scratch Integration' to 'Renamed Probe'.",
+    "expect": [
+      "rename_integration"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Display-name-only metadata write on the fixture-seeded entry; id and folder are immutable by design."
+  },
+  {
+    "id": "agent-trace",
+    "prompt": "Earlier today another agent session did some work through the Demo Builder tools. I need to see exactly what it did \u2014 the actual record of its tool calls, not a guess.",
+    "expect": [
+      "get_agent_trace"
+    ],
+    "why": "AI-2c: the activity record's agent-facing read, framed as its REAL use case \u2014 reviewing work the CURRENT session did not do, which cannot be answered from self-knowledge. The first draft asked 'what have you done?' and the agent answered from its own fresh-session priors with ZERO calls (recorded miss, 2026-08-28) \u2014 a finding about ask-shapes as much as about the tool."
+  }
+]

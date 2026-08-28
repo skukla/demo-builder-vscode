@@ -62,22 +62,18 @@ describe('deployAppComponentIsolated', () => {
         expect(mockApply).toHaveBeenCalledWith('/proj/components/erp', 'erp-pkg');
     });
 
-    it('forwards path, command manager, logger and progress to the deploy tail', async () => {
+    it('forwards path, command manager, logger and the deploy options to the tail', async () => {
         const onProgress = jest.fn();
+        const opts = { onProgress, nodeVersion: '24', layout: 'extension' as const };
         await deployAppComponentIsolated(
             '/proj/components/erp',
             'erp-pkg',
             commandManager,
             logger,
-            onProgress,
+            opts,
         );
 
-        expect(mockDeploy).toHaveBeenCalledWith(
-            '/proj/components/erp',
-            commandManager,
-            logger,
-            onProgress,
-        );
+        expect(mockDeploy).toHaveBeenCalledWith('/proj/components/erp', commandManager, logger, opts);
     });
 
     it('still deploys when there is nothing to isolate (standalone-ness is guaranteed at the add door)', async () => {

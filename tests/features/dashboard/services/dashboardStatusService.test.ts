@@ -148,12 +148,17 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {
-                        MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {
+                                MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
+                            },
+                            sourceHash: 'abc123',
+                            lastDeployed: '2024-01-01T00:00:00Z',
+                                    },
                 },
             };
 
@@ -252,10 +257,15 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '',
+                                    },
                 },
             };
 
@@ -313,11 +323,16 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: 'https://mesh.adobe.io/graphql',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: 'https://mesh.adobe.io/graphql',
+                                    },
                 },
             };
 
@@ -353,10 +368,15 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                                    },
                 },
             };
 
@@ -375,11 +395,16 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: '',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: '',
+                                    },
                 },
             };
 
@@ -398,11 +423,16 @@ describe('dashboardStatusService', () => {
                 created: new Date(),
                 lastModified: new Date(),
                 status: 'ready',
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: '   ',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: '   ',
+                                    },
                 },
             };
 
@@ -452,11 +482,16 @@ describe('dashboardStatusService', () => {
                         MESH_ENDPOINT: 'https://old-stale-endpoint.adobe.io/graphql',
                     },
                 },
-                meshState: {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '2024-01-01',
-                    endpoint: 'https://correct-endpoint.adobe.io/graphql',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            envVars: {},
+                            sourceHash: null,
+                            lastDeployed: '2024-01-01',
+                            endpoint: 'https://correct-endpoint.adobe.io/graphql',
+                                    },
                 },
             };
 

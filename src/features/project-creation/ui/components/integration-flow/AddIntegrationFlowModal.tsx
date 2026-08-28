@@ -24,7 +24,6 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
-import { isPrebuiltIntegration } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { type FlowMode, FlowStageId } from './flowStages';
@@ -42,6 +41,10 @@ import {
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import {
+    isPrebuiltIntegration,
+    isSeedIntegration,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 
@@ -118,14 +121,17 @@ function StageBody({
     const { state, updateState, meshComponent, catalog, onSignIn } = props;
 
     // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
-    // integrations, and the blank shell. Only the last of those three categories
-    // belongs in the Pre-built gallery — the other two already have their own card
-    // in the kind picker, so listing them here offered the same thing twice under
-    // two names (reported 2026-08-06: two options in a catalog with no pre-builts).
+    // integrations, the blank shell, and SEEDS. Only finished integrations belong
+    // in the Pre-built gallery — everything else has its own home (meshes on the
+    // kind picker, blank + seeds on the Build-custom naming stage), so listing
+    // them here offered the same thing twice under two names (reported
+    // 2026-08-06; the seed split is the owner's 2026-08-27 decision: the kit "is
+    // a Custom App that's built using the starter kit").
     //
     // Derived ONCE and used for both the tile count and the gallery, so the count
     // can never disagree with what the gallery would show.
     const prebuiltCatalog = useMemo(() => catalog.filter(isPrebuiltIntegration), [catalog]);
+    const seedCatalog = useMemo(() => catalog.filter(isSeedIntegration), [catalog]);
     const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
     if (stage === 'kind') {
         // Availability and already-added stay SEPARATE here: the tile is hidden
@@ -145,11 +151,16 @@ function StageBody({
         );
     }
     if (stage === 'source-catalog') {
+        // The picked entry gets the same naming field the blank path uses —
+        // prefilled with the entry's name, so a kept default commits the
+        // classic catalog identity and an edited name a named instance.
         return (
             <CatalogStage
                 catalog={prebuiltCatalog}
                 selectedId={draft.catalogId}
                 onPick={flow.pickCatalog}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }
@@ -161,18 +172,25 @@ function StageBody({
                 selectedIds={selectedIds}
                 source={draft.customSource}
                 onSourceChange={flow.setCustomSource}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }
     if (stage === 'source-blank') {
         // The instance-naming stage: a valid, non-colliding name emits the
         // {id, name} instance into the draft (the stage gate); anything else
-        // clears it and re-disables Continue.
+        // clears it and re-disables Continue. Pre-built entries double as
+        // SEEDS here — starting points a custom build clones instead of the
+        // blank shell.
         return (
             <BlankStage
-                reservedIds={props.reservedIds}
-                instance={draft.instance}
-                onInstanceChange={flow.setInstance}
+                seeds={seedCatalog}
+                seedId={draft.seedId}
+                selectedIds={selectedIds}
+                onSeedChange={flow.setSeed}
+                label={draft.label}
+                onLabelChange={flow.setLabel}
             />
         );
     }

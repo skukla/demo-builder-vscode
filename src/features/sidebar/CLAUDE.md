@@ -87,13 +87,13 @@ Main container component that renders context-specific content.
 
 ### AiZone
 
-Labeled sidebar zone with two tiles: a Chat menu and Prompts.
+Labeled sidebar zone with THREE tiles: Chat ⌄ (a menu), Prompts, Workbench.
 
 **Props:**
 - `onOpenAiChat: () => void` — "Continue chat". Routes to
   `demoBuilder.openAiExperience` (opens or focuses the Claude terminal,
   resuming via `claude --continue`).
-- `onShowPrompts: () => void` — invokes the Prompts tile. Routes to
+- `onShowPrompts: () => void` — the Prompts tile. Routes to
   `demoBuilder.showPromptsPicker` (shows the prompt QuickPick).
 - `onNewAiChat?: () => void` — OPTIONAL "New chat". Routes to
   `demoBuilder.newAiChat`, which starts a FRESH conversation. Supplying it is
@@ -108,7 +108,10 @@ Labeled sidebar zone with two tiles: a Chat menu and Prompts.
   icon and an 11px label, with no room for a second element on either line. As a
   third child the chevron became its own row; inline beside the label it squeezed
   the text until `overflow-wrap: anywhere` broke it to one character per line.
-- Prompts tile (`Chat` icon + label).
+- Prompts tile (`Chat` icon + label) — plain button, opens the QuickPick.
+- Workbench tile (`Beaker` icon + label) — plain button, opens the Prompt
+  Workbench. The beaker is the same glyph the simulate vocabulary uses on the
+  prompt card's kebab and in the status bar, so one concept keeps one symbol.
 
 **Why Chat is a menu, not a third tile.** Continuing and starting fresh are two
 ways to do one thing, so they live behind one affordance — the same shape as the
@@ -116,31 +119,56 @@ projects toolbar's `New ⌄` button (`ProjectsDashboard.tsx`). A third flat tile
 read as a third feature and pushed the six-tile stack past the panel at editor
 zoom.
 
+**The Prompt Workbench WAS a third tile, and is not any more.** It moved to
+`feature/prompt-workbench` on 2026-08-26 (AI-3b) with the rest of the
+prompt-evaluation surface, so AiZone is back to two tiles: Chat and Prompts.
+
+The argument it settled still stands and is why the breakpoint is 640px, not
+600px. Two earlier readings called a third tile impossible on the arithmetic —
+"a seventh tile needs 596px against a 600px breakpoint, four pixels, too thin".
+**Both missed that the stack was CENTRED**, so half the leftover space sat above
+the "AI" label doing nothing while the stack was treated as out of room. The
+owner made the call: top-align, and the slack gathers below the last tile, which
+is exactly where a new tile extends into. Keep that layout — the next tile,
+whatever it is, depends on it.
+
 **Why New chat exists at all.** Every launch otherwise resumes, and a resumed
 conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance
 it was born with, however many `AI_CONTEXT_VERSION` bumps ago. This is the only
 route onto the current bundle.
 
-**Top offset.** `.sidebar-view` carries `padding-top: 80px` (moved out of an
-inline `UNSAFE_style`), collapsing to 16px at the same `max-height: 560px`
-breakpoint as the tile wrap — so the roomy layout keeps its original spacing and
-the dense one does not spend the headroom it just gained on an empty gap.
+**Top-aligned, 20px above.** `.sidebar-view` uses `justify-content: flex-start`
+so the leftover vertical space gathers BELOW the last tile instead of being split
+above and below it. That is what makes room for tiles without touching the tile
+size. Three versions, each with a reason: `padding-top: 80px` (fixed, had to be
+re-derived per tile count) → `safe center` (self-adjusting, but split the slack)
+→ `flex-start` (self-adjusting AND the slack is usable).
+
+`safe` is no longer needed and its hazard goes with it: plain `center` overflowed
+a too-short panel in BOTH directions and pushed the first tile above the scroll
+origin; `flex-start` can only overflow downward, into `.sidebar-provider`'s
+scroll.
+
+*This paragraph described the 80px offset until 2026-08-25, long after the CSS
+stopped doing it, and the threshold comment cited the 572px figure that offset
+produced. Both corrected, then corrected again when the tile landed.*
 
 **Layout — one column, wrapping 2-up only when short.** Tiles live in
 `.sidebar-tile-grid`, a plain div (not a Spectrum `Flex` — width gotcha). Default
-is one per row, the original look. Under `@media (max-height: 600px)` they wrap
-two per row: stacked, each tile costs 72px, so the roomy layout needs 572px for
-six tiles and Logs was being clipped on a zoomed panel; wrapped, six take ~356px, and a
-seventh fills the slot beside the sixth without adding a row at all.
+is one per row, the original look. Under `@media (max-height: 640px)` they wrap
+two per row: stacked, each tile costs 72px, so the roomy layout needs 600px for
+SEVEN tiles and Logs was being clipped on a zoomed panel; wrapped, seven take
+~380px, and an eighth fills the slot beside the seventh without adding a row.
 
-**The 600px threshold is DERIVED, not eyeballed** — it must exceed the height the
+**The 640px threshold is DERIVED, not eyeballed** — it must exceed the height the
 roomy layout actually needs, or the last tile is clipped in the gap between the
 two modes (at 560px it was, by ~12px). Adding tiles means recomputing it, ~72px
 per tile:
 
 ```
 content = 32 (padding) + per zone: 18 (label) + 8 + rows*64 + (rows-1)*8, + 24 between zones
-6 tiles -> 1-up 524px | 2-up 308px      8 tiles -> 1-up 668px | 2-up 380px
+6 tiles -> 1-up 524px | 2-up 308px      8 tiles -> 1-up 672px | 2-up 384px
+7 tiles -> 1-up 600px | 2-up 380px      <- TODAY, against a 640px breakpoint
 ```
 
 Centring does not remove the need for the breakpoint: it balances the space that

@@ -22,6 +22,7 @@ import type { AuthCacheManager } from './authCacheManager';
 import type {
     AdobeProject,
     AdobeWorkspace,
+    ConsoleOpFailure,
     RawAdobeProject,
     RawAdobeWorkspace,
     SDKResponse,
@@ -55,23 +56,23 @@ export class AdobeConsoleProjectOps {
      *
      * Uses the Console SDK's `createFireflyProject` (project type 'jaeger' =
      * App Builder). Needs only the cached org id. SDK-only (no CLI fallback).
-     * Never throws — returns the mapped project, or `undefined` on validation
-     * failure, missing org, unavailable SDK, or any SDK error (403 permission /
-     * 409 name-taken / quota), which the handler surfaces to the user.
+     * Never throws — returns the mapped project, or a {@link ConsoleOpFailure}
+     * naming the REAL reason (validation, missing org, unavailable SDK, or the
+     * SDK error's own text), which callers surface verbatim.
      */
     async createProject(
         title: string,
         description: string,
         target?: { orgId?: string },
-    ): Promise<AdobeProject | undefined> {
+    ): Promise<AdobeProject | ConsoleOpFailure> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
             this.debugLogger.error('[Entity Fetcher] Invalid project title (empty or >200 chars)');
-            return undefined;
+            return { error: 'Project title must be 1–200 characters.' };
         }
         if (description.length > 500) {
             this.debugLogger.error('[Entity Fetcher] Invalid project description (>500 chars)');
-            return undefined;
+            return { error: 'Project description must be at most 500 characters.' };
         }
 
         try {
@@ -84,12 +85,12 @@ export class AdobeConsoleProjectOps {
             const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
             if (!orgId) {
                 this.debugLogger.debug('[Entity Fetcher] Cannot create project: missing org ID');
-                return undefined;
+                return { error: 'No organization selected.' };
             }
 
             if (!this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK not available for project creation');
-                return undefined;
+                return { error: 'Console SDK is not available — sign in to Adobe first.' };
             }
 
             // `who_created` is deliberately NOT sent. Adobe stamps it with the calling
@@ -130,7 +131,7 @@ export class AdobeConsoleProjectOps {
                 this.debugLogger.error(
                     '[Entity Fetcher] Project created but no projectId in response',
                 );
-                return undefined;
+                return { error: 'Console accepted the create but returned no project id.' };
             }
 
             this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
@@ -158,10 +159,13 @@ export class AdobeConsoleProjectOps {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {
                 this.debugLogger.error('[Entity Fetcher] Project name already exists (409)');
-            } else {
-                this.debugLogger.error('[Entity Fetcher] Failed to create project', error as Error);
+                return { error: 'A project with this name already exists in the org (409).' };
             }
-            return undefined;
+            this.debugLogger.error('[Entity Fetcher] Failed to create project', error as Error);
+            // The SDK's own text IS the answer — a Console 400 names the exact
+            // rule ("Project name length must be less than 20"), and dropping
+            // it here is what forced a live bisection to rediscover it.
+            return { error: message || 'Console rejected the project with no error message.' };
         }
     }
 
@@ -341,17 +345,17 @@ export class AdobeConsoleProjectOps {
         title: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | undefined> {
+    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
             this.debugLogger.error(
                 '[Entity Fetcher] Invalid workspace title (empty or >200 chars)',
             );
-            return undefined;
+            return { error: 'Workspace title must be 1–200 characters.' };
         }
         if (description.length > 500) {
             this.debugLogger.error('[Entity Fetcher] Invalid workspace description (>500 chars)');
-            return undefined;
+            return { error: 'Workspace description must be at most 500 characters.' };
         }
 
         try {
@@ -366,12 +370,12 @@ export class AdobeConsoleProjectOps {
                 this.debugLogger.debug(
                     '[Entity Fetcher] Cannot create workspace: missing org or project ID',
                 );
-                return undefined;
+                return { error: 'No organization or project selected.' };
             }
 
             if (!this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK not available for workspace creation');
-                return undefined;
+                return { error: 'Console SDK is not available — sign in to Adobe first.' };
             }
 
             const client = this.sdkClient.getClient() as {
@@ -407,7 +411,7 @@ export class AdobeConsoleProjectOps {
                 this.debugLogger.error(
                     '[Entity Fetcher] Workspace created but no workspaceId in response',
                 );
-                return undefined;
+                return { error: 'Console accepted the create but returned no workspace id.' };
             }
 
             this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
@@ -421,13 +425,10 @@ export class AdobeConsoleProjectOps {
             const message = (error as Error).message || '';
             if (message.includes('409') || message.includes('Conflict')) {
                 this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
-            } else {
-                this.debugLogger.error(
-                    '[Entity Fetcher] Failed to create workspace',
-                    error as Error,
-                );
+                return { error: 'A workspace with this name already exists in the project (409).' };
             }
-            return undefined;
+            this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
+            return { error: message || 'Console rejected the workspace with no error message.' };
         }
     }
 

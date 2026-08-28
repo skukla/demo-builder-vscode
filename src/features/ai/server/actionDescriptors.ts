@@ -38,6 +38,12 @@ const addIntegrationSchema = {
         })
         .optional()
         .describe('A custom App Builder app on GitHub. Omit when passing `id`.'),
+    refreshCli: z
+        .boolean()
+        .optional()
+        .describe(
+            'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+        ),
     name: z
         .string()
         .optional()
@@ -45,7 +51,9 @@ const addIntegrationSchema = {
     instanceId: z
         .string()
         .optional()
-        .describe('Explicit instance id for a custom/blank add; must not collide with an existing one'),
+        .describe(
+            'Explicit instance id for a custom/blank add; must not collide with an existing one',
+        ),
     apis: z
         .array(z.string())
         .optional()
@@ -68,7 +76,9 @@ const addIntegrationSchema = {
  * this returns `undefined` for every add available today. It is the guard that
  * has to exist before the first one is authored, not a live branch.
  */
-function addIntegrationPreflight(args: Record<string, unknown>): Record<string, unknown> | undefined {
+function addIntegrationPreflight(
+    args: Record<string, unknown>,
+): Record<string, unknown> | undefined {
     const entry = resolveAddEntry(args as Parameters<typeof resolveAddEntry>[0]);
     // An unknown id is the HANDLER's error to report; answering here would say
     // "enter values" for a component that does not exist.
@@ -95,18 +105,21 @@ function addIntegrationPreflight(args: Record<string, unknown>): Record<string, 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'regenerate_ai_files',
+        readOnly: false,
         description: "Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills)",
         map: aiHandlers,
         type: 'regenerate-ai-files',
     },
     {
         tool: 'start_demo',
+        readOnly: false,
         description: "Start the current project's demo server",
         map: dashboardHandlers,
         type: 'startDemo',
     },
     {
         tool: 'add_integration',
+        readOnly: false,
         description:
             'Add an App Builder integration to the current project: clone it, subscribe its ' +
             'Adobe APIs, build and deploy it under the project org, and register it on the ' +
@@ -123,6 +136,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'rename_integration',
+        readOnly: false,
         description:
             "Change one App Builder integration's DISPLAY NAME on the current project. The id, " +
             'its folder and its Runtime package are immutable and do not move. Local metadata ' +
@@ -138,17 +152,21 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             // optional field here would hang an agent's call on a dialog nobody is
             // watching. Anything the caller must control belongs in the schema —
             // the same reasoning as `argDefaults`, from the other direction.
-            name: z.string().min(1).describe('New display name; must not collide with another integration'),
+            name: z
+                .string()
+                .min(1)
+                .describe('New display name; must not collide with another integration'),
         },
     },
     {
         tool: 'set_console_apis',
+        readOnly: false,
         description:
-            'Set the OPTIONAL Adobe API subscriptions on this project\'s Developer Console ' +
+            "Set the OPTIONAL Adobe API subscriptions on this project's Developer Console " +
             'workspace credential to EXACTLY this list — anything currently subscribed and not ' +
             'listed is REMOVED. Pass an empty array to clear the extras. Use add_console_apis to ' +
             'only add. Always-on codes (baseline + whatever the components require) are re-included ' +
-            'regardless. Pass componentId to edit one integration\'s picks rather than the union.',
+            "regardless. Pass componentId to edit one integration's picks rather than the union.",
         map: dashboardHandlers,
         type: 'setConsoleApis',
         // Gated where `add_console_apis` is not, and the tool NAME is why the
@@ -158,7 +176,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             apis: z
                 .array(z.string())
-                .describe('The complete desired list of extra sdk codes (from list_console_apis); [] clears them'),
+                .describe(
+                    'The complete desired list of extra sdk codes (from list_console_apis); [] clears them',
+                ),
             componentId: z
                 .string()
                 .optional()
@@ -167,6 +187,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_project_destination',
+        readOnly: false,
         description:
             'Point the current project at a different Adobe Console project + workspace, and MOVE ' +
             'every integration there (each is redeployed under the new target; the old deployments ' +
@@ -180,14 +201,20 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .object({
                     id: z.string().describe('Adobe Console project id (from list_adobe_projects)'),
                     name: z.string().optional(),
-                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                    title: z
+                        .string()
+                        .optional()
+                        .describe('Display title, used in progress and the header'),
                 })
                 .describe('The Adobe Console project to deploy into'),
             workspace: z
                 .object({
                     id: z.string().describe('Workspace id (from list_workspaces)'),
                     name: z.string().optional(),
-                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                    title: z
+                        .string()
+                        .optional()
+                        .describe('Display title, used in progress and the header'),
                 })
                 .describe('The workspace within that project'),
         },
@@ -198,6 +225,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'deploy_integration',
+        readOnly: false,
         description:
             'Deploy (or redeploy) one App Builder integration on the current ' +
             'project by its id (from get_project). Runs the guard chain and deploys under the ' +
@@ -206,10 +234,17 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'deployAppBuilderComponent',
         inputSchema: {
             id: z.string().describe('The integration id to deploy (from get_project)'),
+            refreshCli: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+                ),
         },
     },
     {
         tool: 'redeploy_integration',
+        readOnly: false,
         description:
             'Redeploy one App Builder integration by its id (idempotent re-run of its deploy). ' +
             'Same effect as deploy_integration; named for the "redeploy my integration" ask.',
@@ -217,10 +252,33 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'redeployAppBuilderComponent',
         inputSchema: {
             id: z.string().describe('The integration id to redeploy (from get_project)'),
+            refreshCli: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
+                ),
+        },
+    },
+    {
+        tool: 'install_integration',
+        readOnly: false,
+        description:
+            'Re-run the Commerce install/associate pass for a DEPLOYED App Management ' +
+            'integration (e.g. the Commerce starter kit), without redeploying it. Use when ' +
+            'get_integration_install_status reports a failed install. Idempotent — an ' +
+            'already-current install answers skipped.',
+        map: dashboardHandlers,
+        type: 'installAppBuilderComponent',
+        // Not confirm-gated, matching deploy_integration: the install is a
+        // convergent reconcile toward the state the deploy already declared.
+        inputSchema: {
+            id: z.string().describe('The integration id to install (from get_project)'),
         },
     },
     {
         tool: 'remove_integration',
+        readOnly: false,
         description:
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
             '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
@@ -234,12 +292,14 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'stop_demo',
+        readOnly: false,
         description: "Stop the current project's running demo server",
         map: dashboardHandlers,
         type: 'stopDemo',
     },
     {
         tool: 'restart_demo',
+        readOnly: false,
         description:
             "Stop and restart the current project's demo server. Use after a config change that " +
             'says a restart is needed — it owns the settle delay between the stop and the start, ' +
@@ -249,6 +309,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_current_project',
+        readOnly: false,
         description:
             'Make a project the CURRENT one, which is what every project-scoped tool acts on ' +
             '(get_project, configure_project, deploy_*, start_demo…). Takes the path from ' +
@@ -269,6 +330,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_project_pinned',
+        readOnly: false,
         description:
             'Pin or unpin a project. Pinned projects sort first on the projects dashboard. ' +
             'Local display state only — nothing deploys or restarts.',
@@ -281,6 +343,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'rename_project',
+        readOnly: false,
         description:
             'Rename the current project — the folder on disk, saved state, and the ' +
             "project's MCP/AI configs all move together. Rejected while the demo is " +
@@ -296,6 +359,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'save_ai_prompt',
+        readOnly: false,
         description: 'Create or update a saved AI prompt',
         map: aiHandlers,
         type: 'save-ai-prompt',
@@ -315,6 +379,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'delete_ai_prompt',
+        readOnly: false,
         description: 'Delete a saved AI prompt by id',
         map: aiHandlers,
         type: 'delete-ai-prompt',
@@ -323,6 +388,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'deploy_mesh',
+        readOnly: false,
         description:
             "Deploy (or redeploy) the current project's API Mesh. Runs the guard " +
             "chain (auth, org, developer permission) and deploys under the project's Adobe org " +
@@ -333,6 +399,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'export_project_settings',
+        readOnly: false,
         description:
             "Export the current project's settings to a JSON file on disk (folder, saved state, " +
             'component configs, and — by default — secrets). Secrets are written to the FILE only; ' +
@@ -357,6 +424,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'refresh_block_library',
+        readOnly: false,
         description:
             "Rebuild the current EDS project's DA.live authoring block library from its " +
             'component-definition.json (destructive full re-sync — use after hand-editing ' +
@@ -373,6 +441,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'delete_mesh',
+        readOnly: false,
         description: 'Delete the API Mesh for an Adobe I/O workspace',
         map: meshHandlers,
         type: 'delete-api-mesh',
@@ -383,6 +452,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'add_console_apis',
+        readOnly: false,
         description:
             "Subscribe Adobe APIs (sdk codes from list_console_apis) on this project's Developer " +
             'Console workspace credential, e.g. to give a custom App Builder app Firefly Services ' +
@@ -399,6 +469,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'install_prerequisite',
+        readOnly: false,
         description:
             'Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from ' +
             'check_prerequisites. Runs a package manager — confirm with the user first. Some ' +

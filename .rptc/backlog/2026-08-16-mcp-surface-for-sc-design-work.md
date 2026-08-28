@@ -1,4 +1,20 @@
+---
+id: AI-1a
+kind: question
+area: ai
+parent: AI-1
+needs: AI-1c
+value: high
+status: active
+layer: A
+---
 # AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**Re-measured 2026-08-24 on beta.141, and most of the original finding has SHIPPED.** The item was filed when there were 52 tools with "zero for authoring a page"; ai-surface phases 1–6 have since taken the surface to **103 tools** — page authoring (`write_page`, `read_page`, `publish_page`, `delete_page`, `list_content`) and the token fix the item wanted most (`get_block_authoring_shape`, replacing a ~121k-token derivation) both landed. **Reachability is essentially closed**: the corrected `ai-coverage-scan` reports 41 name-level gaps of 123 handler keys, and hand-triage puts the genuinely open count at about five (settings import needs a path-taking variant — the handler opens a modal picker; sign-out / GitHub account switching; `check-credential-service`; `provision-accs-credentials`; non-EDS project reset). Note the scan itself was inflating every figure until 2026-08-24 — it ran a regex that counted nested object keys as handlers; `handler-keys.mjs` shipped beside it unused. **Re-scoped to the design axis 2026-08-24**, replacing the retired four-phase plan — and correcting its headline: "zero tools for design" is no longer true. `refine-visual-match` already drives capped render-compare-adjust rounds through the Playwright MCP, and `commerce-block-mapper` models what is themeable versus immutable. The real gap is narrower: **every visual capability we ship assumes a REFERENCE to match; none supports open-ended design** — exactly the Bodea case (no reference site, the design is being invented, no oracle for "done"). Ordered work: (1) theme tokens as a knowledge tool, generalizing the type-scale fix that converted unbounded font-size iteration into a bounded choice without showing the agent anything; (2) close the `brandAssets` write-through trap — theme edits made inside a project are silently destroyed on reset, so any theming tool builds on sand until this is decided; (3) a design skill carrying a STOPPING rule (copy `refine-visual-match`'s capped rounds + honest deltas); (4) only then ask whether open-ended design needs its own feedback loop. Governing principle: when you cannot give the model feedback, give it constraints. Filed 2026-08-16, re-measured and re-scoped 2026-08-24.
 
 > **⚠️ RE-MEASURED 2026-08-24 (beta.141) — most of this item has SHIPPED; the numbers below are historical.**
 >
@@ -40,6 +56,14 @@ item is about making sure that surface is good enough for an agent to do it well
 
 The question to keep asking of every gap below: *can an agent do this through the extension, and
 does it cost what it should?*
+## Shipped so far
+
+- 2026-08-24  Page authoring — `write_page`, `read_page`, `publish_page`, `delete_page`, `list_content` (ai-surface phases 1–6)
+- 2026-08-24  `get_block_authoring_shape` — replaces the ~121k-token block-shape derivation this item measured
+- 2026-08-24  The bundle's first PreToolUse hook (phase 6)
+- 2026-08-24  Agent layer settled deliberately: no agents ship — `scrape-reference-site` already orchestrates the one 3+-skill flow
+
+**Reachability is essentially closed** — 41 name-level gaps of 123 handler keys, hand-triaged to about five genuinely open. What REMAINS is the design/visual axis: no tool gives an agent visual feedback on a storefront. The four-phase plan below predates the current tool surface and needs re-scoping before anyone executes it.
 
 ## How to audit this systematically — `ai-coverage-scan`
 
@@ -562,4 +586,3 @@ the same deferral logic the item already applied to `write_page` markup validati
 Not a tool count. An agent can be asked to restyle a storefront for a brand and
 (a) uses tokens that exist rather than inventing values, (b) makes changes that
 survive a reset, and (c) stops, reporting what it did and what it could not judge.
-

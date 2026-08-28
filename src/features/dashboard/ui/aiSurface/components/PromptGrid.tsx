@@ -110,7 +110,6 @@ export function PromptGrid({
         (id: string) => (nextPinned: boolean) => onPinToggle(id, nextPinned),
         [onPinToggle],
     );
-
     return (
         <View>
             <View marginBottom="size-200">

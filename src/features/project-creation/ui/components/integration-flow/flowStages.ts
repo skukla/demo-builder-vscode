@@ -34,6 +34,9 @@ export interface BlankInstance {
     name: string;
 }
 
+/** The default label a Blank (no-seed) custom integration mints when unnamed. */
+export const BLANK_DEFAULT_LABEL = 'Custom Integration';
+
 export type FlowMode = 'add' | 'destination' | 'api-edit';
 
 export type FlowStageId =
@@ -52,10 +55,20 @@ export interface FlowDraft {
     catalogId?: string;
     customSource?: { owner: string; repo: string };
     /**
-     * A blank (AI-built) integration's identity ({@link BlankInstance}). Set by
-     * the source-blank stage; committed as the selection id + source-map key.
+     * The OPTIONAL display label the user typed (raw text; empty/undefined =
+     * use the path's default). Identity is minted from it at COMMIT time
+     * (`mintInstance` — silent numeric dedupe, never a gate): the name is a
+     * convenience for the end user, not the machine identity (owner decision
+     * 2026-08-27).
      */
-    instance?: BlankInstance;
+    label?: string;
+    /**
+     * The catalog entry the Build-custom instance is SEEDED from (e.g. the
+     * Commerce starter kit) — undefined means the blank shell. The commit clones
+     * the seed's repo under the minted instance's name; the seed's capability
+     * fields survive via the loader's source recognition, not via this draft.
+     */
+    seedId?: string;
     /**
      * Free Console API picks for a custom/import app's api-access step (the user
      * knows what APIs the app needs up front). Locked codes (baseline + APIs other
@@ -199,9 +212,11 @@ function customSourceValid(draft: FlowDraft, slice: FlowStateSlice): boolean {
 
 const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSlice) => boolean> = {
     kind: (draft) => draft.kind !== undefined,
+    // The optional-name model gates NOTHING on the label: identity is minted
+    // at commit (silent dedupe). Only the required choice gates Continue.
     'source-catalog': (draft) => draft.catalogId !== undefined,
-    // The stage emits instance only for a valid, non-colliding name (instanceId.ts).
-    'source-blank': (draft) => draft.instance !== undefined,
+    // "Blank" is the default starting point, so the stage is always answerable.
+    'source-blank': () => true,
     'source-custom': customSourceValid,
     'dest-signin': (_draft, slice) => slice.isSignedIn,
     'dest-project': (draft, slice) =>

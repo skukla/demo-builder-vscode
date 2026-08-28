@@ -147,9 +147,32 @@ export interface RawComponentDefinition {
         // Flat structure - requiredEnvVars/optionalEnvVars directly in configuration
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
+        /**
+         * BACKEND components only: the Commerce connection contract — which
+         * env key carries the base URL (and any suffix to strip), plus the
+         * App Management flavor. The registry owns these facts; consumers
+         * (the App Management installer) read them via
+         * `getBackendCommerceContract` instead of keeping private copies of
+         * the key names (the silent-rename failure mode).
+         */
+        commerce?: {
+            flavor: 'paas' | 'saas';
+            baseUrlKey: string;
+            baseUrlStripSuffix?: string;
+        };
         configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
         nodeVersion?: string;
+        /**
+         * Treat a failed `npm install` as FATAL for this component. Default
+         * (absent) keeps the historical warn-and-continue, which suits
+         * storefront components whose installs can warn yet remain usable.
+         * App Builder integrations set it: their deploy REQUIRES node_modules,
+         * and continuing past a refused install buries the real error under a
+         * downstream npx failure (measured 2026-08-27, starter kit
+         * engine-strict vs system node).
+         */
+        strictInstall?: boolean;
         buildScript?: string;
         skipNpmInstall?: boolean;
         required?: Record<
@@ -188,18 +211,6 @@ export interface RawComponentDefinition {
     requiresDeployment?: boolean;
     /** Runtime metadata populated during project creation (e.g., EDS URLs) */
     metadata?: Record<string, unknown>;
-    /**
-     * Adobe skill bundle this component installs into the project's `.claude/skills/`.
-     *
-     * - `path` is the bundle subdirectory inside `node_modules/@adobe-commerce/commerce-extensibility-tools/dist/`
-     *   (e.g., `aem-boilerplate-commerce/skills`)
-     * - `prefix` is prepended to each skill's folder name to disambiguate collisions
-     *   across bundles (e.g., `aem` → `aem-tester` vs ISK/CSK's own `tester`).
-     */
-    aiSkillBundle?: {
-        path: string;
-        prefix: string;
-    };
 }
 
 /**

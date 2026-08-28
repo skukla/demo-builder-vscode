@@ -14,6 +14,7 @@
  * @module core/ui/components/ui/menuIcons
  */
 
+import Beaker from '@spectrum-icons/workflow/Beaker';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
@@ -53,6 +54,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     delete: <Delete size="S" />,
     /** API access/entitlements — a key reads as "what this is allowed to reach". */
     apiAccess: <Key size="S" />,
+    /** Try something out without it taking effect — the workbench's whole job. */
+    measure: <Beaker size="S" />,
 };
 
 /**

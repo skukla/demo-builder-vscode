@@ -9,7 +9,7 @@
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
-import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { isConsoleOpFailure, type AdobeWorkspace } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -119,7 +119,6 @@ export async function handleSelectWorkspace(
     }
 }
 
-
 /**
  * create-adobe-workspace — Flow A: create a new workspace in the selected project.
  *
@@ -159,13 +158,10 @@ export async function handleCreateAdobeWorkspace(
         }
 
         const workspace = await context.authManager.createWorkspace(name, description);
-        if (!workspace) {
-            return {
-                success: false,
-                error:
-                    "Could not create the workspace. You may have hit your project's workspace quota — " +
-                    'select an existing workspace instead.',
-            };
+        if (isConsoleOpFailure(workspace)) {
+            // The service carries Console's own reason now — surface it instead
+            // of the old quota guess, which the measured failure never matched.
+            return { success: false, error: `Could not create the workspace: ${workspace.error}` };
         }
 
         // Refresh the workspace list and return it ON THIS RESPONSE (best-effort).

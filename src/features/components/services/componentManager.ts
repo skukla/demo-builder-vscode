@@ -129,11 +129,18 @@ export class ComponentManager {
         // Install dependencies if needed
         if (!options.skipDependencies && componentInstance.path) {
             componentInstance.status = 'installing';
-            await this.dependencies.installDependenciesForComponent(
+            const deps = await this.dependencies.installDependenciesForComponent(
                 componentInstance.path,
                 componentDef,
                 false,
             );
+            if (!deps.success) {
+                // strictInstall components (App Builder integrations) abort here
+                // with npm's own error — the actionable one — instead of letting
+                // a deploy fail later on a missing node_modules.
+                componentInstance.status = 'error';
+                return { success: false, error: deps.error };
+            }
         }
 
         // Mark as ready

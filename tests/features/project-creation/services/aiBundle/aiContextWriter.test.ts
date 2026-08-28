@@ -249,11 +249,16 @@ describe('aiContextWriter', () => {
         describe('mesh endpoint', () => {
             it('includes the mesh endpoint URL when present', () => {
                 const project = makeHeadlessProject({
-                    meshState: {
-                        endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                        envVars: {},
-                        sourceHash: null,
-                        lastDeployed: new Date().toISOString(),
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                                endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                                envVars: {},
+                                sourceHash: null,
+                                lastDeployed: new Date().toISOString(),
+                                            },
                     },
                 });
                 const result = generateAgentsMd(project, STACKS);

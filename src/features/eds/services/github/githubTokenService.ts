@@ -11,7 +11,6 @@
  */
 
 import { Octokit } from '@octokit/core';
-import { retry } from '@octokit/plugin-retry';
 import * as vscode from 'vscode';
 import {
     type GitHubToken,
@@ -19,6 +18,7 @@ import {
     type GitHubUser,
     type GitHubApiError,
 } from '../types';
+import { createAuthenticatedOctokit } from './githubHelpers';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -169,10 +169,7 @@ export class GitHubTokenService {
      * Create authenticated Octokit instance
      */
     private createAuthenticatedOctokit(token: string): InstanceType<typeof Octokit> {
-        const OctokitWithRetry = Octokit.plugin(retry);
-        return new OctokitWithRetry({
-            auth: token,
-        });
+        return createAuthenticatedOctokit(token);
     }
 
     /**

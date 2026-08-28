@@ -54,9 +54,7 @@ describe('IntegrationsGrid actions', () => {
             const panel = await openPanel(user, 'custom-app', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /close details/i }));
 
-            expect(
-                screen.queryByLabelText('custom-app details'),
-            ).not.toBeInTheDocument();
+            expect(screen.queryByLabelText('custom-app details')).not.toBeInTheDocument();
         });
 
         it('a face affordance does NOT open the panel (stop-propagation containment)', async () => {
@@ -138,6 +136,45 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
+        it('routes Install into Commerce to installAppBuilderComponent (AB-5)', async () => {
+            const user = setupUser();
+            renderGrid({
+                appBuilderComponents: {
+                    'custom-app': {
+                        ...DEPLOYED_INTEGRATION,
+                        installation: { status: 'failed', detail: 'hands-back' },
+                    },
+                },
+            });
+
+            const tile = card('custom-app', 'Deployed');
+            await user.click(
+                within(tile).getByRole('button', { name: /^install into commerce$/i })
+            );
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('installAppBuilderComponent', {
+                id: 'custom-app',
+            });
+        });
+
+        it("routes the drawer's Open Commerce Admin to the dashboard tile's openAdminPanel", async () => {
+            const user = setupUser();
+            renderGrid({
+                appBuilderComponents: {
+                    'custom-app': {
+                        ...DEPLOYED_INTEGRATION,
+                        installation: { status: 'installed' },
+                    },
+                },
+            });
+
+            // The link lives on the drawer's Commerce-install row.
+            await user.click(card('custom-app', 'Deployed'));
+            await user.click(screen.getByText('Open Commerce Admin'));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
+        });
+
         // Open moved from the card FACE to the kebab (a healthy card is calm), so
         // this is a menu item scoped to the tile now.
         it('routes the deployed card Open to openLiveSite with the primary url', async () => {
@@ -164,7 +201,7 @@ describe('IntegrationsGrid actions', () => {
             expect(onDeployMesh).toHaveBeenCalled();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'redeployAppBuilderComponent',
-                expect.anything(),
+                expect.anything()
             );
         });
 
@@ -178,10 +215,10 @@ describe('IntegrationsGrid actions', () => {
             const panel = await openPanel(user, 'API Mesh', 'Deployed');
 
             expect(
-                within(panel).queryByRole('button', { name: /manage apis/i }),
+                within(panel).queryByRole('button', { name: /manage apis/i })
             ).not.toBeInTheDocument();
             expect(
-                within(panel).queryByRole('button', { name: /^remove$/i }),
+                within(panel).queryByRole('button', { name: /^remove$/i })
             ).not.toBeInTheDocument();
         });
 
@@ -247,9 +284,7 @@ describe('IntegrationsGrid actions', () => {
             const panel = await openPanel(user, 'API Mesh', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-            expect(
-                screen.getByText(/storefront loses its API Mesh endpoint/i),
-            ).toBeInTheDocument();
+            expect(screen.getByText(/storefront loses its API Mesh endpoint/i)).toBeInTheDocument();
         });
 
         it('routes the needs-auth mesh Sign in to onReAuthenticate', async () => {
@@ -285,9 +320,11 @@ describe('IntegrationsGrid actions', () => {
             // Nothing is offered, so the kebab itself does not render — there is
             // no menu to open and no greyed item to mistake for an available one.
             expect(
-                within(tile).queryByRole('button', { name: /more actions/i }),
+                within(tile).queryByRole('button', { name: /more actions/i })
             ).not.toBeInTheDocument();
-            expect(within(tile).queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+            expect(
+                within(tile).queryByRole('button', { name: /sign in/i })
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -304,11 +341,11 @@ describe('IntegrationsGrid actions', () => {
             await openRemove(user);
 
             expect(
-                screen.getByRole('dialog', { name: /remove app builder component/i }),
+                screen.getByRole('dialog', { name: /remove app builder component/i })
             ).toBeInTheDocument();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',
-                expect.anything(),
+                expect.anything()
             );
         });
 
@@ -335,7 +372,7 @@ describe('IntegrationsGrid actions', () => {
 
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',
-                expect.anything(),
+                expect.anything()
             );
         });
     });
@@ -359,7 +396,7 @@ describe('IntegrationsGrid actions', () => {
             expect(modals[0]).toHaveTextContent('other-app');
         });
 
-        it('scopes the modal to the card\'s component id, and names it by DISPLAY name', async () => {
+        it("scopes the modal to the card's component id, and names it by DISPLAY name", async () => {
             // The grid used to pass the id as `componentName`, so the modal's copy
             // read "Manage Adobe API access for other-app". Both halves now travel:
             // the id scopes the write, the name is what the user reads.
@@ -442,7 +479,7 @@ describe('IntegrationsGrid actions', () => {
             const panel = await openPanel(user, 'app-builder-shell', 'Deployed');
 
             expect(
-                within(panel).queryByRole('button', { name: /^rename/i }),
+                within(panel).queryByRole('button', { name: /^rename/i })
             ).not.toBeInTheDocument();
         });
     });

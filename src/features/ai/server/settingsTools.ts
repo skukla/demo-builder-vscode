@@ -1,5 +1,5 @@
 /**
- * Settings tools (Phase 4, Group 7) — read the 21 `demoBuilder.*` keys, and
+ * Settings tools (Phase 4, Group 7) — read the 22 `demoBuilder.*` keys, and
  * hand a change back to the user.
  *
  * ## Why the read exists
@@ -116,6 +116,7 @@ export function registerSettingsTools(
     server.registerTool(
         'get_settings',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Settings',
             description:
                 "The extension's VS Code settings and their current values. Check here when a " +
@@ -130,9 +131,19 @@ export function registerSettingsTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const requested = args?.key ? String(args.key) : undefined;
+            let requested = args?.key ? String(args.key) : undefined;
 
             if (requested) {
+                // Accept the unprefixed form. Watched live on 2026-08-27: the
+                // agent asked for `dataInstaller.enabled`, was refused, and
+                // retried with the `demoBuilder.` prefix — a wasted round trip
+                // for a key that was unambiguous the first time.
+                if (
+                    !(SETTING_KEYS as readonly string[]).includes(requested) &&
+                    (SETTING_KEYS as readonly string[]).includes(`demoBuilder.${requested}`)
+                ) {
+                    requested = `demoBuilder.${requested}`;
+                }
                 if (!(SETTING_KEYS as readonly string[]).includes(requested)) {
                     // Name what IS available rather than only what is not.
                     return asText({
@@ -154,6 +165,8 @@ export function registerSettingsTools(
     server.registerTool(
         'set_setting',
         {
+            // Hands back to the user; it changes no setting itself.
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Set Setting',
             description:
                 'Change one of the extension\'s VS Code settings. Hands back to the user — settings ' +

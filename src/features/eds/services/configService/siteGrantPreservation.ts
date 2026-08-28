@@ -27,8 +27,8 @@
  * @module features/eds/services/configService/siteGrantPreservation
  */
 
-import { readSiteAccess, restoreSiteRoles } from './configServiceAccess';
 import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import { readSiteAccess, restoreSiteRoles } from './configServiceAccess';
 import { lostGrantsMessage } from './lostGrantsMessage';
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { Logger } from '@/types/logger';

@@ -27,6 +27,7 @@ function renderStage(props: Partial<Props> = {}): { onSourceChange: jest.Mock } 
                 selectedIds={props.selectedIds ?? []}
                 source={props.source}
                 onSourceChange={onSourceChange}
+                onLabelChange={jest.fn()}
             />
         </Provider>
     );

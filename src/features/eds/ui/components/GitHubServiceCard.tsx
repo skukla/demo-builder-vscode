@@ -16,11 +16,8 @@
  * />
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { Spinner } from '@/core/ui/components/ui';
+import { ServiceCardShell, ServiceCardStatus } from './ServiceCardShell';
 import type { GitHubUser } from '@/types/webviewPayloads';
 
 // GitHubUser lives in @/types/webviewPayloads — ONE declaration with the wire
@@ -55,35 +52,6 @@ const GitHubIcon = () => (
     </svg>
 );
 
-/** Authenticated status: a compact "Connected" pill, or the login with a Change action. */
-function renderAuthenticatedStatus(
-    user: GitHubUser,
-    compact: boolean,
-    onChangeAccount?: () => void,
-): React.ReactElement {
-    if (compact) {
-        return (
-            <Flex alignItems="center" gap="size-100">
-                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                <Text UNSAFE_className="status-text">Connected</Text>
-            </Flex>
-        );
-    }
-    return (
-        <Flex alignItems="center" justifyContent="space-between">
-            <Flex alignItems="center" gap="size-100">
-                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                <Text UNSAFE_className="status-text">{user.login}</Text>
-            </Flex>
-            {onChangeAccount && (
-                <button className="service-action-link" onClick={onChangeAccount}>
-                    Change
-                </button>
-            )}
-        </Flex>
-    );
-}
-
 /**
  * GitHubServiceCard Component
  *
@@ -101,42 +69,27 @@ export function GitHubServiceCard({
     compact = false,
 }: GitHubServiceCardProps): React.ReactElement {
     const isLoading = isChecking || isAuthenticating;
+    const connected = isAuthenticated && !!user;
 
     return (
-        <div className="service-card" data-connected={isAuthenticated ? 'true' : 'false'}>
-            <div className="service-card-header">
-                <div className="service-icon github-icon">
-                    <GitHubIcon />
-                </div>
-                <div className="service-card-title">GitHub</div>
-            </div>
-            <div className="service-card-description">Repository for your project code</div>
-            <div className="service-card-status">
-                {isLoading ? (
-                    <Flex alignItems="center" gap="size-100">
-                        <Spinner size="S" aria-label="Checking" />
-                        <Text UNSAFE_className="status-text">
-                            {isAuthenticating ? 'Connecting...' : 'Checking...'}
-                        </Text>
-                    </Flex>
-                ) : isAuthenticated && user ? (
-                    renderAuthenticatedStatus(user, compact, onChangeAccount)
-                ) : error ? (
-                    <Flex direction="column" gap="size-100">
-                        <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className="status-icon-error" />
-                            <Text UNSAFE_className="status-text-error">{error}</Text>
-                        </Flex>
-                        <button className="service-action-button" onClick={onConnect}>
-                            Try Again
-                        </button>
-                    </Flex>
-                ) : (
-                    <button className="service-action-button" onClick={onConnect}>
-                        Connect GitHub
-                    </button>
-                )}
-            </div>
-        </div>
+        <ServiceCardShell
+            icon={<GitHubIcon />}
+            iconClassName="github-icon"
+            title="GitHub"
+            description="Repository for your project code"
+            isConnected={isAuthenticated}
+        >
+            <ServiceCardStatus
+                isLoading={isLoading}
+                loadingLabel={isAuthenticating ? 'Connecting...' : 'Checking...'}
+                isConnected={connected}
+                compact={compact}
+                connectedLabel={user?.login ?? ''}
+                onChange={onChangeAccount}
+                error={error}
+                onAction={onConnect}
+                actionLabel="Connect GitHub"
+            />
+        </ServiceCardShell>
     );
 }

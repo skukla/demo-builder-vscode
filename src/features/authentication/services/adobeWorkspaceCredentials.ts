@@ -19,15 +19,32 @@ import type { AuthCacheManager } from './authCacheManager';
 import type {
     AdobeIdCredentialInput,
     RawWorkspaceCredential,
+    S2SDeployCredentials,
     SDKResponse,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
 } from './types';
 import { getLogger } from '@/core/logging';
 
-/** Name/description for the shared S2S credential created by ensureOAuthCredentialId. */
-const OAUTH_CREDENTIAL_NAME = 'demo-builder-s2s';
+/**
+ * Name/description for the shared S2S credential created by ensureOAuthCredentialId.
+ *
+ * The name is WORKSPACE-SUFFIXED because Console credential names are unique
+ * across the whole ORG (measured 2026-08-27: creating plain `demo-builder-s2s`
+ * on a second workspace answers 409 "Duplicate application name") — the fixed
+ * name meant every workspace after the first could never get its credential.
+ * Lookup is by `integration_type`, never by name, so credentials created under
+ * the old fixed name keep being found.
+ */
+const OAUTH_CREDENTIAL_NAME_PREFIX = 'demo-builder-s2s';
 const OAUTH_CREDENTIAL_DESCRIPTION = 'OAuth Server-to-Server access (Demo Builder)';
+
+/** Workspace ids are sequentially allocated, so their tail is unique in practice. */
+const CREDENTIAL_NAME_SUFFIX_LENGTH = 8;
+
+function oauthCredentialNameFor(workspaceId: string): string {
+    return `${OAUTH_CREDENTIAL_NAME_PREFIX}-${workspaceId.slice(-CREDENTIAL_NAME_SUFFIX_LENGTH)}`;
+}
 
 /**
  * Reads and creates credentials on Adobe Console workspaces.
@@ -355,6 +372,65 @@ export class AdobeWorkspaceCredentials {
     }
 
     /**
+     * The workspace S2S credential's FULL identity for IMS server-to-server
+     * auth — what an App Management app's actions need at deploy time
+     * (`AIO_COMMERCE_AUTH_IMS_*` inputs). Ensures the credential exists, then
+     * reads its detail (`getIntegration`) and secret (`getIntegrationSecrets`).
+     *
+     * Shapes verified live 2026-08-27 against a freshly created credential:
+     * detail carries `technicalAccountId`/`technicalAccountEmail`/`orgCode`
+     * (the IMS org id); secrets carry `client_secrets: [{ client_secret }]`.
+     *
+     * SECRET HYGIENE: callers inject the secret into a per-invocation env and
+     * never persist or log it.
+     */
+    async getS2SDeployCredentials(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<S2SDeployCredentials> {
+        const idIntegration = await this.ensureOAuthCredentialId(orgId, projectId, workspaceId);
+
+        const client = this.sdkClient.getClient() as {
+            getIntegration: (
+                orgId: string,
+                intId: string
+            ) => Promise<
+                SDKResponse<{
+                    apiKey?: string;
+                    technicalAccountId?: string;
+                    technicalAccountEmail?: string;
+                    orgCode?: string;
+                }>
+            >;
+            getIntegrationSecrets: (
+                orgId: string,
+                intId: string
+            ) => Promise<SDKResponse<{ client_secrets?: Array<{ client_secret?: string }> }>>;
+        };
+
+        const detail = (await client.getIntegration(orgId, idIntegration))?.body;
+        const secrets = (await client.getIntegrationSecrets(orgId, idIntegration))?.body;
+
+        // Validated field-by-field into a fully typed candidate — the
+        // error names the first gap, and no non-null assertion is needed.
+        const candidate: S2SDeployCredentials = {
+            clientId: detail?.apiKey ?? '',
+            clientSecret: secrets?.client_secrets?.[0]?.client_secret ?? '',
+            technicalAccountId: detail?.technicalAccountId ?? '',
+            technicalAccountEmail: detail?.technicalAccountEmail ?? '',
+            imsOrgCode: detail?.orgCode ?? '',
+        };
+        const missing = Object.entries(candidate).find(([, value]) => value === '');
+        if (missing) {
+            throw new Error(
+                `Workspace S2S credential is missing ${missing[0]} — cannot build IMS auth env.`,
+            );
+        }
+        return candidate;
+    }
+
+    /**
      * Get the workspace's existing OAuth Server-to-Server credential ids, or
      * `undefined` when the workspace has none. Matches ONLY
      * `integration_type === 'oauth_server_to_server'` list entries — an
@@ -443,7 +519,7 @@ export class AdobeWorkspaceCredentials {
             orgId,
             projectId,
             workspaceId,
-            OAUTH_CREDENTIAL_NAME,
+            oauthCredentialNameFor(workspaceId),
             OAUTH_CREDENTIAL_DESCRIPTION,
         );
         const idIntegration = created?.body?.id;

@@ -121,6 +121,18 @@ Pre-push is the last honest moment for it. Everything the compiler and tests can
 already covered above; this covers what they structurally cannot — a symbol nothing
 imports, and a doc describing code that is gone.
 
+## 7. After committing — let the record catch up
+
+```bash
+node .claude/skills/backlog-item/backlog.mjs unlogged --write
+```
+
+One command, nothing to type. It finds commits carrying a `Backlog:` trailer
+whose sha never reached the item, writes the line, and flips a `backlog` item to
+`active`. It refuses an unknown id or a finished item rather than guessing.
+
+Skipping it is how eight commits landed unlogged on 2026-08-26.
+
 ## Notes
 - This is the inner loop. For agent-driven review use `/rptc:verify`; to ship use `/rptc:commit`.
 - Never commit without explicit user approval; no Co-Authored-By footer (project convention).

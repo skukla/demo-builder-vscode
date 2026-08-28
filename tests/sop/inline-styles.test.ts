@@ -28,6 +28,18 @@ describe('SOP: Inline Styles', () => {
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
         'ContentWithSidebar.tsx': 'Dynamic sidebar inner-content max-width from props',
         'ControlPanelLayout.tsx': 'Dynamic secondary-panel inner-content max-width from props',
+        // The Spectrum Flex 450px workaround — this project's OWN prescribed
+        // pattern for a full-width webview layout (root CLAUDE.md: "Adobe
+        // Spectrum Flex constrains width (450px): use a standard HTML div with
+        // flex styles for critical wizard layouts"). Following it necessarily
+        // produces an inline style, so these are exceptions by construction
+        // rather than by oversight.
+        // The evaluation surface has NO exceptions any more. Step 10's visual
+        // pass (2026-08-25) moved its whole layout into `workbench.css`, which
+        // is where it belonged: the look needs hover states, `::before`
+        // separators and `tabular-nums`, none of which an inline style can
+        // express. The Spectrum-Flex-450px trap is still avoided — the panel is
+        // plain divs — it is just that the flex now lives in a class.
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',

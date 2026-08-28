@@ -117,7 +117,7 @@ describe('every descriptor row answers in the envelope', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'probe_tool', description: 'probe', map, type: 'probe' }],
+            [{ tool: 'probe_tool', description: 'probe', map, type: 'probe', readOnly: true }],
             () => ({}) as HandlerContext,
         );
         return tools.get('probe_tool')!;
@@ -152,7 +152,7 @@ describe('every descriptor row answers in the envelope', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'gated', description: 'g', map, type: 'probe', confirm: true }],
+            [{ tool: 'gated', description: 'g', map, type: 'probe', confirm: true, readOnly: false }],
             () => ({}) as HandlerContext,
         );
 
@@ -176,6 +176,7 @@ describe('every descriptor row answers in the envelope', () => {
                 {
                     tool: 'preflighted',
                     description: 'p',
+                    readOnly: false,
                     map,
                     type: 'probe',
                     preflight: () => ({ needsUser: { reason: 'browser-oauth' } }),

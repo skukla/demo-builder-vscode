@@ -1,0 +1,13 @@
+{
+ "generated": "2026-08-27",
+ "basis": "declared readOnlyHint:true (52)",
+ "note": "AI-1q tier 1 complete. The select_* trio's deferral is PERMANENT (owner decision 2026-08-28, on the loop's recommendation): their readOnlyHint:true stays \u2014 the annotation's commented rationale holds (in-memory session targeting, nothing durable changes, blocking would hobble evaluation navigation) \u2014 and the battery excludes them anyway because their session-state write persists across prompts within one server process and would change measurement conditions mid-sweep. Two valid rationales, resolved by scope: the annotation serves agents, the deferral serves measurement.",
+ "deferred": {
+  "select_org": "annotated read-only but WRITES session state that persists across battery runs (module-level target in the shared server process) \u2014 would change measurement conditions mid-sweep. Also a tool-verdicts flag: is readOnlyHint honest here?",
+  "select_project": "same as select_org",
+  "select_workspace": "same as select_org",
+  "set_setting": "hands-back handoff that opens the Settings UI in the (sleeping) owner's window \u2014 same class as the sign-in annoyance. Run supervised.",
+  "discover_store_structure": "no natural agent prompt exists \u2014 it is a wizard-flow tool taking admin credentials for a NOT-YET project. That absence is itself tool-verdicts evidence about which surface it belongs to."
+ },
+ "todo": []
+}

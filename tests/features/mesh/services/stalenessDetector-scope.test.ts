@@ -48,13 +48,18 @@ function projectWithDeployedScope(websiteCode: string): Project {
                 status: 'deployed',
             },
         },
-        meshState: {
-            envVars: {
-                ACCS_GRAPHQL_ENDPOINT: ENDPOINT,
-                ACCS_WEBSITE_CODE: websiteCode,
-            },
-            sourceHash: SOURCE_HASH,
-            lastDeployed: '2026-08-01T00:00:00Z',
+        appBuilderComponents: {
+            mesh: {
+                kind: 'mesh',
+                status: 'deployed',
+                source: { owner: '', repo: '' },
+                    envVars: {
+                        ACCS_GRAPHQL_ENDPOINT: ENDPOINT,
+                        ACCS_WEBSITE_CODE: websiteCode,
+                    },
+                    sourceHash: SOURCE_HASH,
+                    lastDeployed: '2026-08-01T00:00:00Z',
+                    },
         },
     });
 }
@@ -216,10 +221,15 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
                     status: 'deployed',
                 },
             },
-            meshState: {
-                envVars: { ACCS_GRAPHQL_ENDPOINT: endpoint, ACCS_WEBSITE_CODE: 'citisignal' },
-                sourceHash: SOURCE_HASH,
-                lastDeployed: '2026-08-01T00:00:00Z',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: { ACCS_GRAPHQL_ENDPOINT: endpoint, ACCS_WEBSITE_CODE: 'citisignal' },
+                        sourceHash: SOURCE_HASH,
+                        lastDeployed: '2026-08-01T00:00:00Z',
+                            },
             },
         });
     }
@@ -284,10 +294,15 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
                     status: 'deployed',
                 },
             },
-            meshState: {
-                envVars: { ACCS_GRAPHQL_ENDPOINT: OLD, ACCS_WEBSITE_CODE: 'base' },
-                sourceHash: SOURCE_HASH,
-                lastDeployed: '2026-08-01T00:00:00Z',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                        envVars: { ACCS_GRAPHQL_ENDPOINT: OLD, ACCS_WEBSITE_CODE: 'base' },
+                        sourceHash: SOURCE_HASH,
+                        lastDeployed: '2026-08-01T00:00:00Z',
+                            },
             },
         });
         setupMockFileSystemWithHash(SOURCE_HASH);

@@ -60,6 +60,10 @@ import {
     handleRenameAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
+    handleGetAppBuilderInstallStatus,
+    handleInstallAppBuilderComponent,
+} from '@/features/dashboard/handlers/appManagementInstallHandlers';
+import {
     handleAddConsoleApis,
     handleListConsoleApis,
     handleSetConsoleApis,
@@ -257,6 +261,10 @@ export const dashboardHandlers = defineHandlers({
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,
     renameAppBuilderComponent: handleRenameAppBuilderComponent,
+    // App Management install state (AB-5): the live status read and the
+    // install-without-redeploy retry.
+    installAppBuilderComponent: handleInstallAppBuilderComponent,
+    getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

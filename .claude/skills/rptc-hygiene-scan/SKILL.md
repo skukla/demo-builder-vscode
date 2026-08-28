@@ -91,7 +91,29 @@ beats total coverage that gets switched off.
 - To judge whether two implementations should be one — `architecture-duplication-scan`.
 - To decide what to build. This tells you the record is wrong, not what to do.
 
-## The four sections, and how to judge each
+## The sections, and how to judge each
+
+### 0. Frontmatter and references (run this FIRST — it is the cheap one)
+
+```bash
+node .claude/skills/backlog-item/backlog.mjs check
+node .claude/skills/backlog-item/backlog.mjs stale   # advisory — read it, do not obey it
+```
+
+Exit 1 names every problem: missing or unknown `kind` / `area` / `value`, a
+`parent` that does not exist, a `needs` id that does not resolve.
+
+**Sections 1 and 2 below become largely unnecessary once this passes**, because
+the index is GENERATED from the files rather than hand-maintained (2026-08-26).
+Keep running them anyway — they catch a hand-edit that bypassed the generator,
+which is exactly the mistake the generator exists to prevent someone making.
+
+Two failures this would have caught, both real:
+
+- **Three items invisible for months** — sub-bullets inside another item's prose
+  rather than entries of their own.
+- **An epic with no file** (`AB-1`), pointing at archived work, so its three
+  children had a parent that did not exist.
 
 ### 1. Index → disk (dead links)
 

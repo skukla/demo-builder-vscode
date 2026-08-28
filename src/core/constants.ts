@@ -169,7 +169,57 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // Home-only, so delivery does not depend on this stamp (the home context is
 // rewritten every activation regardless); recorded here to keep the bundle
 // changelog complete.
-export const AI_CONTEXT_VERSION = 22;
+// v23: a `Querying Commerce` section naming `get_commerce_endpoints`, and the
+// warning that a Catalog Service query with the wrong store scope returns an
+// EMPTY result with no error. Added because a survey of 48 sessions run inside
+// demo projects (2026-08-25) found agents calling 20 of 104 tools, overwhelmingly
+// the ones this bundle NAMES — and the one long stretch of real Commerce work
+// hand-assembling 28 `curl`s because nothing answered "what is this project's
+// GraphQL endpoint". Points at the TOOL rather than baking values in: the
+// endpoint, the mesh and the scope all change between regenerations, and a
+// confidently stale endpoint is worse than none.
+// v24: "Your MCP Servers" — the bundle names the OTHER servers a project has
+// (commerce-extensibility, playwright, dropins) and what each is for, generated
+// from ai-defaults.json so it cannot claim a server the project did not get.
+// Written on a measurement that was later DISPROVEN — seven runs showing zero
+// dropins use turned out to be the wrong prompt, and given a question only
+// dropins can answer the agent reaches it on its first call unprompted. The
+// section stays because telling an agent what servers it has is reasonable on its
+// own; it is not evidence-backed. See buildToolServers for the full correction.
+//
+// v25: the six aem-boilerplate-commerce skills (block-developer, content-modeler,
+// dropin-developer, project-manager, researcher, tester) now actually land. They
+// were declared via the component's `aiSkillBundle`, which resolved inside the
+// storefront checkout — a directory that has never contained them — so every
+// project silently ENOENT-skipped the copy. Sourced from the isolated MCP tools
+// dir now, like the integration-starter-kit bundle beside it.
+//
+// v26: the integration-starter-kit skills follow whether a project actually
+// BUILDS an App Builder app, not whether it needs App Builder tooling. Every
+// EDS project satisfied the old gate — a storefront calls search-commerce-docs
+// — so storefronts carried seven skills whose architect tells the agent it is
+// working on a starter-kit integration. The bump is what makes existing
+// projects reconcile: the sweep removes the bundle, file by file, on proof.
+//
+// v27: Demo Builder skills move from flat `.claude/skills/<name>.md` files to
+// `.claude/skills/<name>/SKILL.md` directories — the one layout Claude Code
+// registers as an invocable skill. Measured live 2026-08-27: a session
+// registered every directory-format skill (Adobe bundles, global skills) and
+// NONE of our flat files, so the modal promised "skills" that agents could
+// only reach as prose via file reads. The sweep rewrites the layout and
+// reconciles the legacy flat files away on proof.
+// v28 (2026-08-28): the project AGENTS.md states the connection-scope promise —
+// sessions started inside a project act on THAT project (the MCP server scopes
+// per connection via the proxy's cwd preamble) and never move the dashboard's
+// pointer. Owner decision after the tier-2 battery run measured an agent
+// inspecting one project while its tools acted on another.
+// v29 (2026-08-28): the skills route config-value changes to configure_project.
+// They pointed at raw update_project_config — written before the structured
+// tool existed — and the tier-2 battery measured agents obeying that stale
+// guidance 2/2, taking the door that skips secret-refusal and
+// staleness-marking. Two templates even showed a key/value call signature the
+// raw tool never had.
+export const AI_CONTEXT_VERSION = 29;
 
 /**
  * Component IDs for standardized component instance access

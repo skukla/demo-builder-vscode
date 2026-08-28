@@ -28,8 +28,12 @@ function entry(id: string, name: string, description?: string): AppBuilderCompon
 
 type Props = React.ComponentProps<typeof CatalogStage>;
 
-function renderStage(props: Partial<Props> = {}): { onPick: jest.Mock } {
+function renderStage(props: Partial<Props> = {}): {
+    onPick: jest.Mock;
+    onLabelChange: jest.Mock;
+} {
     const onPick = jest.fn();
+    const onLabelChange = jest.fn();
     render(
         <Provider theme={defaultTheme}>
             <CatalogStage
@@ -38,10 +42,12 @@ function renderStage(props: Partial<Props> = {}): { onPick: jest.Mock } {
                 }
                 selectedId={props.selectedId}
                 onPick={onPick}
+                label={props.label}
+                onLabelChange={onLabelChange}
             />
         </Provider>
     );
-    return { onPick };
+    return { onPick, onLabelChange };
 }
 
 /** Six entries — enough to cross the search threshold (> 5). */
@@ -155,5 +161,42 @@ describe('CatalogStage', () => {
     it('shows the empty-state message for an empty catalog', () => {
         renderStage({ catalog: [] });
         expect(screen.getByText(/No integrations match/)).toBeInTheDocument();
+    });
+});
+
+describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
+    it('shows NO name field until an entry is picked', () => {
+        renderStage();
+        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+    });
+
+    it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {
+        const { onLabelChange } = renderStage({ selectedId: 'acme-a' });
+        const field = screen.getByLabelText(/Name \(optional\)/);
+        expect(field).toHaveValue('');
+        expect(field).toHaveAttribute('placeholder', 'Widget A');
+
+        fireEvent.change(field, { target: { value: 'Order Sync' } });
+        expect(onLabelChange).toHaveBeenCalledWith('Order Sync');
+        expect(screen.queryByTestId('spectrum-textfield-error')).not.toBeInTheDocument();
+    });
+});
+
+describe('node-version disclosure', () => {
+    it('appends the install disclosure for entries that declare a nodeVersion', () => {
+        renderStage({
+            catalog: [
+                {
+                    id: 'kit',
+                    name: 'Commerce Integration Starter Kit',
+                    description: 'Sync scaffolding.',
+                    kind: 'integration',
+                    nodeVersion: '24',
+                    source: { owner: 'adobe', repo: 'kit' },
+                } as never,
+            ],
+        });
+
+        expect(screen.getByText(/Installs Node 24 on first use/)).toBeInTheDocument();
     });
 });

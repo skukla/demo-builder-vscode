@@ -147,6 +147,7 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({
                 success: true,
                 aiPrompts: [{ id: 'new-id', title: 'T', prompt: 'B' }],
+                verify: expect.stringContaining('re-check with list_ai_prompts'),
             });
         });
 

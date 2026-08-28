@@ -43,9 +43,9 @@ Runs the three inspectors via `Promise.allSettled` so a failing inspector degrad
 
 ### `inspectSkills(projectPath): Promise<SkillInventoryEntry[]>`
 
-Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source, bundle? }`. Classification: a top-level filename in `DEMO_BUILDER_SKILL_FILES` → `'demo-builder'`; nested in a bundle subdir → `'adobe'`, with `bundle` set to that directory's `<prefix>` (`aem`, `appbuilder`); other top-level → `'unknown'`.
+Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source, bundle? }`. Classification: a top-level DIRECTORY named in `DEMO_BUILDER_SKILL_NAMES` (the v27+ `<name>/SKILL.md` layout) → `'demo-builder'`, as is a legacy pre-v27 flat `<name>.md` whose stem matches; nested in any other subdir → `'adobe'`, with `bundle` set to that directory's `<prefix>` (`aem`, `appbuilder`); other top-level → `'unknown'`.
 
-`DEMO_BUILDER_SKILL_FILES` lives in `@/types/ai` and is the **single home** for those filenames — `skillsWriter` builds its write list from the same constant. They were separate lists once and drifted: `diagnose-demo.md` shipped in the writer without being added here, so the AI Capabilities modal filed a first-party skill under "Custom". `bundle` exists for the same class of reason — `source: 'adobe'` only means "arrived in a bundle", so the UI grouped every bundle under one hardcoded "Adobe AEM" heading and labelled App Builder skills as AEM.
+`DEMO_BUILDER_SKILL_NAMES` lives in `@/types/ai` and is the **single home** for those names — `skillsWriter` builds its write list from the same constant. They were separate lists once and drifted: `diagnose-demo.md` shipped in the writer without being added here, so the AI Capabilities modal filed a first-party skill under "Custom". `bundle` exists for the same class of reason — `source: 'adobe'` only means "arrived in a bundle", so the UI grouped every bundle under one hardcoded "Adobe AEM" heading and labelled App Builder skills as AEM.
 
 ### `inspectAllServers(projectPath): Promise<McpInventoryEntry[]>` + `clearMcpCache(serverId?)`
 
@@ -89,7 +89,7 @@ The AI context files live in the project directory, not in this feature:
 
 The three writers live in `src/features/project-creation/services/`:
 - `aiContextWriter.ts` — generates `AGENTS.md` and the `CLAUDE.md` pointers; the section builders (and the Wayfinder commit pin) live in its sibling `agentsMdSections.ts`. The "Finding Adobe Documentation" section points agents at [Wayfinder](https://github.com/adobe-commerce/wayfinder), Adobe's own routing guide across aem.live / storefront / Experience League / da.live / developer.adobe.com, so the bundle does not re-derive that map. Pinned to a reviewed commit rather than `@main` — a remote document that becomes agent instructions must not change without our review.
-- `skillsWriter.ts` — writes `.claude/skills/*.md` guides
+- `skillsWriter.ts` — writes `.claude/skills/<name>/SKILL.md` guides (the one layout Claude Code registers as invocable skills; flat `<name>.md` until v27)
 - `mcpConfigWriter.ts` — generates `.mcp.json`, `.claude/mcp.json`, `.claude/settings.json`
 
 The orchestrator is `aiBundleService.generateAIContextFiles()` (tier functions `refreshMcpConfigs` / `refreshContextAndSkills` beside it; every file goes through the `generatedFileWriter` hash-and-skip seam per ADR-013), called as Phase 6 of project creation and from `aiHandlers.ts` for on-demand regeneration.
@@ -104,7 +104,6 @@ The **MCP server** runs *in-extension* (`server/inExtensionMcpServer.ts`) on a p
 | `update_project_config` | Writes `.demo-builder.json` or a `.env` file |
 | `sync_storefront` | Git add / commit / push in the storefront directory |
 | `list_blocks` | Lists block directory names (supports `offset`/`limit`) |
-| `get_block_source` | Lists a block's files (names + sizes) by default; pass `fileName` to read one file's source |
 | `promote_block_to_library` | Registers a custom block in DA.live's authoring picker (updates `component-definition.json`, writes the doc page, appends the sheet row, commits + pushes, publishes). `unsafeHTML` is sanitized via `sanitize-html` at the MCP boundary — see `sanitizeBlockHtml()` in `src/mcp-server.ts` for the allowlist. Optional `description` (≤1,000 chars) is persisted to `component-definition.json::components[].description` and rendered as a picker-tile tooltip by the EDS authoring runtime. |
 
 Responses are shaped to keep token usage low: tool output is emitted as compact JSON (no pretty-print indentation), `get_project` collapses large arrays/metadata unless `full=true`, and `get_block_source` is progressive (manifest first, one file per fetch, with a per-file byte cap) rather than dumping every file at once.
@@ -119,9 +118,8 @@ The MCP server is convenient but every tool call spends the agent's context-wind
 
 This is the portable win: it helps regardless of which CLI version a user runs. The dominant cost is tool **response payloads**, not the tool definitions, so the server keeps responses lean:
 
-- **Compact JSON.** `get_project` and `get_block_source` emit `JSON.stringify(x)` (no indentation). Pretty-print whitespace is pure token waste for machine-consumed output.
+- **Compact JSON.** `get_project` emits `JSON.stringify(x)` (no indentation). Pretty-print whitespace is pure token waste for machine-consumed output.
 - **Summaries over full dumps.** `get_project` returns a curated summary by default — `aiPrompts` collapses to a count, `installedBlockLibraries` keeps name/source but replaces `blockIds` with a count, and `componentInstances` keeps `path` while dropping metadata blobs. Pass `full=true` for the untouched manifest.
-- **Progressive block source.** `get_block_source` without `fileName` returns only a `{ files: [{ name, bytes }] }` manifest; with `fileName` it returns one file. This bounds a response to a single file (capped at `MAX_FILE_BYTES`, 30 KB) instead of dumping up to `MAX_BLOCK_FILES × MAX_FILE_BYTES` at once. The agent uses the manifest's `bytes` to skip files that would truncate.
 - **Pagination.** `list_projects` and `list_blocks` accept `offset`/`limit`.
 
 When adding or changing a tool, keep this in mind: prefer a list-then-fetch shape over bulk dumps, return compact JSON, and cap any file/blob a tool can return.

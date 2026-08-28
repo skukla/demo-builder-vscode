@@ -103,6 +103,7 @@ export function registerSiteTools(
     server.registerTool(
         'get_site_access',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Site Access',
             description:
                 "Who holds the admin role on the current project's storefront configuration, and " +
@@ -125,6 +126,7 @@ export function registerSiteTools(
     server.registerTool(
         'set_site_admin',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Set Site Admin',
             description:
                 "Grant or revoke the admin role on the current project's storefront configuration. " +
@@ -172,6 +174,7 @@ export function registerSiteTools(
     server.registerTool(
         'repair_site_configuration',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Repair Site Configuration',
             description:
                 "Re-run the Configuration Service registration for the current project's storefront " +
@@ -229,6 +232,7 @@ export function registerSiteTools(
     server.registerTool(
         'find_storefront_name_mismatches',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Find Storefront Name Mismatches',
             description:
                 'Projects whose DA.live site name does not match their GitHub repo name — a legacy ' +
@@ -286,6 +290,7 @@ export function registerSiteTools(
     server.registerTool(
         'migrate_storefront_name',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Migrate Storefront Name',
             description:
                 "Rename ONE project's DA.live site to match its GitHub repo name, preserving all " +
@@ -375,6 +380,7 @@ export function registerSiteTools(
     server.registerTool(
         'connect_dalive',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Connect DA.live',
             description:
                 'Sign in to DA.live, which every storefront content and site-config operation ' +

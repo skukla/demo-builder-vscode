@@ -10,9 +10,9 @@
  * Extracted from DaLiveService for better modularity and testability.
  */
 
+import { DaLiveError, DaLiveAuthError, type DaLiveEntry, type DaLiveOrgAccess } from '../types';
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import { DaLiveError, DaLiveAuthError, type DaLiveEntry, type DaLiveOrgAccess } from '../types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

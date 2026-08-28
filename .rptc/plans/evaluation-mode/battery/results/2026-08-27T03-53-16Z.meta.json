@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-27T03-53-16Z",
+  "serving": "develop@048bef4d1+ built 2026-08-27T03:30:02.547Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 829
+  },
+  "promptCount": 1,
+  "allowlist": 92,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 829
+  },
+  "authChangedMidRun": false
+}

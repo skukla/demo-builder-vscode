@@ -30,12 +30,15 @@ import { RESPONSE_CEILINGS } from './responseCeilings';
 
 /** Registers the rows and invokes them exactly as the MCP server does. */
 function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
-    const tools = new Map<string, (args: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+    const tools = new Map<
+        string,
+        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
+    >();
     const server = {
         registerTool(
             name: string,
             _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>,
+            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
         },
@@ -51,7 +54,7 @@ function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
     registerDescriptorTools(
         server,
         descriptors.map((d) => ({ ...d, map: stub })),
-        () => ({}) as HandlerContext,
+        () => ({}) as HandlerContext
     );
     return {
         names: () => [...tools.keys()],
@@ -196,7 +199,7 @@ describe('descriptor tools — response size', () => {
         const shaped = await harness(ALL, payload).sizeOf(tool);
         const unshaped = await harness(
             ALL.map((d) => ({ ...d, shape: undefined })),
-            payload,
+            payload
         ).sizeOf(tool);
 
         expect(shaped).toBeLessThan(unshaped * CEILING[tool]);
@@ -218,10 +221,9 @@ describe('descriptor tools — response size', () => {
         const unshaped = ALL.filter((d) => !d.shape).map((d) => d.tool);
         const sizes = await Promise.all(unshaped.map((t) => h.sizeOf(t)));
 
-         
         console.log(
             `\n  ${unshaped.length} rows pass a ${Buffer.byteLength(JSON.stringify(GENERIC.data), 'utf8').toLocaleString()}-byte payload through unchanged:\n` +
-                unshaped.map((t) => `    ${t}`).join('\n'),
+                unshaped.map((t) => `    ${t}`).join('\n')
         );
 
         // None of them projects, so all must behave identically. A divergence
@@ -277,7 +279,8 @@ describe('rows with no output safety net are classified', () => {
         // Both verified by reading the handler: `checkGitHubApp` returns its
         // response object directly (`checkGitHubAppHandler.ts:261`) and
         // `handleCheckRepoReadiness` returns `{success, readiness}` (`:50`).
-        'check_github_app', 'check_repo_readiness',
+        'check_github_app',
+        'check_repo_readiness',
         // Category 2, verified by reading it: `handleAddAppBuilderComponent`
         // returns `{added: {id, name, kind}}` on success and a named refusal
         // otherwise (`appBuilderComponentHandlers.ts`). The stub cannot see that.
@@ -287,13 +290,29 @@ describe('rows with no output safety net are classified', () => {
         // `handleSetConsoleApis` returns `{data: {subscribed}}` via reconcileExtras,
         // and `handleSetProjectDestination` returns
         // `{data: {destination, previous, move}}` (`destinationHandlers.ts`).
-        'rename_integration', 'set_console_apis', 'set_project_destination',
-        'add_console_apis', 'check_datapack_service', 'check_mesh',
-        'delete_ai_prompt', 'delete_mesh', 'deploy_integration', 'deploy_mesh',
-        'export_project_settings', 'get_datapack', 'get_datapack_activity',
-        'get_project_urls', 'get_store_structure', 'list_datapack_data_types',
-        'redeploy_integration', 'refresh_block_library', 'regenerate_ai_files',
-        'remove_integration', 'rename_project', 'save_ai_prompt', 'start_demo',
+        'rename_integration',
+        'set_console_apis',
+        'set_project_destination',
+        'add_console_apis',
+        'check_datapack_service',
+        'check_mesh',
+        'delete_ai_prompt',
+        'delete_mesh',
+        'deploy_integration',
+        'deploy_mesh',
+        'export_project_settings',
+        'get_datapack',
+        'get_datapack_activity',
+        'get_project_urls',
+        'get_store_structure',
+        'list_datapack_data_types',
+        'redeploy_integration',
+        'refresh_block_library',
+        'regenerate_ai_files',
+        'remove_integration',
+        'rename_project',
+        'save_ai_prompt',
+        'start_demo',
         'stop_demo',
         // Group 5. `restart_demo` is category 1 — success IS the outcome, and
         // `get_project_status` confirms it. `set_current_project` and
@@ -308,7 +327,9 @@ describe('rows with no output safety net are classified', () => {
         // `list_projects` carries `pinned`. The lesson is in the classification
         // itself — "paired with a confirming read" is a claim about ANOTHER tool,
         // and nothing here checks it.
-        'restart_demo', 'set_current_project', 'set_project_pinned',
+        'restart_demo',
+        'set_current_project',
+        'set_project_pinned',
         // Group 7. Category 2, verified by reading the handler: every branch of
         // `handleInstallPrerequisite` now names its outcome — `{installed: {id,
         // name, version, verified}}` on a completed install, `{manual, url}` when
@@ -322,13 +343,22 @@ describe('rows with no output safety net are classified', () => {
         // job record, `validate-datapack-import` returns the verdict, and the two
         // `runAndWatch` writes return `{activationId}`. They appear here only
         // because the STUB cannot see any of it.
-        'get_datapack_import_target', 'list_datapack_import_scopes',
-        'get_datapack_import_status', 'validate_datapack_import',
-        'start_datapack_import', 'reset_datapack',
+        'get_datapack_import_target',
+        'list_datapack_import_scopes',
+        'get_datapack_import_status',
+        'validate_datapack_import',
+        'start_datapack_import',
+        'reset_datapack',
         // Same category, listed separately because it is the one that does NOT
         // go through `runAndWatch`: the export is synchronous (the service gives
         // no activation id to watch) and returns per-type outcomes inline.
         'start_datapack_export',
+        // AB-5 pair, both category 2 and both read before being listed:
+        // `handleInstallAppBuilderComponent` returns `{installation: {status,
+        // detail, at}}` and `handleGetAppBuilderInstallStatus` returns
+        // `{data: {id, persisted, live}}` (appManagementInstallHandlers.ts).
+        'install_integration',
+        'get_integration_install_status',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -366,7 +396,10 @@ describe('the ceiling table tracks the tool surface', () => {
     // which no measurement has ever found large. Listed rather than inferred,
     // so adding a tool cannot silently join them.
     const EXEMPT = new Set([
-        'regenerate_ai_files', 'start_demo', 'stop_demo', 'rename_project',
+        'regenerate_ai_files',
+        'start_demo',
+        'stop_demo',
+        'rename_project',
         // `add_integration` joins its three siblings: its response is
         // `{added: {id, name, kind}}` — three short strings, bounded by
         // nothing that scales with project or catalog size.
@@ -376,19 +409,38 @@ describe('the ceiling table tracks the tool surface', () => {
         // same credential-bounded union `add_console_apis` already returns
         // exempt. `set_project_destination` returns the destination refs plus a
         // move summary, bounded by the project's integration COUNT.
-        'rename_integration', 'set_console_apis', 'set_project_destination',
-        'deploy_integration', 'redeploy_integration', 'remove_integration',
-        'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
-        'export_project_settings', 'refresh_block_library', 'add_console_apis',
-        'check_mesh', 'check_datapack_service', 'get_store_structure',
-        'get_project_urls', 'get_datapack', 'list_datapack_data_types',
-        'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
-        'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
+        'rename_integration',
+        'set_console_apis',
+        'set_project_destination',
+        'deploy_integration',
+        'redeploy_integration',
+        'remove_integration',
+        'deploy_mesh',
+        'delete_mesh',
+        'save_ai_prompt',
+        'delete_ai_prompt',
+        'export_project_settings',
+        'refresh_block_library',
+        'add_console_apis',
+        'check_mesh',
+        'check_datapack_service',
+        'get_store_structure',
+        'get_project_urls',
+        'get_datapack',
+        'list_datapack_data_types',
+        'find_datapacks',
+        'list_installed_datapacks',
+        'get_datapack_activity',
+        'verify_ai_setup',
+        'list_ai_prompts',
+        'list_console_apis',
         // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
         // is a boolean write. `set_current_project` returns ONE project record
         // — the same shape `get_project` already carries a 12,000-byte ceiling
         // for, and bounded the same way.
-        'restart_demo', 'set_current_project', 'set_project_pinned',
+        'restart_demo',
+        'set_current_project',
+        'set_project_pinned',
         // Group 7. Four short strings on the install branch, two on the
         // manual one — bounded by nothing that scales with the machine or
         // the stack.
@@ -396,9 +448,19 @@ describe('the ceiling table tracks the tool surface', () => {
         // Group 8's three job-handle writes. Each returns an activation id or
         // a short per-type outcome list — bounded by the number of DATA TYPES
         // in one datapack, not by how much data moved.
-        'start_datapack_import', 'reset_datapack', 'start_datapack_export',
+        'start_datapack_import',
+        'reset_datapack',
+        'start_datapack_export',
         // A target reference and a status record. Both fixed-shape.
-        'get_datapack_import_target', 'get_datapack_import_status',
+        'get_datapack_import_target',
+        'get_datapack_import_status',
+        // AB-5 pair. `install_integration` returns one three-field install
+        // record. `get_integration_install_status` returns that record plus
+        // the live status and FAILED step names — bounded by the app's own
+        // installer step count (the kit's whole tree measured ~23 nodes),
+        // not by anything that scales with the project.
+        'install_integration',
+        'get_integration_install_status',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {
@@ -422,7 +484,7 @@ describe('the ceiling table tracks the tool surface', () => {
         const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
 
         const missing = descriptorTools.filter(
-            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t),
+            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)
         );
         expect(missing).toEqual([]);
 
@@ -488,7 +550,7 @@ describe('the ceiling table tracks the tool surface', () => {
         ]);
 
         const unwatched = directOnly.filter(
-            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !DIRECT_PENDING.has(t),
+            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !DIRECT_PENDING.has(t)
         );
         expect(unwatched).toEqual([]);
 
@@ -517,9 +579,7 @@ describe('the ceiling table tracks the tool surface', () => {
         const mcpServer = readFileSync('src/mcp-server.ts', 'utf8');
         const blob = sources + mcpServer;
 
-        const orphans = Object.keys(RESPONSE_CEILINGS).filter(
-            (t) => !blob.includes(`'${t}'`),
-        );
+        const orphans = Object.keys(RESPONSE_CEILINGS).filter((t) => !blob.includes(`'${t}'`));
         expect(orphans).toEqual([]);
     });
 });

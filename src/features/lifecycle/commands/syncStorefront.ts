@@ -92,7 +92,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
-                progress.report({ message: 'Committing changes…' });
+                progress.report({ message: 'Saving your storefront changes…' });
                 return await syncAndPublish({
                     storefrontPath,
                     commitMessage,
@@ -136,7 +136,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         // Report the plain-sync outcome AFTER the progress notification closes.
         // `reportSyncResult` awaits a confirmation dialog ("…nothing to commit" /
         // "…synced", each with an OK/Open button); showing it inside `withProgress`
-        // held the "Committing changes…" spinner open until the user dismissed it.
+        // held the "Saving your storefront changes…" spinner open until the user dismissed it.
         if (result) {
             await this.reportSyncResult(result, project);
         }
@@ -159,7 +159,9 @@ export class SyncStorefrontCommand extends BaseCommand {
     }): Promise<void> {
         const { storefrontPath, progress, githubToken, daLiveToken, githubRepo } = args;
 
-        progress.report({ message: 'Remote has new commits — pulling and rebasing…' });
+        // Plain words: a producer syncing a storefront has never heard of a
+        // rebase, and this fires during an operation they cannot cancel.
+        progress.report({ message: 'Someone else changed the storefront — merging their work in…' });
 
         const rebaseOutcome = await this.attemptRebase(storefrontPath);
         if (rebaseOutcome === 'clean') {
@@ -213,7 +215,9 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({ message: 'Waiting for conflict resolution in Source Control…' });
+        progress.report({
+            message: 'Waiting for you to resolve the overlapping changes in Source Control…',
+        });
         await this.revealStorefrontConflicts(storefrontPath);
 
         try {
@@ -233,7 +237,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({ message: 'Continuing rebase…' });
+        progress.report({ message: 'Finishing the merge…' });
         try {
             await execFile('git', ['-C', storefrontPath, 'rebase', '--continue']);
         } catch (err) {

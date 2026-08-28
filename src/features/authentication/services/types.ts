@@ -14,6 +14,28 @@ export type {
     Workspace as AdobeWorkspace,
 } from '@/types/webview';
 
+/**
+ * A Console mutation failure carrying the REAL reason — the SDK's own error
+ * text when there is one. Union-returned (never thrown) so every consumer is
+ * compiler-forced to discriminate. Collapsing all causes to `undefined` is
+ * what let the tool layer invent wrong explanations while the actual cause —
+ * a 19-char name limit — sat unread in the SDK's message (2026-08-27).
+ */
+export interface ConsoleOpFailure {
+    error: string;
+}
+
+/** Discriminates a {@link ConsoleOpFailure} from a created entity. */
+export function isConsoleOpFailure(value: unknown): value is ConsoleOpFailure {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'error' in value &&
+        typeof (value as { error: unknown }).error === 'string' &&
+        !('id' in value)
+    );
+}
+
 // Raw Adobe CLI response types (not in core/ui/types)
 export interface RawAdobeOrg {
     id: string;
@@ -129,6 +151,21 @@ export interface WorkspaceCredential {
 export interface WorkspaceS2SCredentialIds {
     clientId: string;
     idIntegration: string;
+}
+
+/**
+ * The workspace S2S credential's full IMS server-to-server identity — the
+ * inputs an App Management app's actions authenticate with
+ * (`AIO_COMMERCE_AUTH_IMS_*`). `clientSecret` is a live secret: per-invocation
+ * env only, never persisted or logged.
+ */
+export interface S2SDeployCredentials {
+    clientId: string;
+    clientSecret: string;
+    technicalAccountId: string;
+    technicalAccountEmail: string;
+    /** IMS org id (`…@AdobeOrg`) — the integration detail's `orgCode`. */
+    imsOrgCode: string;
 }
 
 /**

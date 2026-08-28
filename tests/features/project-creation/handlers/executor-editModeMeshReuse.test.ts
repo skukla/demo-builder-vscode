@@ -26,9 +26,14 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                 name: 'test-project',
                 path: '/mock/path',
                 created: new Date().toISOString(),
-                meshState: {
-                    endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                    sourceHash: 'hash123',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                            sourceHash: 'hash123',
+                                    },
                 },
             } as any;
 
@@ -97,9 +102,14 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                 name: 'test-project',
                 path: '/mock/path',
                 created: new Date().toISOString(),
-                meshState: {
-                    endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                    sourceHash: 'hash123',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                            sourceHash: 'hash123',
+                                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -120,7 +130,7 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
             // When: extracting mesh data for linkExistingMesh
             const meshData = {
-                endpoint: existingProject.meshState!.endpoint,
+                endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
                 meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,
                 workspace: workspaceId,
@@ -141,9 +151,14 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                 name: 'test-project',
                 path: '/mock/path',
                 created: new Date().toISOString(),
-                meshState: {
-                    endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                    sourceHash: 'hash123',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                            sourceHash: 'hash123',
+                                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -161,7 +176,7 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
             // When: extracting mesh data
             const meshData = {
-                endpoint: existingProject.meshState!.endpoint,
+                endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
                 meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,
                 workspace: workspaceId,

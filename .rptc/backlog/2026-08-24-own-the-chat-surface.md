@@ -1,4 +1,36 @@
+---
+id: AI-2b
+kind: epic
+area: ai
+parent: AI-2
+needs: []
+value: low
+status: spiked
+layer: E
+---
 # Own the chat surface — render Claude Code's stream in our own UI
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**ACTIVE 2026-08-25 — a spike is planned at [`.rptc/plans/own-the-chat-surface/overview.md`](../plans/own-the-chat-surface/overview.md).** Read the plan first; this entry is kept for the correction it records and the prior art it names. The prerequisite it called for ("emit MCP progress from `withToolLogging`") SHIPPED with Evaluation Mode.
+
+**Filed to record a correction, not to argue for the work.** A producer could not tell what was running mid-task — which MCP server, which tool, which phase. Research (`.rptc/research/agent-activity-visibility/`) measured the terminal's ceiling: MCP progress notifications carry a `message` string, Claude Code supplies a progress token, and **the interactive terminal DOES render those messages live** (confirmed by running `probe-server.mjs`). So a tool can narrate itself; what it cannot control is attribution, ordering, styling, or how any other server's lines look. The correction: an earlier read said owning the chat meant abandoning Claude Code, citing ADR-004 and a billing risk, and **both were wrong** — "own the chat" was conflated with "use the Agent SDK directly", when `claude --input-format stream-json --output-format stream-json` runs a real bidirectional session against the local binary. Render the stream and Claude Code is still the engine: skills load, hooks fire (including the `aio` guard), `.mcp.json` connects, `AGENTS.md` is read so `AI_CONTEXT_VERSION` keeps working. ADR-004 chose the ENGINE, not the pixels — it rejected VS Code Chat's separate skill model and MCP transport, none of which applies here. Billing was moot twice: Adobe provides the subscriptions and the CLI path never touches an API key. Prior art is `app-builder/tech-case-studio`, whose Phase 0 spike de-risked this exact seam (streaming + permission prompts + tree-kill) and whose `ClaudeCliProvider` is the subscription-riding path; its `src/tool-call.ts` tool→view mapping is directly reusable, though it does not yet handle MCP tools (filed in that repo's backlog). Real cost is a UI, not the harness: permission cards are the hard part, and Anthropic's stream format is the standing maintenance. **Do first either way:** emit MCP progress from `withToolLogging` — small, lands now, and a prerequisite rather than a detour, since a custom UI still needs the server to send what it renders. Filed 2026-08-24.
+
+> **ACTIVE 2026-08-25.** A spike plan now exists:
+> [`.rptc/plans/own-the-chat-surface/overview.md`](../plans/own-the-chat-surface/overview.md),
+> built on the research pass in `.rptc/research/own-the-chat-surface/`. Read those
+> first — this file is kept for the correction it records and the prior art it
+> names, and the "do this first either way" prerequisite below has SHIPPED
+> (MCP progress notifications, Evaluation Mode step 01b).
+## Shipped so far
+
+- 2026-08-25  Prerequisite shipped either way — MCP progress notifications + Evaluation Mode step 01b (authored tool phrases)
+- 2026-08-26  Spike RUN — all four unknowns answered; see `.rptc/research/own-the-chat-surface/spike.md`
+
+Feasible, and more so than assumed. NOT decided: the cost is the terminal's own affordances, and the surface would sit on an undocumented API.
+- 2026-08-26  Spike RAN and is written up in .rptc/research/own-the-chat-surface/spike.md (16d6e5615) — 11 findings; slash commands mostly WORK through the CLI, contradicting the premise this item was filed on.
 
 ## Provenance
 
@@ -55,6 +87,56 @@ does NOT yet handle MCP tools (they hit a JSON-dump default); that gap is filed
 separately in the studio's own backlog as
 `2026-08-24-mcp-tool-labels-in-chat.md`, and whoever picks this up should read
 both.
+
+## The strongest argument for it, added 2026-08-25
+
+**Owning the stream is what makes Claude Code's OWN permission system available
+to us**, and that covers every tool — not just ours.
+
+Demo Builder shipped consent via MCP elicitation on 2026-08-25 (`consentViaChat.ts`).
+It works, and it protects **our** tools only. Anything the agent does with Bash,
+Write or Edit passes without Demo Builder knowing, and no amount of elicitation
+closes that: elicitation is a mechanism our SERVER has, and it fires inside our
+own tool calls.
+
+The studio gets `control_request` / `can_use_tool` instead — the same message the
+Agent SDK answers through `canUseTool` — because it drives the process with
+`--permission-prompt-tool stdio` and `--input-format stream-json`
+(lines 243-252 of the tech-case-studio repo's `claude-cli-provider.ts`,
+under its sidecar/src — an EXTERNAL repo, not a path here, and written
+path-free so the citation scanner stops resolving it locally). That
+message arrives for EVERY
+tool, before it runs.
+
+So the choice is not only about rendering. It is: does a producer's agent get to
+run a shell command this extension never sees? Today, yes.
+
+Comparison with what to borrow either way:
+`.rptc/research/consent-in-the-chat/compared-with-tech-case-studio.md`.
+
+## Research pass, 2026-08-25 — `.rptc/research/own-the-chat-surface/research.md`
+
+Measured rather than argued. Headline: **less work than it looks, and the cost is
+Claude Code's terminal UI rather than the rendering.**
+
+- **~1,000–1,500 new lines**, against ~1,900 lines of EXISTING surfaces that fold
+  in rather than being rebuilt: the Prompt Library becomes the composer's saved
+  prompts (closing the "cannot load a prompt back" hole for free), the evaluation
+  workbench is already a transcript view, and `toolNarration` / `agentAlertCopy` /
+  `consentText` are a permission card's content already written.
+- **No sidecar.** The studio needs a separate process because Tauri cannot spawn;
+  a VS Code extension host IS node and already spawns `claude`. Most of its
+  420-line provider becomes extension-side code.
+- **The cost is real and is not rendering:** slash commands (the studio had to
+  intercept five terminal-only built-ins that silently no-op headless),
+  `--continue`/`--resume`, `@file`, image paste, ctrl-C, and any future TUI work
+  Anthropic ships.
+- **Four unknowns must be spiked first**, chief among them what is lost when
+  `--setting-sources=` is empty — if the generated project bundle cannot survive
+  it, our agent experience would be WORSE inside our own chat, which is fatal.
+
+Recommendation: spike, do not commit — and do it after the three Evaluation Mode
+holes, which are needed either way and produce pieces this reuses.
 
 ## Goal / Scope
 

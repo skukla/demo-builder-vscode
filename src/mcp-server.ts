@@ -118,8 +118,10 @@ export function registerProjectTools(
     server.registerTool(
         'list_projects',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
-            description: 'List all Demo Builder projects',
+            description:
+                'List all Demo Builder projects. The active one is marked current:true — no follow-up call needed to learn which it is.',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
         async (args: any) =>
@@ -129,6 +131,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_project',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Project',
             description:
                 'Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json',
@@ -147,9 +150,10 @@ export function registerProjectTools(
     server.registerTool(
         'get_component_config',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Component Config',
             description:
-                'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
+                'Read .demo-builder.json or a .env file within the project directory. Secret values are masked — prefer this over reading .env directly so credentials never enter the transcript.',
             inputSchema: {
                 projectName: projectNameSchema,
                 configRelPath: z.string().describe('Relative path to config file within project'),
@@ -168,9 +172,10 @@ export function registerProjectTools(
     server.registerTool(
         'update_project_config',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Update Project Config',
             description:
-                'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
+                'Low-level whole-file write to .demo-builder.json or a .env file inside the project directory (path must not escape the project root). To SET a config value, use configure_project instead — it validates, routes secrets correctly, and marks dependent components stale; this raw write does none of that.',
             inputSchema: {
                 projectName: projectNameSchema,
                 configRelPath: z
@@ -193,6 +198,7 @@ export function registerProjectTools(
     server.registerTool(
         'sync_storefront',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sync Storefront',
             description: 'Git add, commit, and push changes in the storefront directory',
             inputSchema: {
@@ -214,6 +220,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_blocks',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Blocks',
             description: 'List all block directories in the storefront blocks/ directory',
             inputSchema: {
@@ -234,38 +241,9 @@ export function registerProjectTools(
     );
 
     server.registerTool(
-        'get_block_source',
-        {
-            title: 'Get Block Source',
-            description:
-                "List a block's files (names + sizes) by default; pass fileName to read one file's source",
-            inputSchema: {
-                projectName: projectNameSchema,
-                blockName: z
-                    .string()
-                    .regex(/^[a-zA-Z0-9_-]+$/)
-                    .describe('Name of the block directory inside blocks/'),
-                fileName: z
-                    .string()
-                    .regex(/^[a-zA-Z0-9._-]+$/)
-                    .optional()
-                    .describe("A file within the block to read; omit to list the block's files"),
-            },
-        },
-        async (args: any) =>
-            asRawText(
-                await toolHandlers.getBlockSource(
-                    projectsDir,
-                    args.projectName,
-                    args.blockName as string,
-                    args.fileName as string | undefined,
-                ),
-            ),
-    );
-
-    server.registerTool(
         'get_block_authoring_shape',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Authoring Shape',
             description:
                 "Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS to infer its shape.",
@@ -298,6 +276,7 @@ export function registerProjectTools(
     server.registerTool(
         'promote_block_to_library',
         {
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Promote Block to Library',
             // Phrasing matches sync-changes.md ("Block changes to push back to
             // source library"); mcpServer-promoteBlock.test.ts pins it.
@@ -359,6 +338,7 @@ export function registerProjectTools(
     server.registerTool(
         'remove_block_from_library',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Remove Block from Library',
             description:
                 'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',

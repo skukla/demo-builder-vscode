@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-28T00-30-00Z",
+  "serving": "loop/2026-08-27-prompt-coverage@7eae248d7 built 2026-08-28T00:25:33.649Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 1071
+  },
+  "promptCount": 3,
+  "allowlist": 94,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 1071
+  },
+  "authChangedMidRun": false
+}

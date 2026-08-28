@@ -40,7 +40,6 @@
 
 import { ActionButton, Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,
@@ -66,6 +65,7 @@ import {
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

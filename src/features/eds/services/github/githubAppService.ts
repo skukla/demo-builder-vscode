@@ -7,8 +7,8 @@
  * Pattern: Uses same dependency injection as GitHubRepoOperations (takes GitHubTokenService).
  */
 
-import type { GitHubTokenService } from './githubTokenService';
 import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
+import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

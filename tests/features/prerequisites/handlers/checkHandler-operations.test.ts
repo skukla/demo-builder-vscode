@@ -289,8 +289,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18', '20']);
-        // getPluginNodeVersions should return only Node 20 (commerce-paas)
-        (shared.getPluginNodeVersions as jest.Mock).mockReturnValue(['20']);
 
         // CLI is installed
         (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
@@ -311,21 +309,16 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then: getPluginNodeVersions should be called with the correct parameters
-        // Uses nodeVersionIdMapping (component IDs) for matching against requiredFor
-        expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionIdMapping,
-            ['commerce-paas'],
-        );
-
-        // Then: prerequisite-status should contain nodeVersionStatus with only Node 20 entry
+        // Then: the status carries ONLY the requiredFor-matched major (20), not
+        // eds's 18. Asserted by EFFECT: resolveRequiredMajors moved into shared
+        // (2026-08-27) and calls getPluginNodeVersions module-internally, where
+        // this suite's spy cannot see it — the real filter runs on the real
+        // idMapping instead, which is the stronger check anyway.
         expect(context.sendMessage).toHaveBeenCalledWith(
             'prerequisite-status',
             expect.objectContaining({
                 name: 'Adobe I/O CLI',
-                nodeVersionStatus: expect.arrayContaining([
-                    expect.objectContaining({ major: '20' }),
-                ]),
+                nodeVersionStatus: [expect.objectContaining({ major: '20' })],
             })
         );
 
@@ -377,8 +370,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18']);
-        // getPluginNodeVersions returns empty array (no matching components)
-        (shared.getPluginNodeVersions as jest.Mock).mockReturnValue([]);
 
         // CLI is installed
         (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
@@ -402,13 +393,8 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then: getPluginNodeVersions should be called with ID mapping
-        expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionIdMapping,
-            ['api-mesh'],
-        );
-
-        // Then: prerequisite-status should contain empty nodeVersionStatus array
+        // Then (by EFFECT — see the filtering test above): no component in the
+        // idMapping matches 'api-mesh', so the resolved majors are empty and
         expect(context.sendMessage).toHaveBeenCalledWith(
             'prerequisite-status',
             expect.objectContaining({
@@ -455,8 +441,6 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
         (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
         (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['20']);
-        // getPluginNodeVersions should be called with ID mapping and return Node 20
-        (shared.getPluginNodeVersions as jest.Mock).mockReturnValue(['20']);
 
         // Plugin is installed
         (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
@@ -475,14 +459,8 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then: getPluginNodeVersions should be called with ID mapping
-        // The function now uses nodeVersionIdMapping for matching component IDs
-        expect(shared.getPluginNodeVersions).toHaveBeenCalledWith(
-            nodeVersionIdMapping,
-            ['commerce-mesh'],
-        );
-
-        // Then: prerequisite-status should contain nodeVersionStatus with Node 20
+        // Then (by EFFECT — see the filtering test above): the dependency id
+        // 'commerce-mesh' matches the idMapping, so Node 20 is required
         expect(context.sendMessage).toHaveBeenCalledWith(
             'prerequisite-status',
             expect.objectContaining({
@@ -552,10 +530,8 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         // Then: getPluginNodeVersions should NOT be called (fallback to getNodeVersionKeys)
         expect(shared.getPluginNodeVersions).not.toHaveBeenCalled();
 
-        // Then: getNodeVersionKeys should be called
-        expect(shared.getNodeVersionKeys).toHaveBeenCalledWith(nodeVersionMapping);
-
-        // Then: prerequisite-status should contain nodeVersionStatus with both Node 18 and 20
+        // Then (by EFFECT — the fallback path derives ALL majors from the real
+        // mapping now that resolveRequiredMajors lives in shared): both 18 and 20
         const statusCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
             call => call[0] === 'prerequisite-status' && call[1].name === 'Adobe I/O CLI'
         );

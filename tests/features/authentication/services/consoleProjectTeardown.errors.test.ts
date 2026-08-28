@@ -8,6 +8,16 @@
  * never attempts the delete while any item has failed).
  */
 
+// Step-level debug logging (AI-5) — no logger singleton exists under jest.
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    }),
+}));
+
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import { PROPAGATION_RETRY_DELAYS } from '@/features/authentication/services/consoleProjectTeardownEvents';
 import {
@@ -142,7 +152,9 @@ describe('teardownConsoleProject failure handling', () => {
 
         it('should abort without subscribing when discovery fails with a non-access error', async () => {
             const harness = makeHarness();
-            harness.clientFor('client-ws1').listProviders.mockRejectedValue(new Error('network down'));
+            harness
+                .clientFor('client-ws1')
+                .listProviders.mockRejectedValue(new Error('network down'));
 
             const result = await teardownConsoleProject(harness.deps, TARGET);
 
@@ -167,7 +179,7 @@ describe('teardownConsoleProject failure handling', () => {
                 'org1',
                 'proj1',
                 'ws2',
-                'reg-z',
+                'reg-z'
             );
             expect(result.success).toBe(true);
         });
@@ -187,7 +199,7 @@ describe('teardownConsoleProject failure handling', () => {
         it('should mark the workspace and its providers failed when the escalation create fails', async () => {
             const harness = makeEscalationHarness();
             harness.deps.createWorkspaceS2SCredentialFor.mockRejectedValue(
-                new Error('create denied'),
+                new Error('create denied')
             );
 
             const result = await teardownConsoleProject(harness.deps, TARGET);
@@ -196,13 +208,15 @@ describe('teardownConsoleProject failure handling', () => {
             expect(result.projectDeleted).toBe(false);
             expect(
                 result.items.some(
-                    (item) => item.kind === 'workspace' && item.id === 'ws2' && item.outcome === 'failed',
-                ),
+                    (item) =>
+                        item.kind === 'workspace' && item.id === 'ws2' && item.outcome === 'failed'
+                )
             ).toBe(true);
             expect(
                 result.items.some(
-                    (item) => item.kind === 'provider' && item.id === 'p2' && item.outcome === 'failed',
-                ),
+                    (item) =>
+                        item.kind === 'provider' && item.id === 'p2' && item.outcome === 'failed'
+                )
             ).toBe(true);
             expect(harness.deps.deleteConsoleProject).not.toHaveBeenCalled();
         });
@@ -210,7 +224,7 @@ describe('teardownConsoleProject failure handling', () => {
         it('should still process credentialed workspaces when an escalation fails', async () => {
             const harness = makeEscalationHarness();
             harness.deps.createWorkspaceS2SCredentialFor.mockRejectedValue(
-                new Error('create denied'),
+                new Error('create denied')
             );
 
             const result = await teardownConsoleProject(harness.deps, TARGET);
@@ -220,12 +234,13 @@ describe('teardownConsoleProject failure handling', () => {
                 'org1',
                 'proj1',
                 'ws1',
-                'p1',
+                'p1'
             );
             expect(
                 result.items.some(
-                    (item) => item.kind === 'provider' && item.id === 'p1' && item.outcome === 'deleted',
-                ),
+                    (item) =>
+                        item.kind === 'provider' && item.id === 'p1' && item.outcome === 'deleted'
+                )
             ).toBe(true);
         });
 
@@ -238,8 +253,9 @@ describe('teardownConsoleProject failure handling', () => {
             expect(harness.deps.subscribeManagementApi).toHaveBeenCalledTimes(2);
             expect(
                 result.items.some(
-                    (item) => item.kind === 'provider' && item.id === 'p2' && item.outcome === 'failed',
-                ),
+                    (item) =>
+                        item.kind === 'provider' && item.id === 'p2' && item.outcome === 'failed'
+                )
             ).toBe(true);
             expect(harness.deps.deleteConsoleProject).not.toHaveBeenCalled();
         });
@@ -274,8 +290,8 @@ describe('teardownConsoleProject failure handling', () => {
                     (item) =>
                         item.kind === 'registration' &&
                         item.id === 'reg-1' &&
-                        item.outcome === 'failed',
-                ),
+                        item.outcome === 'failed'
+                )
             ).toBe(true);
         });
 
@@ -311,14 +327,15 @@ describe('teardownConsoleProject failure handling', () => {
             expect(harness.deps.subscribeManagementApi).not.toHaveBeenCalled();
             expect(
                 result.items.some(
-                    (item) => item.kind === 'workspace' && item.id === 'ws1' && item.outcome === 'failed',
-                ),
+                    (item) =>
+                        item.kind === 'workspace' && item.id === 'ws1' && item.outcome === 'failed'
+                )
             ).toBe(true);
             expect(harness.clientFor('client-ws1').deleteProvider).toHaveBeenCalledWith(
                 'org1',
                 'proj1',
                 'ws1',
-                'p1',
+                'p1'
             );
             expect(harness.deps.deleteConsoleProject).not.toHaveBeenCalled();
             expect(result.success).toBe(false);
@@ -329,7 +346,7 @@ describe('teardownConsoleProject failure handling', () => {
         it('should collect a failed project item and not signal console-selection clearing', async () => {
             const harness = makeHarness();
             harness.deps.deleteConsoleProject.mockRejectedValue(
-                new Error('409 ERR_MSG_PROJECT_DELETE_FORBIDDEN'),
+                new Error('409 ERR_MSG_PROJECT_DELETE_FORBIDDEN')
             );
 
             const result = await teardownConsoleProject(harness.deps, TARGET);
@@ -353,7 +370,7 @@ describe('teardownConsoleProject failure handling', () => {
         it('names the blockers it could not pre-empt, and the remedy', async () => {
             const harness = makeHarness();
             harness.deps.deleteConsoleProject.mockRejectedValue(
-                new Error('409 ERR_MSG_PROJECT_DELETE_FORBIDDEN'),
+                new Error('409 ERR_MSG_PROJECT_DELETE_FORBIDDEN')
             );
 
             const result = await teardownConsoleProject(harness.deps, TARGET);

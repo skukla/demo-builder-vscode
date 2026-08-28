@@ -253,11 +253,11 @@ describe('toolHandlers.getBlockAuthoringShape', () => {
 
     // ─── missing / bare entries ──────────────────────────────────────────────
 
-    it('errors for an unregistered block and points at get_block_source', async () => {
+    it('errors for an unregistered block and points at the checkout', async () => {
         mockRegistry();
         // A block can exist on disk and never have been registered — a different
         // problem from a typo, so the message names the next step.
-        await expect(shape('carousel')).rejects.toThrow(/get_block_source/);
+        await expect(shape('carousel')).rejects.toThrow(/storefront checkout/);
     });
 
     it('reports a registered block that declares no authoring shape', async () => {

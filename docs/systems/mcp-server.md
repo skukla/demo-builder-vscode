@@ -251,6 +251,30 @@ No webview, no modal, no button — but the work is identical to the UI path.
 
 ---
 
+## 7b. Connection scoping — the session's directory decides the project
+
+Two agent entries are supported: the home chat (session at the projects root;
+the dashboard's current-project pointer decides which project "this project"
+means) and a session started inside a project directory (each project's
+generated `.mcp.json`/AGENTS.md exist for exactly this). Since 2026-08-28 the
+second entry is **connection-scoped**: the proxy writes a one-line
+`#cwd:<path>` preamble as the first bytes of every connection (MCP framing is
+newline-delimited JSON-RPC, so every legitimate first byte is `{` and the
+preamble is unambiguous; bare clients — the probe, old proxies — skip it and
+are handed to the transport untouched). The server (`connectionScope.ts`)
+resolves the cwd to the containing project and, for that connection only:
+
+- current-project reads load THAT project fresh from disk per call;
+- saves route through `saveProjectConfigOnly` — a scoped session can NEVER
+  flip the dashboard's pointer (`scopedStateManager.ts`);
+- `get_current_project` answers `scope: "session-directory"` (vs
+  `"dashboard-pointer"`), so an agent can always tell why it got the project
+  it got.
+
+Decided by the owner after the battery's first tier-2 run measured an agent
+inspecting one project while its tools acted on another. The home chat and
+every unscoped client keep pointer semantics unchanged.
+
 ## 8. The headless `HandlerContext`
 
 Most of the extension's logic is written as **message handlers** that expect a
@@ -292,7 +316,6 @@ blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 | `update_project_config` | Write `.demo-builder.json` / `.env` (env content validated). |
 | `sync_storefront` | Git add/commit/push the storefront. Names the pushed commit in its reply, and says publishing reaches the CDN on a delay — an agent that verified against the rendered site instead of git once read that lag as discarded commits. On a `non-fast-forward` rejection it rebases onto the remote and retries **once** (`retryAfterRebase`); a conflicting rebase is aborted so the checkout is exactly as found. A `ruleset` rejection is never retried — replaying it cannot change why a rule refused it. |
 | `list_blocks` | List EDS blocks in the storefront. |
-| `get_block_source` | Read a block's files (manifest or one file, size-capped). |
 | `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
 | `promote_block_to_library` | Add a local block to the DA.live authoring library. Destructive (commits, pushes, publishes); confirm-gated. |
 | `remove_block_from_library` | The inverse. Destructive; confirm-gated. |
@@ -300,6 +323,14 @@ blockLibraryPublish, blockToolHandlers — split 2026-08-23).
 ### Discovery & catalog — `discoveryTools.ts`
 `list_components`, `list_demo_packages`, `list_stacks` — read-only catalog lookups
 used while assembling a `create_project` call.
+
+### Diagnostics — `diagnosticsTools.ts`
+`read_debug_logs` — the extension's own Debug Logs (or User Logs) channel, read
+from VS Code's on-disk channel mirror under `context.logUri`. Tail-with-filter
+(case-insensitive substring, filtered before the tail). Exists because an opaque
+tool failure used to leave an agent blind while the real cause — e.g. a Console
+400 naming the exact rule — sat in the channel (measured 2026-08-27). Channel
+writes are secret-sanitized at write time, so the mirror carries no raw tokens.
 
 ### Authentication & Adobe — `authTools.ts`, `adobeTools.ts`
 `get_auth_status`, `sign_in`, `list_orgs`, `select_org`, `list_adobe_projects`,
@@ -346,7 +377,11 @@ Thin tools declared as data and dispatched to existing handler maps:
   for — the read that lets an agent see a project pointing at a website or store
   view that does not exist; PaaS uses the project's saved admin credentials, ACCS
   proxies through a configured discovery service and prompts Adobe sign-in ONLY
-  when the read reports it needs a token).
+  when the read reports it needs a token), `get_integration_install_status`
+  (an App Management integration's Commerce install state: the persisted
+  `installation` record plus the LIVE state from the app's own install API,
+  failed step names included — a missing sign-in answers a typed AUTH_REQUIRED,
+  never a dialog).
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `restart_demo` (owns the
   settle delay between the stop and the start, which calling the two in sequence does
   not), `set_current_project` (the pointer every project-scoped tool acts on — note this
@@ -365,8 +400,14 @@ Thin tools declared as data and dispatched to existing handler maps:
   webview path opens never opens for an agent's call),
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
-  `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
-  undeploy + local cleanup + storefront republish),
+  `deploy_mesh` / `check_mesh` / `delete_mesh`), `install_integration` (re-run the
+  Commerce install/associate pass for a DEPLOYED App Management integration without
+  a redeploy — ungated like `deploy_integration`, since the install is a convergent
+  reconcile; use after `get_integration_install_status` reports a failure),
+  `remove_integration` (confirm-gated — for App Management apps it first runs the
+  app's own uninstaller, which removes what the INSTALLER created — event
+  registrations, binding packages, the Commerce association — while the app's API
+  still exists to call, then remote undeploy + local cleanup + storefront republish),
   `rename_integration` (DISPLAY NAME only — the id, folder and Runtime package are
   immutable; local metadata write, nothing redeploys; pre-built catalog entries and the
   mesh are rejected. `name` is REQUIRED in the schema, and that is a headless-safety
@@ -403,10 +444,47 @@ Thin tools declared as data and dispatched to existing handler maps:
 | Tool | File | Notes |
 |---|---|---|
 | `create_project` | `createProjectTool.ts` | Full wizard pipeline, headless. |
+| `get_agent_trace` | `agentTraceTool.ts` | The activity record of agents' tool calls — live session from the in-memory recorder, past sessions from the per-session files the trace sink keeps (AI-2c). Names/sizes/outcomes and a one-way fingerprint of argument values, never a value; capped at 200 entries. The same record feeds the "Demo Builder: Agent Activity" output channel live. |
 | `get_current_project` | `currentProjectTool.ts` | Resolve the active project (persisted current-project pointer); returns `{ name, path }` or `null`. |
 | `delete_project` | `deleteProjectTool.ts` | **Irreversible** — needs `confirm:true` + `confirmName` echo. Local only. |
 | `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. The confirm-gate refusal and every result name the project (`project`), so an agent can catch a wrong current-project pointer before confirming. |
 | `apply_updates` | `applyUpdatesTool.ts` | Check (no confirm) / apply (`confirm:true`) across all update categories. |
+
+### Commerce connection — `commerceEndpointsTool.ts`
+| Tool | File | Notes |
+|---|---|---|
+| `get_commerce_endpoints` | `commerceEndpointsTool.ts` | Where to send a Commerce query and what to send with it: the backend's GraphQL endpoint, Catalog Service, the deployed mesh, the `Magento-*` request headers, and the store scope they select. |
+
+**Why it exists.** A survey of 48 sessions run inside demo projects (2026-08-25)
+found 77% of all tool calls answering four orientation questions, while the one
+long session of real Commerce work issued **28 `curl`s at the GraphQL endpoint
+with the headers typed by hand**. It had to: `get_project_urls` returns places a
+BROWSER can open, `get_project_status` returns the mesh endpoint only, and
+`accsGraphqlEndpoint` appears on the surface exclusively as an INPUT
+`discover_store_structure` expects the caller to already know. The value was
+reachable only by asking `get_component_config` to read a `.env` by relative
+path — a file read, not an answer.
+
+**It returns the headers, not just the URL.** A Catalog Service query against the
+wrong store scope comes back empty *with no error*, which is the "why is phones
+empty?" the same session spent turns on. The headers come from
+`generateHeaders` — the function that writes the storefront's own `config.json` —
+so an agent and the site it is debugging cannot be querying two different stores.
+
+**Both endpoints, separately.** `extractConfigParamsFromConfigs` collapses them
+(`meshEndpoint || config[endpointKey]`), which is right for generating
+`config.json` and wrong for an agent: *"if a partner integrates with or without a
+mesh, what endpoints do they need?"* needs both, plus `storefrontUses` saying
+which one the site itself queries. The mesh value comes from `getMeshEndpoint`,
+the same accessor `get_project_status` reports through.
+
+**No secrets.** The registry marks confidential values `secret: true`; exactly two
+keys carry it (`ACCS_OAUTH_CLIENT_SECRET`, `ADOBE_COMMERCE_ADMIN_PASSWORD`) and
+neither is read by the resolvers behind this tool — asserted by a test, not
+assumed. A PaaS project's headers do carry `x-api-key`
+(`ADOBE_CATALOG_API_KEY`, `type: text`), deliberately: the same value ships in
+`config.json` to every browser that loads the storefront, and withholding it
+would break every PaaS Catalog Service call while protecting nothing.
 
 ### Cloud resources & storefront content
 | Tool | File | Notes |
@@ -488,6 +566,23 @@ entirely. Auth is indifferent to the order.
 
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
+
+`reload_window` — restart the VS Code window so the extension host picks up a
+newly compiled bundle. Confirm-gated and `destructiveHint: true`: it discards
+in-flight work in that window and drops the MCP socket.
+
+**It answers before it reloads.** `workbench.action.reloadWindow` restarts the
+host serving the call, so the response is written first and the command deferred
+by `RELOAD_DEFER_MS`. Without that the caller gets a dropped socket, which is
+indistinguishable from a crash. The response says the socket will drop and names
+`probe.mjs info` as the readiness check — whose build stamp is also how you
+confirm the new bundle is the one now serving.
+
+Exists because the fix-measure loop otherwise stalls: extension-host code cannot
+be measured until the host restarts, and nothing outside the editor could do it.
+Corrects a claim in the `mcp-live-probe` skill that only F5 can — `reloadWindow`
+reloads the window including the extension host, which is exactly how
+`extensionUpdater.ts` applies a new extension version.
 
 ### Lifecycle — `lifecycleTools.ts`
 
@@ -623,7 +718,8 @@ removes, so the `delete_*` reading of this list would miss it. Judge against the
 not the verb.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`add_integration`, `deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
+`add_integration`, `deploy_integration`, `redeploy_integration`,
+`install_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists
@@ -692,7 +788,7 @@ The agent surface is powerful, so it's deliberately constrained:
   crafted name can't escape the projects directory.
 - **`.env` content is allowlist-validated** (`validateEnvContent`) before being
   written — defense-in-depth against injecting executable content.
-- **Bounded responses.** `get_block_source` caps at 50 files / 30 KB each, since
+- **Bounded responses.** `read_page` caps its reads at 30 KB, since
   the output is paid for as context tokens. `get_block_authoring_shape` splits
   index from detail for the same reason: the index carries ids, titles and which
   authoring convention each block uses, but never the markup, selectors or field
@@ -728,9 +824,14 @@ extension-side in `agentOperationNotifier.ts`:
   reached. `demoBuilder.ai.requireAgentConsent` (default on, read live per
   call) is the headless escape hatch. The dialog shows scalar argument
   values — informed consent needs them — with secret-shaped keys masked and
-  long values elided; the keys-only rule remains for logging.
+  long values elided; the keys-only rule remains for logging. An UNANSWERED
+  dialog times out (`TIMEOUTS.LONG`) into a "nobody answered" refusal rather
+  than blocking the agent forever — before 2026-08-27 a headless call whose
+  dialog nobody saw hung indefinitely with no log line (AI-5), and the wait
+  now also announces itself in Debug Logs before the dialog opens.
 - **Mutating calls are visible** (2026-08-23). Every tool whose name is not
-  read-shaped (`isReadOnlyToolName`, an allowlist failing closed) runs inside
+  declared `readOnlyHint: false` (see the dry-run section below — this was an
+  allowlist over tool NAMES until 2026-08-25) runs inside
   a `withProgress` notification (`createAgentOperationNotifier`, injected as
   `longRunningNotifier`), and the OUTCOME lands in the window — status bar on
   success, warning toast on failure — because the agent's own report may
@@ -742,6 +843,61 @@ extension-side in `agentOperationNotifier.ts`:
   (observed live 2026-08-23 as a silent 60s timeout). Generated AGENTS.md
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
+
+### `get_current_project` answers with the project's STATE
+
+It returned a name and a path in ~22 tokens until 2026-08-26. `agent-gap-scan`
+measured **83% of its calls followed immediately by another of our reads** — it
+told an agent WHERE it was and nothing it could act on, so the next step always
+paid a second round trip. That is a shape problem, and no count of how often a
+tool is called can see it.
+
+`get_project_status` already returned a strict superset of those two fields for
+24 more tokens, so two tools answered the same question two ways and the thinner
+one was reached for 2.4x more often. They now share one payload
+(`resolveProjectStatus`).
+
+**Both names stay.** "Which project am I in" and "did `start_demo` take effect"
+are different questions; an agent should not route the second through a tool
+called *current project*. What they must not keep is two different answers.
+
+The **null envelope** is why this is not an alias: `get_project_status` answers a
+prose error when there is no current project, while `get_current_project`
+answers `null` — a fact an agent can branch on rather than a failure it might
+retry. And the shared resolver never throws: a `ServiceLocator` that is not
+initialized degrades the mesh to `needs-auth`, because the moment orientation
+matters most is exactly when activation may not have finished.
+
+### The dry run — REMOVED 2026-08-26
+
+`demoBuilder.ai.dryRun` made agent mutation impossible rather than discouraged:
+while on, every tool that was not read-shaped stopped in `withToolLogging`
+before its handler and answered what it WOULD have done. It left with the
+prompt-evaluation surface (AI-3b) and is on `feature/prompt-workbench`.
+
+It was removed for being unused, not for being wrong. It defaulted OFF, so it
+protected nobody unless switched on, and its status bar item showed
+unconditionally — every user carried a permanent "Dry run off" indicator for a
+mode nobody had turned on.
+
+Two of its properties are worth keeping in mind if it returns, because both were
+learned the hard way: it answered **data, not an error** (an error teaches an
+agent to retry; data teaches it what would have happened), and it classified by
+each tool's own **declaration** rather than its name — `check_github_app` is
+read-shaped and fires a Helix code sync.
+
+**Consent is a different thing and stays.** `demoBuilder.ai.requireAgentConsent`
+defaults ON and asks before each destructive operation. It never depended on the
+dry run.
+
+### `evaluate_prompt` — REMOVED 2026-08-26
+
+The tool spawned a headless `claude -p` run with the dry run forced and answered
+a summary of what a prompt would cost. It left with the prompt-evaluation
+surface (AI-3b); the code is on `feature/prompt-workbench`.
+
+The agent dry run it forced went to the same branch — see the dry-run section
+above. The **consent dialog** stays and is unrelated to both.
 
 ---
 

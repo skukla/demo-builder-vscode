@@ -29,6 +29,7 @@ jest.mock('fs/promises', () => ({
     realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
+    rm: jest.fn().mockResolvedValue(undefined),
 }));
 
 const PROJECTS_ROOT = '/home/user/.demo-builder/projects';
@@ -200,6 +201,33 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         expect(agents).toContain('## Reporting Back to the User');
     });
 
+    it('states the active project when activation knows it (AI-1g)', async () => {
+        // THE BUG. Activation wrote the no-name branch unconditionally, so the
+        // file said "call get_current_project first" — while the Chat tile wrote
+        // the branch that says not to. Same file, opposite instructions, and any
+        // headless run got whichever had been written last.
+        //
+        // Measured 2026-08-26: the live file had been written by activation, and
+        // 9 of 10 battery prompts opened `ToolSearch -> get_current_project`.
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH, 'bodea');
+
+        const agents = captureWrite('AGENTS.md');
+        expect(agents).toContain('The active project is `bodea`');
+        expect(agents).toContain('do **not** spend a call on');
+        expect(agents).not.toContain('Before starting any project task');
+    });
+
+    it('falls back to the ordering directive when activation does NOT know the project', async () => {
+        // The no-name branch must survive: with no pointer set there is nothing
+        // truthful to state, and inventing one is the "right data, wrong project"
+        // failure that made getCurrentProject re-read from disk every call.
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH, undefined);
+
+        const agents = captureWrite('AGENTS.md');
+        expect(agents.toLowerCase()).toContain('before starting any project task');
+        expect(agents).not.toContain('The active project is');
+    });
+
     it('writes CLAUDE.md pointers (root + .claude/) that say "see @AGENTS.md"', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
@@ -282,15 +310,16 @@ describe('ensureHomeAiContext — skills', () => {
         // Spot-check a representative subset across each skill category — the
         // home Chat carries the full skill surface, not just one global skill.
         const expectedSkills = [
-            'create-eds-project.md',
-            'scrape-reference-site.md',
-            'register-custom-block.md',
-            'sync-changes.md',
-            'commerce-block-mapper.md',
+            'create-eds-project',
+            'scrape-reference-site',
+            'register-custom-block',
+            'sync-changes',
+            'commerce-block-mapper',
         ];
         for (const skill of expectedSkills) {
-            expect(wasWritten(path.join('.claude', 'skills', skill))).toBe(true);
-            const content = captureWrite(path.join('skills', skill));
+            // v27+: the registrable `<name>/SKILL.md` layout.
+            expect(wasWritten(path.join('.claude', 'skills', skill, 'SKILL.md'))).toBe(true);
+            const content = captureWrite(path.join('skills', skill, 'SKILL.md'));
             expect(content.length).toBeGreaterThan(0);
         }
     });

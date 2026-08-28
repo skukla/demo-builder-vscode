@@ -128,61 +128,61 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         expect(result).toEqual(expect.objectContaining({ id: 'ws-new' }));
     });
 
-    it('returns undefined for an empty name (no SDK call)', async () => {
+    it('names the failure for an empty name (no SDK call)', async () => {
         const result = await fetcher.createWorkspace('', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined for a name longer than 200 chars (no SDK call)', async () => {
+    it('names the failure for a name longer than 200 chars (no SDK call)', async () => {
         const result = await fetcher.createWorkspace('x'.repeat(201), 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined for a description longer than 500 chars (no SDK call)', async () => {
+    it('names the failure for a description longer than 500 chars (no SDK call)', async () => {
         const result = await fetcher.createWorkspace('Stage', 'd'.repeat(501));
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('500 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when no organization is selected', async () => {
+    it('names the failure when no organization is selected', async () => {
         mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('No organization or project') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when no project is selected', async () => {
+    it('names the failure when no project is selected', async () => {
         mockCacheManager.getCachedProject.mockReturnValue(undefined);
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('No organization or project') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when the SDK is not initialized', async () => {
+    it('names the failure when the SDK is not initialized', async () => {
         mockSDKClient.isInitialized.mockReturnValue(false);
         mockSDKClient.ensureInitialized.mockResolvedValue(false);
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('sign in to Adobe') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns undefined when the SDK throws (e.g. permission denied)', async () => {
+    it('carries the SDK error TEXT when the SDK throws', async () => {
         createWorkspace.mockRejectedValue(new Error('403 Forbidden'));
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('403 Forbidden') });
     });
 
-    it('returns undefined on a 409 Conflict (name already taken)', async () => {
+    it('translates a 409 Conflict into the name-taken reason', async () => {
         createWorkspace.mockRejectedValue(new Error('409 Conflict'));
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('already exists') });
     });
 
-    it('returns undefined when the response has no workspace body', async () => {
+    it('names the failure when the response has no workspace body', async () => {
         createWorkspace.mockResolvedValue({ body: undefined });
         const result = await fetcher.createWorkspace('Stage', 'desc');
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ error: expect.stringContaining('no workspace id') });
     });
 });

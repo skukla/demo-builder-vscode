@@ -11,7 +11,6 @@
  * NOT `getCurrentProject()` — the wizard has no current project yet.
  */
 
-import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import type { SubscribedApi } from '@/features/app-builder/services/apiSubscriber';
@@ -22,6 +21,7 @@ import {
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { formatApiAccessError } from '@/features/mesh/utils/errorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 type EnsureMeshApiSubscribedResult = {

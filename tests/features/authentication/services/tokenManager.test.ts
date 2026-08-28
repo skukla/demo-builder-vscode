@@ -18,7 +18,10 @@
  * doing. What replaced them is one case for a reader that throws.
  */
 
-import { TokenManager, type StoredTokenConfig } from '@/features/authentication/services/tokenManager';
+import {
+    TokenManager,
+    type StoredTokenConfig,
+} from '@/features/authentication/services/tokenManager';
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => ({
@@ -34,9 +37,18 @@ jest.mock('@/core/logging', () => ({
 const LONG_TOKEN = 'x'.repeat(150);
 const HOUR_MS = 60 * 60 * 1000;
 
-/** A manager reading exactly what the test says the config store holds. */
-function managerReading(stored: StoredTokenConfig | undefined): TokenManager {
-    return new TokenManager(undefined, undefined, () => stored);
+/**
+ * A manager reading exactly what the test says the config store holds. The
+ * fourth argument is the silent-refresh seam: `noRefresh` by default so an
+ * expired fixture can NEVER reach the real aio-lib-ims (which would fire a
+ * live IMS call from jest); refresh-path tests inject their own.
+ */
+const noRefresh = async (): Promise<undefined> => undefined;
+function managerReading(
+    stored: StoredTokenConfig | undefined,
+    refresh: () => Promise<StoredTokenConfig | undefined> = noRefresh
+): TokenManager {
+    return new TokenManager(undefined, undefined, () => stored, refresh);
 }
 
 describe('TokenManager — inspectToken', () => {
@@ -113,6 +125,68 @@ describe('TokenManager — inspectToken', () => {
         expect(result.valid).toBe(true);
         expect(result.expiresIn).toBeGreaterThanOrEqual(119);
         expect(result.expiresIn).toBeLessThanOrEqual(121);
+    });
+
+    // ── Silent IMS refresh (2026-08-27) ─────────────────────────────────────
+    // An expired stored token is not "signed out": the aio CLI silently
+    // refreshes via the context's refresh token (measured live: 30-min-expired
+    // access token, 14-day refresh token, session restored in ~2s). The
+    // extension must ask the library before asking a human.
+
+    it('an EXPIRED stored token triggers the silent refresh and serves its result', async () => {
+        const fresh = { token: 'y'.repeat(150), expiry: Date.now() + 24 * HOUR_MS };
+        const refresh = jest.fn().mockResolvedValue(fresh);
+
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            refresh
+        ).inspectToken();
+
+        expect(refresh).toHaveBeenCalledTimes(1);
+        expect(result.valid).toBe(true);
+        expect(result.token).toBe(fresh.token);
+    });
+
+    it('a VALID stored token never consults the refresh', async () => {
+        const refresh = jest.fn();
+
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() + HOUR_MS },
+            refresh
+        ).inspectToken();
+
+        expect(result.valid).toBe(true);
+        expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('a refresh that yields nothing leaves the ORIGINAL expired verdict', async () => {
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            async () => undefined
+        ).inspectToken();
+
+        expect(result.valid).toBe(false);
+        expect(result.expiresIn).toBeLessThan(0);
+    });
+
+    it('a refresh that THROWS is contained — the expired verdict answers', async () => {
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            async () => {
+                throw new Error('network down');
+            }
+        ).inspectToken();
+
+        expect(result.valid).toBe(false);
+    });
+
+    it('a refresh that returns a STILL-BAD token leaves the original verdict', async () => {
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            async () => ({ token: 'short', expiry: Date.now() + HOUR_MS })
+        ).inspectToken();
+
+        expect(result.valid).toBe(false);
     });
 
     /**

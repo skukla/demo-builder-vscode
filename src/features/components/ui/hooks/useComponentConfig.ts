@@ -9,13 +9,13 @@ import {
     writeFieldValue,
     writeToComponents,
 } from '@/features/components/services/componentConfigWrites';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import {
     toServiceGroupWithSortedFields,
     SERVICE_GROUP_DEFINITIONS,
 } from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
-import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { EnvVarDefinition } from '@/types/components';
 import { ComponentConfigs } from '@/types/webview';
 import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';

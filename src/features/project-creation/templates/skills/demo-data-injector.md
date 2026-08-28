@@ -46,7 +46,7 @@ Walk through the scraped content and identify each "live data" category:
 
 2. **For commerce sections**: don't substitute data into the drop-in markup. The drop-in fetches live from Catalog Service. Instead:
    - Make sure the demo's Commerce instance has the right products loaded.
-   - If product data is missing or unsuitable, use `update_project_config` to point at a different Commerce demo backend that has appropriate sample data.
+   - If product data is missing or unsuitable, use `configure_project` to point at a different Commerce demo backend that has appropriate sample data.
    - Document in the demo notes which products to feature in the live demo.
 
 3. **For static content sections** (testimonials, customer logos, support widgets): replace inline.

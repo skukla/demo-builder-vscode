@@ -75,12 +75,10 @@ const COMPONENT_DEFINITION_FIELDS = new Set([
     'requiredComponents',
     'optionalComponents',
     'requiredEnvVars',
-    // Per-frontend Adobe skill bundle (typed at RawComponentDefinition.aiSkillBundle
-    // in src/types/components.ts)
-    'aiSkillBundle',
 ]);
 
 const COMPONENT_CONFIGURATION_FIELDS = new Set([
+    'commerce',
     'requiredEnvVars',
     'optionalEnvVars',
     'requiredServices',
@@ -191,10 +189,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
     let componentsConfig: Record<string, unknown>;
 
     beforeAll(() => {
-        const stacksPath = path.join(
-            __dirname,
-            '../../src/features/components/config/stacks.json'
-        );
+        const stacksPath = path.join(__dirname, '../../src/features/components/config/stacks.json');
         const componentsPath = path.join(
             __dirname,
             '../../src/features/components/config/components.json'

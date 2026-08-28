@@ -12,8 +12,8 @@
  * @module features/eds/services/daLive/daLiveApiClient
  */
 
-import { MAX_RETRY_ATTEMPTS, RETRYABLE_STATUS_CODES, getRetryDelay } from './daLiveConstants';
 import { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from '../types';
+import { MAX_RETRY_ATTEMPTS, RETRYABLE_STATUS_CODES, getRetryDelay } from './daLiveConstants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

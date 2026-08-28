@@ -23,10 +23,47 @@ Extend `withToolLogging` to record per call:
 | duration ms | |
 | ok / error | |
 | blocked-by-dry-run | from step 01 |
+| argument-value FINGERPRINT | a hash, never the values — see below |
+
+**Reads are recorded exactly like writes, and that is the point.** The dry run
+lets them execute; the recorder must still see them. Every measured win so far
+has been a read: the orientation call this effort removed was a read, and the
+A/B that killed the catalog-preload idea was counting reads. A recorder that
+foregrounds blocked writes and treats reads as background would be blind to the
+class of waste that actually shows up.
+
+### Why a fingerprint, and not just keys
+
+Argument KEYS alone cannot tell "asked about project A, then project B" from
+"asked about project A twice". Only the second is waste, and it is the single
+most common thing worth catching. Values cannot be retained — args carry
+secrets, which is why the existing log line is keys-only.
+
+So record a stable hash of the argument values instead. Repetition becomes
+detectable (same tool, same fingerprint, twice in one session) while nothing
+readable is kept. Hash the values only, so a secret never reaches the digest
+input in a form worth attacking, and never log the fingerprint's preimage.
 
 `mcpToolResult.ts` (`asText` / `asRawText`) is the single point every tool
 response is serialised through — the natural place to measure bytes without
 touching 23 registrar modules.
+
+## `projectShape` is built but NOT wired — and why
+
+The recorder accepts it and its tests cover it. It is not supplied, deliberately.
+
+The only way to resolve the current project today is `getCurrentProject()`,
+which reads from DISK on purpose: an in-memory pointer went stale and answered
+confidently — right data, wrong project, and it bit the MCP surface. A disk read
+on every tool call would add overhead to the very thing built to measure
+overhead, which is the one cost this feature must not introduce.
+
+The workbench (step 04) consumes this trace in the same process and can resolve
+the project itself, segmenting at each `set_current_project` entry — the only
+point in a trace where the answer can change. Wire it there, or add a
+synchronous accessor to `StateManager` if step 04 shows it needs one per entry.
+Do not paper over it with a TTL cache; a stale shape is the failure mode that
+made `getCurrentProject` read from disk in the first place.
 
 ## Do NOT parse transcripts in the extension
 
@@ -57,13 +94,32 @@ file speculatively; the owner explicitly raised unbounded logs as a concern.
 ## Tests
 
 - A recorded entry carries keys and **no values** — plant a secret argument and
-  assert it is absent.
+  assert it is absent, in the entry AND in the fingerprint.
+- A read tool is recorded, under dry run and with the mode off. The recorder
+  must not inherit the gate's read/write split — that split decides what RUNS,
+  not what is worth seeing.
+- The same read called twice with identical arguments produces the same
+  fingerprint; called with different arguments, a different one. Without both
+  halves the repeat detector in step 04 cannot be built on it.
 - A blocked call is recorded as blocked, and its handler never ran (composes with
   step 01's assertion).
 - Both registration paths are covered: a descriptor-row tool and a
   directly-registered one. The response-envelope guard shipped covering only one
   directory and missed ten tools in `src/mcp-server.ts`; the same shape is
   available here.
+
+## Success-with-no-effect is NOT built here
+
+The overview asks for it as a distinct outcome. It is not in this step, because
+no honest signal exists yet: a tool that returns `{success:true}` having changed
+nothing is indistinguishable, from the wrapper's seat, from one that changed
+something. Inventing a heuristic would produce a field that reads as evidence
+and is not.
+
+What this step does instead is record enough that step 04 can ASK the question —
+outcome, result bytes, duration and the repeat detector. If a real signal is
+wanted, it has to come from the tools themselves (a handler saying "nothing to
+do"), and that is a surface change, not a recorder change.
 
 ## Done when
 

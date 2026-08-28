@@ -1,4 +1,20 @@
+---
+id: AI-1e
+kind: feature
+area: ai
+parent: AI-1
+needs: AI-1c
+value: med
+status: active
+layer: C
+---
 # Agent round-trip optimisation — four measured candidates
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+**The round trip is the unit of cost, not the payload** — measured 2026-08-24 across six driven agent runs: 2 calls and 4 calls cost the SAME (~47k billable), 9 cost 82k, while our entire surface (103 tool schemas + all generated guidance) is ~3,900 tokens against a ~20k floor that belongs to Claude Code, not us. So shrinking responses barely moves anything at this scale (`list_projects` returns 127 bytes and still costs a whole turn) and shrinking the catalog moves less. Four candidates, each to be run measure → fix → re-measure against the fixed six-prompt battery, k=3, cold and warm separated (cache state alone swung one prompt 55,236 → 8,959): (1) **the self-inflicted orientation call** — the generated home AGENTS.md ORDERS `get_current_project` in bold before any action and 5 of 6 runs obeyed; that file is rewritten every activation so it can simply state the project; (2) the orientation trio, pending re-measure after (1); (3) **catalog preload vs `ToolSearch`** — 6/6 runs opened with a discovery call, which is Anthropic's documented progressive-disclosure pattern for 150k-token catalogs but may be a straight loss at our 2,616, so settle it with an A/B rather than an assumption; (4) **unknown arguments are silently dropped on 102 of 103 tools** — only `configure_project` uses zod `.strict()`, so on a write tool a misspelled argument is discarded rather than refused. Explicitly NOT to do: shrink the catalog, treat response size as the main lever, or grade agents on their path (Anthropic: "too rigid … overly brittle"). Independent of the Evaluation Mode plan, which makes this loop repeatable but is not a prerequisite. Filed 2026-08-24.
 
 **Filed:** 2026-08-24, from the first real measurements of what an agent task
 costs against this extension.
@@ -7,6 +23,12 @@ costs against this extension.
 runs plus a cold-start decomposition) and
 `.rptc/research/agent-efficiency-measurement/research.md` (what Anthropic
 documents). Reproduce any figure with `node scripts/trace-session.mjs`.
+## Shipped so far
+
+- 2026-08-24  Candidate 1 — the self-inflicted orientation call. The home AGENTS.md states the active project instead of ordering `get_current_project`
+
+Three candidates remain (the orientation trio, catalog preload vs `ToolSearch`, and `.strict()` on write tools). Each is measure → fix → re-measure.
+- 2026-08-26  Candidate 1 (the self-inflicted orientation call) MEASURED as still live on the headless path: 9 of 10 battery paths opened ToolSearch -> get_current_project. Cause is not this candidate being wrong but AI-1g — the home AGENTS.md carries whichever of two contents was written last, and activation writes the ordering branch.
 
 ## The finding that reorders everything
 

@@ -19,6 +19,7 @@ import {
     buildConsoleApiAccess,
     buildDocumentationRouting,
     buildEndpoints,
+    buildQueryingCommerce,
     buildHeader,
     buildHowToChangeThings,
     buildNotesForAgents,
@@ -26,6 +27,7 @@ import {
     buildReportingStyle,
     buildStorefront,
     buildTryAskingClaude,
+    buildToolServers,
 } from './agentsMdSections';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import type { Project } from '@/types/base';
@@ -61,6 +63,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildHeader(project, stacksConfig));
     sections.push(buildHowToChangeThings());
     sections.push(buildEndpoints(project));
+    sections.push(buildQueryingCommerce(project));
     sections.push(buildStorefront(project));
     sections.push(buildPdpRouting(project));
     sections.push(buildComponentRepositories(project));
@@ -68,6 +71,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildAdobeIo(project));
     sections.push(buildAppBuilderIntegrations(project));
     sections.push(buildConsoleApiAccess(project));
+    sections.push(buildToolServers(project));
     sections.push(buildTryAskingClaude(project));
     sections.push(buildDocumentationRouting());
     sections.push(buildReportingStyle());

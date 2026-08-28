@@ -432,43 +432,44 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
     });
 });
 
-describe('AddIntegrationFlowModal — build custom (blank instance naming)', () => {
-    const NAME_PLACEHOLDER = 'e.g. Order Sync, Salesforce CRM, Firefly Image Gen';
-
-    /** kind → source-blank (the naming stage). */
-    function walkToBlankNaming(): HTMLElement {
+describe('AddIntegrationFlowModal — build custom (optional-name model)', () => {
+    /** kind → source-blank (the starting-point + optional-name stage). */
+    function walkToBlankStage(): HTMLElement {
         click(/Build custom/);
         click('Continue');
-        return screen.getByPlaceholderText(NAME_PLACEHOLDER);
+        return screen.getByLabelText(/Name \(optional\)/);
     }
 
-    it('gates Continue on the naming stage until a valid name is typed', () => {
+    it('Continue is enabled immediately — the name never gates', () => {
         renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankNaming();
-        expectDisabled('Continue');
-        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        const input = walkToBlankStage();
         expectEnabled('Continue');
-        fireEvent.change(input, { target: { value: '' } });
-        expectDisabled('Continue');
-    });
-
-    it('flags a name colliding with a reserved id inline and keeps Continue disabled', () => {
-        renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankNaming();
-        // Slugs to 'app-builder-shell' — the blank catalog id itself is reserved
-        // (the executor's catalog-first lookup would clone the wrong repo).
+        // Typing does not introduce a gate either — no validation exists here.
         fireEvent.change(input, { target: { value: 'App Builder Shell' } });
         expect(
-            screen.getByText('That name is already used by another part of this project.')
-        ).toBeInTheDocument();
-        expectDisabled('Continue');
-        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+            screen.queryByText('That name is already used by another part of this project.')
+        ).not.toBeInTheDocument();
         expectEnabled('Continue');
     });
 
-    it('walks kind → source-blank → api-access and commits the named instance', async () => {
+    it('an empty name commits the minted DEFAULT instance ("Custom Integration")', async () => {
+        const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
+        walkToBlankStage();
+        click('Continue');
+        await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
+        click('Add Integration');
+        await waitFor(() =>
+            expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
+                { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+                { id: 'custom-integration', name: 'Custom Integration' }
+            )
+        );
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('walks kind → source-blank → api-access and commits the typed name', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankNaming();
+        const input = walkToBlankStage();
         fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
         // Straight to api-access: the committed destination rides along as the
         // context line instead of costing a step.
@@ -476,7 +477,7 @@ describe('AddIntegrationFlowModal — build custom (blank instance naming)', () 
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
         click('Add Integration');
-        // The commit routes through the custom add with the INSTANCE identity —
+        // The commit routes through the custom add with the MINTED identity —
         // never the fixed-id toggle (which capped a project at one shell).
         await waitFor(() =>
             expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(

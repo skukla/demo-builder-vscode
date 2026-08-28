@@ -28,72 +28,58 @@
 
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
-import { humanize } from './toolDisplayName';
+import { narrationFor } from './toolNarration';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
-/** Longest arg value the consent dialog will print before eliding. */
-const CONSENT_DETAIL_VALUE_MAX = 60;
-
 /**
- * Friendlier labels for argument keys a producer would not recognise.
+ * Tools the user has said "don't ask again this session" for.
  *
- * `confirmName` is the surface's proof-of-intent echo — the agent repeats the
- * target's name to show it means this one. As a dialog line it read
- * "confirmName: bodea", which is a field name from our schema leaking into a
- * question we are asking a human.
+ * Module state, and it dies with the window — that is the whole point of the
+ * word SESSION. A grant that survived a reload would be a preference the user
+ * never set, hiding in a place they cannot see it.
+ *
+ * Only tools whose copy sets `sessionGrant` can enter this set, so the two tests
+ * that decide it (recoverable, and does not reach another person) are enforced
+ * where they are authored rather than at the call site.
  */
-const CONSENT_KEY_LABELS: Record<string, string> = {
-    confirmName: 'Name',
-    projectName: 'Project',
-};
+const sessionGrants = new Set<string>();
 
-/** `blockId` / `block_id` → "Block id". A label, not an identifier. */
-function humanizeKey(key: string): string {
-    const labelled = CONSENT_KEY_LABELS[key];
-    if (labelled) return labelled;
-    const spaced = key
-        .replace(/[_-]+/g, ' ')
-        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-        .toLowerCase();
-    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+/** Forget every grant. Test seam, and the reset a future "lock again" would use. */
+export function clearSessionGrants(): void {
+    sessionGrants.clear();
 }
 
-/** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
-const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
+/**
+ * The open project's name, for tools that act on it and take no argument
+ * naming it — `republish`, `sync_content`, `reset_eds_project`.
+ *
+ * Best-effort: the dialog must still appear if state is unavailable. A missing
+ * name costs the reader context; a thrown error would cost them the gate.
+ *
+ * @returns the "Project: x" line, or '' when it cannot be resolved
+ */
+async function currentProjectLine(): Promise<string> {
+    try {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        return project?.name ? `Project: ${project.name}` : '';
+    } catch {
+        return '';
+    }
+}
 
 /**
- * Render a call's args for the consent dialog — the informed half of
- * informed consent. Scalars only (an object arg is structure, not a decision
- * input), the `confirm` marker itself skipped, secret-shaped keys masked,
- * long values elided. This deliberately DOES show values where the logging
- * wrapper shows only keys: "publish /products/x" is the substance the user
- * is consenting to.
+ * The authored phrase for a VS Code frame, or the bare tool name if a tool has
+ * somehow shipped without one. The tool NAME is the honest fallback here: it is
+ * visibly a fallback rather than prose pretending to be authored, and
+ * `toolNarration.test.ts` makes the case unreachable.
  */
-function renderArgsForConsent(args: unknown): string {
-    if (!args || typeof args !== 'object') return '';
-    const lines: string[] = [];
-    for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
-        if (key === 'confirm') continue;
-        if (SECRET_KEY_RE.test(key)) {
-            lines.push(`${humanizeKey(key)}: ***`);
-            continue;
-        }
-        if (typeof value === 'string') {
-            lines.push(
-                `${humanizeKey(key)}: ${
-                    value.length > CONSENT_DETAIL_VALUE_MAX
-                        ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
-                        : value
-                }`,
-            );
-        } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${humanizeKey(key)}: ${value}`);
-        }
-    }
-    return lines.join('\n');
+function label(toolName: string): string {
+    return narrationFor(toolName) ?? toolName;
 }
 
 /**
@@ -133,18 +119,77 @@ export function createAgentConsentGate(
         // signature stays stable, but it is deliberately NOT shown: it is written
         // for an agent, and four passes of transforming it still produced text a
         // producer should not have been handed. See agentAlertCopy.
+        // `copy` is always present in practice — AGENT_ALERT_COPY membership IS
+        // what makes this gate fire (`raisesConsentDialog`). The fallback below
+        // is the bare tool name: visibly a fallback, rather than prose that
+        // pretends to be authored copy.
         const copy = alertCopyFor(toolName);
-        const params = renderArgsForConsent(args);
-        const detail = [copy?.consequence, params].filter(Boolean).join('\n\n');
-        const choice = await vscode.window.showWarningMessage(
-            `Demo Builder: ${copy?.action ?? humanize(toolName)}?`,
-            { modal: true, detail: detail || undefined },
-            'Allow',
-        );
+        // Three lines and no more: what happens, what it costs, and WHICH one.
+        // An empty `target` means the tool acts on the open project, which is
+        // named instead — a reader is never asked to approve an unnamed thing.
+        // ONE builder, shared with the chat path. Two surfaces phrasing the
+        // same question differently is how they drift.
+        const prompt = buildConsentPrompt(toolName, args, await currentProjectLine());
+        // A standing grant answers before the dialog opens. Checked AFTER the
+        // setting so turning consent back on revokes them, and after the copy
+        // lookup so a tool with no copy can never be granted.
+        if (copy?.sessionGrant && sessionGrants.has(toolName)) {
+            logger.info(`[MCP] ${toolName} allowed by a session grant`);
+            return { allowed: true };
+        }
 
+        // The third button appears only where the copy allows it. Its wording
+        // says what is being granted and for how long — "Allow" and "Always
+        // allow" would read as the same promise at a glance.
+        const buttons: string[] = ['Allow'];
+        if (copy?.sessionGrant) buttons.push('Allow for the rest of this session');
+
+        // Name the wait BEFORE opening the dialog. When nobody was watching the
+        // window, this await was a silent indefinite hang — the tool's args line
+        // was the last log anywhere, and the hang site took a live bisection to
+        // find (AI-5, 2026-08-27).
+        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window…`);
+        // The dialog cannot be closed programmatically, so an unanswered one
+        // resolves as a timeout refusal rather than blocking the agent forever.
+        // A click that comes after the timer fires grants nothing — the call
+        // already answered "not approved". `timedOut` separates that from a real
+        // Cancel/Escape, which also resolves `undefined`.
+        let timedOut = false;
+        const choice = await Promise.race([
+            vscode.window.showWarningMessage(
+                prompt?.title ?? `Demo Builder: ${toolName}?`,
+                { modal: true, detail: prompt?.detail || undefined },
+                ...buttons,
+            ),
+            new Promise<undefined>((resolve) =>
+                setTimeout(() => {
+                    timedOut = true;
+                    resolve(undefined);
+                }, TIMEOUTS.LONG),
+            ),
+        ]);
+
+        if (choice === 'Allow for the rest of this session') {
+            sessionGrants.add(toolName);
+            logger.info(`[MCP] user granted ${toolName} for this session`);
+            return { allowed: true };
+        }
         if (choice === 'Allow') {
             logger.info(`[MCP] user allowed agent operation: ${toolName}`);
             return { allowed: true };
+        }
+        if (timedOut) {
+            logger.warn(`[MCP] ${toolName} consent dialog unanswered — treating as not approved`);
+            return {
+                allowed: false,
+                refusal: asRawText(
+                    `Nobody answered the consent dialog for "${toolName}" in the VS Code window, ` +
+                        'so the operation was NOT run. The user may be away from that window — ' +
+                        'tell them a consent dialog may still be open there, and retry only when ' +
+                        'they are ready to answer it. (For unattended use they can turn the dialog ' +
+                        'off with the demoBuilder.ai.requireAgentConsent setting.)',
+                ),
+            };
         }
         logger.info(`[MCP] user declined agent operation: ${toolName}`);
         return {
@@ -170,14 +215,18 @@ export function createAgentOperationNotifier(
     logger: Logger,
 ): (
     toolName: string,
-    run: (report: (message: string) => void) => Promise<unknown>,
+    run: (report: (message: string) => void) => Promise<unknown>
 ) => Promise<unknown> {
     return (toolName, run) =>
         Promise.resolve(
             vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: `Demo Builder — agent: ${humanize(toolName)}…`,
+                    // "Agent:" and nothing more — the old "Demo Builder — agent:"
+                    // prefix plus the phase message wrapped every card onto two
+                    // lines (owner feedback, 2026-08-27). The source is already
+                    // on the card ("Source: Adobe Demo Builder").
+                    title: `Agent: ${label(toolName)}…`,
                     cancellable: false,
                 },
                 async (progress) => {
@@ -188,7 +237,7 @@ export function createAgentOperationNotifier(
                         // the tool's title while the phases went nowhere.
                         const result = await run((message) => progress.report({ message }));
                         vscode.window.setStatusBarMessage(
-                            `$(check) Agent: ${humanize(toolName)} completed`,
+                            `$(check) ${label(toolName)} — done`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
                         );
                         return result;
@@ -198,7 +247,7 @@ export function createAgentOperationNotifier(
                         // A toast, not a status-bar flash: a failed live-site
                         // mutation is the one outcome the user must not miss.
                         void vscode.window.showWarningMessage(
-                            `Demo Builder — agent operation "${humanize(toolName)}" failed: ${message}`,
+                            `Demo Builder — ${label(toolName)} failed: ${message}`,
                         );
                         throw error;
                     }

@@ -26,12 +26,6 @@
  * `storefrontSyncService.ts` and `helixApiClient.ts`.
  */
 
-import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
-import { DaLiveBlockLibraryOperations } from './daLiveBlockLibraryOperations';
-import { DaLiveConfigOperations, type SiteConfigWriteResult } from './daLiveConfigOperations';
-import { DaLiveContentCopy } from './daLiveContentCopy';
-import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
-import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { type PatchReport } from '../patches/patchReportHelper';
 import { type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
 import {
@@ -41,6 +35,12 @@ import {
     type DaLiveProgressCallback,
     type DaLiveContentSource,
 } from '../types';
+import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
+import { DaLiveBlockLibraryOperations } from './daLiveBlockLibraryOperations';
+import { DaLiveConfigOperations, type SiteConfigWriteResult } from './daLiveConfigOperations';
+import { DaLiveContentCopy } from './daLiveContentCopy';
+import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
+import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -280,22 +280,11 @@ export class DaLiveContentOperations {
     }
 
     /**
-     * Create block library from a template's component-definition.json
-     *
-     * Fetches component-definition.json from the template repo, extracts blocks,
-     * and creates library configuration in DA.live. Non-blocking - returns
-     * gracefully if template has no blocks or file doesn't exist.
-     *
-     * @param org - Destination DA.live organization (user's site)
-     * @param site - Destination DA.live site (user's site)
-     * @param templateOwner - GitHub owner of template repo
-     * @param templateRepo - GitHub repo name of template
-     * @param getFileContent - Function to fetch file from GitHub (from GitHubFileOperations)
-     * @param libraryContentSources - DA.live sites whose published block doc pages should be
-     *   copied via public CDN for blocks that lack unsafeHTML auto-generation
-     * @param installedBlockIds - Block IDs installed from block collections; when provided,
-     *   CDN doc page copy is restricted to only these blocks (skips native template blocks)
-     * @returns Result with success status, block count, and paths created (for publishing)
+     * Facade passthrough — behavior and full parameter docs live on
+     * {@link DaLiveBlockLibraryOperations.createBlockLibraryFromTemplate}.
+     * The docblock used to be copied here verbatim (35 lines, jscpd's largest
+     * hit), which is doc-drift waiting to happen: one copy gets corrected and
+     * the other keeps teaching the old contract. 2026-08-27 dedup sweep.
      */
     async createBlockLibraryFromTemplate(
         org: string,

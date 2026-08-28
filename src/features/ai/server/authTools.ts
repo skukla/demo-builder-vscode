@@ -124,6 +124,7 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
     server.registerTool(
         'get_auth_status',
         {
+            annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Auth Status',
             description:
                 'Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. No side effects.',
@@ -141,6 +142,8 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
     server.registerTool(
         'sign_in',
         {
+            // NOT read-only: writes credentials and opens an auth window.
+            annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sign In',
             description:
                 'Open an interactive sign-in to refresh an expired session (opens a browser). ' +

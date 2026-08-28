@@ -130,12 +130,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 35 handlers', () => {
+        it('should have exactly 38 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
-            const types = getRegisteredTypes(dashboardHandlers) as Array<keyof typeof dashboardHandlers>;
+            const types = getRegisteredTypes(dashboardHandlers) as Array<
+                keyof typeof dashboardHandlers
+            >;
 
-            // Then: exactly 35, derived in the map's own declaration order so a
+            // Then: exactly 38, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -150,8 +152,12 @@ describe('dashboardHandlers', () => {
             //                      openIntegrations, showProjectDashboard,
             //                      openDataInstaller
             //   1  mesh            deployMesh
-            //   5  integrations    add/deploy/redeploy/remove/rename
-            //                      AppBuilderComponent
+            //   7  integrations    add/deploy/redeploy/remove/rename
+            //                      AppBuilderComponent, plus the AB-5 pair:
+            //                      installAppBuilderComponent (re-run the
+            //                      Commerce install without a redeploy) and
+            //                      getAppBuilderInstallStatus (live install
+            //                      state read)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
@@ -163,7 +169,7 @@ describe('dashboardHandlers', () => {
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
             //  ==
-            //  36
+            //  38
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -176,14 +182,16 @@ describe('dashboardHandlers', () => {
             // Data tile. It sits in navigation but is the one entry there that
             // does NOT replace the tab — the datapack catalog is global to the
             // service, so opening it leaves the dashboard where it was.
-            expect(types).toHaveLength(36);
+            expect(types).toHaveLength(38);
         });
 
         it('should have handlers as functions', () => {
             // Given: dashboardHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(dashboardHandlers) as Array<keyof typeof dashboardHandlers>;
+            const types = getRegisteredTypes(dashboardHandlers) as Array<
+                keyof typeof dashboardHandlers
+            >;
             for (const type of types) {
                 expect(typeof dashboardHandlers[type]).toBe('function');
             }

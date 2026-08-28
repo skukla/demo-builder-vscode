@@ -271,4 +271,36 @@ describe('PromptCard', () => {
             expect(screen.queryByText('Copy prompt')).not.toBeInTheDocument();
         });
     });
+
+    describe('Open in workbench kebab item', () => {
+        const USER_PROMPT = {
+            id: 'user-1',
+            title: 'My prompt',
+            prompt: 'Do something specific.',
+        };
+
+        const ALL_HANDLERS = {
+            isUserPrompt: true as const,
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle: jest.fn(),
+        };
+
+        it('launches, and offers no second destination', () => {
+            // Clicking the card runs the prompt FOR REAL in the terminal. A
+            // second kebab row sent it to the Prompt Workbench to be simulated
+            // instead; that surface moved to feature/prompt-workbench on
+            // 2026-08-26 (AI-3b) and the row went with it. Kept as a negative so
+            // it comes back deliberately or not at all.
+            const onLaunch = jest.fn();
+            renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onLaunch });
+
+            screen.getByTestId('ai-prompt-card').click();
+            expect(onLaunch).toHaveBeenCalledTimes(1);
+
+            screen.getByLabelText(/more actions/i).click();
+            expect(screen.queryByText('Open in workbench')).not.toBeInTheDocument();
+        });
+    });
 });

@@ -10,12 +10,12 @@
  * @module features/project-creation/ui/steps/buildSummary
  */
 
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
 import { resolveIntegrationRows } from '../components/integration-flow';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';

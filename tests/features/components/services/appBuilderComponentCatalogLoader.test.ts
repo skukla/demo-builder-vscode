@@ -11,9 +11,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     isPrebuiltIntegration,
+    isSeedIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
+    entryFitsProjectAxes,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
@@ -65,10 +67,94 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
 
         it('returns only axis-unrestricted entries for an unmatched backend/frontend combo', () => {
+            // The starter kit is Commerce-gated (compatibleBackends), so an
+            // unmatched stack gets only the blank shell.
             const ids = getAvailableAppBuilderComponents('unknown-backend', 'unknown-frontend').map(
                 (d) => d.id
             );
             expect(ids).toEqual(['app-builder-shell']);
+        });
+
+        it('offers the starter kit on both Commerce backends and refuses it without one', () => {
+            for (const backend of ['adobe-commerce-paas', 'adobe-commerce-accs']) {
+                const ids = getAvailableAppBuilderComponents(backend, 'eds-storefront').map(
+                    (d) => d.id
+                );
+                expect(ids).toContain('commerce-integration-starter-kit');
+            }
+            // A project with NO backend passes '' — no constrained entry lists it.
+            const bare = getAvailableAppBuilderComponents('', '').map((d) => d.id);
+            expect(bare).not.toContain('commerce-integration-starter-kit');
+        });
+    });
+
+    describe('buildCustomIntegrationEntry — seed recognition', () => {
+        it('inherits CAPABILITY fields when the source matches an authored entry (the kit)', () => {
+            // A custom instance built FROM the kit repo must deploy like the kit:
+            // without the inherited layout, the deploy path would rewrite its
+            // fixed package names and skip the workspace-config import.
+            const entry = buildCustomIntegrationEntry(
+                {
+                    owner: 'adobe',
+                    repo: 'commerce-integration-starter-kit',
+                    name: 'Order Sync',
+                },
+                'order-sync'
+            );
+
+            expect(entry.id).toBe('order-sync');
+            expect(entry.name).toBe('Order Sync');
+            expect(entry.layout).toBe('extension');
+            expect(entry.lifecycle).toBe('app-management');
+            expect(entry.nodeVersion).toBe('24');
+            expect(entry.compatibleBackends).toEqual([
+                'adobe-commerce-paas',
+                'adobe-commerce-accs',
+            ]);
+            // Identity stays the instance's own — never the seed's.
+            expect(entry.blank).toBeUndefined();
+        });
+
+        it('a fork of the kit under another owner inherits NOTHING (isBlankSource rule)', () => {
+            const entry = buildCustomIntegrationEntry({
+                owner: 'someone-else',
+                repo: 'commerce-integration-starter-kit',
+            });
+            expect(entry.layout).toBeUndefined();
+            expect(entry.lifecycle).toBeUndefined();
+        });
+
+        it('an unknown source synthesizes a plain entry with no capability fields', () => {
+            const entry = buildCustomIntegrationEntry({ owner: 'acme', repo: 'erp-bridge' });
+            expect(entry.layout).toBeUndefined();
+            expect(entry.nodeVersion).toBeUndefined();
+            expect(entry.kind).toBe('integration');
+        });
+
+        it('a blank-shell instance never inherits the blank flag', () => {
+            const entry = buildCustomIntegrationEntry(
+                { owner: 'skukla', repo: 'app-builder-shell', name: 'My App' },
+                'my-app'
+            );
+            expect(entry.blank).toBeUndefined();
+            expect(entry.id).toBe('my-app');
+        });
+    });
+
+    describe('entryFitsProjectAxes (the add-door gate)', () => {
+        it('accepts a constrained entry on a listed backend and refuses it elsewhere', () => {
+            const kit = getAppBuilderComponentEntry('commerce-integration-starter-kit');
+            expect(kit).toBeDefined();
+            expect(entryFitsProjectAxes(kit!, 'adobe-commerce-paas', 'eds-storefront')).toBe(true);
+            expect(entryFitsProjectAxes(kit!, '', '')).toBe(false);
+            expect(entryFitsProjectAxes(kit!, 'unknown-backend', 'headless')).toBe(false);
+        });
+
+        it('accepts an unconstrained entry on any stack, including none', () => {
+            const shell = getAppBuilderComponentEntry('app-builder-shell');
+            expect(shell).toBeDefined();
+            expect(entryFitsProjectAxes(shell!, '', '')).toBe(true);
+            expect(entryFitsProjectAxes(shell!, 'unknown-backend', 'unknown-frontend')).toBe(true);
         });
     });
 
@@ -310,6 +396,25 @@ describe('appBuilderComponentCatalogLoader', () => {
             }
         });
 
+        it('layout and lifecycle, when present, are within their enums — and the schema agrees with the type', () => {
+            // These fields gate the DEPLOY PATH (extension apps skip the
+            // ow-package rewrite; app-management apps need an install step), so
+            // a typo'd value silently routes a repo down the wrong pipeline.
+            // Enforcement in this suite is spot checks, not full validation —
+            // adding a schema field without a line here means NOTHING checks it,
+            // which is how these two nearly shipped unpinned (2026-08-27).
+            const layoutEnum: string[] =
+                schema.definitions.appBuilderComponent.properties.layout.enum;
+            const lifecycleEnum: string[] =
+                schema.definitions.appBuilderComponent.properties.lifecycle.enum;
+            expect(layoutEnum).toEqual(['standalone', 'extension']);
+            expect(lifecycleEnum).toEqual(['deploy-only', 'app-management']);
+            for (const entry of catalog.appBuilderComponents) {
+                if (entry.layout !== undefined) expect(layoutEnum).toContain(entry.layout);
+                if (entry.lifecycle !== undefined) expect(lifecycleEnum).toContain(entry.lifecycle);
+            }
+        });
+
         it('every env-schema item has {name, type} with type ∈ {text, secret}', () => {
             for (const entry of catalog.appBuilderComponents) {
                 for (const envVar of entry.envSchema ?? []) {
@@ -415,10 +520,10 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         expect(isPrebuiltIntegration(real)).toBe(true);
     });
 
-    it('reports ZERO pre-built entries for every real stack today', () => {
-        // The catalog genuinely has none. This is the assertion that would have
-        // caught the report, and it will fail the day a real one is authored —
-        // which is the moment to update it deliberately.
+    it('the starter kit is a SEED, never a pre-built — the gallery stays empty', () => {
+        // Flipped deliberately 2026-08-27 (owner): "It's not really a pre-built
+        // integration. It's a Custom App that's built using the starter kit."
+        // The kit lives on the Build-custom naming stage's seed row.
         for (const [b, f] of [
             ['adobe-commerce-accs', 'eds-storefront'],
             ['adobe-commerce-paas', 'eds-storefront'],
@@ -427,6 +532,18 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
             const all = getAvailableAppBuilderComponents(b, f);
             expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
             expect(all.filter(isPrebuiltIntegration)).toEqual([]);
+            expect(all.filter(isSeedIntegration).map((e) => e.id)).toEqual([
+                'commerce-integration-starter-kit',
+            ]);
         }
+    });
+
+    it('a seed is never blank, and the blank shell is never a seed', () => {
+        const shell = getAppBuilderComponentEntry('app-builder-shell');
+        const kit = getAppBuilderComponentEntry('commerce-integration-starter-kit');
+        expect(shell && isSeedIntegration(shell)).toBe(false);
+        expect(shell && isPrebuiltIntegration(shell)).toBe(false);
+        expect(kit && isSeedIntegration(kit)).toBe(true);
+        expect(kit && isPrebuiltIntegration(kit)).toBe(false);
     });
 });

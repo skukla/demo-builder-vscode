@@ -17,6 +17,7 @@
  * Flags:
  *   --socket <path>   explicit socket (default: auto-discover, error if ambiguous)
  *   --full            do not truncate call output
+ *   --timeout <secs>  per-call ceiling (default 60) — raise for minutes-long tools
  *   --force <tool>    permit that ONE non-read-only tool (never blanket)
  */
 
@@ -69,6 +70,19 @@ const full = boolFlag('--full');
 // makes each unlock a deliberate, single-target decision.
 const forceTool = valueFlag('--force');
 const socketFlag = valueFlag('--socket');
+// --timeout <seconds>: raise the per-call ceiling for minutes-long tools
+// (add_integration, deploy_integration). The 60s default cut the connection
+// mid-add on 2026-08-27 and the caller had to poll the manifest blind.
+const timeoutFlag = valueFlag('--timeout');
+const TIMEOUT_MS = (() => {
+    if (!timeoutFlag || timeoutFlag === true) return 60_000;
+    const secs = Number(timeoutFlag);
+    if (!Number.isFinite(secs) || secs <= 0) {
+        console.error(`--timeout needs a positive number of seconds, got "${timeoutFlag}"`);
+        process.exit(2);
+    }
+    return secs * 1000;
+})();
 const [cmd, ...rest] = argv;
 
 // ── socket discovery ─────────────────────────────────────────────────────────
@@ -124,8 +138,8 @@ function session(steps) {
 
         const timer = setTimeout(() => {
             c.destroy();
-            reject(new Error('timed out after 60s — is the host still running?'));
-        }, 60_000);
+            reject(new Error(`timed out after ${TIMEOUT_MS / 1000}s — is the host still running?`));
+        }, TIMEOUT_MS);
 
         c.on('connect', () => {
             c.write(

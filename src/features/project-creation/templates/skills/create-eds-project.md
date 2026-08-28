@@ -77,7 +77,7 @@ DA.live token, or wait out a GitHub rate limit), then **re-run the identical
 
 Success returns `{ created: true, name, repoUrl? }`. The project tools are
 project-name-addressed, so you keep working on the new project in the same prompt
-(`update_project_config`, `sync_storefront`, …) with no window reload. The new project is
+(`configure_project`, `sync_storefront`, …) with no window reload. The new project is
 now the current project — `get_current_project` resolves to it.
 
 If the user wants to see the project list in the IDE, offer `open_view view="projects"

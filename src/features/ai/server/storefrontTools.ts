@@ -18,6 +18,7 @@
 
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
 import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
@@ -29,7 +30,6 @@ import {
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
-import { isEdsProject } from '@/types/typeGuards';
 
 /** Pull the GitHub repo + DA.live target from an EDS project's storefront metadata. */
 function edsTargets(
@@ -64,32 +64,18 @@ export function registerStorefrontTools(
     server.registerTool(
         'republish',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description: 'Regenerate and republish the EDS storefront config.json to GitHub and the CDN',
             inputSchema: {},
         },
         async () => {
             const ctx = ctxFactory();
-            const project = await ctx.stateManager.getCurrentProject();
-            if (!project) {
-                return asText({ error: 'No current project is open' });
-            }
-            if (!isEdsProject(project)) {
-                return asText({ error: 'republish applies only to EDS storefront projects' });
-            }
+            const eds = await requireEdsProject(ctx, 'republish');
+            if (!eds.ok) return asText(eds.body);
+            const { project } = eds;
 
-            let githubOk = false;
-            try {
-                githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
-            } catch {
-                githubOk = false;
-            }
-            if (!githubOk) {
-                return asText({
-                    needsAuth: 'github',
-                    message:
-                        'GitHub sign-in required to push config.json. Check get_auth_status, then sign_in(provider:"github", confirm:true) once the user agrees.',
-                });
-            }
+            const github = await requireGitHub(ctx, ' to push config.json');
+            if (github) return asText(github);
 
             try {
                 // Run under the stored session org context so any `aio` work
@@ -136,45 +122,25 @@ export function registerStorefrontTools(
     server.registerTool(
         'sync_content',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description: 'Publish all EDS storefront content (config + code + DA.live pages) to the CDN',
             inputSchema: {},
         },
         async () => {
             const ctx = ctxFactory();
-            const project = await ctx.stateManager.getCurrentProject();
-            if (!project) {
-                return asText({ error: 'No current project is open' });
-            }
-            if (!isEdsProject(project)) {
-                return asText({ error: 'sync_content applies only to EDS storefront projects' });
-            }
+            const eds = await requireEdsProject(ctx, 'sync_content');
+            if (!eds.ok) return asText(eds.body);
+            const { project } = eds;
             const targets = edsTargets(project);
             if (!targets) {
                 return asText({ error: 'Project is missing GitHub repo metadata' });
             }
 
-            let githubOk = false;
-            try {
-                githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
-            } catch {
-                githubOk = false;
-            }
-            if (!githubOk) {
-                return asText({
-                    needsAuth: 'github',
-                    message:
-                        'GitHub sign-in required. Check get_auth_status, then sign_in(provider:"github", confirm:true) once the user agrees.',
-                });
-            }
-
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+            const daLive = await requireDaLive(ctx, ' to publish content');
+            if (daLive) return asText(daLive);
             const daLiveAuthService = getDaLiveAuthService(ctx.context);
-            if (!(await daLiveAuthService.isAuthenticated())) {
-                return asText({
-                    needsAuth: 'dalive',
-                    message:
-                        'DA.live sign-in required to publish content. Check get_auth_status, then sign_in(provider:"dalive", confirm:true) once the user agrees.',
-                });
-            }
 
             const { tokenService: githubTokenService } = getGitHubServices(ctx);
             try {

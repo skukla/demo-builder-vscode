@@ -58,6 +58,9 @@ const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
     retry: 'deployAppBuilderComponent',
     redeploy: 'redeployAppBuilderComponent',
     update: 'redeployAppBuilderComponent',
+    // Re-run the Commerce install pass WITHOUT a redeploy (AB-5) — until this,
+    // the only retry for a failed install was a full deploy round.
+    install: 'installAppBuilderComponent',
 };
 
 /**
@@ -97,7 +100,6 @@ export function IntegrationsGrid({
     // card that left the map closes it.
     const selected = cards.find((card) => card.id === selectedId);
 
-
     // Drop a stale selection so a later card reusing that id cannot spring the
     // drawer open unbidden (remove-then-re-add the same catalog entry).
     useEffect(() => {
@@ -123,6 +125,14 @@ export function IntegrationsGrid({
                 if (model.url) {
                     webviewClient.postMessage('openLiveSite', { url: model.url });
                 }
+                return;
+            }
+            // The Commerce-install row's link. Reuses the dashboard tile's own
+            // message: the extension side resolves the admin URL per flavor
+            // (explicit PaaS field or derived ACCS tenant URL) and already
+            // offers a jump to Configure when it cannot.
+            if (action === 'open-admin') {
+                webviewClient.postMessage('openAdminPanel', {});
                 return;
             }
             // Remove is checked BEFORE the mesh branch. handleMeshAction treats

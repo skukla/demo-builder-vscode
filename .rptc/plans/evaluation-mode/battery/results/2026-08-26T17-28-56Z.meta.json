@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-26T17-28-56Z",
+  "serving": "feature/evaluation-mode-dry-run@d4a1caeee built 2026-08-26T17:24:45.549Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode.worktrees/feature/evaluation-mode-dry-run",
+  "adobeAuthBefore": {
+    "authenticated": false,
+    "expiresInMinutes": -20
+  },
+  "promptCount": 1,
+  "allowlist": 46,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": false,
+    "expiresInMinutes": -20
+  },
+  "authChangedMidRun": false
+}

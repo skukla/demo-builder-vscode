@@ -6,11 +6,18 @@
  * Carries over the old catalog modal's search composition: a {@link SearchHeader} that
  * appears past the same threshold and filters across name + description.
  *
+ * NAMING: a picked entry shows the shared {@link OptionalNameField} — empty
+ * means "use the entry's name", and nothing gates Continue on it (identity is
+ * minted at commit with silent dedupe). A kept default still commits the
+ * classic catalog identity; a typed name commits a named instance of the
+ * entry's template repo (the seed machinery).
+ *
  * @module features/project-creation/ui/components/integration-flow/stages/CatalogStage
  */
 
 import React, { useState } from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
+import { OptionalNameField } from '../OptionalNameField';
 import { SearchHeader } from '@/core/ui/components/navigation';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
@@ -37,6 +44,10 @@ export interface CatalogStageProps {
     selectedId?: string;
     /** Pick an entry (single-select — replaces any previous pick). */
     onPick: (id: string) => void;
+    /** The draft's raw typed label ('' / undefined = the entry's name). */
+    label?: string;
+    /** Report label keystrokes. */
+    onLabelChange: (label: string) => void;
 }
 
 /**
@@ -49,10 +60,13 @@ export function CatalogStage({
     catalog,
     selectedId,
     onPick,
+    label,
+    onLabelChange,
 }: CatalogStageProps): React.ReactElement {
     const [query, setQuery] = useState('');
     const q = query.trim().toLowerCase();
     const filtered = q ? catalog.filter((entry) => matchesQuery(entry, q)) : catalog;
+    const selectedEntry = catalog.find((entry) => entry.id === selectedId);
     return (
         <div className="intflow-catalog">
             <SearchHeader
@@ -74,13 +88,27 @@ export function CatalogStage({
                             key={entry.id}
                             variant="tile"
                             name={entry.name}
-                            description={entry.description}
+                            // Disclose tool cost BEFORE the choice binds: the add
+                            // door auto-installs the declared Node via fnm, and a
+                            // one-time ~30s install should never be a surprise.
+                            description={
+                                entry.nodeVersion
+                                    ? `${entry.description} Installs Node ${entry.nodeVersion} on first use.`
+                                    : entry.description
+                            }
                             selected={entry.id === selectedId}
                             onSelect={() => onPick(entry.id)}
                         />
                     ))}
                 </div>
             )}
+            {selectedEntry ? (
+                <OptionalNameField
+                    label={label}
+                    defaultLabel={selectedEntry.name}
+                    onLabelChange={onLabelChange}
+                />
+            ) : null}
         </div>
     );
 }

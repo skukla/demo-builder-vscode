@@ -34,7 +34,9 @@ import type {
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
+    ConsoleOpFailure,
     OrgServiceInfo,
+    S2SDeployCredentials,
     ServiceSubscriptionInfo,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
@@ -194,6 +196,15 @@ export class AdobeEntityFetcher {
         return this.credentials.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
     }
 
+    /** The S2S credential's full IMS identity — see {@link AdobeWorkspaceCredentials}. */
+    async getS2SDeployCredentials(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<S2SDeployCredentials> {
+        return this.credentials.getS2SDeployCredentials(orgId, projectId, workspaceId);
+    }
+
     // ---- Org service catalog + subscriptions (AdobeOrgServices) ------------
 
     /** The org's entitled-services catalog — see {@link AdobeOrgServices}. */
@@ -239,7 +250,7 @@ export class AdobeEntityFetcher {
         title: string,
         description: string,
         target?: { orgId?: string },
-    ): Promise<AdobeProject | undefined> {
+    ): Promise<AdobeProject | ConsoleOpFailure> {
         return this.projectOps.createProject(title, description, target);
     }
 
@@ -262,7 +273,7 @@ export class AdobeEntityFetcher {
         title: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | undefined> {
+    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return this.projectOps.createWorkspace(title, description, target);
     }
 

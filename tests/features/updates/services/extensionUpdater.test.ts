@@ -111,8 +111,8 @@ describe('ExtensionUpdater', () => {
                 }),
                 expect.any(Function),
             );
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Downloading update...' });
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Installing...' });
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Downloading update…' });
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Installing…' });
         });
 
         it('should validate GitHub URL before downloading', async () => {

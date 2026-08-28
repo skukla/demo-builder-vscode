@@ -204,3 +204,54 @@ describe('ComponentDependencies', () => {
         });
     });
 });
+
+// ─── strictInstall (AB-3) ────────────────────────────────────────────────────
+// Measured live 2026-08-27: the starter kit (engine-strict node ^24) had npm
+// REFUSE to install under the system node; the old warn-and-continue let the
+// deploy proceed to a misleading downstream npx failure. strictInstall makes
+// the refusal fatal with npm's own error — the actionable one.
+describe('strictInstall', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('a failed npm install is FATAL for a strictInstall component, with npm stderr', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({
+            code: 1,
+            stderr: 'npm error engine Unsupported engine\nnpm error notsup Required: {"node":"^24.0.0"}',
+        });
+
+        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+            '/p',
+            componentDef({ configuration: { strictInstall: true } } as never)
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('npm install failed');
+        expect(result.error).toContain('Unsupported engine');
+    });
+
+    it('installDependenciesForComponent surfaces the same fatal error', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({ code: 1, stderr: 'npm error nope' });
+
+        const result = await new ComponentDependencies(logger()).installDependenciesForComponent(
+            '/p',
+            componentDef({ configuration: { strictInstall: true } } as never),
+            false
+        );
+
+        expect(result).toEqual({ success: false, error: expect.stringContaining('nope') });
+    });
+
+    it('a NON-strict component keeps the historical warn-and-continue', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({ code: 1, stderr: 'warnings' });
+
+        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+            '/p',
+            componentDef()
+        );
+
+        expect(result).toEqual({ success: true });
+    });
+});

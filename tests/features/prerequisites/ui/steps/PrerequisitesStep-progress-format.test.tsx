@@ -1,15 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import React from 'react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import {
-    mockOnMessage,
-    baseState,
-    setupScrollMock,
-    resetAllMocks,
-} from './PrerequisitesStep.testUtils';
-import { WizardState } from '@/types/webview';
+import { renderLoadedStep, setupScrollMock, resetAllMocks } from './PrerequisitesStep.testUtils';
 
 // Mock WebviewClient
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -30,10 +21,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
  * Tests the unified progress format (Step X/Y: Task - Detail) rendering
  */
 describe('PrerequisitesStep - Unified Progress Format Display', () => {
-    const mockUpdateState = jest.fn();
-    const mockSetCanProceed = jest.fn();
-    const mockOnNext = jest.fn();
-    const mockOnBack = jest.fn();
 
     beforeAll(() => {
         setupScrollMock();
@@ -45,43 +32,10 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
     });
 
     it('should display unified progress format with step and detail', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
         // Simulate prerequisite checking with unified progress (no separate milestone counters)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -108,43 +62,10 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
     });
 
     it('should display unified format without detail text', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
         // Simulate progress without detail text (detail is empty)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -171,42 +92,9 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
     });
 
     it('should handle single step format correctly', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
-
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -228,43 +116,10 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
     });
 
     it('should display unified format with or without detail', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Node.js')).toBeInTheDocument();
-        });
+        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
 
         // Progress with detail text
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',
@@ -285,7 +140,7 @@ describe('PrerequisitesStep - Unified Progress Format Display', () => {
         });
 
         // Progress without detail text (empty string)
-        statusCallback({
+        fireStatus({
             index: 0,
             status: 'checking',
             message: 'Installing...',

@@ -27,6 +27,7 @@ import {
 } from '@/core/state/appBuilderComponentState';
 import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import componentsConfig from '@/features/components/config/components.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_ENVIRONMENT_ID,
@@ -42,7 +43,6 @@ import {
     ACCS_WEBSITE_CODE,
     ACCS_CUSTOMER_GROUP,
 } from '@/features/components/config/envVarKeys';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import type { Logger, Project } from '@/types';
 
 // Bundled template - single source of truth

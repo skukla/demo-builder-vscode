@@ -11,14 +11,14 @@ Use this skill to add or enable a component in your Demo Builder project.
 
 1. Use the `get_project` MCP tool to view the current project configuration.
 2. Use `get_component_config` to read the current `.env` values for the target component.
-3. Use `update_project_config` to set or update component environment variables.
+3. Use `configure_project` to set component environment variables (`env: {"<componentId>": {"VAR": "value"}}`).
 4. Restart the demo server to apply the changes.
 
 ## Example
 
 ```
 > get_project
-> update_project_config component="headless" key="ADOBE_COMMERCE_URL" value="https://my-store.com"
+> configure_project env={"headless": {"ADOBE_COMMERCE_URL": "https://my-store.com"}}
 > Restart the demo: run `npm run dev` in the component directory
 ```
 

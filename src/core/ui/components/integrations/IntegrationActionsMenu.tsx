@@ -40,6 +40,7 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     deploy: { label: 'Deploy', icon: 'play' },
     update: { label: 'Update', icon: 'redeploy' },
     retry: { label: 'Retry', icon: 'reset' },
+    install: { label: 'Install into Commerce', icon: 'play' },
     'sign-in': { label: 'Sign in', icon: 'admin' },
     // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },

@@ -9,14 +9,12 @@
  */
 
 import { Octokit } from '@octokit/core';
-import { retry } from '@octokit/plugin-retry';
 import AdmZip from 'adm-zip';
 import {
     describePushProtectionBlock,
     describeRejectionDiagnostics,
     isRulesetRejection,
 } from '../errorFormatters';
-import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
     GitHubFileResult,
@@ -24,6 +22,8 @@ import type {
     GitHubTreeEntry,
     GitHubTreeInput,
 } from '../types';
+import { createAuthenticatedOctokit } from './githubHelpers';
+import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 
@@ -377,10 +377,7 @@ export class GitHubFileOperations {
         }
 
         if (!this.octokit) {
-            const OctokitWithRetry = Octokit.plugin(retry);
-            this.octokit = new OctokitWithRetry({
-                auth: token.token,
-            });
+            this.octokit = createAuthenticatedOctokit(token.token);
         }
 
         return this.octokit;

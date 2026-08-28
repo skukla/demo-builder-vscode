@@ -11,6 +11,7 @@ import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -25,19 +26,28 @@ import {
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
+import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
+import { narrationFor } from '@/features/ai/server/toolNarration';
+import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
-import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import {
+    InExtensionMcpServer,
+    type InExtensionMcpServerOptions,
+} from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
-import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
@@ -45,6 +55,7 @@ import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
@@ -62,7 +73,10 @@ import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalS
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
-import { ensureHomeAiContext } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import {
+    ensureHomeAiContext,
+    refreshHomeAgentsMd,
+} from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
@@ -92,10 +106,68 @@ let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let daLiveAuthService: DaLiveAuthService;
 let inExtensionMcpServer: InExtensionMcpServer | undefined;
+/**
+ * Records every agent tool call into a capped in-memory buffer.
+ *
+ * ONE recorder for the window, not one per MCP connection: a client that drops
+ * and reconnects mid-task is still one path through the extension, and a
+ * per-connection recorder would cut that trace in half at the seam.
+ *
+ * NOTHING READS IT TODAY. Its only consumer was the prompt-evaluation surface,
+ * which moved to `feature/prompt-workbench` — see AI-3b. The recorder stays
+ * wired because the write is one array push against a capped buffer and it is
+ * the foundation AI-2 ("can you see what the agent is doing") needs; pulling
+ * the `trace` hook out would mean surgery inside the core MCP server. If AI-2
+ * is answered some other way, delete this and the option together rather than
+ * leaving a recorder nobody reads.
+ *
+ * `projectShape` is deliberately NOT wired. The recorder accepts it and its
+ * tests cover it, but the only way to resolve the current project today is
+ * `getCurrentProject()`, which reads from disk on purpose (an in-memory pointer
+ * went stale and answered confidently — right data, wrong project). A disk read
+ * per tool call would add overhead to the very thing built to measure overhead.
+ */
+// Wired with its sinks inside activate() — the file sink needs the
+// extension's storage path and the channel needs the window. Recorder module
+// stays vscode-free; the sinks are two listeners it never has to know about.
+let agentTrace = new ToolTraceRecorder();
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
     const debugLogger = initializeLogger(context);
+
+    // The agent activity record (AI-2c): every tool call an agent makes is
+    // (a) appended to a per-session file under the extension's log storage —
+    // names, sizes, outcomes, a one-way fingerprint of argument values, never
+    // a value — and (b) narrated live on its own channel, so "what is the
+    // agent doing?" is watchable without wading through Debug Logs.
+    const agentTraceDir = path.join(context.logUri.fsPath, 'agent-traces');
+    // The trace must never cost the extension its activation: a storage path
+    // that cannot be created (sandboxed tests, exotic hosts) degrades to
+    // channel-only — the in-memory record and the live view still work.
+    let traceFileSink: ReturnType<typeof createAgentTraceFileSink> | undefined;
+    try {
+        traceFileSink = createAgentTraceFileSink(agentTraceDir);
+    } catch (err) {
+        debugLogger.warn(
+            `[AgentTrace] file sink unavailable (${err instanceof Error ? err.message : String(err)}) — channel-only`,
+        );
+    }
+    const activityChannel = vscode.window.createOutputChannel('Demo Builder: Agent Activity');
+    context.subscriptions.push(activityChannel);
+    agentTrace = new ToolTraceRecorder(undefined, (entry) => {
+        traceFileSink?.sink(entry);
+        const mark = entry.outcome === 'ok' ? '✓' : '✗';
+        const what = narrationFor(entry.tool) ?? entry.tool;
+        activityChannel.appendLine(
+            `${new Date().toLocaleTimeString()} ${mark} ${what} · ${entry.tool} · ` +
+                `${entry.durationMs}ms · ${entry.resultBytes}B` +
+                // The tag NAMES the call here; the same number MARKS its lines
+                // in Debug Logs — filter there by "#N" to read only this
+                // call's story (AI-2d).
+                (entry.tag !== undefined ? ` · #${entry.tag}` : ''),
+        );
+    });
 
     // Check for pending log replay (after Extension Host restart)
     await replayPendingLogs(debugLogger);
@@ -289,7 +361,34 @@ export async function activate(context: vscode.ExtensionContext) {
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
         const projectsRoot = resolveProjectsRoot();
-        void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
+        void (async () => {
+            const current = await stateManager.getCurrentProject();
+            await ensureHomeAiContext(
+                projectsRoot,
+                path.join(context.extensionPath, 'dist'),
+                undefined,
+                current?.name,
+            );
+        })();
+
+        // Keep the home AGENTS.md in step with the current-project pointer.
+        //
+        // Without this the file only told the truth by luck. Activation wrote one
+        // version and the Chat tile wrote another, so a headless `claude -p` run
+        // got whichever had been written last — measured 2026-08-26, 9 of 10
+        // battery prompts spent a round trip on an orientation call the file had
+        // ordered them to make.
+        //
+        // Subscribing is what makes stating the name SAFE. The objection to
+        // naming a project at activation was that the pointer moves afterwards
+        // and the file goes stale; it cannot go stale if it is rewritten whenever
+        // the pointer moves. `undefined` (no project) rewrites the fallback, so
+        // clearing the pointer never leaves a name behind that is no longer true.
+        context.subscriptions.push(
+            stateManager.onProjectChanged((project) => {
+                void refreshHomeAgentsMd(projectsRoot, project?.name);
+            }),
+        );
 
         // The publish key's SECOND trigger. The activation run happens above,
         // sequenced behind the AI-bundle sweep; this one fires on sign-in.
@@ -536,7 +635,10 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // stamp the activation `[Build]` line prints; undefined when unreadable,
         // which falls back to the static version.
         const buildInfo = await readBuildInfo(context.extensionPath);
-        const server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
+        // Named and kept: one option object, so anything that needs a second
+        // server on its own socket gets exactly these tools. Two objects would
+        // drift, and the drifting one would be whichever nobody watches.
+        const mcpServerOptions: InExtensionMcpServerOptions = {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
             // Agent-triggered mutations get the same visible progress their
@@ -545,7 +647,19 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
-            registerExtraTools: (mcpServer) => {
+            trace: agentTrace,
+            registerExtraTools: (mcpServer, scopedProjectDir) => {
+                // Per-connection scope (owner decision 2026-08-28): a session
+                // whose directory sits inside a project acts on THAT project —
+                // reads load it fresh from disk, saves never flip the
+                // dashboard pointer (scopedStateManager). The home chat and
+                // bare clients arrive unscoped and keep pointer semantics.
+                const connState = scopedProjectDir
+                    ? createScopedStateManager(stateManager, scopedProjectDir)
+                    : stateManager;
+                const connCtxFactory = scopedProjectDir
+                    ? () => createHeadlessHandlerContext(context, connState, logger)
+                    : ctxFactory;
                 registerDescriptorTools(
                     mcpServer,
                     [
@@ -554,21 +668,33 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         ...ACTION_DESCRIPTORS,
                         ...DATA_INSTALLER_DESCRIPTORS,
                     ],
-                    ctxFactory,
+                    connCtxFactory,
                 );
                 registerDiscoveryTools(mcpServer);
-                registerAuthTools(mcpServer, ctxFactory);
-                registerAdobeTools(mcpServer, ctxFactory);
-                registerCreateProjectTool(mcpServer, ctxFactory);
-                registerCurrentProjectTool(mcpServer, ctxFactory);
-                registerProjectStatusTool(mcpServer, stateManager);
-                registerValidateSelectionTool(mcpServer, ctxFactory);
+                // VS Code mirrors the output channels to files under logUri —
+                // that mirror is what read_debug_logs serves.
+                registerDiagnosticsTools(mcpServer, context.logUri.fsPath);
+                registerAuthTools(mcpServer, connCtxFactory);
+                registerAdobeTools(mcpServer, connCtxFactory);
+                registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
+                // Same derivation as activate()'s sink wiring — the dir is a
+                // pure function of the extension's log storage.
+                registerAgentTraceTool(
+                    mcpServer,
+                    agentTrace,
+                    path.join(context.logUri.fsPath, 'agent-traces'),
+                );
+                registerProjectStatusTool(mcpServer, connState);
+                registerCommerceEndpointsTool(mcpServer, connState);
+                registerCommerceQueryTool(mcpServer, connState);
+                registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
-                registerAdobeResourceTools(mcpServer, ctxFactory);
-                registerConfigureProjectTool(mcpServer, stateManager);
-                registerCloudResourceTools(mcpServer, ctxFactory);
-                registerStorefrontTools(mcpServer, ctxFactory);
-                registerSiteTools(mcpServer, ctxFactory);
+                registerAdobeResourceTools(mcpServer, connCtxFactory);
+                registerConfigureProjectTool(mcpServer, connState);
+                registerCloudResourceTools(mcpServer, connCtxFactory);
+                registerStorefrontTools(mcpServer, connCtxFactory);
+                registerSiteTools(mcpServer, connCtxFactory);
                 registerSettingsTools(mcpServer, (key) => {
                     // Split on the LAST dot: `workspace.getConfiguration(section)`
                     // takes the parent and the leaf separately, and these keys are
@@ -578,18 +704,19 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .getConfiguration(key.slice(0, lastDot))
                         .get(key.slice(lastDot + 1));
                 });
-                registerContentAuthoringTools(mcpServer, ctxFactory);
-                registerEdsResetTool(mcpServer, ctxFactory);
-                registerDeleteProjectTool(mcpServer, ctxFactory);
-                registerApplyUpdatesTool(mcpServer, ctxFactory);
+                registerContentAuthoringTools(mcpServer, connCtxFactory);
+                registerEdsResetTool(mcpServer, connCtxFactory);
+                registerDeleteProjectTool(mcpServer, connCtxFactory);
+                registerApplyUpdatesTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
                 );
-                registerLifecycleTools(mcpServer, ctxFactory, (url) =>
+                registerLifecycleTools(mcpServer, connCtxFactory, (url) =>
                     Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
             },
-        });
+        };
+        const server = new InExtensionMcpServer(socketPath, projectsDir, logger, mcpServerOptions);
         await server.start();
         inExtensionMcpServer = server;
     } catch (err) {

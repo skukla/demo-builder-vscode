@@ -16,8 +16,14 @@
  */
 
 const NAME_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-/** Cap the derived base so a long title can't blow past Adobe's name length limit. */
-const MAX_BASE_LENGTH = 40;
+/**
+ * Cap the derived base so base + suffix stays under Adobe's name length limit —
+ * which is 20 (server 400: "Project name length must be less than 20", measured
+ * live 2026-08-27 when a 22-char derived name was rejected; titles of 16+
+ * alphanumeric characters had failed project creation ever since this shipped
+ * at 40). 15 + the 4-char suffix = 19, the longest accepted name.
+ */
+const MAX_BASE_LENGTH = 15;
 const SUFFIX_LENGTH = 4;
 
 /** A short random alphanumeric suffix for uniqueness (kept out of the pure derivation). */

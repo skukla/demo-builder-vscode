@@ -1,9 +1,15 @@
 /**
  * PromptCard
  *
- * A single user-saved AI prompt rendered as a clickable card. Pin/Unpin,
- * Edit, Duplicate, Delete live in the kebab menu. Pinned prompts show a
- * small pin indicator inline with the title.
+ * A single user-saved AI prompt rendered as a clickable card. Pin/Unpin, Edit,
+ * Duplicate, Delete live in the kebab menu. Pinned prompts show a small pin
+ * indicator inline with the title.
+ *
+ * IT LAUNCHES, AND THAT IS ALL. Clicking the card hands the prompt to the
+ * terminal, where it runs for real. A second kebab row sent the same prompt to
+ * the Prompt Workbench to be simulated; that surface moved to
+ * `feature/prompt-workbench` on 2026-08-26 (AI-3b) and the row went with it.
+ * The library stays a launcher: it picks, and something else runs.
  *
  * Title clamps to 1 line and body clamps to 3 lines, so every card has the
  * same fixed height regardless of content length.
@@ -151,7 +157,15 @@ function PromptKebab({
                     break;
             }
         },
-        [isPinned, promptBody, onPinToggle, onEdit, onDuplicate, onDelete, onCopy],
+        [
+            isPinned,
+            promptBody,
+            onPinToggle,
+            onEdit,
+            onDuplicate,
+            onDelete,
+            onCopy,
+                ],
     );
 
     return (

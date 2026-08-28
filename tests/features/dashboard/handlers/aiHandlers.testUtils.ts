@@ -103,6 +103,12 @@ export {
     handleVerifyAiSetup,
     handleRegenerateAiFiles,
     handleOpenInClaude,
+} from '@/features/dashboard/handlers/aiHandlers';
+// Prompt CRUD comes from the module that DEFINES it. It used to come through
+// `aiHandlers`, which re-exported eight names — and this file was the only
+// consumer of six of them, so production code carried a re-export block kept
+// alive solely by its own test helper.
+export {
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,
@@ -111,7 +117,7 @@ export {
     mergePromptsForRead,
     deleteAiPromptById,
     readMergedAiPrompts,
-} from '@/features/dashboard/handlers/aiHandlers';
+} from '@/features/dashboard/handlers/aiPromptHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
 export {

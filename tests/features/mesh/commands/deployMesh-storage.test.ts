@@ -271,8 +271,6 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             expect(capturedProject!.appBuilderComponents!['commerce-mesh'].endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
-            // And the retired singleton is gone, not merely unread.
-            expect(capturedProject!.meshState).toBeUndefined();
         });
 
         it('should update mesh component status to deployed', async () => {

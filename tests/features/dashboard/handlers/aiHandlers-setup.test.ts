@@ -38,6 +38,8 @@ describe('aiHandlers — setup & verification', () => {
             // 8 → 7: inspect-mcp removed 2026-08-05. The AI surface's documented
             // "Refresh" action that supposedly sent it does not exist in
             // AiOverviewScreen; the README claiming otherwise was stale.
+            // 8 → 7: open-prompt-in-workbench left with the prompt-evaluation
+            // surface on 2026-08-26 (AI-3b).
             expect(types).toHaveLength(7);
         });
 
@@ -69,6 +71,7 @@ describe('aiHandlers — setup & verification', () => {
         it('should include copyAiPrompt', () => {
             expect(hasHandler(aiHandlers, 'copyAiPrompt')).toBe(true);
         });
+
 
         it('should have all values as functions', () => {
             const types = getRegisteredTypes(aiHandlers) as Array<keyof typeof aiHandlers>;

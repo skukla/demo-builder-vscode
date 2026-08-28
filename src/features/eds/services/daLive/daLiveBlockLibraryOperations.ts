@@ -15,12 +15,12 @@
  * @module features/eds/services/daLive/daLiveBlockLibraryOperations
  */
 
+import { type DaLiveSourceResult } from '../types';
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DaLiveConfigOperations } from './daLiveConfigOperations';
 import { CONTENT_COPY_BATCH_SIZE, DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
 import { DaLiveContentCopy } from './daLiveContentCopy';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
-import { type DaLiveSourceResult } from '../types';
 import type { Logger } from '@/types/logger';
 
 /** DA.live authoring block-library operations. */

@@ -4,15 +4,20 @@
  * Walks `<project>/.claude/skills/` and returns a `SkillInventoryEntry[]`.
  * Classifies each skill by where it lives on disk:
  *
- *   - Any top-level filename in `DEMO_BUILDER_SKILL_FILES` → 'demo-builder'.
- *     That set is imported from `@/types/ai`, NOT redeclared here —
- *     `skillsWriter` builds its write list from the same constant. The two used
- *     to keep separate copies and drifted (`diagnose-demo.md` was written but
- *     not recognised, so it showed as a user-authored "Custom" skill).
- *   - Any `.md` nested under a subdirectory of `skills/` → 'adobe', carrying the
- *     directory's `<prefix>-` as `bundle` (`aem`, `appbuilder`). The prefix is
- *     what separates one Adobe bundle from another; discarding it is what made
- *     App Builder skills render under an "Adobe AEM" heading.
+ *   - Any top-level DIRECTORY whose name is in `DEMO_BUILDER_SKILL_NAMES`
+ *     → 'demo-builder' (the `<name>/SKILL.md` layout skillsWriter emits since
+ *     v24 — the one layout Claude Code registers as an invocable skill). That
+ *     set is imported from `@/types/ai`, NOT redeclared here — `skillsWriter`
+ *     builds its write list from the same constant. The two used to keep
+ *     separate copies and drifted (`diagnose-demo` was written but not
+ *     recognised, so it showed as a user-authored "Custom" skill).
+ *   - A top-level `<name>.md` whose stem is in that set → 'demo-builder' too:
+ *     the legacy pre-v27 flat layout, still first-party on projects not yet
+ *     regenerated.
+ *   - Any `.md` nested under any OTHER subdirectory of `skills/` → 'adobe',
+ *     carrying the directory's `<prefix>-` as `bundle` (`aem`, `appbuilder`).
+ *     The prefix is what separates one Adobe bundle from another; discarding
+ *     it is what made App Builder skills render under an "Adobe AEM" heading.
  *   - Anything else at the top level → 'unknown'.
  *
  * Parses YAML frontmatter using the same regex + `yaml.parse` shape as
@@ -25,7 +30,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { DEMO_BUILDER_SKILL_FILES, type SkillInventoryEntry, type SkillSource } from '@/types/ai';
+import { DEMO_BUILDER_SKILL_NAMES, type SkillInventoryEntry, type SkillSource } from '@/types/ai';
 
 /**
  * The bundle prefix `copyAdobeSkillBundle` stamped onto a directory it created,
@@ -57,10 +62,23 @@ export async function inspectSkills(projectPath: string): Promise<SkillInventory
         const entryPath = path.join(skillsDir, entry.name);
 
         if (entry.isFile() && entry.name.endsWith('.md')) {
-            const source: SkillSource = DEMO_BUILDER_SKILL_FILES.has(entry.name)
+            // Legacy pre-v27 flat layout — still first-party by stem.
+            const source: SkillSource = DEMO_BUILDER_SKILL_NAMES.has(
+                path.basename(entry.name, '.md'),
+            )
                 ? 'demo-builder'
                 : 'unknown';
             results.push(await readSkillFile(entryPath, source));
+        } else if (entry.isDirectory() && DEMO_BUILDER_SKILL_NAMES.has(entry.name)) {
+            // First-party `<name>/SKILL.md` layout (v27+). No bundle: the
+            // directory name IS the skill, not an Adobe bundle prefix — and it
+            // is also the name fallback (basename would say "SKILL").
+            const nestedMd = await collectMdFiles(entryPath);
+            for (const nestedPath of nestedMd) {
+                results.push(
+                    await readSkillFile(nestedPath, 'demo-builder', undefined, entry.name),
+                );
+            }
         } else if (entry.isDirectory()) {
             // The bundle comes from THIS directory's name, not from wherever the
             // file sits beneath it — a skill nested two levels deep still belongs
@@ -95,6 +113,7 @@ async function readSkillFile(
     filePath: string,
     source: SkillSource,
     bundle?: string,
+    fallbackName?: string,
 ): Promise<SkillInventoryEntry> {
     const content = await fsPromises.readFile(filePath, 'utf-8');
     const frontmatter = parseFrontmatter(content);
@@ -102,7 +121,7 @@ async function readSkillFile(
         name:
             typeof frontmatter.name === 'string' && frontmatter.name.length > 0
                 ? frontmatter.name
-                : path.basename(filePath, '.md'),
+                : (fallbackName ?? path.basename(filePath, '.md')),
         description: typeof frontmatter.description === 'string' ? frontmatter.description : null,
         path: filePath,
         source,

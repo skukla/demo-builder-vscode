@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-27T04-10-47Z",
+  "serving": "feature/overnight-surface-loop@ecb8e23ef+ built 2026-08-27T04:07:33.879Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 813
+  },
+  "promptCount": 7,
+  "allowlist": 92,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 813
+  },
+  "authChangedMidRun": false
+}

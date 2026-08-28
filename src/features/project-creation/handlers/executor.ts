@@ -27,7 +27,6 @@ import {
     sendCompletionAndCleanup,
     generateAIContextFiles,
 } from '../services';
-import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,
@@ -43,10 +42,11 @@ import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPh
 import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflight';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
-import { HandlerContext } from '@/types/handlers';
 import { COMPONENT_IDS } from '@/core/constants';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';

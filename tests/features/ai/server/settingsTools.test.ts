@@ -87,6 +87,15 @@ describe('get_settings', () => {
         expect(out['demoBuilder.defaultPort']).toBe(3000);
     });
 
+    it('accepts the unprefixed key form and answers under the full key', async () => {
+        // Watched live 2026-08-27: the agent asked for `dataInstaller.enabled`,
+        // was refused, and retried with the prefix — a wasted round trip for a
+        // key that was unambiguous the first time.
+        const out = await harness().call('get_settings', { key: 'defaultPort' });
+        expect(out['demoBuilder.defaultPort']).toBe(3000);
+        expect(out.error).toBeUndefined();
+    });
+
     it('names what is available for an unknown key', async () => {
         const out = await harness().call('get_settings', { key: 'demoBuilder.nope' });
         expect(String(out.error)).toMatch(/not a Demo Builder setting/);

@@ -42,18 +42,47 @@ export function setThirdPartyToolsResolver(resolver: () => boolean): void {
 }
 
 /**
- * True when the project does App Builder-adjacent development: an EDS
- * storefront (Commerce extensibility), any mesh component, or an attached
- * App Builder component.
+ * True when the project has a checked-out EDS storefront. Gates the
+ * storefront-only surfaces: the `eds-storefront` ai-defaults entries
+ * (Playwright, dropins) and the `aem-boilerplate-commerce` skill bundle.
  */
-export function projectNeedsAppBuilderTooling(project: Project): boolean {
-    if (project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path) {
-        return true;
-    }
+export function projectHasEdsStorefront(project: Project): boolean {
+    return Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path);
+}
+
+/**
+ * True when the project actually BUILDS an App Builder app — a mesh component
+ * or an attached App Builder component. An EDS storefront alone does not count.
+ *
+ * This is the narrower half, and the distinction is the whole point. Adobe
+ * ships one skill set per project template, and the integration starter kit's
+ * set teaches an agent to build back-office integrations: its architect skill
+ * opens "You are an Expert Adobe Commerce Solutions Architect specializing in
+ * ... the Adobe Commerce Integration Starter Kit". Installed on a project that
+ * has no App Builder app, that is a false statement about the work at hand.
+ *
+ * Gates the `integration-starter-kit` bundle and `extend-app-builder-app`.
+ */
+export function projectBuildsAppBuilderApps(project: Project): boolean {
     if (Object.keys(project.componentInstances ?? {}).some(isMeshComponentId)) {
         return true;
     }
     return Object.keys(project.appBuilderComponents ?? {}).length > 0;
+}
+
+/**
+ * True when the project needs App Builder-adjacent TOOLING: an EDS storefront
+ * (which uses Commerce extensibility), a mesh, or an attached App Builder
+ * component.
+ *
+ * The union, and it is correct for the MCP SERVER — a storefront really does
+ * call `search-commerce-docs`. It was also gating the skill SET, which is where
+ * it was wrong; that is `projectBuildsAppBuilderApps` above. One predicate
+ * answering two questions is how every EDS project ended up carrying seven
+ * skills for a job it was not doing.
+ */
+export function projectNeedsAppBuilderTooling(project: Project): boolean {
+    return projectHasEdsStorefront(project) || projectBuildsAppBuilderApps(project);
 }
 
 /**
@@ -69,7 +98,7 @@ export function aiDefaultsEntryApplies(entry: AiDefaultsMcpServer, project: Proj
         return false;
     }
     if (entry.requires === 'eds-storefront') {
-        return Boolean(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path);
+        return projectHasEdsStorefront(project);
     }
     return projectNeedsAppBuilderTooling(project);
 }

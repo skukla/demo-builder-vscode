@@ -27,6 +27,11 @@
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
+import {
+    getAppBuilderComponent,
+    listAppBuilderComponents,
+    setAppBuilderComponent,
+} from '@/core/state/appBuilderComponentState';
 import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
@@ -34,18 +39,14 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
+    buildCustomIntegrationEntry,
+    entryFitsProjectAxes,
+    getAppBuilderComponentEntry,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import {
-    getAppBuilderComponent,
-    listAppBuilderComponents,
-    setAppBuilderComponent,
-} from '@/core/state/appBuilderComponentState';
-import {
-    buildCustomIntegrationEntry,
-    getAppBuilderComponentEntry,
-} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -70,12 +71,46 @@ export interface GuardFailure {
     code?: ErrorCode;
 }
 
+/**
+ * The guard step every per-component operation opens with: report the check,
+ * run the chain, and on a refusal surface the warning and build the `blocked`
+ * result — `blocked`, not merely failed, because nothing ran, so callers must
+ * NOT take the failed-op path (error row status + snapshot).
+ *
+ * Returns undefined when all guards pass. One home for what was the same
+ * four-line block in add/deploy/remove/install (2026-08-27 sweep — the fourth
+ * copy is what tripped Rule of Three).
+ */
+export async function guardOrBlock(
+    context: HandlerContext,
+    project: Project,
+    report: (message: string) => void,
+): Promise<GuardableResult | undefined> {
+    report('Checking requirements…');
+    const guardError = await runGuards(context, project);
+    if (!guardError) {
+        return undefined;
+    }
+    vscode.window.showWarningMessage(guardError.error);
+    return {
+        success: false,
+        error: guardError.error,
+        code: guardError.code,
+        blocked: true,
+    };
+}
+
 export async function runGuards(
     context: HandlerContext,
     project: Project,
 ): Promise<GuardFailure | undefined> {
     const authManager = ServiceLocator.getAuthenticationService();
 
+    // Per-step debug lines: a live deploy sat at "Checking requirements…" for
+    // 9+ minutes (2026-08-27) and NOTHING here said which guard was holding it
+    // — the same silent-multi-step shape as the teardown (AI-5). Each step
+    // names itself BEFORE it runs so the last line in the log is the culprit.
+    context.logger.debug('[Guards] 1/3 auth check…');
     const authResult = await ensureAdobeIOAuth({
         authManager,
         logger: context.logger,
@@ -92,6 +127,7 @@ export async function runGuards(
         return { error: 'Adobe sign-in required.', code: ErrorCode.AUTH_REQUIRED };
     }
 
+    context.logger.debug('[Guards] 2/3 org-mismatch check…');
     const { detectProjectOrgMismatch } = await import(
         '@/features/authentication/services/detectProjectOrgMismatch'
     );
@@ -102,6 +138,7 @@ export async function runGuards(
         };
     }
 
+    context.logger.debug('[Guards] 3/3 developer-permission check…');
     const permission = await authManager.testDeveloperPermissions();
     if (!permission.hasPermissions) {
         return {
@@ -109,6 +146,7 @@ export async function runGuards(
         };
     }
 
+    context.logger.debug('[Guards] all passed');
     return undefined;
 }
 
@@ -294,7 +332,27 @@ export async function postComponentsSnapshot(context: HandlerContext): Promise<v
  * Handle 'addAppBuilderComponent' — guards → (bucket-3 → Configure) → assemble deps →
  * D1 addAppBuilderComponent. The FIRST live UI-driven full add.
  */
-export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponentRequestPayload> = async (context, payload) => {
+/**
+ * Build the toolchain-refresh consent for this invocation (PL-6 bridge).
+ *
+ * With a webview panel the answer comes from the factory's notification
+ * prompt (return undefined → the default applies). Headless — the MCP agent
+ * surface, where `context.panel` is absent — the answer IS the request's
+ * `refreshCli` flag: an agent is told by the failure hint to confirm with its
+ * human and re-call with the flag, so a handler never parks it on a dialog.
+ * Exported for its own test.
+ */
+export function buildToolchainConsent(
+    context: HandlerContext,
+    refreshCli: boolean | undefined,
+): (() => Promise<boolean>) | undefined {
+    if (context.panel) return undefined; // interactive: the factory prompt decides
+    return async () => refreshCli === true;
+}
+
+export const handleAddAppBuilderComponent: MessageHandler<
+    AddAppBuilderComponentRequestPayload
+> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -305,6 +363,28 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
         return {
             success: false,
             error: 'Unknown appBuilderComponent',
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+
+    // Stack gate: galleries filter by the project's axes, but this add-by-id
+    // door resolves from the RAW catalog — without this check a Commerce-only
+    // entry (the starter kit) could be added to a project with no Commerce
+    // backend, then fail at install/association where nothing explains why.
+    if (
+        !entryFitsProjectAxes(
+            entry,
+            project.componentSelections?.backend ?? '',
+            project.componentSelections?.frontend ?? '',
+        )
+    ) {
+        return {
+            success: false,
+            error:
+                `"${entry.name ?? entry.id}" isn't compatible with this project's stack` +
+                (entry.compatibleBackends?.length
+                    ? ` — it requires one of these backends: ${entry.compatibleBackends.join(', ')}.`
+                    : '.'),
             code: ErrorCode.CONFIG_INVALID,
         };
     }
@@ -330,6 +410,34 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
         };
     }
 
+    // Extension-layout apps (App Management generation) ship FIXED OpenWhisk
+    // package names — the deploy path deliberately skips the per-id ow-package
+    // rewrite for them, so two apps built from the same source in ONE workspace
+    // overwrite each other on Runtime no matter what ids we mint (proven live,
+    // AB-2 spike 2026-08-27). The id check above cannot catch a seeded instance
+    // under a different name, so the same-source scan here is the real gate.
+    // The same-id error-retry exemption stays: that path returned before this.
+    if (entry.layout === 'extension') {
+        const clash = Object.entries(project.appBuilderComponents ?? {}).find(
+            ([existingId, component]) =>
+                existingId !== entry.id &&
+                component.source.owner === entry.source.owner &&
+                component.source.repo === entry.source.repo,
+        );
+        if (clash) {
+            const [, component] = clash;
+            return {
+                success: false,
+                error:
+                    `"${component.name ?? clash[0]}" is already built from ${entry.source.owner}/` +
+                    `${entry.source.repo}. Apps of this kind have fixed internal package names, so a ` +
+                    'second copy in the same workspace would overwrite the first. Remove the ' +
+                    'existing one first, or use a separate project.',
+                code: ErrorCode.CONFIG_INVALID,
+            };
+        }
+    }
+
     // The guards run INSIDE the progress: runGuards does the auth check, whose
     // `aio config get` spawn costs seconds on a cold cache. Running it first left
     // the user clicking Add and staring at nothing until it returned.
@@ -342,18 +450,9 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
@@ -400,7 +499,12 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
             // static title for the ~70s of subscribe + install + build + deploy.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
-                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                // The notification title already names the operation and its object, so
+                // the step line is the SUB-step alone when one exists — joining both
+                // produced two-line cards ('Deploying custom integration... Running
+                // aio app deploy'; owner screenshot, 2026-08-27).
+                (message, subMessage) => report(subMessage || message),
+                buildToolchainConsent(context, payload?.refreshCli),
             );
             return addAppBuilderComponent(project, entry, deps);
         },
@@ -448,7 +552,7 @@ export const handleAddAppBuilderComponent: MessageHandler<AddAppBuilderComponent
  * @param id - the payload's component id, possibly absent
  * @returns the id + project, or the error response to return as-is
  */
-async function resolveComponentTarget(
+export async function resolveComponentTarget(
     context: HandlerContext,
     id: string | undefined,
 ): Promise<{ ok: true; id: string; project: Project } | { ok: false; error: HandlerResponse }> {
@@ -478,7 +582,7 @@ async function resolveComponentTarget(
  * must not take the failed-op path (error row status + snapshot) — nothing was
  * attempted and nothing persisted.
  */
-type GuardableResult = {
+export type GuardableResult = {
     success: boolean;
     error?: string;
     /** Set when the refusal is actionable (AUTH_REQUIRED → the UI offers sign-in). */
@@ -536,7 +640,7 @@ function kindNoun(kind: AppBuilderComponentKind | undefined): string {
  * @param run - the work; call its `report` to push each step to the NOTIFICATION
  * @returns whatever `run` resolves to
  */
-async function withComponentProgress<T extends GuardableResult>(
+export async function withComponentProgress<T extends GuardableResult>(
     options: {
         title: string;
         id: string;
@@ -577,7 +681,11 @@ async function withComponentProgress<T extends GuardableResult>(
 }
 
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
-async function deployById(context: HandlerContext, requestedId: string | undefined) {
+async function deployById(
+    context: HandlerContext,
+    requestedId: string | undefined,
+    refreshCli?: boolean,
+) {
     const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
     const { id, project } = target;
@@ -594,25 +702,21 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             report('Deploying…');
             // Same reuse as the add path: the deploy tail narrates its own steps.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project),
-                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+                // The notification title already names the operation and its object, so
+                // the step line is the SUB-step alone when one exists — joining both
+                // produced two-line cards ('Deploying custom integration... Running
+                // aio app deploy'; owner screenshot, 2026-08-27).
+                (message, subMessage) => report(subMessage || message),
+                buildToolchainConsent(context, refreshCli),
             );
             return deployAppBuilderComponent(project, id, deps);
         },
@@ -630,10 +734,10 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
 }
 
 /** Handle 'deployAppBuilderComponent' — deploy the given appBuilderComponent's tail. */
-export const handleDeployAppBuilderComponent: MessageHandler<{ id?: string }> = (
-    context,
-    payload,
-) => deployById(context, payload?.id);
+export const handleDeployAppBuilderComponent: MessageHandler<{
+    id?: string;
+    refreshCli?: boolean;
+}> = (context, payload) => deployById(context, payload?.id, payload?.refreshCli);
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;
@@ -657,18 +761,9 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
             logger: context.logger,
         },
         async (report): Promise<GuardableResult> => {
-            report('Checking requirements…');
-            const guardError = await runGuards(context, project);
-            if (guardError) {
-                vscode.window.showWarningMessage(guardError.error);
-                // `blocked`, not merely failed: nothing ran, so callers must NOT
-                // take the failed-op path (error row status + snapshot).
-                return {
-                    success: false,
-                    error: guardError.error,
-                    code: guardError.code,
-                    blocked: true,
-                };
+            const refused = await guardOrBlock(context, project, report);
+            if (refused) {
+                return refused;
             }
 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen

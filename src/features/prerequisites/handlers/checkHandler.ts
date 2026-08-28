@@ -10,7 +10,7 @@
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
-import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, resolveRequiredMajors } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
@@ -45,30 +45,6 @@ function toPrerequisiteSummary(
         version: state.result.version,
         canInstall: state.result.canInstall,
     };
-}
-
-/**
- * Resolve the required Node major versions for a per-node-version prerequisite.
- * Checks the prereq's requiredFor, falls back to plugin requiredFor, then all Node versions.
- */
-function resolveRequiredMajors(
-    prereq: { requiredFor?: string[]; plugins?: { requiredFor?: string[] }[] },
-    nodeVersionMapping: Record<string, string>,
-    nodeVersionIdMapping: Record<string, string>,
-): string[] {
-    let requiredForComponents: string[] | undefined = prereq.requiredFor;
-    if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
-        const allPluginRequired = prereq.plugins
-            .filter(p => p.requiredFor && p.requiredFor.length > 0)
-            .flatMap(p => p.requiredFor ?? []);
-        if (allPluginRequired.length > 0) {
-            requiredForComponents = [...new Set(allPluginRequired)];
-        }
-    }
-
-    return requiredForComponents && requiredForComponents.length > 0
-        ? getPluginNodeVersions(nodeVersionIdMapping, requiredForComponents)
-        : getNodeVersionKeys(nodeVersionMapping);
 }
 
 /**

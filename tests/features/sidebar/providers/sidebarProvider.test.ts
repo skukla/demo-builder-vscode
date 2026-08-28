@@ -271,6 +271,7 @@ describe('SidebarProvider', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
         });
 
+
         it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
             await messageHandler({ type: 'showPrompts' });
 
@@ -393,6 +394,7 @@ describe('SidebarProvider', () => {
                 data: { context },
             });
         });
+
     });
 
     // ------------------------------------------------------------------------

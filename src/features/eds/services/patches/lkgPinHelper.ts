@@ -37,8 +37,8 @@
  * @module features/eds/services/patches/lkgPinHelper
  */
 
-import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
+import { applyCanonicalCodePatches } from './codePatchPipelineHelpers';
 import { readLkgSha } from './lkgReader';
 import { addCodeResult, type PatchReport } from './patchReportHelper';
 import type { CodePatchSource } from '@/types/demoPackages';

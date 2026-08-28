@@ -19,11 +19,11 @@
  * services subscribe with `{ licenseConfigs:null, roles:null }`.
  */
 
+import { BASELINE_API } from '@/core/constants';
 import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
 } from '@/features/authentication/services/types';
-import { BASELINE_API } from '@/core/constants';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
@@ -128,6 +128,28 @@ export function computeRequiredApis(
     return [...apis];
 }
 
+/**
+ * Services whose org-catalog row declares NO platformList but are KNOWN to
+ * subscribe onto OAuth S2S credentials. The live catalog declares platforms
+ * for only 25 of 98 services (measured 2026-08-27), and `partitionByPlatform`
+ * rightly refuses to guess for the rest — but that silence cost the BASELINE
+ * its subscription on every S2S credential the spine ever created: the union
+ * PUT skipped it, the credential kept `sdkList: []`, and an App Management
+ * app's event calls answered "403 — Api Key is invalid" one feature away.
+ * The evidence for the override is in this repo: `consoleProjectTeardown`'s
+ * subscribe-on-403 PUTs exactly this service onto S2S credentials and works.
+ */
+const KNOWN_S2S_SERVICES: ReadonlySet<string> = new Set([
+    BASELINE_API,
+    // I/O Events + Adobe I/O Events for Adobe Commerce — the kit's eventing
+    // step calls api.adobe.io/events, and without these subscriptions it
+    // answers 403 with a valid key (measured live 2026-08-27). Both rows carry
+    // platformList null in the org catalog; Console's own UI adds both to
+    // OAuth S2S credentials.
+    'CloudIntegrationSDK',
+    'commerceeventing',
+]);
+
 /** Resolve API names → ServiceInfo via the org service list. Throws on unknown. */
 export function resolveServiceInfos(
     requiredApis: string[],
@@ -138,10 +160,15 @@ export function resolveServiceInfos(
         if (!service) {
             throw new Error(`Unknown Adobe API "${api}" — not entitled for this org.`);
         }
+        const declared = service.platformList ?? [];
+        const platformList =
+            declared.length === 0 && KNOWN_S2S_SERVICES.has(service.code)
+                ? ['oauth_server_to_server']
+                : declared;
         return {
             sdkCode: service.code,
             name: service.name,
-            platformList: service.platformList ?? [],
+            platformList,
             domainMandatory: Boolean(service.domainMandatory),
         };
     });
@@ -166,8 +193,7 @@ export function partitionByPlatform(services: ServiceInfo[]): {
     const oauthS2S = services.filter((s) => s.platformList.includes('oauth_server_to_server'));
     const unmatched = services.filter(
         (s) =>
-            !s.platformList.includes('apiKey') &&
-            !s.platformList.includes('oauth_server_to_server'),
+            !s.platformList.includes('apiKey') && !s.platformList.includes('oauth_server_to_server'),
     );
     return { apiKey, oauthS2S, unmatched };
 }

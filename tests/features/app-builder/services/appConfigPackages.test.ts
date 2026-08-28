@@ -11,9 +11,8 @@ import { promises as fsPromises } from 'fs';
 import * as yaml from 'yaml';
 import {
     applyIsolatedPackages,
-    isStandaloneApp,
+    detectAppLayout,
     isolatePackages,
-    readStandalonePackages,
 } from '@/features/app-builder/services/appConfigPackages';
 
 const mockRead = fsPromises.readFile as jest.Mock;
@@ -44,33 +43,64 @@ describe('isolatePackages (pure)', () => {
     });
 });
 
-describe('readStandalonePackages / isStandaloneApp', () => {
-    it('returns the packages for a standalone config', async () => {
+describe('detectAppLayout', () => {
+    it('detects standalone for a standalone config', async () => {
         mockRead.mockResolvedValue(config({ myapp: { actions: {} } }));
-        await expect(readStandalonePackages('/c')).resolves.toEqual({ myapp: { actions: {} } });
-        await expect(isStandaloneApp('/c')).resolves.toBe(true);
+        await expect(detectAppLayout('/c')).resolves.toBe('standalone');
     });
 
     it('returns undefined for a missing config file', async () => {
         mockRead.mockRejectedValue(new Error('ENOENT'));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
-        await expect(isStandaloneApp('/c')).resolves.toBe(false);
+        await expect(detectAppLayout('/c')).resolves.toBeUndefined();
     });
 
     it('returns undefined for unparseable YAML', async () => {
         mockRead.mockResolvedValue(':\n  - [not valid');
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
+        await expect(detectAppLayout('/c')).resolves.toBeUndefined();
     });
 
-    it('returns undefined for an extension app (no application.runtimeManifest.packages)', async () => {
+    it('detects extension for an extension app (no standalone packages)', async () => {
         mockRead.mockResolvedValue(yaml.stringify({ extensions: { 'dx/excshell/1': {} } }));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
-        await expect(isStandaloneApp('/c')).resolves.toBe(false);
+        await expect(detectAppLayout('/c')).resolves.toBe('extension');
     });
 
-    it('returns undefined for an empty packages map', async () => {
+    it('detects extension for the real integration-starter-kit v4 root config', async () => {
+        // Verbatim from adobe/commerce-integration-starter-kit@main app.config.yaml
+        // (fetched 2026-08-27) — the App Management shape this detector exists for.
+        mockRead.mockResolvedValue(
+            [
+                'extensions:',
+                '  # This extension is required for app management. Do not remove.',
+                '  commerce/extensibility/1:',
+                '    $include: src/commerce-extensibility-1/ext.config.yaml',
+                '',
+                'productDependencies:',
+                '  - code: COMMC',
+                '    minVersion: 2.4.4',
+                '    maxVersion: 2.4.9',
+            ].join('\n')
+        );
+        await expect(detectAppLayout('/c')).resolves.toBe('extension');
+    });
+
+    it('returns undefined for an empty packages map with no extensions', async () => {
         mockRead.mockResolvedValue(config({}));
-        await expect(readStandalonePackages('/c')).resolves.toBeUndefined();
+        await expect(detectAppLayout('/c')).resolves.toBeUndefined();
+    });
+
+    it('returns undefined for an empty extensions map', async () => {
+        mockRead.mockResolvedValue(yaml.stringify({ extensions: {} }));
+        await expect(detectAppLayout('/c')).resolves.toBeUndefined();
+    });
+
+    it('reads a both-shapes config as standalone (the isolatable packages govern)', async () => {
+        mockRead.mockResolvedValue(
+            yaml.stringify({
+                application: { runtimeManifest: { packages: { myapp: {} } } },
+                extensions: { 'dx/excshell/1': {} },
+            })
+        );
+        await expect(detectAppLayout('/c')).resolves.toBe('standalone');
     });
 });
 

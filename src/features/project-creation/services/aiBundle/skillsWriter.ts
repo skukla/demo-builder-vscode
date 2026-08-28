@@ -5,19 +5,27 @@
  *
  * 1. **Demo Builder lifecycle skills** (always written): procedural guides
  *    that tell AI agents how to operate against the Demo Builder MCP server.
- *    - `add-component.md` — add or enable a component via update_project_config
- *    - `sync-changes.md` — push code changes via sync_storefront
- *    - `update-credentials.md` — edit .env credentials via update_project_config
- *    - `create-eds-project.md` — provision a new project headlessly via create_project
- *    - `diagnose-demo.md` — route a broken-demo symptom to the check that answers it
- *    - `import-datapack.md` — the six-call sample-data loop and its three traps
+ *    Each lands as `.claude/skills/<name>/SKILL.md` — the one layout Claude
+ *    Code registers as an invocable skill (measured live 2026-08-27: a session
+ *    registered every directory-format skill and none of the flat `<name>.md`
+ *    files these shipped as before v27; legacy flat copies are reconciled away
+ *    through the ADR-013 removal matrix on the next write).
+ *    - `add-component` — add or enable a component via configure_project
+ *    - `sync-changes` — push code changes via sync_storefront
+ *    - `update-credentials` — edit config values via configure_project (secrets stay user-entered)
+ *    - `create-eds-project` — provision a new project headlessly via create_project
+ *    - `diagnose-demo` — route a broken-demo symptom to the check that answers it
+ *    - `import-datapack` — the six-call sample-data loop and its three traps
  *
- * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
- *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
- *    `<componentPath>/node_modules/@adobe-commerce/commerce-extensibility-tools/dist/<path>/`
+ * 2. **Adobe skill bundles**: Adobe ships every starter-kit bundle inside the
+ *    one `@adobe-commerce/commerce-extensibility-tools` package, which installs
+ *    into the project's isolated `.demo-builder-mcp/` dir. Each applicable
+ *    bundle is copied from
+ *    `<toolsDir>/node_modules/@adobe-commerce/commerce-extensibility-tools/dist/<path>/`
  *    into `<projectPath>/.claude/skills/<prefix>-<skill-name>/`, and each
  *    `*.md` file's `name:` frontmatter is rewritten to match the new folder
- *    name (so colliding skills across bundles stay unique).
+ *    name (so colliding skills across bundles stay unique — both bundles ship
+ *    a `tester`, which lands as `aem-tester` and `appbuilder-tester`).
  *
  * If the Adobe package isn't installed yet (e.g., npm install hasn't run, or
  * the component lacks a `node_modules`), the bundle copy step is skipped
@@ -46,12 +54,14 @@ import scrapeReferenceSiteContent from '../../templates/skills/scrape-reference-
 import syncChangesContent from '../../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../../templates/skills/update-credentials.md';
 import { readInstalledMcpPackages, resolveMcpToolsDir } from './aiDefaultsInstaller';
-import { projectNeedsAppBuilderTooling, resolveAvailableMcpToolIds } from './aiToolingGate';
+import {
+    projectBuildsAppBuilderApps,
+    projectHasEdsStorefront,
+    resolveAvailableMcpToolIds,
+} from './aiToolingGate';
 import type { GeneratedFileWriter } from './generatedFileWriter';
-import componentsConfig from '@/features/components/config/components.json';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS, SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { Project } from '@/types/base';
-import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
 const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
     'node_modules',
@@ -60,21 +70,9 @@ const ADOBE_PACKAGE_DIST_RELATIVE = path.join(
     'dist',
 );
 
-const COMPONENT_CATEGORIES = [
-    'frontends',
-    'backends',
-    'mesh',
-    'dependencies',
-    'integrations',
-    'infrastructure',
-    'tools',
-] as const;
-
-const components = componentsConfig as unknown as RawComponentRegistry;
-
 /**
- * Content for each always-on skill (filename → static content imported at build
- * time). The LIST of filenames is not defined here — it lives in
+ * Content for each always-on skill (name → static content imported at build
+ * time). The LIST of names is not defined here — it lives in
  * `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai`), which the skill inspector also
  * reads, so the writer and the classifier cannot disagree about what counts as
  * first-party. A missing key here is a compile error.
@@ -90,26 +88,26 @@ const components = componentsConfig as unknown as RawComponentRegistry;
  * paragraph below it already said not to restate counts here. Merged.
  */
 const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string> = {
-    'add-component.md': addComponentContent,
-    'sync-changes.md': syncChangesContent,
-    'update-credentials.md': updateCredentialsContent,
-    'create-eds-project.md': createEdsProjectContent,
-    'diagnose-demo.md': diagnoseDemoContent,
-    'import-datapack.md': importDatapackContent,
-    'scrape-reference-site.md': scrapeReferenceSiteContent,
-    'connect-authenticated-site.md': connectAuthenticatedSiteContent,
-    'commerce-block-mapper.md': commerceBlockMapperContent,
-    'demo-data-injector.md': demoDataInjectorContent,
-    'header-nav-footer.md': headerNavFooterContent,
-    'refine-visual-match.md': refineVisualMatchContent,
-    'register-custom-block.md': registerCustomBlockContent,
-    'remove-custom-block.md': removeCustomBlockContent,
+    'add-component': addComponentContent,
+    'sync-changes': syncChangesContent,
+    'update-credentials': updateCredentialsContent,
+    'create-eds-project': createEdsProjectContent,
+    'diagnose-demo': diagnoseDemoContent,
+    'import-datapack': importDatapackContent,
+    'scrape-reference-site': scrapeReferenceSiteContent,
+    'connect-authenticated-site': connectAuthenticatedSiteContent,
+    'commerce-block-mapper': commerceBlockMapperContent,
+    'demo-data-injector': demoDataInjectorContent,
+    'header-nav-footer': headerNavFooterContent,
+    'refine-visual-match': refineVisualMatchContent,
+    'register-custom-block': registerCustomBlockContent,
+    'remove-custom-block': removeCustomBlockContent,
 };
 
-export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: string }> =
-    DEMO_BUILDER_ALWAYS_ON_SKILLS.map((filename) => ({
-        filename,
-        content: SKILL_CONTENT[filename],
+export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ name: string; content: string }> =
+    DEMO_BUILDER_ALWAYS_ON_SKILLS.map((name) => ({
+        name,
+        content: SKILL_CONTENT[name],
     }));
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -118,20 +116,22 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
  * Writes the first-party set declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS`
- * (`@/types/ai` — the ONE home for the filenames; do not restate counts here,
+ * (`@/types/ai` — the ONE home for the names; do not restate counts here,
  * they rot). Three of those skills drive Playwright and are delivery-gated
  * per `SKILL_MCP_TOOL_DEPENDENCIES` — see the gating paragraph below.
  *
- * Additionally copies any Adobe skill bundles declared by components in
- * `project.componentInstances` (via the `aiSkillBundle` field on the
- * component's definition).
+ * Additionally copies the Adobe skill bundles the project qualifies for:
+ * `aem-boilerplate-commerce` for an EDS storefront, `integration-starter-kit`
+ * for App Builder-adjacent projects. Both come from the isolated MCP tools
+ * dir, so the installer must run before this writer (it does, on the creation
+ * and regenerate paths alike).
  *
  * Every skill file — always-on, conditional, and Adobe bundle copies alike —
  * lands through the ADR-013 GeneratedFileWriter seam (hash-and-skip): a
  * user-edited skill is left in place and reported on `writer.report()`
  * rather than overwritten. No bundle write outside this seam. The `written`
  * return keeps its pre-ADR contract (the attempted Demo-Builder skill
- * filenames); skip/remove visibility lives on the writer's report.
+ * names); skip/remove visibility lives on the writer's report.
  *
  * Tool-availability gating: a skill in `SKILL_MCP_TOOL_DEPENDENCIES` whose
  * MCP tool is not usable by this project — the ai-defaults entry doesn't
@@ -153,43 +153,50 @@ export async function writeSkillFiles(
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
 
-    const writeSkill = async (filename: string, content: string): Promise<void> => {
-        if (path.basename(filename) !== filename) {
-            throw new Error(`Invalid skill filename: ${filename}`);
+    // Write `<name>/SKILL.md` (the registrable layout) and reconcile away the
+    // legacy pre-v27 flat `<name>.md` the same skill used to ship as. The
+    // template content doubles as the ownership proof for a pre-ADR unhashed
+    // legacy copy (removed only when byte-equal — provably ours).
+    const writeSkill = async (name: string, content: string): Promise<void> => {
+        if (path.basename(name) !== name) {
+            throw new Error(`Invalid skill name: ${name}`);
         }
-        await writer.write(`.claude/skills/${filename}`, content);
+        await writer.write(`.claude/skills/${name}/SKILL.md`, content);
+        await writer.remove(`.claude/skills/${name}.md`, content);
+    };
+
+    /** Reconcile BOTH layouts of a skill this project must not carry. */
+    const removeSkill = async (name: string, content: string): Promise<void> => {
+        await writer.remove(`.claude/skills/${name}/SKILL.md`, content);
+        await writer.remove(`.claude/skills/${name}.md`, content);
     };
 
     const installedPackages = await readInstalledMcpPackages(projectPath);
     const gatedOut = gatedOutSkills(resolveAvailableMcpToolIds(project, installedPackages));
 
     await Promise.all(
-        DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
-            gatedOut.has(filename)
-                ? // Reconcile any previously-delivered copy. `content` is the
-                  // exact template we'd write today, so a pre-ADR unhashed
-                  // copy is removed only when byte-equal (provably ours).
-                  writer.remove(`.claude/skills/${filename}`, content)
-                : writeSkill(filename, content),
+        DEMO_BUILDER_SKILLS.map(({ name, content }) =>
+            gatedOut.has(name) ? removeSkill(name, content) : writeSkill(name, content),
         ),
     );
 
-    // Copy Adobe skill bundles for components that declare aiSkillBundle.
-    const componentInstances = project.componentInstances ?? {};
-    for (const [compId, instance] of Object.entries(componentInstances)) {
-        const definition = lookupComponentDefinition(compId);
-        if (!definition?.aiSkillBundle) continue;
-        if (!instance.path) continue;
-
+    // aem-boilerplate-commerce skills (block-developer, content-modeler,
+    // dropin-developer, project-manager, researcher, tester) — Adobe ships all
+    // of its starter-kit bundles inside ONE package, so this reads from the
+    // isolated MCP tools dir like the integration kit below, NOT from the
+    // storefront checkout. The storefront IS @adobe/aem-boilerplate-commerce
+    // and carries no skills/ directory of its own; the old component-declared
+    // `aiSkillBundle` pointed there and silently ENOENT-skipped every time.
+    if (projectHasEdsStorefront(project)) {
         await copyAdobeSkillBundle(
-            instance.path,
-            definition.aiSkillBundle.path,
-            definition.aiSkillBundle.prefix,
+            resolveMcpToolsDir(projectPath),
+            path.join('aem-boilerplate-commerce', 'skills'),
+            'aem',
             writer,
         );
     }
 
-    // App Builder-adjacent projects (mesh or attached App Builder component,
+    // Projects that actually BUILD an App Builder app (mesh or attached component,
     // with or without a storefront) also get the Developer Agent's
     // integration-starter-kit skills, sourced from the isolated MCP tools dir
     // (`.demo-builder-mcp/` — installed by installAiDefaultsMcpTools before
@@ -197,30 +204,38 @@ export async function writeSkillFiles(
     // extend-app-builder-app skill teaching the runtime API-access loop
     // (list_console_apis → confirm → add_console_apis → build → deploy).
     // copyAdobeSkillBundle skips silently when the package isn't there.
-    const written = DEMO_BUILDER_SKILLS.filter(({ filename }) => !gatedOut.has(filename)).map(
-        ({ filename }) => filename,
+    const written = DEMO_BUILDER_SKILLS.filter(({ name }) => !gatedOut.has(name)).map(
+        ({ name }) => name,
     );
-    if (projectNeedsAppBuilderTooling(project)) {
+    if (projectBuildsAppBuilderApps(project)) {
         await copyAdobeSkillBundle(
             resolveMcpToolsDir(projectPath),
             path.join('integration-starter-kit', 'skills'),
             'appbuilder',
             writer,
         );
-        await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
-        written.push('extend-app-builder-app.md');
+        await writeSkill('extend-app-builder-app', extendAppBuilderAppContent);
+        written.push('extend-app-builder-app');
+    } else {
+        // Reconcile a bundle this project no longer qualifies for. Every EDS
+        // project received it until 2026-08-26 (AI-1o), so most existing
+        // storefronts carry seven skills telling the agent it is building an
+        // integration starter kit app. Leaving them is worse than never having
+        // written them: they are instructions, and they are wrong.
+        await removeAdobeSkillBundle('appbuilder', writer);
+        await removeSkill('extend-app-builder-app', extendAppBuilderAppContent);
     }
 
     // Summary for the handler boundary to log (Adobe bundle skills are copied
     // into subdirectories and aren't included here — only the written
-    // Demo-Builder skill filenames).
+    // Demo-Builder skill names).
     return { written };
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 /**
- * Always-on skill filenames whose declared MCP tool is not in the available
+ * Always-on skill names whose declared MCP tool is not in the available
  * set — gated OUT of delivery (not written; existing copies reconciled via
  * the ADR-013 removal matrix). A skill absent from
  * `SKILL_MCP_TOOL_DEPENDENCIES` depends on no tool and is never gated.
@@ -229,40 +244,49 @@ function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
     return new Set(
         Object.entries(SKILL_MCP_TOOL_DEPENDENCIES)
             .filter(([, toolId]) => !availableToolIds.has(toolId))
-            .map(([filename]) => filename),
+            .map(([name]) => name),
     );
 }
 
-function lookupComponentDefinition(compId: string): RawComponentDefinition | undefined {
-    const registry = components as unknown as Record<
-        string,
-        Record<string, RawComponentDefinition>
-    >;
-    for (const category of COMPONENT_CATEGORIES) {
-        const group = registry[category];
-        if (group && typeof group === 'object' && compId in group) {
-            return group[compId];
-        }
+/**
+ * Remove a previously-delivered Adobe bundle, file by file, through the ADR-013
+ * seam.
+ *
+ * Ownership comes from the manifest: every file we copied has a recorded
+ * sha-256, so `writer.remove` deletes only what still matches what we wrote and
+ * REPORTS anything the user has edited instead of destroying it. That is why
+ * this walks the recorded hashes rather than the directory — a directory walk
+ * would find files we never wrote and have no proof about.
+ *
+ * Empty directories are left behind deliberately: removing them means a
+ * recursive delete with no per-file proof, which is the one operation this seam
+ * exists to prevent.
+ */
+async function removeAdobeSkillBundle(prefix: string, writer: GeneratedFileWriter): Promise<void> {
+    const owned = Object.keys(writer.hashes()).filter((key) =>
+        key.startsWith(`.claude/skills/${prefix}-`),
+    );
+    for (const key of owned) {
+        await writer.remove(key);
     }
-    return undefined;
 }
 
 async function copyAdobeSkillBundle(
-    componentPath: string,
+    toolsDir: string,
     bundleSubpath: string,
     prefix: string,
     writer: GeneratedFileWriter,
 ): Promise<void> {
-    const sourceBundle = path.join(componentPath, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
+    const sourceBundle = path.join(toolsDir, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
 
     let entries: Array<{ name: string; isDirectory(): boolean }>;
     try {
         entries = await fsPromises.readdir(sourceBundle, { withFileTypes: true });
     } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-            // Bundle not present (e.g., npm install hasn't run yet, or this
-            // component doesn't have the Adobe package). Skip silently — the
-            // three Demo-Builder skills already wrote successfully.
+            // Bundle not present — the tools install hasn't run yet, or this
+            // version of the Adobe package doesn't ship this bundle. Skip; the
+            // Demo-Builder skills already wrote successfully.
             return;
         }
         throw err;

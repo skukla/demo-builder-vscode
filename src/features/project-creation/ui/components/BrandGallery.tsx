@@ -9,13 +9,13 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback } from 'react';
-import { getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
+import { getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

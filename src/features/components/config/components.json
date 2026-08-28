@@ -49,10 +49,6 @@
             "dependencies": {
                 "required": [],
                 "optional": []
-            },
-            "aiSkillBundle": {
-                "path": "aem-boilerplate-commerce/skills",
-                "prefix": "aem"
             }
         },
         "headless": {
@@ -87,6 +83,10 @@
             "name": "Adobe Commerce PaaS",
             "description": "Adobe Commerce DSN instance",
             "configuration": {
+                "commerce": {
+                    "flavor": "paas",
+                    "baseUrlKey": "ADOBE_COMMERCE_URL"
+                },
                 "requiredServices": ["catalog-service", "live-search"],
                 "requiredEnvVars": [
                     "ADOBE_COMMERCE_URL",
@@ -107,6 +107,11 @@
             "name": "Adobe Commerce Cloud Service",
             "description": "Adobe's managed SaaS commerce backend",
             "configuration": {
+                "commerce": {
+                    "flavor": "saas",
+                    "baseUrlKey": "ACCS_GRAPHQL_ENDPOINT",
+                    "baseUrlStripSuffix": "/graphql"
+                },
                 "providesServices": ["catalog-service", "live-search"],
                 "requiredEnvVars": [
                     "ACCS_GRAPHQL_ENDPOINT",

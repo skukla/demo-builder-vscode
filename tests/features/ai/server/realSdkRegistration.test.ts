@@ -30,11 +30,15 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
+import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -58,15 +62,22 @@ describe('registration against the real MCP SDK', () => {
             registerDescriptorTools(
                 server(),
                 [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
-                ctxFactory,
-            ),
+                ctxFactory
+            )
         ).not.toThrow();
     });
 
     it.each([
         ['get_component_requirements', (s: McpServer) => registerComponentRequirementsTool(s)],
-        ['validate_component_selection', (s: McpServer) => registerValidateSelectionTool(s, ctxFactory)],
+        [
+            'validate_component_selection',
+            (s: McpServer) => registerValidateSelectionTool(s, ctxFactory),
+        ],
         ['get_project_status', (s: McpServer) => registerProjectStatusTool(s, stateManager)],
+        [
+            'get_commerce_endpoints',
+            (s: McpServer) => registerCommerceEndpointsTool(s, stateManager),
+        ],
         ['discovery tools', (s: McpServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
         ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
@@ -93,14 +104,22 @@ describe('registration against the real MCP SDK', () => {
             registerDescriptorTools(
                 s,
                 [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
-                ctxFactory,
+                ctxFactory
             );
             registerDiscoveryTools(s);
+            registerDiagnosticsTools(s, '/tmp/nonexistent-log-dir');
             registerAuthTools(s, ctxFactory);
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
+            registerAgentTraceTool(
+                s,
+                { all: () => [], repeats: () => [] } as never,
+                '/nonexistent-trace-dir',
+            );
             registerProjectStatusTool(s, stateManager);
+            registerCommerceEndpointsTool(s, stateManager);
+            registerCommerceQueryTool(s, {} as never);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
@@ -129,11 +148,14 @@ describe('registration against the real MCP SDK', () => {
     it('registers every register* call that extension.ts makes', async () => {
         const { readFileSync } = await import('fs');
         const extensionSource = readFileSync('src/extension.ts', 'utf8');
-        const thisSuite = readFileSync('tests/features/ai/server/realSdkRegistration.test.ts', 'utf8');
+        const thisSuite = readFileSync(
+            'tests/features/ai/server/realSdkRegistration.test.ts',
+            'utf8'
+        );
 
         const calls = [
             ...new Set(
-                [...extensionSource.matchAll(/\b(register[A-Za-z]*Tools?)\s*\(/g)].map((m) => m[1]),
+                [...extensionSource.matchAll(/\b(register[A-Za-z]*Tools?)\s*\(/g)].map((m) => m[1])
             ),
         ].sort();
 
@@ -144,7 +166,9 @@ describe('registration against the real MCP SDK', () => {
         // `\s*` because the multi-argument calls wrap: `registerDescriptorTools(\n  s,`.
         // Matching the argument at all is what stops a name MENTIONED in a comment
         // from counting as covered.
-        const uncovered = calls.filter((name) => !new RegExp(`${name}\\(\\s*s[,)]`).test(thisSuite));
+        const uncovered = calls.filter(
+            (name) => !new RegExp(`${name}\\(\\s*s[,)]`).test(thisSuite)
+        );
         expect(uncovered).toEqual([]);
     });
 
@@ -156,11 +180,11 @@ describe('registration against the real MCP SDK', () => {
                 'raw_json_schema',
                 {
                     description: 'the e26bd01e mistake',
-                     
+
                     inputSchema: { componentId: { type: 'string' } } as any,
                 },
-                async () => ({ content: [] }),
-            ),
+                async () => ({ content: [] })
+            )
         ).toThrow(/Zod schema or raw shape/);
     });
 });

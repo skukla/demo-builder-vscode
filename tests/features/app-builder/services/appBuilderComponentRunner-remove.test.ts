@@ -29,7 +29,7 @@ jest.mock('@/core/shell', () => ({
 }));
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
-    isStandaloneApp: jest.fn().mockResolvedValue(true),
+    detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
 // =============================================================================
@@ -245,6 +245,39 @@ describe('removeAppBuilderComponent (integration)', () => {
         expect(persisted.appBuilderComponents?.['commerce-mesh']).toBeDefined();
     });
 
+    // AI-1o's inverse, and it was broken for longer: removing the last App
+    // Builder component left its seven skills behind forever. Nothing else
+    // re-asks the question — the activation sweep rewrites content only when
+    // AI_CONTEXT_VERSION moves, and the freshness badge fires only on a MISSING
+    // package, which a removal never produces.
+    it('re-derives the AI bundle after a removal, from the project that was persisted', async () => {
+        const project = integrationProject();
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
+        // The CLEARED project, not the caller's stale reference — the skill set
+        // is derived from composition, so refreshing off the pre-removal copy
+        // would rewrite exactly the skills we just decided it should not have.
+        const refreshed = deps.refreshAiBundle.mock.calls[0][0] as Project;
+        expect(refreshed.appBuilderComponents?.['erp-bridge']).toBeUndefined();
+    });
+
+    it('still succeeds when the bundle refresh throws', async () => {
+        // A deploy or removal that landed must not report failure because a
+        // markdown file could not be rewritten. The sweep repairs it later.
+        const project = integrationProject();
+        const deps = createDeps({
+            refreshAiBundle: jest.fn().mockRejectedValue(new Error('disk full')),
+        });
+
+        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        expect(result.success).toBe(true);
+        expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('disk full'));
+    });
+
     // Attribution only pays off if removal spends it. `componentApiPicks` records
     // WHICH integration wanted an API precisely so this moment can answer "is it
     // safe to drop?" — but nothing dropped anything: three writers, no remover.
@@ -379,5 +412,136 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const result = await removeAppBuilderComponent(project, 'nope', deps as never);
 
         expect(result.success).toBe(false);
+    });
+});
+
+describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () => {
+    // `aio app undeploy` removes the ACTIONS only; what the app's installer
+    // created (event registrations, binding packages, Commerce-side eventing
+    // config, the association) is removed by the app's own uninstall API —
+    // which must be called BEFORE the undeploy takes that API down with the
+    // actions (residue measured live, 2026-08-27).
+    const KIT_URLS = {
+        'app-management/installation':
+            'https://ns.adobeioruntime.net/api/v1/web/app-management/installation',
+    };
+
+    function appManagementProject(id: string): Project {
+        return createProject({
+            appBuilderComponents: {
+                [id]: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Kit App',
+                    source: {
+                        owner: 'adobe',
+                        repo: 'commerce-integration-starter-kit',
+                        branch: 'main',
+                    },
+                    deployedUrls: KIT_URLS,
+                },
+            } as never,
+            componentInstances: {
+                [id]: {
+                    id,
+                    name: 'Kit App',
+                    type: 'app-builder',
+                    status: 'ready',
+                    path: `/proj/components/${id}`,
+                } as never,
+            },
+        });
+    }
+
+    function appManagementCatalogEntry(id: string) {
+        return {
+            id,
+            name: 'Kit App',
+            description: 'App Management app',
+            kind: 'integration' as const,
+            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
+            layout: 'extension' as const,
+            lifecycle: 'app-management' as const,
+        };
+    }
+
+    it('uninstalls from Commerce BEFORE the undeploy, with the persisted URLs', async () => {
+        const project = appManagementProject('kit-app');
+        const uninstallAppManagement = jest.fn().mockResolvedValue({ status: 'uninstalled' });
+        const deps = createDeps({
+            catalog: [appManagementCatalogEntry('kit-app')],
+            uninstallAppManagement,
+        });
+
+        const result = await removeAppBuilderComponent(project, 'kit-app', deps as never);
+
+        expect(result.success).toBe(true);
+        expect(uninstallAppManagement).toHaveBeenCalledWith(
+            project,
+            KIT_URLS,
+            expect.any(Function)
+        );
+        // Order: the app's API must still exist when the uninstall runs.
+        const uninstallOrder = uninstallAppManagement.mock.invocationCallOrder[0];
+        const undeployOrder = (deps.commandManager.execute as jest.Mock).mock
+            .invocationCallOrder[0];
+        expect(uninstallOrder).toBeLessThan(undeployOrder);
+    });
+
+    it('recognizes a SEEDED kit instance outside the catalog by its source', async () => {
+        // A kit clone under a user-chosen id has no catalog row; entryFromState
+        // routes through buildCustomIntegrationEntry, whose source recognition
+        // restores lifecycle: 'app-management' from the bundled catalog.
+        const project = appManagementProject('my-erp-sync');
+        const uninstallAppManagement = jest.fn().mockResolvedValue({ status: 'uninstalled' });
+        const deps = createDeps({ uninstallAppManagement });
+
+        await removeAppBuilderComponent(project, 'my-erp-sync', deps as never);
+
+        expect(uninstallAppManagement).toHaveBeenCalled();
+    });
+
+    it('never runs for a standalone integration or a mesh', async () => {
+        const uninstallAppManagement = jest.fn().mockResolvedValue({ status: 'uninstalled' });
+        const project = createProject({
+            appBuilderComponents: {
+                'erp-bridge': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'ERP Bridge',
+                    source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
+                },
+            } as never,
+            componentInstances: {
+                'erp-bridge': {
+                    id: 'erp-bridge',
+                    type: 'app-builder',
+                    status: 'ready',
+                    path: '/proj/components/erp-bridge',
+                } as never,
+            },
+        });
+        const deps = createDeps({ uninstallAppManagement });
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        expect(uninstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('a failed or throwing uninstall never blocks the remove', async () => {
+        const project = appManagementProject('kit-app');
+        const deps = createDeps({
+            catalog: [appManagementCatalogEntry('kit-app')],
+            uninstallAppManagement: jest.fn().mockRejectedValue(new Error('api down')),
+        });
+
+        const result = await removeAppBuilderComponent(project, 'kit-app', deps as never);
+
+        expect(result.success).toBe(true);
+        expect(deps.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Commerce uninstall warning')
+        );
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        expect(saved.appBuilderComponents?.['kit-app']).toBeUndefined();
     });
 });

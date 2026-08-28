@@ -66,7 +66,12 @@ describe('toolHandlers.listProjects', () => {
         jest.clearAllMocks();
     });
 
-    it('returns JSON array of projects with name, path, and status', async () => {
+    it('returns JSON array of projects with name and path — and NO status field', async () => {
+        // The fixtures carry no `status` on purpose: `writeManifest` builds the
+        // manifest from an explicit field list that has never included it (it is
+        // a runtime fact), so a fixture with `status: 'ready'` describes a shape
+        // the writer cannot produce. The old fixtures did exactly that, and the
+        // suite stayed green while every real listing answered 'unknown'.
         (fsProm.readdir as jest.Mock).mockResolvedValue([
             { name: 'project-a', isDirectory: () => true },
             { name: 'project-b', isDirectory: () => true },
@@ -74,10 +79,10 @@ describe('toolHandlers.listProjects', () => {
         (fsProm.stat as jest.Mock).mockResolvedValue({ size: 0 }); // .demo-builder.json exists
         (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
             if (String(p).includes('project-a')) {
-                return Promise.resolve(JSON.stringify({ name: 'Project A', status: 'ready' }));
+                return Promise.resolve(JSON.stringify({ name: 'Project A' }));
             }
             if (String(p).includes('project-b')) {
-                return Promise.resolve(JSON.stringify({ name: 'Project B', status: 'creating' }));
+                return Promise.resolve(JSON.stringify({ name: 'Project B' }));
             }
             return Promise.reject(new Error(`Unexpected readFile: ${p}`));
         });
@@ -89,12 +94,11 @@ describe('toolHandlers.listProjects', () => {
         expect(parsed[0]).toEqual(expect.objectContaining({
             name: 'Project A',
             path: path.join(PROJECTS_DIR, 'project-a'),
-            status: 'ready',
         }));
+        expect(parsed[0]).not.toHaveProperty('status');
         expect(parsed[1]).toEqual(expect.objectContaining({
             name: 'Project B',
             path: path.join(PROJECTS_DIR, 'project-b'),
-            status: 'creating',
         }));
     });
 
@@ -181,21 +185,35 @@ describe('toolHandlers.listProjects', () => {
  * the outcome, paired with a confirming read" — the pairing was assumed, not
  * checked, and did not exist.
  */
+// Routes by PATH, not by call order. The old version answered readFile
+// calls positionally, so listProjects growing a state.json read displaced
+// the whole queue and every row silently failed to build — a fixture
+// coupled to HOW MANY reads the handler makes, not to what it reads.
+function withManifests(
+    manifests: Record<string, unknown>[],
+    state?: Record<string, unknown> | 'unreadable',
+): void {
+    (fsProm.readdir as jest.Mock).mockResolvedValue(
+        manifests.map((m) => ({ name: (m as { name: string }).name, isDirectory: () => true })),
+    );
+    (fsProm.stat as jest.Mock).mockResolvedValue({});
+    (fsProm.readFile as jest.Mock).mockImplementation(async (p: string) => {
+        if (String(p).endsWith('state.json')) {
+            if (state === undefined) throw new Error('ENOENT');
+            if (state === 'unreadable') return 'not json {';
+            return JSON.stringify(state);
+        }
+        const m = manifests.find((x) => String(p).includes(String(x.name)));
+        if (!m) throw new Error(`Unexpected readFile: ${p}`);
+        return JSON.stringify(m);
+    });
+}
+
 describe('toolHandlers.listProjects — pinned', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    function withManifests(manifests: Record<string, unknown>[]): void {
-        (fsProm.readdir as jest.Mock).mockResolvedValue(
-            manifests.map((m) => ({ name: (m as { name: string }).name, isDirectory: () => true })),
-        );
-        (fsProm.stat as jest.Mock).mockResolvedValue({});
-        let call = 0;
-        (fsProm.readFile as jest.Mock).mockImplementation(async () =>
-            JSON.stringify(manifests[call++]),
-        );
-    }
 
     it('reports pinned:true for a pinned project', async () => {
         withManifests([{ name: 'pinned-one', pinned: true }]);
@@ -215,7 +233,61 @@ describe('toolHandlers.listProjects — pinned', () => {
         expect(parsed[0]).not.toHaveProperty('pinned');
         // Control: the row is otherwise intact, so the assertion above is about
         // the field and not about the row failing to build.
-        expect(parsed[0]).toMatchObject({ name: 'plain', status: 'unknown' });
+        expect(parsed[0]).toMatchObject({ name: 'plain' });
+    });
+});
+
+// ─── toolHandlers.listProjects — the current marker ─────────────────────────
+//
+// `agent-gap-scan` measured half of list_projects' chained follow-ups as
+// get_current_project — the agent listing projects and then asking which one
+// is active, a question the listing could have answered. The pointer lives in
+// `state.json` beside the projects dir, atomically written for exactly this
+// kind of file-based reader.
+describe('toolHandlers.listProjects — current marker', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('marks the project state.json points at, and only that one', async () => {
+        withManifests([{ name: 'alpha' }, { name: 'beta' }], {
+            currentProjectPath: path.join(PROJECTS_DIR, 'beta'),
+        });
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        expect(parsed[1]).toMatchObject({ name: 'beta', current: true });
+        expect(parsed[0]).not.toHaveProperty('current');
+    });
+
+    it('lists with no marker when state.json does not exist', async () => {
+        withManifests([{ name: 'alpha' }]);
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        // Absence degrades to "no marker", never to a failed listing.
+        expect(parsed).toHaveLength(1);
+        expect(parsed[0]).not.toHaveProperty('current');
+    });
+
+    it('lists with no marker when state.json is torn or invalid', async () => {
+        withManifests([{ name: 'alpha' }], 'unreadable');
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        expect(parsed).toHaveLength(1);
+        expect(parsed[0]).not.toHaveProperty('current');
+    });
+
+    it('ignores a pointer at a project that is not in the listing', async () => {
+        // A stale pointer (deleted project) must not invent a marker.
+        withManifests([{ name: 'alpha' }], {
+            currentProjectPath: path.join(PROJECTS_DIR, 'deleted-long-ago'),
+        });
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        expect(parsed[0]).not.toHaveProperty('current');
     });
 });
 
@@ -396,14 +468,53 @@ describe('toolHandlers.getComponentConfig', () => {
         jest.clearAllMocks();
     });
 
-    it('reads .demo-builder.json and returns content', async () => {
-        (fsProm.readFile as jest.Mock).mockResolvedValue('{"name":"test"}');
+    it('reads .demo-builder.json and returns content — with manifest secrets STRIPPED', async () => {
+        // The tool's whole edge over native Read (see the handler comment): a
+        // verbatim manifest is the ACCS_OAUTH_CLIENT_SECRET leak, one tool over.
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                name: 'test',
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_OAUTH_CLIENT_SECRET: 'live-credential',
+                        ACCS_BASE_URL: 'https://na1.example',
+                    },
+                },
+            })
+        );
 
         const result = await toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json');
 
         const expectedPath = path.resolve(PROJECT_PATH, '.demo-builder.json');
         expect(fsProm.readFile as jest.Mock).toHaveBeenCalledWith(expectedPath, 'utf-8');
-        expect(result).toBe('{"name":"test"}');
+        const parsed = JSON.parse(result);
+        expect(parsed.name).toBe('test');
+        expect(parsed.componentConfigs['adobe-commerce-accs'].ACCS_BASE_URL).toBe('https://na1.example');
+        expect(result).not.toContain('live-credential');
+    });
+
+    it('masks secret VALUES in a .env file while keeping the keys visible', async () => {
+        // Keys stay: an agent needs to know a credential IS configured. Values
+        // go: the transcript must never carry them.
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            '# Commerce\nACCS_OAUTH_CLIENT_SECRET=shh-real-secret\nMESH_ENDPOINT=https://mesh/graphql\n'
+        );
+
+        const result = await toolHandlers.getComponentConfig(
+            PROJECTS_DIR, PROJECT_NAME, 'components/backend/.env'
+        );
+
+        expect(result).toContain('ACCS_OAUTH_CLIENT_SECRET=[secret hidden]');
+        expect(result).toContain('MESH_ENDPOINT=https://mesh/graphql');
+        expect(result).not.toContain('shh-real-secret');
+    });
+
+    it('refuses to return a manifest that does not parse, rather than leak raw content', async () => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue('{broken json ACCS_OAUTH_CLIENT_SECRET=x');
+
+        await expect(
+            toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json')
+        ).rejects.toThrow(/refusing to return unsanitized/);
     });
 
     it('reads a .env file inside projectPath', async () => {
@@ -462,7 +573,9 @@ describe('toolHandlers.getComponentConfig', () => {
         (fsProm.readFile as jest.Mock).mockResolvedValue('{"name":"test"}');
 
         const result = await toolHandlers.getComponentConfig(symlinkedProjectsDir, PROJECT_NAME, '.demo-builder.json');
-        expect(result).toBe('{"name":"test"}');
+        // Parse-and-match, not a byte pin: the handler sanitizes and
+        // pretty-prints now, and this test's subject is the SYMLINK.
+        expect(JSON.parse(result)).toMatchObject({ name: 'test' });
     });
 });
 

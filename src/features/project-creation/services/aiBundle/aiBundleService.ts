@@ -23,7 +23,6 @@
  */
 
 import * as path from 'path';
-import stacksConfig from '@/features/components/config/stacks.json';
 import type { ProgressTracker } from '../../handlers/shared';
 import { writeAgentsMd } from './aiContextWriter';
 import {
@@ -35,6 +34,7 @@ import { writeMcpConfigs } from './mcpConfigWriter';
 import { writeSkillFiles } from './skillsWriter';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { getLogger } from '@/core/logging';
+import stacksConfig from '@/features/components/config/stacks.json';
 import type { Project } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 

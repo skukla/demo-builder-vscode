@@ -22,20 +22,20 @@
 import { DEMO_BUILDER_SKILLS } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 
-function skill(filename: string): string {
-    const entry = DEMO_BUILDER_SKILLS.find((s) => s.filename === filename);
-    if (!entry) throw new Error(`No skill template named ${filename}`);
+function skill(name: string): string {
+    const entry = DEMO_BUILDER_SKILLS.find((s) => s.name === name);
+    if (!entry) throw new Error(`No skill template named ${name}`);
     return entry.content;
 }
 
 // Control: without this, a typo'd filename in every test below would throw and
 // the suite would report the failure as a missing skill rather than a bad test.
 it('control: the template lookup finds a skill that has always existed', () => {
-    expect(skill('diagnose-demo.md').length).toBeGreaterThan(500);
+    expect(skill('diagnose-demo').length).toBeGreaterThan(500);
 });
 
 describe('diagnose-demo routes the empty-product-page symptom correctly', () => {
-    const content = () => skill('diagnose-demo.md');
+    const content = () => skill('diagnose-demo');
 
     it('sends the PDP symptom to the site-config check FIRST', () => {
         const table = content().slice(content().indexOf('| Symptom'));
@@ -107,10 +107,10 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
 });
 
 describe('import-datapack teaches the traps, not just the sequence', () => {
-    const content = () => skill('import-datapack.md');
+    const content = () => skill('import-datapack');
 
     it('ships as an always-on skill', () => {
-        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('import-datapack.md');
+        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('import-datapack');
     });
 
     it('says the start call returns a handle and must be polled', () => {

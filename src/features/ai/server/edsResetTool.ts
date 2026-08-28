@@ -13,18 +13,18 @@
 
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
+import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     getDaLiveAuthService,
-    getGitHubServices,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /** Silent Adobe IMS auth pre-flight. */
 async function adobeAuthed(): Promise<boolean> {
@@ -50,6 +50,7 @@ export function registerEdsResetTool(
     server.registerTool(
         'reset_eds_project',
         {
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Reset an EDS storefront to its template (repo + DA.live content + config). Requires confirm:true.',
             inputSchema: {
@@ -76,15 +77,9 @@ export function registerEdsResetTool(
             // anonymous "call again with confirm:true" gives the agent no
             // chance to notice, and the success payload was equally anonymous.
             const ctx = ctxFactory();
-            const project = await ctx.stateManager.getCurrentProject();
-            if (!project) {
-                return asText({ error: 'No current project is open' });
-            }
-            if (!isEdsProject(project)) {
-                return asText({
-                    error: 'reset_eds_project applies only to EDS storefront projects',
-                });
-            }
+            const eds = await requireEdsProject(ctx, 'reset_eds_project');
+            if (!eds.ok) return asText(eds.body);
+            const { project } = eds;
 
             if (args?.confirm !== true) {
                 return asText({
@@ -102,28 +97,10 @@ export function registerEdsResetTool(
                 return asText({ error: paramsResult.error, code: paramsResult.code });
             }
 
-            let githubOk = false;
-            try {
-                githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
-            } catch {
-                githubOk = false;
-            }
-            if (!githubOk) {
-                return asText({
-                    needsAuth: 'github',
-                    message:
-                        'GitHub sign-in required. Check get_auth_status, then sign_in(provider:"github", confirm:true) once the user agrees.',
-                });
-            }
-
-            const daLiveAuthService = getDaLiveAuthService(ctx.context);
-            if (!(await daLiveAuthService.isAuthenticated())) {
-                return asText({
-                    needsAuth: 'dalive',
-                    message:
-                        'DA.live sign-in required. Check get_auth_status, then sign_in(provider:"dalive", confirm:true) once the user agrees.',
-                });
-            }
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+            const daLive = await requireDaLive(ctx);
+            if (daLive) return asText(daLive);
 
             const hasMesh = Boolean(getMeshComponentInstance(project)?.path);
             if (hasMesh && !(await adobeAuthed())) {
@@ -135,7 +112,7 @@ export function registerEdsResetTool(
             }
 
             const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
-            const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+            const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context));
             try {
                 // VS Code setting `demoBuilder.byom.overlayUrl` wins over
                 // demo-packages.json. The helper stamps `?org=&site=` so the

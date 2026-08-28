@@ -12,8 +12,7 @@
  * injection, Markdown link injection).
  */
 
-import demoPackagesJson from '@/features/components/config/demo-packages.json';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import aiDefaultsConfig from '../../config/ai-defaults.json';
 import {
     sanitizeTemplateValue,
     sanitizeGithubSlug,
@@ -21,11 +20,14 @@ import {
     sanitizeBlockId,
     escapeMarkdown,
 } from '../sanitization';
+import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
+import demoPackagesJson from '@/features/components/config/demo-packages.json';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { DemoPackagesConfig } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -65,6 +67,16 @@ export function buildHeader(project: Project, stacksConfig: Stack[]): string {
     const status = escapeMarkdown(sanitizeTemplateValue(project.status));
     return [
         `# Demo Builder Project: ${name}`,
+        '',
+        // Scope promise (v28): sessions started in this directory are
+        // connection-scoped by the MCP server — current-project tools act on
+        // THIS project regardless of the dashboard's pointer, and never move
+        // it (connectionScope.ts). Without this line an agent that also saw
+        // the dashboard could reasonably wonder which project its writes hit
+        // — the ambiguity the 2026-08-28 tier-2 battery run measured.
+        '> Sessions started in this directory act on THIS project: the Demo Builder',
+        "> MCP tools scope to it automatically, and never change the dashboard's",
+        '> selected project. `get_current_project` confirms (`scope: "session-directory"`).',
         '',
         '## Project Overview',
         `- **Package:** ${packageName}`,
@@ -128,6 +140,56 @@ export function buildEndpoints(project: Project): string {
 
     if (endpoints.length === 0) return '';
     return ['## Remote Endpoints', ...endpoints].join('\n');
+}
+
+/**
+ * How to actually SEND a Commerce query, and the failure that makes it necessary.
+ *
+ * WHY THIS SECTION EXISTS. A survey of 48 sessions run inside demo projects
+ * (2026-08-25) found the one long stretch of real Commerce work issuing **28
+ * hand-assembled `curl`s** at the GraphQL endpoint, with the `Magento-*` headers
+ * typed out each time — because nothing on a 104-tool surface answered "what is
+ * this project's GraphQL endpoint". `get_commerce_endpoints` now does, and the
+ * same survey is the reason this section exists at all: agents used 20 of 104
+ * tools, and the ones they used were overwhelmingly the ones the bundle NAMED.
+ * A tool nobody is told about is a tool nobody calls.
+ *
+ * ## It points at the tool rather than baking the values in
+ *
+ * The endpoint, the mesh and the store scope all change — deploy a mesh and the
+ * storefront's target flips; reconfigure the backend and the endpoint moves.
+ * `AGENTS.md` is regenerated on activation, so a baked value is correct at
+ * WRITE time and can be wrong by the time it is read, and a confidently wrong
+ * endpoint is worse than no endpoint: the agent curls a host that is not this
+ * project's. The tool has no staleness window.
+ *
+ * (The `Remote Endpoints` section above DOES state values. Those are display
+ * URLs — a live site, a preview, DA.live — which a person opens in a browser and
+ * which do not silently change what a query returns.)
+ *
+ * ## The warning is the load-bearing half
+ *
+ * A Catalog Service query sent without the store-scope headers reaches the wrong
+ * scope and returns an **empty result with no error**. That is not hypothetical:
+ * the surveyed session spent turns on "why is phones empty?" against a catalog
+ * that was not empty. An agent that knows the tool exists but not the failure
+ * mode will still read an empty response as "no products".
+ */
+export function buildQueryingCommerce(project: Project): string {
+    // TWO shapes, both live. `componentSelections.backend` is what a current
+    // project carries (checked against a real manifest: bodea has
+    // `adobe-commerce-accs` and NO top-level `commerce`), while `commerce` is the
+    // older shape the sibling `buildEndpoints` still reads for its Commerce URL.
+    // Keying on one alone would silently omit this section for half the corpus.
+    // Returning '' is the file's own convention for a section that does not apply.
+    if (!project.componentSelections?.backend && !project.commerce) return '';
+
+    return [
+        '## Querying Commerce',
+        'Before sending ANY Commerce or Catalog Service request — a GraphQL query, a `curl`, a Postman collection, checking what a category contains — call the `get_commerce_endpoints` tool. Do not assemble the endpoint or the headers by hand, and do not read them out of a `.env`.',
+        'It returns the backend GraphQL endpoint, the Catalog Service endpoint, the deployed API Mesh endpoint (when there is one), which of them the storefront itself queries, and the request headers with the store scope they select.',
+        '**Send the headers it gives you.** A Catalog Service query with the wrong store scope returns an EMPTY result and no error — it looks exactly like a category with no products in it. If a query comes back empty, re-check the headers before concluding the catalog is empty.',
+    ].join('\n');
 }
 
 export function buildStorefront(project: Project): string {
@@ -417,6 +479,70 @@ export function buildConsoleApiAccess(project: Project): string {
         '',
         'See the `extend-app-builder-app` skill for the full build loop.',
     ].join('\n');
+}
+
+/**
+ * The OTHER MCP servers this project has, and what each is for.
+ *
+ * ## Why this section exists — and what it does NOT rest on
+ *
+ * It exists because an agent should know which servers it has. That is worth
+ * stating plainly on its own merits.
+ *
+ * **It is not backed by a measurement.** It was written on one: seven battery
+ * runs where the agent opened `dropins` zero times, read as "a server nobody
+ * names is a server nobody uses". Two runs of a BETTER prompt disproved that the
+ * same day — asked something only `dropins` can answer ("which slots does the
+ * product-list block expose?"), the agent called `mcp__dropins__list_slots` on
+ * its first call, by name, with no prompting and no exploration.
+ *
+ * The seven zeros were the wrong question, not a discoverability failure:
+ * `cross-no-products` is answerable from the catalog and the rendered page, so
+ * not reaching for `dropins` was the correct choice, not a missed one.
+ *
+ * So: keep this, because telling an agent what it has is reasonable. Do not cite
+ * it as a fix for a problem that has not been shown to exist.
+ *
+ * Before this, the generated bundle named `demo-builder` four times and the
+ * other three servers not once.
+ *
+ * ## Why it is generated from ai-defaults.json
+ *
+ * That file already carries a `description` and a `requires` gate per server and
+ * is the same source `mcpConfigWriter` writes `.mcp.json` from. Generating from
+ * it means this section cannot claim a server the project did not get, and a new
+ * entry appears here without anyone remembering to add it — the drift that made
+ * `get_commerce_endpoints` invisible to the battery for a day.
+ *
+ * Naming a server the project does NOT have is worse than silence: it sends the
+ * agent looking for something absent. The gate is `aiDefaultsEntryApplies`, the
+ * same predicate the installer and the config writer use.
+ */
+export function buildToolServers(project: Project): string {
+    const servers = (aiDefaultsConfig as AiDefaults).mcpServers.filter((entry) =>
+        aiDefaultsEntryApplies(entry, project),
+    );
+    if (servers.length === 0) return '';
+
+    const lines = [
+        '## Your MCP Servers',
+        'This project has more than one MCP server. `demo-builder` is only the first —',
+        'reach for the others when the job is theirs, and search by SERVER NAME when you',
+        'do not know a tool\'s exact name:',
+        '',
+        '- **demo-builder** — this extension: projects, Commerce endpoints and queries,',
+        '  published pages, datapacks, Adobe I/O, deploys.',
+    ];
+    for (const entry of servers) {
+        lines.push(`- **${entry.id}** — ${entry.description}`);
+    }
+    lines.push(
+        '',
+        'A tool you cannot name is still findable: `ToolSearch` takes a server prefix',
+        '(`mcp__dropins__`) as well as an exact name, so list a server\'s tools before',
+        'deciding no tool exists and doing the job by hand.',
+    );
+    return lines.join('\n');
 }
 
 export function buildTryAskingClaude(project: Project): string {

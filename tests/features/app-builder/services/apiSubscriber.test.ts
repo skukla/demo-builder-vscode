@@ -51,9 +51,13 @@ function integrationAppBuilderComponent(apis: string[]): AppBuilderComponentCata
     };
 }
 
+// MGMT's platformList is NULL — the MEASURED live row (2026-08-27; only 25 of
+// 98 org services declare platforms). The previous fixture invented
+// ['oauth_server_to_server'] here, and the code agreed with the invention while
+// the live partition silently dropped the baseline from every S2S subscribe.
 const SERVICES_FOR_ORG = [
     { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
-    { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
+    { code: MGMT, name: 'I/O Management API', platformList: null as unknown as string[] },
     { code: 'SomeOtherSDK', platformList: ['oauth_server_to_server'] },
 ];
 
@@ -114,6 +118,21 @@ describe('apiSubscriber', () => {
             expect(() => resolveServiceInfos(['NotARealSDK'], SERVICES_FOR_ORG)).toThrow(
                 /NotARealSDK/
             );
+        });
+
+        it('the BASELINE with a null catalog platformList resolves as S2S (the override)', () => {
+            // Without this, the baseline lands in partitionByPlatform's unmatched
+            // bucket and is silently never subscribed — every S2S credential the
+            // spine created carried sdkList: [] (measured live 2026-08-27; the
+            // symptom was the kit installer's "403 — Api Key is invalid").
+            const [mgmtInfo] = resolveServiceInfos([MGMT], SERVICES_FOR_ORG);
+            expect(mgmtInfo.platformList).toEqual(['oauth_server_to_server']);
+        });
+
+        it('an UNKNOWN service with no platformList still resolves empty (no guessing)', () => {
+            const services = [...SERVICES_FOR_ORG, { code: 'MysterySDK' }];
+            const [mystery] = resolveServiceInfos(['MysterySDK'], services);
+            expect(mystery.platformList).toEqual([]);
         });
 
         it('should carry the org service display name through', () => {

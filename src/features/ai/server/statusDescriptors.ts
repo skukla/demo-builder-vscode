@@ -32,6 +32,7 @@ const REPO = {
 export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'check_prerequisites',
+        readOnly: true,
         description:
             'Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks.',
         map: prerequisitesHandlers,
@@ -67,6 +68,10 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_github_app',
+        // AS EXPOSED: the handler triggers a Helix code sync on a 404, but
+        // `argDefaults` below forces `skipTrigger`, so that write is unreachable
+        // through this tool. Do not "correct" this to false.
+        readOnly: true,
         description:
             'Is the AEM Code Sync GitHub App installed on a repo. First thing to check when EDS publishing silently fails.',
         map: projectCreationHandlers,
@@ -82,6 +87,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_repo_readiness',
+        readOnly: true,
         description:
             'Can this GitHub repo serve as an EDS storefront. Returns a readiness verdict, or "undetermined" with a reason.',
         map: projectCreationHandlers,
@@ -93,6 +99,10 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'discover_store_structure',
+        // Fetches the live hierarchy and returns it. The PERSISTING variant of
+        // this handler is a different one (`handleDiscoverStoreStructureAndPersist`,
+        // used by the Configure screen); the map here reaches the read-only one.
+        readOnly: true,
         description:
             'Fetch the LIVE Commerce store hierarchy (websites, stores, store views). Use before setting store scope; get_store_structure only reads what was already saved.',
         map: projectCreationHandlers,

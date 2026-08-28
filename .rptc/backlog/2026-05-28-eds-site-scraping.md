@@ -1,4 +1,23 @@
+---
+id: EDS-3
+kind: feature
+area: eds
+needs: []
+value: med
+status: backlog
+layer: F
+---
 # EDS site-scraping capability for Demo Builder
+
+## Index hook
+
+*The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
+
+Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
+
+## Shipped so far
+
+- Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
 
 ## Provenance
 

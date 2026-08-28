@@ -16,42 +16,48 @@
  * The Demo Builder skills written into every generated project, in the order
  * the AI Capabilities modal lists them.
  *
- * THIS IS THE ONE HOME for these filenames. `skillsWriter` builds its write list
- * from it and `skillInspector` classifies against it, because the two used to
- * keep separate copies and drifted: `diagnose-demo.md` was added to the writer
+ * THIS IS THE ONE HOME for these skill names. `skillsWriter` builds its write
+ * list from it and `skillInspector` classifies against it, because the two used
+ * to keep separate copies and drifted: `diagnose-demo` was added to the writer
  * and not the inspector, so a first-party skill was filed under "Custom" in the
  * modal as though a user had written it.
+ *
+ * Each name is a DIRECTORY: skills land as `.claude/skills/<name>/SKILL.md`,
+ * the one layout Claude Code registers as an invocable skill. They shipped as
+ * flat `.claude/skills/<name>.md` files until v27 — measured live 2026-08-27:
+ * a session registered every directory-format skill and NONE of the flat
+ * files, so agents could only ever reach these as prose via file reads.
  *
  * Adding a skill: add it here, add its content to `skillsWriter`'s content map,
  * and remember `AI_CONTEXT_VERSION` (see the `ai-context-authoring` skill).
  */
 export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
     // Lifecycle
-    'add-component.md',
-    'sync-changes.md',
-    'update-credentials.md',
-    'create-eds-project.md',
+    'add-component',
+    'sync-changes',
+    'update-credentials',
+    'create-eds-project',
     // Diagnosis
-    'diagnose-demo.md',
+    'diagnose-demo',
     // Sample data
-    'import-datapack.md',
+    'import-datapack',
     // EDS site-scraping
-    'scrape-reference-site.md',
-    'connect-authenticated-site.md',
-    'commerce-block-mapper.md',
-    'demo-data-injector.md',
-    'header-nav-footer.md',
-    'refine-visual-match.md',
+    'scrape-reference-site',
+    'connect-authenticated-site',
+    'commerce-block-mapper',
+    'demo-data-injector',
+    'header-nav-footer',
+    'refine-visual-match',
     // Custom block authoring
-    'register-custom-block.md',
-    'remove-custom-block.md',
+    'register-custom-block',
+    'remove-custom-block',
 ] as const;
 
 /**
  * Demo Builder skills written only for some projects. Conditional delivery does
  * not make them third-party — they classify as `'demo-builder'` wherever found.
  */
-export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app.md'] as const;
+export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app'] as const;
 
 /**
  * Which ai-defaults MCP tool a generated skill DRIVES — the machine-readable
@@ -81,13 +87,13 @@ export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app.md'] as 
  * skill found on disk still classifies as first-party.
  */
 export const SKILL_MCP_TOOL_DEPENDENCIES = {
-    'scrape-reference-site.md': 'playwright',
-    'connect-authenticated-site.md': 'playwright',
-    'refine-visual-match.md': 'playwright',
+    'scrape-reference-site': 'playwright',
+    'connect-authenticated-site': 'playwright',
+    'refine-visual-match': 'playwright',
 } as const satisfies Partial<Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string>>;
 
-/** Every filename that identifies a first-party skill, however it was delivered. */
-export const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set<string>([
+/** Every skill name that identifies a first-party skill, however it was delivered. */
+export const DEMO_BUILDER_SKILL_NAMES: ReadonlySet<string> = new Set<string>([
     ...DEMO_BUILDER_ALWAYS_ON_SKILLS,
     ...DEMO_BUILDER_CONDITIONAL_SKILLS,
 ]);
@@ -95,13 +101,15 @@ export const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set<string>([
 /**
  * Where a skill originated.
  *
- * - `'demo-builder'` — a top-level `.claude/skills/<filename>.md` listed in
- *   `DEMO_BUILDER_SKILL_FILES` above.
- * - `'adobe'` — any `.md` nested under a subdirectory of `.claude/skills/`.
- *   `skillsWriter` only creates subdirectories for Adobe skill bundles, using a
- *   `<prefix>-<name>/` layout. Which bundle it came from is carried separately
- *   in `bundle` — `'adobe'` alone means only "arrived in a bundle", so do NOT
- *   render it as the name of any one Adobe product.
+ * - `'demo-builder'` — a `.claude/skills/<name>/SKILL.md` whose directory name
+ *   is listed in `DEMO_BUILDER_SKILL_NAMES` above, or a legacy pre-v27 flat
+ *   `.claude/skills/<name>.md` whose stem is (still first-party on projects
+ *   not yet regenerated).
+ * - `'adobe'` — any `.md` nested under a NON-first-party subdirectory of
+ *   `.claude/skills/`. `skillsWriter` creates those only for Adobe skill
+ *   bundles, using a `<prefix>-<name>/` layout. Which bundle it came from is
+ *   carried separately in `bundle` — `'adobe'` alone means only "arrived in a
+ *   bundle", so do NOT render it as the name of any one Adobe product.
  * - `'unknown'` — a top-level `.md` that is not first-party (a user-authored
  *   skill).
  */

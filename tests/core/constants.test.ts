@@ -69,8 +69,42 @@ describe('AI_CONTEXT_VERSION', () => {
     // runs spent because the document told them to. Home-only, so delivery does
     // not actually depend on this stamp (the home context is rewritten on every
     // activation); bumped to keep the bundle changelog complete and honest.
-    it('is 22 (home AGENTS.md states the active project)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(22);
+    // v23: a "Querying Commerce" section naming `get_commerce_endpoints`, plus
+    // the warning that a Catalog Service query with the wrong store scope
+    // returns an EMPTY result and no error. A survey of 48 sessions run inside
+    // demo projects (2026-08-25) found agents calling 20 of 104 tools —
+    // overwhelmingly the ones this bundle NAMES — while the one long stretch of
+    // real Commerce work hand-assembled 28 `curl`s. Unlike v22 this one DOES
+    // depend on the stamp: it is per-project content, so without the bump
+    // existing projects never receive the section.
+    // v24: a "Your MCP Servers" section naming the OTHER servers a project has —
+    // commerce-extensibility, playwright, dropins — and what each is for,
+    // generated from ai-defaults.json so it cannot claim a server the project did
+    // not get. The measurement it was written on was later disproven — seven runs
+    // of zero dropins use were the wrong prompt, and the agent reaches dropins on
+    // its first call when asked something only dropins can answer. The section
+    // stays on its own merits; the bump stands because it IS per-project content
+    // and without it existing projects never receive the section.
+    //
+    // v25: the six aem-boilerplate-commerce skills now actually land. They were
+    // sourced from the storefront checkout, which has never held a skills/ dir,
+    // so the copy ENOENT-skipped on every project ever created. The bump is what
+    // makes existing projects pick them up on the next activation sweep.
+    //
+    // v26: the App Builder skill set follows whether a project BUILDS an App
+    // Builder app, not whether it needs App Builder tooling. The bump is what
+    // reconciles storefronts that already received it.
+    //
+    // v27: Demo Builder skills move to the `<name>/SKILL.md` directory layout —
+    // the only shape Claude Code registers as an invocable skill (flat files
+    // were never registered; measured live 2026-08-27). The bump is what makes
+    // existing projects rewrite the layout and reconcile the flat files away.
+    // v28: the project AGENTS.md states the connection-scope promise (sessions
+    // in a project directory act on THAT project; the pointer never moves).
+    // v29: skills route config values to configure_project (stale guidance
+    // named the raw tool and agents obeyed it — measured 2/2 by the battery).
+    it('is 29 (skills route config values to configure_project)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(29);
     });
 });
 

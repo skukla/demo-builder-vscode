@@ -31,6 +31,7 @@ jest.mock('fs/promises', () => {
         writeFile,
         readdir: jest.fn(),
         readFile: jest.fn(),
+        unlink: jest.fn().mockResolvedValue(undefined),
         // O_NOFOLLOW writes go through open(); the returned handle delegates to
         // the writeFile mock WITH the path, so path-based assertions keep working.
         open: jest.fn(async (p: unknown) => ({
@@ -74,6 +75,11 @@ function writtenFiles(): string[] {
     return writeFileMock.mock.calls.map(([p]: [string]) => p);
 }
 
+function unlinkedFiles(): string[] {
+    const unlinkMock = fsPromises.unlink as jest.Mock;
+    return unlinkMock.mock.calls.map(([p]: [string]) => p);
+}
+
 function writtenContentForPath(filePath: string): string | undefined {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
     const call = writeFileMock.mock.calls.find(([p]: [string]) => p === filePath);
@@ -82,7 +88,11 @@ function writtenContentForPath(filePath: string): string | undefined {
 
 const ADOBE_BUNDLE_RELATIVE =
     'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
-const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/components/eds-storefront/${ADOBE_BUNDLE_RELATIVE}`;
+// The bundle lives in the project's isolated MCP tools dir — Adobe ships every
+// starter-kit bundle in one package and we install it there. NOT the storefront
+// checkout: this fixture named that path until 2026-08-26, matching a copy that
+// could never resolve in production, and the mock answered it happily.
+const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`;
 
 function makeDirent(
     name: string,
@@ -138,10 +148,32 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         });
     });
 
-    it('skips a user-edited skill while the other fourteen still write', async () => {
-        const editedAbs = '/projects/test/.claude/skills/sync-changes.md';
+    it('skips a user-edited skill while the other thirteen still write', async () => {
+        const editedAbs = '/projects/test/.claude/skills/sync-changes/SKILL.md';
         (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
             if (p === editedAbs) return '# user rewrote this skill';
+            if (p.endsWith('.demo-builder-mcp/package.json')) {
+                return mcpToolsManifest(['@playwright/mcp']);
+            }
+            throw enoentError();
+        });
+        const writer = makeWriter('/projects/test', {
+            '.claude/skills/sync-changes/SKILL.md': sha256('what we generated last time'),
+        });
+
+        await writeSkillFiles('/projects/test', makeEdsProject(), writer);
+
+        expect(writtenFiles()).not.toContain(editedAbs);
+        expect(writtenFiles()).toHaveLength(13);
+        expect(writer.report().skipped).toEqual(['.claude/skills/sync-changes/SKILL.md']);
+    });
+
+    it('leaves a user-edited LEGACY flat file in place while the new layout still writes', async () => {
+        // Migration guard: the pre-v27 flat `<name>.md` is reconciled on every
+        // write, but an EDITED copy is the user's — reported, never deleted.
+        const legacyAbs = '/projects/test/.claude/skills/sync-changes.md';
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (p === legacyAbs) return '# user rewrote this skill';
             if (p.endsWith('.demo-builder-mcp/package.json')) {
                 return mcpToolsManifest(['@playwright/mcp']);
             }
@@ -153,13 +185,13 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
 
         await writeSkillFiles('/projects/test', makeEdsProject(), writer);
 
-        expect(writtenFiles()).not.toContain(editedAbs);
-        expect(writtenFiles()).toHaveLength(14);
-        expect(writer.report().skipped).toEqual(['.claude/skills/sync-changes.md']);
+        expect(unlinkedFiles()).not.toContain(legacyAbs);
+        expect(writer.report().skipped).toContain('.claude/skills/sync-changes.md');
+        expect(writtenFiles()).toContain('/projects/test/.claude/skills/sync-changes/SKILL.md');
     });
 
     it('keeps the written return contract unchanged when a skill is skipped', async () => {
-        const editedAbs = '/projects/test/.claude/skills/sync-changes.md';
+        const editedAbs = '/projects/test/.claude/skills/sync-changes/SKILL.md';
         (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
             if (p === editedAbs) return '# user rewrote this skill';
             if (p.endsWith('.demo-builder-mcp/package.json')) {
@@ -168,15 +200,15 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
             throw enoentError();
         });
         const writer = makeWriter('/projects/test', {
-            '.claude/skills/sync-changes.md': sha256('what we generated last time'),
+            '.claude/skills/sync-changes/SKILL.md': sha256('what we generated last time'),
         });
 
         const summary = await writeSkillFiles('/projects/test', makeEdsProject(), writer);
 
         // The handler-boundary contract stays as-is: the attempted skill list.
         // Skip visibility lives on writer.report(), not on `written`.
-        expect(summary.written).toHaveLength(15);
-        expect(summary.written).toContain('sync-changes.md');
+        expect(summary.written).toHaveLength(14);
+        expect(summary.written).toContain('sync-changes');
     });
 
     it('records project-relative posix hash keys for every skill written', async () => {
@@ -185,7 +217,7 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         await writeSkillFiles('/projects/test', makeEdsProject(), writer);
 
         const keys = Object.keys(writer.hashes());
-        expect(keys).toHaveLength(15);
+        expect(keys).toHaveLength(14);
         for (const key of keys) {
             expect(key.startsWith('.claude/skills/')).toBe(true);
             expect(key).not.toContain('\\');
@@ -214,6 +246,13 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         expect(
             writtenContentForPath('/projects/test/.claude/skills/aem-block-developer/SKILL.md')
         ).toBeUndefined();
-        expect(writer.report().skipped).toEqual(['.claude/skills/aem-block-developer/SKILL.md']);
+        // Scoped to bundle files. An EDS project now RECONCILES the App Builder
+        // bundle it no longer qualifies for (AI-1o), and `remove` refuses — and
+        // reports — anything it cannot prove it wrote, which in this mock is
+        // every path. That refusal is the seam working; it is not this test's
+        // subject.
+        expect(writer.report().skipped.filter((k) => k.startsWith('.claude/skills/aem-'))).toEqual([
+            '.claude/skills/aem-block-developer/SKILL.md',
+        ]);
     });
 });
