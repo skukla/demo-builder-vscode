@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.145] - 2026-08-28
+
+### Added
+- **Commerce Integration Starter Kit, end to end.** "Build Custom" now offers Adobe's Commerce Integration Starter Kit as a starting point beside the blank app. Deploying it does the whole job automatically: workspace credentials are created and injected, the required Adobe APIs are subscribed, the app is installed into your configured Commerce instance and associated with it — with automatic retries for the platform's own race conditions. Removing the integration now uninstalls it from Commerce first, so event registrations and configuration don't pile up as residue.
+- **Install state you can see and act on.** An App Management integration's drawer shows whether it's installed into Commerce, with an "Install into Commerce" retry that doesn't redeploy, and an "Open Commerce Admin" link. Agents get the same powers (`get_integration_install_status`, `install_integration`).
+- **Name your integrations.** Every integration — pre-built or custom — takes an optional display name at pick time; naming is a convenience, never a requirement.
+- **Sign in to Adobe / Sign in to DA.live** from the Command Palette.
+- **The agent activity record.** A new "Demo Builder: Agent Activity" output channel shows one plain line per agent action as it happens; the record is kept per session (last 10) and agents can answer "what did you do?" via `get_agent_trace`. Every agent call carries a short tag (`#47`) stamped on its Debug Logs lines, so a failing call filters straight to exactly its own log story. Argument values are never recorded or written to disk.
+- **Sessions act on the project they sit in.** A chat opened inside a project directory operates on that project — and can never hijack the dashboard's selected project. The home chat is unchanged.
+- **Agents can query Commerce directly** (`run_commerce_query`, `get_commerce_endpoints`) instead of assembling curl commands.
+- **Claude Code disk-footprint report** in Diagnostics: how much disk the AI tooling's own data uses, stated plainly, with no cleanup button.
+
+### Fixed
+- **Generated agent skills actually register now.** They were written in a file layout Claude Code never recognizes, so agents could only read them as plain files; existing projects are migrated automatically.
+- **No more surprise Adobe sign-in prompts.** An expired session refreshes silently in the background where possible; when a prompt is genuinely needed, it says so and times out cleanly instead of hanging the operation.
+- **Notifications behave.** One notification per operation, single-line messages, no stuck "Checking requirements…" cards.
+- **Mixed-Node projects pass prerequisites consistently.** A stack whose components use different Node versions no longer passes the check screen and then blocks on Continue over a version nothing required.
+- **Out-of-date Adobe CLI heals in place.** A deploy that fails on a stale CLI offers a one-click update-and-retry inside the same operation.
+- A deleted Adobe Console project now produces a diagnosis instead of a bare 404; settings lookups accept the key names a person would type; derived Adobe entity names respect Console's length limit.
+
+### Changed
+- **Config-value changes route through the structured configuration tool** for agents (it validates, refuses secrets by design, and marks dependent components stale); the raw file-write tool remains for whole-file work and says so.
+- **The AI measurement battery reached full coverage**: every promised skill is proven to load (34/34), safe write-tools run against a disposable scratch project, and the whole sweep is one command at release cuts. Every deliberately-unexercised tool now carries a written reason.
+- Internal quality held by ratchet: two full deduplication sweeps this cycle, zero import cycles, duplication at its recorded floor.
+
 ### Removed
 
 - **`get_block_source` — the first tool deleted on measured evidence.** It read
