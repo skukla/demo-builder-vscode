@@ -101,3 +101,7 @@ a session browser. Check the picker renders in an editor-area terminal FIRST; th
 the whole shape. Reuse the existing `fresh` affordance rather than adding a tile — AiZone.tsx
 records why."
 ```
+
+## Shipped so far
+
+- 2026-08-28  Citations re-verified 2026-08-28 after the hygiene scan's CODE MOVED advisory: AiZone.tsx docstring (now ~line 8) still records the one-affordance reasoning; openInClaude.ts --continue guard and --resume note both intact. Premise unchanged.
