@@ -63,7 +63,7 @@ one tier for the same subject, and separating them by directory would split a
 subject's coverage across the tree for no reader's benefit. The tier is visible
 in the test's own construction, which is where it belongs.
 
-Enforced by `tests/sop/test-placement.test.ts`: every test file must sit at its
+Enforced by `tests/sop/mirror-placement.test.ts`: every test file must sit at its
 subject's mirrored path, and no test file may live outside the mirror.
 
 Grounding: Test Pyramid (Cohn; Fowler), contract tests (Fowler; Pact),

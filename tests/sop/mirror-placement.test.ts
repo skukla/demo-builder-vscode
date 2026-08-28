@@ -16,6 +16,11 @@
  *      written, not where it lives, and one file routinely holds tests of more
  *      than one tier for the same subject.
  *
+ * NAMED `mirror-placement` rather than `test-placement`: the split-family
+ * detector groups suites by their first hyphen-separated token, so a
+ * `test-*.test.ts` name reads as a split of `tests/sop/test-family-setup`.
+ * That would have been a false family, not a real one.
+ *
  * POSITIVE CONTROLS run first. A zero from a check that never ran looks
  * identical to a clean result, and this repo has paid for that twice.
  */
@@ -87,7 +92,7 @@ describe('ADR-016 placement: tests mirror src/', () => {
     it('POSITIVE CONTROL: the walk finds the suite tree at all', () => {
         // If this ever reads zero, every assertion below passes vacuously.
         expect(TEST_FILES.length).toBeGreaterThan(500);
-        expect(TEST_FILES).toContain(path.join('sop', 'test-placement.test.ts'));
+        expect(TEST_FILES).toContain(path.join('sop', 'mirror-placement.test.ts'));
     });
 
     it('POSITIVE CONTROL: a planted tier path is recognised as a violation', () => {
