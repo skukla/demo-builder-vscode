@@ -39,7 +39,13 @@ warnings, 72 prop warnings, 600+ error-channel lines per green run).
    - split-family testUtils rule (a suite family must share its setup)
    - deps-object fakes as the ratified target double style (91% of suites
      already in the lighter styles; conversions ride ADR-015 batches)
-   - tests-tree clone ratchet (159, may only fall)
+   - tests-tree clone ratchet (159, may only fall) — target is NOT literal
+     zero (per-suite mock isolation is ratified policy, and the detector's
+     floor sweeps up benign similarity; the src precedent settled at an
+     adjudicated floor of 66). Target: an ADJUDICATED FLOOR — every remaining
+     clone either carries a named convention reason or sits on the kill
+     queue; the ADR-015 conversions do most of the killing (mock walls are
+     the main generator), and the ratchet locks each drop in.
 
 6. **Coverage follow-ups** (health-epic queue, weighted by the measured
    worst-covered list): the MCP proxy process (0%, load-bearing), project
