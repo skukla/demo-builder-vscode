@@ -153,3 +153,7 @@ after the data ships and re-measures as differentiated.
 > and a pack revision could change that. If they are still identical, the
 > decision is whether to differentiate the DATA; there is no code worth writing
 > before that.
+
+## Shipped so far
+
+- 2026-08-28  Loop pickup 2026-08-28: re-measure attempted per the kickoff prompt, blocked unattended — the isolated dev-host profile lacks the machine-scoped demoBuilder.dataInstaller.apiBaseUrl (deliberately unbundled; public repo), and the real window's server is unreachable while the dev host holds the shared socket. The 2026-08-23 provenance check (pack unchanged since 2026-06-18) stands as the freshest evidence. Item is at its supervised edge: the decision is the drafted differentiation (path 1 — Admin change on one instance, prove the story; then path 2 — pack request to CoreTech). Queued for walkthrough.
