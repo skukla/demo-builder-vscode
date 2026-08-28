@@ -724,5 +724,51 @@
     ],
     "cwd": "project",
     "why": "AI-1q skills half, project-scope coverage (bodea, v27 bundle). Read-only by instruction; the skill route is the verdict under test. Adobe-bundle skill (aem-boilerplate-commerce)."
+  },
+  {
+    "id": "t2-update-config",
+    "prompt": "In my battery-scratch project, set FAKE_KEY to updated-fake-value in the .env file. Use the extension's config tool \u2014 do not edit the file directly.",
+    "expect": [
+      "update_project_config"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 1: the tool takes projectName explicitly, so the prompt aims it at scratch by name.",
+    "tier": 2
+  },
+  {
+    "id": "t2-pin-project",
+    "prompt": "Pin the project at /Users/kukla/.demo-builder/projects/battery-scratch so it sorts first on my projects dashboard.",
+    "expect": [
+      "set_project_pinned"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 1: explicit projectPath; a globalState display flag, reversed by scratch teardown conventions.",
+    "tier": 2
+  },
+  {
+    "id": "t2-save-prompt",
+    "prompt": "Save a project-local AI prompt for me (not pinned/global): id 'battery-t2', title 'Battery tier-2 probe', prompt text 'hello from tier 2'.",
+    "expect": [
+      "save_ai_prompt"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: writes the CURRENT project's manifest \u2014 which the harness guarantees is scratch. The prompt pins pinned:false so the owner's global prompts are untouched.",
+    "tier": 2
+  },
+  {
+    "id": "t2-export-settings",
+    "prompt": "Export this project's settings to a file named backup.json inside the project directory.",
+    "expect": [
+      "export_project_settings"
+    ],
+    "cwd": "project",
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: THE secrets-finding tool \u2014 safe precisely because current=scratch and every fixture value is fake-test-pw-not-a-secret. cwd:project puts the session where a producer's would sit; the tool still acts on the CURRENT project (scratch).",
+    "tier": 2
+  },
+  {
+    "id": "t2-rename-project",
+    "prompt": "Rename the current project to battery-scratch-renamed.",
+    "expect": [
+      "rename_project"
+    ],
+    "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: folder+state move on the current project; the harness's scratch reset undoes it.",
+    "tier": 2
   }
 ]

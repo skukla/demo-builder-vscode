@@ -106,6 +106,20 @@ const NATIVE_TOOLS = [
 ];
 ALLOWED.push(...NATIVE_TOOLS);
 
+// ── Tier 2 (--tier2): scratch-project writes ─────────────────────────────────
+// The hand-curated write list joins the allowlist ONLY under the flag, and the
+// harness (tier2-harness.mjs) flips the current-project pointer to the scratch
+// project BEFORE any agent runs — export_project_settings writes SECRETS from
+// whatever project is current (tier2-design.md finding 1). Setup throws on a
+// failed flip; restore notes print at the TOP of the results.
+const TIER2 = process.argv.includes('--tier2');
+let tier2Token = null;
+if (TIER2) {
+    const { tier2Writes, setup } = await import('./tier2-harness.mjs');
+    ALLOWED.push(...tier2Writes());
+    tier2Token = setup();
+}
+
 
 
 // Bash is allowed ON PURPOSE. The question this battery asks is "what does the
@@ -119,6 +133,10 @@ ALLOWED.push(...NATIVE_TOOLS);
 // score instead of an interpretation. Kept in a file, verbatim, because the
 // original six prompts were lost and their run became incomparable.
 let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
+// Tier-2 prompts expect WRITE tools that only join the allowlist under
+// --tier2 — outside it they would trip the unanswerable-prompt abort on
+// every full run, so they are not selectable at all.
+if (!TIER2) PROMPTS = PROMPTS.filter((p) => p.tier !== 2);
 
 // `--only <id>` re-runs ONE prompt, and `--repeat <n>` runs the selection n times.
 // Both exist for the same reason: every result here is n=1, and agents are
@@ -363,7 +381,7 @@ function runOnce(prompt, cwd = ROOT) {
  *   miss   — neither. It answered from something else, or not at all.
  */
 
-{
+try {
     const variant = 'as-shipped';
     for (const { id: task, prompt, expect, why, expectServers, expectSkill, cwd } of PROMPTS) {
         const started = Date.now();
@@ -451,6 +469,16 @@ function runOnce(prompt, cwd = ROOT) {
                 : '') +
             `    calls=${row.calls} billable=${row.billable}`,
         );
+    }
+} finally {
+    if (tier2Token) {
+        const { restore } = await import('./tier2-harness.mjs');
+        const notes = restore(tier2Token);
+        console.log('\n=== TIER-2 RESTORE (read this FIRST) ===');
+        for (const n of notes) console.log('  ' + n);
+        if (notes.some((n) => n.includes('tier2 RED:'))) {
+            console.log('  ^^ a RED line means the owner\'s state may not be restored — fix before anything else');
+        }
     }
 }
 console.log('done');

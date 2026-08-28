@@ -1,0 +1,26 @@
+# Tier-2 write allowlist — HAND-CURATED, one tool per line (tier2-design.md).
+# Every entry was cleared by READING ITS HANDLER on 2026-08-28; a new entry
+# needs the same. The harness self-test rejects cloud-shaped names outright.
+#
+# Wave 1 — scratch-addressable by EXPLICIT parameter (no pointer flip needed):
+#   update_project_config: pure path-validated file write inside the named
+#     project's root (mcp-server.ts:172; no publish trigger anywhere in the
+#     handler). Prompts aim it at battery-scratch BY NAME.
+#   set_project_pinned: globalState display flag keyed by explicit
+#     projectPath (actionDescriptors.ts:332). Reversible by the same tool.
+update_project_config
+set_project_pinned
+#
+# Wave 2 — act on the CURRENT project; the harness pointer-flip makes that
+# battery-scratch before any agent runs (setup() THROWS if the flip fails):
+#   save_ai_prompt (unpinned): writes the current project's manifest
+#     (aiHandlers 'save-ai-prompt'; pinned:true would write the owner's
+#     GLOBAL prompts — the prompt text pins pinned:false).
+#   export_project_settings: writes ONE file inside the project dir; secrets
+#     go to the FILE only (descriptor at actionDescriptors.ts:401) — on
+#     scratch every value is fake-test-pw-not-a-secret by fixture.
+#   rename_project: folder + state move via renameProjectCore, current
+#     project only; scratch reset undoes it.
+save_ai_prompt
+export_project_settings
+rename_project
