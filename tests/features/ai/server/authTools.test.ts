@@ -5,10 +5,13 @@
  */
 
 const mockSetStatusBarMessage = jest.fn();
+// Default: no silently-readable VS Code GitHub session (tests override per case).
+const mockGetSession = jest.fn(async (..._args: unknown[]): Promise<unknown> => undefined);
 jest.mock(
     'vscode',
     () => ({
         window: { setStatusBarMessage: (...a: unknown[]) => mockSetStatusBarMessage(...a) },
+        authentication: { getSession: (...a: unknown[]) => mockGetSession(...a) },
     }),
     { virtual: true }
 );
@@ -104,11 +107,61 @@ describe('registerAuthTools', () => {
         // agent surface exposes them.
         expect(status.github).toEqual({
             authenticated: true,
+            via: 'stored-token',
             login: 'octocat',
             orgs: ['acme', 'skukla'],
         });
         expect(status.dalive).toEqual({ authenticated: false });
         expect(login).not.toHaveBeenCalled();
+    });
+
+    // GitHub auth is MANAGED BY VS CODE: no stored token does not mean signed
+    // out. The status must fall back to a silent session read (no prompt, no
+    // adoption) and say where the credential lives — an agent misread a bare
+    // `authenticated: false` as "signed out" twice (2026-08-28).
+    it('falls back to the VS Code GitHub session when no token is stored', async () => {
+        const storeToken = jest.fn();
+        (getGitHubServices as jest.Mock).mockImplementationOnce(() => ({
+            tokenService: {
+                validateToken: jest.fn(async () => ({ valid: false })),
+                getUserOrgs: jest.fn(async () => []),
+                storeToken,
+            },
+        }));
+        mockGetSession.mockResolvedValueOnce({
+            account: { label: 'octocat' },
+            accessToken: 'fake-test-pw-not-a-secret',
+        });
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        const status = await server.call('get_auth_status');
+        expect(status.github).toEqual({
+            authenticated: true,
+            via: 'vscode-session',
+            login: 'octocat',
+        });
+        // Silent read only — never adopts, never prompts.
+        expect(mockGetSession).toHaveBeenCalledWith('github', expect.any(Array), {
+            createIfNone: false,
+            silent: true,
+        });
+        expect(storeToken).not.toHaveBeenCalled();
+    });
+
+    it('explains that false may not mean signed out when neither source has a session', async () => {
+        (getGitHubServices as jest.Mock).mockImplementationOnce(() => ({
+            tokenService: {
+                validateToken: jest.fn(async () => ({ valid: false })),
+                getUserOrgs: jest.fn(async () => []),
+            },
+        }));
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        const status = await server.call('get_auth_status');
+        expect(status.github.authenticated).toBe(false);
+        expect(status.github.note).toMatch(/managed by VS Code/);
     });
 
     // The tool must NOT do what handleCheckGitHubAuth does: on finding a VS Code

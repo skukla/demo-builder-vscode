@@ -103,8 +103,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // in a project directory act on THAT project; the pointer never moves).
     // v29: skills route config values to configure_project (stale guidance
     // named the raw tool and agents obeyed it — measured 2/2 by the battery).
-    it('is 29 (skills route config values to configure_project)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(29);
+    // v30: token-first theming generalized beyond type — the design skills
+    // teach the whole styles.css token system (color/spacing/shape/grid) with
+    // read-the-file-first, plus the reset lifecycle stated plainly.
+    it('is 30 (token-first theming across the whole token system)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(30);
     });
 });
 

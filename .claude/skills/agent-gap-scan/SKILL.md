@@ -164,6 +164,16 @@ same tool was called again: near means the answer did not stick, far means the
 agent legitimately re-oriented, and only reading tells you which. Same for
 `→BASH` — early in an arc it is a discovery gap, late it is a capability gap.
 
+Journey mode opens with the **four AI-1d metrics**, computed over the whole arc
+(same leads-not-verdicts rule): **first action** (the first non-read call of
+ours — everything before it is orientation), **re-orientations** (repeat calls
+to read-like tools), **bash moments** bucketed early/mid/late by event index,
+and **interventions** (the user spoke immediately after one of our calls — the
+clearest marker of the agent being off the path). Reference reading, 2026-08-28:
+the 264-turn ERP journey scored first-action-at-#6, 4 re-orientations, 94 Bash
+calls spread 33/36/25 — a journey that ran on Bash THROUGHOUT is a sustained
+capability gap, not a discovery problem.
+
 `PROSE-ERROR` is the trap the battery met first: a tool answering "Adobe sign-in
 required" as ordinary text with `is_error` unset, which every count scores as a
 success.

@@ -219,7 +219,14 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // guidance 2/2, taking the door that skips secret-refusal and
 // staleness-marking. Two templates even showed a key/value call signature the
 // raw tool never had.
-export const AI_CONTEXT_VERSION = 29;
+// v30 (2026-08-28): the token-first theming rule generalizes beyond type.
+// commerce-block-mapper and refine-visual-match taught the bounded-choice rule
+// for `--type-*` only; the shipped styles.css defines the WHOLE theme as tokens
+// (~114 in a real project: color/type/spacing/shape/grid). Both skills now say:
+// read the file for the real inventory, edit tokens, literals only where no
+// token covers the property. AI-1a design axis, step 1 (constraints where
+// feedback is impossible).
+export const AI_CONTEXT_VERSION = 30;
 
 /**
  * Component IDs for standardized component instance access

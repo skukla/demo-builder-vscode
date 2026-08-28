@@ -194,8 +194,8 @@ each item's own file; what has already landed against an item is in its
 | `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | active |
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
-| `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | active |
-| `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | active |
+| `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | shipped |
+| `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | shipped |
 | `AI-1f` | feature | └ [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) | — | low | backlog |
 | `AI-1g` | fix | └ [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) | — | high | shipped |
 | `AI-1h` | feature | └ [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) | — | med | shipped |
@@ -221,7 +221,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-5` | fix | [delete_adobe_project hangs on the headless path](2026-08-27-delete-adobe-project-headless-hang.md) | — | med | shipped |
 | `AI-6` | fix | [One agent deploy, three progress notifications](2026-08-27-agent-deploy-duplicate-progress-notifications.md) | — | med | shipped |
 
-### eds  (9)
+### eds  (10)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -234,6 +234,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | shipped |
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
+| `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 
 ### app-builder  (9)
 
@@ -262,7 +263,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (9)
+### platform  (10)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -274,7 +275,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-6` | fix | [aio CLI tree staleness is invisible to version checks](2026-08-27-aio-cli-tree-staleness-invisible-to-version-checks.md) | — | med | shipped |
 | `PL-7` | fix | [rptc-hygiene-scan check 5 parses zero active entries](2026-08-27-rptc-hygiene-scan-section5-broken.md) | — | low | shipped |
 | `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
-| `PL-9` | chore | [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | low | backlog |
+| `PL-9` | chore | [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | low | active |
+| `PL-10` | question | [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -373,14 +375,14 @@ the table cannot hold: why the layers are ordered this way.*
 **B** — 5 items
 
 - `AI-1c` [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) — shipped
-- `AI-1d` [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) — active
+- `AI-1d` [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) — shipped
 - `AI-1i` [The battery destroys its own baseline on every run](2026-08-26-battery-results-are-overwritten.md) — shipped
 - `AI-1j` [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) — shipped
 - `AI-1n` [The battery measures a world that does not exist, and feeds itself](2026-08-26-battery-measures-a-world-that-does-not-exist.md) — shipped
 
 **C** — 8 items
 
-- `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — active
+- `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — shipped
 - `AI-1f` [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) — backlog
 - `AI-1g` [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) — shipped
 - `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — shipped
@@ -420,7 +422,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*26 item(s) sit outside the A–G chain.*
+*28 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

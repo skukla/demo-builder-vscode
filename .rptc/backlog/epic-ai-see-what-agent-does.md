@@ -46,3 +46,4 @@ producers' hands — do not close it on the activity channel alone.
 ## Shipped so far
 
 - 2026-08-28  Owner clarified the aim: this epic is the Prompt Workbench's visibility layer. beta.145's activity record + call tags are its foundation; the view components are parked on feature/evaluation-mode-dry-run (AI-3b). Stays active — not closable on the channel alone.
+- 2026-08-28  docs(backlog): AI-2 aims at the Prompt Workbench's visibility layer (`c1de7e44d`)

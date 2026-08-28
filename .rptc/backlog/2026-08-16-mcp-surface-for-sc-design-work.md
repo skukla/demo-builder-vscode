@@ -64,6 +64,13 @@ does it cost what it should?*
 - 2026-08-24  Agent layer settled deliberately: no agents ship — `scrape-reference-site` already orchestrates the one 3+-skill flow
 
 **Reachability is essentially closed** — 41 name-level gaps of 123 handler keys, hand-triaged to about five genuinely open. What REMAINS is the design/visual axis: no tool gives an agent visual feedback on a storefront. The four-phase plan below predates the current tool surface and needs re-scoping before anyone executes it.
+- 2026-08-28  Design-axis step 1 SHIPPED (loop, 2026-08-28): token-first theming generalized from type to the whole token system in commerce-block-mapper + refine-visual-match (verified against bodea's real styles.css: 114 tokens — 36 type, 33 color, 15 grid, 14 shape, 13 spacing). Skills teach read-the-file-first, so the rule survives template drift. v30. Step 2 (brandAssets write-through trap) is a product decision — queued for walkthrough with recommendation. Steps 3-4 build on 2.
+- 2026-08-28  Step 2 researched (loop, 2026-08-28) and the trap is BROADER than recorded: EDS reset resets the WHOLE repo to template via the Git Tree bulk operation (edsResetRepoHelper.ts step 1), so ALL CSS edits die on reset — tokens included — not just brandAssets-vendored files. Interim fix shipped: commerce-block-mapper now states the lifecycle plainly and routes must-survive theming upstream with an ask-first. DECISION QUEUED for walkthrough: should theme edits survive reset? Recommendation: keep reset destructive (it is the feature's contract) and make durability an upstream/brand-source concern — a preserve-on-reset mechanism would need vendored-hash bookkeeping in the manifest and blurs what reset means. Steps 3-4 stay gated on this decision per the item's ordering.
+- 2026-08-28  docs(backlog): AI-1a step 2 researched — the reset trap is repo-wide; decision queued (`afb20991f`)
+- 2026-08-28  feat(ai): the theming skill states the reset lifecycle plainly (`74c2a13ef`)
+- 2026-08-28  feat(ai): token-first theming — the whole theme is a bounded choice, not just type (`e918947ca`)
+- 2026-08-28  fix(ai): get_auth_status github false no longer reads as signed out (`f6c0fba49`)
+- 2026-08-28  Step-2 decision RULED (owner, 2026-08-28): themes do NOT survive reset — reset's back-to-template contract stands; the skill's plain lifecycle warning is the shipped behavior. Follow-on feature filed as EDS-10 (custom themes as savable entities). Steps 3-4 (design skill with a stopping rule) are now unblocked.
 
 ## How to audit this systematically — `ai-coverage-scan`
 
