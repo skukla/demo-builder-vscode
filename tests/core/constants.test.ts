@@ -101,8 +101,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // existing projects rewrite the layout and reconcile the flat files away.
     // v28: the project AGENTS.md states the connection-scope promise (sessions
     // in a project directory act on THAT project; the pointer never moves).
-    it('is 28 (AGENTS.md carries the connection-scope promise)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(28);
+    // v29: skills route config values to configure_project (stale guidance
+    // named the raw tool and agents obeyed it — measured 2/2 by the battery).
+    it('is 29 (skills route config values to configure_project)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(29);
     });
 });
 

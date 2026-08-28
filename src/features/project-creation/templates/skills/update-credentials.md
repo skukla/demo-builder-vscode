@@ -24,7 +24,7 @@ that is deliberate, not a fault. These are:
 - `ADOBE_COMMERCE_ADMIN_PASSWORD`
 - `ACCS_OAUTH_CLIENT_SECRET`
 
-**Never write a secret with `update_project_config`.** It writes to project files,
+**Never write a secret with any config tool.** `configure_project` refuses them by design, and raw file writes would land them in plaintext,
 which would put the credential back in plaintext and undo the protection. Ask the
 user to set it in **Configure → Connection**, where the field shows "Saved" when
 one is already held.
@@ -36,14 +36,14 @@ fields are only an override.
 ## Steps
 
 1. Use `get_component_config` to view the current values. A secret shows as absent.
-2. Use `update_project_config` for an ordinary setting; for a secret, hand it to
+2. Use `configure_project` for an ordinary setting; for a secret, hand it to
    the user with the Configure route above.
 3. Restart the demo server so the new values take effect.
 
 ## Example
 
 ```
-> update_project_config component="adobe-commerce-paas" key="ADOBE_COMMERCE_URL" value="https://new-instance.com"
+> configure_project env={"adobe-commerce-paas": {"ADOBE_COMMERCE_URL": "https://new-instance.com"}}
 > Restart the demo server
 ```
 

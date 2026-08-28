@@ -213,7 +213,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // per connection via the proxy's cwd preamble) and never move the dashboard's
 // pointer. Owner decision after the tier-2 battery run measured an agent
 // inspecting one project while its tools acted on another.
-export const AI_CONTEXT_VERSION = 28;
+// v29 (2026-08-28): the skills route config-value changes to configure_project.
+// They pointed at raw update_project_config — written before the structured
+// tool existed — and the tier-2 battery measured agents obeying that stale
+// guidance 2/2, taking the door that skips secret-refusal and
+// staleness-marking. Two templates even showed a key/value call signature the
+// raw tool never had.
+export const AI_CONTEXT_VERSION = 29;
 
 /**
  * Component IDs for standardized component instance access

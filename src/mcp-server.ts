@@ -175,7 +175,7 @@ export function registerProjectTools(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Update Project Config',
             description:
-                'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
+                'Low-level whole-file write to .demo-builder.json or a .env file inside the project directory (path must not escape the project root). To SET a config value, use configure_project instead — it validates, routes secrets correctly, and marks dependent components stale; this raw write does none of that.',
             inputSchema: {
                 projectName: projectNameSchema,
                 configRelPath: z

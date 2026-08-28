@@ -10,9 +10,9 @@
  *    registered every directory-format skill and none of the flat `<name>.md`
  *    files these shipped as before v27; legacy flat copies are reconciled away
  *    through the ADR-013 removal matrix on the next write).
- *    - `add-component` — add or enable a component via update_project_config
+ *    - `add-component` — add or enable a component via configure_project
  *    - `sync-changes` — push code changes via sync_storefront
- *    - `update-credentials` — edit .env credentials via update_project_config
+ *    - `update-credentials` — edit config values via configure_project (secrets stay user-entered)
  *    - `create-eds-project` — provision a new project headlessly via create_project
  *    - `diagnose-demo` — route a broken-demo symptom to the check that answers it
  *    - `import-datapack` — the six-call sample-data loop and its three traps
