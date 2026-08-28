@@ -161,7 +161,11 @@ export async function activate(context: vscode.ExtensionContext) {
         const what = narrationFor(entry.tool) ?? entry.tool;
         activityChannel.appendLine(
             `${new Date().toLocaleTimeString()} ${mark} ${what} · ${entry.tool} · ` +
-                `${entry.durationMs}ms · ${entry.resultBytes}B`,
+                `${entry.durationMs}ms · ${entry.resultBytes}B` +
+                // The tag NAMES the call here; the same number MARKS its lines
+                // in Debug Logs — filter there by "#N" to read only this
+                // call's story (AI-2d).
+                (entry.tag !== undefined ? ` · #${entry.tag}` : ''),
         );
     });
 

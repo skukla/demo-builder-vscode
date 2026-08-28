@@ -32,6 +32,7 @@ import {
     type TraceOutcome,
 } from './toolTraceRecorder';
 import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
+import { currentCallTag, nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
 import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
@@ -277,7 +278,12 @@ function withToolLogging(
                 name,
                 strictifyWriteSchema(name, schema),
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                async (args: any, extra: any) => {
+                async (args: any, extra: any) =>
+                    // The ambient call tag (AI-2d): everything this call does —
+                    // guards, deploys, their debug-log lines — runs inside it,
+                    // so `[Guards #47]` lines link back to trace entry #47.
+                    runWithCallTag(nextCallTag(), async () => {
+                    const callTag = currentCallTag();
                     const started = Date.now();
                     const argKeys =
                         args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
@@ -303,6 +309,7 @@ function withToolLogging(
                                 durationMs: Date.now() - started,
                                 outcome,
                                 projectShape: projectShape?.(),
+                                tag: callTag,
                             });
                         } catch {
                             /* a trace is never worth failing a call over */
@@ -400,7 +407,7 @@ function withToolLogging(
                         recordCall(undefined, 'error');
                         throw err;
                     }
-                },
+                }),
             );
         },
     };

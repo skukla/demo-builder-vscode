@@ -74,6 +74,12 @@ export interface TraceEntry {
      * storefronts, which have no local server.
      */
     projectShape?: string;
+    /**
+     * The ambient call tag (AI-2d) — the number stamped into this call's
+     * debug-log lines (`[Guards #47]`), so a trace entry and its log lines
+     * name each other. Absent for entries recorded outside the wrapper.
+     */
+    tag?: number;
     /** Milliseconds since the recorder was created; orders the trace. */
     at: number;
 }

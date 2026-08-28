@@ -5,7 +5,7 @@ area: ai
 parent: AI-2
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # A call tag links the activity record to its debug-log lines
@@ -69,3 +69,7 @@ log, for free.
 Evening-or-less: ambient context at the one chokepoint, logger reads it,
 tag into the trace entry, tests (tag present during a call, absent outside
 one, correct across concurrent calls — the interleaving case is the point).
+
+## Shipped so far
+
+- 2026-08-28  2026-08-28: BUILT same evening as filed. Ambient tag via AsyncLocalStorage in core/logging (core owns it because the logger reads it and the server sets it; concurrency-pinned — interleaved calls each see their own tag across awaits). The server's per-call wrapper establishes the tag; the DebugLogger stamps it into the SUBSYSTEM bracket on debug-channel writes only ([Guards #47] — level prefixes skipped, bracketless lines get a minimal lead, untagged lines byte-identical, User Logs NEVER tagged — all six rules test-pinned per the owner's scannability directive). The trace entry, the persisted line, and the Agent Activity channel line all carry the tag. Live-proven on all three surfaces in one probe pass.

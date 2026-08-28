@@ -44,6 +44,8 @@ export interface PersistedTraceLine {
     durationMs: number;
     outcome: string;
     projectShape?: string;
+    /** The call tag linking this entry to its `#N`-stamped debug-log lines. */
+    tag?: number;
 }
 
 /** The handle extension.ts wires into the recorder. */
@@ -109,6 +111,7 @@ export function createAgentTraceFileSink(
             durationMs: entry.durationMs,
             outcome: entry.outcome,
             ...(entry.projectShape ? { projectShape: entry.projectShape } : {}),
+            ...(entry.tag !== undefined ? { tag: entry.tag } : {}),
         };
         fs.appendFileSync(file, JSON.stringify(line) + '\n');
         lines++;

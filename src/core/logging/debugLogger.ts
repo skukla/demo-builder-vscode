@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { currentCallTag } from './callTagContext';
 import type { CommandResult } from '@/core/shell/types';
 import { slowCommandThreshold } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation';
@@ -57,7 +58,33 @@ export class DebugLogger {
 
         // Initialize both channels
         this.logsChannel.info('Demo Builder initialized');
-        this.debugChannel.info('Demo Builder initialized - Debug Logs channel ready');
+        this.debugChannel.info(this.tagged('Demo Builder initialized - Debug Logs channel ready'));
+    }
+
+    /**
+     * Stamp the ambient agent-call tag into a DEBUG-channel line (AI-2d).
+     *
+     * The tag goes inside the SUBSYSTEM bracket — `[Guards #47]` — because
+     * that bracket is the eye's scanning anchor and the owner's design rule
+     * is that prefixes stay human-readable. Level prefixes (`[debug]`,
+     * `[trace]`) are skipped, not tagged. A line with no bracket gets a
+     * minimal `[#47]` lead. Outside any agent call, every line is returned
+     * byte-identical — user-caused work looks exactly as it always has,
+     * which is also what makes agent-caused work visually distinct.
+     *
+     * User Logs NEVER pass through here — the headline stream stays clean.
+     */
+    private tagged(text: string): string {
+        const tag = currentCallTag();
+        if (tag === undefined) return text;
+        const m = /^(\[(?:debug|trace)\] )?\[([^\]#]+)\]/.exec(text);
+        if (m) {
+            const level = m[1] ?? '';
+            return `${level}[${m[2]} #${tag}]${text.slice(m[0].length)}`;
+        }
+        const lvl = /^(\[(?:debug|trace)\] )/.exec(text);
+        if (lvl) return `${lvl[1]}[#${tag}] ${text.slice(lvl[1].length)}`;
+        return `[#${tag}] ${text}`;
     }
 
     /**
@@ -82,7 +109,7 @@ export class DebugLogger {
      */
     public info(message: string): void {
         this.logsChannel.info(message);
-        this.debugChannel.info(message);
+        this.debugChannel.info(this.tagged(message));
         this.addToBuffer(`[INFO] ${message}`);
     }
 
@@ -93,7 +120,7 @@ export class DebugLogger {
      */
     public warn(message: string): void {
         this.logsChannel.warn(message);
-        this.debugChannel.warn(message);
+        this.debugChannel.warn(this.tagged(message));
         this.addToBuffer(`[WARN] ${message}`);
     }
 
@@ -104,20 +131,20 @@ export class DebugLogger {
      */
     public error(message: string, error?: Error): void {
         this.logsChannel.error(message);
-        this.debugChannel.error(message);
+        this.debugChannel.error(this.tagged(message));
         this.addToBuffer(`[ERROR] ${message}`);
 
         // SECURITY: Sanitize error message for user-facing logs
         if (error?.message) {
             const sanitizedMessage = sanitizeErrorForLogging(error);
             this.logsChannel.error(`  Error: ${sanitizedMessage}`);
-            this.debugChannel.error(`  Error: ${sanitizedMessage}`);
+            this.debugChannel.error(this.tagged(`  Error: ${sanitizedMessage}`));
             this.addToBuffer(`  Error: ${sanitizedMessage}`);
         }
 
         // Log verbose error details at trace level (reduces noise, available for deep debugging)
         if (error?.stack && this.shouldLog('trace')) {
-            this.debugChannel.info(`[trace] Error stack: ${error.name}: ${error.stack.split('\n').slice(0, 5).join('\n')}`);
+            this.debugChannel.info(this.tagged(`[trace] Error stack: ${error.name}: ${error.stack.split('\n').slice(0, 5).join('\n')}`));
         }
     }
 
@@ -131,15 +158,15 @@ export class DebugLogger {
         if (!this.shouldLog('debug')) return;
 
         // Promote to info() with prefix to ensure visibility at default log level
-        this.debugChannel.info(`[debug] ${message}`);
+        this.debugChannel.info(this.tagged(`[debug] ${message}`));
 
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                this.debugChannel.info(`[debug] ${formatted}`);
+                this.debugChannel.info(this.tagged(`[debug] ${formatted}`));
             } catch {
                 // If JSON.stringify fails (e.g., circular reference), use toString
-                this.debugChannel.info(`[debug] ${String(data)}`);
+                this.debugChannel.info(this.tagged(`[debug] ${String(data)}`));
             }
         }
     }
@@ -155,16 +182,16 @@ export class DebugLogger {
         if (!this.shouldLog('trace')) return;
 
         // Promote to info() with prefix to ensure visibility at default log level
-        this.debugChannel.info(`[trace] ${message}`);
+        this.debugChannel.info(this.tagged(`[trace] ${message}`));
 
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
                 // SECURITY: Sanitize to redact API keys, tokens, secrets
                 const sanitized = sanitizeErrorForLogging(formatted);
-                this.debugChannel.info(`[trace] ${sanitized}`);
+                this.debugChannel.info(this.tagged(`[trace] ${sanitized}`));
             } catch {
-                this.debugChannel.info(`[trace] ${String(data)}`);
+                this.debugChannel.info(this.tagged(`[trace] ${String(data)}`));
             }
         }
     }
@@ -191,19 +218,19 @@ export class DebugLogger {
     public logCommand(command: string, result: CommandResultWithContext, args?: string[]): void {
         if (!this.shouldLog('debug')) return;
 
-        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
-        this.debugChannel.info(`[debug] COMMAND EXECUTION: ${command}`);
+        this.debugChannel.info(this.tagged(`[debug] ${'='.repeat(60)}`));
+        this.debugChannel.info(this.tagged(`[debug] COMMAND EXECUTION: ${command}`));
 
         if (args && args.length > 0) {
-            this.debugChannel.info(`[debug] Arguments: ${args.join(' ')}`);
+            this.debugChannel.info(this.tagged(`[debug] Arguments: ${args.join(' ')}`));
         }
 
         if (result.cwd) {
-            this.debugChannel.info(`[debug] Working Directory: ${result.cwd}`);
+            this.debugChannel.info(this.tagged(`[debug] Working Directory: ${result.cwd}`));
         }
 
         if (result.duration) {
-            this.debugChannel.info(`[debug] Duration: ${result.duration}ms`);
+            this.debugChannel.info(this.tagged(`[debug] Duration: ${result.duration}ms`));
 
             // Warn about slow commands - goes to Logs channel for visibility.
             // The threshold is per-tool: `aio` carries a ~1.7s startup floor that
@@ -215,22 +242,22 @@ export class DebugLogger {
             }
         }
 
-        this.debugChannel.info(`[debug] Exit Code: ${result.code ?? 'null'}`);
+        this.debugChannel.info(this.tagged(`[debug] Exit Code: ${result.code ?? 'null'}`));
 
         // Log stdout/stderr at trace level to reduce noise
         if (this.shouldLog('trace')) {
             if (result.stdout) {
-                this.debugChannel.info('[trace] --- STDOUT ---');
-                this.debugChannel.info(`[trace] ${result.stdout}`);
+                this.debugChannel.info(this.tagged('[trace] --- STDOUT ---'));
+                this.debugChannel.info(this.tagged(`[trace] ${result.stdout}`));
             }
 
             if (result.stderr) {
-                this.debugChannel.info('[trace] --- STDERR ---');
-                this.debugChannel.info(`[trace] ${result.stderr}`);
+                this.debugChannel.info(this.tagged('[trace] --- STDERR ---'));
+                this.debugChannel.info(this.tagged(`[trace] ${result.stderr}`));
             }
         }
 
-        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
+        this.debugChannel.info(this.tagged(`[debug] ${'='.repeat(60)}`));
     }
 
     /**
@@ -241,7 +268,7 @@ export class DebugLogger {
     public logEnvironment(label: string, env: NodeJS.ProcessEnv): void {
         if (!this.shouldLog('debug')) return;
 
-        this.debugChannel.info(`[debug] Environment - ${label}`);
+        this.debugChannel.info(this.tagged(`[debug] Environment - ${label}`));
         this.debugChannel.info('[debug] ' + JSON.stringify({
             PATH: env.PATH?.split(':').join('\n  '),
             HOME: env.HOME,
