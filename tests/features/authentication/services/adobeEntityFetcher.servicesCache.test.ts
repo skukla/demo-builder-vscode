@@ -144,6 +144,10 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
 
         const pending = fetcher.getServicesForOrg('org1');
+        // The assertion IS awaited below; the handler must attach BEFORE the
+        // timers advance or the rejection is unhandled. The rule cannot see a
+        // deferred await.
+        // eslint-disable-next-line jest/valid-expect
         const assertion = expect(pending).rejects.toThrow(/timed out/i);
         await Promise.resolve();
         jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
@@ -157,6 +161,10 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         sdk.getServicesForOrg.mockReturnValueOnce(new Promise(() => {}));
 
         const pending = fetcher.getServicesForOrg('org1');
+        // The assertion IS awaited below; the handler must attach BEFORE the
+        // timers advance or the rejection is unhandled. The rule cannot see a
+        // deferred await.
+        // eslint-disable-next-line jest/valid-expect
         const rejected = expect(pending).rejects.toThrow();
         await Promise.resolve();
         jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);

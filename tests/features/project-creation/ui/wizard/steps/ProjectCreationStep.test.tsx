@@ -317,7 +317,10 @@ describe('ProjectCreationStep', () => {
             expect(screen.getByText(/npm ERR!/i)).toBeInTheDocument();
         });
 
-        it('should display Back button on error', () => {
+        // Renamed 2026-08-28: this shared the previous test's title while
+        // asserting something else entirely (the failure message, not the
+        // Back button) — jest/no-identical-title caught it.
+        it('should display the failure message on error', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -328,8 +331,6 @@ describe('ProjectCreationStep', () => {
                 </Provider>
             );
 
-            // Note: Back button may not be present in ProjectCreationStep
-            // but error should be clear
             expect(screen.getByText(/Failed/i)).toBeInTheDocument();
         });
     });

@@ -170,7 +170,7 @@
           "demoBuilder.autoZoom": {
             "type": "boolean",
             "default": false,
-            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default \u2014 zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
+            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default — zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
           },
           "demoBuilder.updateChannel": {
             "type": "string",
@@ -182,7 +182,7 @@
             "enumDescriptions": [
               "Production releases only",
               "Beta prereleases (testing)",
-              "Alpha preview builds \u2014 honored only for repository collaborators; others fall back to beta"
+              "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
             ],
             "default": "stable",
             "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
@@ -236,12 +236,12 @@
                 "demo-team-blocks"
               ],
               "enumDescriptions": [
-                "Demo Team Block Collection \u2014 general-purpose blocks built by the Demo Team, usable in any EDS storefront"
+                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
               ]
             },
             "uniqueItems": true,
             "default": [],
-            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default \u2014 package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
+            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
           },
           "demoBuilder.blockLibraries.custom": {
             "type": "array",
@@ -262,7 +262,7 @@
             "enumDescriptions": [
               "Prompt before applying upstream library updates or promoting local changes to a library",
               "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
-              "Never touch block library remotes \u2014 promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+              "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
             ],
             "default": "ask",
             "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
@@ -289,7 +289,7 @@
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "",
-            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required \u2014 set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required — set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
           },
           "demoBuilder.daLive.IMSOrgId": {
             "type": "string",
@@ -391,12 +391,12 @@
           "demoBuilder.ai.requireAgentConsent": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` \u2014 publish, delete, reset, \u2026). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use \u2014 the agent-side `confirm` convention then remains the only gate."
+            "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
           },
           "demoBuilder.ai.enableThirdPartyTools": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it \u2014 atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
+            "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it — atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
           }
         }
       },
@@ -413,7 +413,7 @@
             "type": "string",
             "default": "",
             "format": "uri",
-            "description": "Data Installer API base URL, without a trailing action segment. Required \u2014 set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+            "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
           }
         }
       }
@@ -484,7 +484,7 @@
     "mesh:delete": "aio api-mesh delete --autoConfirmAction",
     "mesh:status": "aio api-mesh get --active",
     "hooks": "node scripts/hooks.js",
-    "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) \u2014 turn off: git config --unset core.hooksPath\"",
+    "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"",
     "docs:check": "node scripts/hooks.js coverage",
     "data-installer:drift": "node scripts/dataInstallerDrift.js",
     "eds:drift": "node scripts/edsDrift.js",
@@ -515,6 +515,7 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jest": "^29.16.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.0",

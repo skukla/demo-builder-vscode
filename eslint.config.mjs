@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import importPlugin from 'eslint-plugin-import';
 import prettierConfig from 'eslint-config-prettier';
+import jest from 'eslint-plugin-jest';
 
 export default tseslint.config(
     eslint.configs.recommended,
@@ -165,7 +166,26 @@ export default tseslint.config(
     },
     {
         files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+        plugins: { jest },
         rules: {
+            // ── Jest best practices (ADR-016) ────────────────────────────
+            // The community rule set, adopted 2026-08-28 because it catches
+            // with AST accuracy what the craft census could only approximate
+            // by regex. WARN tier during the burn-down (PL-14 ratchets these
+            // to error as each class reaches zero); the three below are ERROR
+            // from day one — each is a test that silently proves nothing.
+            'jest/no-focused-tests': 'error',      // .only disables its whole file
+            'jest/no-identical-title': 'error',    // a shadowed test never runs alone
+            'jest/valid-expect': 'error',          // a malformed expect asserts nothing
+            'jest/expect-expect': 'warn',          // assertion-free tests (census: 2)
+            'jest/no-disabled-tests': 'warn',
+            'jest/no-conditional-expect': 'warn',  // assertions that can be skipped
+            'jest/no-standalone-expect': 'warn',
+            'jest/valid-title': 'warn',
+            'jest/no-alias-methods': 'warn',
+            'jest/prefer-to-be': 'warn',
+            'jest/prefer-to-have-length': 'warn',
+
             // Relax rules for tests
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-require-imports': 'off',

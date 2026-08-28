@@ -78,6 +78,10 @@ describe('getServicesForOrg retry hardening', () => {
             const call = jest.fn(() => new Promise(() => undefined));
 
             const pending = makeService(call).getServicesForOrg('org-1');
+            // The assertion IS awaited below; the handler must attach BEFORE the
+            // timers advance or the rejection is unhandled. The rule cannot see a
+            // deferred await.
+            // eslint-disable-next-line jest/valid-expect
             const guard = expect(pending).rejects.toThrow(/timed out|org services/i);
             await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
             await guard;
