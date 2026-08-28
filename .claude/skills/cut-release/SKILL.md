@@ -37,6 +37,12 @@ decide what (if anything) to fix before tagging.
 
 - **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
+- **`bash .rptc/plans/evaluation-mode/battery/sweep.sh`** — the full-coverage
+  battery (AI-1q): every unattended-safe prompt (tier 1 + skills read-only, then
+  the tier-2 scratch writes), closing with the coverage gates. Needs a live dev
+  host on the socket (mcp-live-probe has the relaunch recipe) and REAL agent
+  sessions — minutes, not seconds. Tier 3 never runs here by design; the named
+  floor in `unprompted-baseline.json` documents each exclusion.
 - **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — rot in the RPTC record itself
   (~2s, offline): backlog links that do not resolve, items with no index entry, plans that
   shipped and never moved, citations naming a deleted file. Read the CONTROL line in each

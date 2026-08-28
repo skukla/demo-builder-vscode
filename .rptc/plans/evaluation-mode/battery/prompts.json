@@ -770,5 +770,32 @@
     ],
     "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: folder+state move on the current project; the harness's scratch reset undoes it.",
     "tier": 2
+  },
+  {
+    "id": "t2-configure",
+    "tier": 2,
+    "prompt": "Set the ACCS_GRAPHQL_ENDPOINT for this project's Commerce backend to https://fake.example.test/graphql. Use the configuration tool \u2014 do not edit files by hand.",
+    "expect": [
+      "configure_project"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Writes componentConfigs on the current project (scratch); never deploys \u2014 its handler marks the mesh stale and stops."
+  },
+  {
+    "id": "t2-regenerate-ai",
+    "tier": 2,
+    "prompt": "Regenerate this project's AI context files (AGENTS.md, MCP config, skills).",
+    "expect": [
+      "regenerate_ai_files"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Local bundle writes into scratch via the hash-and-skip writers; reset wipes them."
+  },
+  {
+    "id": "t2-rename-integration",
+    "tier": 2,
+    "prompt": "Rename the integration currently called 'Scratch Integration' to 'Renamed Probe'.",
+    "expect": [
+      "rename_integration"
+    ],
+    "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Display-name-only metadata write on the fixture-seeded entry; id and folder are immutable by design."
   }
 ]

@@ -24,3 +24,16 @@ set_project_pinned
 save_ai_prompt
 export_project_settings
 rename_project
+#
+# Wave 3 (2026-08-28 closeout loop), each cleared by reading its handler:
+#   configure_project: writes componentConfigs/secrets into the CURRENT
+#     project and marks the mesh config-changed — it never deploys (its own
+#     docstring: redeploy prompts belong to a UI with a person in front).
+#   regenerate_ai_files: rewrites the current project's AI bundle files on
+#     disk (hash-and-skip writers); scratch gets a bundle, reset wipes it.
+#   rename_integration: display-name-only metadata write on the current
+#     project's keyed entry (id/folder immutable); the fixture seeds
+#     'scratch-integration' for it to rename.
+configure_project
+regenerate_ai_files
+rename_integration

@@ -26,5 +26,17 @@
     "eds-storefront": {
       "AEM_ASSETS_ENABLED": "fake-test-pw-not-a-secret"
     }
+  },
+  "appBuilderComponents": {
+    "scratch-integration": {
+      "kind": "integration",
+      "status": "deployed",
+      "name": "Scratch Integration",
+      "source": {
+        "owner": "fake-owner",
+        "repo": "fake-repo",
+        "branch": "main"
+      }
+    }
   }
 }

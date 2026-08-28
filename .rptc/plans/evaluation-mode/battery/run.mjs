@@ -116,7 +116,12 @@ const TIER2 = process.argv.includes('--tier2');
 let tier2Token = null;
 if (TIER2) {
     const { tier2Writes, setup } = await import('./tier2-harness.mjs');
-    ALLOWED.push(...tier2Writes());
+    // PREFIXED, matching enumerate-tools' output — the CLI's --allowed-tools
+    // matches literally, and a bare name silently fails to authorize the MCP
+    // tool. Measured 2026-08-28: rename_integration was DENIED mid-run and the
+    // agent hand-edited the manifest as a workaround (itself a finding: denial
+    // text invites 'other tools', and the agent obliged).
+    ALLOWED.push(...tier2Writes().map((t) => `mcp__demo-builder__${t}`));
     tier2Token = setup();
 }
 

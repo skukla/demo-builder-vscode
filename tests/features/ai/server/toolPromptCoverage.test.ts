@@ -66,6 +66,24 @@ describe('every tool is exercised by a battery prompt', () => {
         expect(unjudged).toEqual([]);
     });
 
+    it('every floor entry carries a NAMED reason — a bare entry is an IOU, not a floor', () => {
+        // AI-1q's done-condition: the baseline is DOCUMENTATION of the tier-3
+        // floor, not a list of unpaid debts. An entry without a reason is a
+        // tool nobody decided about.
+        const baseline: { tools: string[]; reasons?: Record<string, string> } = JSON.parse(
+            readFileSync(join(BATTERY, 'unprompted-baseline.json'), 'utf8'),
+        );
+        const unreasoned = baseline.tools.filter(
+            (t) => !baseline.reasons?.[t] || baseline.reasons[t].length < 10,
+        );
+        expect(unreasoned).toEqual([]);
+        // And no orphaned reason survives its tool leaving the floor.
+        const orphaned = Object.keys(baseline.reasons ?? {}).filter(
+            (t) => !baseline.tools.includes(t),
+        );
+        expect(orphaned).toEqual([]);
+    });
+
     it('the baseline may only shrink — a paid-off entry left listed is rot', () => {
         // Same rule the response-ceiling IOU list carries. A tool that HAS a prompt
         // now must leave the baseline, or the list stops meaning anything.
