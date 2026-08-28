@@ -40,3 +40,20 @@ create-and-delete inside one journey.
 Idempotency rules apply verbatim (journey measurement rule 6): the ask
 contains its own undo, the result is reported in plain English, and anything
 that cannot return to zero is a reversibility finding.
+
+## RESULTS — run 2026-08-28, session 1c249bb9 (unattended)
+
+**98 turns, 95 tool calls, 977 seconds, $10.12.** Added the kit, built the ERP
+layer on it, wired real Commerce order events, PLACED A REAL ORDER and watched
+it arrive in durable storage, exposed the lookup endpoint, all 215 kit tests
+passing (plus new ones). First organic use of `list_event_providers`.
+Teardown refused by the consent-ordering bug (fixed same day: standing
+consent now beats the auto-declining chat ask); the follow-up teardown run
+removed everything and re-verified Runtime empty — finding AB-7 on the way
+(remove_integration leaves Runtime code behind; the run hand-cleaned 15
+packages including an August leftover).
+
+Metrics: first action call 7, 3 re-orientations, calls-by-server built-in 43 ·
+bash 34 · demo-builder 18 · siblings 0 — the commerce-extensibility rules
+server went unused in BOTH journeys while the agent re-derived kit knowledge
+by reading its source: the standing routing lead.
