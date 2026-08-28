@@ -145,6 +145,15 @@ export const TIMEOUTS = {
      *  capping a genuine hang (the picker surfaces failures with a Retry). */
     ORG_SERVICES_FETCH: 60000,
 
+    /** Pause before the ONE retry of a fast-failed org-services fetch.
+     *  Adobe's own error template for this endpoint says retry
+     *  (ERR_MSG_RETRY_ON_INTERNAL_ERROR), and the 2026-08-28 incident measured
+     *  the failure mode: intermittent sub-second 500s while a raw retry
+     *  succeeded. Short on purpose — the same fetch feeds the Add Integration
+     *  picker, whose fast-fail + Retry button must stay fast; timeouts are
+     *  never retried (they already spent the full budget). */
+    ORG_SERVICES_RETRY_DELAY: 2000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 
