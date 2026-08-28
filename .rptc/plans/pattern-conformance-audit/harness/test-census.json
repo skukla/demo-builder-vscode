@@ -9,9 +9,8 @@
   },
   {
    "unit": "src/features/components/services/componentInstallation.ts",
-   "verdict": "INDIRECT",
-   "suites": [],
-   "note": "INDIRECT: referenced by projectFinalizationService + catalogLoader suites \u2014 same re-read needed"
+   "verdict": "UNTESTED",
+   "suites": []
   },
   {
    "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
@@ -103,9 +102,8 @@
   },
   {
    "unit": "src/features/mesh/services/meshRedeploy.ts",
-   "verdict": "INDIRECT",
-   "suites": [],
-   "note": "INDIRECT: exercised through edsResetService-meshAuth + edsResetTool suites (name-referenced, not imported) \u2014 reclassify after reading whether those assert its collaborator calls"
+   "verdict": "UNTESTED",
+   "suites": []
   },
   {
    "unit": "src/features/mesh/services/meshVerifier.ts",
@@ -417,38 +415,6 @@
    ]
   },
   {
-   "unit": "src/core/vscode/envFileWatcherService.ts",
-   "verdict": "WITNESS",
-   "suites": [
-    "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService.test.ts"
-   ]
-  },
-  {
-   "unit": "src/core/vscode/workspaceWatcherManager.ts",
-   "verdict": "WITNESS",
-   "suites": [
-    "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
-    "tests/core/vscode/envFileWatcherService.test.ts",
-    "tests/core/vscode/envFileWatcherService.testUtils.ts",
-    "tests/core/vscode/workspaceWatcherManager.mocked.test.ts"
-   ]
-  },
-  {
-   "unit": "src/features/app-builder/services/appManagementClient.ts",
-   "verdict": "WITNESS",
-   "suites": [
-    "tests/features/app-builder/services/appManagementClient.test.ts",
-    "tests/features/app-builder/services/appManagementInstaller.test.ts",
-    "tests/features/app-builder/services/appManagementUninstaller.test.ts",
-    "tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts"
-   ]
-  },
-  {
    "unit": "src/features/app-builder/services/appManagementInstaller.ts",
    "verdict": "WITNESS",
    "suites": [
@@ -675,19 +641,6 @@
     "tests/features/eds/services/authoringExperienceFlip.test.ts",
     "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
     "tests/features/eds/services/storefrontRepublishContent.test.ts"
-   ]
-  },
-  {
-   "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
-   "verdict": "BLIND",
-   "suites": [
-    "tests/core/di/service-logger-injection.test.ts",
-    "tests/features/prerequisites/services/prerequisitesCacheManager-operations.test.ts",
-    "tests/features/prerequisites/services/prerequisitesCacheManager-stats-versions.test.ts",
-    "tests/features/prerequisites/services/prerequisitesCacheManager-ttl-eviction.test.ts",
-    "tests/unit/prerequisites/cacheManager-invalidation.test.ts",
-    "tests/unit/prerequisites/cacheManager-operations.test.ts",
-    "tests/unit/prerequisites/cacheManager-security.test.ts"
    ]
   },
   {
