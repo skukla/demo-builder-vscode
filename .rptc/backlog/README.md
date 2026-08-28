@@ -195,7 +195,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
 | `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | shipped |
-| `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | active |
+| `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | shipped |
 | `AI-1f` | feature | └ [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) | — | low | backlog |
 | `AI-1g` | fix | └ [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) | — | high | shipped |
 | `AI-1h` | feature | └ [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) | — | med | shipped |
@@ -380,7 +380,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 **C** — 8 items
 
-- `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — active
+- `AI-1e` [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) — shipped
 - `AI-1f` [An open-ended design skill — for a pass that adds design skills, not for phase 5](2026-08-17-open-ended-design-skill.md) — backlog
 - `AI-1g` [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) — shipped
 - `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — shipped

@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: AI-1c
 value: med
-status: active
+status: shipped
 layer: C
 ---
 # Agent round-trip optimisation — four measured candidates
@@ -29,6 +29,7 @@ documents). Reproduce any figure with `node scripts/trace-session.mjs`.
 
 Three candidates remain (the orientation trio, catalog preload vs `ToolSearch`, and `.strict()` on write tools). Each is measure → fix → re-measure.
 - 2026-08-26  Candidate 1 (the self-inflicted orientation call) MEASURED as still live on the headless path: 9 of 10 battery paths opened ToolSearch -> get_current_project. Cause is not this candidate being wrong but AI-1g — the home AGENTS.md carries whichever of two contents was written last, and activation writes the ordering branch.
+- 2026-08-28  Candidate 2 (orientation trio) RE-MEASURED and CLOSED 2026-08-28: 4 prompts x 3 repeats, headless, multi-project machine, live server on the loop branch. 12/12 hits; get_current_project in 0 runs; no run called even 2 of the trio. The 2026-08-27 orientation fixes (merged status answer, current:true on list_projects) plus AI-1g's flip-flop fix removed the trio without a consolidated tool. Nothing to build. Minor lead left unforced: 2 of 3 urls runs followed get_project_urls with get_project (n too small to sentence). All four candidates now resolved: 1 shipped, 2 closed-nothing-left, 3 measured-and-rejected, 4 shipped.
 
 ## The finding that reorders everything
 
