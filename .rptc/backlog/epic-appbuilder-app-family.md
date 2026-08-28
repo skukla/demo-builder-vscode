@@ -27,3 +27,7 @@ invisible as items for months.
 
 `AB-2` (per-SC Adobe I/O project) is the same territory from the other side —
 where the integration gets deployed, rather than what it is.
+
+## Shipped so far
+
+- 2026-08-28  2026-08-27 reconciliation: the App Management arc shipped under this epic today — AB-1d (kit as seed + registry Commerce contract), AB-4 (uninstall before remove), AB-5 (install-state surface: drawer row, status/install tools, Commerce Admin link). The spine now covers the full lifecycle: add, deploy, install, status, retry, uninstall, remove. Remaining scope is unchanged: the three shapes (AB-1a gated, AB-1b, AB-1c).

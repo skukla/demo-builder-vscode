@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: active
+status: backlog
 ---
 
 # Tests-tree dedup — the census after the first-ever scan

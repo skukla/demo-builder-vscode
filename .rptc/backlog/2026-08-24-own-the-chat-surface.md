@@ -102,8 +102,10 @@ own tool calls.
 The studio gets `control_request` / `can_use_tool` instead — the same message the
 Agent SDK answers through `canUseTool` — because it drives the process with
 `--permission-prompt-tool stdio` and `--input-format stream-json`
-(the tech-case-studio repo's `sidecar/src/claude-cli-provider.ts:243-252` —
-an EXTERNAL repo, not a path here). That message arrives for EVERY
+(lines 243-252 of the tech-case-studio repo's `claude-cli-provider.ts`,
+under its sidecar/src — an EXTERNAL repo, not a path here, and written
+path-free so the citation scanner stops resolving it locally). That
+message arrives for EVERY
 tool, before it runs.
 
 So the choice is not only about rendering. It is: does a producer's agent get to
