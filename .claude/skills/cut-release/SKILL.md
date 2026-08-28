@@ -43,6 +43,11 @@ decide what (if anything) to fix before tagging.
   host on the socket (mcp-live-probe has the relaunch recipe) and REAL agent
   sessions — minutes, not seconds. Tier 3 never runs here by design; the named
   floor in `unprompted-baseline.json` documents each exclusion.
+- **`node .claude/skills/test-divergence-scan/scan.mjs tests`** — how many
+  DIFFERENT ways the suite builds the same fake (~2s, offline). Not duplication —
+  divergence: 26 distinct StateManager fakes across 48 uses is nobody knowing what
+  the fake should look like. Baseline table lives in the skill; compare against it.
+  Exit 2 means a probe matched nothing — BROKEN, not clean.
 - **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — rot in the RPTC record itself
   (~2s, offline): backlog links that do not resolve, items with no index entry, plans that
   shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
