@@ -4,7 +4,7 @@ kind: question
 area: ai
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # Unattended teardown consent — how does a commissioned journey get to zero?
@@ -44,3 +44,7 @@ Candidate shapes (decision needed before any build):
   is about AUTHORIZED reversal, not about weakening the gate.
 - The journey doc (`.rptc/plans/evaluation-mode/journeys/erp-roundtrip.md`)
   records the full trace.
+
+## Shipped so far
+
+- 2026-08-28  ANSWERED same day: the capability already exists — demoBuilder.ai.requireAgentConsent (default on, read live per call; agentOperationNotifier.ts:113). Owner granted consent verbally; the setting was turned off in the dev-host profile and the ERP journey's teardown then ran unattended: remove_integration succeeded, zero-state diff verdict AT ZERO. The refinement that remains OPEN if field use wants it: a granular per-tool pre-approval list instead of the blanket boolean (candidate 1 in the body) — file separately if the blanket off proves too broad.

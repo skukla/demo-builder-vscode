@@ -3,7 +3,7 @@ id: AB-6
 kind: feature
 area: app-builder
 needs: []
-value: med
+value: high
 status: backlog
 ---
 
@@ -42,3 +42,7 @@ does not exist.
 
 Done when: an ERP-class journey can request real event delivery and still end
 at zero, with the journey scan confirming the providers are gone.
+
+## Shipped so far
+
+- 2026-08-28  Owner directive 2026-08-28: this is now a committed gap to fix, not a sketch — the extension SHOULD manage event providers, for BOTH headful (wizard/dashboard UI) and headless (agent/MCP) users. Research commissioned: what it takes (APIs/SDK/CLI mechanics, starter-kit onboarding as ground truth, org-context requirements, both delivery surfaces). Research output: .rptc/research/event-provider-lifecycle/research.md
