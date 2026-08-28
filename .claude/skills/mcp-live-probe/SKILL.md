@@ -82,8 +82,34 @@ c.on('error',e=>{console.log('DEAD:',e.code);clearTimeout(t);process.exit(0)});
 |---|---|
 | `LISTENING` but `info` still times out | Host is up; its **MCP server is wedged**. Restarting the host is the fix, not waiting |
 | `HALF-OPEN` | Same — accepted the socket, never answered |
-| `DEAD: ECONNREFUSED` | Stale socket file, no host. Ask for F5; `rm` the socket |
+| `DEAD: ECONNREFUSED` | Stale socket file, no host. `rm` the socket, then relaunch (below) or ask for F5 |
 | `DEAD: ENOENT` | No socket at all. No host has ever bound here |
+
+**The dev host is CLI-launchable — a dead host is not owner-gated** (proven
+2026-08-28, owner-authorized). The obvious routes fail in specific ways worth
+not rediscovering:
+
+- `cursor --extensionDevelopmentPath=… <folder>` SILENTLY drops the dev flag
+  when a Cursor instance is already running — it opens a NORMAL window at the
+  folder and exits 0. No error, no dev host, no socket.
+- A separate instance needs its own `--user-data-dir`, and the path must be
+  SHORT: Cursor binds its own IPC socket inside it, and a unix socket path
+  over 103 chars fails with `listen EINVAL` (a scratchpad path is too long).
+
+The working recipe:
+
+```bash
+mkdir -p /tmp/db-devhost && nohup /Applications/Cursor.app/Contents/MacOS/Cursor \
+  --user-data-dir=/tmp/db-devhost \
+  --extensionDevelopmentPath="$PWD" "$HOME/.demo-builder/projects" \
+  > /tmp/db-devhost/launch.log 2>&1 &
+# then poll `probe.mjs info` (~30s to bind)
+```
+
+Caveat: the isolated data dir has FRESH SecretStorage and globalState — no
+GitHub/DA.live/Adobe sessions, no current-project pointer. Fine for skill
+measurement and unauthenticated reads; auth-dependent work still wants the
+owner's own window.
 
 **Do NOT diagnose this with `lsof` or `ps`.** Both produced confident wrong answers on
 2026-08-17, and the wrong answer went into this skill before the connect test caught it:
