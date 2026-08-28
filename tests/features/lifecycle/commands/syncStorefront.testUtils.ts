@@ -129,21 +129,8 @@ export function makeStateManager(project: Record<string, unknown> | null): {
     };
 }
 
-export function makeLogger(): {
-    info: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
-    debug: jest.Mock;
-    trace: jest.Mock;
-} {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
 export function makeEdsProject(): Record<string, unknown> {
     return {

@@ -37,9 +37,8 @@ export interface MockLogger {
     debug: jest.Mock;
 }
 
-export function makeLogger(): MockLogger {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
 export function makeStateManager(project: Partial<Project> | null): { getCurrentProject: jest.Mock } {
     return { getCurrentProject: jest.fn().mockResolvedValue(project) };

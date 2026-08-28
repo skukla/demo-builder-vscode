@@ -25,7 +25,7 @@ import {
 import {
     daLiveOrg,
     daLiveSite,
-    makeMockGithub,
+    makePdp404Github,
     mockLogger,
     overlayUrl,
     repoName,
@@ -38,7 +38,7 @@ describe('installSmart404Handler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGithub = makeMockGithub();
+        mockGithub = makePdp404Github();
     });
 
     it('installs the snippet on the happy path', async () => {

@@ -26,7 +26,7 @@ import {
     logger,
     asOps,
     writesTo,
-    makeMockGithub,
+    makeBrandAssetGithub,
     mockSourceFetch,
 } from './brandAssetPublisher.testUtils';
 
@@ -50,7 +50,7 @@ describe('publishBrandAssets policy', () => {
                 'src/mod.js': GROUP_JS,
                 'src/schema.json': '{"id":"x"}',
             });
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 configWithFiles([
@@ -87,7 +87,7 @@ describe('publishBrandAssets policy', () => {
         ])('refuses target %s with a per-file non-fatal failure', async (to) => {
             // Source fetch WOULD succeed — only the target policy stands in the way.
             mockSourceFetch({ 'styles/bodea-theme.css': THEME_CSS });
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 configWithFiles([{ from: 'styles/bodea-theme.css', to }]),
@@ -108,7 +108,7 @@ describe('publishBrandAssets policy', () => {
 
         it('still vendors the allowed files when one target is refused', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 configWithFiles([
@@ -131,7 +131,7 @@ describe('publishBrandAssets policy', () => {
 
         it('accepts the bundled shape: a stylesheet link plus a module script', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 configWithSnippet(CONFIG.headSnippet!),
@@ -171,7 +171,7 @@ describe('publishBrandAssets policy', () => {
             ],
         ])('refuses a snippet with %s without touching head.html', async (_label, headSnippet) => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 configWithSnippet(headSnippet),

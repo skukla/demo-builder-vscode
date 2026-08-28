@@ -10,16 +10,9 @@
  */
 
 import * as net from 'net';
-import type { Logger } from '@/types/logger';
 
-export function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
 /** Minimal newline-delimited JSON-RPC client over a connected socket. */
 export class SocketRpc {

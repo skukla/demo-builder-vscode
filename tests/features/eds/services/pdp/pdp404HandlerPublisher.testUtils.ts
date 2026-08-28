@@ -11,23 +11,20 @@
  */
 
 export const repoOwner = 'skukla';
+import type { MockGithub } from '../../../../helpers/githubFake';
+export type { MockGithub } from '../../../../helpers/githubFake';
 export const repoName = 'citisignal-b2b';
 export const daLiveOrg = 'skukla';
 export const daLiveSite = 'citisignal-b2b';
 export const overlayUrl =
     'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
 
-export interface MockGithub {
-    getFileContent: jest.Mock;
-    createOrUpdateFile: jest.Mock;
-}
-
 /**
  * Default storefront: `head.html` and `404.html` both carry a nonced
  * `<script>`; anything else resolves as an existing `delayed.js`. Suites that
  * exercise the "no nonce" / "file missing" paths override per-test.
  */
-export function makeMockGithub(): MockGithub {
+export function makePdp404Github(): MockGithub {
     return {
         getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
             if (path === 'head.html') {

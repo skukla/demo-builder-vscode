@@ -34,23 +34,5 @@ export function createLibraryCreationMocks(): LibraryCreationMocks {
     return { service, mockTokenProvider, mockLogger, mockGetFileContent };
 }
 
-/**
- * Build a component-definition.json content string.
- * Note: GitHubFileOperations.getFileContent returns decoded content (not base64).
- */
-export function createComponentDef(
-    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-): string {
-    const content = {
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({
-                title: b.title,
-                id: b.id,
-                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-            })),
-        }],
-    };
-    return JSON.stringify(content);
-}
+/** Byte-identical to the blockCollectionHelpers one; re-exported (ADR-016). */
+export { createComponentDef } from '../blockCollectionHelpers.testUtils';

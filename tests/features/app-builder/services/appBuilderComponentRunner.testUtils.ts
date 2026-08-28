@@ -83,9 +83,9 @@ export function createCommandManager() {
     };
 }
 
-export function createLogger() {
-    return { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() };
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+import { createMockLogger as createLogger } from '../../../helpers/loggerFake';
+export { createLogger };
 
 export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
     return {

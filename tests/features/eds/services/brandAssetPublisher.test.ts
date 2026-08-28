@@ -28,7 +28,7 @@ import {
     logger,
     asOps,
     writesTo,
-    makeMockGithub,
+    makeBrandAssetGithub,
     mockSourceFetch,
 } from './brandAssetPublisher.testUtils';
 
@@ -44,7 +44,7 @@ describe('publishBrandAssets', () => {
     describe('file copies', () => {
         it('fetches each configured file from the source repo at the configured branch', async () => {
             const fetchMock = mockSourceFetch();
-            await publishBrandAssets(CONFIG, asOps(makeMockGithub()), repoOwner, repoName, logger);
+            await publishBrandAssets(CONFIG, asOps(makeBrandAssetGithub()), repoOwner, repoName, logger);
 
             const urls = fetchMock.mock.calls.map((c) => String(c[0]));
             expect(urls).toContain(
@@ -57,7 +57,7 @@ describe('publishBrandAssets', () => {
 
         it('creates a new file when the target does not exist', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 CONFIG, asOps(github), repoOwner, repoName, logger,
@@ -75,7 +75,7 @@ describe('publishBrandAssets', () => {
 
         it('updates an existing file whose content changed, passing its SHA', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             github.getFileContent.mockImplementation((_o, _r, path: string) => {
                 if (path === 'styles/bodea-theme.css') {
                     return Promise.resolve({ content: '/* stale */', sha: 'old-theme-sha' });
@@ -99,7 +99,7 @@ describe('publishBrandAssets', () => {
 
         it('skips the write when the target is already identical', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             github.getFileContent.mockImplementation((_o, _r, path: string) => {
                 if (path === 'styles/bodea-theme.css') {
                     return Promise.resolve({ content: THEME_CSS, sha: 'theme-sha' });
@@ -122,7 +122,7 @@ describe('publishBrandAssets', () => {
 
         it('reports a non-fatal reason when a source fetch 404s and still processes the rest', async () => {
             mockSourceFetch({ 'scripts/bodea-customer-group.js': GROUP_JS });
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 CONFIG, asOps(github), repoOwner, repoName, logger,
@@ -139,7 +139,7 @@ describe('publishBrandAssets', () => {
         it('reports a non-fatal reason when the source fetch throws', async () => {
             const mock = jest.fn().mockRejectedValue(new Error('network down'));
             global.fetch = mock as unknown as typeof fetch;
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 CONFIG, asOps(github), repoOwner, repoName, logger,
@@ -154,7 +154,7 @@ describe('publishBrandAssets', () => {
 
         it('reports a non-fatal reason when the GitHub write fails (never throws)', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             github.createOrUpdateFile.mockRejectedValue(new Error('403 Forbidden'));
 
             const result = await publishBrandAssets(
@@ -168,7 +168,7 @@ describe('publishBrandAssets', () => {
 
         it('retries once on a stale SHA by re-reading the target', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             github.getFileContent.mockImplementation((_o, _r, path: string) => {
                 if (path === 'styles/bodea-theme.css') {
                     return Promise.resolve({ content: '/* moved */', sha: 'fresh-theme-sha' });
@@ -206,7 +206,7 @@ describe('publishBrandAssets', () => {
 
         it('skips the retry write when the re-read shows the content already landed', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             // First read: stale state. Re-read after the stale-SHA rejection:
             // someone else already wrote the exact content.
             github.getFileContent
@@ -244,7 +244,7 @@ describe('publishBrandAssets', () => {
     describe('head.html snippet', () => {
         it('appends a marker-bounded block when the markers are absent', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
                 CONFIG, asOps(github), repoOwner, repoName, logger,
@@ -266,7 +266,7 @@ describe('publishBrandAssets', () => {
 
         it('is idempotent: an identical marker block is not rewritten', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             // First run captures what got written; second run starts from it.
             await publishBrandAssets(CONFIG, asOps(github), repoOwner, repoName, logger);
@@ -292,7 +292,7 @@ describe('publishBrandAssets', () => {
 
         it('re-vendors in place when the marker block carries an older snippet', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             const stale =
                 `${HEAD_HTML}\n${BRAND_ASSETS_MARKER_START}\n`
                 + '<link rel="stylesheet" href="/styles/old-theme.css">\n'
@@ -321,7 +321,7 @@ describe('publishBrandAssets', () => {
 
         it('reports a failure (not "already current") when the marker block is malformed', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             // Start marker present, end marker mangled away — a complete block
             // cannot be rebuilt, and appending would duplicate the start marker.
             const mangled = `${HEAD_HTML}\n${BRAND_ASSETS_MARKER_START}\n<link rel="stylesheet" href="/styles/bodea-theme.css">\n`;
@@ -347,7 +347,7 @@ describe('publishBrandAssets', () => {
 
         it('reports a non-fatal reason when head.html is missing', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             github.getFileContent.mockImplementation((_o, _r, path: string) => {
                 if (path === 'head.html') return Promise.resolve(null);
                 return Promise.resolve(null);
@@ -365,7 +365,7 @@ describe('publishBrandAssets', () => {
 
         it('does not touch head.html when the config has no headSnippet', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
             const { headSnippet: _unused, ...noSnippet } = CONFIG;
 
             const result = await publishBrandAssets(
@@ -383,7 +383,7 @@ describe('publishBrandAssets', () => {
     describe('overall result', () => {
         it('reports success when everything is already current (no-op re-run)', async () => {
             mockSourceFetch();
-            const github = makeMockGithub();
+            const github = makeBrandAssetGithub();
 
             // First run vendors everything; feed its outputs back as the repo state.
             await publishBrandAssets(CONFIG, asOps(github), repoOwner, repoName, logger);

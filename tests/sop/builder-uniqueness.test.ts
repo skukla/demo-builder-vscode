@@ -38,11 +38,8 @@ const KNOWN_DUPLICATES: Record<string, number> = {
     createMockCommandManager: 4,
     createMockCommandExecutor: 3,
     makeContext: 3,
-    makeLogger: 3,
-    createComponentDef: 2,
     createComponentSelection: 2,
     createSuccessResult: 2,
-    makeMockGithub: 2,
     makeProject: 2,
     makeStateManager: 2,
 };

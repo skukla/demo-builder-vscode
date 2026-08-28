@@ -16,7 +16,7 @@ import { installSmart404Handler } from '@/features/eds/services/pdp/pdp404Handle
 import {
     daLiveOrg,
     daLiveSite,
-    makeMockGithub,
+    makePdp404Github,
     mockLogger,
     overlayUrl,
     repoName,
@@ -29,7 +29,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGithub = makeMockGithub();
+        mockGithub = makePdp404Github();
     });
 
     it('also vendors the eager redirect into head.html (eliminates the visible 404 flash)', async () => {

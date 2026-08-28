@@ -9,6 +9,8 @@
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { BrandAssetsConfig } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
+import type { MockGithub } from '../../../helpers/githubFake';
+export type { MockGithub } from '../../../helpers/githubFake';
 
 export const repoOwner = 'test-owner';
 export const repoName = 'test-repo';
@@ -28,13 +30,8 @@ export const CONFIG: BrandAssetsConfig = {
         + '<script type="module" src="/scripts/bodea-customer-group.js"></script>',
 };
 
-export interface MockGithub {
-    getFileContent: jest.Mock;
-    createOrUpdateFile: jest.Mock;
-}
-
 /** Default target repo: head.html exists, brand files absent (fresh create). */
-export function makeMockGithub(): MockGithub {
+export function makeBrandAssetGithub(): MockGithub {
     return {
         getFileContent: jest.fn().mockImplementation((_o, _r, path: string) => {
             if (path === 'head.html') {
