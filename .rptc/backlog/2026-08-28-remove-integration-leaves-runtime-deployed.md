@@ -53,3 +53,7 @@ reversibility principle names.
   turns, $3.77 — the hand-cleanup and re-verification are all in the route.
 - The zero-state check now passes only BECAUSE the agent hand-cleaned;
   without its own Runtime listing the leak would have shipped again.
+
+## Shipped so far
+
+- 2026-08-28  FIX SHIPPED (2b5be4ce0), live proof pending upstream: removeAppBuilderComponent now lists the namespace after undeploy and deletes leftovers it can attribute EXACTLY (declared config packages incl. $include'd extension configs + the derived isolation package); unattributable packages never touched; unlistable namespace answers verified:false. Unit-proven with argument-asserted tests (6 cases incl. the exact leftover-delete command and the mesh exclusion); full suite 15,229 green. LIVE verification attempted twice 2026-08-28 and blocked by an Adobe Console outage (ERROR_GET_SERVICES_FOR_ORG 500, two request ids, 'retry later' template) — add_integration cannot create the fixture. The next journey run (or any add/remove once Console recovers) is the live proof; the runner's zero-check epilogue captures it automatically.
