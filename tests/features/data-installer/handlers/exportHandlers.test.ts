@@ -45,7 +45,7 @@ function accsProject(): Partial<Project> {
     };
 }
 
-function makeContext(project: unknown = accsProject()) {
+function makeImportHarness(project: unknown = accsProject()) {
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -96,7 +96,7 @@ beforeEach(() => {
 
 describe('list-datapack-export-items', () => {
     it('derives the REST base URL from the project ACCS endpoint', async () => {
-        await importHandlers['list-datapack-export-items'](makeContext(), {
+        await importHandlers['list-datapack-export-items'](makeImportHarness(), {
             ...PAYLOAD,
             dataType: 'attribute_sets',
         });
@@ -117,7 +117,7 @@ describe('list-datapack-export-items', () => {
             excludedCount: 1,
         });
 
-        const result = await importHandlers['list-datapack-export-items'](makeContext(), {
+        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
             ...PAYLOAD,
             dataType: 'attribute_sets',
         });
@@ -127,7 +127,7 @@ describe('list-datapack-export-items', () => {
     });
 
     it('refuses without a data type rather than asking for everything', async () => {
-        const result = await importHandlers['list-datapack-export-items'](makeContext(), PAYLOAD);
+        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), PAYLOAD);
 
         expect(result.success).toBe(false);
         expect(listExportItems).not.toHaveBeenCalled();
@@ -140,7 +140,7 @@ describe('start-datapack-export', () => {
      * else owns is not something the service will stop, so this does.
      */
     it('refuses a nameless target instead of writing into the shared catalog', async () => {
-        const result = await importHandlers['start-datapack-export'](makeContext(), {
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
             ...PAYLOAD,
             datapackName: '',
         });
@@ -151,7 +151,7 @@ describe('start-datapack-export', () => {
     });
 
     it('refuses without a version — name and version are the identity', async () => {
-        const result = await importHandlers['start-datapack-export'](makeContext(), {
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
             ...PAYLOAD,
             version: '',
         });
@@ -161,7 +161,7 @@ describe('start-datapack-export', () => {
     });
 
     it('refuses with no data types selected', async () => {
-        const result = await importHandlers['start-datapack-export'](makeContext(), {
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
             ...PAYLOAD,
             dataTypes: [],
         });
@@ -171,7 +171,7 @@ describe('start-datapack-export', () => {
     });
 
     it('passes the identity, instance and types through', async () => {
-        await importHandlers['start-datapack-export'](makeContext(), PAYLOAD);
+        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(startExport).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -197,7 +197,7 @@ describe('start-datapack-export', () => {
             ],
         });
 
-        const result = await importHandlers['start-datapack-export'](makeContext(), PAYLOAD);
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(result.success).toBe(true); // the call worked; the export did not
         expect(JSON.stringify(result.data)).toContain('MongoDB connection URI required');
@@ -206,14 +206,14 @@ describe('start-datapack-export', () => {
     it('refuses when the project has no usable Commerce credentials', async () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' } as never);
 
-        const result = await importHandlers['start-datapack-export'](makeContext(), PAYLOAD);
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(result.success).toBe(false);
         expect(startExport).not.toHaveBeenCalled();
     });
 
     it('never puts the credential pair in the response', async () => {
-        const result = await importHandlers['start-datapack-export'](makeContext(), PAYLOAD);
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
     });

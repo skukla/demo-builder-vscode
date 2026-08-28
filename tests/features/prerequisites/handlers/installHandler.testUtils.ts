@@ -28,6 +28,7 @@
 import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { ServiceLocator } from '@/core/di';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 // Mock prerequisite definitions
 export const mockNodePrereq: PrerequisiteDefinition = {
@@ -193,7 +194,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     const states = new Map();
     states.set(0, { prereq: mockNpmPrereq, result: mockNodeResult });
 
-    return {
+    return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),
             getInstallSteps: jest.fn().mockReturnValue({
@@ -242,5 +243,5 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    } as never)
 }

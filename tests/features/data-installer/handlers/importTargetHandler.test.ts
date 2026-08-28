@@ -65,7 +65,7 @@ const PAAS_PROJECT: Partial<Project> = {
     },
 };
 
-function makeContext(project: unknown) {
+function makeImportHarness(project: unknown) {
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -77,7 +77,7 @@ function makeContext(project: unknown) {
 }
 
 async function target(project: unknown) {
-    const result = await importHandlers['get-datapack-import-target'](makeContext(project));
+    const result = await importHandlers['get-datapack-import-target'](makeImportHarness(project));
     return result.data as {
         instance?: string;
         projectName?: string;
@@ -231,7 +231,7 @@ describe('get-datapack-import-target', () => {
         });
 
         it('succeeds with no instance when no project is open', async () => {
-            const result = await importHandlers['get-datapack-import-target'](makeContext(null));
+            const result = await importHandlers['get-datapack-import-target'](makeImportHarness(null));
 
             // Not a failure: the catalog is browsable with no project, and the
             // modal simply asks the user to type the target.

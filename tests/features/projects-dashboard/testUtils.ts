@@ -5,6 +5,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { Project, ComponentInstance, ProjectStatus } from '@/types/base';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../helpers/handlerContextTestHelpers';
 
 /**
  * Get valid demo-builder projects base path
@@ -128,9 +129,7 @@ export interface MockHandlerContext {
  * - getAllProjects() returns { name, path, lastModified }[]
  * - loadProjectFromPath(path) returns full Project
  */
-export function createMockHandlerContext(
-    projects: Project[] = []
-): MockHandlerContext {
+export function createMockHandlerContext(projects: Project[] = []): MockHandlerContext {
     // Create simplified project list (what getAllProjects returns)
     const projectList = projects.map((p) => ({
         name: p.name,
@@ -138,7 +137,7 @@ export function createMockHandlerContext(
         lastModified: p.lastModified,
     }));
 
-    return {
+    return createMockHandlerContextBase({
         stateManager: {
             getAllProjects: jest.fn().mockResolvedValue(projectList),
             getCurrentProject: jest.fn().mockResolvedValue(projects[0] || null),
@@ -155,7 +154,7 @@ export function createMockHandlerContext(
             error: jest.fn(),
         },
         sendMessage: jest.fn(),
-    };
+    } as never) as unknown as MockHandlerContext
 }
 
 /**

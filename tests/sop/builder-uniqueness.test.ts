@@ -32,7 +32,7 @@ const KNOWN_DUPLICATES: Record<string, number> = {
     createMockContext: 10,
     createMockProject: 9,
     createMockHandlerContext: 5,
-    makeContext: 3,
+    makeContext: 2,
     makeProject: 2,
 };
 

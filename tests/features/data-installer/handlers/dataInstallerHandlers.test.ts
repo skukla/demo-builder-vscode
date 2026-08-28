@@ -41,7 +41,7 @@ function setupSettings(values: { apiBaseUrl?: unknown; enabled?: unknown } = {})
 }
 
 /** A context with the fields the guard and handlers actually touch. */
-function makeContext(overrides: Partial<HandlerContext> = {}): HandlerContext {
+function makeImportHarness(overrides: Partial<HandlerContext> = {}): HandlerContext {
     const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 55, token: 'tok' }) };
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
@@ -58,7 +58,7 @@ function makeContext(overrides: Partial<HandlerContext> = {}): HandlerContext {
 
 /** A headless context — what `createHeadlessHandlerContext` produces. */
 function makeHeadlessContext(overrides: Partial<HandlerContext> = {}): HandlerContext {
-    return makeContext({ panel: undefined, ...overrides });
+    return makeImportHarness({ panel: undefined, ...overrides });
 }
 
 describe('dataInstallerHandlers', () => {
@@ -101,13 +101,13 @@ describe('dataInstallerHandlers', () => {
 
     describe('resolveDataInstallerAccess', () => {
         it('returns a client when settings and auth are in order', async () => {
-            const access = await resolveDataInstallerAccess(makeContext());
+            const access = await resolveDataInstallerAccess(makeImportHarness());
             expect(access.ok).toBe(true);
         });
 
         it('refuses when the feature is disabled, without constructing a client', async () => {
             setupSettings({ enabled: false });
-            const access = await resolveDataInstallerAccess(makeContext());
+            const access = await resolveDataInstallerAccess(makeImportHarness());
             expect(access.ok).toBe(false);
             expect(access.ok === false && access.response.code).toBe(ErrorCode.INVALID_OPERATION);
             expect(MockedClient).not.toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe('dataInstallerHandlers', () => {
 
         it('refuses when the base URL is unusable, without constructing a client', async () => {
             setupSettings({ apiBaseUrl: 'not a url' });
-            const access = await resolveDataInstallerAccess(makeContext());
+            const access = await resolveDataInstallerAccess(makeImportHarness());
             expect(access.ok).toBe(false);
             expect(MockedClient).not.toHaveBeenCalled();
         });
@@ -130,7 +130,7 @@ describe('dataInstallerHandlers', () => {
         describe('every config refusal leaves a trace and says how to fix it', () => {
             it('logs the unset base URL by name', async () => {
                 setupSettings({ apiBaseUrl: '' });
-                const context = makeContext();
+                const context = makeImportHarness();
 
                 const access = await resolveDataInstallerAccess(context);
 
@@ -141,7 +141,7 @@ describe('dataInstallerHandlers', () => {
 
             it('logs the disabled feature by name', async () => {
                 setupSettings({ enabled: false });
-                const context = makeContext();
+                const context = makeImportHarness();
 
                 await resolveDataInstallerAccess(context);
 
@@ -156,9 +156,9 @@ describe('dataInstallerHandlers', () => {
              */
             it('codes both config refusals so the UI can offer the settings fix', async () => {
                 setupSettings({ apiBaseUrl: '' });
-                const unset = await resolveDataInstallerAccess(makeContext());
+                const unset = await resolveDataInstallerAccess(makeImportHarness());
                 setupSettings({ enabled: false });
-                const off = await resolveDataInstallerAccess(makeContext());
+                const off = await resolveDataInstallerAccess(makeImportHarness());
 
                 expect(unset.ok === false && unset.response.code).toBe(ErrorCode.INVALID_OPERATION);
                 expect(off.ok === false && off.response.code).toBe(ErrorCode.INVALID_OPERATION);
@@ -168,7 +168,7 @@ describe('dataInstallerHandlers', () => {
         it('logs a URL fingerprint and never the rejected value', async () => {
             const secret = 'http://host.example.invalid/p?token=super-secret';
             setupSettings({ apiBaseUrl: secret });
-            const context = makeContext();
+            const context = makeImportHarness();
             await resolveDataInstallerAccess(context);
             const logged = JSON.stringify((context.logger.warn as jest.Mock).mock.calls);
             expect(logged).not.toContain('super-secret');
@@ -177,12 +177,12 @@ describe('dataInstallerHandlers', () => {
 
         it('reports AUTH_REQUIRED when sign-in fails', async () => {
             mockedEnsureAuth.mockResolvedValue({ authenticated: false });
-            const access = await resolveDataInstallerAccess(makeContext());
+            const access = await resolveDataInstallerAccess(makeImportHarness());
             expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
 
         it('reports AUTH_REQUIRED when the token is missing after sign-in', async () => {
-            const context = makeContext();
+            const context = makeImportHarness();
             (context.authManager!.getTokenManager() as unknown as { inspectToken: jest.Mock }).inspectToken
                 .mockResolvedValue({ valid: false, expiresIn: 0, token: undefined });
             const access = await resolveDataInstallerAccess(context);
@@ -197,7 +197,7 @@ describe('dataInstallerHandlers', () => {
             });
 
             it('still calls it when a panel IS present', async () => {
-                await resolveDataInstallerAccess(makeContext());
+                await resolveDataInstallerAccess(makeImportHarness());
                 expect(mockedEnsureAuth).toHaveBeenCalledTimes(1);
             });
 
@@ -215,7 +215,7 @@ describe('dataInstallerHandlers', () => {
 
     describe('handler behaviour', () => {
         it('check-datapack-service returns health', async () => {
-            const context = makeContext();
+            const context = makeImportHarness();
             MockedClient.prototype.checkHealth = jest.fn().mockResolvedValue({ reachable: true });
             const res = await dataInstallerHandlers['check-datapack-service'](context);
             expect(res.success).toBe(true);
@@ -226,14 +226,14 @@ describe('dataInstallerHandlers', () => {
             // 23 of 40 live entries are shared; the rest is developer scratch.
             const findDatapacks = jest.fn().mockResolvedValue({ items: [], count: 0, total: 0 });
             MockedClient.prototype.findDatapacks = findDatapacks;
-            await dataInstallerHandlers['find-datapacks'](makeContext(), {});
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(findDatapacks).toHaveBeenCalledWith(expect.objectContaining({ shared: true }));
         });
 
         it('find-datapacks drops the shared filter when community packs are requested', async () => {
             const findDatapacks = jest.fn().mockResolvedValue({ items: [], count: 0, total: 0 });
             MockedClient.prototype.findDatapacks = findDatapacks;
-            await dataInstallerHandlers['find-datapacks'](makeContext(), { includeCommunity: true });
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), { includeCommunity: true });
             expect(findDatapacks.mock.calls[0][0].shared).toBeUndefined();
         });
 
@@ -250,7 +250,7 @@ describe('dataInstallerHandlers', () => {
             const batch = jest.fn().mockResolvedValue({ present: [], missing: [], presentCount: 0, missingCount: 0, requestedCount: 0 });
             MockedClient.prototype.batchGetDataItems = batch;
 
-            await dataInstallerHandlers['get-datapack-detail'](makeContext(), {
+            await dataInstallerHandlers['get-datapack-detail'](makeImportHarness(), {
                 datapackName: 'citisignal_new',
                 version: 'main',
             });
@@ -272,7 +272,7 @@ describe('dataInstallerHandlers', () => {
             const batch = jest.fn();
             MockedClient.prototype.batchGetDataItems = batch;
 
-            const res = await dataInstallerHandlers['get-datapack-detail'](makeContext(), {
+            const res = await dataInstallerHandlers['get-datapack-detail'](makeImportHarness(), {
                 datapackName: 'empty',
                 version: 'main',
             });
@@ -282,14 +282,14 @@ describe('dataInstallerHandlers', () => {
         });
 
         it('list-datapack-data-types requires an operation mode', async () => {
-            const res = await dataInstallerHandlers['list-datapack-data-types'](makeContext(), {});
+            const res = await dataInstallerHandlers['list-datapack-data-types'](makeImportHarness(), {});
             expect(res.success).toBe(false);
         });
 
         it('list-datapack-data-types asks per mode, since the sets differ', async () => {
             const order = jest.fn().mockResolvedValue(['giftcards']);
             MockedClient.prototype.getProcessorOrder = order;
-            await dataInstallerHandlers['list-datapack-data-types'](makeContext(), { operationMode: 'import' });
+            await dataInstallerHandlers['list-datapack-data-types'](makeImportHarness(), { operationMode: 'import' });
             expect(order).toHaveBeenCalledWith('import');
         });
 
@@ -297,7 +297,7 @@ describe('dataInstallerHandlers', () => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
                 .mockRejectedValue(new DataInstallerApiError('nope', 401, 'find-datapacks'));
-            const res = await dataInstallerHandlers['find-datapacks'](makeContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(res.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
@@ -306,7 +306,7 @@ describe('dataInstallerHandlers', () => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
                 .mockRejectedValue(new DataInstallerApiError('boom', 500, 'find-datapacks'));
-            const res = await dataInstallerHandlers['find-datapacks'](makeContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(res.code).not.toBe(ErrorCode.AUTH_REQUIRED);
             expect(res.error).toContain('boom');
@@ -314,7 +314,7 @@ describe('dataInstallerHandlers', () => {
 
         it('never lets a thrown error escape as an unhandled rejection', async () => {
             MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue(new Error('unexpected'));
-            const res = await dataInstallerHandlers['find-datapacks'](makeContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(res.error).toBeDefined();
         });
@@ -328,7 +328,7 @@ describe('dataInstallerHandlers', () => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
                 .mockRejectedValue(new DataInstallerApiError('boom', 500, 'find-datapacks'));
-            const context = makeContext();
+            const context = makeImportHarness();
 
             await dataInstallerHandlers['find-datapacks'](context, {});
 
@@ -340,7 +340,7 @@ describe('dataInstallerHandlers', () => {
             setupSettings({ enabled: false });
             const findDatapacks = jest.fn();
             MockedClient.prototype.findDatapacks = findDatapacks;
-            const res = await dataInstallerHandlers['find-datapacks'](makeContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(findDatapacks).not.toHaveBeenCalled();
         });
@@ -348,11 +348,11 @@ describe('dataInstallerHandlers', () => {
 
     describe('the drift canary reaches the logger', () => {
         it('wires onDrift so a moved shape warns with key names only', async () => {
-            await resolveDataInstallerAccess(makeContext());
+            await resolveDataInstallerAccess(makeImportHarness());
             const deps = MockedClient.mock.calls[0][0];
             expect(typeof deps.onDrift).toBe('function');
 
-            const context = makeContext();
+            const context = makeImportHarness();
             const access = await resolveDataInstallerAccess(context);
             expect(access.ok).toBe(true);
             const latest = MockedClient.mock.calls[MockedClient.mock.calls.length - 1][0];
@@ -365,14 +365,14 @@ describe('dataInstallerHandlers', () => {
 
     describe('token handling', () => {
         it('passes a token provider rather than a token, so it refreshes per call', async () => {
-            await resolveDataInstallerAccess(makeContext());
+            await resolveDataInstallerAccess(makeImportHarness());
             const deps = MockedClient.mock.calls[0][0];
             expect(typeof deps.getToken).toBe('function');
             await expect(deps.getToken()).resolves.toBe('tok');
         });
 
         it('never logs the token value', async () => {
-            const context = makeContext();
+            const context = makeImportHarness();
             await resolveDataInstallerAccess(context);
             const allLogs = JSON.stringify([
                 (context.logger.info as jest.Mock).mock.calls,

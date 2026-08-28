@@ -73,7 +73,7 @@ function accsProject(): Partial<Project> {
     };
 }
 
-function makeContext(project: unknown = accsProject()) {
+function makeImportHarness(project: unknown = accsProject()) {
     const saved: unknown[] = [];
     const context = {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -106,7 +106,7 @@ describe('provision-accs-credentials', () => {
     });
 
     it('targets the PROJECT its own Adobe binding', async () => {
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['provision-accs-credentials'](context);
 
@@ -118,7 +118,7 @@ describe('provision-accs-credentials', () => {
     });
 
     it('writes the pair into the DECLARED fields and saves — where a pasted pair lives', async () => {
-        const { context, saved } = makeContext(accsProject());
+        const { context, saved } = makeImportHarness(accsProject());
 
         const result = await importHandlers['provision-accs-credentials'](context);
 
@@ -131,7 +131,7 @@ describe('provision-accs-credentials', () => {
     });
 
     it('never puts the secret in the response', async () => {
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['provision-accs-credentials'](context);
 
@@ -141,7 +141,7 @@ describe('provision-accs-credentials', () => {
 
     it('reports a provisioner refusal as the error', async () => {
         mockedProvision.mockResolvedValue({ ok: false, reason: 'no secret in the workspace' });
-        const { context, saved } = makeContext();
+        const { context, saved } = makeImportHarness();
 
         const result = await importHandlers['provision-accs-credentials'](context);
 
@@ -151,7 +151,7 @@ describe('provision-accs-credentials', () => {
     });
 
     it('refuses a project with no Adobe binding, naming the gap', async () => {
-        const { context } = makeContext({ ...accsProject(), adobe: undefined });
+        const { context } = makeImportHarness({ ...accsProject(), adobe: undefined });
 
         const result = await importHandlers['provision-accs-credentials'](context);
 
@@ -161,7 +161,7 @@ describe('provision-accs-credentials', () => {
     });
 
     it('refuses a non-ACCS backend — PaaS uses the admin pair, not OAuth', async () => {
-        const { context } = makeContext({
+        const { context } = makeImportHarness({
             ...accsProject(),
             componentSelections: { backend: 'adobe-commerce-paas' },
         });
@@ -188,7 +188,7 @@ describe('the needs-accs-credentials refusal carries its flag', () => {
     });
 
     it('marks the credential refusal so the UI can offer provisioning', async () => {
-        const { context } = makeContext(); // ACCS, no OAuth pair in configs
+        const { context } = makeImportHarness(); // ACCS, no OAuth pair in configs
 
         const result = await importHandlers['validate-datapack-import'](context, {
             datapackName: 'bodea',
@@ -234,7 +234,7 @@ describe('the offer appears only where provisioning could actually run', () => {
     });
 
     async function refusalFor(project: unknown) {
-        const { context } = makeContext(project);
+        const { context } = makeImportHarness(project);
         return importHandlers['validate-datapack-import'](context, {
             datapackName: 'bodea',
             version: 'main',

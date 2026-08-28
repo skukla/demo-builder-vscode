@@ -21,6 +21,7 @@
 
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 // Test data
 export const mockConfig = {
@@ -73,7 +74,7 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
  * Helper to create mock HandlerContext
  */
 export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
+    return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),
             resolveDependencies: jest.fn(),
@@ -112,7 +113,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    } as never)
 }
 
 /** Canonical component-selection fixture (ADR-016). */

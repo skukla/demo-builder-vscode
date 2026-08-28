@@ -76,7 +76,7 @@ const unboundProject = (): Partial<Project> => accsProject();
 /** A full binding, so Console provisioning is a real option. */
 const boundProject = (): Partial<Project> => accsProject(FULL_BINDING);
 
-function makeContext(project: unknown): HandlerContext {
+function makeImportHarness(project: unknown): HandlerContext {
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -115,7 +115,7 @@ function seedSettings(services: unknown[]): void {
 }
 
 const validate = (project: unknown) =>
-    importHandlers['validate-datapack-import'](makeContext(project), {
+    importHandlers['validate-datapack-import'](makeImportHarness(project), {
         datapackName: 'bodea',
         version: 'main',
         commerceInstance: 'inst',

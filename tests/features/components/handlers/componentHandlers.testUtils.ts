@@ -12,10 +12,11 @@
 
 import { HandlerContext } from '@/types/handlers';
 import type { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 /** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
 export function createMockHandlerContext(): HandlerContext {
-    return {
+    return createMockHandlerContextBase({
         context: {
             extensionPath: '/mock/extension/path',
         } as any,
@@ -29,7 +30,7 @@ export function createMockHandlerContext(): HandlerContext {
             isAuthenticating: false,
         } as any,
         sendMessage: jest.fn(),
-    } as any;
+    } as never)
 }
 
 /** Build a mock ComponentRegistryManager with all queried methods stubbed. */

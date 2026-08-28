@@ -12,6 +12,7 @@ import type { ProgressUnifier } from '@/core/utils/progressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { StateManager } from '@/core/state/stateManager';
 import type { ExtensionContext } from 'vscode';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 // Test data
 export const mockOrg: AdobeOrg = {
@@ -40,7 +41,7 @@ export const mockOrgs: AdobeOrg[] = [
  * @returns A fully mocked HandlerContext
  */
 export function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
+    return createMockHandlerContextBase({
         prereqManager: {} as PrerequisitesManager,
         authManager: {
             isAuthenticated: jest.fn(),
@@ -85,5 +86,5 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
             isAuthenticating: false,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    } as never)
 }

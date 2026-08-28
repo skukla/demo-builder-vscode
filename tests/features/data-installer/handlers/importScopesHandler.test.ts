@@ -69,7 +69,7 @@ function paasProject(): Partial<Project> {
     };
 }
 
-function makeContext(project: unknown = paasProject()) {
+function makeImportHarness(project: unknown = paasProject()) {
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -100,7 +100,7 @@ describe('list-datapack-import-scopes', () => {
     });
 
     it('returns each website with the store views that belong to it', async () => {
-        const context = makeContext();
+        const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
@@ -124,7 +124,7 @@ describe('list-datapack-import-scopes', () => {
      * place in the feature where Commerce credentials reach a webview.
      */
     it('never puts credentials in the response', async () => {
-        const context = makeContext();
+        const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
@@ -134,7 +134,7 @@ describe('list-datapack-import-scopes', () => {
 
     it('reports a discovery failure as a reason, not an exception', async () => {
         mockedDiscover.mockResolvedValue({ success: false, error: 'Connection timed out.' } as never);
-        const context = makeContext();
+        const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
@@ -148,10 +148,10 @@ describe('list-datapack-import-scopes', () => {
      * list, not an error the modal has to render.
      */
     it('returns no websites when there is no project, without failing', async () => {
-        // `null`, not `undefined`: passing undefined re-triggers makeContext's
+        // `null`, not `undefined`: passing undefined re-triggers makeImportHarness's
         // DEFAULT parameter and silently hands back a full project — the test
         // then asserts the no-project path against a project.
-        const context = makeContext(null);
+        const context = makeImportHarness(null);
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
@@ -162,7 +162,7 @@ describe('list-datapack-import-scopes', () => {
 
     it('does not attempt discovery when the project has no usable credentials', async () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' } as never);
-        const context = makeContext();
+        const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
 

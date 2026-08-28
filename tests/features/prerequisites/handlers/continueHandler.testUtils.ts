@@ -1,5 +1,6 @@
 import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 // Mock prerequisite definitions
 export const mockNodePrereq: PrerequisiteDefinition = {
@@ -52,7 +53,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
     states.set(1, { prereq: mockNpmPrereq, result: mockNpmResult });
 
-    return {
+    return createMockHandlerContextBase({
         prereqManager: {
             checkPrerequisite: jest.fn().mockResolvedValue(mockNodeResult),
             checkMultipleNodeVersions: jest.fn().mockResolvedValue([
@@ -78,5 +79,5 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             currentPrerequisiteStates: states,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    } as never)
 }

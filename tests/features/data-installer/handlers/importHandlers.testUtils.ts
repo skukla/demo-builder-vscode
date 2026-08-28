@@ -86,7 +86,13 @@ export const PAAS_PROJECT: Partial<Project> = {
     },
 };
 
-export function makeContext(project: unknown = PAAS_PROJECT) {
+/**
+ * RENAMED from `makeImportHarness` 2026-08-28: this returns a HARNESS
+ * ({ context, stores }), not a context. It shared a name with eleven builders
+ * that do return one, which is what made a family of unrelated fixtures look
+ * like a single duplicated helper.
+ */
+export function makeImportHarness(project: unknown = PAAS_PROJECT) {
     const stores = makeStores();
     const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }) };
     const context = {

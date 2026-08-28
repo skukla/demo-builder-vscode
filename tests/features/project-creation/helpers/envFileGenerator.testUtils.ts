@@ -10,6 +10,7 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 export { createMockLogger };
 
 /**
@@ -21,7 +22,7 @@ export { createMockLogger };
 export function createMockHandlerContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
-    return {
+    return createMockHandlerContextBase({
         logger: createMockLogger() as any,
         debugLogger: createMockLogger() as any,
         context: {
@@ -41,7 +42,7 @@ export function createMockHandlerContext(
         },
         authManager: {} as any,
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    } as never)
 }
 
 /**

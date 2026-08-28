@@ -22,7 +22,7 @@
 import {
     happyClient,
     importHandlers,
-    makeContext,
+    makeImportHarness,
     MockedWriteClient,
     mockedWatch,
     PAYLOAD,
@@ -37,7 +37,7 @@ describe('start-datapack-import', () => {
 
     it('records itself as an import', async () => {
         happyClient();
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -66,7 +66,7 @@ describe('start-datapack-import', () => {
 
         it('forwards each poll to the webview as it arrives', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, PAYLOAD);
             await settleWatch();
@@ -89,7 +89,7 @@ describe('start-datapack-import', () => {
          */
         it('stamps the push with the activation it belongs to', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, PAYLOAD);
             await settleWatch();
@@ -104,7 +104,7 @@ describe('start-datapack-import', () => {
         /** A reset watches the same way and must say so, for the wording. */
         it('names the operation, so a reset is not worded as an import', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             // `confirm` is the destructive-action guard; without it the reset
             // refuses before it ever reaches the watch.
@@ -121,7 +121,7 @@ describe('start-datapack-import', () => {
 
     it('validates BEFORE starting', async () => {
         const { validateImport, startImport } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -138,7 +138,7 @@ describe('start-datapack-import', () => {
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
         const startImport = jest.fn();
         MockedWriteClient.mockImplementation(() => ({ validateImport, startImport }) as never);
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -149,7 +149,7 @@ describe('start-datapack-import', () => {
 
     it('returns the activation id once accepted', async () => {
         happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -159,7 +159,7 @@ describe('start-datapack-import', () => {
 
     it('passes the instance string through untouched', async () => {
         const { startImport } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -172,7 +172,7 @@ describe('start-datapack-import', () => {
     describe('credentials', () => {
         it('refuses before any network call when a PaaS project has no admin pair', async () => {
             const { startImport, validateImport } = happyClient();
-            const { context } = makeContext({
+            const { context } = makeImportHarness({
                 name: 'demo-a',
                 stack: { backend: 'adobe-commerce-paas' },
                 componentConfigs: {},
@@ -187,7 +187,7 @@ describe('start-datapack-import', () => {
 
         it('asks for ACCS credentials when none are stored', async () => {
             happyClient();
-            const { context } = makeContext({
+            const { context } = makeImportHarness({
                 name: 'demo-a',
                 stack: { backend: 'adobe-commerce-accs' },
                 componentConfigs: {},
@@ -203,7 +203,7 @@ describe('start-datapack-import', () => {
     describe('the detached watch', () => {
         it('does NOT await the watch — the request returns while the job runs', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
             let settled = false;
             mockedWatch.mockImplementation(
                 () => new Promise((resolve) => setTimeout(() => { settled = true; resolve({ outcome: 'success', perType: {} }); }, 50)),
@@ -217,7 +217,7 @@ describe('start-datapack-import', () => {
 
         it('records the job so a closed panel does not lose it', async () => {
             happyClient();
-            const { context, stores } = makeContext();
+            const { context, stores } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -228,7 +228,7 @@ describe('start-datapack-import', () => {
     describe('input', () => {
         it('requires both halves of the datapack identity', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
                 ...PAYLOAD,
@@ -240,7 +240,7 @@ describe('start-datapack-import', () => {
 
         it('requires at least one data type', async () => {
             const { validateImport } = happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
                 ...PAYLOAD,
@@ -260,7 +260,7 @@ describe('start-datapack-import', () => {
          */
         it('passes a complete target through to the request', async () => {
             const { startImport } = happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, {
                 ...PAYLOAD,
@@ -277,7 +277,7 @@ describe('start-datapack-import', () => {
 
         it('sends NO target when neither code was chosen — the service defaults to base', async () => {
             const { startImport } = happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -288,7 +288,7 @@ describe('start-datapack-import', () => {
 
         it('refuses a half pair rather than letting the service 400 after the 202', async () => {
             const { startImport } = happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
                 ...PAYLOAD,
@@ -302,7 +302,7 @@ describe('start-datapack-import', () => {
 
         it('requires a commerce instance — it is the write target', async () => {
             happyClient();
-            const { context } = makeContext();
+            const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
                 ...PAYLOAD,
@@ -324,7 +324,7 @@ describe('validate-datapack-import', () => {
     // request is well-formed is not the useful answer.
     it('checks credentials BEFORE the request shape', async () => {
         const { validateImport, checkCredentials } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -345,7 +345,7 @@ describe('validate-datapack-import', () => {
                     startImport: jest.fn(),
                 }) as never,
         );
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -355,7 +355,7 @@ describe('validate-datapack-import', () => {
 
     it('validates WITHOUT starting anything', async () => {
         const { validateImport, startImport } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -367,7 +367,7 @@ describe('validate-datapack-import', () => {
 
     it('never records a job — nothing ran', async () => {
         happyClient();
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -376,7 +376,7 @@ describe('validate-datapack-import', () => {
 
     it('never starts a watch', async () => {
         happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -398,7 +398,7 @@ describe('validate-datapack-import', () => {
                     checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
                 }) as never,
         );
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -408,7 +408,7 @@ describe('validate-datapack-import', () => {
 
     it('checks credentials before sending, like the start path', async () => {
         const { validateImport } = happyClient();
-        const { context } = makeContext({
+        const { context } = makeImportHarness({
             name: 'demo-a',
             stack: { backend: 'adobe-commerce-paas' },
             componentConfigs: {},
@@ -431,7 +431,7 @@ describe('reset-datapack', () => {
 
     it('removes the data rather than importing it', async () => {
         const { startDelete, startImport } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['reset-datapack'](context, CONFIRMED);
 
@@ -444,7 +444,7 @@ describe('reset-datapack', () => {
     // opt-in the MCP action tools use. Nothing removes data by default.
     it('refuses without an explicit confirm', async () => {
         const { startDelete } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: false });
 
@@ -454,7 +454,7 @@ describe('reset-datapack', () => {
 
     it('validates before removing, as the import path does', async () => {
         const { validateImport, startDelete } = happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
@@ -467,7 +467,7 @@ describe('reset-datapack', () => {
     // is an activation id like any other.
     it('watches the reset with the unchanged runner', async () => {
         happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
@@ -483,7 +483,7 @@ describe('reset-datapack', () => {
     // finished" for a completed reset, live, because nothing carried this.
     it('records itself as a reset, not an import', async () => {
         happyClient();
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
@@ -495,7 +495,7 @@ describe('reset-datapack', () => {
 
     it('records the reset so the panel can be closed', async () => {
         happyClient();
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
@@ -532,7 +532,7 @@ describe('a watch that cannot run', () => {
     it('records that it stopped watching when the runner throws', async () => {
         happyClient();
         mockedWatch.mockRejectedValue(new Error('the service went away'));
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
@@ -545,7 +545,7 @@ describe('a watch that cannot run', () => {
     it('keeps the reason so the panel can say what went wrong', async () => {
         happyClient();
         mockedWatch.mockRejectedValue(new Error('the service went away'));
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
@@ -561,7 +561,7 @@ describe('a watch that cannot run', () => {
     it('does not disguise a broken watch as the user stopping one', async () => {
         happyClient();
         mockedWatch.mockRejectedValue(new Error('boom'));
-        const { context, stores } = makeContext();
+        const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
@@ -574,7 +574,7 @@ describe('a watch that cannot run', () => {
     it('still reports the import as started', async () => {
         happyClient();
         mockedWatch.mockRejectedValue(new Error('boom'));
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
@@ -589,7 +589,7 @@ describe('get-datapack-import-status', () => {
     });
 
     it('returns nothing when no import has been started', async () => {
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
 
         const result = await importHandlers['get-datapack-import-status'](context);
 
@@ -599,7 +599,7 @@ describe('get-datapack-import-status', () => {
 
     it('returns the recorded job after a start', async () => {
         happyClient();
-        const { context } = makeContext();
+        const { context } = makeImportHarness();
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
         const result = await importHandlers['get-datapack-import-status'](context);

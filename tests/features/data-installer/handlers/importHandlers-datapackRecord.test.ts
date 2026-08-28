@@ -50,7 +50,7 @@ const PAAS_PROJECT = (): Partial<Project> => ({
     },
 });
 
-function makeContext(project: Partial<Project>, saveProject = jest.fn()) {
+function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
     const mem = new Map<string, unknown>();
     const context = {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -123,7 +123,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('writes name and version, and saves', async () => {
         happyClient();
         const project = PAAS_PROJECT();
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -140,7 +140,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('CONTROL — records nothing when validate refuses the request', async () => {
         refusingClient();
         const project = PAAS_PROJECT();
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -155,7 +155,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('still reports success when the project write fails', async () => {
         happyClient();
         const saveProject = jest.fn().mockRejectedValue(new Error('disk full'));
-        const { context } = makeContext(PAAS_PROJECT(), saveProject);
+        const { context } = makeImportHarness(PAAS_PROJECT(), saveProject);
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -167,7 +167,7 @@ describe('an accepted reset clears it', () => {
     it('removes the datapack so reset stops offering a removal already done', async () => {
         happyClient();
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
 
@@ -180,7 +180,7 @@ describe('an accepted reset clears it', () => {
     it('CONTROL — an unconfirmed reset changes nothing', async () => {
         happyClient();
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['reset-datapack'](context, PAYLOAD);
 

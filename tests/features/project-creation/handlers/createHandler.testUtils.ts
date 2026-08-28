@@ -20,7 +20,19 @@ export interface TestSetup {
 }
 
 /**
- * Creates a mock HandlerContext with sensible defaults
+ * Creates a mock HandlerContext with sensible defaults.
+ *
+ * DELIBERATELY NOT delegating to the canonical `createMockHandlerContext`
+ * (ADR-016), unlike its eight siblings. The canonical fills every absent field
+ * with a placeholder — `{} as jest.Mocked<...>` — and this suite's handler
+ * behaves differently when those fields are PRESENT-BUT-EMPTY rather than
+ * absent: the cancellation test's mesh cleanup stops running. Verified by
+ * stashing the delegation, where the suite passes, and restoring it, where it
+ * does not.
+ *
+ * The general lesson, recorded because it bounds the consolidation: a suite
+ * that omits a context field may be expressing something, and a canonical
+ * fixture that fills every gap with a truthy empty object is not neutral.
  */
 export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return {
