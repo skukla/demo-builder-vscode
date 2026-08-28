@@ -266,7 +266,7 @@ each item's own file; what has already landed against an item is in its
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
-| `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | active |
+| `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | shipped |
 | `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | shipped |
 | `PL-3` | chore | [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) | — | low | backlog |
 | `PL-4` | chore | [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) | — | low | shipped |
@@ -415,7 +415,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 - `EDS-7` [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) — shipped
 - `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — backlog
-- `PL-1` [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) — active
+- `PL-1` [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) — shipped
 - `PL-2` [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) — shipped
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
