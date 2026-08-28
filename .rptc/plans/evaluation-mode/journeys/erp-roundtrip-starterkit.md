@@ -35,13 +35,6 @@ starter-kit rules and the appbuilder-* skills (all unused in A), the kit's
 own onboarding surface — and, once AB-6 ships, real event-provider
 create-and-delete inside one journey.
 
-## Variant B2 — fresh add on a kit-less project (needs a host project)
-
-The catalog's "Pre-built integration" door: add the kit, onboard, build,
-deploy, remove. This is also the natural measure for AB-6 (the kit's onboard
-creates event providers; teardown must delete them) — blocked on AB-6's
-tooling for the eventing half, runnable without it for the rest.
-
 ## Both journeys' shared contract
 
 Idempotency rules apply verbatim (journey measurement rule 6): the ask
