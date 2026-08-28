@@ -1345,6 +1345,12 @@
    "evidence": "kind=service-class"
   },
   {
+   "unit": "src/extension.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
    "unit": "src/features/ai/aiSetupVerifier.ts",
    "pattern": "kind",
    "verdict": "conforming",
@@ -5159,6 +5165,18 @@
    "pattern": "kind",
    "verdict": "conforming",
    "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/mcp-proxy.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/mcp-server.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
   },
   {
    "unit": "src/mcp/blockAuthoring.ts",

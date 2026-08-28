@@ -20,7 +20,7 @@ const HARNESS = new URL('.', import.meta.url).pathname;
 const sh = (cmd) => execSync(cmd, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
 const lines = (cmd) => { const out = sh(cmd + ' || true'); return out ? out.split('\n') : []; };
 
-const srcFiles = lines(`git ls-files 'src/**/*.ts' 'src/**/*.tsx'`);
+const srcFiles = lines(`git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`);
 const handlerFiles = lines(`grep -rln "defineHandlers\\|: MessageHandler" src --include="*.ts"`)
     .filter((f) => /andlers/.test(f));
 const serviceFiles = lines(`grep -rln "^export class.*Service\\|^export class.*Manager" src --include="*.ts"`);

@@ -130,6 +130,16 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
+## Architecture law (ADR-015, owner-ratified 2026-08-28)
+
+**Services are fetched only at the boundary** (`extension.ts`, `commands/`,
+`handlers/`, MCP tool registrars); everywhere else dependencies arrive as
+parameters, constructed only in `extension.ts` or a feature's `create...Deps`
+file. Placement rules: `docs/architecture/where-code-goes.md` (the
+when-you-want-X table). Enforced by `tests/sop/architecture-rules.test.ts` —
+new violations fail the build; exemptions live in its ledger and every one
+carries a reason.
+
 ## Verified duplication gets FIXED, not reported
 
 When a scan or hook surfaces duplication, the default is to fix it in the same turn —

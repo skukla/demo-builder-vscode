@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-SRC_FILES=$(git ls-files 'src/**/*.ts' 'src/**/*.tsx' | wc -l | tr -d ' ')
+SRC_FILES=$(git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx' | wc -l | tr -d ' ')
 HANDLER_MAPS=$(grep -rln "defineHandlers\|: MessageHandler" src --include="*.ts" | grep -c "andlers" || true)
 SERVICE_CLASSES=$(grep -rln "^export class.*Service\|^export class.*Manager" src --include="*.ts" | wc -l | tr -d ' ')
 TOOL_REGISTRARS=$(grep -rln "registerTool(" src --include="*.ts" | wc -l | tr -d ' ')

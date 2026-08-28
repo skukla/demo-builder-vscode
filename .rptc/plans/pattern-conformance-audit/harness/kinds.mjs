@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const HARNESS = new URL('.', import.meta.url).pathname;
-const files = execSync(`git ls-files 'src/**/*.ts' 'src/**/*.tsx'`, { encoding: 'utf8' })
+const files = execSync(`git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`, { encoding: 'utf8' })
     .trim().split('\n');
 
 function kindOf(f, src) {

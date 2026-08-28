@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-08-28T15:16:42.733Z",
+ "generatedAt": "2026-08-28T15:44:42.152Z",
  "universes": {
   "di-style": "src_files",
   "envelope": "tool_registrar_files",
@@ -1350,6 +1350,12 @@
    "pattern": "di-style",
    "verdict": "conforming",
    "evidence": "style=construction (3 site(s))"
+  },
+  {
+   "unit": "src/extension.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "composition root — constructing and registering here IS the pattern"
   },
   {
    "unit": "src/features/ai/aiSetupVerifier.ts",
@@ -5163,6 +5169,18 @@
   },
   {
    "unit": "src/features/updates/services/updateManager.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp-proxy.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/mcp-server.ts",
    "pattern": "di-style",
    "verdict": "exempt",
    "evidence": "acquires no services"

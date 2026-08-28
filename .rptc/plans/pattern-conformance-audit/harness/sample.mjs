@@ -8,7 +8,7 @@
 import { execSync } from 'node:child_process';
 const [seed, n = '25'] = process.argv.slice(2);
 if (!seed) { console.error('usage: sample.mjs <seed> [n]'); process.exit(2); }
-const files = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { encoding: 'utf8' })
+const files = execSync("git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'", { encoding: 'utf8' })
     .trim().split('\n');
 // Deterministic PRNG (mulberry32) from the seed string.
 let h = 1779033703 ^ seed.length;
