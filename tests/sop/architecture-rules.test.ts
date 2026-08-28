@@ -36,9 +36,22 @@ const LEDGER = JSON.parse(
     readFileSync(join(__dirname, 'architecture-rules.exemptions.json'), 'utf8')
 ) as Record<string, Record<string, string> | number | string>;
 
+/**
+ * Source with comments removed.
+ *
+ * Detectors match CODE, never prose: a doc comment showing
+ * `new PrerequisitesCacheManager()` as usage is not a construction site, and
+ * five ledger rows were phantom debt for exactly that reason (found
+ * 2026-08-28, first file of the phase-2 pass). Stripping here fixes the whole
+ * class rather than annotating each victim.
+ */
+function stripComments(source: string): string {
+    return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 const src = new Map<string, string>();
 for (const f of FILES) {
-    src.set(f, readFileSync(join(ROOT, f), 'utf8'));
+    src.set(f, stripComments(readFileSync(join(ROOT, f), 'utf8')));
 }
 
 /** Boundary membership per ADR-015: where fetching is allowed. */
