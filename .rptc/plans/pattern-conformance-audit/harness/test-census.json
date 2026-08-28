@@ -1,0 +1,740 @@
+{
+ "rows": [
+  {
+   "unit": "src/features/components/services/componentDependencies.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/components/services/componentDependencies.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/components/services/componentInstallation.ts",
+   "verdict": "INDIRECT",
+   "suites": [],
+   "note": "INDIRECT: referenced by projectFinalizationService + catalogLoader suites \u2014 same re-read needed"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/dashboard/services/onOpenChecks/orgContextCheck.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/github/githubRepoOperations.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/handlers/authoringExperience-ewCanvasBranch.test.ts",
+    "tests/features/eds/handlers/authoringExperience.test.ts",
+    "tests/features/eds/handlers/byomOverlay.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveSiteConfig.test.ts",
+    "tests/features/eds/handlers/daLive/edsDaLiveAuthHandlers-storeToken.test.ts",
+    "tests/features/eds/handlers/edsHelpers.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-auth.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-configService.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-customBlockLibraries.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-recovery.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-tracking.test.ts",
+    "tests/features/eds/services/github/githubRepoOperations.test.ts",
+    "tests/unit/features/eds/services/cleanupService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetMeshHelper.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/reset/edsResetMeshHelper.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetUI.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/dashboard/handlers/dashboardHandlers-eds.test.ts",
+    "tests/features/eds/services/reset/edsResetService-auth.test.ts",
+    "tests/features/eds/services/reset/edsResetUI-auth.test.ts",
+    "tests/features/eds/services/reset/edsResetUI-sampleData.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/toolManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/di/service-logger-injection.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-auth.test.ts",
+    "tests/unit/features/eds/services/cleanupService.test.ts",
+    "tests/unit/features/eds/services/toolManager.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/lifecycle/services/projectResetService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/lifecycle/services/projectResetService-componentList.test.ts",
+    "tests/features/lifecycle/services/projectResetService-meshContext.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshHeadless.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/mesh/handlers/deployHandler.test.ts",
+    "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/mesh/services/deployMeshWithFeedback.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/mesh/services/meshDeploymentVerifier.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/mesh/commands/deployMesh-auth.test.ts",
+    "tests/features/mesh/commands/deployMesh-orgContext.test.ts",
+    "tests/features/mesh/commands/deployMesh-storage.test.ts",
+    "tests/features/mesh/services/meshDeployment-createFallback.test.ts",
+    "tests/features/mesh/services/meshDeployment.testUtils.ts",
+    "tests/features/mesh/services/meshDeploymentVerifier-deployment.test.ts",
+    "tests/features/mesh/services/meshDeploymentVerifier-edge-cases.test.ts",
+    "tests/features/mesh/services/meshDeploymentVerifier-errors.test.ts",
+    "tests/features/mesh/services/meshDeploymentVerifier-status.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/mesh/services/meshRedeploy.ts",
+   "verdict": "INDIRECT",
+   "suites": [],
+   "note": "INDIRECT: exercised through edsResetService-meshAuth + edsResetTool suites (name-referenced, not imported) \u2014 reclassify after reading whether those assert its collaborator calls"
+  },
+  {
+   "unit": "src/features/mesh/services/meshVerifier.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/dashboard/handlers/dashboardHandlers-requestStatus.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-switchOrg.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-unknownDeployed.test.ts",
+    "tests/features/eds/services/reset/edsResetMeshHelper.test.ts",
+    "tests/features/lifecycle/services/projectResetService-meshContext.test.ts",
+    "tests/features/mesh/commands/deployMesh-storage.test.ts",
+    "tests/features/mesh/commands/deployMesh-subscribe.test.ts",
+    "tests/features/mesh/commands/deployMesh-unify.test.ts",
+    "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/mesh/services/meshVerifier-di.test.ts",
+    "tests/features/mesh/services/meshVerifier.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/mesh/services/stalenessDetector.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/projectStatusTool.test.ts",
+    "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-eds.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-exportProjectSettings.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-lifecycle.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-moreActions.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-republish.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-requestStatus.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-switchOrg.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-unknownDeployed.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers.testUtils.ts",
+    "tests/features/dashboard/handlers/navigateBack.test.ts",
+    "tests/features/dashboard/handlers/openIntegrations.test.ts",
+    "tests/features/dashboard/handlers/refreshBlockLibrary.test.ts",
+    "tests/features/dashboard/handlers/showProjectDashboard.test.ts",
+    "tests/features/eds/services/reset/edsResetMeshHelper.test.ts",
+    "tests/features/eds/services/reset/edsResetService-configService.test.ts",
+    "tests/features/eds/services/reset/edsResetService-customBlockLibraries.test.ts",
+    "tests/features/eds/services/reset/edsResetService-daLiveReauth.test.ts",
+    "tests/features/eds/services/reset/edsResetService-meshAuth.test.ts",
+    "tests/features/lifecycle/services/projectResetService-meshContext.test.ts",
+    "tests/features/mesh/commands/deployMesh-auth.test.ts",
+    "tests/features/mesh/commands/deployMesh-orgContext.test.ts",
+    "tests/features/mesh/commands/deployMesh-storage.test.ts",
+    "tests/features/mesh/commands/deployMesh-subscribe.test.ts",
+    "tests/features/mesh/commands/deployMesh-unify.test.ts",
+    "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/mesh/services/stalenessDetector-edgeCases.test.ts",
+    "tests/features/mesh/services/stalenessDetector-envFileReader.test.ts",
+    "tests/features/mesh/services/stalenessDetector-fileComparison.test.ts",
+    "tests/features/mesh/services/stalenessDetector-hashCalculation.test.ts",
+    "tests/features/mesh/services/stalenessDetector-initialization.test.ts",
+    "tests/features/mesh/services/stalenessDetector-scope.test.ts",
+    "tests/features/mesh/services/stalenessDetector-stateDetection.test.ts",
+    "tests/features/project-creation/handlers/executor-appBuilderComponentLoading.test.ts",
+    "tests/features/project-creation/handlers/executor-edsStandardFlow.test.ts",
+    "tests/features/project-creation/handlers/executor-meshComponentLoading.test.ts",
+    "tests/features/project-creation/handlers/executor-meshStatePopulation.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-adminPanel.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-orgTargeting.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers.test.ts",
+    "tests/unit/features/mesh/services/stalenessDetector.test.ts",
+    "tests/unit/features/project-creation/services/meshSetupService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/utils/progressUnifier/testUtils.ts",
+    "tests/features/ai/server/headlessHandlerContext.test.ts",
+    "tests/features/authentication/handlers/testUtils.ts",
+    "tests/features/prerequisites/handlers/checkHandler.testUtils.ts",
+    "tests/features/prerequisites/handlers/security-validation.test.ts",
+    "tests/features/prerequisites/handlers/shared-dependencies.test.ts",
+    "tests/features/prerequisites/handlers/shared-per-node-status.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-checking.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-edgeCases.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-installation.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-progress.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-stateManagement.test.ts",
+    "tests/features/project-creation/commands/createProject-configListener.test.ts",
+    "tests/features/project-creation/commands/createProject-context.test.ts",
+    "tests/features/project-creation/commands/createProject-initialData.test.ts",
+    "tests/features/project-creation/commands/createProject.test.ts",
+    "tests/unit/prerequisites/parallelExecution.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+   "verdict": "UNTESTED",
+   "suites": []
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+   "verdict": "UNTESTED",
+   "suites": []
+  },
+  {
+   "unit": "src/features/project-creation/helpers/envFileGenerator.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/project-creation/handlers/executor-appBuilderComponentLoading.test.ts",
+    "tests/features/project-creation/handlers/executor-edsStandardFlow.test.ts",
+    "tests/features/project-creation/handlers/executor-meshComponentLoading.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-basic.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-filtering.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-formatting.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-regenerate.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-scopeOwnership.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-storeStructureExcluded.test.ts",
+    "tests/features/project-creation/helpers/envFileGenerator-values.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/dashboard/handlers/aiHandlers.testUtils.ts",
+    "tests/features/project-creation/services/aiBundle/aiDefaultsInstaller.test.ts",
+    "tests/features/project-creation/services/componentInstallationOrchestrator.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/dashboard/handlers/appBuilderComponentHandlers.testUtils.ts",
+    "tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts",
+    "tests/features/dashboard/handlers/consoleApiHandlers.test.ts",
+    "tests/features/dashboard/handlers/destinationHandlers.test.ts",
+    "tests/features/project-creation/handlers/executor.appBuilderIntegrations.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/meshSetupService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/unit/features/project-creation/services/meshSetupService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/adobeMcpUpdateCore.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/commands/updateExecutor-adobeMcp.test.ts",
+    "tests/features/updates/services/adobeMcpUpdateCore.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/componentUpdater.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/commands/checkUpdates-graduation.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
+    "tests/features/updates/commands/checkUpdates.test.ts",
+    "tests/features/updates/services/componentUpdater-core.test.ts",
+    "tests/features/updates/services/componentUpdater-envMigration.test.ts",
+    "tests/features/updates/services/componentUpdater-extended.test.ts",
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/templateSyncService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/communication/webviewCommunicationManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/communication/testHelpers.ts",
+    "tests/core/communication/webviewCommunicationManager.edge-cases.test.ts",
+    "tests/core/communication/webviewCommunicationManager.handshake.test.ts",
+    "tests/core/communication/webviewCommunicationManager.messaging.test.ts",
+    "tests/core/communication/webviewCommunicationManager.testUtils.ts",
+    "tests/features/data-installer/commands/showDataInstaller.test.ts",
+    "tests/security/csp-nonce-security.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/shell/commandExecutor.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/shell/commandExecutor-adobe-cli.test.ts",
+    "tests/core/shell/commandExecutor-basic-execution.test.ts",
+    "tests/core/shell/commandExecutor-cancellation.test.ts",
+    "tests/core/shell/commandExecutor-delegation.test.ts",
+    "tests/core/shell/commandExecutor-orgContext.test.ts",
+    "tests/core/shell/commandExecutor-orgTargetingGuard.test.ts",
+    "tests/core/shell/commandExecutor-stdinTruncation.test.ts",
+    "tests/core/shell/commandExecutor-timeout.test.ts",
+    "tests/core/shell/commandExecutor.security.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/shell/fileWatcher.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/shell/commandExecutor-adobe-cli.test.ts",
+    "tests/core/shell/commandExecutor-basic-execution.test.ts",
+    "tests/core/shell/commandExecutor-cancellation.test.ts",
+    "tests/core/shell/commandExecutor-delegation.test.ts",
+    "tests/core/shell/commandExecutor-orgContext.test.ts",
+    "tests/core/shell/commandExecutor-orgTargetingGuard.test.ts",
+    "tests/core/shell/commandExecutor-stdinTruncation.test.ts",
+    "tests/core/shell/commandExecutor-timeout.test.ts",
+    "tests/core/shell/commandExecutor.security.test.ts",
+    "tests/core/shell/commandExecutor.testUtils.ts",
+    "tests/core/shell/fileWatcher-branches.test.ts",
+    "tests/core/shell/fileWatcher.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/state/stateManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/state/stateManager-errorHandling.test.ts",
+    "tests/core/state/stateManager.disposal.test.ts",
+    "tests/core/state/stateManager.testUtils.ts",
+    "tests/features/ai/server/scopedStateManager.test.ts",
+    "tests/features/authentication/handlers/testUtils.ts"
+   ]
+  },
+  {
+   "unit": "src/core/ui/utils/WebviewClient.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/ui/components/WebviewApp.test.tsx",
+    "tests/core/ui/utils/WebviewClient.test.ts",
+    "tests/features/authentication/ui/components/AdobeEntityFields.test.tsx",
+    "tests/features/authentication/ui/components/AdobeProjectPicker.delete.test.tsx",
+    "tests/features/authentication/ui/components/AdobeProjectPicker.test.tsx",
+    "tests/features/authentication/ui/components/AdobeWorkspacePicker.test.tsx",
+    "tests/features/authentication/ui/hooks/useAuthStatus-core.test.tsx",
+    "tests/features/authentication/ui/hooks/useAuthStatus-errorCodes.test.tsx",
+    "tests/features/authentication/ui/hooks/useAuthStatus-messages.test.tsx",
+    "tests/features/authentication/ui/hooks/useAuthStatus.testUtils.ts",
+    "tests/features/authentication/ui/hooks/useSelectionStep-basic.test.tsx",
+    "tests/features/authentication/ui/hooks/useSelectionStep-errorCodes.test.tsx",
+    "tests/features/authentication/ui/hooks/useSelectionStep-searchAndErrors.test.tsx",
+    "tests/features/authentication/ui/hooks/useSelectionStep-stateManagement.test.tsx",
+    "tests/features/authentication/ui/hooks/useSelectionStep.testUtils.ts",
+    "tests/features/authentication/ui/steps/AdobeAuthStep-authentication.test.tsx",
+    "tests/features/authentication/ui/steps/AdobeAuthStep-errors.test.tsx",
+    "tests/features/authentication/ui/steps/AdobeAuthStep-messaging.test.tsx",
+    "tests/features/authentication/ui/steps/AdobeAuthStep-organization.test.tsx",
+    "tests/features/dashboard/ui/ProjectDashboardScreen-actions.test.tsx",
+    "tests/features/dashboard/ui/ProjectDashboardScreen-aiReady.test.tsx",
+    "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
+    "tests/features/dashboard/ui/ProjectDashboardScreen-orgMismatch.test.tsx",
+    "tests/features/dashboard/ui/ProjectDashboardScreen.testUtils.tsx",
+    "tests/features/dashboard/ui/aiSurface/AiOverviewScreen.testUtils.tsx",
+    "tests/features/dashboard/ui/components/DataInstallerTile.test.tsx",
+    "tests/features/dashboard/ui/components/IntegrationsSummaryTile.test.tsx",
+    "tests/features/dashboard/ui/components/ManageApisModal.test.tsx",
+    "tests/features/dashboard/ui/components/integrations/IntegrationsGrid.testUtils.tsx",
+    "tests/features/dashboard/ui/configure/ConfigureScreen-authoring-experience.test.tsx",
+    "tests/features/dashboard/ui/configure/ConfigureScreen-operations.test.tsx",
+    "tests/features/dashboard/ui/configure/ConfigureScreen-rendering.test.tsx",
+    "tests/features/dashboard/ui/configure/ConfigureScreen-store-discovery.test.tsx",
+    "tests/features/dashboard/ui/configure/ConfigureScreen-validation.test.tsx",
+    "tests/features/dashboard/ui/hooks/useDashboardActions.test.ts",
+    "tests/features/dashboard/ui/hooks/useDashboardStatus-aiReady.test.ts",
+    "tests/features/dashboard/ui/hooks/useDashboardStatus-statusDisplay.test.ts",
+    "tests/features/dashboard/ui/hooks/useDashboardStatus.test.ts",
+    "tests/features/dashboard/ui/hooks/useDashboardStatus.testUtils.ts",
+    "tests/features/dashboard/ui/hooks/useFieldSyncWithBackend.test.tsx",
+    "tests/features/dashboard/ui/hooks/useInlineRename.test.ts",
+    "tests/features/dashboard/ui/hooks/useLiveDaLiveUrl.test.ts",
+    "tests/features/dashboard/ui/hooks/useLiveDestination.test.ts",
+    "tests/features/dashboard/ui/hooks/useRowStatusOverrides.test.ts",
+    "tests/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.test.tsx",
+    "tests/features/dashboard/ui/integrationsSurface/IntegrationsScreen.test.tsx",
+    "tests/features/data-installer/ui/DataInstallerScreen.test.tsx",
+    "tests/features/data-installer/ui/components/ExportDatapackModal.test.tsx",
+    "tests/features/data-installer/ui/components/ImportDatapackModal.testUtils.tsx",
+    "tests/features/data-installer/ui/hooks/useDataInstallerRequest.test.tsx",
+    "tests/features/data-installer/ui/hooks/useImportProgress.test.tsx",
+    "tests/features/data-installer/ui/views/DatapackActivityView-firstFrame.test.tsx",
+    "tests/features/data-installer/ui/views/DatapackActivityView.test.tsx",
+    "tests/features/data-installer/ui/views/DatapackCatalogView-firstFrame.test.tsx",
+    "tests/features/data-installer/ui/views/DatapackCatalogView.test.tsx",
+    "tests/features/eds/ui/hooks/useDaLiveAuth.test.tsx",
+    "tests/features/eds/ui/hooks/useGitHubAuth.test.tsx",
+    "tests/features/eds/ui/steps/RepoSelectionInline.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-checking.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-edgeCases.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-installation.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-optional.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-progress-format.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-progress-updates.test.tsx",
+    "tests/features/prerequisites/ui/steps/PrerequisitesStep-recheck.test.tsx",
+    "tests/features/project-creation/ui/steps/SampleDataStep.test.tsx",
+    "tests/features/projects-dashboard/ui/ProjectsDashboard.test.tsx",
+    "tests/webview-ui/shared/hooks/useAsyncData.test.ts",
+    "tests/webview-ui/shared/hooks/useVSCodeMessage.test.ts",
+    "tests/webview-ui/shared/hooks/useVSCodeRequest.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/vscode/envFileWatcherService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/core/vscode/workspaceWatcherManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
+    "tests/core/vscode/envFileWatcherService.test.ts",
+    "tests/core/vscode/envFileWatcherService.testUtils.ts",
+    "tests/core/vscode/workspaceWatcherManager.mocked.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementClient.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/app-builder/services/appManagementClient.test.ts",
+    "tests/features/app-builder/services/appManagementInstaller.test.ts",
+    "tests/features/app-builder/services/appManagementUninstaller.test.ts",
+    "tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementInstaller.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/app-builder/services/appManagementInstaller.test.ts",
+    "tests/features/app-builder/services/appManagementUninstaller.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementUninstaller.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/app-builder/services/appManagementUninstaller.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/authentication/services/adobeSDKClient.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher-tokenOrgFallback.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.authDiagnostics.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.createProject.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.createWorkspace.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.orgListSingleFlight.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.renameRemoteProject.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.servicesCache.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.teardown.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.test.ts",
+    "tests/features/authentication/services/adobeEntityFetcher.workspaces.test.ts",
+    "tests/features/authentication/services/adobeEntityService.testUtils.ts",
+    "tests/features/authentication/services/adobeSDKClient.test.ts",
+    "tests/features/authentication/services/adobeWorkspaceCredentials.s2s.test.ts",
+    "tests/features/authentication/services/authenticationService-checks.test.ts",
+    "tests/features/authentication/services/authenticationService-context.test.ts",
+    "tests/features/authentication/services/authenticationService-entities.test.ts",
+    "tests/features/authentication/services/authenticationService-operations.test.ts",
+    "tests/features/authentication/services/authenticationService-subscriber.test.ts",
+    "tests/features/authentication/services/authenticationService.testUtils.ts"
+   ]
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/app-builder/services/apiSubscriberClientAdapter.test.ts",
+    "tests/features/authentication/handlers/deleteAdobeProjectHandler.test.ts",
+    "tests/features/authentication/services/authenticationService-checks.test.ts",
+    "tests/features/authentication/services/authenticationService-context.test.ts",
+    "tests/features/authentication/services/authenticationService-entities.test.ts",
+    "tests/features/authentication/services/authenticationService-operations.test.ts",
+    "tests/features/authentication/services/authenticationService-subscriber.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/authoringExperienceFlip.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/authoringExperienceFlip.test.ts",
+    "tests/features/eds/services/ewSettingChangeListener.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/configService/repairSiteConfigForProject.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/siteTools.test.ts",
+    "tests/features/eds/services/configService/repairSiteConfigForProject.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/configSyncService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/configSyncService.test.ts",
+    "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
+    "tests/features/eds/services/storefrontRepublishContent.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/daLive/daLiveConfigService-mutations.test.ts",
+    "tests/features/eds/services/daLive/daLiveConfigService-queries.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentOperations.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/commands/migrateStorefrontNames.test.ts",
+    "tests/commands/refreshBlockLibrary.test.ts",
+    "tests/features/ai/mcpServer-promoteBlock.test.ts",
+    "tests/features/ai/mcpServer-removeBlock.test.ts",
+    "tests/features/ai/server/cloudResourceTools.test.ts",
+    "tests/features/ai/server/contentAuthoringTools-sizes.test.ts",
+    "tests/features/ai/server/contentAuthoringTools.test.ts",
+    "tests/features/ai/server/edsResetTool.test.ts",
+    "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-eds.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveSiteConfig.test.ts",
+    "tests/features/eds/handlers/daLive/edsDaLiveAuthHandlers-storeToken.test.ts",
+    "tests/features/eds/handlers/edsHelpers.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-auth.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-configService.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-customBlockLibraries.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-recovery.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases-tracking.test.ts",
+    "tests/features/eds/services/authoringExperienceFlip.test.ts",
+    "tests/features/eds/services/configService/repairSiteConfigForProject.test.ts",
+    "tests/features/eds/services/configService/siteAccessManagerHeadless.test.ts",
+    "tests/features/eds/services/contentCompleteness.smoke.test.ts",
+    "tests/features/eds/services/daLive/daLiveConfigService-mutations.test.ts",
+    "tests/features/eds/services/daLive/daLiveConfigService-queries.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentCopy-retry.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-401.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-accountOverlay.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-appendBlockToLibrary.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-applySiteConfig.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-blockDocPages.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-enumeration.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-library-cdnCopy.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-library-creation.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-library-creation.testUtils.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-referenceDiscovery.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-removeBlockFromLibrary.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-tokenFactory.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-transform.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-utils.test.ts",
+    "tests/features/eds/services/refreshBlockLibraryHeadless.test.ts",
+    "tests/features/eds/services/reset/edsResetService-configService.test.ts",
+    "tests/features/eds/services/reset/edsResetService-customBlockLibraries.test.ts",
+    "tests/features/eds/services/reset/edsResetService-daLiveReauth.test.ts",
+    "tests/features/eds/services/reset/edsResetService-meshAuth.test.ts",
+    "tests/features/eds/services/resourceCleanupHelpers.test.ts",
+    "tests/features/eds/services/storefront/storefrontNameMigrationForProject.test.ts",
+    "tests/features/eds/services/storefrontRepublishContent.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts",
+    "tests/unit/features/eds/services/helix/helixService-auth-keys.test.ts",
+    "tests/unit/features/eds/services/helix/helixService-persistent-keys.test.ts",
+    "tests/unit/features/eds/services/helix/helixService-preview-publish.test.ts",
+    "tests/unit/features/eds/services/helix/helixService-rate-limiting.test.ts",
+    "tests/unit/features/project-creation/services/edsContentSetup.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveOrgOperations.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/di/service-logger-injection.test.ts",
+    "tests/features/ai/server/cloudResourceTools.test.ts",
+    "tests/features/eds/handlers/authoringExperience-ewCanvasBranch.test.ts",
+    "tests/features/eds/handlers/authoringExperience.test.ts",
+    "tests/features/eds/handlers/byomOverlay.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts",
+    "tests/features/eds/handlers/daLive/daLiveSiteConfig.test.ts",
+    "tests/features/eds/handlers/daLive/edsDaLiveAuthHandlers-storeToken.test.ts",
+    "tests/features/eds/handlers/edsHelpers.test.ts",
+    "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers-auth.test.ts",
+    "tests/features/eds/services/daLive/daLiveConfigOperations.test.ts",
+    "tests/features/eds/services/daLive/daLiveContentOperations-applySiteConfig.test.ts",
+    "tests/unit/features/eds/services/cleanupService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/pdp/publishKeyRegistrar.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/commands/migrateStorefrontNames.test.ts",
+    "tests/features/eds/services/configService/siteConfigRegistrar.test.ts",
+    "tests/features/eds/services/pdp/publishKeyRegistrar.test.ts",
+    "tests/features/eds/services/pdp/publishKeyRenewalSweep.test.ts",
+    "tests/features/eds/services/storefront/storefrontNameMigrationForProject.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/refreshBlockLibraryHeadless.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/handlers/refreshBlockLibraryHandler.test.ts",
+    "tests/features/eds/services/refreshBlockLibraryHeadless.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetConfigStep.ts",
+   "verdict": "UNTESTED",
+   "suites": []
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/edsResetTool.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-eds.test.ts",
+    "tests/features/eds/services/reset/edsResetService-configService.test.ts",
+    "tests/features/eds/services/reset/edsResetService-customBlockLibraries.test.ts",
+    "tests/features/eds/services/reset/edsResetService-daLiveReauth.test.ts",
+    "tests/features/eds/services/reset/edsResetService-meshAuth.test.ts",
+    "tests/features/eds/services/reset/edsResetUI-auth.test.ts",
+    "tests/features/eds/services/reset/edsResetUI-sampleData.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/siteTools.test.ts",
+    "tests/features/eds/services/configService/repairSiteConfigForProject.test.ts",
+    "tests/features/eds/services/storefront/storefrontNameMigrationForProject.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontRepublishService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/storefrontTools.test.ts",
+    "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-republish.test.ts",
+    "tests/features/eds/services/authoringExperienceFlip.test.ts",
+    "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
+    "tests/features/eds/services/storefrontRepublishContent.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+   "verdict": "BLIND",
+   "suites": [
+    "tests/core/di/service-logger-injection.test.ts",
+    "tests/features/prerequisites/services/prerequisitesCacheManager-operations.test.ts",
+    "tests/features/prerequisites/services/prerequisitesCacheManager-stats-versions.test.ts",
+    "tests/features/prerequisites/services/prerequisitesCacheManager-ttl-eviction.test.ts",
+    "tests/unit/prerequisites/cacheManager-invalidation.test.ts",
+    "tests/unit/prerequisites/cacheManager-operations.test.ts",
+    "tests/unit/prerequisites/cacheManager-security.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/catalogPrewarmPhase.ts",
+   "verdict": "UNTESTED",
+   "suites": []
+  },
+  {
+   "unit": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/project-creation/services/componentInstallationOrchestrator.test.ts",
+    "tests/features/project-creation/services/projectFinalizationService-meshEndpoint.test.ts",
+    "tests/unit/features/project-creation/services/projectFinalizationService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/edsContentSetup.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/unit/features/project-creation/services/edsContentSetup.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/projectDeletionService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/deleteProjectTool.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-moreActions.test.ts",
+    "tests/features/dashboard/handlers/dashboardHandlers-republish.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/updateApplyService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/ai/server/applyUpdatesTool.test.ts",
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/updateCore.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  }
+ ]
+}
