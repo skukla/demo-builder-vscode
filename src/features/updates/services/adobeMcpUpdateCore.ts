@@ -23,7 +23,7 @@
  * an import cycle between the two callers.
  */
 
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import type { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils';
 import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
@@ -37,6 +37,8 @@ export interface AdobeMcpUpdateCoreContext {
     /** The one method this core calls; UpdateContext's pick satisfies it. */
     stateManager: Pick<StateManager, 'saveProjectConfigOnly'>;
     logger: Logger;
+    /** ADR-015: handed in at the boundary rather than fetched here. */
+    commandManager: CommandExecutor;
 }
 
 /**
@@ -50,7 +52,7 @@ export async function applyAdobeMcpUpdate(
     latestVersion: string,
     ctx: AdobeMcpUpdateCoreContext,
 ): Promise<void> {
-    const commandManager = ServiceLocator.getCommandExecutor();
+    const { commandManager } = ctx;
     const toolsDir = resolveMcpToolsDir(project.path);
 
     const result = await commandManager.execute(`npm update ${packageName} --no-fund`, {

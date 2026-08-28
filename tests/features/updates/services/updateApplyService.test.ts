@@ -51,9 +51,11 @@ jest.mock('@/features/project-creation/services', () => ({
     // "the single source of truth" for that location.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
+ * suite no longer mocks the service registry.
+ */
+const executor = { execute: executeMock } as never;
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
@@ -87,6 +89,7 @@ const ctx = {
     secrets: {},
     extensionPath: '/ext',
     stateManager: { saveProject: jest.fn(async () => undefined) },
+    commandManager: executor,
     logger: {
         info: jest.fn(),
         warn: jest.fn(),

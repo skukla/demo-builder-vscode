@@ -13,6 +13,7 @@ import {
     generateAIContextFiles,
     installAiDefaultsMcpTools,
     createMockContext,
+    seedCommandExecutor,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -20,6 +21,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 describe('handleRegenerateAiFiles — tooling gate', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        seedCommandExecutor();
     });
 
     it('runs the tooling install for a mesh project without a storefront', async () => {
@@ -47,6 +49,7 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
         expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
             meshProject.path,
             meshProject,
+            expect.anything(),
             expect.any(Function)
         );
     });

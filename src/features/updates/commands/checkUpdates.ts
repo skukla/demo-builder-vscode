@@ -21,6 +21,7 @@ import {
     type UpdateItem,
 } from './updateTypes';
 import { BaseCommand } from '@/core/base';
+import { ServiceLocator } from '@/core/di';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
@@ -447,6 +448,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             extensionPath: this.context.extensionPath,
             stateManager: this.stateManager,
             logger: this.logger,
+            commandManager: ServiceLocator.getCommandExecutor(),
         };
     }
 }

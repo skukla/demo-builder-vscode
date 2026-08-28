@@ -16,6 +16,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ComponentDependencies } from './componentDependencies';
 import { ComponentInstallation } from './componentInstallation';
+import type { CommandExecutor } from '@/core/shell';
 import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -36,10 +37,10 @@ export class ComponentManager {
     private installation: ComponentInstallation;
     private dependencies: ComponentDependencies;
 
-    constructor(logger: Logger) {
+    constructor(logger: Logger, commandManager: CommandExecutor) {
         this.logger = logger;
         this.installation = new ComponentInstallation(logger);
-        this.dependencies = new ComponentDependencies(logger);
+        this.dependencies = new ComponentDependencies(logger, commandManager);
     }
 
     /**

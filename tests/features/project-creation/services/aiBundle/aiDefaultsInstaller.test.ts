@@ -23,7 +23,6 @@ import {
     resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Project } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
@@ -33,11 +32,11 @@ jest.mock('fs/promises', () => ({
 }));
 
 const executeMock = jest.fn();
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(() => ({ execute: executeMock })),
-    },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN, so this suite no
+ * longer mocks the service registry — the fake is a plain object.
+ */
+const executor = { execute: executeMock } as never;
 
 const PROJECT_PATH = '/projects/test';
 // EDS storefront project — both ai-defaults entries apply (Developer Agent
@@ -91,7 +90,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('creates the isolated .demo-builder-mcp directory (recursive)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(fsPromises.mkdir).toHaveBeenCalledWith(TOOLS_DIR, { recursive: true });
     });
@@ -99,7 +98,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('writes a package.json into the isolated dir (not the storefront)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(fsPromises.writeFile).toHaveBeenCalledWith(
             TOOLS_PACKAGE_JSON_PATH,
@@ -111,7 +110,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('declares dependencies equal to exactly the ai-defaults packages', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         const pkg = captureToolsPackageJson();
         const deps = pkg?.dependencies as Record<string, string> | undefined;
@@ -128,7 +127,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('marks the tools package.json private with a stable name', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         const pkg = captureToolsPackageJson();
         expect(pkg?.name).toBe('demo-builder-mcp-tools');
@@ -139,7 +138,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('does NOT declare any storefront dependency (decoupled from the storefront manifest)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         const pkg = captureToolsPackageJson();
         const deps = pkg?.dependencies as Record<string, string> | undefined;
@@ -152,7 +151,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('installs only the Developer Agent tooling for a mesh-only project (no Playwright)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        await installAiDefaultsMcpTools(PROJECT_PATH, MESH_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, MESH_PROJECT, executor);
 
         const pkg = captureToolsPackageJson();
         const deps = pkg?.dependencies as Record<string, string> | undefined;
@@ -162,7 +161,7 @@ describe('installAiDefaultsMcpTools', () => {
     });
 
     it('no-ops (success, no npm run) when no ai-defaults entry applies', async () => {
-        const result = await installAiDefaultsMcpTools(PROJECT_PATH, BARE_PROJECT);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, BARE_PROJECT, executor);
 
         expect(result).toEqual({ success: true });
         expect(fsPromises.writeFile).not.toHaveBeenCalled();
@@ -172,9 +171,10 @@ describe('installAiDefaultsMcpTools', () => {
     it('runs npm install with cwd = the isolated dir (NOT the storefront)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
 
-        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
-        expect(ServiceLocator.getCommandExecutor).toHaveBeenCalledTimes(1);
+        // The install runs exactly once, through the handed-in executor.
+        expect(executeMock).toHaveBeenCalledTimes(1);
         expect(executeMock).toHaveBeenCalledWith(
             'npm install',
             expect.objectContaining({ cwd: TOOLS_DIR })
@@ -189,7 +189,7 @@ describe('installAiDefaultsMcpTools', () => {
             stderr: 'npm ERR! 404 Not Found - @some/package',
         });
 
-        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/npm install/);
@@ -200,7 +200,7 @@ describe('installAiDefaultsMcpTools', () => {
     it('reports failure when the command executor throws', async () => {
         executeMock.mockRejectedValue(new Error('ENOENT: npm not found'));
 
-        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/npm not found/);
@@ -211,7 +211,7 @@ describe('installAiDefaultsMcpTools', () => {
             new Error('EACCES: permission denied')
         );
 
-        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT);
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/EACCES/);
@@ -248,7 +248,7 @@ describe('applicableMcpPackages', () => {
 
     it('agrees with what the installer would install (the two must not drift)', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-        await installAiDefaultsMcpTools(PROJECT_PATH, MESH_PROJECT);
+        await installAiDefaultsMcpTools(PROJECT_PATH, MESH_PROJECT, executor);
         const manifest = captureToolsPackageJson();
         expect(Object.keys((manifest?.dependencies as object) ?? {}).sort()).toEqual(
             applicableMcpPackages(MESH_PROJECT).sort()

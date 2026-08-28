@@ -22,6 +22,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
+import { ServiceLocator } from '@/core/di';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -167,6 +168,18 @@ function setupDefaultMocks(): {
 // Tests
 // ---------------------------------------------------------------------------
 
+
+/**
+ * ADR-015 (2026-08-28): this boundary fetches the shell executor from the
+ * registry, which the shared node setup resets after EVERY test — so the fake
+ * is seeded per-test rather than once at module scope.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+});
+
 describe('CheckUpdatesCommand — Add-on Updates', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -203,7 +216,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         expect(vscode.window.showQuickPick).toHaveBeenCalled();
         const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
         const blockItems = items.filter((i: any) => i.isBlockLibraryUpdate === true);
-        expect(blockItems.length).toBe(1);
+        expect(blockItems).toHaveLength(1);
         expect(blockItems[0].commitsBehind).toBe(7);
     });
 
@@ -232,7 +245,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         expect(vscode.window.showQuickPick).toHaveBeenCalled();
         const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
         const inspectorItems = items.filter((i: any) => i.isInspectorUpdate === true);
-        expect(inspectorItems.length).toBe(1);
+        expect(inspectorItems).toHaveLength(1);
         expect(inspectorItems[0].commitsBehind).toBe(4);
     });
 
@@ -462,7 +475,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
         const skipCalls = mockLogger.info.mock.calls.filter(
             (c: any[]) => typeof c[0] === 'string' && c[0].includes('skipping') && c[0].includes('External Blocks'),
         );
-        expect(skipCalls.length).toBe(0);
+        expect(skipCalls).toHaveLength(0);
     });
 
     it('should NOT skip block library when template sync was not selected', async () => {
@@ -505,7 +518,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
         const skipCalls = mockLogger.info.mock.calls.filter(
             (c: any[]) => typeof c[0] === 'string' && c[0].includes('skipping'),
         );
-        expect(skipCalls.length).toBe(0);
+        expect(skipCalls).toHaveLength(0);
     });
 
     it('should NOT skip block library when template sync failed', async () => {
@@ -550,6 +563,6 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
         const skipCalls = mockLogger.info.mock.calls.filter(
             (c: any[]) => typeof c[0] === 'string' && c[0].includes('skipping') && c[0].includes('Demo Team Blocks'),
         );
-        expect(skipCalls.length).toBe(0);
+        expect(skipCalls).toHaveLength(0);
     });
 });

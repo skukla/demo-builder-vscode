@@ -429,7 +429,11 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             registerEwSettingChangeListener({ context, stateManager, logger }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
-            registerThirdPartyToolingSettingListener(context.extensionPath, logger),
+            registerThirdPartyToolingSettingListener(
+                ServiceLocator.getCommandExecutor(),
+                context.extensionPath,
+                logger,
+            ),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)

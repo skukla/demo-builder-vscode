@@ -16,7 +16,11 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type OrgContextTarget,
+ CommandExecutor } from '@/core/shell';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
@@ -24,7 +28,6 @@ import type { ComponentDefinitionEntry } from '@/features/project-creation/servi
 import type { Project, TransformedComponentDefinition, ComponentRegistry } from '@/types';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Stack } from '@/types/stacks';
-
 
 // ==========================================================
 // Types
@@ -37,6 +40,8 @@ export interface ResetWithUIOptions {
     context: HandlerContext;
     /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
     logPrefix?: string;
+    /** ADR-015: the shell executor, supplied by the calling handler. */
+    commandManager: CommandExecutor;
 }
 
 // ==========================================================
@@ -52,7 +57,11 @@ interface LoadResult {
 
 /** Look up a component definition by type from the registry manager */
 async function findComponentByType(
-    registryManager: { getFrontends: () => Promise<TransformedComponentDefinition[]>; getDependencies: () => Promise<TransformedComponentDefinition[]>; getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined> },
+    registryManager: {
+        getFrontends: () => Promise<TransformedComponentDefinition[]>;
+        getDependencies: () => Promise<TransformedComponentDefinition[]>;
+        getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined>;
+    },
     comp: { id: string; type: string },
 ): Promise<TransformedComponentDefinition | undefined> {
     if (comp.type === 'frontend') {
@@ -67,10 +76,7 @@ async function findComponentByType(
 }
 
 /** Build the flat component list from stack + saved selections */
-export function buildComponentList(
-    stack: Stack,
-    project: Project,
-): { id: string; type: string }[] {
+export function buildComponentList(stack: Stack, project: Project): { id: string; type: string }[] {
     const frontend = stack.frontend;
     // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
@@ -136,9 +142,7 @@ async function loadComponentDefinitionsFromProject(
     const stack = project.selectedStack ? getStackById(project.selectedStack) : undefined;
 
     if (!stack) {
-        throw new Error(
-            `Stack "${project.selectedStack}" not found in stacks.json. Cannot reset.`,
-        );
+        throw new Error(`Stack "${project.selectedStack}" not found in stacks.json. Cannot reset.`);
     }
 
     const allComponents = buildComponentList(stack, project);
@@ -180,9 +184,7 @@ async function loadComponentDefinitionsFromProject(
         }
 
         if (!componentDef.source) {
-            context.logger.warn(
-                `[ProjectReset] Component ${comp.id} has no source, skipping`,
-            );
+            context.logger.warn(`[ProjectReset] Component ${comp.id} has no source, skipping`);
             continue;
         }
 
@@ -231,7 +233,8 @@ async function ensureAdobeContext(
         project,
         logger: context.logger,
         logPrefix,
-        warningMessage: 'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
+        warningMessage:
+            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
     });
 
     return result.ready;
@@ -256,6 +259,7 @@ async function runTargetedMeshDeploy(
     logPrefix: string,
     progress: { report: (value: { message: string }) => void },
     vscode: typeof import('vscode'),
+    commandManager: CommandExecutor,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
     progress.report({ message: 'Redeploying API Mesh…' });
     context.logger.info(`${logPrefix} Redeploying mesh`);
@@ -263,13 +267,10 @@ async function runTargetedMeshDeploy(
     try {
         // Create-or-update from REMOTE truth — the shared rule lives in
         // deployMeshCreateOrUpdate (one copy, was three).
-        const { deployMeshCreateOrUpdate } = await import(
-            '@/features/mesh/services/meshRedeploy'
-        );
-        const { ServiceLocator } = await import('@/core/di');
+        const { deployMeshCreateOrUpdate } = await import('@/features/mesh/services/meshRedeploy');
         const meshResult = await deployMeshCreateOrUpdate(
             meshPath,
-            ServiceLocator.getCommandExecutor(),
+            commandManager,
             context.logger,
             (_msg, sub) => progress.report({ message: sub || _msg }),
         );
@@ -292,7 +293,10 @@ async function runTargetedMeshDeploy(
 
         return {
             redeployed: false,
-            earlyReturn: { success: true, error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}` },
+            earlyReturn: {
+                success: true,
+                error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}`,
+            },
         };
     }
 }
@@ -304,6 +308,7 @@ export async function handleMeshRedeployment(
     logPrefix: string,
     progress: { report: (value: { message: string }) => void },
     vscode: typeof import('vscode'),
+    commandManager: CommandExecutor,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
     const meshComponent = getMeshComponentInstance(project);
@@ -322,7 +327,15 @@ export async function handleMeshRedeployment(
     // instead of mutating the shared `aio` global with select* (racey).
     const target = await buildProjectOrgTarget(project);
     return withOrgContext(target, () =>
-        runTargetedMeshDeploy(project, meshComponent.path as string, context, logPrefix, progress, vscode),
+        runTargetedMeshDeploy(
+            project,
+            meshComponent.path as string,
+            context,
+            logPrefix,
+            progress,
+            vscode,
+            commandManager,
+        ),
     );
 }
 
@@ -344,14 +357,8 @@ export async function handleMeshRedeployment(
  * 8. Redeploy API Mesh (if project has mesh component)
  * 9. Restore status, show success/error notification
  */
-export async function resetProjectWithUI(
-    options: ResetWithUIOptions,
-): Promise<HandlerResponse> {
-    const {
-        project,
-        context,
-        logPrefix = '[ProjectReset]',
-    } = options;
+export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<HandlerResponse> {
+    const { project, context, logPrefix = '[ProjectReset]', commandManager } = options;
 
     const vscode = await import('vscode');
 
@@ -413,9 +420,7 @@ export async function resetProjectWithUI(
                     await fsPromises.rm(componentsDir, { recursive: true, force: true });
                     context.logger.info(`${logPrefix} Removed components directory`);
                 } catch {
-                    context.logger.debug(
-                        `${logPrefix} No components directory to remove`,
-                    );
+                    context.logger.debug(`${logPrefix} No components directory to remove`);
                 }
 
                 // Clear component instances (will be rebuilt by cloneAllComponents)
@@ -435,6 +440,7 @@ export async function resetProjectWithUI(
                     }) as import('@/features/project-creation/handlers/shared').ProgressTracker,
                     logger: context.logger,
                     saveProject: () => context.stateManager.saveProject(project),
+                    commandManager,
                 };
 
                 await cloneAllComponents(installContext);
@@ -452,7 +458,12 @@ export async function resetProjectWithUI(
 
                 // Step 6: Redeploy API Mesh (if project has mesh)
                 const meshRedeployResult = await handleMeshRedeployment(
-                    project, context, logPrefix, progress, vscode,
+                    project,
+                    context,
+                    logPrefix,
+                    progress,
+                    vscode,
+                    commandManager,
                 );
                 if (meshRedeployResult?.earlyReturn) return meshRedeployResult.earlyReturn;
                 const meshRedeployed = meshRedeployResult?.redeployed ?? false;
@@ -471,8 +482,7 @@ export async function resetProjectWithUI(
                         location: vscode.ProgressLocation.Notification,
                         title: successMessage,
                     },
-                    async () =>
-                        sleep(TIMEOUTS.UI.NOTIFICATION),
+                    async () => sleep(TIMEOUTS.UI.NOTIFICATION),
                 );
 
                 context.logger.info(`${logPrefix} Project reset completed`);

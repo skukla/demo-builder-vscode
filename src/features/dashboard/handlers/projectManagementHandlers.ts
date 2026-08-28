@@ -10,6 +10,7 @@
 
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
+import { ServiceLocator } from '@/core/di';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -93,6 +94,7 @@ export const handleResetProject: MessageHandler = async (context) => {
         '@/features/lifecycle/services/projectResetService'
     );
     return resetProjectWithUI({
+        commandManager: ServiceLocator.getCommandExecutor(),
         project,
         context,
         logPrefix: '[Dashboard]',

@@ -36,15 +36,21 @@ function makeContext(componentInstances: Record<string, { path: string }>): Inst
         warn: jest.fn(),
         error: jest.fn(),
     } as unknown as Logger;
+    // Only the definition MAP is narrowed — the context itself is built to its
+    // real shape. A whole-object cast here used to hide missing fields (it was
+    // short `saveProject`, and silently absorbed `commandManager` when ADR-015
+    // added it, so the suite failed at runtime with a green typecheck).
     const componentDefinitions = new Map(
         Object.keys(componentInstances).map((compId) => [compId, { definition: { name: compId } }])
-    );
+    ) as unknown as InstallationContext['componentDefinitions'];
     return {
         project: { name: 'Test', path: '/proj', componentInstances } as unknown as Project,
         componentDefinitions,
         progressTracker: jest.fn(),
         logger,
-    } as unknown as InstallationContext;
+        saveProject: jest.fn(async () => undefined),
+        commandManager: { execute: jest.fn() } as unknown as InstallationContext['commandManager'],
+    };
 }
 
 describe('installAllComponents — isolated MCP-tools install contract', () => {
@@ -64,6 +70,7 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
         expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
             '/proj',
             expect.objectContaining({ path: '/proj' }),
+            expect.anything(),
             expect.any(Function)
         );
     });
@@ -79,6 +86,7 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
         expect(mockInstallAiDefaultsMcpTools).toHaveBeenCalledWith(
             '/proj',
             expect.objectContaining({ path: '/proj' }),
+            expect.anything(),
             expect.any(Function)
         );
     });

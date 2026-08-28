@@ -46,7 +46,7 @@ describe('ComponentManager - Lifecycle', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
+        componentManager = new ComponentManager(mockLogger, mockCommandExecutor);
 
         // Mock successful command execution by default
         mockSuccessfulExecution(mockCommandExecutor);

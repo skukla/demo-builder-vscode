@@ -31,7 +31,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
-import { ServiceLocator } from '@/core/di/serviceLocator';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -86,6 +86,7 @@ export function resolveMcpToolsDir(projectPath: string): string {
 export async function installAiDefaultsMcpTools(
     projectPath: string,
     project: Project,
+    commandManager: CommandExecutor,
     onProgress?: (message: string) => void,
 ): Promise<InstallAiDefaultsResult> {
     const toolsDir = resolveMcpToolsDir(projectPath);
@@ -117,7 +118,7 @@ export async function installAiDefaultsMcpTools(
         return { success: false, error: describeInstallerError(err) };
     }
 
-    const executor = ServiceLocator.getCommandExecutor();
+    const executor = commandManager;
     try {
         // Stream npm's own output into the caller's progress line — real
         // progress instead of one opaque block with a guessed duration

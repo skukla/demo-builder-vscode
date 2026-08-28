@@ -13,6 +13,7 @@ import {
     installAiDefaultsMcpTools,
     clearMcpCache,
     createMockContext,
+    seedCommandExecutor,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -36,6 +37,7 @@ const PROJECT_HEADLESS = {
 describe('aiHandlers — regenerating AI files', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        seedCommandExecutor();
     });
 
     describe('handleRegenerateAiFiles', () => {
@@ -197,6 +199,7 @@ describe('aiHandlers — regenerating AI files', () => {
             expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
                 PROJECT_WITH_STOREFRONT.path,
                 PROJECT_WITH_STOREFRONT,
+                expect.anything(),
                 expect.any(Function)
             );
             // Order matters: the install must complete before context files are written

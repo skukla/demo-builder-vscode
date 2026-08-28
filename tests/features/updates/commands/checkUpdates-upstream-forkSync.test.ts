@@ -20,6 +20,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
+import { ServiceLocator } from '@/core/di';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -163,6 +164,18 @@ function setupDefaultMocks(): {
 // Tests
 // ---------------------------------------------------------------------------
 
+
+/**
+ * ADR-015 (2026-08-28): this boundary fetches the shell executor from the
+ * registry, which the shared node setup resets after EVERY test — so the fake
+ * is seeded per-test rather than once at module scope.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+});
+
 describe('CheckUpdatesCommand — Fork Sync', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -200,7 +213,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         expect(vscode.window.showQuickPick).toHaveBeenCalled();
         const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
         const forkItems = items.filter((i: any) => i.isForkSync === true);
-        expect(forkItems.length).toBe(1);
+        expect(forkItems).toHaveLength(1);
         expect(forkItems[0].behindBy).toBe(5);
         expect(forkItems[0].owner).toBe('adobe');
         expect(forkItems[0].repo).toBe('aem-boilerplate-commerce');

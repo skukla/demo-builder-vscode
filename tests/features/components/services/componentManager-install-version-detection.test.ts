@@ -55,7 +55,7 @@ describe('ComponentManager - Version Detection', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
+        componentManager = new ComponentManager(mockLogger, mockCommandExecutor);
 
         // Mock fs/promises
         const fs = require('fs/promises');

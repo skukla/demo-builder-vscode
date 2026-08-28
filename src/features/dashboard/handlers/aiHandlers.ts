@@ -18,6 +18,7 @@ import {
     handleListAiPrompts,
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
+import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import {
     clearMcpCache,
@@ -219,7 +220,11 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         emit('Downloading AI tool packages', `Fetching ${packages.join(', ')}…`);
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
-        const installResult = await installAiDefaultsMcpTools(project.path, project, (line) =>
+        const installResult = await installAiDefaultsMcpTools(
+            project.path,
+            project,
+            ServiceLocator.getCommandExecutor(),
+            (line) =>
             emit('Downloading AI tool packages', line),
         );
         if (!installResult.success) {

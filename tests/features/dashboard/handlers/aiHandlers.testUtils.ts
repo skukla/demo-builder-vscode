@@ -127,6 +127,7 @@ export {
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di';
 
 // ==========================================================
 // Test Helpers
@@ -250,4 +251,17 @@ export function makeScopedContext(
         } as unknown as HandlerContext['stateManager'],
     });
     return { context, project, saveProject, memento };
+}
+
+/**
+ * ADR-015 (2026-08-28): `handleRegenerateAiFiles` fetches the shell executor at
+ * the handler boundary, which is where fetching is allowed. Rather than mock the
+ * registry module away, seed the REAL ServiceLocator with a fake — the suites
+ * then drive the actual lookup path the handler uses. The shared node setup
+ * resets the registry after EVERY test, so this must run per-test.
+ */
+export function seedCommandExecutor(): void {
+    ServiceLocator.setCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
 }

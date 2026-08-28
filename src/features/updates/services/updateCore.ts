@@ -12,6 +12,7 @@
 
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { CommandExecutor } from '@/core/shell';
 import type { StateManager } from '@/core/state';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
@@ -36,6 +37,8 @@ export interface UpdateContext {
      */
     stateManager: Pick<StateManager, 'saveProject' | 'getCurrentProject' | 'saveProjectConfigOnly'>;
     logger: Logger;
+    /** ADR-015: the shell executor, supplied by whichever boundary builds this. */
+    commandManager: CommandExecutor;
 }
 
 /**

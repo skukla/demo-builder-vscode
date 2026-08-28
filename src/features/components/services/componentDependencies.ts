@@ -11,7 +11,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -21,7 +21,13 @@ import { DEFAULT_SHELL } from '@/types/shell';
  * Handles npm dependency installation for components
  */
 export class ComponentDependencies {
-    constructor(private logger: Logger) {}
+    /**
+     * ADR-015: the executor joins the logger as an injected dependency.
+     */
+    constructor(
+        private logger: Logger,
+        private commandManager: CommandExecutor,
+    ) {}
 
     /**
      * npm install, then the component's build script when it declares one.
@@ -46,7 +52,7 @@ export class ComponentDependencies {
     ): Promise<string | undefined> {
         this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
 
-        const commandManager = ServiceLocator.getCommandExecutor();
+        const commandManager = this.commandManager;
         const nodeVersion = componentDef.configuration?.nodeVersion;
         const installCommand = 'npm install';
 

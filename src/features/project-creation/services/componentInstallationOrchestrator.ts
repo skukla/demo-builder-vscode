@@ -11,6 +11,7 @@ import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
+import type { CommandExecutor } from '@/core/shell';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -29,6 +30,8 @@ export interface InstallationContext {
     progressTracker: ProgressTracker;
     logger: Logger;
     saveProject: () => Promise<void>;
+    /** ADR-015: the shell executor, supplied by whichever boundary builds this. */
+    commandManager: CommandExecutor;
     /**
      * Optional override for components directory.
      * Used in edit mode to install to a temp directory before atomic swap.
@@ -58,7 +61,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
         logger.debug(`[Project Creation] Using custom components directory: ${componentsDir}`);
     }
 
-    const componentManager = new ComponentManager(logger);
+    const componentManager = new ComponentManager(logger, context.commandManager);
 
     // Clone all components in parallel
     const clonePromises = Array.from(componentDefinitions.entries()).map(
@@ -110,7 +113,7 @@ export async function installAllComponents(context: InstallationContext): Promis
     progressTracker('Installing Components', 40, 'Installing npm packages...');
     logger.debug('[Project Creation] Phase 2: Installing components...');
 
-    const componentManager = new ComponentManager(logger);
+    const componentManager = new ComponentManager(logger, context.commandManager);
 
     // Run npm install for all components in parallel
     const installPromises = Array.from(componentDefinitions.entries()).map(
@@ -142,7 +145,7 @@ export async function installAllComponents(context: InstallationContext): Promis
     // NON-FATAL: MCP tooling is optional — a failure here must never abort
     // project creation, so log a warning and carry on.
     if (projectNeedsAppBuilderTooling(project)) {
-        const mcpResult = await installAiDefaultsMcpTools(project.path, project, (line) =>
+        const mcpResult = await installAiDefaultsMcpTools(project.path, project, context.commandManager, (line) =>
             progressTracker('Installing Components', 55, line),
         );
         if (!mcpResult.success) {

@@ -43,6 +43,7 @@ import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflig
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
+import { ServiceLocator } from '@/core/di';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
@@ -326,6 +327,7 @@ export async function executeProjectCreation(
         progressTracker,
         logger: context.logger,
         saveProject: () => context.stateManager.saveProject(project),
+        commandManager: ServiceLocator.getCommandExecutor(),
         // In edit mode, install to temp directory for atomic swap
         componentsDir: tempComponentsDir,
     };

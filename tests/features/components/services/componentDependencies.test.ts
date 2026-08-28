@@ -7,7 +7,7 @@
  * trailing log. This suite was written BEFORE extracting that core — the file
  * had no tests at all, so the refactor needed something to prove itself against.
  *
- * The command executor and fs are mocked; nothing spawns.
+ * The command executor is a plain handed-in fake and fs is mocked; nothing spawns.
  */
 
 import * as fs from 'fs/promises';
@@ -19,9 +19,12 @@ import type { Logger } from '@/types/logger';
 jest.mock('fs/promises');
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN now, so this suite
+ * mocks the service registry NOT AT ALL — the fake is a plain object and the
+ * assertions are unchanged.
+ */
+const executor = { execute: mockExecute } as never;
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
@@ -69,7 +72,7 @@ describe('ComponentDependencies', () => {
             ['installDependenciesForComponent', true],
         ])('%s runs npm install with the component Node version', async (method, needsSkipArg) => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             if (needsSkipArg) {
                 await deps.installDependenciesForComponent('/p', componentDef(), false);
@@ -90,7 +93,7 @@ describe('ComponentDependencies', () => {
 
         it('honours a configured install timeout over the default', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies(
                 '/p',
@@ -105,7 +108,7 @@ describe('ComponentDependencies', () => {
 
         it('runs the build script when configured, at the LONG timeout', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies(
                 '/p',
@@ -122,7 +125,7 @@ describe('ComponentDependencies', () => {
 
         it('skips the build step when no build script is configured', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies('/p', componentDef());
 
@@ -135,7 +138,7 @@ describe('ComponentDependencies', () => {
             const log = logger();
             mockExecute.mockResolvedValue({ code: 1, stdout: '', stderr: 'boom' });
 
-            const result = await new ComponentDependencies(log).installNpmDependencies(
+            const result = await new ComponentDependencies(log, executor).installNpmDependencies(
                 '/p',
                 componentDef()
             );
@@ -153,7 +156,7 @@ describe('ComponentDependencies', () => {
                 .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
                 .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'build boom' });
 
-            await new ComponentDependencies(log).installNpmDependencies(
+            await new ComponentDependencies(log, executor).installNpmDependencies(
                 '/p',
                 componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } })
             );
@@ -167,7 +170,7 @@ describe('ComponentDependencies', () => {
         it('returns success and installs nothing when there is no package.json', async () => {
             packageJsonExists(false);
 
-            const result = await new ComponentDependencies(logger()).installNpmDependencies(
+            const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
                 '/p',
                 componentDef()
             );
@@ -181,7 +184,7 @@ describe('ComponentDependencies', () => {
         it('installs nothing when there is no package.json', async () => {
             packageJsonExists(false);
 
-            await new ComponentDependencies(logger()).installDependenciesForComponent(
+            await new ComponentDependencies(logger(), executor).installDependenciesForComponent(
                 '/p',
                 componentDef(),
                 false
@@ -194,7 +197,7 @@ describe('ComponentDependencies', () => {
         it('installs nothing when skipDependencies is set', async () => {
             packageJsonExists(true);
 
-            await new ComponentDependencies(logger()).installDependenciesForComponent(
+            await new ComponentDependencies(logger(), executor).installDependenciesForComponent(
                 '/p',
                 componentDef(),
                 true
@@ -220,7 +223,7 @@ describe('strictInstall', () => {
             stderr: 'npm error engine Unsupported engine\nnpm error notsup Required: {"node":"^24.0.0"}',
         });
 
-        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
             '/p',
             componentDef({ configuration: { strictInstall: true } } as never)
         );
@@ -234,7 +237,7 @@ describe('strictInstall', () => {
         packageJsonExists(true);
         mockExecute.mockResolvedValue({ code: 1, stderr: 'npm error nope' });
 
-        const result = await new ComponentDependencies(logger()).installDependenciesForComponent(
+        const result = await new ComponentDependencies(logger(), executor).installDependenciesForComponent(
             '/p',
             componentDef({ configuration: { strictInstall: true } } as never),
             false
@@ -247,7 +250,7 @@ describe('strictInstall', () => {
         packageJsonExists(true);
         mockExecute.mockResolvedValue({ code: 1, stderr: 'warnings' });
 
-        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
             '/p',
             componentDef()
         );

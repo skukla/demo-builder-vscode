@@ -243,7 +243,10 @@ export async function buildRunnerDepsContext(
     const { ComponentManager } = await import('@/features/components/services/componentManager');
     const authManager = ServiceLocator.getAuthenticationService();
     return {
-        componentManager: new ComponentManager(context.logger),
+        componentManager: new ComponentManager(
+            context.logger,
+            ServiceLocator.getCommandExecutor(),
+        ),
         commandManager: ServiceLocator.getCommandExecutor(),
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),

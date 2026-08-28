@@ -19,6 +19,7 @@ import {
     renameProjectCore,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
+import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
@@ -835,6 +836,7 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
         '@/features/lifecycle/services/projectResetService'
     );
     return resetProjectWithUI({
+        commandManager: ServiceLocator.getCommandExecutor(),
         project,
         context,
         logPrefix: '[ProjectsList]',

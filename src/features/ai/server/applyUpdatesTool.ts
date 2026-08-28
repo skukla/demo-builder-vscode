@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
+import { ServiceLocator } from '@/core/di';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     applyUpdatesHeadless,
@@ -103,6 +104,7 @@ export function registerApplyUpdatesTool(
                     // structurally — no class/interface widening cast.
                     stateManager: ctx.stateManager,
                     logger: ctx.logger,
+                    commandManager: ServiceLocator.getCommandExecutor(),
                 },
                 // Collected for the RESULT and reported LIVE. The array is the
                 // agent's after-the-fact record; reportPhase is what the user

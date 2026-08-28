@@ -24,6 +24,7 @@ import { refreshMcpConfigs, refreshContextAndSkills } from './aiBundleService';
 import { installAiDefaultsMcpTools } from './aiDefaultsInstaller';
 import { createGeneratedFileWriter } from './generatedFileWriter';
 import { resolveNodePath } from './mcpConfigWriter';
+import type { CommandExecutor } from '@/core/shell';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { ProjectDirectoryScanner } from '@/core/state/projectDirectoryScanner';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
@@ -32,7 +33,11 @@ import type { Logger } from '@/types/logger';
 const SETTING = 'demoBuilder.ai.enableThirdPartyTools';
 
 /** Apply the new answer to every project: tier 3, then tiers 1+2. */
-async function applyToAllProjects(extensionPath: string, logger: Logger): Promise<void> {
+async function applyToAllProjects(
+    extensionPath: string,
+    logger: Logger,
+    commandManager: CommandExecutor,
+): Promise<void> {
     const scanner = new ProjectDirectoryScanner(logger);
     const loader = new ProjectFileLoader(logger);
     const configWriter = new ProjectConfigWriter(logger);
@@ -43,7 +48,7 @@ async function applyToAllProjects(extensionPath: string, logger: Logger): Promis
         try {
             const project = await loader.loadProject(summary.path, () => []);
             if (!project) continue;
-            await installAiDefaultsMcpTools(summary.path, project);
+            await installAiDefaultsMcpTools(summary.path, project, commandManager);
             const writer = createGeneratedFileWriter(
                 summary.path,
                 project.aiFileHashes ?? {},
@@ -72,6 +77,7 @@ async function applyToAllProjects(extensionPath: string, logger: Logger): Promis
  * subscription list.
  */
 export function registerThirdPartyToolingSettingListener(
+    commandManager: CommandExecutor,
     extensionPath: string,
     logger: Logger,
 ): vscode.Disposable {
@@ -101,7 +107,7 @@ export function registerThirdPartyToolingSettingListener(
                     : 'Demo Builder: removing third-party AI tooling…',
                 cancellable: false,
             },
-            () => applyToAllProjects(extensionPath, logger),
+            () => applyToAllProjects(extensionPath, logger, commandManager),
         );
     });
 }

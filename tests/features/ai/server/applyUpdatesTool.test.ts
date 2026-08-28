@@ -17,6 +17,7 @@ import {
     countSelections,
 } from '@/features/updates/services/updateApplyService';
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
@@ -42,9 +43,22 @@ const getCurrentProject = jest.fn();
 const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
+        commandManager: { execute: jest.fn() } as never,
         context: { secrets: {}, extensionPath: '/ext' },
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
     }) as unknown as HandlerContext;
+
+
+/**
+ * ADR-015 (2026-08-28): this boundary fetches the shell executor from the
+ * registry, which the shared node setup resets after EVERY test — so the fake
+ * is seeded per-test rather than once at module scope.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+});
 
 describe('apply_updates', () => {
     beforeEach(() => {
