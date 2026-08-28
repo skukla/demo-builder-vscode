@@ -1,0 +1,5498 @@
+{
+ "rows": [
+  {
+   "unit": "src/commands/claudeCodeFootprint.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/claudeSessionStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/commandManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/commands/configure.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/diagnostics.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/diagnosticsChecks.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/diagnosticsReport.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/handlerContextFactory.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/manageSiteAccess.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/migrateStorefrontNames.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/openInClaude.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/openModernizationAgent.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/orphanedSettings.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/refreshBlockLibrary.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/repairSiteConfiguration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/commands/showPromptsPicker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/core/auth/adobeAuthGuard.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/auth/browserSignInNotice.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/base/baseCommand.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/base/baseWebviewCommand.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/base/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/base/webviewPanelManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/build/buildInfo.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/build/buildStampUi.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/cache/cacheUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/cache/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/commands/ResetAiOnboardingCommand.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/core/commands/ResetAllCommand.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/core/communication/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/communication/webviewCommunicationManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/config/ConfigurationLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/core/config/configFileGenerator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/core/constants.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/di/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/di/serviceLocator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/handlers/dispatchHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/core/handlers/errorHandling.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/core/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/core/handlers/projectCommandHelper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/core/logging/callTagContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/logging/debugLogger.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/logging/errorLogger.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/logging/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/logging/stepLogger.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/buildComponent.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/commandExecutor.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/commandQueue.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/commandResultCache.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/commandSequencer.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/ensureNodeVersion.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/environmentSetup.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/fileWatcher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/meshDeleteCommand.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/orgContextEnv.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/pollingService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/shell/portChecker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/processCleanup.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/rateLimiter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/resourceLocker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/shell/retryStrategyManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/shell/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/apiOwners.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/apiRowState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/appBuilderComponentMigration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/appBuilderComponentState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/componentApiPicks.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/componentSelectionReconcile.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/manifestFormatSweep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/manifestValidation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/projectConfigWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/projectDirectoryScanner.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/projectFileLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/projectStateSync.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/recentProjectsManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/state/sessionUIState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/state/stateManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/state/transientStateManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/ui/components/ErrorBoundary.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/TimelineChildren.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/TimelineNav.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/WebviewApp.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/ApiCatalogFeedback.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/CtaEmptyState.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/EmptyState.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/InlineNotice.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/LoadingDisplay.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/LoadingOverlay.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/StatusCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/StatusDisplay.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/SuccessStateDisplay.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/feedback/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/forms/ConfigSection.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/forms/FieldHelpButton.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/forms/FormField.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/forms/InlineRenameField.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/forms/descriptionRenderer.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/forms/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/IntegrationActionsMenu.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/IntegrationCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/integrations/integrationCardModel.types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/core/ui/components/layout/CenteredFeedbackContainer.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ContentColumn.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ContentWithSidebar.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/ControlPanelLayout.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/FullScreenSurface.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/GridLayout.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageFooter.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageHeader.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/PageLayout.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/SingleColumnLayout.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/StepAreaShell.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/TwoColumnLayout.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/layout/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/BackButton.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/SearchHeader.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/SearchableList.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/StepRail.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/listScrollGeometry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/navigation/useScrollToSelectedRow.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/components/selection/ApiAccessPicker.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/selection/SelectionStepContent.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/selection/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/timelineNav.helpers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/CardActionsMenu.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/CopyableText.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/DestinationContext.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Drawer.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/FadeTransition.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Modal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/NumberedInstructions.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/SelectionCheck.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/Spinner.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/StatusDot.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/ui/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/components/ui/menuIcons.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/ConfigurationSummary.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/StatusSection.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/configurationSummaryHelpers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/core/ui/components/wizard/stepStatusHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/hooks/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useActivateOnKey.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useArrowKeyNavigation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAsyncData.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAsyncOperation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useAutoScroll.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useCanProceed.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useDebouncedLoading.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useDebouncedValue.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useElapsedStage.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useEnterExit.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useFocusOnMount.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useFocusTrap.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useIsMounted.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useLoadingState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/usePollingWithTimeout.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSearchFilter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelectableDefault.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelection.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSelectionStep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useSetToggle.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useTimerCleanup.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVSCodeMessage.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVSCodeRequest.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/hooks/useVerificationMessage.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/core/ui/utils/WebviewClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/baseUri.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/classNames.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/componentDataHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/frontendTimeouts.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/meshStatusDisplay.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/spectrumTokens.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/statusVocabulary.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/stepCompletion.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/titleHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/validationState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/vscode-api.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/ui/utils/webviewLogger.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/core/utils/agentPhaseChannel.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/browserUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/bundleUri.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/disposableStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/envParser.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/envVarExtraction.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/executionLock.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/getWebviewHTMLWithBundles.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/githubUrlParser.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/loadingHTML.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/maskEmail.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/mcpSocketPath.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/meshConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/oneTimeTip.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/progressUnifier/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/projectDisplayName.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/projectsRoot.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/promiseUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/quickPickUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/singleFlight.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/sleep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/timeFormatting.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/timeoutConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/utils/writeFileAtomic.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/PathSafetyValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/SensitiveDataRedactor.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/URLValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/Validator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/fieldValidation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/normalizers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/validators/AccessTokenValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/validators/AdobeResourceValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/validators/NodeVersionValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/validators/ProjectNameValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/validation/validators/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/vscode/envFileWatcherService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/core/vscode/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/vscode/progressRegister.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/core/vscode/workspaceWatcherManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/ai/aiSetupVerifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/mcpDriftDetector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/mcpInspector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/actionDescriptors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/adobeResourceTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/adobeTargetStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/adobeTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/agentAlertCopy.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/agentOperationNotifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/agentTraceSink.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/agentTraceTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/applyUpdatesTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/authTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/cloudResourceTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/commerceEndpointsTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/commerceQueryTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/componentRequirementsTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/configureProjectTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/connectionScope.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/consentText.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/consentViaChat.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/contentAuthoringTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/createProjectTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/currentProjectTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/dataInstallerDescriptors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/deleteProjectTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/diagnosticsTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/discoveryTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/edsResetTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/edsToolGuards.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/eventProviderTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/handoff.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/headlessHandlerContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/inExtensionMcpServer.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/lifecycleTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/mcpProxyFraming.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/mcpProxyRetry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/mcpSocketDiscovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/mcpToolProbe.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/mcpToolResult.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/progressCapture.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/projectStatusTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/projectors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/readDescriptors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/scopedStateManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/settingsTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/siteTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/statusDescriptors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/storefrontTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/toolDescriptors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/toolDisplayName.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/toolNarration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/toolTraceRecorder.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/server/validateSelectionTool.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/server/viewTools.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=mcp-tool"
+  },
+  {
+   "unit": "src/features/ai/sessionMcpDetector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/ai/skillInspector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/allowedDomain.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiAccessRows.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiSubscriber.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/apiSubscriberClientAdapter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appBuilderDeployOutcome.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appConfigPackages.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appDeployment.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementInstaller.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/appManagementUninstaller.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/deployAppIsolated.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/ensureMeshApiSubscribed.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/owPackageName.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/runtimeCredentials.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/s2sDeployEnv.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/secretKey.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/app-builder/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/handlers/authenticationHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/eventLifecycleDeps.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/orgSwitchHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/organizationHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/projectHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/handlers/workspaceHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/authentication/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeCliFallback.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeConsoleProjectOps.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeContextResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityFetcher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityMapper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityName.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityReads.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntitySelector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeEntityService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeOrgServices.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeSDKClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/apiAccessCatalog.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/authCacheManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/authentication/services/authPredicates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationErrorFormatter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/authenticationService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/authentication/services/consoleProjectTeardown.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/consoleProjectTeardownEvents.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/detectProjectOrgMismatch.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureOrgContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureProjectAdobeContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/ensureProjectOrgContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/eventProviderLifecycle.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/imsTokenClaims.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/ioEventsClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/authentication/services/orgContextEnv.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/organizationValidator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/performanceTracker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/projectOwnership.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/services/tokenManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/authentication/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeProjectPicker.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/authentication/ui/components/AdobeWorkspacePicker.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/authentication/ui/hooks/useAuthStatus.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/AdobeAuthStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/authHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/authPredicates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/authentication/ui/steps/components/AuthLoadingState.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/config/backendOwnedScope.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/features/components/config/envVarKeys.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/features/components/config/storeFieldHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/features/components/handlers/componentHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/components/services/ComponentRegistryManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/components/services/DependencyResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/appBuilderComponentCatalogLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/backendCommerce.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/blockLibraryLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/commerceCredentialStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/commerceSecretMigration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/commerceSecretSweep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/componentConfigWrites.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/componentDependencies.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/componentInstallation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/componentManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/components/services/componentTransforms.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/demoPackageLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/envVarHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/meshCatalogDerivation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/projectAppBuilderPredicate.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/serviceGroupTransforms.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/stackComponentCollector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/components/ui/components/BrokeredCredentialFields.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/components/ConfigFieldRenderer.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/components/ServiceGroupList.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreConfigFieldRow.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreSelectionRow.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/components/StoreStructureSelector.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useAutoStoreDetect.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useComponentConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useCredentialService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/components/ui/hooks/useStoreDiscovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/commands/configure.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/dashboard/commands/configureEnvLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/dashboard/commands/openAi.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/dashboard/commands/showDashboard.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/dashboard/commands/showIntegrations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/aiHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/aiPromptHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appBuilderComponentSecrets.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/appManagementInstallHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/configureHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/destinationHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/edsContentHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/eventingHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/meshStatusHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/openUrlHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/panelNavigationHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/projectManagementHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/handlers/statusHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/dashboard/services/dashboardStatusService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/defaultPromptsSeeder.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/aiVerifyCheck.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/orchestrator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/services/onOpenChecks/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/dashboard/ui/ProjectDashboardScreen.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/aiSurface/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/ActionGrid.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiCapabilitiesModal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiMcpsList.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AiSkillsList.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DashboardStatusHeader.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DashboardTile.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/DataInstallerTile.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/OrgContextNotice.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/aiIntegrations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/aiSurfaceNames.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/ConfigureSectionBody.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/SecretFieldRow.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/appBuilderComponentFieldModel.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureFieldValidation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureHelpers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureSections.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/configureTypes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useSelectedComponents.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/configure/storedSecretPayload.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/dashboardPredicates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/aiStatusDerivations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/dashboardCheckRouting.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/dashboardStatusTypes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useDashboardActions.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useInlineRename.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveAppBuilderComponents.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useLiveDestination.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/integrationsSurface/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/dashboard/ui/main.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/commands/showDataInstaller.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/dataInstallerHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/exportHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/importHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/data-installer/handlers/settingsHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/data-installer/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/accsCredentialProvisioner.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/accsProvisionEligibility.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/commerceCredentialBroker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/commerceCredentials.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerErrors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerParsers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/dataInstallerWriteClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/data-installer/services/datapackCatalog.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/importInstance.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/importJobRunner.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/importScopeDiscovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/sampleDataInstall.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/sampleDataInstallDeps.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/services/workspaceConfigDownload.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/data-installer/ui/DataInstallerScreen.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/DatapackCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/DatapackDetailPanel.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ImportForm.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/ViewSwitcher.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/components/importResult.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/data-installer/ui/dataInstallerFailure.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/dataTypeLabel.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useDataInstallerRequest.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useImportProgress.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/data-installer/ui/hooks/useImportScopes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/data-installer/ui/importDependencies.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/data-installer/ui/importProgress.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/data-installer/ui/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/views/DatapackActivityView.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/commands/cleanupDaLiveSites.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/eds/commands/manageGitHubRepos.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/eds/handlers/authoringExperience.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/blockLibraryPublish.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/byomOverlay.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/checkRepoReadinessHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/configServiceRegistration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/credentialServiceHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/daLiveSiteConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/daLive/edsDaLiveHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsGitHubHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/edsServiceCache.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/refreshBlockLibraryHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storeStructureHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupTypes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/eds/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/accsDiscoveryConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/appInstallationResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/authoringExperienceFlip.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/b2bReadinessDetection.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/blockCollectionHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/brandAssetPublisher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/catalogPrewarmService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/cleanupService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/codeSyncErrors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/commerceStoreDiscovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configGenerator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configAccessRecovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configServiceAccess.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configServiceProbe.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/configurationService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/configService/lostGrantsMessage.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/repairSiteConfigForProject.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/repairSiteConfigHeadless.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteAccessManagerHeadless.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteConfigRegistrar.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configService/siteGrantPreservation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/configSyncService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=config"
+  },
+  {
+   "unit": "src/features/eds/services/credentialServiceProbe.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daAuthHelperToken.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveApiClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveAuthRetry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveAuthService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConfigService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveConstants.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentDiscovery.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveContentOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveOrgOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/daLive/daLiveSpreadsheetUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/edsPipeline.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/errorFormatters.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/ewSettingChangeListener.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/fstabGenerator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubAppService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubCredentialProbe.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubFileOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubOAuthService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubRepoOperations.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/github/githubTokenService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixAdminAuth.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixAdminErrors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixApiClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixApiKeys.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixBulkJobs.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixKeyStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/helix/helixSiteContent.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/inspectorHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/codePatchRegistry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/contentPatchRegistry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/externalPatchFetcher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/lkgPinHelper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/lkgReader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchMissTracker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchReportHelper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/patches/patchTargetPolicy.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdp404Snippet.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/pdpUrlEncoding.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/publishKeyRegistrar.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/pdp/publishKeyRenewalSweep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/placeholderStubs.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/quickEditPublisher.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/refreshBlockLibraryHeadless.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetConfigStep.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetMeshHelper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetParams.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/reset/edsResetUI.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/resourceCleanupHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/runtimeSurfaceInventory.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/runtimeSurfaceResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storeStructureReader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/repoStorefrontReadiness.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontNameMigration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontProbe.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontRepublishService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/storefront/storefrontSyncService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/services/toolManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/eds/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/eds/ui/components/DaLiveServiceCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/components/GitHubAppInstallDialog.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/components/GitHubServiceCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/components/ServiceCardShell.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/components/VerifiedField.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/components/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/eds/ui/helpers/bookmarkletSetupPage.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/eds/ui/helpers/codeSyncInstallContent.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/ui/steps/repoSelectionInline.helpers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/eds/utils/daLiveTokenBookmarklet.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/deleteProject.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/managedStorefrontFiles.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/startDemo.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/stopDemo.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/syncStorefront.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/commands/viewStatus.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/lifecycle/services/lifecycleService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/lifecycle/services/projectResetService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/commands/deployMesh.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/mesh/handlers/checkHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/deleteHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/deployHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/meshHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/shared.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/handlers/subscribeHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshHeadless.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshWithFeedback.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshCheckHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshDeployment.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshDeploymentVerifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshEndpoint.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshRedeploy.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshStatusResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshUpdateDecline.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/meshVerifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/mesh/services/stalenessDetector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/mesh/utils/errorFormatter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/mesh/utils/meshHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/checkHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/continueHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/installHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/prerequisitesHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/handlers/shared.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/prerequisites/services/installation/InstallStepBuilder.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/installation/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/prerequisites/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/DependencyResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/NodeVersionParser.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/services/versioning/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/prerequisites/ui/steps/hooks/usePrerequisiteState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/commands/createProject.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/consoleApiHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/createHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executor.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorComponentLoading.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorEditMode.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorEdsPhase.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorMeshPhase.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorPreflight.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/executorSampleDataPhase.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/shared.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/validateHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/handlers/wizardLifecycleHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/envFileGenerator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/formatters.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/project-creation/helpers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/project-creation/services/ProjectSetupContext.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/agentsMdSections.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiBundleService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiContextWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/aiToolingGate.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/generatedFileWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/globalMcpRegistration.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/skillsWriter.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/appBuilderComponentSelection.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/catalogPrewarmPhase.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/customBlockLibraryUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/edsContentSetup.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/envVarClassifier.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/meshSetupService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/projectFinalizationService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/services/sanitization.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BrandGallery.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/BuildYourProjectSummary.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/ChoiceCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/brandGalleryHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/commerceSectionValidity.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/OptionalNameField.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/apiAccessConstants.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/flowStages.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/instanceId.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/integrationCards.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/integrationRows.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/meshApiSubscription.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/BlankStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/CatalogStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/CustomStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/DestinationStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/stages/KindStage.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/brandStackLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/buttonTextHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/demoPackageLoader.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useSelectedStack.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/hooks/useStepValidation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/BuildYourProjectStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/ReviewStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/StorefrontStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/buildSummary.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/buildYourProjectAreas.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/commerceSections.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/commerceStepBodies.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/edsConfigFromStorefront.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/projectCreationPredicates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/reviewPredicates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/reviewStepHelpers.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/storefrontSections.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/tileStatus.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/steps/useProjectBuilder.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/appBuilderComponentSelectionState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/buildAreaWalk.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useMessageListeners.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardEffects.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardNavigation.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/stepFiltering.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/project-creation/ui/wizard/wizardStepRouter.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/commands/showProjectsList.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/projects-dashboard/handlers/projectsListHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/projectDeletionService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/projectRenameService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/settingsSerializer.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/projects-dashboard/services/settingsTransferService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/ProjectsDashboard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/DashboardEmptyState.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectCard.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectRow.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectRowList.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/ProjectsGrid.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/components/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/hooks/useProjectSelectHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-hook"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/projects-dashboard/ui/projectsDashboardHelpers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/projects-dashboard/utils/componentSummaryUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  },
+  {
+   "unit": "src/features/sidebar/handlers/sidebarHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/features/sidebar/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/sidebar/providers/sidebarProvider.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/sidebar/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/sidebar/ui/Sidebar.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/sidebar/ui/components/AiZone.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/sidebar/ui/index.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/sidebar/ui/views/UtilityBar.tsx",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=react-component"
+  },
+  {
+   "unit": "src/features/sidebar/ui/views/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=ui-support"
+  },
+  {
+   "unit": "src/features/updates/commands/checkUpdates.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/updates/commands/updateExecutor.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/updates/commands/updateTypes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=command"
+  },
+  {
+   "unit": "src/features/updates/services/addonUpdateChecker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/adobeMcpUpdateChecker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/adobeMcpUpdateCore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/collaboratorGate.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/componentRepositoryResolver.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/componentUpdater.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/extensionUpdater.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/forkSyncService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/updates/services/githubApiClient.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/releaseTrack.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/templateSyncService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/features/updates/services/templateUpdateChecker.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/types.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/updateApplyService.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/updateCore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/features/updates/services/updateManager.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=service-class"
+  },
+  {
+   "unit": "src/mcp/blockAuthoring.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/mcp/blockLibraryPublish.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/mcp/blockToolHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/mcp/credentials.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/mcp/projectSecurity.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=feature-service-fn"
+  },
+  {
+   "unit": "src/mcp/projectToolHandlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/mcp/storefrontSyncHandler.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=handler"
+  },
+  {
+   "unit": "src/types/adobeApis.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/ai.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/aiDefaults.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/aio-lib-core-config.d.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/aio-lib-ims.d.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/appBuilderComponents.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/assets.d.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/base.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/blockLibraries.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/commerceStore.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/components.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/demoPackages.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/errorCodes.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/errors.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/handlers.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/index.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/logger.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/messages.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/results.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/settingsFile.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/shell.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/stacks.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/state.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/typeGuards.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/webview.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/webviewPayloads.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/webviewRequests.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/types/wizard.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=types"
+  },
+  {
+   "unit": "src/utils/autoUpdater.ts",
+   "pattern": "kind",
+   "verdict": "conforming",
+   "evidence": "kind=helper"
+  }
+ ],
+ "matrix": {
+  "react-component": [
+   [
+    "Spectrum/webview gotchas (Flex 450px, tokens)",
+    "scan: spectrum-webview-ui skill + docs"
+   ],
+   [
+    "size ≤350 lines / ≤8 props",
+    "test: SOP suite (god files) + lint max-lines"
+   ],
+   [
+    "complex JSX chains extracted",
+    "test: tests/sop/complex-expressions"
+   ],
+   [
+    "markup duplicated ≥3 sites → component",
+    "scan: component-extraction-scan"
+   ]
+  ],
+  "react-hook": [
+   [
+    "stable array/object refs to hooks",
+    "NONE (documented in memory only)"
+   ],
+   [
+    "inline fetching >20 lines → custom hook",
+    "scan: SOP docs, no detector"
+   ]
+  ],
+  "handler": [
+   [
+    "typed MessageHandler map + dispatchHandler",
+    "audit: handler-map pattern (33/33)"
+   ],
+   [
+    "Pattern B responses (return, not sendMessage)",
+    "NONE (convention in docs)"
+   ],
+   [
+    "secrets never logged",
+    "scan: hand audits only"
+   ]
+  ],
+  "service-class": [
+   [
+    "no VS Code UI from services",
+    "audit: ui-in-services (32/33)"
+   ],
+   [
+    "DI style (the contested axis)",
+    "audit: di-style — awaiting ruling"
+   ],
+   [
+    "size ≤400 lines",
+    "lint: max-lines warn + SOP scan"
+   ]
+  ],
+  "mcp-tool": [
+   [
+    "response envelope via asText/asRawText",
+    "test: responseEnvelope (28/28)"
+   ],
+   [
+    "narration phrase + ceiling + floor/prompt",
+    "test: toolNarration, responseSize, toolPromptCoverage"
+   ],
+   [
+    "registration against real SDK",
+    "test: realSdkRegistration"
+   ]
+  ],
+  "command": [
+   [
+    "BaseCommand/BaseWebviewCommand shape",
+    "NONE (docs only)"
+   ]
+  ],
+  "types": [
+   [
+    "types-only, no runtime imports",
+    "NONE (tsc catches cycles only)"
+   ]
+  ],
+  "config": [
+   [
+    "ConfigurationLoader + schema",
+    "NONE (per-feature ad hoc)"
+   ]
+  ],
+  "helper": [
+   [
+    "pure, ≤300 lines, no vscode UI",
+    "lint: max-lines; purity NONE"
+   ]
+  ],
+  "ui-support": [
+   [
+    "shared-ui conventions",
+    "scan: docs only"
+   ]
+  ],
+  "feature-service-fn": [
+   [
+    "injected-deps functions (the runner shape)",
+    "audit: di-style covers acquisition"
+   ],
+   [
+    "size ≤400 lines",
+    "lint: max-lines"
+   ]
+  ],
+  "other": [
+   [
+    "(re-classify: nothing should land here)",
+    "audit: this row IS the check"
+   ]
+  ]
+ }
+}
