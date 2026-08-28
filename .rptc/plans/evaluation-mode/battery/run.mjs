@@ -254,9 +254,32 @@ if (authBefore.authenticated === false) {
     console.log('           and this run is NOT comparable to a signed-in one.\n');
 }
 
+// WHICH project answers this run — recorded the way auth is (declared, not
+// inferred). On 2026-08-28 six journey-prompt runs scored TOOL-INSUFFICIENT
+// against battery-scratch (no Commerce backend): the tier-2 harness had
+// correctly left scratch current on a fresh isolated host ("restore-to-none is
+// not expressible") and SAID so, but nothing in later runs' results carried it.
+function currentProjectMeta() {
+    try {
+        const out = execFileSync('node',
+            ['.claude/skills/mcp-live-probe/probe.mjs', 'call', 'get_current_project', '{}'],
+            { encoding: 'utf8', cwd: REPO });
+        const m = out.match(/"name":\s*"([^"]+)"/);
+        return m ? m[1] : null;
+    } catch {
+        return null;
+    }
+}
+const currentProject = currentProjectMeta();
+if (currentProject === 'Battery Scratch') {
+    console.log('  WARNING: the current project is Battery Scratch (no real backend).');
+    console.log('           Data-dependent prompts will answer for an empty shell.\n');
+}
+
 const META = {
     startedAt: STAMP,
     serving,
+    currentProject,
     adobeAuthBefore: authBefore,
     promptCount: PROMPTS.length,
     allowlist: ALLOWED.length,
