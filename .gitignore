@@ -96,3 +96,4 @@ jscpd-output/
 
 # Internal service doc drops (Adobe wiki exports) — local reference only, never published
 .rptc/research/*.doc
+tests/setup/console-gate-offenders.txt

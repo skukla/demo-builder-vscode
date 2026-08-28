@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
+import './consoleGate';
 
 // =============================================================================
 // Global RAF Mock (CRITICAL for useFocusOnMount hook)

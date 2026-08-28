@@ -14,6 +14,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { socketRootForRun } from './mcpTestSocketRoot';
+import './consoleGate';
 
 // Ensure the demo-builder projects base directory exists. The real path-safety
 // validator (validateProjectPath → assertPathInsideSync → fs.realpathSync)
