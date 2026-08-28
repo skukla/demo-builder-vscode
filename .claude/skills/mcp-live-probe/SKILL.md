@@ -86,23 +86,31 @@ c.on('error',e=>{console.log('DEAD:',e.code);clearTimeout(t);process.exit(0)});
 | `DEAD: ENOENT` | No socket at all. No host has ever bound here |
 
 **The dev host is CLI-launchable — a dead host is not owner-gated** (proven
-2026-08-28, owner-authorized). The obvious routes fail in specific ways worth
-not rediscovering:
+2026-08-28, owner-authorized). **Launch VS CODE, not Cursor** (owner,
+2026-08-28: "that's where the extension host lives" — the F5 flow and the
+extension's home are VS Code; the first recipe here used Cursor only because
+that session ran inside it). The failure modes worth not rediscovering:
 
-- `cursor --extensionDevelopmentPath=… <folder>` SILENTLY drops the dev flag
-  when a Cursor instance is already running — it opens a NORMAL window at the
-  folder and exits 0. No error, no dev host, no socket.
+- `--extensionDevelopmentPath` is SILENTLY dropped when an instance already
+  owns the profile — you get a normal window at the folder, exit 0, no dev
+  host, no socket (observed on Cursor; assume both editors).
 - A separate instance needs its own `--user-data-dir`, and the path must be
-  SHORT: Cursor binds its own IPC socket inside it, and a unix socket path
-  over 103 chars fails with `listen EINVAL` (a scratchpad path is too long).
+  SHORT: the editor binds its own IPC socket inside it, and a unix socket
+  path over 103 chars fails with `listen EINVAL` (a scratchpad path is too
+  long).
+- **A wedged instance holds the single-instance lock**: if a prior dev host
+  crashed its extension host but the app processes survive, every relaunch
+  against the same `--user-data-dir` silently no-ops. `pkill -9 -f <profile
+  dirname>` first, then remove stale `*.sock` files, then launch.
 
 The working recipe:
 
 ```bash
-mkdir -p /tmp/db-devhost && nohup /Applications/Cursor.app/Contents/MacOS/Cursor \
-  --user-data-dir=/tmp/db-devhost \
+pkill -9 -f db-vsc 2>/dev/null; rm -f "$TMPDIR"/demo-builder-mcp/*.sock
+mkdir -p /tmp/db-vsc && nohup "/Applications/Visual Studio Code.app/Contents/MacOS/Code" \
+  --user-data-dir=/tmp/db-vsc \
   --extensionDevelopmentPath="$PWD" "$HOME/.demo-builder/projects" \
-  > /tmp/db-devhost/launch.log 2>&1 &
+  > /tmp/db-vsc/launch.log 2>&1 &
 # then poll `probe.mjs info` (~30s to bind)
 ```
 
