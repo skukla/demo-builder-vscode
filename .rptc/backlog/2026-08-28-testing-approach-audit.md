@@ -71,3 +71,7 @@ execution.
 - `.claude/skills/webview-test-authoring/` (the conventions any scan must
   respect)
 - `tests/README.md`, `docs/testing/test-file-splitting-playbook.md`
+
+## Shipped so far
+
+- 2026-08-28  ESCAPE ANALYSIS SHIPPED (.rptc/plans/test-strategy-audit/escape-analysis.md): 15 shipped defects from two years of receipts, each with found-how / why-missed / style-that-catches. The tally is the strategy verdict's evidence: 8 of 15 escapes are EXTERNAL-contract/live-behavior gaps that NO unit-test improvement can close (mocks structurally blind); 5 of 15 were internal mock-blindness (already fixed forward by the argument-assertion rule — witness census 47/54); 1 unchecked convention (fixed by the convention-test pattern); 1 documentation-as-verification. Catch record compiled alongside. Verdict slate drafted, NOT codified: a three-tier strategy (unit = handed-in deps + argument assertions; contract = fixtures-from-live + drift scripts; live = journeys/probe verification + verify-after-write in destructive ops) — every tier already practiced somewhere, none yet policy. Awaiting the owner's ruling.
