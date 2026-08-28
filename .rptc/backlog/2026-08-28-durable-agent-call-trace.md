@@ -5,7 +5,7 @@ area: ai
 parent: AI-2
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # The agent activity record — a foundation, with a live view as its first use
@@ -84,3 +84,7 @@ no new UI. Both were owner decisions the loop proposed as defaults.
 One loop (~an evening) — smaller than the install-state surface (AB-5),
 which shipped in one. All local, no cloud; live-verifiable with the probe
 and one battery prompt.
+
+## Shipped so far
+
+- 2026-08-28  2026-08-28: BUILT, one loop as sized. (1) The recorder tells a listener about every call (a failing listener can never cost a call — pinned). (2) Per-session files under the extension's log storage: fixed field list so no future field reaches disk undecided, PRIVACY PIN (argument values can never land on disk), last 10 sessions kept, 5000-line cap with a truncation marker. (3) 'Demo Builder: Agent Activity' channel — one narrated line per call, only agent actions. (4) get_agent_trace serves the live record + past sessions (200-entry cap; ceiling 50KB measured). Activation degrades to channel-only if storage fails — the trace never costs activation. Live-proven at every layer, ending with a battery agent answering 'what did the earlier session do?' via the tool (HIT, 4 calls). BONUS FINDING: the first prompt draft asked 'what have YOU done?' and the agent answered from fresh-session self-knowledge with ZERO calls — 'what happened?' asks need past-session framing to route to records at all; kept on the prompt.

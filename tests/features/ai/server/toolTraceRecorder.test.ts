@@ -141,6 +141,46 @@ describe('the recorder, driven through the real server', () => {
     });
 });
 
+describe('the sink — every recorded call reaches the listener (AI-2c)', () => {
+    it('invokes the sink once per record, with the stamped entry', () => {
+        const seen: unknown[] = [];
+        const r = new ToolTraceRecorder(10, (e) => seen.push(e));
+
+        r.record({
+            tool: 'get_project',
+            readOnly: true,
+            argumentKeys: ['name'],
+            argumentFingerprint: 'abc123',
+            resultBytes: 42,
+            durationMs: 7,
+            outcome: 'ok',
+        });
+
+        expect(seen).toHaveLength(1);
+        expect(seen[0]).toMatchObject({ tool: 'get_project', resultBytes: 42 });
+        expect((seen[0] as { at: number }).at).toBeGreaterThanOrEqual(0);
+    });
+
+    it('a throwing sink never fails the record — the trace must not cost a call', () => {
+        const r = new ToolTraceRecorder(10, () => {
+            throw new Error('sink exploded');
+        });
+
+        expect(() =>
+            r.record({
+                tool: 'get_project',
+                readOnly: true,
+                argumentKeys: [],
+                argumentFingerprint: 'none',
+                resultBytes: 0,
+                durationMs: 1,
+                outcome: 'ok',
+            })
+        ).not.toThrow();
+        expect(r.all()).toHaveLength(1);
+    });
+});
+
 describe('telling a repeat from a different question', () => {
     it('collides on the same arguments and not on different ones', () => {
         // Both halves. Checking only the first would pass with a constant.

@@ -119,7 +119,17 @@ export class ToolTraceRecorder {
 
     private readonly startedAt = Date.now();
 
-    constructor(private readonly capacity: number = TRACE_CAPACITY) {}
+    /**
+     * @param capacity - ring size; oldest entries drop first
+     * @param sink - optional listener told about EVERY recorded entry (AI-2c:
+     *   the durable file and the Agent Activity channel are two of these). A
+     *   sink failure is swallowed — the trace exists to observe calls, and
+     *   must never be the reason one fails.
+     */
+    constructor(
+        private readonly capacity: number = TRACE_CAPACITY,
+        private readonly sink?: (entry: TraceEntry) => void,
+    ) {}
 
     /**
      * Record one completed call.
@@ -127,8 +137,14 @@ export class ToolTraceRecorder {
      * @param entry - everything but `at`, which the recorder stamps
      */
     record(entry: Omit<TraceEntry, 'at'>): void {
-        this.entries.push({ ...entry, at: Date.now() - this.startedAt });
+        const stamped = { ...entry, at: Date.now() - this.startedAt };
+        this.entries.push(stamped);
         if (this.entries.length > this.capacity) this.entries.shift();
+        try {
+            this.sink?.(stamped);
+        } catch {
+            // Deliberately silent — see the constructor docstring.
+        }
     }
 
     /** Every call still held, oldest first. */

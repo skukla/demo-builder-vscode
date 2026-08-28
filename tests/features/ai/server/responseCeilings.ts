@@ -42,6 +42,12 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    // Measured live 2026-08-28: one entry serializes to ~180-230B (446B for a
+    // 2-entry response); the tool caps entries at 200, so worst case is ~46KB
+    // plus the envelope. The cap is this ceiling's basis — raising MAX_LIMIT
+    // must raise this with it.
+    get_agent_trace: 50_000,
+
     run_commerce_query: {
         bytes: 31_000,
         why:

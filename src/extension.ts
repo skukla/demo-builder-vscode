@@ -32,6 +32,9 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
+import { narrationFor } from '@/features/ai/server/toolNarration';
 import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
@@ -124,11 +127,43 @@ let inExtensionMcpServer: InExtensionMcpServer | undefined;
  * went stale and answered confidently — right data, wrong project). A disk read
  * per tool call would add overhead to the very thing built to measure overhead.
  */
-const agentTrace = new ToolTraceRecorder();
+// Wired with its sinks inside activate() — the file sink needs the
+// extension's storage path and the channel needs the window. Recorder module
+// stays vscode-free; the sinks are two listeners it never has to know about.
+let agentTrace = new ToolTraceRecorder();
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
     const debugLogger = initializeLogger(context);
+
+    // The agent activity record (AI-2c): every tool call an agent makes is
+    // (a) appended to a per-session file under the extension's log storage —
+    // names, sizes, outcomes, a one-way fingerprint of argument values, never
+    // a value — and (b) narrated live on its own channel, so "what is the
+    // agent doing?" is watchable without wading through Debug Logs.
+    const agentTraceDir = path.join(context.logUri.fsPath, 'agent-traces');
+    // The trace must never cost the extension its activation: a storage path
+    // that cannot be created (sandboxed tests, exotic hosts) degrades to
+    // channel-only — the in-memory record and the live view still work.
+    let traceFileSink: ReturnType<typeof createAgentTraceFileSink> | undefined;
+    try {
+        traceFileSink = createAgentTraceFileSink(agentTraceDir);
+    } catch (err) {
+        debugLogger.warn(
+            `[AgentTrace] file sink unavailable (${err instanceof Error ? err.message : String(err)}) — channel-only`,
+        );
+    }
+    const activityChannel = vscode.window.createOutputChannel('Demo Builder: Agent Activity');
+    context.subscriptions.push(activityChannel);
+    agentTrace = new ToolTraceRecorder(undefined, (entry) => {
+        traceFileSink?.sink(entry);
+        const mark = entry.outcome === 'ok' ? '✓' : '✗';
+        const what = narrationFor(entry.tool) ?? entry.tool;
+        activityChannel.appendLine(
+            `${new Date().toLocaleTimeString()} ${mark} ${what} · ${entry.tool} · ` +
+                `${entry.durationMs}ms · ${entry.resultBytes}B`,
+        );
+    });
 
     // Check for pending log replay (after Extension Host restart)
     await replayPendingLogs(debugLogger);
@@ -639,6 +674,13 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
+                // Same derivation as activate()'s sink wiring — the dir is a
+                // pure function of the extension's log storage.
+                registerAgentTraceTool(
+                    mcpServer,
+                    agentTrace,
+                    path.join(context.logUri.fsPath, 'agent-traces'),
+                );
                 registerProjectStatusTool(mcpServer, connState);
                 registerCommerceEndpointsTool(mcpServer, connState);
                 registerCommerceQueryTool(mcpServer, connState);

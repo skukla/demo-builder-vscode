@@ -165,6 +165,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     rename_integration: 'Renaming the integration',
     install_integration: 'Installing the app into Commerce',
     get_integration_install_status: 'Reading the Commerce install state',
+    get_agent_trace: 'Reading the agent activity record',
 
     // ── Storefront and content ──────────────────────────────────────────
     republish: 'Republishing the storefront configuration',

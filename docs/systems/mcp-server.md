@@ -444,6 +444,7 @@ Thin tools declared as data and dispatched to existing handler maps:
 | Tool | File | Notes |
 |---|---|---|
 | `create_project` | `createProjectTool.ts` | Full wizard pipeline, headless. |
+| `get_agent_trace` | `agentTraceTool.ts` | The activity record of agents' tool calls — live session from the in-memory recorder, past sessions from the per-session files the trace sink keeps (AI-2c). Names/sizes/outcomes and a one-way fingerprint of argument values, never a value; capped at 200 entries. The same record feeds the "Demo Builder: Agent Activity" output channel live. |
 | `get_current_project` | `currentProjectTool.ts` | Resolve the active project (persisted current-project pointer); returns `{ name, path }` or `null`. |
 | `delete_project` | `deleteProjectTool.ts` | **Irreversible** — needs `confirm:true` + `confirmName` echo. Local only. |
 | `reset_eds_project` | `edsResetTool.ts` | Reset storefront to template; captured progress timeline. The confirm-gate refusal and every result name the project (`project`), so an agent can catch a wrong current-project pointer before confirming. |

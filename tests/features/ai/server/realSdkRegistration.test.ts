@@ -30,6 +30,7 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
@@ -111,6 +112,11 @@ describe('registration against the real MCP SDK', () => {
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
+            registerAgentTraceTool(
+                s,
+                { all: () => [], repeats: () => [] } as never,
+                '/nonexistent-trace-dir',
+            );
             registerProjectStatusTool(s, stateManager);
             registerCommerceEndpointsTool(s, stateManager);
             registerCommerceQueryTool(s, {} as never);

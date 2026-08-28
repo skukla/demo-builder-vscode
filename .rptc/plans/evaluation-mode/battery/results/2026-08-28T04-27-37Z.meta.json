@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-28T04-27-37Z",
+  "serving": "loop/2026-08-28-agent-activity-record@e360ad86a+ built 2026-08-28T04:26:55.920Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 834
+  },
+  "promptCount": 1,
+  "allowlist": 95,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 834
+  },
+  "authChangedMidRun": false
+}

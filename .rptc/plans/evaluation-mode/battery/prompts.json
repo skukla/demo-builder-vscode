@@ -797,5 +797,13 @@
       "rename_integration"
     ],
     "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Display-name-only metadata write on the fixture-seeded entry; id and folder are immutable by design."
+  },
+  {
+    "id": "agent-trace",
+    "prompt": "Earlier today another agent session did some work through the Demo Builder tools. I need to see exactly what it did \u2014 the actual record of its tool calls, not a guess.",
+    "expect": [
+      "get_agent_trace"
+    ],
+    "why": "AI-2c: the activity record's agent-facing read, framed as its REAL use case \u2014 reviewing work the CURRENT session did not do, which cannot be answered from self-knowledge. The first draft asked 'what have you done?' and the agent answered from its own fresh-session priors with ZERO calls (recorded miss, 2026-08-28) \u2014 a finding about ask-shapes as much as about the tool."
   }
 ]

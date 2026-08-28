@@ -150,6 +150,8 @@ jest.mock('vscode', () => ({
         workspaceFolders: [],
     },
     window: {
+        // activate() now creates the Agent Activity channel (AI-2c).
+        createOutputChannel: jest.fn(() => ({ appendLine: jest.fn(), dispose: jest.fn() })),
         createTreeView: jest.fn(() => ({
             title: '',
             dispose: jest.fn(),
