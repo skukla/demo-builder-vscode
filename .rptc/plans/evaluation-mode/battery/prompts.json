@@ -805,5 +805,31 @@
       "get_agent_trace"
     ],
     "why": "AI-2c: the activity record's agent-facing read, framed as its REAL use case \u2014 reviewing work the CURRENT session did not do, which cannot be answered from self-knowledge. The first draft asked 'what have you done?' and the agent answered from its own fresh-session priors with ZERO calls (recorded miss, 2026-08-28) \u2014 a finding about ask-shapes as much as about the tool."
+  },
+  {
+    "id": "journey-catalog-format",
+    "prompt": "Use this project's graphql endpoint to return the first 4 skus from the catalog and show me the format.",
+    "expect": [
+      "run_commerce_query"
+    ],
+    "why": "Verbatim opening ask of the 264-turn ERP journey (de59e150, 2026-08). The original spent 8 trial-and-error curls discovering the schema and hit the Missing-Magento-Store-View-Code trap; run_commerce_query attaches those headers. Replay measures the phase on today's surface."
+  },
+  {
+    "id": "journey-category-query",
+    "prompt": "How would I query the catalog service for all of the products within a given category? Pick a real category from this store and show the query working.",
+    "expect": [
+      "run_commerce_query"
+    ],
+    "why": "Journey turns 4-7 (category filtering). The original re-derived headers per call (2 -> 14 -H flags by call 13). Category discovery is part of the measure - the original also had to find real category keys."
+  },
+  {
+    "id": "journey-mesh-inspect",
+    "prompt": "What is the API mesh endpoint for this project, and is the mesh deployed and current?",
+    "expect": [
+      "check_mesh",
+      "get_commerce_endpoints",
+      "get_project_status"
+    ],
+    "why": "Journey's api-mesh:describe/get phase (5 aio commands with the workspace-select dance). Today one read should answer it; the select dance is eliminated by per-invocation org targeting."
   }
 ]
