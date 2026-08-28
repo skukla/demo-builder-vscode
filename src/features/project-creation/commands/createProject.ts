@@ -95,7 +95,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
 
         // PrerequisitesManager is initialized with proper path
-        this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
+        this.prereqManager = new PrerequisitesManager(context.extensionPath, logger, ServiceLocator.getCommandExecutor());
         this.authManager = ServiceLocator.getAuthenticationService();
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);

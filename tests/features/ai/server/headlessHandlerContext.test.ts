@@ -46,6 +46,9 @@ describe('createHeadlessHandlerContext', () => {
     beforeEach(() => {
         ServiceLocator.reset();
         ServiceLocator.setAuthenticationService(fakeAuth);
+        // ADR-015: the headless context builds a PrerequisitesManager, which
+        // now takes the executor as a constructor argument.
+        ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
     });
 
     it('builds a webview-free context (panel/comm undefined, sendMessage no-op)', async () => {
@@ -67,6 +70,8 @@ describe('createHeadlessHandlerContext', () => {
         expect(PrerequisitesManager).toHaveBeenCalledWith(
             fakeContext.extensionPath,
             expect.anything(),
+            // ADR-015: the shell executor, resolved here at the boundary.
+            expect.objectContaining({ execute: expect.any(Function) })
         );
     });
 
@@ -81,5 +86,4 @@ describe('createHeadlessHandlerContext', () => {
         expect(ctx.authManager).toBe(fakeAuth);
         expect(ctx.sharedState).toEqual({ isAuthenticating: false });
     });
-
 });

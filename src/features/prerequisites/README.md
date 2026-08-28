@@ -40,7 +40,10 @@ This feature ensures users have all necessary tools (Node.js, npm, Adobe CLI, et
 ```typescript
 import { PrerequisitesManager } from '@/features/prerequisites';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+// ADR-015: `commandManager` is the shell executor, supplied by the boundary
+// that builds the manager (a command, a handler context, or the MCP server's
+// headless context) — the manager never fetches it itself.
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 
 // Load configuration
 await prereqManager.loadConfig();
@@ -140,7 +143,7 @@ The feature is driven by `config/prerequisites.json`:
 ```typescript
 import { PrerequisitesManager } from '@/features/prerequisites';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 
 // Load config
 await prereqManager.loadConfig();
@@ -180,7 +183,7 @@ for (const status of statuses) {
 import { PrerequisitesManager } from '@/features/prerequisites';
 import { ComponentRegistryManager } from '@/features/components';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 const componentRegistry = new ComponentRegistryManager(extensionPath);
 
 // Get required Node versions from components
@@ -211,7 +214,7 @@ for (const result of results) {
 import { PrerequisitesManager } from '@/features/prerequisites';
 import { ServiceLocator } from '@/services/serviceLocator';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 const commandManager = ServiceLocator.getCommandExecutor();
 
 // Get prerequisite
@@ -240,7 +243,7 @@ if (installInfo?.steps) {
 ```typescript
 import { PrerequisitesManager } from '@/features/prerequisites';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 
 // Get Adobe CLI prerequisite (perNodeVersion=true)
 const aioPrereq = await prereqManager.getPrerequisiteById('aio-cli');
@@ -265,7 +268,7 @@ if (status.installed) {
 ```typescript
 import { PrerequisitesManager } from '@/features/prerequisites';
 
-const prereqManager = new PrerequisitesManager(extensionPath, logger);
+const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 await prereqManager.loadConfig();
 
 const prereqs = await prereqManager.getRequiredPrerequisites({

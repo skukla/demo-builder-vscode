@@ -14,7 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
 
 // Mock the ConfigurationLoader
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 // Mock fs module for components.json reading
 jest.mock('fs', () => ({
@@ -30,7 +29,6 @@ jest.mock('fs', () => ({
 
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
-import { ServiceLocator } from '@/core/di';
 
 export interface TestMocks {
     logger: jest.Mocked<Logger>;
@@ -98,9 +96,8 @@ export function setupMocks(): TestMocks {
         execute: jest.fn(),
     } as any;
 
-    // Mock ServiceLocator
-    (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
-
+    // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor argument
+    // now — suites pass `mocks.executor` in. No registry mock at all.
     return {
         logger: mockLogger,
         executor: mockExecutor,

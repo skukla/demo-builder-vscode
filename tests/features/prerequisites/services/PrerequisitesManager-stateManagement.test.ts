@@ -14,7 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
@@ -31,7 +30,7 @@ describe('PrerequisitesManager - State Management', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
     });
 
     describe('loadConfig', () => {
@@ -48,7 +47,7 @@ describe('PrerequisitesManager - State Management', () => {
                 load: jest.fn().mockRejectedValue(new Error('Config not found')),
             }));
 
-            manager = new PrerequisitesManager('/mock/extension/path', mocks.logger);
+            manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
 
             await expect(manager.loadConfig()).rejects.toThrow('Config not found');
         });

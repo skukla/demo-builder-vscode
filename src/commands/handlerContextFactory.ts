@@ -52,7 +52,7 @@ export function createPanelHandlerContext(parts: PanelContextParts): HandlerCont
     const logger = getLogger();
 
     return {
-        prereqManager: new PrerequisitesManager(parts.context.extensionPath, logger),
+        prereqManager: new PrerequisitesManager(parts.context.extensionPath, logger, ServiceLocator.getCommandExecutor()),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: new ErrorLogger(parts.context),
         progressUnifier: new ProgressUnifier(logger),

@@ -14,7 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
@@ -31,7 +30,7 @@ describe('PrerequisitesManager - Prerequisite Checking', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
     });
 
     describe('checkPrerequisite', () => {

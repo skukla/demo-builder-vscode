@@ -40,7 +40,7 @@ export function createHeadlessHandlerContext(
         // gets nothing, iterates zero prerequisites, and `[].every(...)` is `true`
         // — so a prerequisites check would report "everything installed" on a bare
         // machine. Any tool over that handler needs this line first.
-        prereqManager: new PrerequisitesManager(context.extensionPath, logger),
+        prereqManager: new PrerequisitesManager(context.extensionPath, logger, ServiceLocator.getCommandExecutor()),
         authManager: ServiceLocator.getAuthenticationService(),
         // Deliberately absent on the agent surface. These are OPTIONAL on
         // HandlerContext, and every reader in the handler tree uses `?.`

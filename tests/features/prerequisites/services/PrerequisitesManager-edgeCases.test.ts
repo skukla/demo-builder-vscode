@@ -14,7 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 // Mock the shared module's checkPerNodeVersionStatus function
 const mockCheckPerNodeVersionStatus = jest.fn();
@@ -39,7 +38,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
     });
 
     describe('checkPrerequisite - perNodeVersion detection consistency (Step 2)', () => {
