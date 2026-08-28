@@ -29,23 +29,34 @@ const TESTS_ROOT = path.resolve(__dirname, '..');
  * name has exactly one definition left.
  */
 const KNOWN_DUPLICATES: Record<string, number> = {
-    // createMockLogger left this ledger 2026-08-28: nine definitions across four
-    // return types collapsed into tests/helpers/loggerFake.ts. First entry
-    // consolidated; the rest follow the same shape.
-    createMockContext: 10,
-    createMockProject: 8,
+    createMockContext: 11,
+    createMockProject: 9,
+    createMockCommandExecutor: 5,
     createMockHandlerContext: 5,
     createMockCommandManager: 4,
-    createMockCommandExecutor: 3,
+    createSuccessResult: 3,
     makeContext: 3,
     createComponentSelection: 2,
-    createSuccessResult: 2,
+    createFailureResult: 2,
     makeProject: 2,
     makeStateManager: 2,
 };
 
-/** `export function create|make|buildSomething(` — the builder convention. */
-const BUILDER = /export\s+(?:async\s+)?function\s+((?:create|make|build)[A-Z]\w*)\s*\(/g;
+/**
+ * The builder convention, in BOTH declaration forms.
+ *
+ * The first version of this check matched only `export function`. That missed
+ * every `export const createX = () => ...` — about a fifth of the corpus, and
+ * three more logger builders that a consolidation had just been declared
+ * complete without. A check blind to one form reports clean while duplicates
+ * accumulate in the other, which is the precise failure this repo keeps paying
+ * for: a zero from a probe that cannot see is indistinguishable from a zero
+ * from a probe that found nothing.
+ */
+const BUILDER_FORMS = [
+    /export\s+(?:async\s+)?function\s+((?:create|make|build)[A-Z]\w*)\s*\(/g,
+    /export\s+const\s+((?:create|make|build)[A-Z]\w*)\s*(?::[^=]+)?=\s*(?:async\s*)?(?:\(|function)/g,
+];
 
 function walk(dir: string): string[] {
     const out: string[] = [];
@@ -66,9 +77,11 @@ function collectBuilders(): Map<string, string[]> {
     const found = new Map<string, string[]>();
     for (const file of walk(TESTS_ROOT)) {
         const src = fs.readFileSync(file, 'utf8');
-        for (const m of src.matchAll(BUILDER)) {
-            const rel = path.relative(TESTS_ROOT, file);
-            found.set(m[1], [...(found.get(m[1]) ?? []), rel]);
+        for (const form of BUILDER_FORMS) {
+            for (const m of src.matchAll(form)) {
+                const rel = path.relative(TESTS_ROOT, file);
+                found.set(m[1], [...(found.get(m[1]) ?? []), rel]);
+            }
         }
     }
     return found;
@@ -80,7 +93,9 @@ const DUPLICATED = [...BUILDERS.entries()].filter(([, files]) => files.length > 
 describe('PL-16: a builder name has one definition', () => {
     it('POSITIVE CONTROL: the scan finds builders at all', () => {
         // A zero here would make every assertion below pass vacuously.
-        expect(BUILDERS.size).toBeGreaterThan(50);
+        expect(BUILDERS.size).toBeGreaterThan(100);
+        // Both declaration forms must be visible, or the check is half-blind.
+        expect(BUILDERS.has('createSuccessResult')).toBe(true); // export const form
         expect(BUILDERS.has('createMockLogger')).toBe(true);
     });
 

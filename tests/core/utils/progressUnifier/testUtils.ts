@@ -5,7 +5,6 @@
  * progressUnifier test files.
  */
 
-import type { Logger } from '@/types/logger';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { UnifiedProgress } from '@/core/utils/progressUnifier';
 
@@ -62,15 +61,5 @@ export const createProgressCollector = () => {
     };
 };
 
-/**
- * Create a mock logger for testing
- *
- * @returns Mock Logger instance
- */
-export const createMockLogger = (): Logger => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-});
+/** Canonical logger fake (ADR-016). */
+export { createMockLogger } from '../../../helpers/loggerFake';

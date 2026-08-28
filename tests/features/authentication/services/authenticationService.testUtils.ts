@@ -1,6 +1,5 @@
 import type { CommandExecutor, CommandResult } from '@/core/shell';
 import type { StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { EntityServices } from '@/features/authentication/services/adobeEntityService';
@@ -39,13 +38,8 @@ export const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
     invalidateNodeVersionCache: jest.fn(),
 } as any);
 
-export const createMockLogger = (): jest.Mocked<Logger> => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-} as any);
+/** Canonical logger fake (ADR-016). */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 export const createMockStepLogger = (): jest.Mocked<StepLogger> => ({
     logTemplate: jest.fn(),
