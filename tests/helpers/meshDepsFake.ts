@@ -1,3 +1,4 @@
+import type { MeshRedeployDeps } from '@/features/eds/services/reset/edsResetMeshHelper';
 /**
  * The collaborators mesh-touching code receives (ADR-015): a shell executor and
  * an auth service.
@@ -35,9 +36,12 @@ export function createMeshDepsFake(
         commandManager?: unknown;
         authManager?: unknown;
     } = {}
-) {
+): MeshRedeployDeps {
     return {
         commandManager: overrides.commandManager ?? { execute: jest.fn() },
         authManager: overrides.authManager ?? defaultAuthManager(),
-    } as never;
+        // The one cast, at the boundary of the fake rather than through it: the
+        // fakes are structural stand-ins, but the RETURN type is the real one,
+        // so this builder stops compiling the day MeshRedeployDeps changes.
+    } as unknown as MeshRedeployDeps;
 }
