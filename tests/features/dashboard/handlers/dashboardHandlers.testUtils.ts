@@ -10,7 +10,13 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/features/authentication');
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
-        getAuthenticationService: jest.fn(),
+        // ADR-015 (2026-08-28): handlers resolve these when assembling runner
+        // deps, so the default answer has to be usable rather than undefined.
+        getAuthenticationService: jest.fn(() => ({
+            getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
+            getCachedOrganization: jest.fn(),
+            getS2SDeployCredentials: jest.fn(),
+        })),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));

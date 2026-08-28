@@ -122,7 +122,10 @@ export async function executeAppBuilderIntegrationsPhase(
     const { addAppBuilderComponent } = await import(
         '@/features/app-builder/services/appBuilderComponentRunner'
     );
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }));
 
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time

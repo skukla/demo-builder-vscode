@@ -45,6 +45,10 @@ beforeEach(() => {
     resetHandlerMocks();
 });
 
+
+
+
+
 describe('handleAddAppBuilderComponent', () => {
     it('resolves the catalog entry, assembles deps, and calls addAppBuilderComponent', async () => {
         const { mockContext, mockProject } = setupMocks();
@@ -53,7 +57,15 @@ describe('handleAddAppBuilderComponent', () => {
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(mockContext, mockProject);
+        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(
+            mockContext,
+            mockProject,
+            // ADR-015: the shared services the handler resolves at the boundary.
+            expect.objectContaining({
+                authManager: expect.anything(),
+                commandManager: expect.anything(),
+            })
+        );
         expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith(
             expect.objectContaining({
                 subscriberClient: expect.anything(),

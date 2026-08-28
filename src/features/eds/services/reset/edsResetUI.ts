@@ -26,6 +26,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -110,10 +111,9 @@ async function checkAdobeAuth(
     context: HandlerContext,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    authService: AuthenticationService,
 ): Promise<EdsResetResult | null> {
     const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-    const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
 
     const result = await ensureAdobeIOAuth({
         authManager: authService,
@@ -156,13 +156,11 @@ async function checkOrgContext(
     context: HandlerContext,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    authService: AuthenticationService,
 ): Promise<EdsResetResult | null> {
     const { ensureProjectOrgContext } = await import(
         '@/features/authentication/services/ensureProjectOrgContext'
     );
-    const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
-
     const result = await ensureProjectOrgContext({
         authManager: authService,
         project,
@@ -455,6 +453,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                         context,
                         originalStatus,
                         logPrefix,
+                        options.meshDeps.authManager,
                     );
                     if (adobeResult) return adobeResult;
 
@@ -464,6 +463,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                         context,
                         originalStatus,
                         logPrefix,
+                        options.meshDeps.authManager,
                     );
                     if (orgResult) return orgResult;
                 }

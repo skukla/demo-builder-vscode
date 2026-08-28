@@ -22,6 +22,7 @@ import {
     postRowStatus,
     runGuards,
 } from './appBuilderComponentHandlers';
+import { ServiceLocator } from '@/core/di';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import {
@@ -180,7 +181,10 @@ async function applyDestination(
     // migration runs targets it; `previous` is what addresses the old one.
     report(`Moving ${movingIds.length} integration${movingIds.length === 1 ? '' : 's'}…`);
     const deps = buildDefaultRunnerDeps(
-        await buildRunnerDepsContext(context, project),
+        await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }),
         // The deploy tails narrate their own steps; surface them as sub-messages so
         // a multi-minute move reads as progress rather than a stalled notification.
         (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),

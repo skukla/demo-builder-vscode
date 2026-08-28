@@ -38,6 +38,10 @@ const mockTestDeveloperPermissions = jest.fn();
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: () => ({ testDeveloperPermissions: mockTestDeveloperPermissions }),
+        // ADR-015 (2026-08-28): the handler resolves these when assembling
+        // runner deps, so the module mock must answer them.
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
+
     },
 }));
 
@@ -72,6 +76,8 @@ beforeEach(() => {
     mockAddAppBuilderComponent.mockResolvedValue({ success: true });
     mockTestDeveloperPermissions.mockResolvedValue({ hasPermissions: true });
 });
+
+
 
 describe('executeAppBuilderIntegrationsPhase', () => {
     it('is a no-op when no integration ids are selected (no permission check)', async () => {

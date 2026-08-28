@@ -53,6 +53,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di';
 
 const EXISTING_ADOBE = {
     organization: '285361',
@@ -87,6 +88,25 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRunGuards.mockResolvedValue(undefined);
     mockMove.mockResolvedValue({ success: true, moved: [], failed: [] });
+});
+
+
+
+
+
+
+/**
+ * ADR-015 (2026-08-28): this handler resolves the shared services from the REAL
+ * registry when assembling runner deps (no module mock reaches this suite), and
+ * the shared node setup empties it after every test — so seed per-test.
+ */
+beforeEach(() => {
+    ServiceLocator.setAuthenticationService({
+        getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
+        getCachedOrganization: jest.fn(),
+        getS2SDeployCredentials: jest.fn(),
+    } as never);
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
 });
 
 describe('handleSetProjectDestination', () => {

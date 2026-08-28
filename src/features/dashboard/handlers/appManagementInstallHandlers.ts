@@ -26,6 +26,7 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
+import { ServiceLocator } from '@/core/di';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     AppManagementClient,
@@ -123,7 +124,7 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
             code: ErrorCode.INVALID_OPERATION,
         };
     }
-    const auth = await resolveAppManagementAuth(project);
+    const auth = await resolveAppManagementAuth(project, ServiceLocator.getAuthenticationService());
     if (!auth) {
         return {
             success: false,
@@ -201,7 +202,10 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
             }
 
             const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project),
+                await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }),
                 (message, subMessage) => report(subMessage || message),
             );
             // Always wired by buildDefaultRunnerDeps; the field is optional only

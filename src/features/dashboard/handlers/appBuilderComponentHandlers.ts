@@ -498,7 +498,10 @@ export const handleAddAppBuilderComponent: MessageHandler<
             // reporter so a slow add narrates itself instead of sitting on one
             // static title for the ~70s of subscribe + install + build + deploy.
             const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project),
+                await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }),
                 // The notification title already names the operation and its object, so
                 // the step line is the SUB-step alone when one exists — joining both
                 // produced two-line cards ('Deploying custom integration... Running
@@ -710,7 +713,10 @@ async function deployById(
             report('Deploying…');
             // Same reuse as the add path: the deploy tail narrates its own steps.
             const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project),
+                await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }),
                 // The notification title already names the operation and its object, so
                 // the step line is the SUB-step alone when one exists — joining both
                 // produced two-line cards ('Deploying custom integration... Running
@@ -769,7 +775,10 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
             report('Removing integration…');
-            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                }));
             return removeAppBuilderComponent(project, id, deps);
         },
     );

@@ -49,7 +49,16 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 // jest.mock('@/core/di') registers after this spec's SUT import chain has
 // already required the real ServiceLocator.
 jest.mock('@/core/di', () => ({
-    ServiceLocator: { getAuthenticationService: jest.fn() },
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(() => ({
+            getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
+            getCachedOrganization: jest.fn(),
+            getS2SDeployCredentials: jest.fn(),
+        })),
+        // ADR-015 (2026-08-28): the handler resolves these when assembling
+        // runner deps, so the module mock must answer them.
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
+    },
 }));
 
 // ---- guards ----------------------------------------------------------------
@@ -126,6 +135,8 @@ beforeEach(() => {
         completedAt: '2026-08-27T01:02:00Z',
     });
 });
+
+
 
 describe('handleGetAppBuilderInstallStatus', () => {
     it('reads the LIVE state from the app base URL and returns it with the persisted record', async () => {
