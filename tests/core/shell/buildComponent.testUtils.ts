@@ -12,11 +12,5 @@ export function createMockCommandManager() {
     };
 }
 
-export function createMockLogger() {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../helpers/loggerFake';

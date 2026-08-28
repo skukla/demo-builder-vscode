@@ -153,16 +153,8 @@ export function createCommandFailureResponse(stderr: string = 'Command failed') 
     };
 }
 
-/**
- * Factory for creating a mock logger
- */
-export function createMockLogger() {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Default verification options for testing

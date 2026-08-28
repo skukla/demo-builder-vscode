@@ -6,7 +6,6 @@
  */
 
 import { Project } from '@/types';
-import { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell';
 
 /**
@@ -27,18 +26,8 @@ export function createMockCommandExecutor(): CommandExecutor {
     } as unknown as CommandExecutor;
 }
 
-/**
- * Creates a mock Logger with all methods stubbed
- */
-export function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a test Project with default values

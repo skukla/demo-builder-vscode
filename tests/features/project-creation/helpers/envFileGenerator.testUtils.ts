@@ -4,23 +4,13 @@
 
 import { EnvVarDefinition, ComponentRegistry } from '@/types/components';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import type { Logger } from '@/types/logger';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 
-/**
- * Creates a mock logger for testing
- */
-export function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+import { createMockLogger } from '../../../helpers/loggerFake';
+export { createMockLogger };
 
 /**
  * Creates a mock HandlerContext for testing

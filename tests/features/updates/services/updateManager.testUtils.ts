@@ -30,17 +30,8 @@ export function createMockContext(version: string = '1.0.0'): any {
     };
 }
 
-/**
- * Creates a mock logger instance
- */
-export function createMockLogger(): any {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a mock workspace configuration object

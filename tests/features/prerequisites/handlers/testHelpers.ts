@@ -1,5 +1,4 @@
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 /**
  * Test Helpers for Prerequisites Handlers Tests
@@ -7,18 +6,9 @@ import type { Logger } from '@/types/logger';
  * Shared mock factories and utilities for testing prerequisite handlers.
  */
 
-/**
- * Creates a mock logger with all standard methods.
- */
-export function createMockLogger(): jest.Mocked<Logger> {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+import { createMockLogger } from '../../../helpers/loggerFake';
+export { createMockLogger };
 
 /**
  * Creates a mock HandlerContext with sensible defaults and optional overrides.

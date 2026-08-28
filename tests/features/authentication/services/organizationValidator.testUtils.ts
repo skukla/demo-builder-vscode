@@ -1,6 +1,5 @@
 import type { CommandExecutor } from '@/core/shell';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger } from '@/types/logger';
 
 /**
  * OrganizationValidator Test Utilities
@@ -38,17 +37,8 @@ export function createMockCacheManager(): jest.Mocked<AuthCacheManager> {
     } as any;
 }
 
-/**
- * Creates a mock Logger for tests.
- */
-export function createMockLogger(): jest.Mocked<Logger> {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a successful command execution result.

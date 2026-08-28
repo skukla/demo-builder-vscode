@@ -29,8 +29,10 @@ const TESTS_ROOT = path.resolve(__dirname, '..');
  * name has exactly one definition left.
  */
 const KNOWN_DUPLICATES: Record<string, number> = {
+    // createMockLogger left this ledger 2026-08-28: nine definitions across four
+    // return types collapsed into tests/helpers/loggerFake.ts. First entry
+    // consolidated; the rest follow the same shape.
     createMockContext: 10,
-    createMockLogger: 9,
     createMockProject: 8,
     createMockHandlerContext: 5,
     createMockCommandManager: 4,
