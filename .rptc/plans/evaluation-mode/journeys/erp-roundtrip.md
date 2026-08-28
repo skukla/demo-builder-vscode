@@ -19,12 +19,22 @@ the teardown (the round-trip rule).
 
 ## How to run it
 
-Interactively, owner present: open the **bodea project dashboard → Chat**
-(Open in Claude), paste the prompt. Interactive is load-bearing twice over:
-consent gates on the write tools are supposed to reach a human, and the
-original journey was human-steered — this is the closest honest replay.
-Answer questions as a producer would; intervene only when it goes wrong
-(interventions are one of the four metrics).
+**As run (2026-08-28): unattended, owner-authorized** — the owner commissioned
+this specific journey and could not be present ("I can't be present while you
+run it"). `run-erp-roundtrip.sh` runs it headless at the bodea cwd with the
+battery's isolation flags and a write set capped to exactly this journey's
+needs. Deliberate caps, stated: no Console project/workspace create or
+delete (the journey uses bodea's existing Console project — the extension's
+model; a denial there steers, it does not invalidate), no mesh/EDS/DA.live
+writes, no sign_in. Write/Edit allowed (building an app writes code).
+
+Two consequences of unattended, recorded honestly: consent gates are
+answered by the agent itself (confirm:true) rather than a human, and the
+interventions metric is structurally zero — neither is comparable to a
+human-steered run on those two axes.
+
+The interactive owner-present variant remains the richer measurement for a
+future pass: paste the prompt into the bodea Chat and answer as a producer.
 
 ## What "zero" means (verified, not remembered)
 
