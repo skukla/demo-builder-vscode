@@ -648,6 +648,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
+            // Standing consent, read live — must beat the chat ask (see the
+            // option's doc: headless clients auto-decline elicitation).
+            consentNotRequired: () =>
+                vscode.workspace
+                    .getConfiguration('demoBuilder')
+                    .get<boolean>('ai.requireAgentConsent', true) === false,
             trace: agentTrace,
             registerExtraTools: (mcpServer, scopedProjectDir) => {
                 // Per-connection scope (owner decision 2026-08-28): a session

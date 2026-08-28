@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { raisesConsentDialog } from './agentAlertCopy';
+import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
 import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asRawText } from './mcpToolResult';
@@ -31,7 +32,6 @@ import {
     type ToolTraceRecorder,
     type TraceOutcome,
 } from './toolTraceRecorder';
-import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
 import { currentCallTag, nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
@@ -251,26 +251,26 @@ function withToolLogging(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     logger: Logger,
-     
+
     notifier?: (
         toolName: string,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        run: (report: PhaseSink) => Promise<any>,
+        run: (report: PhaseSink) => Promise<any>
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) => Promise<any>,
     consentGate?: (
         toolName: string,
         args: unknown,
-        description?: string,
+        description?: string
     ) => Promise<ConsentVerdict>,
     trace?: ToolTraceRecorder,
     projectShape?: () => string | undefined,
+    consentNotRequired?: () => boolean,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         registerTool(name: string, schema: unknown, handler: (args: any) => Promise<any>) {
-             
             // Read ONCE at registration: the declaration is static, and re-deriving
             // it per call would invite someone to make it dynamic later.
             const readOnly = declaredReadOnly(schema);
@@ -283,131 +283,150 @@ function withToolLogging(
                     // guards, deploys, their debug-log lines — runs inside it,
                     // so `[Guards #47]` lines link back to trace entry #47.
                     runWithCallTag(nextCallTag(), async () => {
-                    const callTag = currentCallTag();
-                    const started = Date.now();
-                    const argKeys =
-                        args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
-                    logger.info(`[MCP] tool: ${name}`);
-                    /**
-                     * Record this call, whatever happened to it.
-                     *
-                     * Never throws: a recorder fault must not turn a working
-                     * tool call into a failure. Recording is a diagnostic, and a
-                     * diagnostic that can break the thing it observes is worse
-                     * than no diagnostic.
-                     */
-                    const recordCall = (result: unknown, outcome: TraceOutcome): void => {
-                        if (!trace) return;
-                        try {
-                            trace.record({
-                                tool: name,
-                                readOnly,
-                                argumentKeys:
-                                    args && typeof args === 'object' ? Object.keys(args) : [],
-                                argumentFingerprint: fingerprintArgs(args),
-                                resultBytes: resultByteLength(result),
-                                durationMs: Date.now() - started,
-                                outcome,
-                                projectShape: projectShape?.(),
-                                tag: callTag,
-                            });
-                        } catch {
-                            /* a trace is never worth failing a call over */
-                        }
-                    };
-                    logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
-                    // Consent BEFORE the notifier: a declined operation never
-                    // ran, so no progress notification may claim it did. The gate
-                    // decides only when the call carries the destructive marker.
-                    if (callRequestsConsent(name, args)) {
-                        // ASK THE CHAT FIRST, because that is where the producer
-                        // is looking. The modal opens in the VS Code window,
-                        // which they may not be watching — and a blocking prompt
-                        // nobody sees is worse than no prompt.
-                        const caps = server.server?.getClientCapabilities?.();
-                        const chat = await askChatForConsent(
-                            name,
-                            args,
-                            extra,
-                            Boolean(caps && 'elicitation' in caps),
-                        );
-                        if (chat === 'refuse') {
-                            logger.info(`[MCP] ${name} refused in the chat`);
-                            return asRawText(
-                                `${name} was not approved. Nothing was changed. Ask the user ` +
-                                    'again only if they want to retry.',
-                            );
-                        }
-                        // 'unavailable' — the client cannot be asked, or the ask
-                        // failed. NOT a refusal: fall through to the modal, which
-                        // stays the floor. A consent gate that silently stops
-                        // working is the worst available outcome.
-                        if (chat !== 'accept' && consentGate) {
-                            // The tool's own description reaches the gate. Reading all
-                            // 60 write tools showed the NAMES are mostly fine but several
-                            // are ambiguous alone — "Republish" (what?), "Sync content"
-                            // vs "Sync storefront" (CDN publish vs git push).
-                            const description = (schema as { description?: string } | undefined)
-                                ?.description;
-                            const verdict = await consentGate(name, args, description);
-                            if (!verdict.allowed) {
-                                logger.info(`[MCP] ${name} declined by user consent dialog`);
-                                return verdict.refusal;
+                        const callTag = currentCallTag();
+                        const started = Date.now();
+                        const argKeys =
+                            args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
+                        logger.info(`[MCP] tool: ${name}`);
+                        /**
+                         * Record this call, whatever happened to it.
+                         *
+                         * Never throws: a recorder fault must not turn a working
+                         * tool call into a failure. Recording is a diagnostic, and a
+                         * diagnostic that can break the thing it observes is worse
+                         * than no diagnostic.
+                         */
+                        const recordCall = (result: unknown, outcome: TraceOutcome): void => {
+                            if (!trace) return;
+                            try {
+                                trace.record({
+                                    tool: name,
+                                    readOnly,
+                                    argumentKeys:
+                                        args && typeof args === 'object' ? Object.keys(args) : [],
+                                    argumentFingerprint: fingerprintArgs(args),
+                                    resultBytes: resultByteLength(result),
+                                    durationMs: Date.now() - started,
+                                    outcome,
+                                    projectShape: projectShape?.(),
+                                    tag: callTag,
+                                });
+                            } catch {
+                                /* a trace is never worth failing a call over */
+                            }
+                        };
+                        logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
+                        // Consent BEFORE the notifier: a declined operation never
+                        // ran, so no progress notification may claim it did. The gate
+                        // decides only when the call carries the destructive marker.
+                        if (callRequestsConsent(name, args)) {
+                            // STANDING CONSENT FIRST (read live). The owner's
+                            // `requireAgentConsent: false` must beat the chat ask:
+                            // headless `claude -p` DECLARES elicitation and then
+                            // auto-declines it (measured 2026-08-28: refusal in
+                            // 12ms), so a chat-first order turned the owner's
+                            // explicit standing grant into a guaranteed refusal —
+                            // both ERP journeys built green and could not tear
+                            // down. A real user's chat refusal still stands: this
+                            // branch only fires when consent is not required at all.
+                            if (consentNotRequired?.()) {
+                                logger.info(
+                                    `[MCP] ${name} consent pre-granted ` +
+                                        '(demoBuilder.ai.requireAgentConsent is off)',
+                                );
+                            } else {
+                                // ASK THE CHAT FIRST, because that is where the producer
+                                // is looking. The modal opens in the VS Code window,
+                                // which they may not be watching — and a blocking prompt
+                                // nobody sees is worse than no prompt.
+                                const caps = server.server?.getClientCapabilities?.();
+                                const chat = await askChatForConsent(
+                                    name,
+                                    args,
+                                    extra,
+                                    Boolean(caps && 'elicitation' in caps),
+                                );
+                                if (chat === 'refuse') {
+                                    logger.info(`[MCP] ${name} refused in the chat`);
+                                    return asRawText(
+                                        `${name} was not approved. Nothing was changed. Ask the user ` +
+                                            'again only if they want to retry.',
+                                    );
+                                }
+                                // 'unavailable' — the client cannot be asked, or the ask
+                                // failed. NOT a refusal: fall through to the modal, which
+                                // stays the floor. A consent gate that silently stops
+                                // working is the worst available outcome.
+                                if (chat !== 'accept' && consentGate) {
+                                    // The tool's own description reaches the gate. Reading all
+                                    // 60 write tools showed the NAMES are mostly fine but several
+                                    // are ambiguous alone — "Republish" (what?), "Sync content"
+                                    // vs "Sync storefront" (CDN publish vs git push).
+                                    const description = (
+                                        schema as { description?: string } | undefined
+                                    )?.description;
+                                    const verdict = await consentGate(name, args, description);
+                                    if (!verdict.allowed) {
+                                        logger.info(
+                                            `[MCP] ${name} declined by user consent dialog`,
+                                        );
+                                        return verdict.refusal;
+                                    }
+                                }
                             }
                         }
-                    }
-                    // AFTER consent, never before: announcing "Deploying mesh…" and
-                    // then raising a dialog the user declines would narrate work that
-                    // never happened. Reads are skipped — they return promptly and a
-                    // line per query is noise, not information.
-                    {
-                        // EVERY call, reads included. Reads used to be silent on
-                        // the reasoning that a line per query is noise — but the
-                        // whole point of this feature is seeing the path the agent
-                        // takes, and a path with its reads removed is not the path.
-                        // Owner correction, 2026-08-25.
-                        await announceToolStart(name, extra);
-                    }
-                    // Fan the operation's own phase strings out to BOTH places a
-                    // user might be watching: the chat (MCP progress) and the
-                    // VS Code notification (the notifier's reporter). Previously
-                    // neither got them — the phases were computed and dropped for
-                    // every agent call, so a two-minute create_project announced
-                    // itself once and then went silent everywhere.
-                    const mcpSink: PhaseSink = (message) => {
-                        void announcePhase(extra, message);
-                    };
-                    // Reads get NO sinks at all, matching the opening line they
-                    // also do not get: a query returns promptly, and a line per
-                    // query is noise rather than information. A read tool that
-                    // calls reportPhase therefore narrates to nobody, which is
-                    // the intent — caught by a test that found the first version
-                    // installing sinks for reads too.
-                    let invoke: () => Promise<unknown>;
-                    if (readOnly) {
-                        invoke = () => handler(args);
-                    } else if (notifier) {
-                        invoke = () =>
-                            notifier(name, (report) =>
-                                withPhaseSinks([mcpSink, report], () => handler(args)),
+                        // AFTER consent, never before: announcing "Deploying mesh…" and
+                        // then raising a dialog the user declines would narrate work that
+                        // never happened. Reads are skipped — they return promptly and a
+                        // line per query is noise, not information.
+                        {
+                            // EVERY call, reads included. Reads used to be silent on
+                            // the reasoning that a line per query is noise — but the
+                            // whole point of this feature is seeing the path the agent
+                            // takes, and a path with its reads removed is not the path.
+                            // Owner correction, 2026-08-25.
+                            await announceToolStart(name, extra);
+                        }
+                        // Fan the operation's own phase strings out to BOTH places a
+                        // user might be watching: the chat (MCP progress) and the
+                        // VS Code notification (the notifier's reporter). Previously
+                        // neither got them — the phases were computed and dropped for
+                        // every agent call, so a two-minute create_project announced
+                        // itself once and then went silent everywhere.
+                        const mcpSink: PhaseSink = (message) => {
+                            void announcePhase(extra, message);
+                        };
+                        // Reads get NO sinks at all, matching the opening line they
+                        // also do not get: a query returns promptly, and a line per
+                        // query is noise rather than information. A read tool that
+                        // calls reportPhase therefore narrates to nobody, which is
+                        // the intent — caught by a test that found the first version
+                        // installing sinks for reads too.
+                        let invoke: () => Promise<unknown>;
+                        if (readOnly) {
+                            invoke = () => handler(args);
+                        } else if (notifier) {
+                            invoke = () =>
+                                notifier(name, (report) =>
+                                    withPhaseSinks([mcpSink, report], () => handler(args)),
+                                );
+                        } else {
+                            invoke = () => withPhaseSinks([mcpSink], () => handler(args));
+                        }
+                        try {
+                            const result = await invoke();
+                            logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
+                            recordCall(result, 'ok');
+                            return result;
+                        } catch (err) {
+                            logger.error(
+                                `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
+                                err instanceof Error ? err : undefined,
                             );
-                    } else {
-                        invoke = () => withPhaseSinks([mcpSink], () => handler(args));
-                    }
-                    try {
-                        const result = await invoke();
-                        logger.debug(`[MCP] ${name} ok in ${Date.now() - started}ms`);
-                        recordCall(result, 'ok');
-                        return result;
-                    } catch (err) {
-                        logger.error(
-                            `[MCP] ${name} failed: ${err instanceof Error ? err.message : String(err)}`,
-                            err instanceof Error ? err : undefined,
-                        );
-                        recordCall(undefined, 'error');
-                        throw err;
-                    }
-                }),
+                            recordCall(undefined, 'error');
+                            throw err;
+                        }
+                    }),
             );
         },
     };
@@ -421,7 +440,7 @@ export interface InExtensionMcpServerOptions {
      * tools are logged too. Injected by the extension so this module stays free
      * of vscode/handler-map imports.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     /**
      * @param scopedProjectDir - absolute project path the CONNECTION is scoped
      *   to, when its session directory sits inside a project (connectionScope);
@@ -445,7 +464,7 @@ export interface InExtensionMcpServerOptions {
     // its own implementation, which is exactly the silenced-type-error shape.
     longRunningNotifier?: (
         toolName: string,
-        run: (report: (message: string) => void) => Promise<unknown>,
+        run: (report: (message: string) => void) => Promise<unknown>
     ) => Promise<unknown>;
     /**
      * Native consent for destructive calls (injected — this module stays
@@ -458,8 +477,19 @@ export interface InExtensionMcpServerOptions {
     consentGate?: (
         toolName: string,
         args: unknown,
-        description?: string,
+        description?: string
     ) => Promise<ConsentVerdict>;
+    /**
+     * Standing consent, read LIVE per call (injected — vscode-free module):
+     * true when `demoBuilder.ai.requireAgentConsent` is OFF, in which case a
+     * destructive call proceeds without the chat ask or the modal. Checked
+     * BEFORE the chat ask, necessarily: headless `claude -p` DECLARES
+     * elicitation and auto-declines it (measured 2026-08-28, refusal in 12ms),
+     * so a chat-first order turned the owner's standing grant into a
+     * guaranteed refusal — both ERP journeys built green and could not tear
+     * down.
+     */
+    consentNotRequired?: () => boolean;
     /**
      * Evaluation Mode's dry run, read LIVE per call (injected, same reason as
      * `consentGate` — this module stays vscode-free).
@@ -656,7 +686,9 @@ export class InExtensionMcpServer {
         const startedAt = Date.now();
         this.logger.debug(
             `[MCP] client connected (conn=${connId}` +
-                (scopedProjectDir ? `, session-scoped to ${scopedProjectDir})` : ', pointer-scoped)'),
+                (scopedProjectDir
+                    ? `, session-scoped to ${scopedProjectDir})`
+                    : ', pointer-scoped)'),
         );
         // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -674,6 +706,7 @@ export class InExtensionMcpServer {
             this.options.consentGate,
             this.options.trace,
             this.options.projectShape,
+            this.options.consentNotRequired,
         );
         registerProjectTools(logged, this.projectsDir, this.options.credentials);
         this.options.registerExtraTools?.(logged, scopedProjectDir);

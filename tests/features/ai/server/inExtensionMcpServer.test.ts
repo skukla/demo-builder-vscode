@@ -130,7 +130,15 @@ describe('InExtensionMcpServer', () => {
         const registerExtra = (mcpServer: unknown) =>
             registerDescriptorTools(
                 mcpServer,
-                [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping', readOnly: true }],
+                [
+                    {
+                        tool: 'ping_tool',
+                        description: 'test',
+                        map: extraMap,
+                        type: 'ping',
+                        readOnly: true,
+                    },
+                ],
                 () => ({}) as HandlerContext
             );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
@@ -201,7 +209,11 @@ describe('InExtensionMcpServer', () => {
 
         const debug = logger.debug as jest.Mock;
         const ids = debug.mock.calls
-            .map(([msg]) => /\[MCP\] client connected \(conn=(\d+), [a-z-]+-scoped(?: to [^)]+)?\)/.exec(String(msg)))
+            .map(([msg]) =>
+                /\[MCP\] client connected \(conn=(\d+), [a-z-]+-scoped(?: to [^)]+)?\)/.exec(
+                    String(msg)
+                )
+            )
             .filter((m): m is RegExpExecArray => m !== null)
             .map((m) => Number(m[1]));
         expect(ids).toHaveLength(2);
@@ -390,7 +402,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
     it('every tool that interrupts has authored copy — no dialog without words', () => {
         // Membership IS the copy table, so a dialog with no written text is not
         // expressible. This pins that the two cannot drift apart.
-         
+
         const { AGENT_ALERT_COPY } = require('@/features/ai/server/agentAlertCopy');
         for (const [tool, copy] of Object.entries(AGENT_ALERT_COPY)) {
             expect(callRequestsConsent(tool, { confirm: true })).toBe(true);
@@ -435,6 +447,33 @@ describe('agent-operation visibility (the notifier seam)', () => {
             expect.any(String)
         );
         expect(notified).toEqual([]);
+    });
+
+    it('standing consent (consentNotRequired) beats BOTH the chat ask and the gate', async () => {
+        // The 2026-08-28 regression: headless `claude -p` declares elicitation
+        // and auto-declines it, so with the chat ask first the owner's
+        // requireAgentConsent:false could never take effect — both ERP
+        // journeys built green and were refused their own teardown. The
+        // standing grant must short-circuit BEFORE any ask happens.
+        const consentGate = jest.fn(async () => ({
+            allowed: false as const,
+            refusal: { content: [{ type: 'text' as const, text: 'should never be consulted' }] },
+        }));
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            consentGate,
+            consentNotRequired: () => true,
+        });
+        await server.start();
+
+        // The refusal NOT arriving proves neither ask ran; the handler's own
+        // failure on the empty projects dir is the expected outcome instead.
+        const result = await callToolOverSocket(socketPath, 'remove_block_from_library', {
+            projectName: 'nope',
+            blockId: 'hero',
+            confirm: true,
+        }).catch((e: Error) => e.message);
+        expect(result).not.toBe('should never be consulted');
+        expect(consentGate).not.toHaveBeenCalled();
     });
 
     it('an allowed gate proceeds into the notifier; confirm-less calls never consult the gate', async () => {
