@@ -94,7 +94,9 @@ describe('deployMeshCreateOrUpdate', () => {
 
         await deployMeshCreateOrUpdate(MESH_PATH, executor, logger);
 
-        expect(mockFetchMeshInfo).toHaveBeenCalledWith(logger);
+        // The probe now receives the executor too (meshVerifier converted in
+        // the same batch) — the assertion tracks the real call shape.
+        expect(mockFetchMeshInfo).toHaveBeenCalledWith(executor, logger);
         expect(mockFetchMeshInfo).toHaveBeenCalledTimes(1);
     });
 

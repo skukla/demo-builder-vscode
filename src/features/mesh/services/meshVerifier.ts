@@ -6,7 +6,6 @@
  * Backward-compatible function exports use a lazy-loaded default logger.
  */
 
-import { ServiceLocator } from '@/core/di';
 import { getLogger } from '@/core/logging';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
@@ -16,6 +15,7 @@ import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
+import type { CommandExecutor } from '@/core/shell';
 
 export type { MeshVerificationResult };
 
@@ -39,16 +39,23 @@ function getDefaultLogger(): Logger {
  */
 export class MeshVerifierService {
     private logger: Logger;
+    private commandManager: CommandExecutor;
 
-    constructor(logger: Logger) {
+    /**
+     * ADR-015: the executor joins the logger as an injected dependency — the
+     * class already used constructor injection, so this completes the pattern
+     * rather than introducing one.
+     */
+    constructor(logger: Logger, commandManager: CommandExecutor) {
         this.logger = logger;
+        this.commandManager = commandManager;
     }
 
     /**
      * Verify that a mesh actually exists in Adobe I/O
      */
     async verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
-        return verifyMeshDeploymentImpl(project, this.logger);
+        return verifyMeshDeploymentImpl(project, this.commandManager, this.logger);
     }
 
     /**
@@ -69,8 +76,10 @@ export class MeshVerifierService {
 /**
  * Implementation: Fetch mesh info from Adobe I/O via aio api-mesh:describe
  */
-async function fetchMeshInfoFromAdobeIOImpl(logger: Logger): Promise<{ meshId?: string; endpoint?: string } | null> {
-    const commandManager = ServiceLocator.getCommandExecutor();
+async function fetchMeshInfoFromAdobeIOImpl(
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<{ meshId?: string; endpoint?: string } | null> {
 
     try {
         const result = await commandManager.execute(
@@ -135,10 +144,14 @@ async function fetchMeshInfoFromAdobeIOImpl(logger: Logger): Promise<{ meshId?: 
 /**
  * Implementation: Attempt to recover missing mesh ID by fetching from Adobe I/O
  */
-async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Logger): Promise<string | null> {
+async function tryRecoverMeshIdImpl(
+    meshComponent: ComponentInstance,
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<string | null> {
     logger.debug('[Mesh Verifier] Attempting to recover missing mesh ID from Adobe I/O...');
 
-    const meshInfo = await fetchMeshInfoFromAdobeIOImpl(logger);
+    const meshInfo = await fetchMeshInfoFromAdobeIOImpl(commandManager, logger);
 
     if (meshInfo?.meshId) {
         logger.debug('[Mesh Verifier] Successfully recovered mesh ID from Adobe I/O');
@@ -163,7 +176,11 @@ async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Lo
 /**
  * Implementation: Verify that a mesh actually exists in Adobe I/O
  */
-async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promise<MeshVerificationResult> {
+async function verifyMeshDeploymentImpl(
+    project: Project,
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<MeshVerificationResult> {
     const meshComponent = getMeshComponentInstance(project);
 
     // No mesh component = no mesh
@@ -177,7 +194,7 @@ async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promi
 
     if (!meshId) {
         // Attempt to recover mesh ID from Adobe I/O (self-healing for older projects)
-        meshId = await tryRecoverMeshIdImpl(meshComponent, logger);
+        meshId = await tryRecoverMeshIdImpl(meshComponent, commandManager, logger);
         if (meshId) {
             meshIdRecovered = true;
         } else {
@@ -189,8 +206,6 @@ async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promi
     }
 
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
-
         // Call aio api-mesh:describe to verify mesh exists
         // Uses Node version defined in commerce-mesh component configuration
         const result = await commandManager.execute(
@@ -351,16 +366,22 @@ function syncMeshStatusImpl(
 /**
  * Backward-compatible export: Verify that a mesh actually exists in Adobe I/O
  */
-export async function verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
-    return verifyMeshDeploymentImpl(project, getDefaultLogger());
+export async function verifyMeshDeployment(
+    project: Project,
+    commandManager: CommandExecutor,
+): Promise<MeshVerificationResult> {
+    return verifyMeshDeploymentImpl(project, commandManager, getDefaultLogger());
 }
 
 /**
  * Fetch mesh info (meshId, endpoint) from Adobe I/O via aio api-mesh:describe.
  * Used by reset flows to recover mesh ID when not stored in project metadata.
  */
-export async function fetchMeshInfoFromAdobeIO(logger: Logger): Promise<{ meshId?: string; endpoint?: string } | null> {
-    return fetchMeshInfoFromAdobeIOImpl(logger);
+export async function fetchMeshInfoFromAdobeIO(
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<{ meshId?: string; endpoint?: string } | null> {
+    return fetchMeshInfoFromAdobeIOImpl(commandManager, logger);
 }
 
 /**

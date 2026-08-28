@@ -65,7 +65,7 @@ describe('MeshVerifierService - DI Pattern', () => {
         ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
 
         // Create service with injected logger
-        service = new MeshVerifierService(mockLogger);
+        service = new MeshVerifierService(mockLogger, mockCommandManager);
     });
 
     describe('Constructor Injection', () => {

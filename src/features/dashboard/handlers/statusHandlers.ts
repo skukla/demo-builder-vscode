@@ -177,7 +177,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 // request.
                 verify: (p) =>
                     withOrgContext(buildOrgTargetFromProjectAdobe(p.adobe), () =>
-                        meshVerifier.verifyMeshDeployment(p),
+                        meshVerifier.verifyMeshDeployment(
+                            p,
+                            ServiceLocator.getCommandExecutor(),
+                        ),
                     ),
                 syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
                 markDirty: (key) => context.stateManager.markDirty(key),

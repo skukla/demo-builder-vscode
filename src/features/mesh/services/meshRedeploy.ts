@@ -41,7 +41,7 @@ export async function deployMeshCreateOrUpdate(
     logger: Logger,
     onProgress?: (message: string, subMessage?: string) => void,
 ): Promise<MeshDeploymentResult> {
-    const meshInfo = await fetchMeshInfoFromAdobeIO(logger);
+    const meshInfo = await fetchMeshInfoFromAdobeIO(commandManager, logger);
     const existingMeshId = meshInfo?.meshId || '';
     return deployMeshComponent(meshPath, commandManager, logger, onProgress, existingMeshId);
 }
