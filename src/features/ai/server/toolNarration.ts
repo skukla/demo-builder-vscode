@@ -163,6 +163,13 @@ export const TOOL_NARRATION: Record<string, string> = {
     remove_integration: 'Removing the integration',
     // Display name only — "nothing redeploys".
     rename_integration: 'Renaming the integration',
+
+    // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
+    list_event_providers: 'Listing the event providers',
+    create_event_provider: 'Creating the event provider',
+    create_event_registration: 'Creating the event registration',
+    delete_event_registration: 'Deleting the event registration',
+    delete_event_provider: 'Deleting the event provider',
     install_integration: 'Installing the app into Commerce',
     get_integration_install_status: 'Reading the Commerce install state',
     get_agent_trace: 'Reading the agent activity record',

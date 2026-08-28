@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Event-provider lifecycle tooling — so eventing round-trips to zero

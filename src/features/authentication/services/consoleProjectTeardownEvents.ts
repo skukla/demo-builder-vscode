@@ -66,8 +66,11 @@ async function ensureManagementApiSubscribed(
  * Run an events-API call with subscribe-on-403 recovery: on access denial,
  * `ensureAccess` (subscribe) then retry on {@link PROPAGATION_RETRY_DELAYS}.
  * Non-access errors and exhausted retries propagate to the caller.
+ *
+ * Exported since 2026-08-28: the event-provider lifecycle service (AB-6)
+ * needs the identical recovery, and two copies of a retry policy drift.
  */
-async function withEventsAccess<T>(
+export async function withEventsAccess<T>(
     operation: () => Promise<T>,
     ensureAccess: () => Promise<void>,
 ): Promise<T> {
@@ -175,7 +178,11 @@ async function escalateCredentialLessWorkspaces(
                 ctx.target.projectId,
                 workspaceId,
             );
-            await ensureManagementApiSubscribed(ctx.deps, ctx.target.orgId, credential.idIntegration);
+            await ensureManagementApiSubscribed(
+                ctx.deps,
+                ctx.target.orgId,
+                credential.idIntegration,
+            );
             ctx.credentials.set(workspaceId, credential);
         } catch (error) {
             ctx.items.push({

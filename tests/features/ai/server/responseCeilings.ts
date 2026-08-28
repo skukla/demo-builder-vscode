@@ -47,7 +47,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why:
             'Measured live 2026-08-28: one entry serializes to ~180-230B (446B for a ' +
             '2-entry response); the tool caps entries at 200, so worst case is ~46KB ' +
-            'plus the envelope. The cap is this ceiling\'s basis — raising MAX_LIMIT ' +
+            "plus the envelope. The cap is this ceiling's basis — raising MAX_LIMIT " +
             'must raise this with it.',
     },
 
@@ -186,6 +186,29 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     create_adobe_project: {
         bytes: 1_000,
         why: 'created project id + name, or a refusal explaining the likely cause',
+    },
+    list_event_providers: {
+        bytes: 20_000,
+        why:
+            "This workspace's providers + registrations with a routing note; a workspace " +
+            'holds a handful of each (the kit, the largest known producer, makes ~23 ' +
+            'registrations) — far under this ceiling.',
+    },
+    create_event_provider: {
+        bytes: 1_000,
+        why: 'providerId + created flag + a verify hint',
+    },
+    create_event_registration: {
+        bytes: 1_000,
+        why: 'registrationId + created flag + a verify hint',
+    },
+    delete_event_registration: {
+        bytes: 1_000,
+        why: 'one collected outcome item (deleted/failed + reason)',
+    },
+    delete_event_provider: {
+        bytes: 4_000,
+        why: 'collected outcome items — the named registrations first, then the provider',
     },
     create_adobe_workspace: {
         bytes: 1_000,

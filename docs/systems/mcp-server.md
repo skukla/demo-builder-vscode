@@ -486,6 +486,22 @@ assumed. A PaaS project's headers do carry `x-api-key`
 `config.json` to every browser that loads the storefront, and withholding it
 would break every PaaS Catalog Service call while protecting nothing.
 
+### I/O Events lifecycle (AB-6 — the generic lane)
+| Tool | File | Notes |
+|---|---|---|
+| `list_event_providers` | `eventProviderTools.ts` | Read-only. This workspace's 3rd-party providers (via `rel:update` binding) + all its registrations. |
+| `create_event_provider` | `eventProviderTools.ts` | Idempotent by deterministic `instance_id` (find-before-create); pins the 3rd-party `provider_metadata` so Console teardown keeps recognizing ownership. |
+| `create_event_registration` | `eventProviderTools.ts` | Idempotent by name; `client_id` is always the workspace S2S credential. |
+| `delete_event_registration` | `eventProviderTools.ts` | Destructive; confirm-gated + consent copy. |
+| `delete_event_provider` | `eventProviderTools.ts` | Destructive; confirm-gated + consent copy. Deletes named registrations FIRST (delete-with-live-registrations is undocumented upstream). |
+
+All five scope to the CURRENT PROJECT's Console workspace (`project.adobe`) — no
+select-chain, deliberately: eventing belongs to the project. Starter-kit apps
+manage their own eventing via App Management install/uninstall — deploy/remove
+the integration instead of using these. Service:
+`features/authentication/services/eventProviderLifecycle.ts` (subscribe-on-403
+recovery shared with Console teardown).
+
 ### Cloud resources & storefront content
 | Tool | File | Notes |
 |---|---|---|

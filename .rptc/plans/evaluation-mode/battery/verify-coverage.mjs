@@ -62,7 +62,15 @@ if (existsSync(dir)) {
 
 // Routes record demo-builder tools BARE and others fully qualified, so compare
 // on both forms rather than reporting a false gap.
-const covers = (t) => allowed.has(t) || allowed.has(`mcp__demo-builder__${t}`);
+// Bare-name equivalence: results sometimes record a sibling tool WITHOUT its
+// server prefix (seen with the 2026-08-28 cross-routing runs recording
+// `list_design_tokens` bare). A bare name is covered when ANY allowed
+// prefixed tool shares it — coarse, but a false "covered" here requires two
+// servers shipping same-named tools where only one is allowed, which the
+// enumerate step would surface as a duplicate anyway.
+const allowedBare = new Set([...allowed].map((t) => t.replace(/^mcp__[^_]+(?:[^_]|_(?!_))*__/, '')));
+const covers = (t) =>
+    allowed.has(t) || allowed.has(`mcp__demo-builder__${t}`) || allowedBare.has(t);
 
 // Tools from the USER'S GLOBAL config, recorded before `--strict-mcp-config` was
 // added. A producer's project does not have them, so their absence is the fix

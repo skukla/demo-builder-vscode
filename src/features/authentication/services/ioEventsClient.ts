@@ -39,12 +39,12 @@ export const MAX_PROVIDER_PAGES = 200;
  * the only kind that can exist under our Console projects, and therefore the
  * only kind teardown may consider for deletion.
  *
- * NOT "the kind the extension creates": verified 2026-08-27, this extension
- * has NO create path for event providers anywhere — this client is
- * deliberately list/delete-only, built for teardown. Anything here was
- * created by an app's own onboarding (or App Management) inside a project we
- * provisioned. If a create path ever ships (the App Management work), revisit
- * whether this filter is still the right ownership test.
+ * Revisited 2026-08-28 when the create path shipped (AB-6): the filter STAYS
+ * correct BY CONSTRUCTION — the lifecycle service pins
+ * `provider_metadata: THIRD_PARTY_PROVIDER_METADATA` on every provider it
+ * creates (eventProviderLifecycle.ts), so both kinds that can exist under our
+ * Console projects (app-onboarded and extension-created) carry this value and
+ * it remains the right ownership test for teardown's "may I delete this".
  */
 export const THIRD_PARTY_PROVIDER_METADATA = '3rd_party_custom_events';
 
@@ -87,6 +87,38 @@ export interface EventRegistrationSummary {
     name?: string;
 }
 
+/** Body for POST …/providers (research §3.1; matches @adobe/aio-lib-events). */
+export interface CreateProviderBody {
+    label: string;
+    description?: string;
+    docs_url?: string;
+    /** Deterministic instance id — the find-before-create key (kit model). */
+    instance_id?: string;
+    provider_metadata?: string;
+    data_residency_region?: string;
+}
+
+/** Body for POST …/providers/{id}/eventmetadata. */
+export interface CreateEventMetadataBody {
+    event_code: string;
+    label: string;
+    description: string;
+    /** Base64-encoded JSON sample payload. */
+    sample_event_template?: string;
+}
+
+/** Body for POST …/registrations. */
+export interface CreateRegistrationBody {
+    /** The workspace S2S credential's client_id — also sent as x-api-key. */
+    client_id: string;
+    name: string;
+    description: string;
+    delivery_type: 'webhook' | 'webhook_batch' | 'journal';
+    webhook_url?: string;
+    events_of_interest: Array<{ provider_id: string; event_code: string }>;
+    enabled?: boolean;
+}
+
 /** Raw provider entry from GET /events/{orgId}/providers (unfiltered). */
 export interface RawProvider {
     id?: string;
@@ -117,7 +149,10 @@ interface HalListBody {
  * Message is sanitized — status + operation label only, never auth material.
  */
 export class IoEventsApiError extends Error {
-    constructor(message: string, readonly status: number) {
+    constructor(
+        message: string,
+        readonly status: number,
+    ) {
         super(message);
         this.name = 'IoEventsApiError';
     }
@@ -203,9 +238,10 @@ export class IoEventsClient {
      * `provider_metadata` and binding is the caller's job). Follows
      * `_links.next` pagination defensively, capped at {@link MAX_PROVIDER_PAGES}.
      */
-    async listProviders(orgId: string): Promise<RawProvider[]> {
+    async listProviders(orgId: string, opts?: { instanceId?: string }): Promise<RawProvider[]> {
         const providers: RawProvider[] = [];
-        let url: string | undefined = `${IO_EVENTS_BASE_URL}/${orgId}/providers`;
+        const query = opts?.instanceId ? `?instanceId=${encodeURIComponent(opts.instanceId)}` : '';
+        let url: string | undefined = `${IO_EVENTS_BASE_URL}/${orgId}/providers${query}`;
 
         for (let page = 0; page < MAX_PROVIDER_PAGES && url; page++) {
             const body = await this.getJson(url, 'List providers');
@@ -254,6 +290,68 @@ export class IoEventsClient {
         await this.delete(url, 'Delete registration');
     }
 
+    /**
+     * Create an event provider in a workspace (AB-6 — the create half; the
+     * client was teardown-only until 2026-08-28). Find-before-create is the
+     * CALLER's job via `listProviders(orgId, { instanceId })`.
+     */
+    async createProvider(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        body: CreateProviderBody,
+    ): Promise<RawProvider> {
+        const url = `${IO_EVENTS_BASE_URL}/${orgId}/${projectId}/${workspaceId}/providers`;
+        return (await this.postJson(url, body, 'Create provider')) as RawProvider;
+    }
+
+    /** Create event metadata (one event type) on a provider. */
+    async createEventMetadata(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        providerId: string,
+        body: CreateEventMetadataBody,
+    ): Promise<void> {
+        const url =
+            `${IO_EVENTS_BASE_URL}/${orgId}/${projectId}/${workspaceId}` +
+            `/providers/${providerId}/eventmetadata`;
+        await this.postJson(url, body, 'Create event metadata');
+    }
+
+    /** Create an event registration; returns the normalized `{ id, name? }`. */
+    async createRegistration(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        body: CreateRegistrationBody,
+    ): Promise<EventRegistrationSummary> {
+        const url = `${IO_EVENTS_BASE_URL}/${orgId}/${projectId}/${workspaceId}/registrations`;
+        const created = (await this.postJson(url, body, 'Create registration')) as {
+            registration_id?: string;
+            id?: string;
+            name?: string;
+        };
+        return {
+            id: (created.registration_id ?? created.id) as string,
+            name: created.name,
+        };
+    }
+
+    /** Delete one event-metadata entry. 404 (already gone) resolves. */
+    async deleteEventMetadata(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+        providerId: string,
+        eventCode: string,
+    ): Promise<void> {
+        const url =
+            `${IO_EVENTS_BASE_URL}/${orgId}/${projectId}/${workspaceId}` +
+            `/providers/${providerId}/eventmetadata/${eventCode}`;
+        await this.delete(url, 'Delete event metadata');
+    }
+
     /** Delete one event provider. 404 (already gone) resolves. */
     async deleteProvider(
         orgId: string,
@@ -288,6 +386,30 @@ export class IoEventsClient {
         });
     }
 
+    /** POST a JSON body; parses the JSON response, sanitized error on non-2xx. */
+    private async postJson(url: string, body: unknown, label: string): Promise<unknown> {
+        const response = await this.fetchImpl(url, {
+            method: 'POST',
+            headers: { ...this.buildHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+        });
+        if (!response.ok) {
+            throw new IoEventsApiError(
+                `${label} failed (HTTP ${response.status})`,
+                response.status,
+            );
+        }
+        try {
+            return await response.json();
+        } catch {
+            throw new IoEventsApiError(
+                `${label} returned an unexpected non-JSON response (HTTP ${response.status})`,
+                response.status,
+            );
+        }
+    }
+
     /** GET a URL and parse its HAL body; throws IoEventsApiError on non-2xx. */
     private async getJson(url: string, label: string): Promise<HalListBody> {
         const response = await this.request('GET', url);
@@ -297,7 +419,10 @@ export class IoEventsClient {
     /** Validate 2xx and parse JSON; sanitized IoEventsApiError otherwise. */
     private async parseJson(response: Response, label: string): Promise<HalListBody> {
         if (!response.ok) {
-            throw new IoEventsApiError(`${label} failed (HTTP ${response.status})`, response.status);
+            throw new IoEventsApiError(
+                `${label} failed (HTTP ${response.status})`,
+                response.status,
+            );
         }
         try {
             return (await response.json()) as HalListBody;

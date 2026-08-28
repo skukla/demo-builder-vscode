@@ -23,6 +23,8 @@ import {
     createAgentConsentGate,
     createAgentOperationNotifier,
 } from '@/features/ai/server/agentOperationNotifier';
+import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
@@ -32,16 +34,13 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
-import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
-import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
-import { narrationFor } from '@/features/ai/server/toolNarration';
-import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     InExtensionMcpServer,
@@ -50,11 +49,13 @@ import {
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { narrationFor } from '@/features/ai/server/toolNarration';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
@@ -691,6 +692,9 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
                 registerAdobeResourceTools(mcpServer, connCtxFactory);
+                // I/O Events lifecycle (AB-6) — scoped to the current
+                // project's Console workspace; deletes are consent-gated.
+                registerEventProviderTools(mcpServer, connCtxFactory, () => authenticationService);
                 registerConfigureProjectTool(mcpServer, connState);
                 registerCloudResourceTools(mcpServer, connCtxFactory);
                 registerStorefrontTools(mcpServer, connCtxFactory);
