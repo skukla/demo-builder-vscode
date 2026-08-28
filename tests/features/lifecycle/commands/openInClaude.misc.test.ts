@@ -14,7 +14,7 @@ import {
     makeStateManager,
     makeGlobalState,
     makeOpenInClaudeContext,
-    makeProject,
+    makeOpenInClaudeProject,
 } from './openInClaude.testkit';
 
 // The home Chat always launches at the projects root. Pin the root so the
@@ -49,7 +49,7 @@ describe('OpenInClaudeCommand', () => {
         it('logs the projects-root cwd in the launch path', async () => {
             setupVscodeMocks();
             const logger = makeLogger();
-            const project = makeProject({ name: 'my-demo-project' });
+            const project = makeOpenInClaudeProject({ name: 'my-demo-project' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
@@ -69,11 +69,11 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 logger as never
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             const allInfo = logger.info.mock.calls.flat().join(' ');
             expect(allInfo).toMatch(/terminal spawned/);
@@ -87,11 +87,11 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 logger as never
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             const allInfo = logger.info.mock.calls.flat().join(' ');
             expect(allInfo).toMatch(/terminal reused/);
@@ -112,11 +112,11 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 logger as never
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(logger.error).toHaveBeenCalled();
             const errorShown =
@@ -135,7 +135,7 @@ describe('OpenInClaudeCommand', () => {
             // The home Chat does not resolve a project; it always opens at the
             // projects root so one session addresses any project by name via MCP.
             const mocks = setupVscodeMocks({ workspaceFolderPath: '/p/state' });
-            const project = makeProject({ name: 'from-state', path: '/p/state' });
+            const project = makeOpenInClaudeProject({ name: 'from-state', path: '/p/state' });
             const stateManager = makeStateManager(project);
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),

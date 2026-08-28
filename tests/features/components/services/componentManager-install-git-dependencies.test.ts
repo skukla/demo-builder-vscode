@@ -22,7 +22,7 @@ import { CommandExecutor } from '@/core/shell';
 import {
     createMockCommandExecutor,
     createMockLogger,
-    createMockProject,
+    createComponentServiceProject,
     mockSuccessfulExecution,
     mockFileNotFound,
     mockFileExists
@@ -46,7 +46,7 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
         // Create mocks
         mockLogger = createMockLogger();
-        mockProject = createMockProject();
+        mockProject = createComponentServiceProject();
         mockCommandExecutor = createMockCommandExecutor();
 
         // Mock ServiceLocator

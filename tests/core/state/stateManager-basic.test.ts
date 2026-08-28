@@ -7,7 +7,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, mockStateFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
 // Re-declare mocks to ensure proper typing and hoisting
 jest.mock('vscode');
@@ -110,7 +110,7 @@ describe('StateManager - Basic Operations', () => {
     describe('getCurrentProject', () => {
         it('should return current project when exists', async () => {
             const { stateManager } = testMocks;
-            const project = createMockProject();
+            const project = createStateManagerProject();
             const mockState = {
                 version: 1,
                 currentProject: project,
@@ -159,7 +159,7 @@ describe('StateManager - Basic Operations', () => {
     describe('hasProject', () => {
         it('should return true when project exists', async () => {
             const { stateManager } = testMocks;
-            const project = createMockProject();
+            const project = createStateManagerProject();
             const mockState = {
                 version: 1,
                 currentProject: project,

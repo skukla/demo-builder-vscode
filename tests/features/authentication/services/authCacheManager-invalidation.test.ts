@@ -1,7 +1,7 @@
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import {
     createMockOrg,
-    createMockProject,
+    createMockAdobeProject,
     createMockWorkspace,
     createMockConsoleWhere,
 } from './authCacheManager.testUtils';
@@ -74,7 +74,7 @@ describe('AuthCacheManager - Invalidation Operations', () => {
     describe('clearSessionCaches', () => {
         it('should clear all session caches', () => {
             const mockOrg = createMockOrg();
-            const mockProject = createMockProject();
+            const mockProject = createMockAdobeProject();
             const mockWorkspace = createMockWorkspace();
 
             cacheManager.setCachedOrganization(mockOrg);
@@ -135,7 +135,7 @@ describe('AuthCacheManager - Invalidation Operations', () => {
     describe('clearAll', () => {
         it('should clear all caches', () => {
             const mockOrg = createMockOrg();
-            const mockProject = createMockProject();
+            const mockProject = createMockAdobeProject();
             const mockWorkspace = createMockWorkspace();
             const mockConsoleWhere = createMockConsoleWhere();
 

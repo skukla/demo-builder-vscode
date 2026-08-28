@@ -28,7 +28,7 @@ import {
     detectFrontendChanges,
 } from '@/features/mesh/services/stalenessDetector';
 import {
-    createMockProject,
+    createStalenessProject,
     createMockProjectWithMesh,
     createMockProjectWithFrontend,
     setupMockFileSystemWithHash,
@@ -176,7 +176,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should return hasChanges=true when no previous state', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -202,7 +202,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should return no changes when no mesh component', async () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             const result = await detectMeshChanges(project, {}, meshDeps);
 
@@ -215,7 +215,7 @@ describe('StalenessDetector - Edge Cases', () => {
             // Bug fix: ACCS projects have PaaS vars (ADOBE_CATALOG_API_KEY, etc.)
             // in eds-storefront componentConfigs. The staleness detector must only
             // compare ACCS-relevant env vars for eds-accs-mesh, ignoring PaaS vars.
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'eds-accs-mesh': {
                         id: 'eds-accs-mesh',
@@ -271,7 +271,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should detect ACCS env var changes for eds-accs-mesh', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'eds-accs-mesh': {
                         id: 'eds-accs-mesh',
@@ -320,7 +320,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
     describe('updateMeshState', () => {
         it('should update mesh state after deployment (keyed entry; legacy write retired, Step 07)', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -348,7 +348,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should do nothing when no mesh component', async () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             await updateMeshState(project);
 
@@ -372,7 +372,7 @@ describe('StalenessDetector - Edge Cases', () => {
             };
 
             it('should write the full deploy outcome onto the keyed mesh entry', async () => {
-                const project = createMockProject({ componentInstances: meshInstances });
+                const project = createStalenessProject({ componentInstances: meshInstances });
                 const envFileContent = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql\n';
                 setupMockFileSystemWithHash('abc123', envFileContent);
 
@@ -391,7 +391,7 @@ describe('StalenessDetector - Edge Cases', () => {
             });
 
             it('should land on the migrated "mesh" key instead of creating a twin', async () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     componentInstances: meshInstances,
                     appBuilderComponents: {
                         mesh: {
@@ -414,7 +414,7 @@ describe('StalenessDetector - Edge Cases', () => {
             });
 
             it('should clear a previous "Later" decline on the keyed entry', async () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     componentInstances: meshInstances,
                     appBuilderComponents: {
                         mesh: {
@@ -437,7 +437,7 @@ describe('StalenessDetector - Edge Cases', () => {
             });
 
             it('should refresh a provided MESH_ENDPOINT with the fresh endpoint', async () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     componentInstances: meshInstances,
                     appBuilderComponents: {
                         mesh: {
@@ -524,7 +524,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should return false when no frontend component', () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             const result = detectFrontendChanges(project);
 

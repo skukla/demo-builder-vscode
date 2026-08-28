@@ -16,7 +16,7 @@ import {
     handleOpenBrowser,
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
-import { setupMocks, createMockProject } from './dashboardHandlers.testUtils';
+import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
 
 // Mock vscode
 jest.mock(
@@ -130,7 +130,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open browser when no frontend port', async () => {
-            const projectWithoutPort = createMockProject({
+            const projectWithoutPort = createDashboardProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -173,7 +173,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should use correct port from frontend component', async () => {
-            const projectWithCustomPort = createMockProject({
+            const projectWithCustomPort = createDashboardProject({
                 componentInstances: {
                     headless: {
                         id: 'headless',

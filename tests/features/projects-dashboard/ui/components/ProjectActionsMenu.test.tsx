@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectActionsMenu } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
 import type { ProjectActions } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
-import { createMockProject } from '../../testUtils';
+import { createProjectsDashboardProject } from '../../testUtils';
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -31,7 +31,7 @@ const menuItemLabels = (): string[] =>
 
 /** An EDS project — isEdsProject keys off an `eds-` selectedStack. */
 const edsProject = (name = 'EDS Project') =>
-    createMockProject({ name, selectedStack: 'eds-dalive' } as any);
+    createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' } as any);
 
 /**
  * An EDS project (the resolved authoring experience no longer rides in the
@@ -40,14 +40,14 @@ const edsProject = (name = 'EDS Project') =>
 const edsProjectWithExperience = (
     _experience: 'da-live-classic' | 'experience-workspace',
     name = 'EDS Project'
-) => createMockProject({ name, selectedStack: 'eds-dalive' } as any);
+) => createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' } as any);
 
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
         it('renders the kebab trigger when at least one action is wired', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onDelete: jest.fn() }}
                 />
             );
@@ -57,7 +57,7 @@ describe('ProjectActionsMenu', () => {
         it('renders no items for callbacks that are absent', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onDelete: jest.fn() }}
                 />
             );
@@ -72,7 +72,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('invokes the matching callback with the project when an item is selected', () => {
-            const project = createMockProject({ name: 'Test' });
+            const project = createProjectsDashboardProject({ name: 'Test' });
             const onDelete = jest.fn();
             renderWithProvider(<ProjectActionsMenu project={project} actions={{ onDelete }} />);
             openMenu();
@@ -88,7 +88,7 @@ describe('ProjectActionsMenu', () => {
             const actions: ProjectActions = { onStartDemo: jest.fn(), onOpenAi: jest.fn() };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     isRunning={false}
                     actions={actions}
                 />
@@ -108,7 +108,7 @@ describe('ProjectActionsMenu', () => {
             };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     isRunning
                     actions={actions}
                 />
@@ -130,7 +130,7 @@ describe('ProjectActionsMenu', () => {
             };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={actions}
                 />
             );
@@ -150,7 +150,7 @@ describe('ProjectActionsMenu', () => {
         it('keeps Reset a normal Manage action, not in the submenu', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onResetProject: jest.fn() }}
                 />
             );
@@ -163,7 +163,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('flips the pin label to Unpin when the project is pinned', () => {
-            const project = createMockProject({ name: 'Test', pinned: true } as any);
+            const project = createProjectsDashboardProject({ name: 'Test', pinned: true } as any);
             renderWithProvider(
                 <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />
             );
@@ -178,7 +178,7 @@ describe('ProjectActionsMenu', () => {
         it('puts Export straight in the menu, with no submenu wrapper', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onExport: jest.fn() }}
                 />
             );
@@ -192,7 +192,7 @@ describe('ProjectActionsMenu', () => {
             const onExport = jest.fn();
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onExport }}
                 />
             );
@@ -206,7 +206,7 @@ describe('ProjectActionsMenu', () => {
         it('no longer offers Copy Path', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onExport: jest.fn() }}
                 />
             );
@@ -218,7 +218,7 @@ describe('ProjectActionsMenu', () => {
         it('offers no deploy actions either — those live on their own surfaces', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test', meshStatusSummary: 'stale' })}
+                    project={createProjectsDashboardProject({ name: 'Test', meshStatusSummary: 'stale' })}
                     actions={
                         // onRedeployMesh is deliberately NOT in ProjectActions —
                         // the deploy surfaces own it now. The cast keeps this test
@@ -251,7 +251,7 @@ describe('ProjectActionsMenu', () => {
             };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={actions}
                 />
             );
@@ -265,7 +265,7 @@ describe('ProjectActionsMenu', () => {
             const actions: ProjectActions = { onDelete: jest.fn() };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={actions}
                 />
             );
@@ -337,7 +337,7 @@ describe('ProjectActionsMenu', () => {
             };
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={actions}
                 />
             );
@@ -364,7 +364,7 @@ describe('ProjectActionsMenu', () => {
         it('renders Open AI in the USE group when wired', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onOpenAi: jest.fn() }}
                 />
             );
@@ -378,7 +378,7 @@ describe('ProjectActionsMenu', () => {
         it('does not render Open AI when the callback is omitted', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onDelete: jest.fn() }}
                 />
             );
@@ -388,7 +388,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('invokes onOpenAi with the project when selected', () => {
-            const project = createMockProject({ name: 'AI Target' });
+            const project = createProjectsDashboardProject({ name: 'AI Target' });
             const onOpenAi = jest.fn();
             renderWithProvider(<ProjectActionsMenu project={project} actions={{ onOpenAi }} />);
             openMenu();
@@ -413,7 +413,7 @@ describe('ProjectActionsMenu', () => {
         it('renders Manage Commerce in the USE group when wired (non-EDS)', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onOpenAdminPanel: jest.fn() }}
                 />
             );
@@ -439,7 +439,7 @@ describe('ProjectActionsMenu', () => {
         it('does not render Manage Commerce when the callback is omitted', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
+                    project={createProjectsDashboardProject({ name: 'Test' })}
                     actions={{ onDelete: jest.fn() }}
                 />
             );
@@ -449,7 +449,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('invokes onOpenAdminPanel with the project when selected', () => {
-            const project = createMockProject({ name: 'Admin Target' });
+            const project = createProjectsDashboardProject({ name: 'Admin Target' });
             const onOpenAdminPanel = jest.fn();
             renderWithProvider(
                 <ProjectActionsMenu project={project} actions={{ onOpenAdminPanel }} />

@@ -8,7 +8,7 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectsDashboard } from '@/features/projects-dashboard/ui/ProjectsDashboard';
 import {
     createMockProjects,
-    createMockProject,
+    createProjectsDashboardProject,
 } from '../testUtils';
 
 // Mock the webviewClient
@@ -159,12 +159,12 @@ describe('ProjectsDashboard', () => {
 
         it('should filter projects based on search query', async () => {
             const projects = [
-                createMockProject({ name: 'Alpha Project', path: '/test/alpha' }),
-                createMockProject({ name: 'Beta Project', path: '/test/beta' }),
-                createMockProject({ name: 'Gamma Project', path: '/test/gamma' }),
-                createMockProject({ name: 'Delta Project', path: '/test/delta' }),
-                createMockProject({ name: 'Epsilon Project', path: '/test/epsilon' }),
-                createMockProject({ name: 'Zeta Project', path: '/test/zeta' }),
+                createProjectsDashboardProject({ name: 'Alpha Project', path: '/test/alpha' }),
+                createProjectsDashboardProject({ name: 'Beta Project', path: '/test/beta' }),
+                createProjectsDashboardProject({ name: 'Gamma Project', path: '/test/gamma' }),
+                createProjectsDashboardProject({ name: 'Delta Project', path: '/test/delta' }),
+                createProjectsDashboardProject({ name: 'Epsilon Project', path: '/test/epsilon' }),
+                createProjectsDashboardProject({ name: 'Zeta Project', path: '/test/zeta' }),
             ];
             renderWithProvider(
                 <ProjectsDashboard

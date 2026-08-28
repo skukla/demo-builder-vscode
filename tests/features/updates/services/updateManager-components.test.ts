@@ -82,7 +82,7 @@ import {
     createUpdateManagerContext,
     createMockLogger,
     createMockWorkspaceConfig,
-    createMockProject,
+    createUpdateManagerProject,
     createMockRelease,
     mockSecurityValidationPass,
 } from './updateManager.testUtils';
@@ -111,13 +111,13 @@ describe('UpdateManager - Component Updates', () => {
             // Given: Two projects with a repoUrl-only component
             const project1 = {
                 name: 'Project 1',
-                ...createMockProject([
+                ...createUpdateManagerProject([
                     { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
                 ]),
             };
             const project2 = {
                 name: 'Project 2',
-                ...createMockProject([
+                ...createUpdateManagerProject([
                     { id: 'eds-storefront', version: '0.9.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds2' },
                 ]),
             };
@@ -148,7 +148,7 @@ describe('UpdateManager - Component Updates', () => {
             // Given: A component with repoUrl but no path (should be skipped by resilience check)
             const project = {
                 name: 'Project 1',
-                ...createMockProject([
+                ...createUpdateManagerProject([
                     { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds' },
                 ]),
             };
@@ -163,7 +163,7 @@ describe('UpdateManager - Component Updates', () => {
             // Given: A project with both resolver-known and repoUrl-only components
             const project = {
                 name: 'Project 1',
-                ...createMockProject([
+                ...createUpdateManagerProject([
                     { id: 'commerce-mesh', version: '1.0.0', path: '/mock/path/mesh' },
                     { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
                 ]),

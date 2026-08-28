@@ -14,7 +14,7 @@ import {
     detectMeshChanges,
 } from '@/features/mesh/services/stalenessDetector';
 import {
-    createMockProject,
+    createStalenessProject,
     setupMockCommandExecutor,
     setupMockFileSystemWithHash,
     meshDeps,
@@ -48,7 +48,7 @@ describe('StalenessDetector - State Detection', () => {
 
     describe('getCurrentMeshState', () => {
         it('should return mesh state from project', () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -71,7 +71,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should return null when no mesh state', () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             const result = getCurrentMeshState(project);
 
@@ -79,7 +79,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should handle partial mesh state', () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -105,7 +105,7 @@ describe('StalenessDetector - State Detection', () => {
         // entry — the only carrier since PL-1 phase 2.
         describe('keyed-first read (ADR-011 D3 Step 06)', () => {
             it('should read envVars/sourceHash/lastDeployed from the keyed mesh entry (keyed-only)', () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     appBuilderComponents: {
                         'commerce-mesh': {
                             kind: 'mesh',
@@ -129,7 +129,7 @@ describe('StalenessDetector - State Detection', () => {
             });
 
             it('should return null for an undeployed keyed entry with no runtime fields (fresh-deploy semantics)', () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     appBuilderComponents: {
                         mesh: {
                             kind: 'mesh',
@@ -146,7 +146,7 @@ describe('StalenessDetector - State Detection', () => {
 
     describe('detectMeshChanges - unknownDeployedState handling', () => {
         it('should return unknownDeployedState=true and hasChanges=false when fetch fails (timeout)', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -181,7 +181,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should populate the keyed entry envVars and set shouldSaveProject when fetch succeeds (keyed-only)', async () => {
-            const project: Project = createMockProject({
+            const project: Project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -247,7 +247,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should handle an empty keyed baseline with fetch returning null (no mesh deployed)', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -282,7 +282,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should handle missing mesh component gracefully', async () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             const result = await detectMeshChanges(project, {}, meshDeps);
 

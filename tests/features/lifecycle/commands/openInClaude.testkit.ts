@@ -19,6 +19,7 @@ import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
 import type { Project } from '@/types/base';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 // NOTE: each consuming test file MUST declare its own
 //   `jest.mock('@/commands/claudeSessionStore', () => ({ hasConversation: jest.fn(() => false) }))`
@@ -73,12 +74,12 @@ export function makeOpenInClaudeContext(globalState: MockGlobalState): vscode.Ex
     } as unknown as Partial<vscode.ExtensionContext>);
 }
 
-export function makeProject(overrides: Partial<Project> = {}): Partial<Project> {
-    return {
+export function makeOpenInClaudeProject(overrides: Partial<Project> = {}): Partial<Project> {
+    return createMockProjectBase({
         name: 'demo',
         path: '/projects/demo',
         ...overrides,
-    };
+    } as never)
 }
 
 // ----------------------------------------------------------------------------

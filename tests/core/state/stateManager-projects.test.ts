@@ -10,7 +10,7 @@ import * as path from 'path';
 import {
     setupMocks,
     mockStateFile,
-    createMockProject,
+    createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
 import type { Project } from '@/types';
@@ -32,7 +32,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject('new-project');
+            const project = createStateManagerProject('new-project');
             project.componentSelections = {
                 frontend: 'headless',
                 backend: 'adobe-commerce-paas',
@@ -59,7 +59,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
 
             expect(fs.mkdir).toHaveBeenCalledWith(project.path, { recursive: true });
@@ -69,7 +69,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.adobe = {
                 projectId: 'proj123',
                 projectName: 'Test Project',
@@ -98,7 +98,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.commerce = {
                 type: 'platform-as-a-service',
                 instance: {
@@ -128,7 +128,7 @@ describe('StateManager - Project Management', () => {
             const eventHandler = jest.fn();
             stateManager.onProjectChanged(eventHandler);
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
 
             expect(eventHandler).toHaveBeenCalledWith(project);
@@ -145,7 +145,7 @@ describe('StateManager - Project Management', () => {
                 return Promise.resolve();
             });
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
             await expect(stateManager.saveProject(project as Project)).rejects.toThrow(
@@ -157,7 +157,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // Capture time before save
             const timeBefore = new Date().toISOString();
@@ -193,7 +193,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
             expect(await stateManager.getCurrentProject()).toBeDefined();
 
@@ -254,7 +254,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager, mockWorkspaceState } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
             await stateManager.clearAll();
 

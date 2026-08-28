@@ -9,7 +9,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
 // Re-declare mocks to ensure proper typing and hoisting
 jest.mock('vscode');
@@ -31,7 +31,7 @@ describe('StateManager - Context Variables', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject() as any;
+            const project = createStateManagerProject() as any;
 
             // When: saveProject is called successfully
             await stateManager.saveProject(project);
@@ -49,7 +49,7 @@ describe('StateManager - Context Variables', () => {
         it('should set demoBuilder.projectLoaded context to false when project is cleared', async () => {
             // Given: StateManager has a project loaded
             const { stateManager } = testMocks;
-            const project = createMockProject() as any;
+            const project = createStateManagerProject() as any;
             const mockState = {
                 version: 1,
                 currentProject: project,
@@ -76,7 +76,7 @@ describe('StateManager - Context Variables', () => {
         it('should set demoBuilder.projectLoaded context to false when all state is cleared', async () => {
             // Given: StateManager has state loaded
             const { stateManager } = testMocks;
-            const project = createMockProject() as any;
+            const project = createStateManagerProject() as any;
             const mockState = {
                 version: 1,
                 currentProject: project,

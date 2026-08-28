@@ -11,7 +11,7 @@ import * as path from 'path';
 import {
     setupMocks,
     mockHomedir,
-    createMockProject,
+    createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
 import type { Project } from '@/types';
@@ -354,8 +354,8 @@ describe('StateManager - Utilities', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project1 = createMockProject('project1');
-            const project2 = createMockProject('project2');
+            const project1 = createStateManagerProject('project1');
+            const project2 = createStateManagerProject('project2');
 
             await Promise.all([
                 stateManager.saveProject(project1 as Project),
@@ -374,7 +374,7 @@ describe('StateManager - Utilities', () => {
             // Simulate file system error
             (fs.writeFile as jest.Mock).mockRejectedValue(new Error('Disk full'));
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
             await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Disk full');

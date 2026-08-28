@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { OpenInClaudeCommand, isClaudeChatOpen } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
-    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeProject,
+    setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeOpenInClaudeProject,
 } from './openInClaude.testkit';
 
 // The home Chat always launches at the projects root. Pin the root to a known
@@ -47,11 +47,11 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         });
@@ -60,11 +60,11 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude');
         });
@@ -73,18 +73,18 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
         });
 
         it('probes the session store using the projects root, not the project path', async () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
-            const project = makeProject({ path: '/projects/demo' });
+            const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
@@ -99,7 +99,7 @@ describe('OpenInClaudeCommand', () => {
         it('never anchors the workspace (no openFolder, no pending record)', async () => {
             const mocks = setupVscodeMocks({ workspaceFolderPath: '/some/other/repo' });
             const globalState = makeGlobalState();
-            const project = makeProject({ path: '/projects/demo' });
+            const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(globalState),
                 makeStateManager(project) as never,
@@ -134,11 +134,11 @@ describe('OpenInClaudeCommand', () => {
             });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             // Did NOT spawn a new terminal
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
@@ -156,11 +156,11 @@ describe('OpenInClaudeCommand', () => {
             });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --continue');
@@ -172,11 +172,11 @@ describe('OpenInClaudeCommand', () => {
             });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         });
@@ -192,11 +192,11 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
             const createArg = mocks.createTerminalMock.mock.calls[0][0];
@@ -254,7 +254,7 @@ describe('OpenInClaudeCommand', () => {
     describe('terminal behavior', () => {
         it('creates a terminal named \'Claude Code\' with cwd = projects root', async () => {
             const mocks = setupVscodeMocks();
-            const project = makeProject({ path: '/projects/demo' });
+            const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as never,
@@ -272,11 +272,11 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as never,
                 makeLogger() as never,
             );
 
-            await command.execute(makeProject() as Project);
+            await command.execute(makeOpenInClaudeProject() as Project);
 
             const showOrder = mocks.terminalShowMock.mock.invocationCallOrder[0];
             const sendOrder = mocks.terminalSendTextMock.mock.invocationCallOrder[0];

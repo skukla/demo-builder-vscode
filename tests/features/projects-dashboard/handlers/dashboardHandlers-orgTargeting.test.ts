@@ -26,7 +26,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import { handleGetProjects } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createProjectsDashboardContext } from '../testUtils';
+import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
 
 // Mock mesh staleness detection
 jest.mock('@/core/state/appBuilderComponentState', () => ({
@@ -109,7 +109,7 @@ describe('handleGetProjects — org targeting', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
@@ -135,13 +135,13 @@ describe('handleGetProjects — org targeting', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const projectA = createMockProject({
+            const projectA = createProjectsDashboardProject({
                 name: 'a',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'a'),
                 componentConfigs: { 'api-mesh': { V: '1' } },
                 adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
-            const projectB = createMockProject({
+            const projectB = createProjectsDashboardProject({
                 name: 'b',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'b'),
                 componentConfigs: { 'api-mesh': { V: '2' } },

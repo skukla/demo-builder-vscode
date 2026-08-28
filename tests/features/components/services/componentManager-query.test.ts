@@ -17,7 +17,7 @@ import { CommandExecutor } from '@/core/shell';
 import {
     createMockCommandExecutor,
     createMockLogger,
-    createMockProject,
+    createComponentServiceProject,
     mockSuccessfulExecution
 } from './testHelpers';
 
@@ -38,7 +38,7 @@ describe('ComponentManager - Query', () => {
 
         // Create mocks
         mockLogger = createMockLogger();
-        mockProject = createMockProject();
+        mockProject = createComponentServiceProject();
         mockCommandExecutor = createMockCommandExecutor();
 
         // Mock ServiceLocator

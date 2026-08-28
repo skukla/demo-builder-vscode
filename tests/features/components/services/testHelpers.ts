@@ -7,6 +7,7 @@
 
 import { Project } from '@/types';
 import { CommandExecutor } from '@/core/shell';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 /** Canonical command-executor fake (ADR-016). */
 export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -17,8 +18,8 @@ export { createMockLogger } from '../../../helpers/loggerFake';
 /**
  * Creates a test Project with default values
  */
-export function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+export function createComponentServiceProject(overrides?: Partial<Project>): Project {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -26,7 +27,7 @@ export function createMockProject(overrides?: Partial<Project>): Project {
         lastModified: new Date(),
         componentInstances: {},
         ...overrides
-    };
+    } as never)
 }
 
 /**

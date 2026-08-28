@@ -85,6 +85,7 @@ export function createCommandManager() {
 
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
 import { createMockLogger as createLogger } from '../../../helpers/loggerFake';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 export { createLogger };
 
 export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
@@ -124,7 +125,7 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 export function createProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/proj',
         adobe: {
@@ -134,5 +135,5 @@ export function createProject(overrides: Partial<Project> = {}): Project {
         },
         componentInstances: {},
         ...overrides,
-    } as unknown as Project;
+    } as never)
 }

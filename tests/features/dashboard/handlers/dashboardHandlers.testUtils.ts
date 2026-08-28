@@ -4,6 +4,7 @@
 
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -58,7 +59,7 @@ export interface TestMocks {
 /**
  * Factory function to create a mock project with typical structure
  */
-export function createMockProject(overrides?: Partial<Project>): Project {
+export function createDashboardProject(overrides?: Partial<Project>): Project {
     const baseProject = {
         name: 'test-project',
         path: '/path/to/project',
@@ -111,17 +112,17 @@ export function createMockProject(overrides?: Partial<Project>): Project {
         },
     } as unknown as Project;
 
-    return {
+    return createMockProjectBase({
         ...baseProject,
         ...overrides,
-    } as unknown as Project;
+    } as never)
 }
 
 /**
  * Setup function to create minimal mock context
  */
 export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
-    const mockProject = createMockProject(projectOverrides);
+    const mockProject = createDashboardProject(projectOverrides);
 
     // Setup auth service mock (used by handleRequestStatus)
     const { ServiceLocator } = require('@/core/di');

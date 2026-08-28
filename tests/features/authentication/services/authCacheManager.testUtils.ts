@@ -30,7 +30,13 @@ export const createMockOrg2 = (): AdobeOrg => ({
     name: 'Second Organization',
 });
 
-export const createMockProject = (overrides?: Partial<AdobeProject>): AdobeProject => ({
+/**
+ * RENAMED from `createMockProject` 2026-08-28: this builds an ADOBE CONSOLE
+ * project (`AdobeProject`: id + name), not the demo-builder `Project`. Sharing
+ * the name with ten builders of an unrelated type is exactly the confusion this
+ * consolidation exists to remove.
+ */
+export const createMockAdobeProject = (overrides?: Partial<AdobeProject>): AdobeProject => ({
     id: 'proj123',
     name: 'Test Project',
     ...overrides,
@@ -44,7 +50,7 @@ export const createMockWorkspace = (overrides?: Partial<AdobeWorkspace>): AdobeW
 
 export const createMockConsoleWhere = (): AdobeConsoleWhereResponse => {
     const org = createMockOrg();
-    const project = createMockProject();
+    const project = createMockAdobeProject();
     const workspace = createMockWorkspace();
 
     return {

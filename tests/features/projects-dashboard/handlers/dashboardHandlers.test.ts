@@ -13,7 +13,7 @@ import {
     handleOpenLiveSite,
     handleOpenDaLive,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
+import { createProjectsDashboardProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
 import { ServiceLocator } from '@/core/di';
 
 // Mock mesh staleness detection
@@ -158,7 +158,7 @@ describe('dashboardHandlers', () => {
         it('should return projects in deterministic alphabetical order by name (regression)', async () => {
             // Create projects in reverse-alphabetical order (simulates mtime-based ordering)
             const projects = [
-                createMockProject({
+                createProjectsDashboardProject({
                     name: 'citisignal-headless',
                     path: path.join(
                         os.homedir(),
@@ -167,11 +167,11 @@ describe('dashboardHandlers', () => {
                         'citisignal-headless'
                     ),
                 }),
-                createMockProject({
+                createProjectsDashboardProject({
                     name: 'citisignal-eds',
                     path: path.join(os.homedir(), '.demo-builder', 'projects', 'citisignal-eds'),
                 }),
-                createMockProject({
+                createProjectsDashboardProject({
                     name: 'buildright-eds',
                     path: path.join(os.homedir(), '.demo-builder', 'projects', 'buildright-eds'),
                 }),
@@ -194,7 +194,7 @@ describe('dashboardHandlers', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 appBuilderComponents: {
                     mesh: {
@@ -226,7 +226,7 @@ describe('dashboardHandlers', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 appBuilderComponents: {
                     mesh: {
@@ -257,7 +257,7 @@ describe('dashboardHandlers', () => {
             } = require('@/core/state/appBuilderComponentState');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 appBuilderComponents: {
                     mesh: {
@@ -286,7 +286,7 @@ describe('dashboardHandlers', () => {
                 hasMeshDeploymentRecord,
             } = require('@/core/state/appBuilderComponentState');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
             });
             const context = createProjectsDashboardContext([project]);
@@ -302,7 +302,7 @@ describe('dashboardHandlers', () => {
 
     describe('handleSelectProject', () => {
         it('should load and save project in StateManager', async () => {
-            const project = createMockProject({ name: 'Selected Project' });
+            const project = createProjectsDashboardProject({ name: 'Selected Project' });
             const context = createProjectsDashboardContext([project]);
 
             const result = await handleSelectProject(context as any, {
@@ -363,7 +363,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should log selection event', async () => {
-            const project = createMockProject({ name: 'Logged Project' });
+            const project = createProjectsDashboardProject({ name: 'Logged Project' });
             const context = createProjectsDashboardContext([project]);
 
             await handleSelectProject(context as any, {
@@ -376,7 +376,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('should NOT use sendMessage (Pattern B)', async () => {
-            const project = createMockProject();
+            const project = createProjectsDashboardProject();
             const context = createProjectsDashboardContext([project]);
 
             await handleSelectProject(context as any, {
@@ -482,7 +482,7 @@ describe('dashboardHandlers', () => {
         afterEach(() => setWorkspaceFolder(null));
 
         it('sets the current-project pointer and dispatches demoBuilder.openInClaude with NO project arg (always-root home Chat)', async () => {
-            const project = createMockProject({ name: 'AI Target' });
+            const project = createProjectsDashboardProject({ name: 'AI Target' });
             setWorkspaceFolder(project.path);
             const context = makeContext([project]);
             const vscode = require('vscode');
@@ -506,7 +506,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('never anchors the workspace even when workspace ≠ project', async () => {
-            const project = createMockProject({ name: 'AI Target' });
+            const project = createProjectsDashboardProject({ name: 'AI Target' });
             setWorkspaceFolder('/some/other/repo');
             const context = makeContext([project]);
             const vscode = require('vscode');

@@ -6,7 +6,7 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
 // Re-declare mocks to ensure proper typing and hoisting
 jest.mock('vscode');
@@ -115,7 +115,7 @@ describe('StateManager - Dirty Tracking', () => {
     describe('saveProject clears dirty state', () => {
         it('should clear dirty fields after successful save', async () => {
             const { stateManager } = testMocks;
-            const project = createMockProject() as any;
+            const project = createStateManagerProject() as any;
 
             // Setup mocks for save
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
@@ -136,7 +136,7 @@ describe('StateManager - Dirty Tracking', () => {
 
         it('should not clear dirty fields if save fails', async () => {
             const { stateManager } = testMocks;
-            const project = createMockProject() as any;
+            const project = createStateManagerProject() as any;
 
             // Setup mocks for failed save
             (fs.access as jest.Mock).mockResolvedValue(undefined);

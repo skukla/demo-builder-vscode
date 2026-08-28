@@ -76,6 +76,61 @@ Both forms are now matched, in the scan and in
 `tests/sop/builder-uniqueness.test.ts`, whose positive control asserts a known
 `export const` builder is visible so this cannot regress silently.
 
+## COMPLETE — 2026-08-28
+
+Every subject on the list is consolidated. `tests/sop/builder-uniqueness.test.ts`
+now carries an EMPTY ledger, and it was verified still to fire: planting a tenth
+`createMockLogger` fails the build; removing it goes green.
+
+    duplicated builder names: 14 -> 0
+    redundant definitions:    43 -> 0
+    canonical fixtures in tests/helpers/: 8
+
+The canonical set:
+
+| File | Replaces |
+|---|---|
+| `loggerFake.ts` | 12 logger builders |
+| `commandExecutorFake.ts` | 9 (two names — "manager" was the legacy one) |
+| `handlerContextTestHelpers.ts` | 12 handler-context builders (8 delegate, 1 deliberately does not) |
+| `extensionContextFake.ts` | 5 extension-context builders |
+| `projectFake.ts` | 11 project builders |
+| `commandResultFake.ts` | 5 success/failure result builders |
+| `meshDepsFake.ts` | 11 copies of one deps object |
+| `stateManagerFake.ts`, `componentSelectionFake.ts`, `githubFake.ts` | the pairs |
+
+## What the work actually taught
+
+**Three of the "duplicates" were not duplicates.** `makeContext` in the
+data-installer and `createMockContext` in transientStateManager returned
+HARNESSES, not contexts; `createMockProject` in authCacheManager builds an
+Adobe CONSOLE project, an unrelated type. Renamed rather than merged. Sharing a
+name is what made a family of unrelated fixtures look like one duplicated
+helper.
+
+**One delegation had to be reverted.** `createHandler.testUtils` cannot use the
+canonical: it fills absent fields with `{} as ...`, and that suite's handler
+behaves differently when they are present-but-empty rather than absent. Verified
+by stashing and restoring, not guessed. A suite that OMITS a field may be
+expressing something.
+
+**A canonical must not be thinner, or more opinionated, than what it replaces.**
+Three separate regressions, all the same mistake:
+- the first ExtensionContext carried only the fields the caller in front of me
+  needed → activation died on `logUri.fsPath`
+- it called `vscode.Uri.file()` unconditionally → broke every suite that mocks
+  vscode thinly
+- the first Project defaulted to an EDS storefront AND a `title`; the first
+  changed which branch handlers took, the second shadowed `name` in every list
+  UI because production prefers title
+
+Real SHAPE, neutral CONTENT.
+
+**Typing the fakes found 47 wrong fixtures.** Once the executor fake returned the
+real type, 51 call sites failed to compile — CommandResult literals missing
+`duration`, sometimes `stderr` and `code`. They had always been wrong; nothing
+could see it while the fake was `any`.
+
 ## Progress
 
 | Date | Subject | Defs before → after | Redundant remaining |

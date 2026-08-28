@@ -6,7 +6,7 @@
  */
 
 import { handleOpenAdminPanel } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createProjectsDashboardContext } from '../testUtils';
+import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
 
 // Mock mesh staleness detection (module-eval safety; unused by these tests).
 jest.mock('@/core/state/appBuilderComponentState', () => ({
@@ -75,7 +75,7 @@ describe('dashboardHandlers', () => {
 
         /** Project whose componentConfigs carry the optional admin-panel env var. */
         function projectWithAdminUrl(url: string) {
-            return createMockProject({
+            return createProjectsDashboardProject({
                 name: 'Admin Target',
                 componentConfigs: {
                     'citisignal-nextjs': { ADOBE_COMMERCE_ADMIN_URL: url },
@@ -185,7 +185,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('shows a notification with an Open Configure action when no URL is set', async () => {
-            const project = createMockProject({ name: 'No Admin URL' });
+            const project = createProjectsDashboardProject({ name: 'No Admin URL' });
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
@@ -206,7 +206,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('sets the current-project pointer then opens Configure when the action is selected', async () => {
-            const project = createMockProject({ name: 'No Admin URL' });
+            const project = createProjectsDashboardProject({ name: 'No Admin URL' });
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
             vscode.window.showInformationMessage.mockResolvedValue('Open Configure');

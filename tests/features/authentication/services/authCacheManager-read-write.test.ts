@@ -2,7 +2,7 @@ import { AuthCacheManager } from '@/features/authentication/services/authCacheMa
 import {
     createMockOrg,
     createMockOrg2,
-    createMockProject,
+    createMockAdobeProject,
     createMockWorkspace,
     createMockConsoleWhere,
 } from './authCacheManager.testUtils';
@@ -77,7 +77,7 @@ describe('AuthCacheManager - Read/Write Operations', () => {
 
     describe('project caching', () => {
         it('should cache project', () => {
-            const mockProject = createMockProject();
+            const mockProject = createMockAdobeProject();
             cacheManager.setCachedProject(mockProject);
             const result = cacheManager.getCachedProject();
 
@@ -85,7 +85,7 @@ describe('AuthCacheManager - Read/Write Operations', () => {
         });
 
         it('should clear cached project', () => {
-            const mockProject = createMockProject();
+            const mockProject = createMockAdobeProject();
             cacheManager.setCachedProject(mockProject);
             cacheManager.setCachedProject(undefined);
             const result = cacheManager.getCachedProject();

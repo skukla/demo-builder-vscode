@@ -8,6 +8,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import type { Project } from '@/types';
+import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -52,8 +53,8 @@ export interface TestMocks {
     mockWorkspaceState: vscode.Memento;
 }
 
-export function createMockProject(id?: string): Partial<Project> {
-    return {
+export function createStateManagerProject(id?: string): Partial<Project> {
+    return createMockProjectBase({
         id: id || 'test-project',
         path: '/test/project',
         name: 'Test Project',
@@ -64,7 +65,7 @@ export function createMockProject(id?: string): Partial<Project> {
         hasUnsavedChanges: false,
         components: [],
         openFiles: []
-    } as Partial<Project>;
+    } as never)
 }
 
 export function setupMocks(): TestMocks {

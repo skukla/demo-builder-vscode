@@ -11,7 +11,7 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
@@ -31,7 +31,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             const { stateManager } = testMocks;
 
             // Initialize with cached project in globalState
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/cached-project';
 
             const mockState = {
@@ -75,7 +75,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             const { stateManager } = testMocks;
 
             // Initialize with stale cached project (missing componentVersions)
-            const staleProject = createMockProject();
+            const staleProject = createStateManagerProject();
             staleProject.path = '/mock/home/.demo-builder/projects/test-project';
             // Deliberately missing componentVersions (simulating stale cache)
 
@@ -121,7 +121,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
         it('should reload on every call to ensure freshness', async () => {
             const { stateManager } = testMocks;
 
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
 
             const mockState = {
@@ -171,7 +171,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
         it('should return stale cache if loadProjectFromPath fails', async () => {
             const { stateManager } = testMocks;
 
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
             cachedProject.name = 'Stale Cached Project';
 
@@ -233,7 +233,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
         it('should convert null from loadProjectFromPath to undefined', async () => {
             const { stateManager } = testMocks;
 
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
 
             const mockState = {
@@ -343,7 +343,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             const { stateManager } = testMocks;
 
             // Initialize with cached project that has stale selectedPackage
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
             (cachedProject as Project).selectedPackage = 'old-package';
 
@@ -459,7 +459,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
         it('should handle concurrent calls to getCurrentProject', async () => {
             const { stateManager } = testMocks;
 
-            const cachedProject = createMockProject();
+            const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
 
             const mockState = {

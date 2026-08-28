@@ -13,7 +13,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectRow } from '@/features/projects-dashboard/ui/components/ProjectRow';
-import { createMockProject, createRunningProject } from '../../testUtils';
+import { createProjectsDashboardProject, createRunningProject } from '../../testUtils';
 
 const renderWithProvider = (ui: React.ReactElement) => {
     return render(
@@ -25,7 +25,7 @@ const renderWithProvider = (ui: React.ReactElement) => {
 
 describe('ProjectRow — inline rename', () => {
     it('renders the rename pencil beside the name when onRenameSubmit is wired', () => {
-        const project = createMockProject({ name: 'Row Project' });
+        const project = createProjectsDashboardProject({ name: 'Row Project' });
         renderWithProvider(
             <ProjectRow
                 project={project}
@@ -54,7 +54,7 @@ describe('ProjectRow — inline rename', () => {
     });
 
     it('commits a rename through actions.onRenameSubmit with the project + new name', async () => {
-        const project = createMockProject({ name: 'Old Row' });
+        const project = createProjectsDashboardProject({ name: 'Old Row' });
         const onRenameSubmit = jest.fn().mockResolvedValue(null);
         renderWithProvider(
             <ProjectRow project={project} onSelect={jest.fn()} actions={{ onRenameSubmit }} />
@@ -73,7 +73,7 @@ describe('ProjectRow — inline rename', () => {
     });
 
     it('never opens the project while interacting with the rename editor', () => {
-        const project = createMockProject({ name: 'Contained Row' });
+        const project = createProjectsDashboardProject({ name: 'Contained Row' });
         const onSelect = jest.fn();
         renderWithProvider(
             <ProjectRow
@@ -91,7 +91,7 @@ describe('ProjectRow — inline rename', () => {
     });
 
     it('keeps the name click-transparent: clicking the name still opens the project', () => {
-        const project = createMockProject({ name: 'Openable Row' });
+        const project = createProjectsDashboardProject({ name: 'Openable Row' });
         const onSelect = jest.fn();
         renderWithProvider(
             <ProjectRow

@@ -28,10 +28,18 @@ const TESTS_ROOT = path.resolve(__dirname, '..');
  * These are the consolidation queue, most-copied first. Delete a row when its
  * name has exactly one definition left.
  */
-const KNOWN_DUPLICATES: Record<string, number> = {
-    createMockProject: 9,
-    makeProject: 2,
-};
+/**
+ * EMPTY as of 2026-08-28 — every duplicated builder name is consolidated.
+ *
+ * It began at 14 names / 43 redundant definitions. The list only ever shrank,
+ * which is the property that made the work finishable: without it, 43 became 43
+ * one forgivable duplicate at a time.
+ *
+ * Keeping the (now empty) ledger rather than deleting it is deliberate: the
+ * checks below still run, so a new duplicate fails immediately instead of
+ * quietly starting a fresh pile.
+ */
+const KNOWN_DUPLICATES: Record<string, number> = {};
 
 /**
  * The builder convention, in BOTH declaration forms.

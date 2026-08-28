@@ -6,6 +6,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type { Project, ComponentInstance, ProjectStatus } from '@/types/base';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../helpers/handlerContextTestHelpers';
+import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 /**
  * Get valid demo-builder projects base path
@@ -18,11 +19,11 @@ function getProjectsBasePath(): string {
 /**
  * Creates a mock Project for testing
  */
-export function createMockProject(overrides?: Partial<Project>): Project {
+export function createProjectsDashboardProject(overrides?: Partial<Project>): Project {
     const now = new Date();
     // Use valid demo-builder path for security validation compliance
     const basePath = getProjectsBasePath();
-    return {
+    return createMockProjectBase({
         name: 'Test Project',
         created: now,
         lastModified: now,
@@ -45,7 +46,7 @@ export function createMockProject(overrides?: Partial<Project>): Project {
             }),
         },
         ...overrides,
-    };
+    } as never)
 }
 
 /**
@@ -67,7 +68,7 @@ export function createMockComponentInstance(
  * Creates a running project for testing
  */
 export function createRunningProject(overrides?: Partial<Project>): Project {
-    return createMockProject({
+    return createProjectsDashboardProject({
         status: 'running',
         componentInstances: {
             'headless': createMockComponentInstance({
@@ -95,7 +96,7 @@ export function createRunningProject(overrides?: Partial<Project>): Project {
 export function createMockProjects(count: number): Project[] {
     const basePath = getProjectsBasePath();
     return Array.from({ length: count }, (_, i) =>
-        createMockProject({
+        createProjectsDashboardProject({
             name: `Project ${i + 1}`,
             path: path.join(basePath, `project-${i + 1}`),
             status: i % 2 === 0 ? 'stopped' : 'running',

@@ -5,6 +5,7 @@
 import type { Project } from '@/types';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 // Mock dependencies
 jest.mock('@/core/di', () => ({
@@ -78,19 +79,19 @@ export const MOCK_DEPLOYED_CONFIG = {
 };
 
 // Factory functions
-export function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+export function createStalenessProject(overrides?: Partial<Project>): Project {
+    return createMockProjectBase({
         name: 'Test Project',
         path: '/test',
         created: new Date('2024-01-01T00:00:00Z'),
         lastModified: new Date('2024-01-01T00:00:00Z'),
         status: 'running',
         ...overrides,
-    };
+    } as never)
 }
 
 export function createMockProjectWithMesh(overrides?: Partial<Project>): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentInstances: {
             'commerce-mesh': {
                 id: 'commerce-mesh',
@@ -117,7 +118,7 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
 }
 
 export function createMockProjectWithFrontend(overrides?: Partial<Project>): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentInstances: {
             'headless': {
                 id: 'headless',

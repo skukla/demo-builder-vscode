@@ -10,7 +10,7 @@ jest.mock('@/core/logging', () => ({
 }));
 
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { createMockProject, setupMockFileSystemWithHash, meshDeps } from './stalenessDetector.testUtils';
+import { createStalenessProject, setupMockFileSystemWithHash, meshDeps } from './stalenessDetector.testUtils';
 import type { Project } from '@/types';
 
 /**
@@ -37,7 +37,7 @@ const ENDPOINT = 'https://backend.example/graphql';
 
 /** ACCS project with a deployed mesh whose snapshot is supplied per test. */
 function projectWithDeployedScope(websiteCode: string): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentSelections: { backend: BACKEND_ID },
         componentInstances: {
             [MESH_ID]: {
@@ -229,7 +229,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
     const NEW = 'https://new.example/graphql';
 
     function projectDeployedWith(endpoint: string): Project {
-        return createMockProject({
+        return createStalenessProject({
             componentSelections: { backend: BACKEND_ID },
             componentInstances: {
                 [MESH_ID]: {
@@ -308,7 +308,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         // them, or the mesh-first ordering above would reinstate the original bug.
         // Deployed against `base`; the mesh config still says `base` and comes
         // first; the backend says `citisignal`. Only the scope may differ.
-        const project = createMockProject({
+        const project = createStalenessProject({
             componentSelections: { backend: BACKEND_ID },
             componentInstances: {
                 [MESH_ID]: {

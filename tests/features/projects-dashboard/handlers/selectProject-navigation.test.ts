@@ -32,7 +32,7 @@ import {
     handleSelectProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import {
-    createMockProject,
+    createProjectsDashboardProject,
     createProjectsDashboardContext,
 } from '../testUtils';
 
@@ -53,7 +53,7 @@ describe('handleSelectProject - Navigation', () => {
     describe('showProjectDashboard command execution', () => {
         it('navigates to dashboard in-place on a plain selection (no browse reload)', async () => {
             // Given: A valid project and the workspace folder is already the project
-            const project = createMockProject({ name: 'Navigation Test Project' });
+            const project = createProjectsDashboardProject({ name: 'Navigation Test Project' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
 
@@ -73,7 +73,7 @@ describe('handleSelectProject - Navigation', () => {
 
         it('should execute showProjectDashboard after saveProject completes', async () => {
             // Given: A valid project (plain selection → in-place, no openFolder reload)
-            const project = createMockProject({ name: 'Order Test Project' });
+            const project = createProjectsDashboardProject({ name: 'Order Test Project' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
             const callOrder: string[] = [];
@@ -130,7 +130,7 @@ describe('handleSelectProject - Navigation', () => {
 
         it('should return success even if showProjectDashboard fails', async () => {
             // Given: A valid project but showProjectDashboard command fails
-            const project = createMockProject({ name: 'Error Test Project' });
+            const project = createProjectsDashboardProject({ name: 'Error Test Project' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
             mockExecuteCommand.mockRejectedValue(new Error('Command failed'));
@@ -150,7 +150,7 @@ describe('handleSelectProject - Navigation', () => {
     describe('workspace anchoring', () => {
         it('does NOT reload on a plain selection when no workspace is open — renders in-place', async () => {
             // Given: A valid project AND no workspace folder open
-            const project = createMockProject({ name: 'Anchor Test' });
+            const project = createProjectsDashboardProject({ name: 'Anchor Test' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(null);
 
@@ -170,7 +170,7 @@ describe('handleSelectProject - Navigation', () => {
         });
 
         it('does NOT reload on a plain selection when the workspace is a different folder — renders in-place', async () => {
-            const project = createMockProject({ name: 'Anchor Test 2' });
+            const project = createProjectsDashboardProject({ name: 'Anchor Test 2' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder('/some/other/folder');
 
@@ -188,7 +188,7 @@ describe('handleSelectProject - Navigation', () => {
         });
 
         it('opens the project folder in a NEW window when forceNewWindow is true', async () => {
-            const project = createMockProject({ name: 'New Window Test' });
+            const project = createProjectsDashboardProject({ name: 'New Window Test' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder('/some/other/folder');
 
@@ -207,7 +207,7 @@ describe('handleSelectProject - Navigation', () => {
         it('opens in NEW window even when workspace already matches if forceNewWindow=true', async () => {
             // Edge case: user is already in the project workspace but shift-clicks the tile.
             // Intent: spawn another window for the same project (rare but supported).
-            const project = createMockProject({ name: 'Force New' });
+            const project = createProjectsDashboardProject({ name: 'Force New' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
 
@@ -224,7 +224,7 @@ describe('handleSelectProject - Navigation', () => {
         });
 
         it('does NOT call openFolder when workspace already matches and forceNewWindow is absent/false', async () => {
-            const project = createMockProject({ name: 'No Reload' });
+            const project = createProjectsDashboardProject({ name: 'No Reload' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
 

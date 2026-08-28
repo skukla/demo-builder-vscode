@@ -1,4 +1,5 @@
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 /**
  * Shared test utilities for UpdateManager tests
  *
@@ -122,7 +123,7 @@ export function createMockReleasesArray(options?: {
 /**
  * Creates a mock project with components
  */
-export function createMockProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
+export function createUpdateManagerProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
     const componentInstances: any = {};
     const componentVersions: any = {};
 
@@ -136,10 +137,10 @@ export function createMockProject(components: { id: string; version: string; rep
         componentVersions[comp.id] = { version: comp.version };
     });
 
-    return {
+    return createMockProjectBase({
         componentInstances,
         componentVersions,
-    };
+    } as never)
 }
 
 /**

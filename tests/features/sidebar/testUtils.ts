@@ -4,13 +4,14 @@
 
 import type { Project } from '@/types/base';
 import type { SidebarContext } from '@/features/sidebar/types';
+import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 /**
  * Creates a mock project for testing
  */
-export function createMockProject(overrides?: Partial<Project>): Project {
+export function createSidebarProject(overrides?: Partial<Project>): Project {
     const now = new Date();
-    return {
+    return createMockProjectBase({
         name: 'Test Project',
         created: now,
         lastModified: now,
@@ -18,7 +19,7 @@ export function createMockProject(overrides?: Partial<Project>): Project {
         status: 'stopped',
         organization: 'Test Org',
         ...overrides,
-    };
+    } as never)
 }
 
 /**
@@ -34,7 +35,7 @@ export function createProjectsContext(): SidebarContext {
 export function createProjectContext(project?: Partial<Project>): SidebarContext {
     return {
         type: 'project',
-        project: createMockProject(project),
+        project: createSidebarProject(project),
     };
 }
 

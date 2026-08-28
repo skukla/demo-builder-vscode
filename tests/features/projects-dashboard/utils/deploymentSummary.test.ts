@@ -21,7 +21,7 @@ import {
     getRuntimeSummary,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
-import { createMockProject } from '../testUtils';
+import { createProjectsDashboardProject } from '../testUtils';
 
 /** A project with one mesh entry and N integration entries. */
 function withDeployables(
@@ -46,7 +46,7 @@ function withDeployables(
             source: { owner: 'o', repo: 'r' },
         };
     });
-    return createMockProject({
+    return createProjectsDashboardProject({
         appBuilderComponents: appBuilderComponents as Project['appBuilderComponents'],
         ...rest,
     });
@@ -137,7 +137,7 @@ describe('getDeploymentSummary — one line for the whole project', () => {
     it('returns null when the project has nothing deployable', () => {
         // No mesh, no integrations, no storefront — the card renders no line at
         // all rather than an empty or misleading one.
-        expect(getDeploymentSummary(createMockProject())).toBeNull();
+        expect(getDeploymentSummary(createProjectsDashboardProject())).toBeNull();
     });
 });
 
@@ -157,7 +157,7 @@ describe('getDeploymentSummary — one line for the whole project', () => {
  * the summary does not express, so it keeps its line while it lasts.
  */
 const eds = (over: Partial<Project> = {}) =>
-    createMockProject({ selectedStack: 'eds-dalive', ...over });
+    createProjectsDashboardProject({ selectedStack: 'eds-dalive', ...over });
 
 describe('getRuntimeSummary — the local axis only', () => {
     it('gives an EDS project NO runtime line when nothing is in flight', () => {
@@ -176,14 +176,14 @@ describe('getRuntimeSummary — the local axis only', () => {
     });
 
     it('leaves a NON-EDS project reporting Running/Stopped — control', () => {
-        const stopped = getRuntimeSummary(createMockProject({ status: 'stopped' }));
+        const stopped = getRuntimeSummary(createProjectsDashboardProject({ status: 'stopped' }));
 
         expect(stopped?.text).toBe('Stopped');
         expect(stopped?.variant).toBe('neutral');
     });
 
     it('reports the port for a running non-EDS project', () => {
-        const project = createMockProject({
+        const project = createProjectsDashboardProject({
             status: 'running',
             componentInstances: { frontend: { port: 3000 } } as never,
         });

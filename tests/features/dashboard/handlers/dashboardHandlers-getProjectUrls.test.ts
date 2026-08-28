@@ -21,7 +21,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => {
     };
 });
 
-import { setupMocks, createMockProject } from './dashboardHandlers.testUtils';
+import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
 import type { Project } from '@/types';
 
 async function run(context: unknown) {
@@ -99,7 +99,7 @@ describe('handleGetProjectUrls', () => {
         expect(urlsOf(withPort).storefront).toBe('http://localhost:3000');
 
         // Stopped / no port → storefront omitted.
-        const stopped = createMockProject({
+        const stopped = createDashboardProject({
             componentInstances: { headless: { id: 'headless', type: 'frontend' } } as never,
         });
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(stopped);
@@ -113,7 +113,7 @@ describe('handleGetProjectUrls', () => {
         const result = await run(mockContext);
         expect(urlsOf(result).commerceAdmin).toBeUndefined();
 
-        const withAdmin = createMockProject({
+        const withAdmin = createDashboardProject({
             componentConfigs: {
                 'commerce-paas': { ADOBE_COMMERCE_ADMIN_URL: 'https://admin.example.com' },
             } as never,
@@ -132,7 +132,7 @@ describe('handleGetProjectUrls', () => {
     });
 
     it('falls back to the generic Console URL when Adobe IDs are absent', async () => {
-        const noAdobe = createMockProject({ adobe: undefined } as never);
+        const noAdobe = createDashboardProject({ adobe: undefined } as never);
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(noAdobe);
 
@@ -144,7 +144,7 @@ describe('handleGetProjectUrls', () => {
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest
             .fn()
-            .mockResolvedValue(createMockProject(edsProject() as never));
+            .mockResolvedValue(createDashboardProject(edsProject() as never));
 
         const urls = urlsOf(await run(mockContext));
         expect(urls.liveSite).toBe('https://main--site--owner.aem.live');

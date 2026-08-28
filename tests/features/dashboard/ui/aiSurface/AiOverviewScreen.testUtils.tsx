@@ -19,6 +19,7 @@ import { AiOverviewScreen } from '@/features/dashboard/ui/aiSurface/AiOverviewSc
 import '@testing-library/jest-dom';
 import type { Project } from '@/types/base';
 import type { AiInventory, SkillInventoryEntry } from '@/types/ai';
+import { createMockProject as createMockProjectBase } from '../../../../helpers/projectFake';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -63,12 +64,12 @@ jest.mock('@/core/ui/components/layout', () => ({
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
-export function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+export function makeAiOverviewProject(overrides: Partial<Project> = {}): Project {
+    return createMockProjectBase({
         name: 'My Demo Project',
         path: '/projects/my-demo',
         ...overrides,
-    } as Project;
+    } as never)
 }
 
 function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventoryEntry {
@@ -109,7 +110,7 @@ export function makeFullInventory(): AiInventory {
 }
 
 export function makeProjectWithUserPrompts(): Project {
-    return makeProject({
+    return makeAiOverviewProject({
         aiPrompts: [
             { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
             { id: 'u2', title: 'My second user prompt', prompt: 'Do thing two' },
@@ -133,7 +134,7 @@ export async function renderScreen(opts: {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
         webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
     };
-    const project = makeProject(opts.projectOverrides);
+    const project = makeAiOverviewProject(opts.projectOverrides);
     const defaultVerifyResponse = {
         success: true,
         status: opts.status ?? 'ok',

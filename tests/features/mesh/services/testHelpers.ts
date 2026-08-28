@@ -6,12 +6,13 @@
 
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 /**
  * Creates a test project with Commerce configuration
  */
-export function createMockProject(overrides: Partial<Project> = {}): Project {
-    return {
+export function createMeshProject(overrides: Partial<Project> = {}): Project {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -28,7 +29,7 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
             },
         },
         ...overrides,
-    };
+    } as never)
 }
 
 /** Canonical command-executor fake (ADR-016). */
