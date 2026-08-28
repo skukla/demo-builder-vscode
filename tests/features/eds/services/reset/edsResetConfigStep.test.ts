@@ -1,0 +1,194 @@
+/**
+ * edsResetConfigStep — reset steps 6–7, where most of the reset's error
+ * nuance lives.
+ *
+ * WRITTEN 2026-08-28 as phase-2 of the ADR-015 convergence. The module had NO
+ * test despite its own docblock saying "all of it is load-bearing", and its
+ * inline comments record SIX past incidents. Each of those is a behaviour a
+ * refactor could silently undo, so each gets a witness here:
+ *
+ *  1. a skipped config write must report `configWritten: false` — a run that
+ *     silently skipped it used to end with "reset successfully" while PDPs
+ *     were dead
+ *  2. the tokenProvider reaches HelixService — without it the CDN keeps
+ *     serving a stale config.json (401, seen live 2026-08-15)
+ *  3. a config.json publish failure is NON-fatal; step 7 still runs
+ *  4. registration goes through `registerSiteConfig` WITH the tokenProvider
+ *     and retryOn403 — that call carries the publish-key re-mint a reset used
+ *     to destroy
+ *  5. an expired DA.live session does NOT rethrow (a rethrow left a half-reset
+ *     repo) and does NOT fall into the BYOM branch
+ *  6. lost grants are surfaced on the progress channel
+ */
+
+const mockPreviewCode = jest.fn();
+const MockHelixService = jest.fn();
+const MockConfigurationService = jest.fn();
+const mockRegisterSiteConfig = jest.fn();
+const mockLogConfigAccessState = jest.fn();
+const mockBuildSiteConfigParams = jest.fn((..._a: unknown[]) => ({ built: 'params' }));
+const mockLostGrantsMessage = jest.fn((..._a: unknown[]) => 'lost: admin');
+const mockSurfaceOverlayFailure = jest.fn();
+const mockByomFailureMessage = jest.fn((..._a: unknown[]) => 'byom advice');
+
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    surfaceOverlayRegistrationFailure: (...a: unknown[]) => mockSurfaceOverlayFailure(...a),
+    byomRegistrationFailureMessage: (...a: unknown[]) => mockByomFailureMessage(...a),
+}));
+jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
+    logConfigAccessState: (...a: unknown[]) => mockLogConfigAccessState(...a),
+}));
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
+    buildSiteConfigParams: (...a: unknown[]) => mockBuildSiteConfigParams(...a),
+    ConfigurationService: class {
+        constructor(...args: unknown[]) {
+            MockConfigurationService(...args);
+        }
+    },
+}));
+jest.mock('@/features/eds/services/configService/lostGrantsMessage', () => ({
+    lostGrantsMessage: (...a: unknown[]) => mockLostGrantsMessage(...a),
+}));
+jest.mock('@/features/eds/services/configService/siteConfigRegistrar', () => ({
+    registerSiteConfig: (...a: unknown[]) => mockRegisterSiteConfig(...a),
+}));
+jest.mock('@/features/eds/services/helix/helixService', () => ({
+    HelixService: class {
+        previewCode = mockPreviewCode;
+        constructor(...args: unknown[]) {
+            MockHelixService(...args);
+        }
+    },
+}));
+
+import { publishConfigAndRegisterSite } from '@/features/eds/services/reset/edsResetConfigStep';
+import { DaLiveAuthError } from '@/features/eds/services/types';
+import type { Logger } from '@/types/logger';
+
+const PARAMS = {
+    repoOwner: 'skukla',
+    repoName: 'kukla-bodea',
+    daLiveOrg: 'skukla',
+    byomOverlayUrl: 'https://overlay.example/render',
+};
+
+const TOKEN_PROVIDER = { getToken: jest.fn() } as never;
+const GITHUB_TOKENS = { validateToken: jest.fn() } as never;
+
+function makeLogger(): Logger {
+    return {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    } as unknown as Logger;
+}
+
+function run(overrides: Partial<typeof PARAMS> = {}, report = jest.fn()) {
+    return publishConfigAndRegisterSite(
+        { ...PARAMS, ...overrides },
+        GITHUB_TOKENS,
+        TOKEN_PROVIDER,
+        makeLogger(),
+        report
+    );
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockPreviewCode.mockResolvedValue(undefined);
+    mockRegisterSiteConfig.mockResolvedValue({ registered: true, statusCode: 200 });
+});
+
+describe('publishConfigAndRegisterSite — the happy path', () => {
+    it('reports configWritten TRUE only when the registration actually succeeded', async () => {
+        await expect(run()).resolves.toEqual({ configWritten: true });
+    });
+
+    it('hands the tokenProvider to HelixService — without it the CDN serves a stale config', async () => {
+        await run();
+
+        expect(MockHelixService).toHaveBeenCalledWith(
+            expect.anything(),
+            GITHUB_TOKENS,
+            TOKEN_PROVIDER
+        );
+        expect(mockPreviewCode).toHaveBeenCalledWith('skukla', 'kukla-bodea', '/config.json');
+    });
+
+    it('registers through the shared registrar WITH the publish-key inputs and 403 retry', async () => {
+        await run();
+
+        expect(mockRegisterSiteConfig).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tokenProvider: TOKEN_PROVIDER,
+                retryOn403: true,
+                siteParams: { built: 'params' },
+            })
+        );
+    });
+
+    it('surfaces lost grants on the progress channel', async () => {
+        mockRegisterSiteConfig.mockResolvedValue({
+            registered: true,
+            statusCode: 200,
+            lostGrants: ['admin'],
+        });
+        const report = jest.fn();
+
+        await run({}, report);
+
+        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('lost: admin'));
+    });
+});
+
+describe('publishConfigAndRegisterSite — the failure nuances', () => {
+    it('a config.json publish failure is NON-fatal: step 7 still runs', async () => {
+        mockPreviewCode.mockRejectedValue(new Error('helix 500'));
+
+        await expect(run()).resolves.toEqual({ configWritten: true });
+        expect(mockRegisterSiteConfig).toHaveBeenCalled();
+    });
+
+    it('a FAILED registration reports configWritten FALSE — the "reset successfully" lie', async () => {
+        mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 403 });
+
+        await expect(run()).resolves.toEqual({ configWritten: false });
+    });
+
+    it('a failed registration WITH an overlay surfaces the shared BYOM advice', async () => {
+        mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 403 });
+        const report = jest.fn();
+
+        await run({}, report);
+
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(expect.anything(), undefined, 403);
+        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('byom advice'));
+    });
+
+    it('an expired DA.live session does NOT rethrow, and does NOT take the BYOM branch', async () => {
+        mockRegisterSiteConfig.mockRejectedValue(new DaLiveAuthError('session expired'));
+        const report = jest.fn();
+
+        // A rethrow here used to abort AFTER the repo was wiped and BEFORE the
+        // content came back — a half-reset storefront.
+        await expect(run({}, report)).resolves.toEqual({ configWritten: false });
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('DA.live session expired'));
+    });
+
+    it('a non-auth throw with an overlay still surfaces the advice and reports false', async () => {
+        mockRegisterSiteConfig.mockRejectedValue(new Error('network down'));
+
+        await expect(run()).resolves.toEqual({ configWritten: false });
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
+    });
+
+    it('logs the config access state BEFORE the write that depends on it', async () => {
+        await run();
+
+        expect(mockLogConfigAccessState.mock.invocationCallOrder[0]).toBeLessThan(
+            mockRegisterSiteConfig.mock.invocationCallOrder[0]
+        );
+    });
+});

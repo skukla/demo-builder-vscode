@@ -562,6 +562,7 @@
     "tests/features/eds/services/resourceCleanupHelpers.test.ts",
     "tests/features/eds/services/storefront/storefrontNameMigrationForProject.test.ts",
     "tests/features/eds/services/storefrontRepublishContent.test.ts",
+    "tests/features/project-creation/services/catalogPrewarmPhase.test.ts",
     "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts",
     "tests/unit/features/eds/services/helix/helixService-auth-keys.test.ts",
     "tests/unit/features/eds/services/helix/helixService-persistent-keys.test.ts",
@@ -647,13 +648,16 @@
     "tests/features/dashboard/handlers/dashboardHandlers-republish.test.ts",
     "tests/features/eds/services/authoringExperienceFlip.test.ts",
     "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
-    "tests/features/eds/services/storefrontRepublishContent.test.ts"
+    "tests/features/eds/services/storefrontRepublishContent.test.ts",
+    "tests/features/project-creation/services/catalogPrewarmPhase.test.ts"
    ]
   },
   {
    "unit": "src/features/project-creation/services/catalogPrewarmPhase.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/project-creation/services/catalogPrewarmPhase.test.ts"
+   ]
   },
   {
    "unit": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
