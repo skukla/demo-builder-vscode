@@ -11,7 +11,6 @@
   "src/features/lifecycle/services/projectResetService.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/mesh/services/deployMeshHeadless.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/mesh/services/meshDeploymentVerifier.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
-  "src/features/mesh/services/meshRedeploy.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/mesh/services/meshVerifier.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/mesh/services/stalenessDetector.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/prerequisites/services/PrerequisitesManager.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",

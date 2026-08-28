@@ -186,6 +186,7 @@ export async function deployMeshHeadless(
             // — sending a live mesh down the create path.
             const result = await deployMeshCreateOrUpdate(
                 meshComponent.path as string,
+                ServiceLocator.getCommandExecutor(),
                 logger,
                 (message: string, subMessage?: string) => onProgress?.(message, subMessage),
             );

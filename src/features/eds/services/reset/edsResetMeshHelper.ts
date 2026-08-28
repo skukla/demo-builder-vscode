@@ -49,6 +49,7 @@ async function deployMeshAndPersist(
         // workspace. meshComponent.path is non-null: redeployApiMesh checked.
         const meshDeployResult = await deployMeshCreateOrUpdate(
             meshComponent.path as string,
+            ServiceLocator.getCommandExecutor(),
             context.logger,
             (msg, sub) => report(12, sub || msg),
         );

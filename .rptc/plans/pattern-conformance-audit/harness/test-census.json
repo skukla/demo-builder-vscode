@@ -9,8 +9,10 @@
   },
   {
    "unit": "src/features/components/services/componentInstallation.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/components/services/componentInstallation.test.ts"
+   ]
   },
   {
    "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
@@ -612,8 +614,10 @@
   },
   {
    "unit": "src/features/eds/services/reset/edsResetConfigStep.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/reset/edsResetConfigStep.test.ts"
+   ]
   },
   {
    "unit": "src/features/eds/services/reset/edsResetService.ts",

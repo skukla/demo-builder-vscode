@@ -7,24 +7,25 @@
  * local metadata was stale. All three redeploy surfaces route through here, so
  * a silent break here breaks them all.
  *
- * What the witness pins is exactly what the conversion will move: the remote
- * probe happening at all, and the id it returns being handed to the deploy
- * spine (that id IS the create-vs-update switch), together with the fetched
- * executor and the caller's progress surface.
+ * What the witness pins: the remote probe happening at all, and the id it
+ * returns being handed to the deploy spine (that id IS the create-vs-update
+ * switch), together with the executor and the caller's progress surface.
+ *
+ * CONVERTED 2026-08-28 (ADR-015): the executor is now handed IN rather than
+ * fetched, so this suite no longer mocks the service registry at all — one
+ * module mock deleted, assertions unchanged.
  */
 
 const mockDeployMeshComponent = jest.fn();
 const mockFetchMeshInfo = jest.fn();
-const mockExecutor = { execute: jest.fn() };
+/** A plain fake, handed in — no module mock needed since ADR-015. */
+const executor = { execute: jest.fn() } as never;
 
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: (...args: unknown[]) => mockDeployMeshComponent(...args),
 }));
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     fetchMeshInfoFromAdobeIO: (...args: unknown[]) => mockFetchMeshInfo(...args),
-}));
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => mockExecutor },
 }));
 
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
@@ -52,13 +53,13 @@ describe('deployMeshCreateOrUpdate', () => {
         const logger = makeLogger();
         const onProgress = jest.fn();
 
-        await deployMeshCreateOrUpdate(MESH_PATH, logger, onProgress);
+        await deployMeshCreateOrUpdate(MESH_PATH, executor, logger, onProgress);
 
         // The whole point of the module: the remote id is the create-vs-update
         // switch, and it must arrive as the spine's 5th argument.
         expect(mockDeployMeshComponent).toHaveBeenCalledWith(
             MESH_PATH,
-            mockExecutor,
+            executor,
             logger,
             onProgress,
             'mesh-abc123'
@@ -68,11 +69,11 @@ describe('deployMeshCreateOrUpdate', () => {
     it('NO remote mesh takes the create path — an empty id, never undefined', async () => {
         mockFetchMeshInfo.mockResolvedValue(undefined);
 
-        await deployMeshCreateOrUpdate(MESH_PATH, makeLogger());
+        await deployMeshCreateOrUpdate(MESH_PATH, executor, makeLogger());
 
         expect(mockDeployMeshComponent).toHaveBeenCalledWith(
             MESH_PATH,
-            mockExecutor,
+            executor,
             expect.anything(),
             undefined,
             ''
@@ -82,7 +83,7 @@ describe('deployMeshCreateOrUpdate', () => {
     it('a remote answer WITHOUT an id is treated as no mesh (never a falsy id)', async () => {
         mockFetchMeshInfo.mockResolvedValue({ meshId: '' });
 
-        await deployMeshCreateOrUpdate(MESH_PATH, makeLogger());
+        await deployMeshCreateOrUpdate(MESH_PATH, executor, makeLogger());
 
         expect(mockDeployMeshComponent.mock.calls[0][4]).toBe('');
     });
@@ -91,7 +92,7 @@ describe('deployMeshCreateOrUpdate', () => {
         mockFetchMeshInfo.mockResolvedValue({ meshId: 'mesh-1' });
         const logger = makeLogger();
 
-        await deployMeshCreateOrUpdate(MESH_PATH, logger);
+        await deployMeshCreateOrUpdate(MESH_PATH, executor, logger);
 
         expect(mockFetchMeshInfo).toHaveBeenCalledWith(logger);
         expect(mockFetchMeshInfo).toHaveBeenCalledTimes(1);
@@ -102,6 +103,6 @@ describe('deployMeshCreateOrUpdate', () => {
         const failure = { success: false, error: 'deploy exploded' };
         mockDeployMeshComponent.mockResolvedValue(failure);
 
-        await expect(deployMeshCreateOrUpdate(MESH_PATH, makeLogger())).resolves.toBe(failure);
+        await expect(deployMeshCreateOrUpdate(MESH_PATH, executor, makeLogger())).resolves.toBe(failure);
     });
 });

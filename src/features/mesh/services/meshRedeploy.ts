@@ -21,7 +21,7 @@
 
 import { deployMeshComponent, type MeshDeploymentResult } from './meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -29,17 +29,19 @@ import type { Logger } from '@/types/logger';
  * I/O reports one and creating otherwise.
  *
  * @param meshPath - the installed mesh component's path
+ * @param commandManager - the executor the deploy runs through (ADR-015: this
+ *   module is logic, so its dependencies arrive; the boundary caller supplies)
  * @param logger - flow logger (also used for the remote-truth probe)
  * @param onProgress - the caller's progress surface, passed to the spine
  * @returns the spine's deployment result (callers map failures themselves)
  */
 export async function deployMeshCreateOrUpdate(
     meshPath: string,
+    commandManager: CommandExecutor,
     logger: Logger,
     onProgress?: (message: string, subMessage?: string) => void,
 ): Promise<MeshDeploymentResult> {
     const meshInfo = await fetchMeshInfoFromAdobeIO(logger);
     const existingMeshId = meshInfo?.meshId || '';
-    const commandManager = ServiceLocator.getCommandExecutor();
     return deployMeshComponent(meshPath, commandManager, logger, onProgress, existingMeshId);
 }

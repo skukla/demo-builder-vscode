@@ -266,8 +266,10 @@ async function runTargetedMeshDeploy(
         const { deployMeshCreateOrUpdate } = await import(
             '@/features/mesh/services/meshRedeploy'
         );
+        const { ServiceLocator } = await import('@/core/di');
         const meshResult = await deployMeshCreateOrUpdate(
             meshPath,
+            ServiceLocator.getCommandExecutor(),
             context.logger,
             (_msg, sub) => progress.report({ message: sub || _msg }),
         );
