@@ -53,6 +53,17 @@ log, for free.
 - Accept before shipping: put ten tagged and untagged lines in front of a
   human; if the tag slows finding the subsystem prefix, the format is wrong.
 
+## Where the tag appears (settled with the owner, 2026-08-28)
+
+- **Agent Activity channel + the trace record**: once per line/entry — the
+  tag NAMES the call (`#47 ✗ Deploying the integration`).
+- **Debug Logs**: on every line written while serving the call — the tag
+  marks MEMBERSHIP (`[Guards #47] auth check…`). Filter by tag = read only
+  that call's lines.
+- **User Logs: never.** It is the headline stream for a person watching
+  their own operation; call bookkeeping is noise there. Same instinct as
+  the scannability rule.
+
 ## Effort
 
 Evening-or-less: ambient context at the one chokepoint, logger reads it,
