@@ -157,3 +157,4 @@ after the data ships and re-measures as differentiated.
 ## Shipped so far
 
 - 2026-08-28  Loop pickup 2026-08-28: re-measure attempted per the kickoff prompt, blocked unattended — the isolated dev-host profile lacks the machine-scoped demoBuilder.dataInstaller.apiBaseUrl (deliberately unbundled; public repo), and the real window's server is unreachable while the dev host holds the shared socket. The 2026-08-23 provenance check (pack unchanged since 2026-06-18) stands as the freshest evidence. Item is at its supervised edge: the decision is the drafted differentiation (path 1 — Admin change on one instance, prove the story; then path 2 — pack request to CoreTech). Queued for walkthrough.
+- 2026-08-28  docs(backlog): EDS-6 at its supervised edge — decision queued (`870c098b8`)

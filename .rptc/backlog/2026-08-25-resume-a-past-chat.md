@@ -105,3 +105,4 @@ records why."
 ## Shipped so far
 
 - 2026-08-28  Citations re-verified 2026-08-28 after the hygiene scan's CODE MOVED advisory: AiZone.tsx docstring (now ~line 8) still records the one-affordance reasoning; openInClaude.ts --continue guard and --resume note both intact. Premise unchanged.
+- 2026-08-28  docs(backlog): resume-a-past-chat citations re-verified after code moved (`78a659052`)
