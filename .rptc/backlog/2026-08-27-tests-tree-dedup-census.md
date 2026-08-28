@@ -3,7 +3,7 @@ id: PL-9
 kind: chore
 area: platform
 needs: []
-value: low
+value: med
 status: active
 parent: PL-11
 ---
@@ -50,6 +50,36 @@ webview-test-authoring §3), test COUNT stays identical, all green. Also
 90 files sit in the 500-750 warning zone (validate:test-file-sizes) — split
 per the playbook when touched, not as a batch.
 
+## The 2026-08-28 refresh — what the 160 clones ARE, and the three lanes
+
+The owner's challenge ("is 160 acceptable for a baseline?") forced the
+composition measurement. It is NOT acceptable as an endpoint — it is frozen
+so it cannot grow. Reference point: `src` sits at **0.62%** under the same
+reviewers, so 2.44% in tests is accumulated slack, not a law of test code.
+
+**7,863 duplicated lines, measured, in three lanes:**
+
+| Lane | Size | Mechanism | Owner |
+|---|---|---|---|
+| **A. A suite repeating ITSELF** | 16 clones | Fix outright — no design question, no trade-off | this item, do first |
+| **B. Mock-wall suites** | 41 clones / 1,658 lines (21%) | Melts as a SIDE EFFECT of the ADR-015 conversions — no separate work | PL-13 batches |
+| **C. Between separate files** | 103 clones / ≈2,446 removable | Extract a shared setup per family, worst-first | this item, ranked list below |
+
+Lane C's ranking is `.rptc/plans/architecture-test-convergence/family-worklist.json`
+(all 89 shared-setup-less families scored): **20 real targets** (≥40 removable
+lines — deleteProject 177, stopDemo 152, storefrontSetupPhases 147,
+edsResetService 144, aiContextWriter 141 lead it), **27 small** (10–39, do
+opportunistically when a batch is already in that area), **42 legitimate
+size-splits** (adjudicate to a reason string; they stop counting as debt).
+
+**Guardrails already live**: the family-setup check (new families without
+shared setup fail the build) and the clone ratchet (160, may only fall,
+re-measured by the sweep's own command).
+
+**Done when**: lane A is zero, lane B has melted with its conversions, lane C's
+20 real targets are extracted, the 42 legitimate splits carry written reasons,
+and the ratchet rests at that adjudicated floor.
+
 ## Shipped so far
 
 - 2026-08-27  test(prerequisites): the arrange ritual lives in testUtils — because the helper was broken (`8002fe208`)
@@ -57,3 +87,4 @@ per the playbook when touched, not as a batch.
 - 2026-08-28  Cluster triage completed (loop, 2026-08-28). MECHANICAL, fixed tonight: extension-activation pair (5 clones) and AddIntegrationFlowModal pair (3) — census 167 -> 159, 2.59% -> 2.45%. VARIANTS, need per-family design, not forced: edsResetService family (5 suites, preambles differ 70-160 lines of 130 — each steers different mocks), checkUpdates-upstream pair (makeProject defaults differ semantically: forkSync's fixture deliberately lacks githubRepo), startDemo/stopDemo family (7 clones woven across 4 files). Internal-only clusters (daLiveContentOperations-transform, blockCollectionHelpers-multiLibrary) unexamined. Next pass starts from this triage.
 - 2026-08-28  refactor(tests): the AddIntegrationFlowModal pair shares one preamble (`4d4192dcc`)
 - 2026-08-28  refactor(tests): the extension-activation pair shares one preamble (`767c8ecd6`)
+- 2026-08-28  REFRESHED with the measured composition (owner challenge: 'is 160 acceptable?'). Answer recorded: no — a frozen starting line, not an endpoint; src is 0.62% under the same reviewers. Three lanes now named with owners: A = 16 clones of a suite repeating itself (fix outright, do first, no design question), B = 41 clones / 1,658 lines / 21% inside mock-wall suites (melts as a side effect of the PL-13 conversions, zero separate work), C = 103 clones / ~2,446 removable lines across families (ranked worklist: 20 real targets, 27 small, 42 legitimate splits to adjudicate). Value raised low -> med; guardrails already enforcing (family-setup check + ratchet with its producing command).
