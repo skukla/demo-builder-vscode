@@ -71,6 +71,7 @@ does it cost what it should?*
 - 2026-08-28  feat(ai): token-first theming — the whole theme is a bounded choice, not just type (`e918947ca`)
 - 2026-08-28  fix(ai): get_auth_status github false no longer reads as signed out (`f6c0fba49`)
 - 2026-08-28  Step-2 decision RULED (owner, 2026-08-28): themes do NOT survive reset — reset's back-to-template contract stands; the skill's plain lifecycle warning is the shipped behavior. Follow-on feature filed as EDS-10 (custom themes as savable entities). Steps 3-4 (design skill with a stopping rule) are now unblocked.
+- 2026-08-28  Journey measurement APPLIED end-to-end (2026-08-28): ERP journey replayed as three battery prompts. Results vs original: catalog-format 8 trial-and-error curls + header creep -> ONE run_commerce_query call, 3/3 repeats identical; category query -> 2 queries (discover + filter) in 2/3 repeats; mesh inspect 5 aio commands + select dance -> 3-5 calls, dance gone. First pass artifact: 6 runs answered for Battery Scratch (isolated host had no prior pointer; harness said so, results did not carry it) -> run meta now records currentProject with a loud scratch warning. NEW FINDING from the enumerate step: the dropins MCP's 21 tools (incl. list_graphql_queries) declare no readOnlyHint, so the battery allowlist excludes them ALL — the dropins routing question is unmeasurable by battery until someone classifies those tools; real sessions can still reach them.
 
 ## How to audit this systematically — `ai-coverage-scan`
 
