@@ -65,6 +65,24 @@ keeps converging everything else while they wait.
 
 ## Report contract
 
-Per batch: one line (files converted, rows deleted, ratchets moved).
-Per session: plain English — what moved on the scoreboard, what got decided,
-what's waiting on the owner. The impact report is always a snapshot diff.
+**ATTENDED MODE (owner present — the default for this program; set
+2026-08-28, 1:13pm ET, "priority number one, constant updates").** The owner
+is watching, so narration is continuous, not end-of-session:
+
+- **Before each step**: one or two sentences — what I'm about to do, WHY, and
+  what would change my mind. Never a bare tool call into silence.
+- **After each step**: what actually happened, in plain English, including
+  when it failed or surprised me. A step that found nothing says so.
+- **Per batch**: the one-line score — files converted, ledger rows deleted,
+  ratchets moved, gate result.
+- **No invented vocabulary.** A term coined during the work either gets a
+  plain-word replacement or a plain-word definition in the same sentence.
+  Summaries open with what it MEANS, not with what was built.
+- **Surprises surface immediately**, not at the end — a blocked file, a test
+  that should have caught something and didn't, a number moving the wrong
+  way.
+
+**UNATTENDED MODE** (owner away): the standard loop contract — per-item
+reports, the walkthrough queue, the handoff file, sleep guard on.
+
+Either mode: the impact report is always a snapshot diff, never a narrative.
