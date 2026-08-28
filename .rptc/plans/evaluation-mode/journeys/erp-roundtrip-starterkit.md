@@ -5,41 +5,35 @@ app shell or via the starter kit. We should have two distinct journeys and
 test both flows."* Journey A (`erp-roundtrip.md`) measured the shell flow.
 This is the starter-kit flow: same producer goal, the other door.
 
-## The ground fact that shapes this journey
+## The ground fact that shapes this journey (UPDATED 2026-08-28)
 
-bodea already has `commerce-integration-starter-kit` attached and DEPLOYED
-(v4.0.0, since 2026-08-27). So on bodea, "implement via the starter kit" is
-the EXTEND flow — a producer who has the kit and builds their ERP on top of
-it (the `extend-app-builder-app` skill's exact territory). The fresh-add flow
-(producer without the kit: add from catalog → build → deploy → remove) needs
-a project that does not have the kit; run it there when one exists.
+The owner ordered bodea fully cleaned: ALL integrations removed (the starter
+kit included). Both journeys now start from the identical clean baseline —
+`eds-storefront` only (`erp-roundtrip-zero-state.json`) — and differ ONLY in
+which door they take: journey A the blank shell, journey B the pre-built
+starter kit from the catalog. Each is a full add -> build -> deploy -> prove
+-> remove round trip against the same zero.
 
-## Variant B1 — extend the existing kit on bodea (runnable now)
+The extend-flow variant (build on an already-attached kit) is retired as a
+bodea journey; it returns if a project with a standing kit becomes a fixture.
 
-**Zero state**: the kit's pre-journey state — capture BEFORE the run:
-`git -C ~/.demo-builder/projects/bodea/components/commerce-integration-starter-kit
-rev-parse HEAD` + `git status --short` + the component's `status`/`version`
-from the manifest. Zero = same commit, clean tree (or byte-identical mods),
-same deployed state.
+## Journey B — fresh add via the starter kit (runnable now)
 
 **The prompt**:
 
-> I want to build ERP-style order handling into this project using the
-> Commerce integration starter kit that's already part of it — order events
-> from my Commerce backend should be received and queryable through an
-> endpoint an external system could call. Build it on the starter kit, deploy
-> it, and show me it working. Once we've confirmed it works, undo everything
-> — the starter kit and this project should end exactly as they started.
+> I want to build ERP-style order handling for this project using Adobe's
+> Commerce integration starter kit — order events from my Commerce backend
+> should be received and queryable through an endpoint an external system
+> could call. Add the starter kit, build on it, deploy it, and show me it
+> working. Once we've confirmed it works, tear the whole thing down — the
+> app, its deployment, and anything created in Adobe along the way — so this
+> project ends exactly as it started.
 
-**What B1 measures that A could not**: the extend-app-builder-app skill and
-the commerce-extensibility server's starter-kit rules (both sat unused in A —
-the shell's embedded guidance carried that build); `redeploy_integration` as
-the undo vehicle (restore files → redeploy, rather than remove); and whether
-an agent can round-trip a MUTATION of pre-existing state, which is a harder
-zero than add-then-remove.
-
-**Teardown consent note**: redeploy_integration may carry the same human
-consent gate as remove (verify before an unattended run) — see AI-7.
+**What B measures that A could not**: the catalog's pre-built door
+(add_integration with the kit), the commerce-extensibility server's
+starter-kit rules and the appbuilder-* skills (all unused in A), the kit's
+own onboarding surface — and, once AB-6 ships, real event-provider
+create-and-delete inside one journey.
 
 ## Variant B2 — fresh add on a kit-less project (needs a host project)
 

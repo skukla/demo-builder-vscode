@@ -1,13 +1,6 @@
 {
-  "takenAt": "2026-08-28T11:15Z (pre ERP round-trip journey)",
+  "takenAt": "2026-08-28T12:35Z (CLEAN BASELINE: owner-ordered removal of all integrations; supersedes the pre-journey-A snapshot \u2014 that one is in git history)",
   "componentInstances": {
-    "commerce-integration-starter-kit": {
-      "id": "commerce-integration-starter-kit",
-      "type": "app-builder",
-      "subType": "app",
-      "status": "deployed",
-      "version": "4.0.0"
-    },
     "eds-storefront": {
       "id": "eds-storefront",
       "type": "frontend",
@@ -21,9 +14,7 @@
     "backend": "adobe-commerce-accs",
     "dependencies": [],
     "integrations": [],
-    "appBuilder": [
-      "commerce-integration-starter-kit"
-    ]
+    "appBuilder": []
   },
   "adobe": {
     "organization": "285361",
