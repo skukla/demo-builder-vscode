@@ -10,6 +10,7 @@
 
 import { detectMeshChanges, calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types';
+import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
@@ -73,15 +74,8 @@ jest.mock('@/types/typeGuards', () => ({
 }));
 
 
-/**
- * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
- * suite passes the fake explicitly at each call site, so a reader sees the
- * real signature.
- */
-const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
-} as never;
+/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
+const meshDeps = createMeshDepsFake();
 
 /** The same object, typed for the per-test swap in `beforeEach`. */
 const mutableMeshDeps = meshDeps as unknown as {

@@ -136,20 +136,14 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
+import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 
 /**
  * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
  * rather than fetching them, so the suites hand in this plain fake.
  */
-/**
- * ADR-015 (2026-08-28): the reset's auth checks receive the auth service through
- * this bag now, so it carries the SAME fake the registry stub used to return —
- * the assertions below still see `mockAuthService`.
- */
-const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: mockAuthService,
-} as never;
+/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
+const meshDeps = createMeshDepsFake({ authManager: mockAuthService });
 
 
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)

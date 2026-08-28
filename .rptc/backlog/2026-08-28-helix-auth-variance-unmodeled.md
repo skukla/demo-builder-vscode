@@ -3,103 +3,84 @@ id: EDS-11
 kind: fix
 area: eds
 needs: []
-value: high
-status: backlog
+value: low
+status: dropped
 ---
 
-# HelixService takes three optional credentials, so the wrong combination compiles
+# RETRACTED — HelixService's optional credentials are not the hazard I described
 
-Filed 2026-08-28, out of the ADR-015 conversion work. Raised by the owner as a
-question — "is this the right way to handle variance?" — about a class of thing
-the conversion kept walking past.
+Filed 2026-08-28 and **retracted the same day, before any code changed.**
+Recorded rather than deleted, because the way it was wrong is worth keeping.
 
-## What is wrong
+## What I claimed
 
-`HelixService` (`src/features/eds/services/helix/helixService.ts:178`) has this
-constructor:
+That `HelixService`'s three optional constructor parameters let any combination
+compile including unworkable ones; that this caused a live 401 in August; and
+that the fix was named factories per job — `helixForPublishing(...)`,
+`helixForCodeSync(...)` — so a call site names a job instead of assembling a
+credential tuple.
 
-```ts
-constructor(
-    logger?: Logger,
-    githubTokenService?: GitHubTokenService,
-    daLiveTokenProvider?: DaLiveTokenProvider,
-)
-```
+## What is actually true
 
-Different operations on it need different credentials. Minting a publish key and
-publishing `config.json` need the DA.live token provider. Code sync and preview
-need the GitHub token service. Status reads need neither.
+**The incident was real and is already fixed — by a better mechanism than the
+one I proposed.**
 
-Because all three parameters are optional, **every combination typechecks**,
-including the ones that cannot work. Nothing connects "which method am I about
-to call" to "which credential must be present". That knowledge lives as
-convention across 11 construction sites.
+`src/extension.ts:340` registers ONE DA.live token source that every
+HelixService falls back to, read at call time, before anything can construct
+one. Its comment states the history directly:
 
-## Evidence this is not theoretical
+> There is a single DA.live session per host, so threading it through each layer
+> that builds a HelixService modelled a plurality that does not exist — and two
+> construction sites were missing it, which made a Helix code publish 401 on any
+> admin-locked site and leave the CDN serving a stale config.json.
 
-**It has already caused a live failure.** The witness for reset step 7 records
-it in its own words (`tests/features/eds/services/reset/edsResetConfigStep.test.ts:13`):
+So omitting the DA.live provider is not an error. It is the intended path: the
+default answers. Passing one explicitly still wins, which is why several sites
+do.
 
-> the tokenProvider reaches HelixService — without it the CDN keeps serving a
-> stale config.json (401, seen live 2026-08-15)
+**And the other credential does not fail silently.** `HelixAdminAuth.getGitHubToken`
+(`helixAdminAuth.ts:70`) throws immediately when the GitHub token service is
+absent: *"GitHub authentication required for Helix Admin API. Please log in to
+GitHub."* Loud, actionable, at the point of use.
 
-A HelixService built without the right credential compiled, ran, and left the
-CDN serving stale config until somebody noticed in production. There is a test
-pinning that behaviour now, which is good, and the shape that allowed it is
-still in place, which is the point of this item.
+## Why the retraction matters more than the item did
 
-**A call site skips a parameter positionally.** `pdp/publishKeyRegistrar.ts:87`:
+**My proposed fix was the thing the codebase deliberately moved away from.**
+Named per-job factories threading a credential through every construction site
+IS the per-layer threading the comment describes — and that threading is what
+produced the August bug, because two of the sites forgot. Replacing a default
+with eleven explicit decisions reintroduces eleven chances to forget.
 
-```ts
-const helix = new HelixService(logger, undefined, tokenProvider);
-```
+The owner had approved a review of an 11-row mapping table built on this
+premise. Producing it would have spent their time confirming a table whose whole
+basis was refuted by a comment in `extension.ts`.
 
-Passing `undefined` to step over a middle argument is the visible symptom of a
-constructor that asks callers to assemble a combination rather than name a job.
+## What I got wrong, mechanically
 
-**Measured 2026-08-28:** 11 construction sites, at least 5 distinct argument
-shapes among them.
+Two pieces of evidence were read correctly and joined wrongly:
 
-## Proposed shape
+1. A test comment recording the incident — read as *current* rather than
+   *historical*. It says "seen live 2026-08-15"; it does not say unfixed. A
+   pinned regression test is evidence a bug WAS fixed.
+2. `new HelixService(logger, undefined, tokenProvider)` — read as a caller
+   stepping over a hazard. It is a caller passing an explicit provider where the
+   default would also serve. Redundant, not dangerous.
 
-Replace the optional-parameter constructor with named factories, each taking the
-credential its job actually requires:
+The check that would have falsified it in one command, and was not run until
+after the item was filed: **read who registers the default, and when.**
 
-```ts
-helixForPublishing(daLiveTokenProvider, logger)   // publish keys, config.json
-helixForCodeSync(githubTokenService, logger)      // code sync, preview
-helixForStatus(logger)                            // read-only status
-```
+## Residual, if anything
 
-The call site then picks a job. The compiler rejects a publishing call built
-with GitHub credentials. The variance stays — it is real — but becomes a small
-closed set of checkable cases instead of eight tuples of which several are
-silently wrong.
+Small and cosmetic. `logger, undefined, tokenProvider` at
+`pdp/publishKeyRegistrar.ts:87` passes an explicit provider that duplicates the
+activation default; the middle `undefined` is noise. Worth tidying whenever that
+file is next open. Not worth an item — which is why this one is retracted rather
+than rescoped.
 
-## Why this needs a human, unlike the rest of the conversion
+## Standing lesson
 
-Every other ADR-015 conversion was behaviour-preserving and proved itself by
-leaving assertions untouched. This one changes which credential reaches a
-network call. The failure mode is precisely the 2026-08-15 incident: it
-compiles, it runs, and the damage appears later somewhere else. Mapping each of
-the 11 sites to the right factory needs someone who knows which operation each
-one performs; it cannot be inferred from the call shape, because the call shape
-is what is wrong.
-
-## Scope
-
-- `HelixService`: 11 construction sites, one class.
-- Then ask the same question of `DaLiveContentOperations` and
-  `ConfigurationService`. Both take a **required** token provider, so they are
-  already safer and may need nothing — confirm rather than assume.
-
-## The general lesson this came from
-
-The conversion work repeatedly found near-duplicate structures, checked them,
-concluded "variants, not duplicates", and stopped. That verdict is a beginning,
-not an end: it establishes THAT something varies, and says nothing about whether
-the variation is **modeled** (expressed so it cannot be got wrong) or merely
-**accidental** (divergence nobody has looked at). This item is what one
-unexamined "it's a variant" was hiding.
-
-Related: D-3 in `.rptc/plans/architecture-test-convergence/decisions-for-owner.md`.
+The lesson the item was filed to make is still true and is now better
+illustrated by the item itself: **"it's a variant" is the start of an inquiry,
+not the end.** But so is "this looks like a hazard". Both need the same next
+question — what does the code around it already do about this? — and here that
+question had an answer sitting in a comment at the composition root.

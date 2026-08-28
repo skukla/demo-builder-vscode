@@ -92,3 +92,26 @@ is watching, so narration is continuous, not end-of-session:
 reports, the walkthrough queue, the handoff file, sleep guard on.
 
 Either mode: the impact report is always a snapshot diff, never a narrative.
+
+---
+
+## Phase 8 (added 2026-08-28) — the frontend half of the architecture
+
+The owner's observation after phases 1–7: the architecture we wrote and enforced
+is the BACKEND architecture. The extension is two programs — an extension host
+(608 files) and eight webview bundles (291 files) — and only one of them is
+written down.
+
+This is not speculative. ADR-015 mentions React, hooks, webviews and browsers
+zero times, yet one of the six checks enforced under its name is a pure React
+rule (custom hooks must not take inline `[]`/`{}`, the re-render trap) with five
+files on its ledger. Frontend rules already exist and are already enforced —
+under a document that does not claim them.
+
+Tracked as **PL-17**. Scope: declare ADR-015's scope as the extension host,
+write the frontend ADR (composition root = the bundle entries; dependencies
+arrive as props/context; rehome the hook rule), and split the enforcement so a
+frontend violation is not reported as an ADR-015 one.
+
+Sequenced AFTER the construction-boundary work, because that work is what keeps
+turning up the evidence for it.

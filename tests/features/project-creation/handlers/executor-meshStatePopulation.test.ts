@@ -12,6 +12,7 @@
 
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
+import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
 
 // Mock the stalenessDetector module
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -25,10 +26,8 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 const meshLogger = {
     debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
 } as never;
-const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
-} as never;
+/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
+const meshDeps = createMeshDepsFake();
 
 describe('Executor - Mesh State Population After Deployment', () => {
     let mockProject: Project;

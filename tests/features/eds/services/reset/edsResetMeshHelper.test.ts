@@ -65,15 +65,10 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 }));
 
 import { redeployApiMesh } from '@/features/eds/services/reset/edsResetMeshHelper';
+import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 
-/**
- * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
- * rather than fetching them, so the suites hand in this plain fake.
- */
-const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: { getCachedOrganization: jest.fn() },
-} as never;
+/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
+const meshDeps = createMeshDepsFake();
 
 
 // =============================================================================

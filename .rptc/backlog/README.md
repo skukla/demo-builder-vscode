@@ -236,7 +236,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
-| `EDS-11` | fix | [HelixService takes three optional credentials, so the wrong combination compiles](2026-08-28-helix-auth-variance-unmodeled.md) | — | high | backlog |
+| `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 
 ### app-builder  (11)
 
@@ -286,8 +286,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | backlog |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-13` | chore | [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | backlog |
-| `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | med | backlog |
-| `PL-17` | question | [ADR-015 judges 291 webview files by a rule that gives them no legal path](2026-08-28-adr015-webview-jurisdiction.md) | — | high | backlog |
+| `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | backlog |
+| `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | backlog |
 
 <!-- END GENERATED registry -->
 

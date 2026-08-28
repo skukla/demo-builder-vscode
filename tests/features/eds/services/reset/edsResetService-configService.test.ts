@@ -154,15 +154,10 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
+import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 
-/**
- * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
- * rather than fetching them, so the suites hand in this plain fake.
- */
-const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: { getCachedOrganization: jest.fn() },
-} as never;
+/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
+const meshDeps = createMeshDepsFake();
 
 
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<

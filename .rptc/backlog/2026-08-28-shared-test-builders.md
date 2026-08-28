@@ -3,7 +3,7 @@ id: PL-16
 kind: fix
 area: platform
 needs: []
-value: med
+value: high
 status: backlog
 ---
 
@@ -12,66 +12,83 @@ status: backlog
 Filed 2026-08-28 from the test-divergence audit the owner asked for after
 noticing that suites "do things their own way".
 
-## The measurement
+## The measurement — WHOLE SUITE, corrected 2026-08-28
 
-`node .claude/skills/test-divergence-scan/scan.mjs tests` over 1,288 files:
+The first version of this item measured five collaborators and concluded
+"medium value, adopt opportunistically". The owner pushed back that this sounded
+like a large consolidation opportunity. Measuring the whole corpus rather than
+five samples says they are right.
 
-| Collaborator | shared builder | hand-rolled | distinct shapes | most common covers | shapes used once |
-|---|---|---|---|---|---|
-| HandlerContext | 165 | 4 | 3 | 78% | 2 |
-| CommandExecutor | 80 | 81 | 5 | 54% | 2 |
-| Logger | 210 | 341 | 30 | 33% | 9 |
-| StateManager | 47 | 48 | 26 | 14% | 17 |
-| Project fixture | 78 | 38 | 32 | 13% | 25 |
+Every object literal in `tests/` whose values are `jest.fn()` — i.e. a
+hand-rolled fake of something:
 
-## What it says
+    1,289 test files
+    2,532 hand-rolled fakes
+      552 distinct shapes
+      305 shapes (55%) used EXACTLY ONCE
 
-**HandlerContext is the control, and it is the whole argument.** 165 suites
-import `createMockHandlerContext`; four hand-roll one. That is not superior
-discipline in those 165 authors — it is that a shared builder exists, is easy to
-find, and covers what suites actually need. Where that holds, divergence does
-not happen.
+The most-copied shapes are the consolidation targets, and they are not exotic:
 
-**StateManager and Project fixtures are where it does not hold.** Twenty-six
-distinct shapes across forty-eight uses, and thirty-two across thirty-eight.
-Seventeen and twenty-five of those shapes have exactly one user — a shape with
-one user is a shape nobody agreed to.
+| Copies | Shape | What it is |
+|---|---|---|
+| 331 | `{ debug, error, info, warn }` | a logger |
+| 228 | `{ debug, error, info, trace, warn }` | the SAME logger, plus `trace` |
+| 90 | `{ dispose }` | a disposable |
+| 80 | `{ getAccessToken }` | a token provider |
+| 79 | `{ execute }` | a command executor |
+| 55 / 46 | `{ get, update }` / `{ get }` | config or memento |
+| 44 | `{ report }` | a progress reporter |
+| 44 | `{ executeCommand }` | the vscode command bridge |
+| 43 / 29 | `{ getCurrentProject }` / `+ saveProject` | a state manager |
 
-## Why it matters, stated at the right strength
+**559 logger fakes, split across two shapes that differ by one key.** Nobody
+decided that; it accumulated.
 
-This is a **risk**, not a live defect. The audit checked specifically for the
-known-wrong Project shape (a `components: [...]` array instead of the real
-`componentInstances` record) and found **zero** genuine instances. Nine files
-matched the pattern; all nine were read; all nine were legitimate — block
-libraries have their own unrelated `components` array, one file deliberately
-exercises a legacy manifest, and one contains the string in a comment
-*documenting* the mistake after it was fixed.
+## The part that raises the priority: the conversion program FEEDS this
 
-The mechanism has bitten once. `tests/features/ai/server/projectStatusTool.test.ts`
-guessed the Project shape and three tests failed against the real accessors; its
-header now records why. It is documented in `mcp-tool-authoring` and
-`webview-test-authoring` as a trap. It is contained — and thirty-two independent
-Project shapes is how it stops being contained.
+ADR-015 removes module mocks by making services take their dependencies. Every
+converted service then needs a fake — and with no shared builder, each suite
+writes its own.
 
-## The work
+Measured on this session's own commits: roughly **20 new hand-rolled fakes added
+in one day**, including `const meshDeps = { ... }` written out **ten times**,
+identically, once per file, and `const executor = { execute: ... }` six times
+across three different spellings.
 
-Not a rule telling people to share. A builder, placed where suites already look:
+So this is not a tidy-up to schedule after the architecture work. Without shared
+builders, the architecture work makes it worse at a measurable rate. That is why
+this is not "adopt opportunistically".
 
-1. **Project fixture** (25 one-off shapes — most urgent). One
-   `createMockProject(overrides)` in `tests/helpers/`, built from a REAL
-   `.demo-builder.json` per the standing rule, covering the shapes the one-offs
-   currently reach for (frontend port on the instance, mesh by `subType`,
-   `appBuilderComponents` keyed map).
-2. **StateManager** (17 one-offs). Same treatment.
-3. **Logger** (9 one-offs, 341 inline). Largest by volume but least dangerous —
-   a logger fake that is wrong fails loudly. Lowest priority.
+## What good looks like, already in the repo
 
-Convert opportunistically rather than in one sweep: a suite moves to the builder
-when it is next touched for another reason. The scan's numbers are the progress
-measure.
+`createMockHandlerContext`: 165 suites use it, 4 hand-roll their own. Not
+discipline — a builder that exists, is findable, and covers the real need.
+Divergence collapses on its own where that is true.
+
+## The work, ordered by copies
+
+1. **Logger** — 559 copies, two shapes. One `createMockLogger()` covering the
+   full method set. Highest count, lowest risk: a wrong logger fake fails loudly.
+2. **The deps bags this program is creating** — `meshDeps`, `executor`,
+   `secretsFake` and friends. Build these AS each conversion batch lands, not
+   after; that is what stops the bleeding.
+3. **State manager** (72 copies across two shapes) and **Project fixture** (32
+   shapes / 38 uses, 25 used once). Highest risk, because a wrong Project shape
+   typechecks — copy from a real `.demo-builder.json` per the standing rule.
+4. **Token provider** (80), **progress reporter** (44), **command bridge** (44).
+
+Convert a suite when it is next touched; do not sweep. The scan's numbers are
+the progress measure.
+
+## Still true: nothing is currently WRONG
+
+The audit checked specifically for the known-bad Project shape and found ZERO
+genuine instances — nine files matched the pattern and all nine were read and
+were legitimate. This is a maintenance and drift problem, not a field of live
+defects. It has bitten once (a fixture written from memory; three tests failed
+against the real accessors) and was caught.
 
 ## Guard
 
-Re-run the scan at release cuts (it is in the `test-divergence-scan` skill and
-should join the `cut-release` scan list). The baseline table above is what a
-later run is compared against.
+`node .claude/skills/test-divergence-scan/scan.mjs tests`, at release cuts. The
+table above is the baseline a later run is compared against.
