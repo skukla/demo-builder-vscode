@@ -243,42 +243,61 @@ are on the ledger correctly. While answering D-2 I was about to ratify them as
 "internal composition, standard OO, fine." The owner asked the question that
 stopped it. That category was invented in the moment and is not in the ADR.
 
-### What it actually costs (measured, not argued)
+### What it actually costs — CORRECTED 2026-08-28
 
-For each of the 19, the question that decides it: does building its own parts
-force TESTS to reach around the class and module-mock those parts? That is the
-exact failure this program removes.
+The first version of this section ranked the 19 by "how many test suites
+module-mock the parts this file builds", and put `WebviewClient` at the top with
+59 suites. **That ranking was wrong**, and the owner's next question exposed it:
+counting mocks says nothing about WHY a file is on the list. Three different
+things were being counted as one.
 
-**14 of 19 do.** Ranked by how many suites are walled off:
+Separating them:
 
-| Constructed inside | Suites forced to module-mock | File |
+| Category | Files | What it actually is |
 |---|---|---|
-| WebviewClient | 59 | `core/ui/utils/WebviewClient.ts` |
-| ComponentRegistryManager | 17 | `features/updates/services/componentUpdater.ts` |
-| ComponentRegistryManager | 17 | `features/mesh/services/deployMeshHeadless.ts` |
-| ComponentRegistryManager | 17 | `features/lifecycle/services/projectResetService.ts` |
-| CommandQueue + 3 others | 13 | `core/shell/commandExecutor.ts` |
-| PollingService | 12 | `features/eds/services/github/githubRepoOperations.ts` |
-| PollingService | 12 | `core/shell/fileWatcher.ts` |
-| AdobeSDKClient + 3 others | 6 | `features/authentication/services/authenticationService.ts` |
-| AddonUpdateChecker + 3 | 5 | `features/updates/services/updateApplyService.ts` |
-| ComponentManager | 4 | `features/project-creation/services/componentInstallationOrchestrator.ts` |
-| …4 more at 1–2 suites each | | |
+| **Sibling service** | 27 | A service builds a DIFFERENT service. The real ADR-015 violation. |
+| **Own parts** | 7 | A class builds its own private collaborators in its constructor. |
+| **Self singleton** | 1 | A module exports one instance of the class it defines. Not composition at all. |
+| **Self other** | 2 | A class instantiates itself outside a singleton export. Needs reading. |
 
-**5 force no mock wall today** — stateManager, PrerequisitesManager, edsResetUI,
-and two DA.live files. They still violate the rule as written; they just are not
-currently costing anything.
+Ranked by suites actually walled off:
 
-### Recommendation
+**Sibling service — 27 files, 77 distinct suites.** The top six all wall off 41
+suites each, and they cluster on the same three EDS clients:
 
-**Work the table top-down; that ordering is the whole point.** Each conversion
-removes a module-mock wall from a measured number of suites, so the value of
-each step is known before it starts rather than argued afterwards. The first
-four entries alone free 110 suites from mocking a collaborator out.
+    authoringExperienceFlip · refreshBlockLibraryHeadless · edsResetService
+    storefrontRepublishService · edsContentSetup · projectDeletionService
 
-Leave the bottom five until their files are touched for another reason — the
-rule covers them, but converting them buys nothing today, and this program has
-enough real work in it.
+**Own parts — 7 files, 19 distinct suites.** commandExecutor (13),
+fileWatcher (12), authenticationService (6). The other four wall off NOTHING —
+stateManager and three DA.live files build their parts and no suite has ever
+needed to reach around them.
+
+**Self singleton — 1 file, and it turns out it has no lawful alternative.**
+`WebviewClient` is webview-side, and ADR-015's permitted construction sites are
+all extension-side names. See PL-17: a third of the codebase is judged by a rule
+that never scoped itself to them. That is a jurisdiction question, not debt this
+program can discharge.
+
+### Recommendation — revised with the corrected categories
+
+**Start with the sibling-service group, not the mock counts.** Twenty-seven
+files, seventy-seven suites, and — the part the first ranking missed — six of
+them do the SAME thing: build an EDS client (Helix, DA.live content,
+Configuration Service) inline for their own use. Those six are one piece of work,
+not six, and they are the same six that EDS-11 is about. Fixing the credential
+shape and handing the clients in are the same edit.
+
+**Then the three own-parts files that cost something**: commandExecutor (13
+suites), fileWatcher (12), authenticationService (6).
+
+**Leave the four own-parts files that cost nothing** — stateManager and three
+DA.live modules. They violate the rule as written and wall off zero suites.
+Convert them when their file is touched for another reason.
+
+**WebviewClient is not this program's to fix.** It is webview-side, and PL-17
+asks whether the rule reaches webview code at all. Until that is answered, any
+"fix" here is guessing at a rule that has not been written.
 
 **Every ledger row now carries its measured reason instead of "pending
 adjudication."** That phrase appears zero times in the file. A row either names
