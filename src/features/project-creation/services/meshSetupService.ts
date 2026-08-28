@@ -8,9 +8,10 @@
  */
 
 import { ProgressTracker } from '../handlers/shared';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import {
     ProjectSetupContext,
@@ -36,6 +37,9 @@ export interface MeshSetupContext {
     onMeshPhaseUpdate?: (meshPhase: MeshPhaseState) => void;
     /** Wait for user decision on retry/cancel (resolves with 'retry' or 'cancel') */
     waitForMeshDecision?: () => Promise<MeshUserDecision>;
+    /** ADR-015: collaborators supplied by the handler that starts mesh setup. */
+    commandManager: CommandExecutor;
+    authManager: AuthenticationService;
 }
 
 export interface MeshApiConfig {
@@ -66,9 +70,9 @@ export function shouldConfigureExistingMesh(
  */
 async function fetchMeshInfoFromDescribe(
     logger: Logger,
+    commandManager: CommandExecutor,
 ): Promise<{ meshId?: string; endpoint?: string }> {
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const describeResult = await commandManager.execute('aio api-mesh:describe', {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
@@ -112,6 +116,8 @@ async function handleMeshDeploySuccess(params: {
     onMeshCreated?: (workspace: string | undefined) => void;
     updateMeshPhase: (state: Partial<MeshPhaseState> & { status: MeshPhaseState['status'] }) => void;
     logger: Logger;
+    /** ADR-015: passed down from the caller's MeshSetupContext. */
+    commandManager: CommandExecutor;
 }): Promise<void> {
     const {
         meshDeployResult, apiMeshConfig, startTime, attempt,
@@ -131,7 +137,7 @@ async function handleMeshDeploySuccess(params: {
 
     // If mesh info is incomplete, fetch it from Adobe I/O
     if (!meshId || !endpoint) {
-        const describeInfo = await fetchMeshInfoFromDescribe(logger);
+        const describeInfo = await fetchMeshInfoFromDescribe(logger, params.commandManager);
         meshId = meshId || describeInfo.meshId;
         endpoint = endpoint || describeInfo.endpoint;
     }
@@ -206,7 +212,7 @@ export async function deployNewMesh(
     );
     await ensureMeshApiSubscribed({
         project,
-        authService: ServiceLocator.getAuthenticationService(),
+        authService: context.authManager,
         logger,
     });
 
@@ -227,7 +233,10 @@ export async function deployNewMesh(
     // workspace mesh here (deployNewMesh already runs inside withOrgContext, so
     // describe is org-targeted). Without this, a workspace that already has a
     // mesh would wrongly `create` and fail.
-    const { meshId: describedMeshId } = await fetchMeshInfoFromDescribe(logger);
+    const { meshId: describedMeshId } = await fetchMeshInfoFromDescribe(
+        logger,
+        context.commandManager,
+    );
     const existingMeshId = apiMeshConfig?.meshId ?? describedMeshId;
 
     // Retry loop for mesh deployment
@@ -249,10 +258,9 @@ export async function deployNewMesh(
         });
 
         try {
-            const commandManager = ServiceLocator.getCommandExecutor();
             const meshDeployResult = await deployMeshComponent(
                 meshComponent.path,
-                commandManager,
+                context.commandManager,
                 logger,
                 (message: string, subMessage?: string) => {
                     const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -270,6 +278,7 @@ export async function deployNewMesh(
 
             if (meshDeployResult.success) {
                 await handleMeshDeploySuccess({
+                    commandManager: context.commandManager,
                     meshDeployResult, apiMeshConfig, startTime, attempt,
                     setupContext, project, meshComponent, meshComponentId,
                     onMeshCreated, updateMeshPhase, logger,
@@ -359,10 +368,9 @@ export async function linkExistingMesh(
         // This ensures the mesh has the correct schema (e.g., CATALOG_SERVICE_ENDPOINT vs ADOBE_CATALOG_SERVICE_ENDPOINT)
         logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O...');
         
-        const commandManager = ServiceLocator.getCommandExecutor();
         const meshDeployResult = await deployMeshComponent(
             meshComponent.path,
-            commandManager,
+            context.commandManager,
             logger,
             (message: string, subMessage?: string) => {
                 progressTracker('Deploying API Mesh', 78, subMessage || message);

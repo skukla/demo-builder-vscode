@@ -79,6 +79,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Import after mocks
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
+import type { CommandExecutor } from '@/core/shell';
 
 describe('ToolManager', () => {
     let toolManager: ToolManager;
@@ -109,7 +110,9 @@ describe('ToolManager', () => {
 
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/toolManager');
-        toolManager = new module.ToolManager();
+        // CONVERTED 2026-08-28 (ADR-015): the executor is handed in rather than
+        // fetched; the registry mock above is now vestigial for this class.
+        toolManager = new module.ToolManager(mockCommandExecutor as unknown as CommandExecutor);
     });
 
     // ==========================================================

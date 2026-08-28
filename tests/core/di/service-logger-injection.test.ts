@@ -22,6 +22,8 @@
  */
 
 import type { Logger } from '@/types/logger';
+import { ToolManager } from '@/features/eds/services/toolManager';
+import type { CommandExecutor } from '@/core/shell';
 
 /**
  * Create a mock Logger for testing
@@ -225,16 +227,23 @@ describe('Service Logger Injection', () => {
     });
 
     describe('ToolManager', () => {
-        it('should accept optional logger in constructor', () => {
-            const { ToolManager } = require('@/features/eds/services/toolManager');
+        /**
+         * REWRITTEN 2026-08-28. This used to load the class through `require`,
+         * which types as `any` — so the compiler checked NOTHING here, and the
+         * test asserted a no-argument constructor still worked. ADR-015 made
+         * the executor required, and the old test would have kept passing
+         * regardless, because JavaScript does not enforce argument counts.
+         *
+         * A statically imported class is what makes the contract checkable.
+         */
+        it('requires the executor and still takes an optional logger', () => {
+            const executor = { execute: jest.fn() } as unknown as CommandExecutor;
 
-            // Should work without logger (backward compatible)
-            const manager1 = new ToolManager();
-            expect(manager1).toBeDefined();
+            const withoutLogger = new ToolManager(executor);
+            expect(withoutLogger).toBeDefined();
 
-            // Should work with logger (DI pattern)
-            const manager2 = new ToolManager(mockLogger);
-            expect(manager2).toBeDefined();
+            const withLogger = new ToolManager(executor, mockLogger);
+            expect(withLogger).toBeDefined();
         });
     });
 

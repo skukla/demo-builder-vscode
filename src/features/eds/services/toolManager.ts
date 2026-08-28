@@ -23,8 +23,8 @@ import {
     type ToolInstallOptions,
     type ToolExecutionOptions,
 } from './types';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -67,7 +67,7 @@ const NPM_INSTALL_FLAGS = '--no-fund';
  *
  * @example
  * ```typescript
- * const manager = new ToolManager();
+ * const manager = new ToolManager(commandManager);
  *
  * // Install tool and data repo
  * await manager.ensureToolInstalled();
@@ -96,9 +96,15 @@ export class ToolManager {
 
     /**
      * Create a ToolManager
+     * @param commandManager - ADR-015: the shell executor, supplied by the
+     *   boundary that builds this (it precedes `logger` because `logger` is
+     *   optional and a required parameter cannot follow an optional one)
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      */
-    constructor(logger?: Logger) {
+    constructor(
+        private commandManager: CommandExecutor,
+        logger?: Logger,
+    ) {
         this.logger = logger ?? getLogger();
         const homeDir = os.homedir();
         this.toolsBasePath = path.join(homeDir, '.demo-builder', 'tools');
@@ -264,10 +270,9 @@ export class ToolManager {
             command = `DRY_RUN=true ${command} --dry-run`;
         }
 
-        const executor = ServiceLocator.getCommandExecutor();
 
         try {
-            const result = await executor.execute(command, {
+            const result = await this.commandManager.execute(command, {
                 cwd: this.toolPath,
                 timeout,
                 useNodeVersion: NODE_VERSION,
@@ -323,11 +328,10 @@ export class ToolManager {
     private async cloneTool(): Promise<void> {
         this.logger.debug(`[ToolManager] Cloning ${TOOL_CONFIG.name}`);
 
-        const executor = ServiceLocator.getCommandExecutor();
         const command = `git clone --depth 1 --branch ${TOOL_CONFIG.branch} ${TOOL_CONFIG.repoUrl} ${this.toolPath}`;
 
         try {
-            const result = await executor.execute(command, {
+            const result = await this.commandManager.execute(command, {
                 timeout: TIMEOUTS.LONG,
             });
 
@@ -369,10 +373,9 @@ export class ToolManager {
     private async cloneDataRepo(): Promise<void> {
         this.logger.debug(`[ToolManager] Cloning ${DATA_REPO_CONFIG.name}`);
 
-        const executor = ServiceLocator.getCommandExecutor();
         const command = `git clone --depth 1 --branch ${DATA_REPO_CONFIG.branch} ${DATA_REPO_CONFIG.repoUrl} ${this.dataRepoPath}`;
 
-        const result = await executor.execute(command, {
+        const result = await this.commandManager.execute(command, {
             timeout: TIMEOUTS.LONG,
         });
 
@@ -392,8 +395,7 @@ export class ToolManager {
     private async runNpmInstall(): Promise<void> {
         this.logger.debug('[ToolManager] Running npm install');
 
-        const executor = ServiceLocator.getCommandExecutor();
-        const result = await executor.execute(`npm install ${NPM_INSTALL_FLAGS}`, {
+        const result = await this.commandManager.execute(`npm install ${NPM_INSTALL_FLAGS}`, {
             cwd: this.toolPath,
             timeout: TIMEOUTS.LONG,
             useNodeVersion: NODE_VERSION,

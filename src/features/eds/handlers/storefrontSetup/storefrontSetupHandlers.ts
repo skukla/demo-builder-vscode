@@ -35,6 +35,7 @@ import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
+import { ServiceLocator } from '@/core/di';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type {
@@ -443,7 +444,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-    const toolManager = new ToolManager(context.logger);
+    const toolManager = new ToolManager(ServiceLocator.getCommandExecutor(), context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
 
     return new CleanupService(

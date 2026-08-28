@@ -16,7 +16,6 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 import type { Project, TransformedComponentDefinition } from '@/types';
 
 // Mock dependencies
-jest.mock('@/core/di');
 jest.mock('@/core/logging/debugLogger');
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
@@ -32,7 +31,6 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
-import { ServiceLocator } from '@/core/di';
 
 describe('meshSetupService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -40,6 +38,7 @@ describe('meshSetupService', () => {
     let mockMeshDefinition: TransformedComponentDefinition;
     let mockProgressTracker: jest.Mock;
     let mockCommandExecutor: any;
+    let mockAuthManager: any;
     let mockHandlerContext: any;
 
     beforeEach(() => {
@@ -126,12 +125,11 @@ describe('meshSetupService', () => {
             execute: jest.fn(),
         };
 
-        (ServiceLocator.getCommandExecutor as jest.Mock) = jest
-            .fn()
-            .mockReturnValue(mockCommandExecutor);
-        (ServiceLocator.getAuthenticationService as jest.Mock) = jest.fn().mockReturnValue({
+        // CONVERTED 2026-08-28 (ADR-015): both collaborators arrive on the
+        // MeshSetupContext, so this suite mocks the service registry NOT AT ALL.
+        mockAuthManager = {
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        });
+        };
         mockEnsureSubscribed.mockResolvedValue(undefined);
     });
 
@@ -171,6 +169,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             // Mock successful deployment (default mock already set in beforeEach)
@@ -200,6 +200,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             await deployNewMesh(context, undefined);
@@ -234,6 +236,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContextWithoutPath,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             await deployNewMesh(context, undefined);
@@ -246,6 +250,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: undefined,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             await deployNewMesh(context, undefined);
@@ -258,6 +264,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             // Default mock already set in beforeEach
@@ -287,6 +295,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             // Default mock already set in beforeEach
@@ -303,6 +313,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             });
 
             const getExistingMeshIdArg = (): unknown => {
@@ -354,6 +366,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             const meshConfig: MeshApiConfig = {
@@ -398,6 +412,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContextWithoutPath,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             const meshConfig: MeshApiConfig = {
@@ -415,6 +431,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             const meshConfig: MeshApiConfig = {
@@ -436,6 +454,8 @@ describe('meshSetupService', () => {
                 setupContext: mockSetupContext,
                 meshDefinition: mockMeshDefinition,
                 progressTracker: mockProgressTracker,
+                commandManager: mockCommandExecutor,
+                authManager: mockAuthManager,
             };
 
             const meshConfig: MeshApiConfig = {

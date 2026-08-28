@@ -17,6 +17,7 @@ import {
     type MeshApiConfig,
 } from '../services';
 import type { ProgressTracker } from './shared';
+import { ServiceLocator } from '@/core/di';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,
@@ -136,6 +137,10 @@ export async function executeMeshPhase(
     const meshDefinition = meshId ? componentDefinitions.get(meshId)?.definition : undefined;
 
     const meshContext = {
+        // ADR-015: mesh setup receives its collaborators; this handler is the
+        // boundary that resolves them.
+        commandManager: ServiceLocator.getCommandExecutor(),
+        authManager: ServiceLocator.getAuthenticationService(),
         setupContext,
         meshDefinition,
         progressTracker,
