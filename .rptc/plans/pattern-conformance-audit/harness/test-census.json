@@ -102,8 +102,10 @@
   },
   {
    "unit": "src/features/mesh/services/meshRedeploy.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/mesh/services/meshRedeploy.test.ts"
+   ]
   },
   {
    "unit": "src/features/mesh/services/meshVerifier.ts",
@@ -118,6 +120,7 @@
     "tests/features/mesh/commands/deployMesh-subscribe.test.ts",
     "tests/features/mesh/commands/deployMesh-unify.test.ts",
     "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/mesh/services/meshRedeploy.test.ts",
     "tests/features/mesh/services/meshVerifier-di.test.ts",
     "tests/features/mesh/services/meshVerifier.test.ts"
    ]
@@ -198,13 +201,17 @@
   },
   {
    "unit": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/prerequisites/services/versioning/MultiVersionDetector.test.ts"
+   ]
   },
   {
    "unit": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
-   "verdict": "UNTESTED",
-   "suites": []
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/prerequisites/services/versioning/VersionSatisfactionChecker.test.ts"
+   ]
   },
   {
    "unit": "src/features/project-creation/helpers/envFileGenerator.ts",
