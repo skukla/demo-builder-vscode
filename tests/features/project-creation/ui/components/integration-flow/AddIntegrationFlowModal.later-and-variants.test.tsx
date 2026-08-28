@@ -1,282 +1,43 @@
 /**
- * AddIntegrationFlowModal Tests (Integrations flow redesign — Step 7)
+ * AddIntegrationFlowModal — later add + variants (Integrations flow redesign)
  *
- * The one-modal journey shell: a DialogContainer host with a CONDITIONAL mount
- * (the Spectrum test mock renders dialogs eagerly), the shared core Modal whose
- * Back/Continue footer is driven ENTIRELY by useIntegrationFlow, and a stage
- * switch mapping the hook's stage to the stage bodies. Graybox: the stages and
- * the ApiAccessPicker render REAL — only module-external boundaries are mocked
- * (webviewClient, useProjectCreationPhases, AdobeAuthStep, AdobeEntityFields).
+ * The later-add journeys (destination already committed), the signed-out gate,
+ * and the picker variants. Graybox like the base suite; this suite mounts the
+ * modal WITHOUT a blank starter component and with the narrower id domain.
  *
- * Reset-on-open is the conditional mount itself: closing unmounts the journey,
- * reopening mounts a fresh hook (pinned by the reopen test).
+ * Mocks, fixtures, harness and helpers live in AddIntegrationFlowModal.testUtils
+ * (shared with the base suite) — import the SUT from there only.
  *
  * @jest-environment jsdom
  */
 
-import React, { useCallback, useState } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import '@testing-library/jest-dom';
-
-// --- module-external mocks --------------------------------------------------
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-        postMessage: jest.fn(),
-        // The mesh enable subscribes to per-API progress ticks; return an unsubscribe.
-        onMessage: jest.fn(() => () => {}),
-    },
-}));
-
-const phasesMock = jest.fn();
-jest.mock('@/features/project-creation/ui/hooks/useProjectCreationPhases', () => ({
-    useProjectCreationPhases: (...args: unknown[]) => phasesMock(...args),
-}));
-
-jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
-    AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
-}));
-jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
-    AdobeProjectField: ({
-        selectedProjectId,
-        onProjectSelect,
-    }: {
-        selectedProjectId?: string;
-        onProjectSelect?: (p: { id: string; name: string; title?: string }) => void;
-    }) => (
-        <div data-testid="project-field" data-selected={selectedProjectId ?? ''}>
-            <button
-                type="button"
-                onClick={() =>
-                    onProjectSelect?.({ id: 'p-picked', name: 'picked', title: 'Picked Project' })
-                }
-            >
-                pick-project
-            </button>
-        </div>
-    ),
-    AdobeWorkspaceField: ({
-        selectedWorkspaceId,
-        onWorkspaceSelect,
-    }: {
-        selectedWorkspaceId?: string;
-        onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
-    }) => (
-        <div data-testid="workspace-field" data-selected={selectedWorkspaceId ?? ''}>
-            <button
-                type="button"
-                onClick={() =>
-                    onWorkspaceSelect?.({ id: 'w-picked', name: 'Stage', title: 'Stage' })
-                }
-            >
-                pick-ws
-            </button>
-        </div>
-    ),
-}));
-
-import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
-import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
-import type { SelectableAppBuilderComponent } from '@/features/project-creation/services/appBuilderComponentSelection';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
-
-// --- fixtures ----------------------------------------------------------------
-const MESH = {
-    id: 'commerce-mesh',
-    name: 'API Mesh',
-    description: 'Mesh for the stack',
-    kind: 'mesh',
-    requiredApis: ['GraphQLServiceSDK'],
-    source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
-    requirement: 'optional',
-} as unknown as SelectableAppBuilderComponent;
-
-const ERP: AppBuilderComponentCatalogEntry = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Sync orders with your ERP',
-    kind: 'integration',
-    source: { owner: 'adobe', repo: 'erp-sync', branch: 'main' },
-};
-const CRM: AppBuilderComponentCatalogEntry = {
-    id: 'crm-connect',
-    name: 'CRM Connect',
-    description: 'Connect your CRM',
-    kind: 'integration',
-    source: { owner: 'adobe', repo: 'crm-connect', branch: 'main' },
-};
-const CATALOG = [ERP, CRM];
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+    mockRequest,
+    setPhases,
+    COMMITTED_DEST,
+    APIS,
+    renderFlowModal,
+    button,
+    click,
+    expectDisabled,
+    expectEnabled,
+    walkMeshToProject,
+    type RenderOptions,
+} from './AddIntegrationFlowModal.testUtils';
+import type { WizardState } from '@/types/webview';
 
 /** The composed collision domain the host threads in (blank naming). */
 const RESERVED_IDS = new Set(['app-builder-shell', 'erp-sync', 'crm-connect', 'commerce-mesh']);
 
-const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Demo Project' };
-const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
-
-const SIGNED_IN: Partial<WizardState> = {
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    adobeOrg: { id: 'org-1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-};
 const SIGNED_OUT: Partial<WizardState> = {
     adobeAuth: { isAuthenticated: false, isChecking: false },
     adobeOrg: undefined,
 };
-const COMMITTED_DEST: Partial<WizardState> = {
-    adobeProject: PROJECT,
-    adobeWorkspace: WORKSPACE,
-    // A committed shared destination co-occurs with an existing integration (later
-    // add) — required for the destination to collapse to the summary rather than
-    // re-walking the picker as a clean slate.
-    selectedAppBuilderComponents: ['existing-integration'],
-};
 
-const APIS = [
-    { code: 'GraphQLServiceSDK', name: 'Mesh Gateway', locked: true },
-    { code: 'AnalyticsSDK', name: 'Adobe Analytics', locked: false },
-    { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false },
-];
-
-// --- phase-hook helper (DestinationStage's create/workspace flow) -------------
-function setPhases(overrides: { phase?: string; phaseMessage?: string } = {}): void {
-    phasesMock.mockReturnValue({
-        phase: 'idle',
-        phaseMessage: undefined,
-        phaseSubMessage: undefined,
-        error: undefined,
-        failedPhase: undefined,
-        enableResult: undefined,
-        projectName: '',
-        start: jest.fn(),
-        retry: jest.fn(),
-        reset: jest.fn(),
-        ...overrides,
-    });
-}
-
-// --- harness ------------------------------------------------------------------
-function makeState(initial: Partial<WizardState> = {}): WizardState {
-    return {
-        currentStep: 'build-your-project',
-        projectName: '',
-        selectedPackage: 'citisignal',
-        selectedStack: 'headless-paas',
-        ...SIGNED_IN,
-        ...initial,
-    } as WizardState;
-}
-
-interface HarnessProps {
-    isOpen: boolean;
-    mode: FlowMode;
-    initial?: Partial<WizardState>;
-    meshComponent?: SelectableAppBuilderComponent;
-    catalog: AppBuilderComponentCatalogEntry[];
-    onClose: jest.Mock;
-    builder: {
-        onAppBuilderComponentToggle: jest.Mock;
-        onAddCustomAppBuilderComponent: jest.Mock;
-    };
-    updateSpy: jest.Mock;
-}
-
-/** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
-function Harness({
-    isOpen,
-    mode,
-    initial,
-    meshComponent,
-    catalog,
-    onClose,
-    builder,
-    updateSpy,
-}: HarnessProps): React.ReactElement {
-    const [state, setState] = useState<WizardState>(() => makeState(initial));
-    const updateState = useCallback(
-        (partial: Partial<WizardState>): void => {
-            updateSpy(partial);
-            setState((current) => ({ ...current, ...partial }));
-        },
-        [updateSpy]
-    );
-    return (
-        <AddIntegrationFlowModal
-            isOpen={isOpen}
-            onClose={onClose}
-            mode={mode}
-            state={state}
-            updateState={updateState}
-            meshComponent={meshComponent}
-            catalog={catalog}
-            reservedIds={RESERVED_IDS}
-            builder={builder}
-        />
-    );
-}
-
-interface RenderOptions {
-    isOpen?: boolean;
-    mode?: FlowMode;
-    initial?: Partial<WizardState>;
-    meshComponent?: SelectableAppBuilderComponent;
-    catalog?: AppBuilderComponentCatalogEntry[];
-}
-
-function renderModal(options: RenderOptions = {}) {
-    const onClose = jest.fn();
-    const builder = {
-        onAppBuilderComponentToggle: jest.fn(),
-        onAddCustomAppBuilderComponent: jest.fn(),
-    };
-    const updateSpy = jest.fn();
-    const meshComponent = 'meshComponent' in options ? options.meshComponent : MESH;
-    const makeElement = (isOpen: boolean): React.ReactElement => (
-        <Provider theme={defaultTheme} colorScheme="light">
-            <Harness
-                isOpen={isOpen}
-                mode={options.mode ?? 'add'}
-                initial={options.initial}
-                meshComponent={meshComponent}
-                catalog={options.catalog ?? CATALOG}
-                onClose={onClose}
-                builder={builder}
-                updateSpy={updateSpy}
-            />
-        </Provider>
-    );
-    const view = render(makeElement(options.isOpen ?? true));
-    return {
-        onClose,
-        builder,
-        updateSpy,
-        /** Rerender the tree (setOpen(true) doubles as a plain force-rerender). */
-        setOpen: (open: boolean) => view.rerender(makeElement(open)),
-    };
-}
-
-// --- interaction helpers -------------------------------------------------------
-function button(name: string | RegExp): HTMLElement {
-    return screen.getByRole('button', { name });
-}
-
-function click(name: string | RegExp): void {
-    fireEvent.click(button(name));
-}
-
-function expectDisabled(name: string | RegExp): void {
-    expect(button(name)).toHaveAttribute('aria-disabled', 'true');
-}
-
-function expectEnabled(name: string | RegExp): void {
-    expect(button(name)).toHaveAttribute('aria-disabled', 'false');
-}
-
-/** kind → dest-project for a mesh add (signed in, nothing committed). */
-function walkMeshToProject(): void {
-    click(/API Mesh/);
-    click('Continue');
+/** This suite mounts the modal WITHOUT a blank starter, over the narrow id domain. */
+function renderModal(options: Omit<RenderOptions, 'reservedIds' | 'blankComponent'> = {}) {
+    return renderFlowModal({ reservedIds: RESERVED_IDS, ...options });
 }
 
 /**
