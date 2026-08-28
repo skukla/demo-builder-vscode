@@ -70,6 +70,64 @@ Grounding: Test Pyramid (Cohn; Fowler), contract tests (Fowler; Pact),
 GOOS interaction testing (Freeman & Pryce), characterization tests
 (Feathers), architectural fitness functions (Ford/Parsons/Kua).
 
+### Fixtures and fakes: one canonical builder each (added 2026-08-28)
+
+The tiers say a unit test hands its dependencies in. They did not say where the
+fake being handed in comes from, and that silence had the same shape as the
+placement gap above.
+
+**Measured 2026-08-28 across 1,289 test files:** 2,532 hand-rolled fake object
+literals, 552 distinct shapes, 305 of those shapes used exactly once. 559 of the
+literals are a logger, split across two shapes differing by one method name.
+
+The cause is not unwillingness to share. The suite contains **98 builder
+functions**; the problem is that 14 of those NAMES are defined in more than one
+file — 43 redundant definitions — so there is no canonical one to find, and
+writing another is cheaper than searching. `createMockContext` exists ten times
+across six different return types: ten incompatible things wearing one name.
+
+Four rules, in the order they matter:
+
+**1. One home.** A fake that a second feature directory needs lives in
+`tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to
+that subject. The test is mechanical — does another feature need it?
+
+**2. A builder returns the REAL type. No `as never`, no `as any`.** 163
+hand-rolled fakes are currently cast to `never` or `any`, which disables the
+compiler for precisely the thing most likely to drift. A builder typed
+`(): Logger` stops compiling the day `Logger` gains a method — one failure, one
+fix, at the one place that needs changing. A fake cast to `never` fails nothing
+and silently ceases to resemble what it stands for. This is the repo's standing
+"a cast at a call boundary is a silenced type error" rule, applied to test code
+where it had been ignored.
+
+Cast the object literal INTO the return type at the boundary of the builder if
+the structural fake is partial; never type the builder itself as `never`.
+
+**3. Shapes are read, not remembered.** A builder's method list comes from the
+real interface plus what callers actually use. Data fixtures — `Project` above
+all — are copied from a real `~/.demo-builder/projects/*/.demo-builder.json`.
+This repeats the CONTRACT tier's rule for external systems because the same
+failure occurs internally: an invented shape typechecks and fails only when a
+real accessor touches it.
+
+**4. One builder name, one definition.** Enforced by
+`tests/sop/builder-uniqueness.test.ts`, whose ledger of 14 duplicated names may
+only shrink. It does not force consolidation; it stops the count growing while
+consolidation happens, which is the only property that makes the work
+finishable — 43 became 43 one forgivable duplicate at a time.
+
+**Consolidation is on-touch, never a sweep.** A suite adopts the canonical
+builder when it is open for another reason. Progress is two falling numbers:
+distinct shapes (`test-divergence-scan`) and duplicated builder names (the
+ledger above). Tracked as PL-16.
+
+**A conversion ships its builder with it.** Making a service receive its
+dependencies creates demand for a fake; without a builder in the same change,
+each adopting suite writes its own. This is not hypothetical — the ADR-015
+conversion work added roughly 20 hand-rolled fakes in a single day, including
+one deps object written out eleven times.
+
 ## Ratified with the tiers
 
 - **Framework**: Jest stays. Criteria: fit (20s full suite — the speed a
@@ -113,7 +171,34 @@ CLASSES do not repeat.
 
 ## Enforcement
 
-`tests/sop/architecture-rules.test.ts` (shared with ADR-015), the coming
-fail-on-console gate, eslint-plugin-jest, the clone ratchet, and the pinned
-census instruments in `.rptc/plans/pattern-conformance-audit/harness/`.
-Execution is tracked under PL-11 (test health epic).
+`tests/sop/architecture-rules.test.ts` (shared with ADR-015), the console gate,
+eslint-plugin-jest, the clone ratchet, and the pinned census instruments in
+`.rptc/plans/pattern-conformance-audit/harness/`.
+
+This ADR's own rules are enforced by:
+
+| Rule | Check |
+|---|---|
+| Placement (mirror `src/`, no tier directory) | `tests/sop/mirror-placement.test.ts` |
+| One builder name, one definition | `tests/sop/builder-uniqueness.test.ts` |
+| Split families share their setup | `tests/sop/test-family-setup.test.ts` |
+| Suites emit no console noise | `tests/setup/consoleGate.ts` |
+| A per-test timeout may not undercut the file budget | `tests/sop/no-lowered-test-timeout.test.ts` |
+| No bare `sleep` in tests | `tests/sop/no-bare-sleep.test.ts` |
+| Config leaves are not mocked | `tests/sop/no-config-leaf-mocks.test.ts` |
+| Divergent fakes (advisory, at release cuts) | `.claude/skills/test-divergence-scan/scan.mjs` |
+
+Each carries a ledger that may only shrink, and each runs its positive controls
+first — a check that matched nothing reads identically to a clean one.
+
+Audited 2026-08-28: of the 14 checks under `tests/sop/`, thirteen are named or
+described in a governing document (this ADR, ADR-015, `.rptc/sop/`, `CLAUDE.md`,
+or `docs/`). The fourteenth — the per-test timeout rule — was enforced and
+documented only in its own header, where nobody looking for the rule would find
+it; it is listed above now. The remaining code-quality checks (magic timeouts,
+complex expressions, inline styles, component extraction) are correctly homed in
+`.rptc/sop/` and `CLAUDE.md` rather than here: they govern how code is written,
+not how it is tested.
+
+Execution is tracked under PL-11 (test health epic); the fixture consolidation
+under PL-16.
