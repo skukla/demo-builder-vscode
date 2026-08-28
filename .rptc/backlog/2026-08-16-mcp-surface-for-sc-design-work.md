@@ -70,6 +70,7 @@ does it cost what it should?*
 - 2026-08-28  feat(ai): the theming skill states the reset lifecycle plainly (`74c2a13ef`)
 - 2026-08-28  feat(ai): token-first theming — the whole theme is a bounded choice, not just type (`e918947ca`)
 - 2026-08-28  fix(ai): get_auth_status github false no longer reads as signed out (`f6c0fba49`)
+- 2026-08-28  Step-2 decision RULED (owner, 2026-08-28): themes do NOT survive reset — reset's back-to-template contract stands; the skill's plain lifecycle warning is the shipped behavior. Follow-on feature filed as EDS-10 (custom themes as savable entities). Steps 3-4 (design skill with a stopping rule) are now unblocked.
 
 ## How to audit this systematically — `ai-coverage-scan`
 
