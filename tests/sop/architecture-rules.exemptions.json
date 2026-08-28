@@ -1,12 +1,10 @@
 {
   "_what": "ADR-015 enforcement ledger. Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
   "fetchBoundary": {
-    "src/features/components/services/componentInstallation.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/eds/services/github/githubRepoOperations.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/eds/services/reset/edsResetUI.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/eds/services/toolManager.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/lifecycle/services/projectResetService.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
-    "src/features/mesh/services/deployMeshHeadless.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/mesh/services/stalenessDetector.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/prerequisites/services/PrerequisitesManager.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
     "src/features/project-creation/helpers/envFileGenerator.ts": "pre-ADR-015: locator fetch inside logic — converge to handed-in deps (PL-12 cleanup queue)",
@@ -40,7 +38,6 @@
     "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/eds/services/storefront/storefrontRepublishService.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/lifecycle/services/projectResetService.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
-    "src/features/mesh/services/deployMeshHeadless.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/prerequisites/services/PrerequisitesManager.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/project-creation/services/catalogPrewarmPhase.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/project-creation/services/componentInstallationOrchestrator.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
@@ -49,7 +46,8 @@
     "src/features/updates/services/componentUpdater.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/updates/services/templateSyncService.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
     "src/features/updates/services/updateApplyService.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
-    "src/features/updates/services/updateCore.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder"
+    "src/features/updates/services/updateCore.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder",
+    "src/features/mesh/services/deployMeshHeadless.ts": "pre-ADR-015 inventory: pending adjudication — constructs-its-own-subordinate (may be ratified) vs converge to a create...Deps builder"
   },
   "commandBase": {
     "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command — exempt by role",

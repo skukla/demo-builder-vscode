@@ -39,7 +39,7 @@ export class ComponentManager {
 
     constructor(logger: Logger, commandManager: CommandExecutor) {
         this.logger = logger;
-        this.installation = new ComponentInstallation(logger);
+        this.installation = new ComponentInstallation(logger, commandManager);
         this.dependencies = new ComponentDependencies(logger, commandManager);
     }
 

@@ -8,7 +8,6 @@
  * (with UI callbacks) and the deploy_mesh MCP handler (headless) call it.
  */
 
-jest.mock('@/core/di/serviceLocator');
 jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({
     ensureProjectAdobeContext: jest.fn(),
 }));
@@ -39,7 +38,6 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 
-import { ServiceLocator } from '@/core/di';
 import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
@@ -79,9 +77,18 @@ function project(withMesh = true): Project {
     } as Project;
 }
 
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the auth manager and executor are handed in
+ * through this bag now, so the suite mocks the service registry NOT AT ALL.
+ * `currentAuthManager` is what the old registry stub used to return.
+ */
+let currentAuthManager: unknown;
+
 function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: project(),
+        authManager: currentAuthManager as never,
+        commandManager: { execute: jest.fn() } as never,
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
         logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never,
         extensionPath: '/ext',
@@ -103,8 +110,7 @@ describe('deployMeshHeadless', () => {
                 name: 'Adobe Demo System',
             })),
         };
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(authManager);
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({ execute: jest.fn() });
+        currentAuthManager = authManager;
         mockPreflight.mockResolvedValue({ ready: true });
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-1', endpoint: 'https://old/graphql' });
         mockDeploy.mockResolvedValue({
@@ -278,11 +284,11 @@ describe('deployMeshHeadless', () => {
             projectRequiresAppBuilder,
         } = require('@/features/components/services/projectAppBuilderPredicate');
         projectRequiresAppBuilder.mockReturnValue(true);
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
+        currentAuthManager = {
             testDeveloperPermissions: jest
                 .fn()
                 .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
-        });
+        };
 
         const result = await deployMeshHeadless(deps());
         expect(result.success).toBe(false);

@@ -36,6 +36,17 @@ jest.mock(
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di';
+
+/**
+ * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
+ * the boundary, which is where fetching is allowed. The shared node setup empties
+ * the registry after EVERY test, so the fakes are seeded per-test.
+ */
+function seedRegistry(): void {
+    ServiceLocator.setAuthenticationService({} as never);
+    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+}
 
 function ctx(project: unknown): HandlerContext {
     return {
@@ -46,7 +57,10 @@ function ctx(project: unknown): HandlerContext {
 }
 
 describe('handleDeployApiMesh', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        seedRegistry();
+    });
 
     it('errors when no project is loaded', async () => {
         const result = await handleDeployApiMesh(ctx(undefined));
@@ -87,7 +101,10 @@ describe('handleDeployApiMesh', () => {
 });
 
 describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        seedRegistry();
+    });
 
     it('opens the progress notification', async () => {
         mockDeployMeshHeadless.mockResolvedValue({ success: true });

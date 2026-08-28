@@ -17,11 +17,11 @@
 
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
 import { updateMeshState } from './stalenessDetector';
-import { ServiceLocator } from '@/core/di';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type CommandExecutor } from '@/core/shell';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
@@ -53,6 +53,9 @@ export interface DeployMeshHeadlessDeps {
     logger: Logger;
     /** Extension path — the App Builder permission gate loads the registry. */
     extensionPath: string;
+    /** ADR-015: collaborators supplied by whichever boundary starts the deploy. */
+    authManager: AuthenticationService;
+    commandManager: CommandExecutor;
     /** Status telegraph (dashboard badge). No-op for headless callers. */
     onStatus?: (
         status: MeshDeployStatus,
@@ -73,7 +76,7 @@ export async function deployMeshHeadless(
     deps: DeployMeshHeadlessDeps,
 ): Promise<DeployMeshHeadlessResult> {
     const { project, stateManager, logger, extensionPath, onStatus, onProgress } = deps;
-    const authManager = ServiceLocator.getAuthenticationService();
+    const { authManager } = deps;
 
     await onStatus?.('deploying', 'Checking requirements...');
 
@@ -186,7 +189,7 @@ export async function deployMeshHeadless(
             // — sending a live mesh down the create path.
             const result = await deployMeshCreateOrUpdate(
                 meshComponent.path as string,
-                ServiceLocator.getCommandExecutor(),
+                deps.commandManager,
                 logger,
                 (message: string, subMessage?: string) => onProgress?.(message, subMessage),
             );

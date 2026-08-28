@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { ExecutionLock } from '@/core/utils';
 import type { Logger } from '@/types/logger';
@@ -54,6 +55,8 @@ export class DeployMeshCommand extends BaseCommand {
                 // the same as this one. The command keeps only what is its own:
                 // the lock (above), the toasts and result mapping (below).
                 const result = await deployMeshWithFeedback({
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    commandManager: ServiceLocator.getCommandExecutor(),
                     project,
                     stateManager: this.stateManager,
                     logger: this.logger,

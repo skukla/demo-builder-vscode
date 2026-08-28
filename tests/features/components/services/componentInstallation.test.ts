@@ -19,9 +19,12 @@
  */
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is a constructor dependency now,
+ * so this suite mocks the service registry NOT AT ALL. Assertions unchanged —
+ * including the ones that pin the exact clone command and its options.
+ */
+const executor = { execute: mockExecute } as never;
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
     access: jest.fn().mockRejectedValue(new Error('ENOENT')),
@@ -71,7 +74,7 @@ function makeDef(overrides: Record<string, unknown> = {}): TransformedComponentD
 const instance = (): ComponentInstance => ({ id: 'eds-storefront' }) as ComponentInstance;
 
 function install(def = makeDef(), options = {}) {
-    return new ComponentInstallation(makeLogger()).installGitComponent(
+    return new ComponentInstallation(makeLogger(), executor).installGitComponent(
         PROJECT,
         def,
         instance(),
@@ -134,7 +137,7 @@ describe('installGitComponent — the shell-injection guards', () => {
 });
 
 describe('installGitComponent — the clone seam', () => {
-    it('clones through the FETCHED executor with the exact command and options', async () => {
+    it('clones through the HANDED-IN executor with the exact command and options', async () => {
         await install();
 
         const [command, options] = cloneCall();
