@@ -84,6 +84,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
             mockCommandManager.execute.mockResolvedValue(createPendingStatusResponse());
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 100,
                 pollInterval: 500,
                 maxRetries: 2,
@@ -108,6 +109,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
             const onProgress = jest.fn();
 
             const _promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 1000,
                 pollInterval: 500,
                 maxRetries: 3,
@@ -136,6 +138,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
                 .mockResolvedValueOnce(createEndpointTextResponse());
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 maxRetries: 1,
             });
 
@@ -155,6 +158,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
                 .mockResolvedValueOnce(createEndpointTextResponse());
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 100,
                 pollInterval: 100,
                 maxRetries: 1,

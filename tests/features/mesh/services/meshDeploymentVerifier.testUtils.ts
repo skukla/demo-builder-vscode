@@ -15,11 +15,15 @@ export function createMockCommandManager() {
 }
 
 /**
- * Sets up the ServiceLocator mock with a command manager
+ * CONVERTED 2026-08-28 (ADR-015): waitForMeshDeployment receives its executor
+ * instead of fetching one, so this no longer touches the service registry —
+ * it records the fake the suites will HAND IN via createDefaultOptions().
+ * Kept as a named function so the four sibling suites did not have to change
+ * a line.
  */
+let handedInExecutor: any;
 export function setupServiceLocatorMock(mockCommandManager: any) {
-    const { ServiceLocator } = require('@/core/di');
-    ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
+    handedInExecutor = mockCommandManager;
 }
 
 /**
@@ -165,6 +169,7 @@ export function createMockLogger() {
  */
 export function createDefaultOptions() {
     return {
+        commandManager: handedInExecutor,
         initialWait: 100,
         pollInterval: 100,
         maxRetries: 5,

@@ -3,13 +3,13 @@
  * Used by both project creation wizard and manual deploy command
  */
 
-import { ServiceLocator } from '@/core/di';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
+import type { CommandExecutor } from '@/core/shell';
 
 /**
  * MeshDeploymentVerificationResult - Result from deployment verification polling
@@ -28,6 +28,12 @@ export interface MeshDeploymentVerificationResult {
 }
 
 export interface VerificationOptions {
+    /**
+     * The executor every poll and describe runs through (ADR-015: this module
+     * is logic, so its dependencies arrive). The deploy spine already holds
+     * one and supplies it.
+     */
+    commandManager: CommandExecutor;
     maxRetries?: number;        // Calculated from timeout if not provided
     pollInterval?: number;      // Default: 10000ms (10 seconds)
     initialWait?: number;       // Default: 20000ms (20 seconds)
@@ -74,6 +80,7 @@ async function processMeshStatus(
     initialWait: number,
     pollInterval: number,
     attempt: number,
+    commandManager: CommandExecutor,
     logger?: Logger,
 ): Promise<MeshDeploymentVerificationResult | undefined> {
     const meshStatus = meshData.meshStatus?.toLowerCase();
@@ -86,7 +93,7 @@ async function processMeshStatus(
         const deployedMeshId = meshData.meshId || meshData.mesh_id;
         let deployedEndpoint: string | undefined;
         if (deployedMeshId) {
-            deployedEndpoint = await getEndpoint(deployedMeshId, logger);
+            deployedEndpoint = await getEndpoint(deployedMeshId, commandManager, logger);
         } else {
             logger?.warn('[Mesh Verification] No meshId found in response, cannot retrieve endpoint');
         }
@@ -111,7 +118,7 @@ async function processMeshStatus(
  * This function waits until Adobe confirms deployment is complete
  */
 export async function waitForMeshDeployment(
-    options: VerificationOptions = {},
+    options: VerificationOptions,
 ): Promise<MeshDeploymentVerificationResult> {
     const pollInterval = options.pollInterval ?? TIMEOUTS.POLL.INTERVAL;
     const initialWait = options.initialWait ?? TIMEOUTS.POLL.INITIAL;
@@ -121,9 +128,7 @@ export async function waitForMeshDeployment(
     const maxRetries = options.maxRetries ??
         Math.floor((TIMEOUTS.LONG - initialWait) / pollInterval);
 
-    const { onProgress, logger } = options;
-
-    const commandManager = ServiceLocator.getCommandExecutor();
+    const { onProgress, logger, commandManager } = options;
 
     // Initial wait - mesh won't be ready immediately after update command
     logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning...`);
@@ -155,7 +160,7 @@ export async function waitForMeshDeployment(
                 if (meshData) {
                     const result = await processMeshStatus(
                         meshData, verifyResult.stdout,
-                        initialWait, pollInterval, attempt, logger,
+                        initialWait, pollInterval, attempt, commandManager, logger,
                     );
                     if (result) return result;
                 }
@@ -174,12 +179,15 @@ export async function waitForMeshDeployment(
 /**
  * Get mesh endpoint using aio api-mesh:describe
  */
-async function getEndpoint(meshId: string, logger?: Logger): Promise<string | undefined> {
+async function getEndpoint(
+    meshId: string,
+    commandManager: CommandExecutor,
+    logger?: Logger,
+): Promise<string | undefined> {
     // SECURITY: Validate meshId before using in URL construction (defense-in-depth)
     validateMeshId(meshId);
 
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {

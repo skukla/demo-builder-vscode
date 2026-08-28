@@ -92,6 +92,7 @@ describe('MeshDeploymentVerifier - Error Handling', () => {
             mockCommandManager.execute.mockResolvedValue(createPendingStatusResponse());
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 100,
                 pollInterval: 100,
                 maxRetries: 3,

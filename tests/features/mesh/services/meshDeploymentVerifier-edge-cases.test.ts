@@ -92,6 +92,7 @@ describe('MeshDeploymentVerifier - Edge Cases', () => {
             });
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 100,
                 pollInterval: 100,
                 maxRetries: 1,
@@ -135,6 +136,7 @@ describe('MeshDeploymentVerifier - Edge Cases', () => {
             });
 
             const _promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 1000,
                 pollInterval: 1000,
                 // maxRetries not specified, should be calculated
