@@ -38,7 +38,7 @@ import {
 const PINNED_LKG_SHA = '760601940fa7264ea900c9d4b6bf735a5e78f46b';
 
 const CANONICAL_SCRIPTS_JS = readFileSync(
-    resolve(__dirname, '../../../../fixtures/eds/canonical/aem-boilerplate-commerce-scripts.js'),
+    resolve(__dirname, '../../../fixtures/eds/canonical/aem-boilerplate-commerce-scripts.js'),
     'utf-8',
 );
 

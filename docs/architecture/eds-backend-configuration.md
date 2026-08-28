@@ -192,7 +192,8 @@ const result = resolveServices(accsBackend, [], []);
 - **Schema**: `src/features/components/config/components.schema.json`
 - **Types**: `src/types/components.ts`
 - **Provides/requires consumers**: `src/features/project-creation/ui/steps/reviewStepHelpers.tsx` (display), `src/features/components/ui/hooks/useComponentConfig.ts` (env fields) — the standalone resolver was deleted in `b5c1256cb`
-- **Tests**: `tests/unit/features/components/services/serviceResolver.test.ts`
+- **Tests**: none — the suite went with the resolver in `b5c1256cb`; the consumers
+  named above carry their own coverage.
 
 ### 4. Configuration Field Scoping - Reusing PaaS Fields ✅
 

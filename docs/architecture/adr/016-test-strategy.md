@@ -38,6 +38,34 @@ doing verification's job.
    operations (the remove_integration fix shape — postconditions, not
    trust).
 
+### Where a test file lives (added 2026-08-28)
+
+The tiers above say what a test IS. They said nothing about where it goes,
+and that omission had a cost: a second test tree, `tests/unit/`, existed for
+years without violating anything written down. It held 28 files against 1,158
+in the mirror tree, covered 5 modules the mirror tree ALSO covered, and — being
+in a different directory — could not reach the shared setup helpers its
+neighbours used. That is the whole explanation for suites that "each do their
+own thing": they were not allowed to share.
+
+The rule, from here:
+
+**A test file lives at the path its subject lives at, with `src/` replaced by
+`tests/`.** `src/features/eds/services/toolManager.ts` is tested by
+`tests/features/eds/services/toolManager*.test.ts` and nowhere else. A suite
+split for size keeps the base name and adds a `-suffix`; the split shares one
+`*.testUtils.ts` beside it.
+
+There is no tier directory, and there must not be one. UNIT, CONTRACT and LIVE
+describe how a test is written — handed-in fakes, captured fixtures, real
+systems — not where it sits. A given file routinely contains tests of more than
+one tier for the same subject, and separating them by directory would split a
+subject's coverage across the tree for no reader's benefit. The tier is visible
+in the test's own construction, which is where it belongs.
+
+Enforced by `tests/sop/test-placement.test.ts`: every test file must sit at its
+subject's mirrored path, and no test file may live outside the mirror.
+
 Grounding: Test Pyramid (Cohn; Fowler), contract tests (Fowler; Pact),
 GOOS interaction testing (Freeman & Pryce), characterization tests
 (Feathers), architectural fitness functions (Ford/Parsons/Kua).

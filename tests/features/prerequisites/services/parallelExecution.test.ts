@@ -12,7 +12,7 @@
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
-import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({
