@@ -1,0 +1,35 @@
+{
+  "takenAt": "2026-08-28T11:15Z (pre ERP round-trip journey)",
+  "componentInstances": {
+    "commerce-integration-starter-kit": {
+      "id": "commerce-integration-starter-kit",
+      "type": "app-builder",
+      "subType": "app",
+      "status": "deployed",
+      "version": "4.0.0"
+    },
+    "eds-storefront": {
+      "id": "eds-storefront",
+      "type": "frontend",
+      "subType": null,
+      "status": "ready",
+      "version": "6.0.0"
+    }
+  },
+  "componentSelections": {
+    "frontend": "eds-storefront",
+    "backend": "adobe-commerce-accs",
+    "dependencies": [],
+    "integrations": [],
+    "appBuilder": [
+      "commerce-integration-starter-kit"
+    ]
+  },
+  "adobe": {
+    "organization": "285361",
+    "projectId": "4566206088345738527",
+    "projectName": "KuklaBodeaMesh",
+    "workspace": "4566206088345780697",
+    "workspaceName": "Stage"
+  }
+}
