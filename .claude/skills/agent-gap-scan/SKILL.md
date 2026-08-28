@@ -6,7 +6,17 @@ description: Find gaps in the extension's AI surface from what agents ACTUALLY d
 # Agent Gap Scan
 
 **`ai-coverage-scan` asks whether the surface is big enough on paper. This asks
-whether it worked in practice.** A tool can exist, be reachable, and still never
+whether it worked in practice.**
+
+**Division of labor with the agent activity record (AI-2c, since 2026-08-28):**
+the trace (`get_agent_trace` + the per-session `agent-trace-*.jsonl` files)
+answers "which of OUR tools ran, how often, how big, did they fail" — cheaper
+and structured, so reach for it FIRST for usage counts. This scan remains the
+only reading for what the trace is STRUCTURALLY BLIND to: Bash workarounds,
+native file reads, other MCP servers — the "did the job without us" evidence
+that IS the gap signal — plus everything older than the trace's ship date and
+what the agent SAID while working. The trace measures us; the transcripts
+measure the world around us. Neither replaces the other. A tool can exist, be reachable, and still never
 be used because nobody knows it is there — that gap is invisible to a static
 scan and obvious in a transcript.
 

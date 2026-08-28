@@ -5,6 +5,17 @@ description: Triage a pasted "Demo Builder Debug Logs" dump — find the real fa
 
 # Debug-Log Triage
 
+## FIRST MOVE since 2026-08-28: filter by the call tag
+
+If the failure came from an AGENT tool call, its lines carry a `#N` tag inside
+the subsystem bracket (`[Guards #47]`, `[MCP #47]`) — the same number shown on
+the "Demo Builder: Agent Activity" channel line and in `get_agent_trace`
+entries. Find the failing call's number there (or grep the dump for
+`failed`), then filter the dump to `#N`: everything left is that call's own
+story, with concurrent work and background noise already gone. Only fall back
+to timestamp-scrolling for UNTAGGED lines — user-initiated work, or logs
+predating the tags.
+
 Parse a Demo Builder debug-log dump to the actual failure fast. The logs mix three things:
 the real signal, verbose-but-healthy progress, and **alarming-looking lines that are benign
 by design**. Knowing which is which is the whole skill.
