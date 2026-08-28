@@ -360,7 +360,8 @@ function journey(sessionId) {
            `**${rows.length}** of them ours.\n`);
     L.push('## Journey metrics (leads, not verdicts)\n');
     L.push(`- **First action**: ${firstAction
-        ? `call #${firstAction.n} (\`${firstAction.tool}\`) — everything before it was reads`
+        ? `call #${firstAction.n} (\`${firstAction.tool}\`)` +
+          (firstAction.n > 1 ? ` — the ${firstAction.n - 1} call${firstAction.n > 2 ? 's' : ''} before it were reads` : ' — the journey acted immediately')
         : 'never — every one of our calls was a read'}`);
     L.push(`- **Re-orientations**: ${reorientations} repeat read${reorientations === 1 ? '' : 's'} ` +
            '(a read-like tool asked again; near repeats mean the answer did not stick)');
