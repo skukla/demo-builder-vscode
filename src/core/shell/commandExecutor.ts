@@ -16,6 +16,17 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation';
 import { DEFAULT_SHELL } from '@/types/shell';
 
+/** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */
+export interface CommandExecutorDeps {
+    environmentSetup: EnvironmentSetup;
+    retryManager: RetryStrategyManager;
+    resourceLocker: ResourceLocker;
+    pollingService: PollingService;
+    fileWatcher: FileWatcher;
+    commandSequencer: CommandSequencer;
+    resultCache: CommandResultCache;
+}
+
 /**
  * Main command executor - orchestrates all command execution operations
  * Provides unified interface for running external commands with advanced features
@@ -31,14 +42,26 @@ export class CommandExecutor {
     private resultCache: CommandResultCache;
     private commandQueue: CommandQueue;
 
-    constructor() {
-        this.environmentSetup = new EnvironmentSetup();
-        this.retryManager = new RetryStrategyManager();
-        this.resourceLocker = new ResourceLocker();
-        this.pollingService = new PollingService();
-        this.fileWatcher = new FileWatcher();
-        this.commandSequencer = new CommandSequencer();
-        this.resultCache = new CommandResultCache();
+    /**
+     * ADR-015: the six collaborators below are handed in rather than built here.
+     *
+     * They were constructed in this constructor until 2026-08-28, and the cost
+     * was visible at the top of every executor suite: six `jest.mock(...)` lines
+     * in a block, because a test had no other way to reach past them. Handing
+     * them in turns that block into one plain object.
+     *
+     * `commandQueue` is NOT among them and stays built here: it closes over
+     * `this.execute` and `this.executeExclusive`, so it cannot exist before the
+     * instance does.
+     */
+    constructor(deps: CommandExecutorDeps) {
+        this.environmentSetup = deps.environmentSetup;
+        this.retryManager = deps.retryManager;
+        this.resourceLocker = deps.resourceLocker;
+        this.pollingService = deps.pollingService;
+        this.fileWatcher = deps.fileWatcher;
+        this.commandSequencer = deps.commandSequencer;
+        this.resultCache = deps.resultCache;
         this.commandQueue = new CommandQueue({
             executeCommand: (command, options) => this.execute(command, options),
             executeExclusive: (resource, operation) => this.executeExclusive(resource, operation),

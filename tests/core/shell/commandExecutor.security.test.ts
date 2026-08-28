@@ -14,18 +14,14 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { CommandSequencer } from '@/core/shell/commandSequencer';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { FileWatcher } from '@/core/shell/fileWatcher';
-import { PollingService } from '@/core/shell/pollingService';
-import { ResourceLocker } from '@/core/shell/resourceLocker';
-import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { ExecuteOptions } from '@/core/shell/types';
 import { createMockExecaSubprocess, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
 // Mock execa
 jest.mock('execa');
 import execa from 'execa';
+import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
@@ -36,12 +32,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Security: Node Version Validation Integration', () => {
     let commandExecutor: CommandExecutor;
@@ -51,57 +41,17 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Setup mock implementations BEFORE creating CommandExecutor
-        (ResourceLocker as jest.MockedClass<typeof ResourceLocker>).mockImplementation(() => ({
-            executeExclusive: jest.fn(<T>(resource: string, operation: () => Promise<T>) => operation()) as any,
-            clearAllLocks: jest.fn()
-        } as any));
-
-        (RetryStrategyManager as jest.MockedClass<typeof RetryStrategyManager>).mockImplementation(() => ({
-            executeWithRetry: jest.fn((executeFn: () => Promise<any>) => executeFn()) as any,
-            getDefaultStrategy: jest.fn(() => ({
-                maxAttempts: 1,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 2
-            })),
-            getStrategy: jest.fn(() => ({
-                maxAttempts: 1,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 1.5
-            }))
-        } as any));
-
-        (EnvironmentSetup as jest.MockedClass<typeof EnvironmentSetup>).mockImplementation(() => {
-            const mock = {
-                findAdobeCLINodeVersion: jest.fn().mockResolvedValue('18'),
-                findFnmPath: jest.fn().mockReturnValue('/usr/local/bin/fnm'),
-                findNpmGlobalPaths: jest.fn().mockReturnValue([]),
-                ensureAdobeCLIConfigured: jest.fn().mockResolvedValue(undefined),
-                ensureAdobeCLINodeVersion: jest.fn().mockResolvedValue(undefined),
-                resetSession: jest.fn()
-            } as any;
-            mockEnvironmentSetup = mock;
-            return mock;
-        });
-
-        (FileWatcher as jest.MockedClass<typeof FileWatcher>).mockImplementation(() => ({
-            disposeAll: jest.fn(),
-            waitForFileSystem: jest.fn()
-        } as any));
-
-        (CommandSequencer as jest.MockedClass<typeof CommandSequencer>).mockImplementation(() => ({
-            executeSequence: jest.fn(),
-            executeParallel: jest.fn()
-        } as any));
-
-        (PollingService as jest.MockedClass<typeof PollingService>).mockImplementation(() => ({
-            pollUntilCondition: jest.fn()
-        } as any));
+        // CONVERTED 2026-08-28 (ADR-015). Sixty lines of class-constructor
+        // mocking stood here, duplicating what commandExecutor.testUtils
+        // already did, because CommandExecutor built its own collaborators.
+        // One shared fake replaces all of it; `npmGlobalPaths` is empty in this
+        // suite, which is the one way it differed.
+        const deps = createFakeCommandExecutorDeps();
+        mockEnvironmentSetup = deps.environmentSetup as unknown as jest.Mocked<EnvironmentSetup>;
+        mockEnvironmentSetup.findNpmGlobalPaths.mockReturnValue([]);
 
         // Create CommandExecutor instance
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(deps);
     });
 
     // =================================================================

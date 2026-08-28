@@ -14,12 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Timeout Handling', () => {
     let commandExecutor: CommandExecutor;
@@ -29,10 +23,10 @@ describe('CommandExecutor - Timeout Handling', () => {
         jest.clearAllMocks();
 
         // Setup mock implementations BEFORE creating instances
-        setupMockDependencies();
+        const mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('timeout handling', () => {

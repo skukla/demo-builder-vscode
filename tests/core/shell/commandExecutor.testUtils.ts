@@ -1,10 +1,8 @@
-import { CommandSequencer } from '@/core/shell/commandSequencer';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { FileWatcher } from '@/core/shell/fileWatcher';
-import { PollingService } from '@/core/shell/pollingService';
 import { ResourceLocker } from '@/core/shell/resourceLocker';
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import { EventEmitter } from 'events';
+import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 
 /**
  * Mock execa subprocess that simulates ExecaChildProcess behavior.
@@ -113,74 +111,27 @@ export function simulateSubprocessComplete(
  * Setup standard mock implementations for CommandExecutor dependencies.
  * Returns mocks that can be inspected in tests.
  */
+/**
+ * The CommandExecutor's machinery, as ONE fake object to hand to its constructor.
+ *
+ * CONVERTED 2026-08-28 (ADR-015). This used to intercept six modules and replace
+ * their CLASS constructors, because CommandExecutor built its own collaborators
+ * and a test had no other way past them. Every executor suite carried the same
+ * six `jest.mock(...)` lines to make that work; they are gone.
+ *
+ * The behaviours are unchanged and now live in
+ * `tests/helpers/commandExecutorDepsFake.ts` — notably the two pass-throughs
+ * (resourceLocker.executeExclusive and retryManager.executeWithRetry), without
+ * which every command silently does nothing.
+ *
+ * Pass `deps` to the constructor; read the accessors to assert on calls.
+ */
 export function setupMockDependencies() {
-    let mockResourceLocker: jest.Mocked<ResourceLocker>;
-    let mockRetryManager: jest.Mocked<RetryStrategyManager>;
-    let mockEnvironmentSetup: jest.Mocked<EnvironmentSetup>;
-
-    // Mock resource locker constructor
-    (ResourceLocker as jest.MockedClass<typeof ResourceLocker>).mockImplementation(() => {
-        const mock = {
-            executeExclusive: jest.fn(<T>(resource: string, operation: () => Promise<T>) => operation()) as any,
-            clearAllLocks: jest.fn()
-        } as any;
-        mockResourceLocker = mock;
-        return mock;
-    });
-
-    // Mock retry manager constructor
-    (RetryStrategyManager as jest.MockedClass<typeof RetryStrategyManager>).mockImplementation(() => {
-        const mock = {
-            executeWithRetry: jest.fn((executeFn: () => Promise<any>) => executeFn()) as any,
-            getDefaultStrategy: jest.fn(() => ({
-                maxAttempts: 1,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 2
-            })),
-            getStrategy: jest.fn(() => ({
-                maxAttempts: 2,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 1.5
-            }))
-        } as any;
-        mockRetryManager = mock;
-        return mock;
-    });
-
-    // Mock environment setup constructor
-    (EnvironmentSetup as jest.MockedClass<typeof EnvironmentSetup>).mockImplementation(() => {
-        const mock = {
-            findAdobeCLINodeVersion: jest.fn().mockResolvedValue('18'),
-            findFnmPath: jest.fn().mockReturnValue('/usr/local/bin/fnm'),
-            findNpmGlobalPaths: jest.fn().mockReturnValue(['/usr/local/lib/node_modules/.bin']),
-            ensureAdobeCLIConfigured: jest.fn().mockResolvedValue(undefined),
-            ensureAdobeCLINodeVersion: jest.fn().mockResolvedValue(undefined),
-            resetSession: jest.fn()
-        } as any;
-        mockEnvironmentSetup = mock;
-        return mock;
-    });
-
-    // Mock other constructors with minimal implementation
-    (FileWatcher as jest.MockedClass<typeof FileWatcher>).mockImplementation(() => ({
-        disposeAll: jest.fn(),
-        waitForFileSystem: jest.fn()
-    } as any));
-
-    (CommandSequencer as jest.MockedClass<typeof CommandSequencer>).mockImplementation(() => ({
-        executeSequence: jest.fn(),
-        executeParallel: jest.fn()
-    } as any));
-
-    (PollingService as jest.MockedClass<typeof PollingService>).mockImplementation(() => ({
-        pollUntilCondition: jest.fn()
-    } as any));
-
+    const deps = createFakeCommandExecutorDeps();
     return {
-        mockResourceLocker: () => mockResourceLocker,
-        mockRetryManager: () => mockRetryManager,
-        mockEnvironmentSetup: () => mockEnvironmentSetup
+        deps,
+        mockResourceLocker: () => deps.resourceLocker as unknown as jest.Mocked<ResourceLocker>,
+        mockRetryManager: () => deps.retryManager as unknown as jest.Mocked<RetryStrategyManager>,
+        mockEnvironmentSetup: () => deps.environmentSetup as unknown as jest.Mocked<EnvironmentSetup>,
     };
 }

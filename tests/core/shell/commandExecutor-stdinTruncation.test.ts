@@ -46,12 +46,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
 }));
 
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('execa options', () => {
     let commandExecutor: CommandExecutor;
@@ -59,8 +53,8 @@ describe('execa options', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        setupMockDependencies();
-        commandExecutor = new CommandExecutor();
+        const mockDependencies = setupMockDependencies();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     async function runOnce(command = 'aio console project list --json') {

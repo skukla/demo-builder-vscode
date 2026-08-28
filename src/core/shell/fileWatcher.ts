@@ -12,8 +12,13 @@ export class FileWatcher {
     private watchers = new Map<string, vscode.FileSystemWatcher>();
     private pollingService: PollingService;
 
-    constructor() {
-        this.pollingService = new PollingService();
+    /**
+     * ADR-015: the polling service is handed in. It used to be built here, which
+     * meant a FileWatcher inside a CommandExecutor ran a SECOND polling service
+     * alongside the executor's own — createCommandExecutorDeps now shares one.
+     */
+    constructor(pollingService: PollingService) {
+        this.pollingService = pollingService;
     }
 
     /**

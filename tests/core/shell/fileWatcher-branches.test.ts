@@ -29,6 +29,9 @@ import { EventEmitter } from 'events';
 jest.mock('vscode');
 
 // Mock polling service
+// CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is
+// handed in. The module mock stays only because this suite builds its fake via
+// `new PollingService()` and relies on the automock for the method surface.
 jest.mock('@/core/shell/pollingService');
 
 // Mock logging - must match the import path in fileWatcher.ts: '@/core/logging'
@@ -81,7 +84,7 @@ describe('FileWatcher Branch Coverage', () => {
         mockPollingService.pollUntilCondition = jest.fn().mockResolvedValue(undefined);
 
         // Create FileWatcher and inject mock polling service
-        fileWatcher = new FileWatcher();
+        fileWatcher = new FileWatcher(mockPollingService);
         (fileWatcher as any).pollingService = mockPollingService;
 
         // Setup mock watcher factory

@@ -15,12 +15,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Service Delegation', () => {
     let commandExecutor: CommandExecutor;
@@ -33,7 +27,7 @@ describe('CommandExecutor - Service Delegation', () => {
         mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('executeExclusive', () => {
@@ -58,7 +52,7 @@ describe('CommandExecutor - Service Delegation', () => {
             const options = { maxAttempts: 10, timeout: 5000 };
 
             // Create new executor to get fresh mocks
-            const executor = new CommandExecutor();
+            const executor = new CommandExecutor(mockDependencies.deps);
 
             // Mock the polling service method
             (executor as any).pollingService.pollUntilCondition = mockPollingService.pollUntilCondition;

@@ -14,12 +14,6 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Adobe CLI Integration', () => {
     let commandExecutor: CommandExecutor;
@@ -33,7 +27,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
         mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('Adobe CLI telemetry handling', () => {

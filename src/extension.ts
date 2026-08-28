@@ -85,6 +85,7 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
+import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 
 /**
  * Whether this window should re-home to the projects root on activation.
@@ -294,7 +295,7 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         // Initialize external command manager
-        externalCommandManager = new CommandExecutor();
+        externalCommandManager = new CommandExecutor(createCommandExecutorDeps());
 
         // Register CommandExecutor with ServiceLocator (breaks circular dependencies)
         ServiceLocator.setCommandExecutor(externalCommandManager);
