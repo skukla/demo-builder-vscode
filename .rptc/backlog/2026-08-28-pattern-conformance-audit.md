@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # Pattern-conformance audit — one architecture, or one per feature?
@@ -63,3 +63,7 @@ for the same job-shape).
 - `architecture-duplication-scan`, `call-path-audit` (the job-level halves)
 - `.rptc/sop/consistency-patterns.md` (the SOP this would give teeth)
 - PL-11 (test health) owns the test-side conventions
+
+## Shipped so far
+
+- 2026-08-28  ANSWERED AND ENFORCED (2026-08-28). The question ('one architecture or one per feature?') resolved: one architecture, one fault line. Owner-ratified ruling: ADR-015 (fetch at the boundary, inject below, construct in the root or create...Deps; responsibility contracts; the 11-row where-code-goes table). Enforcement live: tests/sop/architecture-rules.test.ts, six checks, positive controls, 75-entry reasoned ledger that only shrinks. The instrument earned its keep twice: the done-gate caught planted holes, and the enforcement suite's positive control caught the audit's OWN coverage bug (the ls-files glob silently excluded the three top-level src files incl. extension.ts — corrected everywhere, 899/899 kinded, re-verified). Cleanup queue: PL-13.
