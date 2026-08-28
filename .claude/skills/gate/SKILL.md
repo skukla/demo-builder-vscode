@@ -133,6 +133,21 @@ whose sha never reached the item, writes the line, and flips a `backlog` item to
 
 Skipping it is how eight commits landed unlogged on 2026-08-26.
 
+## 7. Reading a CI failure (the two commands)
+
+```bash
+gh run list --limit 40 --json conclusion,displayTitle,name,headBranch,databaseId,createdAt \
+  | python3 -c "import json,sys; [print(r['conclusion'],'|',r['name'],'|',r['headBranch'],'|',r['displayTitle'][:55],'| id',r['databaseId']) for r in json.load(sys.stdin) if r['conclusion']=='failure']"
+gh run view <databaseId> --log-failed | grep -E "##\[error\]"   # the actual error lines
+```
+
+Then reproduce the failing check LOCALLY against current HEAD before concluding
+anything — a red run tests the tree AS OF ITS COMMIT, and a fix may already have
+landed. The 2026-08-28 case: three red runs were docs pushes inside the
+minutes-wide window between a bad `responseCeilings.ts` shape and its fix; the
+error was real, the alarm was stale. `conclusion` empty means still running,
+not failed.
+
 ## Notes
 - This is the inner loop. For agent-driven review use `/rptc:verify`; to ship use `/rptc:commit`.
 - Never commit without explicit user approval; no Co-Authored-By footer (project convention).
