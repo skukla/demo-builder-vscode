@@ -87,6 +87,7 @@
 | [013](adr/013-generated-file-edit-survival.md) | Generated AI files — hash-and-skip edit survival (refresh overwrites only unmodified files) | Implemented (feature/tiered-ai-refresh, 2026-08-14) |
 | [014](adr/014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service (one pair, never persisted; a declared pair still wins) | Implemented (feature/data-installer-credential-broker, 2026-08-16) |
 | [015](adr/015-dependency-architecture.md) | Dependency architecture: fetch only at the boundary (extension.ts, commands/, handlers/, tool registrars), inject below, construct in the root or a create...Deps file | Implemented + enforced (tests/sop/architecture-rules.test.ts, 2026-08-28); placement rules in [where-code-goes.md](../architecture/where-code-goes.md) |
+| [016](adr/016-test-strategy.md) | Test strategy: three tiers (unit = handed-in deps + argument assertions; contract = fixtures-from-live + drift; live = journeys/verify-after-write), Jest retained, noise-to-zero, Stryker effectiveness pilot | Ratified 2026-08-28; execution under PL-11 |
 
 ## Quick Reference
 

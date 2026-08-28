@@ -280,7 +280,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
 | `PL-11` | epic | [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
 | `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | low | active |
-| `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | backlog |
+| `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-13` | chore | [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | med | backlog |
 

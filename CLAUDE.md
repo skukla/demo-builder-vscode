@@ -139,6 +139,10 @@ file. Placement rules: `docs/architecture/where-code-goes.md` (the
 when-you-want-X table). Enforced by `tests/sop/architecture-rules.test.ts` —
 new violations fail the build; exemptions live in its ledger and every one
 carries a reason.
+Its companion **ADR-016** rules the TEST strategy: three tiers (unit =
+handed-in deps + argument assertions; contract = fixtures captured from live
+responses; live = journeys/verify-after-write), Jest retained, run-noise to
+zero, effectiveness measured by mutation testing.
 
 ## Verified duplication gets FIXED, not reported
 
