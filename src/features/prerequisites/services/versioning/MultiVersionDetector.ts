@@ -5,7 +5,7 @@
  */
 
 import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
@@ -24,12 +24,12 @@ export interface NodeVersionStatus {
  */
 export async function checkMultipleNodeVersions(
     versionToComponentMapping: Record<string, string>,
+    commandManager: CommandExecutor,
     logger: Logger,
 ): Promise<NodeVersionStatus[]> {
     const results: NodeVersionStatus[] = [];
 
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const fnmListResult = await commandManager.execute('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
             shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
@@ -68,9 +68,11 @@ export async function checkMultipleNodeVersions(
  * @param logger - Logger instance
  * @returns Array of Node major versions
  */
-export async function getInstalledNodeVersions(logger: Logger): Promise<string[]> {
+export async function getInstalledNodeVersions(
+    commandManager: CommandExecutor,
+    logger: Logger,
+): Promise<string[]> {
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const fnmListResult = await commandManager.execute('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
             shell: DEFAULT_SHELL,
@@ -91,6 +93,7 @@ export async function getInstalledNodeVersions(logger: Logger): Promise<string[]
  */
 export async function getLatestInFamily(
     versionFamily: string,
+    commandManager: CommandExecutor,
     logger: Logger,
 ): Promise<string | null> {
     // SECURITY: Validate versionFamily to prevent command injection
@@ -101,7 +104,6 @@ export async function getLatestInFamily(
     }
 
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         // SECURITY: Use Node.js string processing instead of shell pipes
         // Eliminates shell injection risk entirely (defense-in-depth)
         const { stdout } = await commandManager.execute('fnm list-remote', {

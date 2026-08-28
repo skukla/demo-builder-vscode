@@ -14,8 +14,6 @@
   "src/features/mesh/services/meshVerifier.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/mesh/services/stalenessDetector.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/prerequisites/services/PrerequisitesManager.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
-  "src/features/prerequisites/services/versioning/MultiVersionDetector.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
-  "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/project-creation/helpers/envFileGenerator.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",
   "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts": "pre-ADR-015: locator fetch inside logic \u2014 converge to handed-in deps (PL-12 cleanup queue)",

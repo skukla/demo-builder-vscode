@@ -26,6 +26,7 @@ import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteInstallCompletePayload, PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 import type { InstallPrerequisiteRequestPayload } from '@/types/webviewRequests';
+import { ServiceLocator } from '@/core/di';
 
 /**
  * Get target Node versions for installation (SOP §3 compliance)
@@ -144,7 +145,10 @@ async function resolvePerNodeTargetVersions(
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
     const missingNodeVersions = perNodeStatus.missingVariantMajors;
 
-    const fnmInstalledVersions = await getInstalledNodeVersions(context.logger);
+    const fnmInstalledVersions = await getInstalledNodeVersions(
+        ServiceLocator.getCommandExecutor(),
+        context.logger,
+    );
     const fnmInstalledSet = new Set(fnmInstalledVersions);
     const installableVersions = missingNodeVersions.filter(v => fnmInstalledSet.has(v));
 
@@ -270,7 +274,10 @@ async function resolvePluginNodeVersions(
     }
 
     if (pluginNodeVersions.length > 0) {
-        const fnmVersions = await getInstalledNodeVersions(context.logger);
+        const fnmVersions = await getInstalledNodeVersions(
+            ServiceLocator.getCommandExecutor(),
+            context.logger,
+        );
         const fnmSet = new Set(fnmVersions);
         const installablePluginVersions = pluginNodeVersions.filter(v => fnmSet.has(v));
 

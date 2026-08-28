@@ -187,7 +187,10 @@ export class PrerequisitesManager {
             `[Prerequisites] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`,
         );
 
-        const installedNodeVersions = await getInstalledNodeVersions(this.logger);
+        const installedNodeVersions = await getInstalledNodeVersions(
+            ServiceLocator.getCommandExecutor(),
+            this.logger,
+        );
 
         if (installedNodeVersions.length === 0) {
             this.logger.debug(`[Prerequisites] ${prereq.id}: No Node versions installed`);
@@ -415,19 +418,27 @@ export class PrerequisitesManager {
 
     // Delegate to extracted module
     async getLatestInFamily(versionFamily: string): Promise<string | null> {
-        return getLatestInFamily(versionFamily, this.logger);
+        return getLatestInFamily(versionFamily, ServiceLocator.getCommandExecutor(), this.logger);
     }
 
     // Delegate to extracted module
     async checkMultipleNodeVersions(
         versionToComponentMapping: Record<string, string>,
     ): Promise<{ version: string; component: string; installed: boolean }[]> {
-        return checkMultipleNodeVersions(versionToComponentMapping, this.logger);
+        return checkMultipleNodeVersions(
+            versionToComponentMapping,
+            ServiceLocator.getCommandExecutor(),
+            this.logger,
+        );
     }
 
     // Delegate to extracted module
     async checkVersionSatisfaction(requiredFamily: string): Promise<boolean> {
-        const result = await checkVersionSatisfaction(requiredFamily, this.logger);
+        const result = await checkVersionSatisfaction(
+            requiredFamily,
+            ServiceLocator.getCommandExecutor(),
+            this.logger,
+        );
         return result.satisfied;
     }
 

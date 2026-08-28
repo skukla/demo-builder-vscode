@@ -15,9 +15,12 @@
  */
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN now, so this
+ * suite mocks NO modules — the registry mock it used to need is gone and the
+ * fake is a plain object. Assertions are unchanged.
+ */
+const executor = { execute: mockExecute } as never;
 
 import {
     checkMultipleNodeVersions,
@@ -58,7 +61,7 @@ describe('checkMultipleNodeVersions', () => {
     it('consults the executor with the EXACT command and options (the conversion seam)', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_LIST });
 
-        await checkMultipleNodeVersions({ '20': 'API Mesh' }, makeLogger());
+        await checkMultipleNodeVersions({ '20': 'API Mesh' }, executor, makeLogger());
 
         expect(mockExecute).toHaveBeenCalledTimes(1);
         expect(mockExecute).toHaveBeenCalledWith('fnm list', {
@@ -72,6 +75,7 @@ describe('checkMultipleNodeVersions', () => {
 
         const results = await checkMultipleNodeVersions(
             { '20': 'API Mesh', '21': 'Nothing' },
+            executor,
             makeLogger()
         );
 
@@ -85,7 +89,7 @@ describe('checkMultipleNodeVersions', () => {
         mockExecute.mockRejectedValue(new Error('fnm: command not found'));
         const logger = makeLogger();
 
-        const results = await checkMultipleNodeVersions({ '20': 'API Mesh' }, logger);
+        const results = await checkMultipleNodeVersions({ '20': 'API Mesh' }, executor, logger);
 
         expect(results).toEqual([{ version: 'Node 20', component: 'API Mesh', installed: false }]);
         expect(logger.warn).toHaveBeenCalledWith(
@@ -98,7 +102,7 @@ describe('getInstalledNodeVersions', () => {
     it('returns the installed major versions, sorted, from real fnm output', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_LIST });
 
-        await expect(getInstalledNodeVersions(makeLogger())).resolves.toEqual([
+        await expect(getInstalledNodeVersions(executor, makeLogger())).resolves.toEqual([
             '18',
             '20',
             '22',
@@ -114,7 +118,7 @@ describe('getInstalledNodeVersions', () => {
         mockExecute.mockRejectedValue(new Error('boom'));
         const logger = makeLogger();
 
-        await expect(getInstalledNodeVersions(logger)).resolves.toEqual([]);
+        await expect(getInstalledNodeVersions(executor, logger)).resolves.toEqual([]);
         expect(logger.warn).toHaveBeenCalled();
     });
 });
@@ -123,7 +127,7 @@ describe('getLatestInFamily', () => {
     it('REJECTS a non-numeric family without touching the executor (injection guard)', async () => {
         const logger = makeLogger();
 
-        await expect(getLatestInFamily('20; rm -rf /', logger)).resolves.toBeNull();
+        await expect(getLatestInFamily('20; rm -rf /', executor, logger)).resolves.toBeNull();
 
         // The guard's whole point: no command is built at all.
         expect(mockExecute).not.toHaveBeenCalled();
@@ -135,7 +139,7 @@ describe('getLatestInFamily', () => {
     it('returns the first matching version in the family, without the v prefix', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_REMOTE });
 
-        await expect(getLatestInFamily('20', makeLogger())).resolves.toBe('20.19.4');
+        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBe('20.19.4');
         expect(mockExecute).toHaveBeenCalledWith('fnm list-remote', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
         });
@@ -144,6 +148,6 @@ describe('getLatestInFamily', () => {
     it('answers null when the family has no remote versions', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_REMOTE });
 
-        await expect(getLatestInFamily('19', makeLogger())).resolves.toBeNull();
+        await expect(getLatestInFamily('19', executor, makeLogger())).resolves.toBeNull();
     });
 });

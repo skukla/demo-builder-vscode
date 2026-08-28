@@ -11,9 +11,12 @@
  */
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN now, so this
+ * suite mocks NO modules — the registry mock it used to need is gone and the
+ * fake is a plain object. Assertions are unchanged.
+ */
+const executor = { execute: mockExecute } as never;
 
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -41,7 +44,7 @@ describe('checkVersionSatisfaction', () => {
     it('consults the executor with the EXACT command and options (the conversion seam)', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_LIST });
 
-        await checkVersionSatisfaction('20', makeLogger());
+        await checkVersionSatisfaction('20', executor, makeLogger());
 
         expect(mockExecute).toHaveBeenCalledWith('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
@@ -52,7 +55,7 @@ describe('checkVersionSatisfaction', () => {
     it('satisfied: names the installed version that matched the family', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_LIST });
 
-        await expect(checkVersionSatisfaction('20', makeLogger())).resolves.toEqual({
+        await expect(checkVersionSatisfaction('20', executor, makeLogger())).resolves.toEqual({
             satisfied: true,
             matchingVersion: '20.19.6',
         });
@@ -61,7 +64,7 @@ describe('checkVersionSatisfaction', () => {
     it('not satisfied: no installed version in that family', async () => {
         mockExecute.mockResolvedValue({ stdout: FNM_LIST });
 
-        await expect(checkVersionSatisfaction('19', makeLogger())).resolves.toEqual({
+        await expect(checkVersionSatisfaction('19', executor, makeLogger())).resolves.toEqual({
             satisfied: false,
             matchingVersion: undefined,
         });
@@ -70,7 +73,7 @@ describe('checkVersionSatisfaction', () => {
     it('REJECTS a non-numeric family without touching the executor (injection guard)', async () => {
         const logger = makeLogger();
 
-        await expect(checkVersionSatisfaction('20 && curl evil', logger)).resolves.toEqual({
+        await expect(checkVersionSatisfaction('20 && curl evil', executor, logger)).resolves.toEqual({
             satisfied: false,
         });
         expect(mockExecute).not.toHaveBeenCalled();
@@ -83,7 +86,7 @@ describe('checkVersionSatisfaction', () => {
         mockExecute.mockRejectedValue(new Error('fnm: command not found'));
         const logger = makeLogger();
 
-        await expect(checkVersionSatisfaction('20', logger)).resolves.toEqual({ satisfied: false });
+        await expect(checkVersionSatisfaction('20', executor, logger)).resolves.toEqual({ satisfied: false });
         expect(logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Error checking Node 20.x')
         );

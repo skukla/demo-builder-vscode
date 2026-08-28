@@ -6,7 +6,7 @@
 
 import * as semver from 'semver';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
@@ -38,6 +38,7 @@ interface VersionSatisfactionResult {
  */
 export async function checkVersionSatisfaction(
     requiredFamily: string,
+    commandManager: CommandExecutor,
     logger: Logger,
 ): Promise<VersionSatisfactionResult> {
     const startTime = Date.now();
@@ -51,7 +52,6 @@ export async function checkVersionSatisfaction(
     }
 
     try {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const fnmListResult = await commandManager.execute('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
             shell: DEFAULT_SHELL,
