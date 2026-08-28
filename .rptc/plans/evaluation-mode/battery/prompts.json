@@ -838,7 +838,8 @@
     "expect": [
       "list_graphql_queries"
     ],
-    "why": "The ERP journey's schema trial-and-error (8 discovery curls) had this answer on the dropins server the whole time it existed. Measures routing to sibling-server knowledge: the tool is allowlisted via third-party-reads.txt and documented by the aem-researcher skill."
+    "why": "The ERP journey's schema trial-and-error (8 discovery curls) had this answer on the dropins server the whole time it existed. Measures routing to sibling-server knowledge: the tool is allowlisted via third-party-reads.txt and documented by the aem-researcher skill. cwd:project \u2014 the first measurement ran home-cwd (project servers, HOME guidance: a mismatch no real session has) and went 2/2 to grepping vendored source without one ToolSearch.",
+    "cwd": "project"
   },
   {
     "id": "cross-design-tokens",

@@ -254,6 +254,21 @@ comparison point.
    rule, pinned on the round-trip item): the question is never "did the agent
    take our route" but "what did the route it took cost".
 
+**6. Journeys round-trip to zero, and the report says so in plain English**
+   (owner, 2026-08-28 — from the extension's overarching goal: an SC works as
+   idempotently as possible; whatever can be done should be undoable so
+   activities reproduce at will). Two obligations on every journey:
+   - **The ask contains its own undo.** A journey that creates, deploys, or
+     configures something also asks for its removal in the same journey, so
+     the run ends at zero. This is deliberately stronger than harness cleanup
+     (the tier-2 scratch choreography): the UNDO PATH is part of the measured
+     surface, and a journey that cannot get back to zero has found a
+     reversibility gap — a product finding under the idempotency goal, not a
+     test inconvenience.
+   - **The result is reported in plain English**: what the journey actually
+     did, and what it left behind (the right answer is "nothing"). Scores and
+     routes are the appendix, never the report.
+
 ### The corpus excludes battery runs, and you must not bypass that
 
 `batterySessionsExcluded` is usually the MAJORITY of files — 78 of 120 on
