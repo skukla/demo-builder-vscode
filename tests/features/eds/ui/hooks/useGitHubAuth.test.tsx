@@ -28,16 +28,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock webviewLogger
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 // Default wizard state for hook tests
 const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
     currentStep: 'storefront-setup',
@@ -61,6 +51,12 @@ describe('useGitHubAuth Hook', () => {
         jest.clearAllMocks();
         messageHandlers.clear();
         mockUpdateState = jest.fn();
+        // ABSORB the expected OAuth failure. This suite has an error-path test,
+        // and webviewLogger.error logs unconditionally — deliberately, since an
+        // error is never dev-only. In beforeEach, not beforeAll: the console
+        // gate installs its wrapper in a setup-file beforeEach that runs first,
+        // so a beforeAll spy would be wrapped BY the gate and still counted.
+        jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
     it('should check GitHub auth status on mount', async () => {

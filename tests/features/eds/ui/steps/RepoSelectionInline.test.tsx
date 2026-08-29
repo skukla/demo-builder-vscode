@@ -38,15 +38,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <Provider theme={defaultTheme} colorScheme="light">
         {children}

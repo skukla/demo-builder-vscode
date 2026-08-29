@@ -30,16 +30,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock webviewLogger
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 // Default wizard state for hook tests
 const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
     currentStep: 'storefront-setup',

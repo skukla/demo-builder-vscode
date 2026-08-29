@@ -25,16 +25,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-// Mock webviewLogger
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: () => ({
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-    }),
-}));
-
 // Mock Validator
 jest.mock('@/core/validation/Validator', () => ({
     url: () => () => ({ valid: true }),

@@ -25,10 +25,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), trace: jest.fn() }),
-}));
-
 // Real validators are irrelevant here — every field under test is `text`.
 jest.mock('@/core/validation/Validator', () => ({
     url: () => () => ({ valid: true }),
