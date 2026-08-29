@@ -28,14 +28,28 @@ m.srcLines = Number(sh(`git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/*
 m.testFiles = Number(sh(`git ls-files 'tests/**/*.ts' 'tests/**/*.tsx' | wc -l`));
 m.testLines = Number(sh(`git ls-files 'tests/**/*.ts' 'tests/**/*.tsx' | xargs wc -l | tail -1 | awk '{print $1}'`));
 
-// ── Architecture debt (the ADR-015 ledger — the program's primary target) ───
+// ── Architecture debt (the program's primary target) ────────────────────────
+// TWO ledgers since 2026-08-29: ADR-015 rules the extension host, ADR-017 the
+// webviews, and the split moved `hookRefs` from the first to the second
+// (cf49e8fbd). This file kept reading `arch.hookRefs` and crashed on undefined
+// — for as long as it took someone to run it, which was days, because nothing
+// did. Registered in tests/sop/toolingRegistry.ts now so that cannot recur.
 const arch = JSON.parse(readFileSync(`${ROOT}/tests/sop/architecture-rules.exemptions.json`, 'utf8'));
+const web = JSON.parse(
+    readFileSync(`${ROOT}/tests/sop/webview-architecture-rules.exemptions.json`, 'utf8'),
+);
+/** Fail loudly on a key that moved again, rather than silently scoring it 0. */
+const rows = (ledger, key) => {
+    const bucket = ledger[key];
+    if (!bucket) throw new Error(`exemption ledger has no "${key}" — did it move between ADRs?`);
+    return Object.keys(bucket).length;
+};
 m.archExemptions = {
-    fetchBoundary: Object.keys(arch.fetchBoundary).length,
-    constructionBoundary: Object.keys(arch.constructionBoundary).length,
-    commandBase: Object.keys(arch.commandBase).length,
-    typesPurity: Object.keys(arch.typesPurity).length,
-    hookRefs: Object.keys(arch.hookRefs).length,
+    fetchBoundary: rows(arch, 'fetchBoundary'),
+    constructionBoundary: rows(arch, 'constructionBoundary'),
+    commandBase: rows(arch, 'commandBase'),
+    typesPurity: rows(arch, 'typesPurity'),
+    hookRefs: rows(web, 'hookRefs'),
     sendMessageCeiling: arch.patternBSendMessageCeiling,
 };
 m.archExemptionTotal = Object.values(m.archExemptions).reduce((a, b) => a + (typeof b === 'number' && b < 1000 ? b : 0), 0) - m.archExemptions.sendMessageCeiling + 0;

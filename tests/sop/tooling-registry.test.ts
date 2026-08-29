@@ -20,7 +20,8 @@
 
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { INSTRUMENTS, sweepable, type Instrument } from './toolingRegistry';
+import { execFileSync } from 'child_process';
+import { INSTRUMENTS, sweepable, NON_INSTRUMENT_SCRIPTS, type Instrument } from './toolingRegistry';
 
 const REPO_ROOT = join(__dirname, '..', '..');
 const SKILLS_DIR = join(REPO_ROOT, '.claude', 'skills');
@@ -84,6 +85,60 @@ describe('the tooling registry matches what is on disk', () => {
     });
 });
 
+describe("the program's own instruments cannot go dark", () => {
+    /**
+     * Every executable under `.rptc/`, from git rather than a filesystem walk —
+     * an untracked scratch script is not something the repo owes an answer for.
+     */
+    const rptcScripts = execFileSync(
+        'git',
+        ['ls-files', '.rptc/**/*.mjs', '.rptc/**/*.js', '.rptc/**/*.sh'],
+        { cwd: REPO_ROOT, encoding: 'utf8' }
+    )
+        .split('\n')
+        .filter(Boolean)
+        .sort();
+
+    const registeredPaths = new Set(INSTRUMENTS.map((i) => i.path).filter(Boolean));
+
+    it('CONTROL: the git listing finds the instruments it is meant to audit', () => {
+        expect(rptcScripts.length).toBeGreaterThan(10);
+        expect(rptcScripts).toContain(
+            '.rptc/plans/pattern-conformance-audit/harness/program-metrics.mjs'
+        );
+    });
+
+    it('accounts for every .rptc executable — as an instrument or as a stated one-shot', () => {
+        // The gap this closes: 24 scripts, several of them the program's own
+        // measurement tools, reachable from nothing. One had been crashing since
+        // the ADR-015/017 split and nobody knew.
+        const unaccounted = rptcScripts.filter(
+            (p) => !registeredPaths.has(p) && !(p in NON_INSTRUMENT_SCRIPTS)
+        );
+        expect(unaccounted).toEqual([]);
+    });
+
+    it('has no exemption for a script that no longer exists', () => {
+        const onDisk = new Set(rptcScripts);
+        const ghosts = Object.keys(NON_INSTRUMENT_SCRIPTS).filter((p) => !onDisk.has(p));
+        expect(ghosts).toEqual([]);
+    });
+
+    it('gives every exemption a reason', () => {
+        const unexplained = Object.entries(NON_INSTRUMENT_SCRIPTS)
+            .filter(([, why]) => why.trim().length < 15)
+            .map(([p]) => p);
+        expect(unexplained).toEqual([]);
+    });
+
+    it('points every registered instrument at a file that exists', () => {
+        const broken = INSTRUMENTS.filter((i) => i.path)
+            .filter((i) => !existsSync(join(REPO_ROOT, i.path as string)))
+            .map((i) => i.id);
+        expect(broken).toEqual([]);
+    });
+});
+
 describe('every entry says enough to be actionable', () => {
     it('CONTROL: the fields being checked are actually populated somewhere', () => {
         expect(INSTRUMENTS.some((i) => i.runs !== null)).toBe(true);
@@ -131,6 +186,21 @@ describe('every entry says enough to be actionable', () => {
         // assertion above would pass while proving nothing.
         const kinds = new Set(INSTRUMENTS.map((i) => i.resultKind).filter(Boolean));
         expect([...kinds].sort()).toEqual(['gate', 'report']);
+    });
+
+    it('never lets the sweep run an instrument that WRITES', () => {
+        // The safety property, learned the hard way: `classify.mjs` rewrites the
+        // audit ledger and was run blind to see if it still worked, taking it
+        // from 998 rows to 5. A sweep is something you run without thinking; a
+        // writer is not.
+        const writersInSweep = sweepable()
+            .filter((i) => i.writes)
+            .map((i) => i.id);
+        expect(writersInSweep).toEqual([]);
+    });
+
+    it('CONTROL: the registry does contain writers, so the rule above has work to do', () => {
+        expect(INSTRUMENTS.filter((i) => i.writes).length).toBeGreaterThan(0);
     });
 
     it('points every npm-script entry at a script that exists', () => {

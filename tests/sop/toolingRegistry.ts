@@ -40,7 +40,13 @@ export type InstrumentKind =
     /** A skill directory under `.claude/skills/`. */
     | 'skill'
     /** A script in `package.json`. */
-    | 'npm-script';
+    | 'npm-script'
+    /**
+     * A measurement instrument living under `.rptc/` — a census, a metric, an
+     * audit gate. These are the tools the consolidation program runs ON itself,
+     * and they were invisible to everything until 2026-08-29.
+     */
+    | 'rptc-instrument';
 
 /**
  * How often it runs — the axis that matters, because it says who is responsible
@@ -98,6 +104,19 @@ export interface Instrument {
      * registry report as unwired, which is the state we want to see.
      */
     readonly unwiredReason?: string;
+    /**
+     * Running it MUTATES tracked files. Such an instrument is never run by
+     * `npm run sweep`, and a test enforces that.
+     *
+     * Learned by doing it: `classify.mjs` was run blind on 2026-08-29 to find out
+     * whether it still worked. It rewrites the audit ledger, and took it from 998
+     * rows to 5. Nothing in the file's name, its output, or any list said it
+     * wrote anything — because no list existed. Git had the rows, so it cost
+     * minutes; a sweep that ran it on a schedule would have cost the audit.
+     */
+    readonly writes?: boolean;
+    /** Repo-relative path, for instruments identified by file rather than name. */
+    readonly path?: string;
 }
 
 /**
@@ -360,14 +379,141 @@ const AUTHORING: readonly Instrument[] = (
     })
 );
 
+/**
+ * The consolidation program's own instruments — how we measure whether the ADRs
+ * are landing. Every one lived under `.rptc/` reachable from nothing until
+ * 2026-08-29, and the cost was concrete: `program-metrics.mjs`, the program's
+ * impact meter, had been CRASHING since the ADR-015/017 split moved `hookRefs`
+ * to the webview ledger (cf49e8fbd), and nobody knew, because nothing ran it.
+ *
+ * Note how many of these WRITE. That is why they are on-demand rather than in
+ * the sweep, and why `writes` is a required part of the record.
+ */
+const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
+    {
+        id: 'check-ledger',
+        kind: 'rptc-instrument',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        path: '.rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs',
+        what: "the ADR-015 audit's done-gate: every unit accounted for, or exit non-zero",
+        runs: 'node .rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs',
+    },
+    {
+        id: 'program-metrics',
+        kind: 'rptc-instrument',
+        cadence: 'on-demand',
+        resultKind: 'report',
+        path: '.rptc/plans/pattern-conformance-audit/harness/program-metrics.mjs',
+        what: "the convergence program's impact meter — one dated snapshot; impact is the diff between two",
+        runs: 'node .rptc/plans/pattern-conformance-audit/harness/program-metrics.mjs',
+        writes: true,
+        unwiredReason:
+            'writes a dated snapshot + re-runs the censuses; run at program checkpoints, not on a schedule',
+    },
+    {
+        id: 'craft-census',
+        kind: 'rptc-instrument',
+        cadence: 'on-demand',
+        resultKind: 'report',
+        path: '.rptc/plans/pattern-conformance-audit/harness/craft-census.mjs',
+        what: 'every suite classified against the accepted test-craft patterns and double styles (ADR-016)',
+        runs: 'node .rptc/plans/pattern-conformance-audit/harness/craft-census.mjs',
+        writes: true,
+        unwiredReason: 'writes craft-census.json',
+    },
+    {
+        id: 'test-census',
+        kind: 'rptc-instrument',
+        cadence: 'on-demand',
+        resultKind: 'report',
+        path: '.rptc/plans/pattern-conformance-audit/harness/test-census.mjs',
+        what: 'for each ADR-015 queue file, can its tests OBJECT to a bad refactor, or would they pass regardless',
+        runs: 'node .rptc/plans/pattern-conformance-audit/harness/test-census.mjs',
+        writes: true,
+        unwiredReason: 'writes test-census.json',
+    },
+    {
+        id: 'classify',
+        kind: 'rptc-instrument',
+        cadence: 'on-demand',
+        resultKind: 'report',
+        path: '.rptc/plans/pattern-conformance-audit/harness/classify.mjs',
+        what: 'fills the audit ledger with one verdict per (unit, pattern)',
+        runs: 'node .rptc/plans/pattern-conformance-audit/harness/classify.mjs',
+        writes: true,
+        unwiredReason:
+            'REWRITES ledger.json wholesale — running it blind cost 998 rows on 2026-08-29',
+    },
+    {
+        id: 'webview-visual-baseline',
+        kind: 'rptc-instrument',
+        cadence: 'on-demand',
+        resultKind: 'report',
+        path: '.rptc/research/webview-visual-testing/build-fixtures.mjs',
+        what: 'computed-style fingerprint of every webview — the baseline that makes an ADR-018 CSS change provable',
+        runs: 'node .rptc/research/webview-visual-testing/build-fixtures.mjs <outdir>',
+        writes: true,
+        unwiredReason:
+            'takes an output directory and drives a browser; PL-21 is its consumer, and it needs a durable home before that starts',
+    },
+];
+
+/**
+ * `.rptc/` executables that are deliberately NOT instruments — one-shot probes
+ * answering a question that is now answered, and migration scripts for work that
+ * has shipped. Listed so a NEW parked script forces a decision rather than
+ * joining them silently.
+ *
+ * Same shape as every other ledger here: it may shrink, and each row says why.
+ */
+export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
+    '.rptc/research/probe-config.mjs':
+        'one-shot research probe; its question is answered in the writeup beside it',
+    '.rptc/research/agent-activity-visibility/probe-server.mjs':
+        'one-shot probe for AI-2c, which shipped',
+    '.rptc/research/consent-in-the-chat/probe-elicit.mjs':
+        'one-shot MCP elicitation probe; answered in AI-7',
+    '.rptc/research/consent-in-the-chat/probe-capabilities.mjs':
+        'one-shot MCP capability probe; answered in AI-7',
+    '.rptc/research/webview-visual-testing/capture.js':
+        'browser-side half of webview-visual-baseline, injected by it rather than run directly',
+    '.rptc/complete/frontend-architecture-cleanup/update-imports.sh':
+        'migration script for completed work',
+    '.rptc/complete/frontend-architecture-cleanup/update-test-imports.sh':
+        'migration script for completed work',
+    '.rptc/complete/frontend-architecture-cleanup/usage-analyzer.sh':
+        'migration script for completed work',
+    '.rptc/plans/pattern-conformance-audit/harness/denominators.sh':
+        'helper invoked by the censuses, not a standalone instrument',
+    '.rptc/plans/pattern-conformance-audit/harness/kinds.mjs':
+        'shared classifier library imported by the censuses',
+    '.rptc/plans/pattern-conformance-audit/harness/sample.mjs':
+        'sampling helper for spot-checking a census',
+    '.rptc/plans/evaluation-mode/battery/sweep.sh':
+        'the AI battery entry point — named in the cut-release skill',
+    '.rptc/plans/evaluation-mode/battery/run.mjs': 'battery internals, invoked by sweep.sh',
+    '.rptc/plans/evaluation-mode/battery/score.mjs': 'battery internals',
+    '.rptc/plans/evaluation-mode/battery/score.test.mjs': "the battery scorer's own tests",
+    '.rptc/plans/evaluation-mode/battery/enumerate-tools.mjs': 'battery internals',
+    '.rptc/plans/evaluation-mode/battery/tier2-harness.mjs': 'battery internals',
+    '.rptc/plans/evaluation-mode/battery/verify-coverage.mjs': 'battery internals',
+    '.rptc/plans/evaluation-mode/journeys/run-erp-roundtrip.sh':
+        'a single named journey, run deliberately',
+};
+
 export const INSTRUMENTS: readonly Instrument[] = [
     ...PERIODIC,
     ...JUDGEMENT,
     ...NPM_CHECKS,
     ...AUTHORING,
+    ...PROGRAM_INSTRUMENTS,
 ];
 
 /** The periodic tier that `npm run sweep` can actually execute. */
 export function sweepable(): readonly Instrument[] {
-    return INSTRUMENTS.filter((i) => i.cadence === 'periodic' && i.runs !== null);
+    // A writer is EXCLUDED however it is otherwise classified. A sweep is
+    // something you run without thinking about it; an instrument that rewrites an
+    // audit ledger is not. `tooling-registry.test.ts` pins that.
+    return INSTRUMENTS.filter((i) => i.cadence === 'periodic' && i.runs !== null && !i.writes);
 }
