@@ -151,6 +151,90 @@ Either mode: the impact report is always a snapshot diff, never a narrative.
 
 ---
 
+## Phase 6 — per-unit done criteria, written BEFORE each unit
+
+Added 2026-08-29 after the owner named the real problem: *"You do a thing and
+declare it done and then you take another look at it and you find what you think
+are issues... everything you do doesn't really have a definition of done."*
+
+The diagnosis that came out of examining it: in the `mcp-proxy` unit, BOTH later
+findings were visible at the moment "done" was declared. Neither needed new
+information. One was a design choice shipped with a justification that did not
+survive being questioned; the other was a printed `0%` narrated as "now genuinely
+just I/O" when the file still held the retry policy and the EMFILE guard. **The
+narration was the check.**
+
+So the gap is not that re-inspection finds new things forever — it is that the
+unit work is declared done at a level with no stated criterion. Phases have one
+(the "Done when" column). Items sometimes do (10 of 76). A BATCH — the thing
+actually being called done — had none, and a green gate answers "did I break
+anything", not "did I finish".
+
+**The rule: write the criterion before starting the unit, check it explicitly in
+the commit that closes it.** One line. The point is that it is written down
+before the work can rationalise it.
+
+### mcp-proxy — RETROSPECTIVE (what it should have said)
+
+> No decision logic left in the entry point; anything still uncovered there is
+> named and is genuinely I/O.
+
+Would have failed on the first pass, before anyone had to ask.
+
+### projectDeletionService — stated 2026-08-29, before the work
+
+> 1. Cancelling the delete is proven to delete NOTHING, on both confirmation
+>    paths (the EDS cleanup dialog and the plain warning modal).
+> 2. The retry in `deleteDirectoryWithRetry` is covered: it retries, and it gives
+>    up rather than looping.
+> 3. Every remaining uncovered line in the file is NAMED in the commit and is a
+>    `vscode.window` call or filesystem I/O — not a decision.
+
+Clause 3 is the one that does the work: it forbids narrating the leftover.
+
+#### Result — checked against the criterion, not against the diff
+
+**Clause 1: MET, and the criterion was WRONG about its own scope.** It said "both
+confirmation paths". There are three, because `cleanupBehavior` has three values:
+`ask` (the resource dialog), `localOnly` (the plain modal), and `deleteAll` (no
+confirmation at all — it removes the GitHub repo and the DA.live site without
+asking). All three are now pinned, `deleteAll` deliberately so: that test is what
+stops silent-delete becoming true of the default. A fourth case was added on the
+same reasoning — unticking a resource row is a quieter way of saying no than
+cancelling, and honouring it is what keeps a repo the user declined to delete.
+
+**Clause 2: MET.** Retries, gives up, refuses to retry a permanent error, and
+keeps the underlying reason in the message.
+
+**Clause 3: FAILED AS WRITTEN — and that is the whole reason it exists.** At 83%
+the leftover was NOT all I/O: the EDS cloud-cleanup branch that decides *which*
+remote resources get destroyed was uncovered, decisions included. Under the old
+habit that number would have been reported with a sentence about the rest being
+vscode calls. Instead the branch got tested. What remains uncovered now is
+`if (!configDeleteResult.success)` — a debug log on a non-fatal config-cleanup
+miss — plus progress-reporting and error-formatting lines.
+
+**Evidence, since green tests are not evidence.** Twelve defects were planted in
+the production file one at a time; every one was caught by a named test:
+cancel-proceeds on all three confirmations, the two dialog cancel routes,
+delete-all starting to prompt, never-retrying, retrying-forever, ignoring an
+unticked GitHub row, ignoring an unticked DA.live row, dropping the DA.live skip
+guard, and deleting each resource without auth.
+
+**Two defects in the tests themselves, both caught by this process, neither by a
+passing suite.** The first EDS fixture keyed off `componentSelections`, but
+`isEdsProject` reads `componentInstances` — so the "EDS path" tests were
+exercising the plain path and passing. A `CONTROL:` test now asserts the branch
+is actually entered. The `ensureDaLiveAuth` mock invented `{ success, authService }`;
+the real helper returns `{ authenticated }`, which silently skipped the DA.live
+cleanup. Both are the shape the repo already has a rule about — a shape written
+where the compiler cannot read it.
+
+**One fix outside the file.** `createMockHandlerContext` cast `context` to
+`{ extensionPath }`, so any handler reaching `globalState` (via `showOneTimeTip`)
+died with a TypeError that reads like a bug in the code under test. It now gets
+methods, for the same reason `stateManager` does — the note beside it says so.
+
 ## Phase 8 (added 2026-08-28) — the frontend half of the architecture
 
 The owner's observation after phases 1–7: the architecture we wrote and enforced

@@ -42,9 +42,24 @@ export function createMockHandlerContext(
         stepLogger: {} as jest.Mocked<HandlerContext['stepLogger']>,
         logger: mockLogger,
         debugLogger: {} as jest.Mocked<HandlerContext['debugLogger']>,
+        /**
+         * `globalState` gets METHODS for the same reason `stateManager` does
+         * (see the note below). Production reads it through `showOneTimeTip`,
+         * so any handler that shows a one-time tip failed here with
+         * "Cannot read properties of undefined (reading 'get')" — a TypeError
+         * that reads like a bug in the code under test rather than a hole in
+         * the fixture. `get` returns the SHOWN value by default so tips stay
+         * out of the way; a suite that tests tip behaviour overrides it.
+         */
         context: {
             extensionPath: '/test/extension/path',
-        } as jest.Mocked<HandlerContext['context']>,
+            globalState: {
+                get: jest.fn().mockReturnValue(true),
+                update: jest.fn().mockResolvedValue(undefined),
+                keys: jest.fn().mockReturnValue([]),
+                setKeysForSync: jest.fn(),
+            },
+        } as unknown as jest.Mocked<HandlerContext['context']>,
         panel: undefined,
         /**
          * The state manager gets METHODS, not `{}`.
