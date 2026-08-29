@@ -14,7 +14,6 @@
     "tests/core/state/stateManager-getCurrentProject-reload.test.ts",
     "tests/core/state/stateManager-utilities.test.ts",
     "tests/features/ai/mcpServer-config.test.ts",
-    "tests/features/components/ui/hooks/useComponentConfig.test.ts",
     "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
     "tests/features/dashboard/ui/components/ActionGrid-overflow.test.tsx",
     "tests/features/dashboard/ui/components/ActionGrid-zoneStatus.test.tsx",
