@@ -135,9 +135,7 @@ describe('ActionGrid — overflow menu', () => {
         it('marks the Delete menu item with the destructive text class', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.getByText('Delete').getAttribute('unsafe_classname')).toContain(
-                'menu-item-destructive'
-            );
+            expect(screen.getByText('Delete').className).toContain('menu-item-destructive');
         });
 
         it('should call handleDeleteProject when Delete clicked', async () => {

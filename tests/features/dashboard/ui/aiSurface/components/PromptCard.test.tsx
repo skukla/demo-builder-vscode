@@ -26,7 +26,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof PromptCard>> = {}
     const utils = render(
         <Provider theme={defaultTheme}>
             <PromptCard {...merged} />
-        </Provider>,
+        </Provider>
     );
     return { ...utils, ...merged };
 }
@@ -40,7 +40,7 @@ describe('PromptCard', () => {
     it('renders the prompt body text', () => {
         renderCard();
         expect(
-            screen.getByText('Add a hero block to the homepage with a CTA.'),
+            screen.getByText('Add a hero block to the homepage with a CTA.')
         ).toBeInTheDocument();
     });
 

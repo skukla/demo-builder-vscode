@@ -43,7 +43,7 @@ describe('useConfigureFieldValues', () => {
 
             expect(existing.headless.ADOBE_COMMERCE_URL).toBe('https://original.test');
             expect(result.current.componentConfigs.headless.ADOBE_COMMERCE_URL).toBe(
-                'https://edited.test',
+                'https://edited.test'
             );
         });
 
@@ -68,7 +68,7 @@ describe('useConfigureFieldValues', () => {
 
             expect(existing.headless.ADOBE_COMMERCE_URL).toBe('https://original.test/');
             expect(result.current.componentConfigs.headless.ADOBE_COMMERCE_URL).toBe(
-                'https://original.test',
+                'https://original.test'
             );
         });
 
@@ -77,7 +77,11 @@ describe('useConfigureFieldValues', () => {
             const { result } = render(existing);
 
             act(() =>
-                result.current.stageAppBuilderComponentValue('erp-integration', 'ERP_HOST', 'edited.test'),
+                result.current.stageAppBuilderComponentValue(
+                    'erp-integration',
+                    'ERP_HOST',
+                    'edited.test'
+                )
             );
 
             expect(existing['erp-integration'].ERP_HOST).toBe('original.test');
@@ -101,10 +105,10 @@ describe('useConfigureFieldValues', () => {
             act(() => result.current.updateField(sharedField, 'https://edited.test'));
 
             expect(result.current.componentConfigs.headless.ADOBE_COMMERCE_URL).toBe(
-                'https://edited.test',
+                'https://edited.test'
             );
             expect(result.current.componentConfigs.backend.ADOBE_COMMERCE_URL).toBe(
-                'https://edited.test',
+                'https://edited.test'
             );
         });
 

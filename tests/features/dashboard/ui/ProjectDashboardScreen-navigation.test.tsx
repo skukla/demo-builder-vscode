@@ -14,67 +14,70 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock React Spectrum Provider context (required for Spectrum components)
-jest.mock('@adobe/react-spectrum', () => ({
-    // ActionGrid's lifecycle + remedy tiles wrap their buttons in a
-    // TooltipTrigger. A per-suite Spectrum mock only exports what the tree
-    // rendered when it was written, so adding a primitive anywhere in the tree
-    // breaks every suite mocking this module.
-    TooltipTrigger: ({ children }: any) => <>{children}</>,
-    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => (
-        <div style={{ display: 'flex' }} {...props}>
-            {children}
-        </div>
-    ),
-    Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
-        return <Tag {...props}>{children}</Tag>;
-    },
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button
-            onClick={onPress}
-            disabled={isDisabled}
-            data-variant={variant}
-            data-testid="back-button"
-            {...props}
-        >
-            {children}
-        </button>
-    ),
-    ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => {
-        const r = require('react');
-        return (
-            <div role="menu">
-                {r.Children.map(children, (child: any) => {
-                    if (!child) return null;
-                    const key = child.key ?? child.props?.['data-key'];
-                    return (
-                        <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                            {child.props?.children}
-                        </button>
-                    );
-                })}
+jest.mock('@adobe/react-spectrum', () => {
+    const { domProps } = jest.requireActual('../../../helpers/spectrumStubProps');
+    return {
+        // ActionGrid's lifecycle + remedy tiles wrap their buttons in a
+        // TooltipTrigger. A per-suite Spectrum mock only exports what the tree
+        // rendered when it was written, so adding a primitive anywhere in the tree
+        // breaks every suite mocking this module.
+        TooltipTrigger: ({ children }: any) => <>{children}</>,
+        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+        View: ({ children, ...props }: any) => <div {...domProps(props)}>{children}</div>,
+        Flex: ({ children, ...props }: any) => (
+            <div style={{ display: 'flex' }} {...domProps(props)}>
+                {children}
             </div>
-        );
-    },
-    Item: ({ children }: any) => <>{children}</>,
-    Divider: () => <hr />,
-    ProgressCircle: () => <div data-testid="progress-circle" />,
-    Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-        <a onClick={onPress} {...props}>
-            {children}
-        </a>
-    ),
-    DialogContainer: ({ children }: any) => <div>{children}</div>,
-}));
+        ),
+        Heading: ({ children, level, ...props }: any) => {
+            const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
+            return <Tag {...domProps(props)}>{children}</Tag>;
+        },
+        Text: ({ children, ...props }: any) => <span {...domProps(props)}>{children}</span>,
+        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+            <button
+                onClick={onPress}
+                disabled={isDisabled}
+                data-variant={variant}
+                data-testid="back-button"
+                {...domProps(props)}
+            >
+                {children}
+            </button>
+        ),
+        ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} {...domProps(props)}>
+                {children}
+            </button>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => {
+            const r = require('react');
+            return (
+                <div role="menu">
+                    {r.Children.map(children, (child: any) => {
+                        if (!child) return null;
+                        const key = child.key ?? child.props?.['data-key'];
+                        return (
+                            <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                                {child.props?.children}
+                            </button>
+                        );
+                    })}
+                </div>
+            );
+        },
+        Item: ({ children }: any) => <>{children}</>,
+        Divider: () => <hr />,
+        ProgressCircle: () => <div data-testid="progress-circle" />,
+        Link: ({ children, onPress, _isQuiet, ...props }: any) => (
+            <a onClick={onPress} {...domProps(props)}>
+                {children}
+            </a>
+        ),
+        DialogContainer: ({ children }: any) => <div>{children}</div>,
+    };
+});
 
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/ChevronLeft', () => ({

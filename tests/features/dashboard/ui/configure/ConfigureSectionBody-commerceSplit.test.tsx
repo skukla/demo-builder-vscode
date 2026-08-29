@@ -190,7 +190,7 @@ describe('the Business Structure tab', () => {
                 authoringExperience="da-live-classic"
                 onAuthoringExperienceChange={jest.fn()}
                 storeStructureReady={storeStructureReady}
-            />,
+            />
         );
     }
 

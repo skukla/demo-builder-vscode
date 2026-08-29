@@ -14,41 +14,61 @@ import React from 'react';
 // MenuTrigger/Menu/Item are mocked so overflow items render as clickable buttons:
 // each Item becomes a <button> that fires the Menu's onAction with the Item's key,
 // preserving the existing getByText(...).closest('button') click-assertion pattern.
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => (
-        <div role="menu">
-            {React.Children.map(children, (child: any) => {
-                if (!child) return null;
-                const key = child.key ?? child.props?.['data-key'];
-                return (
-                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                        {child.props?.children}
-                    </button>
-                );
-            })}
-        </div>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
-    // The remedy tiles wrap their button in a TooltipTrigger. Both render
-    // inline so the tooltip text is queryable without a hover.
-    TooltipTrigger: ({ children }: any) => <>{children}</>,
-    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-    // StatusCard renders its remediation action as a Link. Added when artifact
-    // status moved into the zones — a per-suite Spectrum mock only exports what
-    // the tree rendered when it was written, and the action branch is new here.
-    Link: ({ children, onPress, ...props }: any) => (
-        <span role="link" tabIndex={0} onClick={onPress} {...props}>
-            {children}
-        </span>
-    ),
-}));
+jest.mock('@adobe/react-spectrum', () => {
+    const { domProps } = jest.requireActual('../../../../helpers/spectrumStubProps');
+    return {
+        // `UNSAFE_className` is destructured and re-applied as `className`, never
+        // spread: React does not recognise it on a DOM node and warns. A stub that
+        // spreads its whole prop bag onto an element inherits every Spectrum-only
+        // prop the component passes.
+        // `UNSAFE_className` is re-applied as `className` because these suites
+        // assert on it; everything else Spectrum-only is stripped by `domProps`,
+        // which is what stops the "React does not recognize the `x` prop" warnings
+        // from reappearing one prop at a time.
+        ActionButton: ({ children, onPress, isDisabled, UNSAFE_className, ...props }: any) => (
+            <button
+                onClick={onPress}
+                disabled={isDisabled}
+                className={UNSAFE_className}
+                {...domProps(props)}
+            >
+                {children}
+            </button>
+        ),
+        Text: ({ children, UNSAFE_className, ...props }: any) => (
+            <span className={UNSAFE_className} {...domProps(props)}>
+                {children}
+            </span>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => (
+            <div role="menu">
+                {React.Children.map(children, (child: any) => {
+                    if (!child) return null;
+                    const key = child.key ?? child.props?.['data-key'];
+                    return (
+                        <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                            {child.props?.children}
+                        </button>
+                    );
+                })}
+            </div>
+        ),
+        Item: ({ children }: any) => <>{children}</>,
+        // The remedy tiles wrap their button in a TooltipTrigger. Both render
+        // inline so the tooltip text is queryable without a hover.
+        TooltipTrigger: ({ children }: any) => <>{children}</>,
+        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+        // StatusCard renders its remediation action as a Link. Added when artifact
+        // status moved into the zones — a per-suite Spectrum mock only exports what
+        // the tree rendered when it was written, and the action branch is new here.
+        Link: ({ children, onPress, ...props }: any) => (
+            <span role="link" tabIndex={0} onClick={onPress} {...props}>
+                {children}
+            </span>
+        ),
+    };
+});
 
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
@@ -97,7 +117,6 @@ jest.mock('@spectrum-icons/workflow/Replay', () => ({
     __esModule: true,
     default: () => <span data-testid="replay-icon" />,
 }));
-
 
 // Imported AFTER the mocks above, and re-exported so no spec reaches for the
 // real module. See the file header — this ordering is the whole point.

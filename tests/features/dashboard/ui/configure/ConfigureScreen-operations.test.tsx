@@ -97,11 +97,7 @@ Element.prototype.scrollIntoView = jest.fn();
 
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 describe('ConfigureScreen - Operations', () => {
@@ -239,10 +235,7 @@ describe('ConfigureScreen - Operations', () => {
         it('should send cancel message when Close clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             const closeButton = screen.getByText('Close');
@@ -384,7 +377,7 @@ describe('ConfigureScreen - Operations', () => {
                                 ADOBE_COMMERCE_URL: 'https://edited.example.com',
                             }),
                         }),
-                    }),
+                    })
                 );
             });
         });

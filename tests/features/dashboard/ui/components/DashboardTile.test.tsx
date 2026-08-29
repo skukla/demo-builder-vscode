@@ -15,16 +15,19 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    TooltipTrigger: ({ children }: any) => <>{children}</>,
-    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-}));
+jest.mock('@adobe/react-spectrum', () => {
+    const { domProps } = jest.requireActual('../../../../helpers/spectrumStubProps');
+    return {
+        ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} {...domProps(props)}>
+                {children}
+            </button>
+        ),
+        Text: ({ children, ...props }: any) => <span {...domProps(props)}>{children}</span>,
+        TooltipTrigger: ({ children }: any) => <>{children}</>,
+        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+    };
+});
 
 // Imported after the Spectrum mock above — see ActionGrid.testUtils for why
 // this ordering matters.
@@ -47,10 +50,7 @@ describe('DashboardTile', () => {
             />
         );
 
-        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute(
-            'data-variant',
-            'warning'
-        );
+        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
         expect(screen.getByRole('tooltip')).toHaveTextContent(
             'Republish needed — configuration changed'
         );
@@ -96,9 +96,7 @@ describe('DashboardTile', () => {
 
     it('fires onPress and can be disabled', () => {
         const onPress = jest.fn();
-        const { rerender } = render(
-            <DashboardTile label="Start" icon={icon} onPress={onPress} />
-        );
+        const { rerender } = render(<DashboardTile label="Start" icon={icon} onPress={onPress} />);
         screen.getByText('Start').click();
         expect(onPress).toHaveBeenCalledTimes(1);
 

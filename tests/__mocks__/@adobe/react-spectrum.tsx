@@ -12,30 +12,111 @@ import React from 'react';
 
 // List of Spectrum-specific props that shouldn't be passed to DOM elements
 const SPECTRUM_PROPS = [
-    'UNSAFE_className', 'UNSAFE_style', 'isQuiet', 'shouldFlip', 'menuWidth',
-    'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'wrap', 'direction',
-    'justifyContent', 'alignContent', 'alignItems', 'gap', 'columnGap', 'rowGap',
-    'flexGrow', 'flexShrink', 'flexBasis', 'flex', 'order', 'gridArea',
-    'gridColumn', 'gridColumnEnd', 'gridColumnStart', 'gridRow', 'gridRowEnd',
-    'gridRowStart', 'justifySelf', 'alignSelf', 'isHidden', 'colorVersion',
-    'marginTop', 'marginBottom', 'marginStart', 'marginEnd', 'marginX', 'marginY',
-    'paddingTop', 'paddingBottom', 'paddingStart', 'paddingEnd', 'paddingX', 'paddingY',
-    'position', 'zIndex', 'top', 'bottom', 'left', 'right', 'start', 'end',
-    'width', 'height', 'isEmphasized', 'staticColor', 'validationState',
-    'necessityIndicator', 'labelPosition', 'labelAlign', 'isIndeterminate',
-    'showValueLabel', 'formatOptions', 'variant', 'size', 'density', 'orientation',
-    'selectionMode', 'disallowEmptySelection', 'overflowMode', 'isOpen', 'defaultOpen',
+    'UNSAFE_className',
+    'UNSAFE_style',
+    'isQuiet',
+    'shouldFlip',
+    'menuWidth',
+    'minWidth',
+    'maxWidth',
+    'minHeight',
+    'maxHeight',
+    'wrap',
+    'direction',
+    'justifyContent',
+    'alignContent',
+    'alignItems',
+    'gap',
+    'columnGap',
+    'rowGap',
+    'flexGrow',
+    'flexShrink',
+    'flexBasis',
+    'flex',
+    'order',
+    'gridArea',
+    'gridColumn',
+    'gridColumnEnd',
+    'gridColumnStart',
+    'gridRow',
+    'gridRowEnd',
+    'gridRowStart',
+    'justifySelf',
+    'alignSelf',
+    'isHidden',
+    'colorVersion',
+    'marginTop',
+    'marginBottom',
+    'marginStart',
+    'marginEnd',
+    'marginX',
+    'marginY',
+    'paddingTop',
+    'paddingBottom',
+    'paddingStart',
+    'paddingEnd',
+    'paddingX',
+    'paddingY',
+    'position',
+    'zIndex',
+    'top',
+    'bottom',
+    'left',
+    'right',
+    'start',
+    'end',
+    'width',
+    'height',
+    'isEmphasized',
+    'staticColor',
+    'validationState',
+    'necessityIndicator',
+    'labelPosition',
+    'labelAlign',
+    'isIndeterminate',
+    'showValueLabel',
+    'formatOptions',
+    'variant',
+    'size',
+    'density',
+    'orientation',
+    'selectionMode',
+    'disallowEmptySelection',
+    'overflowMode',
+    'isOpen',
+    'defaultOpen',
     // Additional props that should not be passed to DOM
-    'selectedKeys', 'defaultSelectedKeys', 'onSelectionChange', 'errorMessage',
-    'description', 'items', 'renderEmptyState', 'loadingState', 'onLoadMore',
-    'textValue', 'autoFocus', 'isKeyboardDismissDisabled', 'isDismissable',
-    'isLoading', 'isReadOnly', 'inputMode', 'inputValue', 'onInputChange',
+    'selectedKeys',
+    'defaultSelectedKeys',
+    'onSelectionChange',
+    'errorMessage',
+    'description',
+    'items',
+    'renderEmptyState',
+    'loadingState',
+    'onLoadMore',
+    'textValue',
+    'autoFocus',
+    'isKeyboardDismissDisabled',
+    'isDismissable',
+    'isLoading',
+    'isReadOnly',
+    'inputMode',
+    'inputValue',
+    'onInputChange',
     // Added 2026-08-29 (phase 4). Each was MEASURED leaking to the DOM by
     // emptying the console allowlist and reading what React complained about —
     // not guessed. The filter was already applied in 37 places; the list simply
     // did not name these.
-    'backgroundColor', 'borderRadius', 'borderWidth', 'borderColor',
-    'onDismiss', 'isRequired', 'isDisabled', 'maxValue', 'minValue',
+    'backgroundColor',
+    'borderRadius',
+    'borderWidth',
+    'borderColor',
+    'onDismiss',
+    'isRequired',
+    'isDisabled',
+    'maxValue',
+    'minValue',
 ];
 
 // Helper to filter out Spectrum-specific props
@@ -57,12 +138,17 @@ export const filterSpectrumProps = (props: Record<string, any>): Record<string, 
 };
 
 // Provider mock - renders a container to allow className/style tests
-export const Provider: React.FC<{ children: React.ReactNode; theme?: any; colorScheme?: string; UNSAFE_className?: string }> = ({
-    children,
-    colorScheme,
-    UNSAFE_className
-}) => (
-    <div data-testid="spectrum-provider" className={`spectrum ${UNSAFE_className || ''}`} data-color-scheme={colorScheme}>
+export const Provider: React.FC<{
+    children: React.ReactNode;
+    theme?: any;
+    colorScheme?: string;
+    UNSAFE_className?: string;
+}> = ({ children, colorScheme, UNSAFE_className }) => (
+    <div
+        data-testid="spectrum-provider"
+        className={`spectrum ${UNSAFE_className || ''}`}
+        data-color-scheme={colorScheme}
+    >
         {children}
     </div>
 );
@@ -84,7 +170,14 @@ const getDimensionStyle = (props: Record<string, any>): React.CSSProperties => {
 
 // Basic components that render their children
 export const View: React.FC<any> = ({ children, UNSAFE_className, ...props }) => (
-    <div data-testid="spectrum-view" className={UNSAFE_className} style={getDimensionStyle(props)} {...filterSpectrumProps(props)}>{children}</div>
+    <div
+        data-testid="spectrum-view"
+        className={UNSAFE_className}
+        style={getDimensionStyle(props)}
+        {...filterSpectrumProps(props)}
+    >
+        {children}
+    </div>
 );
 
 // Helper to convert Spectrum flex layout props to inline styles
@@ -100,11 +193,25 @@ const getFlexStyle = (props: Record<string, any>): React.CSSProperties => {
 };
 
 export const Flex: React.FC<any> = ({ children, UNSAFE_className, ...props }) => (
-    <div data-testid="spectrum-flex" className={UNSAFE_className} style={getFlexStyle(props)} {...filterSpectrumProps(props)}>{children}</div>
+    <div
+        data-testid="spectrum-flex"
+        className={UNSAFE_className}
+        style={getFlexStyle(props)}
+        {...filterSpectrumProps(props)}
+    >
+        {children}
+    </div>
 );
 
 export const Text: React.FC<any> = ({ children, slot, UNSAFE_className, ...props }) => (
-    <span data-testid="spectrum-text" data-slot={slot} className={UNSAFE_className} {...filterSpectrumProps(props)}>{children}</span>
+    <span
+        data-testid="spectrum-text"
+        data-slot={slot}
+        className={UNSAFE_className}
+        {...filterSpectrumProps(props)}
+    >
+        {children}
+    </span>
 );
 
 // Helper to extract original key from React's prefixed key format
@@ -131,10 +238,11 @@ export const Picker: React.FC<any> = ({
 }) => {
     const items = React.Children.toArray(children);
     // Find the selected item's label - compare using cleaned keys
-    const selectedItem = items.find((child: any) =>
-        getOriginalKey(child.key) === selectedKey
-    ) as React.ReactElement<{ textValue?: string; children?: React.ReactNode }> | undefined;
-    const selectedLabel = selectedItem?.props?.textValue || selectedItem?.props?.children || placeholder || '';
+    const selectedItem = items.find((child: any) => getOriginalKey(child.key) === selectedKey) as
+        | React.ReactElement<{ textValue?: string; children?: React.ReactNode }>
+        | undefined;
+    const selectedLabel =
+        selectedItem?.props?.textValue || selectedItem?.props?.children || placeholder || '';
 
     return (
         <div data-testid="spectrum-picker-wrapper" className={UNSAFE_className}>
@@ -173,9 +281,7 @@ export const Picker: React.FC<any> = ({
 };
 
 // Item mock for Picker
-export const Item: React.FC<any> = ({ children, _textValue, ..._props }) => (
-    <>{children}</>
-);
+export const Item: React.FC<any> = ({ children, _textValue, ..._props }) => <>{children}</>;
 
 // Checkbox mock
 export const Checkbox: React.FC<any> = ({
@@ -198,27 +304,35 @@ export const Checkbox: React.FC<any> = ({
 
 // Button mock - handles both onPress (Spectrum) and onClick (DOM)
 // Uses forwardRef to support buttonRef.current.focus()
-export const Button = React.forwardRef<HTMLButtonElement, any>(({ children, onPress, onClick, isDisabled, ...props }, ref) => (
-    <button
-        ref={ref}
-        data-testid="spectrum-button"
-        tabIndex={0}
-        onClick={(e) => {
-            onClick?.(e);
-            onPress?.(e);
-        }}
-        disabled={isDisabled}
-        {...filterSpectrumProps(props)}
-    >
-        {children}
-    </button>
-));
+export const Button = React.forwardRef<HTMLButtonElement, any>(
+    ({ children, onPress, onClick, isDisabled, ...props }, ref) => (
+        <button
+            ref={ref}
+            data-testid="spectrum-button"
+            tabIndex={0}
+            onClick={(e) => {
+                onClick?.(e);
+                onPress?.(e);
+            }}
+            disabled={isDisabled}
+            {...filterSpectrumProps(props)}
+        >
+            {children}
+        </button>
+    )
+);
 
 // ActionButton mock - handles both onPress (Spectrum) and onClick (DOM).
 // Real Spectrum presses do NOT bubble to ancestor click handlers (e.g. a
 // selectable row's onClick), so the mock stops propagation before invoking
 // the handlers — production code must not need test-only stopPropagation.
-export const ActionButton: React.FC<any> = ({ children, onPress, onClick, isDisabled, ...props }) => (
+export const ActionButton: React.FC<any> = ({
+    children,
+    onPress,
+    onClick,
+    isDisabled,
+    ...props
+}) => (
     <button
         data-testid="spectrum-action-button"
         tabIndex={0}
@@ -263,13 +377,7 @@ export const TextField: React.FC<any> = ({
 );
 
 // TextArea mock
-export const TextArea: React.FC<any> = ({
-    label,
-    value,
-    onChange,
-    isDisabled,
-    ...props
-}) => (
+export const TextArea: React.FC<any> = ({ label, value, onChange, isDisabled, ...props }) => (
     <label data-testid="spectrum-textarea">
         {label}
         <textarea
@@ -283,7 +391,12 @@ export const TextArea: React.FC<any> = ({
 
 // ProgressBar mock
 export const ProgressBar: React.FC<any> = ({ label, value, ...props }) => (
-    <div data-testid="spectrum-progressbar" role="progressbar" aria-valuenow={value} {...filterSpectrumProps(props)}>
+    <div
+        data-testid="spectrum-progressbar"
+        role="progressbar"
+        aria-valuenow={value}
+        {...filterSpectrumProps(props)}
+    >
         {label}
     </div>
 );
@@ -291,12 +404,22 @@ export const ProgressBar: React.FC<any> = ({ label, value, ...props }) => (
 // Heading mock
 export const Heading: React.FC<any> = ({ children, level = 2, UNSAFE_className, ...props }) => {
     const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
-    return <Tag data-testid="spectrum-heading" className={UNSAFE_className} {...filterSpectrumProps(props)}>{children}</Tag>;
+    return (
+        <Tag
+            data-testid="spectrum-heading"
+            className={UNSAFE_className}
+            {...filterSpectrumProps(props)}
+        >
+            {children}
+        </Tag>
+    );
 };
 
 // Content mock
 export const Content: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-content" {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-content" {...filterSpectrumProps(props)}>
+        {children}
+    </div>
 );
 
 // Divider mock
@@ -306,22 +429,30 @@ export const Divider: React.FC<any> = (props) => (
 
 // StatusLight mock
 export const StatusLight: React.FC<any> = ({ children, variant, ...props }) => (
-    <span data-testid="spectrum-statuslight" data-variant={variant} {...filterSpectrumProps(props)}>{children}</span>
+    <span data-testid="spectrum-statuslight" data-variant={variant} {...filterSpectrumProps(props)}>
+        {children}
+    </span>
 );
 
 // Well mock
 export const Well: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-well" {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-well" {...filterSpectrumProps(props)}>
+        {children}
+    </div>
 );
 
 // IllustratedMessage mock
 export const IllustratedMessage: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-illustrated-message" {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-illustrated-message" {...filterSpectrumProps(props)}>
+        {children}
+    </div>
 );
 
 // Link mock
 export const Link: React.FC<any> = ({ children, onPress, ...props }) => (
-    <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>{children}</a>
+    <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>
+        {children}
+    </a>
 );
 
 // SearchField mock
@@ -337,7 +468,9 @@ export const SearchField: React.FC<any> = ({ value, onChange, ...props }) => (
 
 // Grid mock
 export const Grid: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-grid" style={{ display: 'grid' }} {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-grid" style={{ display: 'grid' }} {...filterSpectrumProps(props)}>
+        {children}
+    </div>
 );
 
 // Form mock
@@ -357,7 +490,12 @@ export const Form: React.FC<any> = ({ children, onSubmit, ...props }) => (
 // DialogTrigger mock - handles both simple children and render function pattern
 // In tests, always renders both trigger and dialog so tests can verify content
 // NOTE: React.Children.toArray doesn't include function children, so we iterate manually
-export const DialogTrigger: React.FC<any> = ({ children, isOpen: _controlledIsOpen, onOpenChange, type: _type = 'modal' }) => {
+export const DialogTrigger: React.FC<any> = ({
+    children,
+    isOpen: _controlledIsOpen,
+    onOpenChange,
+    type: _type = 'modal',
+}) => {
     // Create a close handler for render function pattern
     const handleClose = () => {
         onOpenChange?.(false);
@@ -385,20 +523,21 @@ export const DialogTrigger: React.FC<any> = ({ children, isOpen: _controlledIsOp
     // Clone trigger to add onClick handler for callbacks
     const triggerWithHandler = React.isValidElement(trigger)
         ? React.cloneElement(trigger as React.ReactElement<any>, {
-            onClick: (e: React.MouseEvent) => {
-                handleOpen();
-                const originalOnClick = (trigger as React.ReactElement<any>).props?.onClick;
-                originalOnClick?.(e);
-                const originalOnPress = (trigger as React.ReactElement<any>).props?.onPress;
-                originalOnPress?.(e);
-            }
-        })
+              onClick: (e: React.MouseEvent) => {
+                  handleOpen();
+                  const originalOnClick = (trigger as React.ReactElement<any>).props?.onClick;
+                  originalOnClick?.(e);
+                  const originalOnPress = (trigger as React.ReactElement<any>).props?.onPress;
+                  originalOnPress?.(e);
+              },
+          })
         : trigger;
 
     // Handle render function pattern: {(close) => <Dialog>...</Dialog>}
-    const dialog = typeof dialogOrFunc === 'function'
-        ? (dialogOrFunc as (close: () => void) => React.ReactNode)(handleClose)
-        : dialogOrFunc;
+    const dialog =
+        typeof dialogOrFunc === 'function'
+            ? (dialogOrFunc as (close: () => void) => React.ReactNode)(handleClose)
+            : dialogOrFunc;
 
     // Always render both trigger and dialog in tests
     // Tests verify content accessibility, not open/close behavior
@@ -438,7 +577,9 @@ export const TooltipTrigger: React.FC<any> = ({ children }) => <>{children}</>;
 
 // Section mock (for Picker)
 export const Section: React.FC<any> = ({ children, title, ...props }) => (
-    <optgroup label={title} {...filterSpectrumProps(props)}>{children}</optgroup>
+    <optgroup label={title} {...filterSpectrumProps(props)}>
+        {children}
+    </optgroup>
 );
 
 // SubmenuTrigger mock — structural marker. Its children are [trigger Item, submenu Menu].
@@ -447,26 +588,27 @@ export const SubmenuTrigger: React.FC<any> = ({ children }) => <>{children}</>;
 
 // Header mock
 export const Header: React.FC<any> = ({ children, ...props }) => (
-    <header data-testid="spectrum-header" {...filterSpectrumProps(props)}>{children}</header>
+    <header data-testid="spectrum-header" {...filterSpectrumProps(props)}>
+        {children}
+    </header>
 );
 
 // Footer mock
 export const Footer: React.FC<any> = ({ children, ...props }) => (
-    <footer data-testid="spectrum-footer" {...filterSpectrumProps(props)}>{children}</footer>
+    <footer data-testid="spectrum-footer" {...filterSpectrumProps(props)}>
+        {children}
+    </footer>
 );
 
 // ButtonGroup mock
 export const ButtonGroup: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-buttongroup" {...filterSpectrumProps(props)}>{children}</div>
+    <div data-testid="spectrum-buttongroup" {...filterSpectrumProps(props)}>
+        {children}
+    </div>
 );
 
 // NumberField mock
-export const NumberField: React.FC<any> = ({
-    label,
-    value,
-    onChange,
-    ...props
-}) => (
+export const NumberField: React.FC<any> = ({ label, value, onChange, ...props }) => (
     <label data-testid="spectrum-numberfield">
         {label}
         <input
@@ -479,12 +621,7 @@ export const NumberField: React.FC<any> = ({
 );
 
 // Switch mock
-export const Switch: React.FC<any> = ({
-    children,
-    isSelected,
-    onChange,
-    ...props
-}) => (
+export const Switch: React.FC<any> = ({ children, isSelected, onChange, ...props }) => (
     <label data-testid="spectrum-switch" {...filterSpectrumProps(props)}>
         <input
             type="checkbox"
@@ -525,7 +662,13 @@ export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect,
 // ProgressCircle mock - critical for LoadingDisplay component
 // Note: Don't render text content as it can conflict with actual loading messages
 // Handles both className and UNSAFE_className (Spectrum uses UNSAFE_className)
-export const ProgressCircle: React.FC<any> = ({ size, 'aria-label': ariaLabel, className, UNSAFE_className, ...props }) => (
+export const ProgressCircle: React.FC<any> = ({
+    size,
+    'aria-label': ariaLabel,
+    className,
+    UNSAFE_className,
+    ...props
+}) => (
     <div
         data-testid="spectrum-progresscircle"
         role="progressbar"
@@ -641,7 +784,7 @@ export const MenuTrigger: React.FC<any> = ({ children }) => <>{children}</>;
  */
 function flattenSpectrumMenuChildren(
     children: React.ReactNode,
-    onAction?: (key: any) => void,
+    onAction?: (key: any) => void
 ): React.ReactNode[] {
     const rows: React.ReactNode[] = [];
     React.Children.forEach(children, (child: any) => {
@@ -651,9 +794,13 @@ function flattenSpectrumMenuChildren(
             const { title, children: sectionChildren } = child.props ?? {};
             if (title) {
                 rows.push(
-                    <li key={`section-${title}`} role="presentation" data-testid="spectrum-menu-section">
+                    <li
+                        key={`section-${title}`}
+                        role="presentation"
+                        data-testid="spectrum-menu-section"
+                    >
                         {title}
-                    </li>,
+                    </li>
                 );
             }
             rows.push(...flattenSpectrumMenuChildren(sectionChildren, onAction));
@@ -675,7 +822,7 @@ function flattenSpectrumMenuChildren(
                     onClick={() => onAction?.(triggerKey)}
                 >
                     {trigger?.props?.textValue || trigger?.props?.children}
-                </li>,
+                </li>
             );
             const submenuOnAction = submenu?.props?.onAction ?? onAction;
             rows.push(
@@ -683,7 +830,7 @@ function flattenSpectrumMenuChildren(
                     <ul role="menu" data-testid="spectrum-submenu">
                         {flattenSpectrumMenuChildren(submenu?.props?.children, submenuOnAction)}
                     </ul>
-                </li>,
+                </li>
             );
             return;
         }
@@ -693,7 +840,7 @@ function flattenSpectrumMenuChildren(
         rows.push(
             <li key={key} role="menuitem" tabIndex={0} onClick={() => onAction?.(key)}>
                 {child.props?.textValue || child.props?.children}
-            </li>,
+            </li>
         );
     });
     return rows;
@@ -712,12 +859,7 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
             // Extract label from item for accessible name
             const itemText = item.label || item.name || item.textValue || key;
             return (
-                <li
-                    key={key}
-                    role="menuitem"
-                    onClick={() => onAction?.(key)}
-                    tabIndex={0}
-                >
+                <li key={key} role="menuitem" onClick={() => onAction?.(key)} tabIndex={0}>
                     {itemText}
                 </li>
             );
@@ -745,11 +887,18 @@ export const DialogContainer: React.FC<any> = ({ children, _onDismiss, ...props 
 
 // Tabs mock — renders selected tab panel only (matches Spectrum behavior)
 export const Tabs: React.FC<any> = ({ children, selectedKey, onSelectionChange, ...props }) => (
-    <div data-testid="spectrum-tabs" data-selected-key={selectedKey} {...filterSpectrumProps(props)}>
+    <div
+        data-testid="spectrum-tabs"
+        data-selected-key={selectedKey}
+        {...filterSpectrumProps(props)}
+    >
         {React.Children.map(children, (child: any) =>
             React.isValidElement(child)
-                ? React.cloneElement(child as React.ReactElement<any>, { selectedKey, onSelectionChange })
-                : child,
+                ? React.cloneElement(child as React.ReactElement<any>, {
+                      selectedKey,
+                      onSelectionChange,
+                  })
+                : child
         )}
     </div>
 );
@@ -778,7 +927,9 @@ export const TabPanels: React.FC<any> = ({ children, selectedKey, ...props }) =>
     const active = panels.find((child: any) => getOriginalKey(child.key) === selectedKey);
     return (
         <div data-testid="spectrum-tabpanels" {...filterSpectrumProps(props)}>
-            {active ? (active as React.ReactElement<{ children?: React.ReactNode }>).props?.children : null}
+            {active
+                ? (active as React.ReactElement<{ children?: React.ReactNode }>).props?.children
+                : null}
         </div>
     );
 };

@@ -10,7 +10,7 @@ import {
     ProgressUnifier,
     IDateProvider,
     ITimerProvider,
-    IProcessSpawner
+    IProcessSpawner,
 } from '@/core/utils/progressUnifier';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { EventEmitter } from 'events';
@@ -80,7 +80,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
 
     // Mock date provider - returns controlled time
     const mockDate: jest.Mocked<IDateProvider> = {
-        now: jest.fn(() => currentTime)
+        now: jest.fn(() => currentTime),
     };
 
     // Mock timer provider - tracks timers without actually setting them
@@ -91,7 +91,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                 type: 'interval',
                 callback,
                 ms,
-                lastTriggered: currentTime
+                lastTriggered: currentTime,
             });
             return id as unknown as NodeJS.Timeout;
         }),
@@ -104,13 +104,13 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                 type: 'timeout',
                 callback,
                 ms,
-                lastTriggered: currentTime
+                lastTriggered: currentTime,
             });
             return id as unknown as NodeJS.Timeout;
         }),
         clearTimeout: jest.fn((timeout: NodeJS.Timeout) => {
             activeTimers.delete(timeout as unknown as number);
-        })
+        }),
     };
 
     /**
@@ -152,14 +152,14 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                     }
                 }
                 // Let microtasks settle
-                await new Promise(resolve => setImmediate(resolve));
+                await new Promise((resolve) => setImmediate(resolve));
             },
             triggerStdout: (data: string) => {
                 stdoutEmitter.emit('data', Buffer.from(data));
             },
             triggerStderr: (data: string) => {
                 stderrEmitter.emit('data', Buffer.from(data));
-            }
+            },
         };
 
         return mockProcess;
@@ -172,21 +172,23 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
      * Mock spawn function - returns controllable mock process
      * By default, processes complete successfully after 10ms of fake time
      */
-    const mockSpawn = jest.fn((
-        _command: string,
-        _args: string[],
-        _options: Record<string, unknown>
-    ): ChildProcessWithoutNullStreams => {
-        const process = createMockProcess();
-        _currentMockProcess = process;
+    const mockSpawn = jest.fn(
+        (
+            _command: string,
+            _args: string[],
+            _options: Record<string, unknown>
+        ): ChildProcessWithoutNullStreams => {
+            const process = createMockProcess();
+            _currentMockProcess = process;
 
-        // Auto-complete after 10ms fake time (can be overridden in tests)
-        mockTimers.setTimeout(async () => {
-            await process.triggerClose(0);
-        }, 10);
+            // Auto-complete after 10ms fake time (can be overridden in tests)
+            mockTimers.setTimeout(async () => {
+                await process.triggerClose(0);
+            }, 10);
 
-        return process as unknown as ChildProcessWithoutNullStreams;
-    });
+            return process as unknown as ChildProcessWithoutNullStreams;
+        }
+    );
 
     /**
      * Create ProgressUnifier with mocked dependencies
@@ -226,8 +228,10 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
 
             for (const [id, timer] of activeTimers) {
                 const triggerTime = timer.lastTriggered + timer.ms;
-                if (triggerTime <= targetTime &&
-                    (!nextTimer || triggerTime < nextTimer.triggerTime)) {
+                if (
+                    triggerTime <= targetTime &&
+                    (!nextTimer || triggerTime < nextTimer.triggerTime)
+                ) {
                     nextTimer = { id, timer, triggerTime };
                 }
             }
@@ -269,12 +273,14 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
             // Allow promises and microtasks to resolve before checking for new timers
             // Multiple yields ensure deeply nested async work completes
             for (let i = 0; i < 5; i++) {
-                await new Promise(resolve => setImmediate(resolve));
+                await new Promise((resolve) => setImmediate(resolve));
             }
         }
 
         if (iterations >= MAX_ITERATIONS) {
-            throw new Error(`advanceTime exceeded maximum iterations (${MAX_ITERATIONS}). Possible infinite timer loop.`);
+            throw new Error(
+                `advanceTime exceeded maximum iterations (${MAX_ITERATIONS}). Possible infinite timer loop.`
+            );
         }
 
         currentTime = targetTime;
@@ -294,7 +300,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
             id,
             callback: timer.callback,
             ms: timer.ms,
-            lastTriggered: timer.lastTriggered
+            lastTriggered: timer.lastTriggered,
         }));
     };
 
@@ -303,11 +309,11 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
         mocks: {
             date: mockDate,
             timers: mockTimers,
-            spawn: mockSpawn
+            spawn: mockSpawn,
         },
         advanceTime,
         getCurrentTime,
         getActiveTimers,
-        createMockProcess
+        createMockProcess,
     };
 }

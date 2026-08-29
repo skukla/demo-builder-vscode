@@ -22,7 +22,11 @@ import '@testing-library/jest-dom';
 // Modal is the shared confirm shell.
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => (
+        <div style={{ display: 'flex' }} {...props}>
+            {children}
+        </div>
+    ),
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
@@ -33,7 +37,12 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             <button onClick={onClose}>Close</button>
             {actionButtons.map((b: any, i: number) => (
-                <button key={i} onClick={b.onPress} data-variant={b.variant} disabled={b.isDisabled}>
+                <button
+                    key={i}
+                    onClick={b.onPress}
+                    data-variant={b.variant}
+                    disabled={b.isDisabled}
+                >
                     {b.label}
                 </button>
             ))}
@@ -53,7 +62,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
                 appBuilderComponentId="erp-sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
-            />,
+            />
         );
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -66,14 +75,16 @@ describe('AppBuilderComponentRemoveDialog', () => {
                 appBuilderComponentId="erp-sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
-            />,
+            />
         );
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         // Names the appBuilderComponent.
         expect(screen.getByText(/erp-sync/)).toBeInTheDocument();
         // Warns this is a destructive cloud teardown, not a local-only action.
-        expect(screen.getByText(/permanently|destructive|undeploy|tear.?down|cloud/i)).toBeInTheDocument();
+        expect(
+            screen.getByText(/permanently|destructive|undeploy|tear.?down|cloud/i)
+        ).toBeInTheDocument();
     });
 
     it('fires onConfirm (the consumer posts removeAppBuilderComponent) then closes on confirm', async () => {
@@ -86,7 +97,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
                 appBuilderComponentId="erp-sync"
                 onConfirm={onConfirm}
                 onClose={onClose}
-            />,
+            />
         );
 
         await user.click(screen.getByRole('button', { name: /^remove$/i }));
@@ -101,7 +112,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
                 appBuilderComponentId="erp-sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
-            />,
+            />
         );
 
         const confirm = screen.getByRole('button', { name: /^remove$/i });
@@ -118,7 +129,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
                 appBuilderComponentId="erp-sync"
                 onConfirm={onConfirm}
                 onClose={onClose}
-            />,
+            />
         );
 
         await user.click(screen.getByRole('button', { name: /close/i }));

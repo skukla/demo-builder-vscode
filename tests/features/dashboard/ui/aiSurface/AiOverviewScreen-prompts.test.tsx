@@ -23,9 +23,7 @@ describe('AiOverviewScreen — user prompts', () => {
         it('clicking a user prompt card dispatches openInClaude with the prompt payload', async () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: {
-                    aiPrompts: [
-                        { id: 'u1', title: 'My launchable', prompt: 'Body to launch' },
-                    ],
+                    aiPrompts: [{ id: 'u1', title: 'My launchable', prompt: 'Body to launch' }],
                 } as Partial<Project>,
             });
             const body = screen.getByTestId('page-layout-body');
@@ -41,9 +39,13 @@ describe('AiOverviewScreen — user prompts', () => {
 
     describe('user prompts CRUD', () => {
         it('renders user prompts from project.aiPrompts', async () => {
-            await renderScreen({ projectOverrides: { aiPrompts: [
-                { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
-            ] } as Partial<Project> });
+            await renderScreen({
+                projectOverrides: {
+                    aiPrompts: [
+                        { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
+                    ],
+                } as Partial<Project>,
+            });
             expect(screen.getByText('My first user prompt')).toBeInTheDocument();
             expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(1);
         });
@@ -63,7 +65,12 @@ describe('AiOverviewScreen — user prompts', () => {
                     'list-ai-prompts': {
                         success: true,
                         aiPrompts: [
-                            { id: 'g1', title: 'Pinned global prompt', prompt: 'global body', pinned: true },
+                            {
+                                id: 'g1',
+                                title: 'Pinned global prompt',
+                                prompt: 'global body',
+                                pinned: true,
+                            },
                         ],
                     },
                 },
@@ -137,7 +144,9 @@ describe('AiOverviewScreen — user prompts', () => {
                 await Promise.resolve();
             });
 
-            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'save-ai-prompt');
+            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+                (c) => c[0] === 'save-ai-prompt'
+            );
             expect(saveCalls.length).toBe(1);
             const payload = saveCalls[0][1] as { prompt: { title: string; prompt: string } };
             expect(payload.prompt.title).toBe('New title');
@@ -185,7 +194,9 @@ describe('AiOverviewScreen — user prompts', () => {
                 await Promise.resolve();
             });
 
-            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'save-ai-prompt');
+            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+                (c) => c[0] === 'save-ai-prompt'
+            );
             expect(saveCalls.length).toBe(1);
             const payload = saveCalls[0][1] as { prompt: { id: string; title: string } };
             expect(payload.prompt.id).toBe('u1');
@@ -218,9 +229,13 @@ describe('AiOverviewScreen — user prompts', () => {
                 await Promise.resolve();
             });
 
-            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'save-ai-prompt');
+            const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+                (c) => c[0] === 'save-ai-prompt'
+            );
             expect(saveCalls.length).toBe(1);
-            const payload = saveCalls[0][1] as { prompt: { id: string; title: string; prompt: string } };
+            const payload = saveCalls[0][1] as {
+                prompt: { id: string; title: string; prompt: string };
+            };
             expect(payload.prompt.id).not.toBe('u1');
             expect(payload.prompt.id.length).toBeGreaterThan(0);
             expect(payload.prompt.title).toBe('My first user prompt (copy)');
@@ -253,7 +268,9 @@ describe('AiOverviewScreen — user prompts', () => {
                 await Promise.resolve();
             });
 
-            const deleteCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'delete-ai-prompt');
+            const deleteCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+                (c) => c[0] === 'delete-ai-prompt'
+            );
             expect(deleteCalls.length).toBe(1);
             expect(deleteCalls[0][1]).toEqual({ promptId: 'u1' });
         });
@@ -277,7 +294,9 @@ describe('AiOverviewScreen — user prompts', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Brand new' } });
-            fireEvent.change(screen.getByLabelText(/prompt/i), { target: { value: 'Brand new body' } });
+            fireEvent.change(screen.getByLabelText(/prompt/i), {
+                target: { value: 'Brand new body' },
+            });
 
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
@@ -330,9 +349,7 @@ describe('AiOverviewScreen — user prompts', () => {
         it('clicking the "Copy prompt" kebab item dispatches copyAiPrompt with the prompt body', async () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: {
-                    aiPrompts: [
-                        { id: 'u1', title: 'Copy me', prompt: 'This is the body' },
-                    ],
+                    aiPrompts: [{ id: 'u1', title: 'Copy me', prompt: 'This is the body' }],
                 } as Partial<Project>,
             });
             (webviewClient.postMessage as jest.Mock).mockClear();
@@ -346,9 +363,11 @@ describe('AiOverviewScreen — user prompts', () => {
             });
 
             const calls = (webviewClient.postMessage as jest.Mock).mock.calls;
-            const copyCalls = calls.filter(c => c[0] === 'copyAiPrompt');
+            const copyCalls = calls.filter((c) => c[0] === 'copyAiPrompt');
             expect(copyCalls.length).toBe(1);
-            expect(copyCalls[0][1]).toEqual(expect.objectContaining({ prompt: 'This is the body' }));
+            expect(copyCalls[0][1]).toEqual(
+                expect.objectContaining({ prompt: 'This is the body' })
+            );
         });
     });
 });

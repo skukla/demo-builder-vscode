@@ -74,7 +74,11 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports), so
 // these tests use the real rail to reach each service group.
 jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title }: { title: string }) => <div data-testid="page-header"><h1>{title}</h1></div>,
+    PageHeader: ({ title }: { title: string }) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+        </div>
+    ),
     PageFooter: () => <div data-testid="page-footer" />,
 }));
 
@@ -91,7 +95,13 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
     it('invokes useAutoStoreDetect with orgId from project.adobe.organization', () => {
         const projectWithAdobe = {
             ...mockProject,
-            adobe: { organization: '285361', projectId: 'p', projectName: 'pn', workspace: 'w', authenticated: true },
+            adobe: {
+                organization: '285361',
+                projectId: 'p',
+                projectName: 'pn',
+                workspace: 'w',
+                authenticated: true,
+            },
         };
 
         renderWithProvider(
@@ -102,7 +112,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(
-            expect.objectContaining({ orgId: '285361' }),
+            expect.objectContaining({ orgId: '285361' })
         );
     });
 
@@ -117,16 +127,13 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(
-            expect.objectContaining({ orgId: undefined }),
+            expect.objectContaining({ orgId: undefined })
         );
     });
 
     it('renders StoreConfigFieldRow for every field in the ACTIVE service group', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as never}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
         );
 
         // Fields from the test fixture — see ConfigureScreen.testUtils. One section is on
@@ -144,10 +151,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
 
     it('passes the correct service group id to StoreConfigFieldRow so store-group branching works', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as never}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
         );
 
         // Commerce URL is in the 'adobe-commerce' group (a store group per the mock isStoreGroup)
@@ -163,10 +167,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
 
     it('passes fetchStores, hasStoreData, isFetching to useAutoStoreDetect so the hook can coordinate', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as never}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(
@@ -175,7 +176,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
                 hasStoreData: false,
                 isFetching: false,
                 configs: expect.any(Object),
-            }),
+            })
         );
     });
 });

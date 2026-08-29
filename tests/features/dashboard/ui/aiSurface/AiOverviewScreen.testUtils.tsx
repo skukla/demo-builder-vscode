@@ -54,7 +54,13 @@ jest.mock('@/core/ui/components/layout', () => ({
             {subtitle && <h3 data-testid="page-header-subtitle">{subtitle}</h3>}
         </div>
     ),
-    PageFooter: ({ leftContent, rightContent }: { leftContent?: React.ReactNode; rightContent?: React.ReactNode }) => (
+    PageFooter: ({
+        leftContent,
+        rightContent,
+    }: {
+        leftContent?: React.ReactNode;
+        rightContent?: React.ReactNode;
+    }) => (
         <div data-testid="page-footer">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
@@ -69,7 +75,7 @@ export function makeAiOverviewProject(overrides: Partial<Project> = {}): Project
         name: 'My Demo Project',
         path: '/projects/my-demo',
         ...overrides,
-    } as never)
+    } as never);
 }
 
 function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventoryEntry {
@@ -120,17 +126,19 @@ export function makeProjectWithUserPrompts(): Project {
 
 // ─── Render helpers ──────────────────────────────────────────────────────────
 
-export async function renderScreen(opts: {
-    projectOverrides?: Partial<Project>;
-    inventory?: AiInventory;
-    status?: 'ok' | 'warning' | 'error';
-    /**
-     * Override the response for specific request types. Used in handful of
-     * cases where the default verify-ai-setup response shape is wrong for
-     * the test.
-     */
-    requestOverrides?: Record<string, unknown>;
-} = {}) {
+export async function renderScreen(
+    opts: {
+        projectOverrides?: Partial<Project>;
+        inventory?: AiInventory;
+        status?: 'ok' | 'warning' | 'error';
+        /**
+         * Override the response for specific request types. Used in handful of
+         * cases where the default verify-ai-setup response shape is wrong for
+         * the test.
+         */
+        requestOverrides?: Record<string, unknown>;
+    } = {}
+) {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
         webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
     };
@@ -157,13 +165,12 @@ export async function renderScreen(opts: {
         return Promise.resolve(defaultVerifyResponse);
     });
 
-
     let result!: ReturnType<typeof render>;
     await act(async () => {
         result = render(
             <Provider theme={defaultTheme}>
                 <AiOverviewScreen project={project} />
-            </Provider>,
+            </Provider>
         );
         jest.runAllTimers();
     });

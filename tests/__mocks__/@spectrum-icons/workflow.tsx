@@ -6,6 +6,8 @@
  */
 import React from 'react';
 
+import { domProps } from '../../helpers/spectrumStubProps';
+
 // Generic icon component that works for all workflow icons
 // Uses SVG to match what tests expect when querying for svg elements
 const createIconMock = (name: string) => {
@@ -20,7 +22,7 @@ const createIconMock = (name: string) => {
             width={size === 'S' ? 16 : size === 'L' ? 24 : 20}
             height={size === 'S' ? 16 : size === 'L' ? 24 : 20}
             viewBox="0 0 24 24"
-            {...props}
+            {...domProps(props)}
         >
             <title>{name}</title>
         </svg>

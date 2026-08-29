@@ -7,10 +7,7 @@
  */
 
 import { screen, within } from '@testing-library/react';
-import {
-    makeProjectWithUserPrompts,
-    renderScreen,
-} from './AiOverviewScreen.testUtils';
+import { makeProjectWithUserPrompts, renderScreen } from './AiOverviewScreen.testUtils';
 
 describe('AiOverviewScreen — rendering', () => {
     beforeEach(() => {
@@ -34,7 +31,9 @@ describe('AiOverviewScreen — rendering', () => {
             expect(screen.getByTestId('page-layout')).toBeInTheDocument();
             expect(screen.getByTestId('page-layout-body')).toBeInTheDocument();
             expect(screen.getByTestId('page-footer')).toBeInTheDocument();
-            expect(within(screen.getByTestId('page-footer')).getByRole('button', { name: /close/i })).toBeInTheDocument();
+            expect(
+                within(screen.getByTestId('page-footer')).getByRole('button', { name: /close/i })
+            ).toBeInTheDocument();
         });
 
         it('wraps body content in the centered .page-container-padded class', async () => {
@@ -52,7 +51,9 @@ describe('AiOverviewScreen — rendering', () => {
 
         it('does not render the removed "Open in Claude Code" CTA', async () => {
             await renderScreen();
-            expect(screen.queryByRole('button', { name: /open in claude code/i })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /open in claude code/i })
+            ).not.toBeInTheDocument();
         });
 
         it('does not render the removed Learn more link', async () => {
@@ -72,8 +73,12 @@ describe('AiOverviewScreen — rendering', () => {
         it('does NOT render AI-health controls in the body (those live on the dashboard)', async () => {
             await renderScreen();
             const body = screen.getByTestId('page-layout-body');
-            expect(within(body).queryByRole('button', { name: /regenerate ai files/i })).not.toBeInTheDocument();
-            expect(within(body).queryByTestId('ai-installed-skills-trigger')).not.toBeInTheDocument();
+            expect(
+                within(body).queryByRole('button', { name: /regenerate ai files/i })
+            ).not.toBeInTheDocument();
+            expect(
+                within(body).queryByTestId('ai-installed-skills-trigger')
+            ).not.toBeInTheDocument();
             expect(within(body).queryByTestId('ai-view-skills-trigger')).not.toBeInTheDocument();
         });
     });
@@ -85,8 +90,9 @@ describe('AiOverviewScreen — rendering', () => {
             });
 
             expect(screen.getByTestId('page-header')).toBeInTheDocument();
-            const verifyCalls = (webviewClient.request as jest.Mock).mock.calls
-                .filter(c => c[0] === 'verify-ai-setup');
+            const verifyCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+                (c) => c[0] === 'verify-ai-setup'
+            );
             expect(verifyCalls.length).toBe(0);
         });
 

@@ -4,7 +4,12 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData, selectSection, railTab } from './ConfigureScreen.testUtils';
+import {
+    mockProject,
+    mockComponentsData,
+    selectSection,
+    railTab,
+} from './ConfigureScreen.testUtils';
 
 // Mock hooks
 jest.mock('@/core/ui/hooks', () => ({
@@ -44,11 +49,7 @@ jest.mock('@/core/ui/components/layout', () => ({
 
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 describe('ConfigureScreen - Validation', () => {
@@ -73,10 +74,7 @@ describe('ConfigureScreen - Validation', () => {
         it('should validate URL fields', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');

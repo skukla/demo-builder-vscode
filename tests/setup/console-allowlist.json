@@ -14,16 +14,7 @@
     "tests/core/state/stateManager-getCurrentProject-reload.test.ts",
     "tests/core/state/stateManager-utilities.test.ts",
     "tests/features/ai/mcpServer-config.test.ts",
-    "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
-    "tests/features/dashboard/ui/components/ActionGrid-overflow.test.tsx",
-    "tests/features/dashboard/ui/components/ActionGrid-zoneStatus.test.tsx",
-    "tests/features/dashboard/ui/components/ActionGrid.test.tsx",
-    "tests/features/dashboard/ui/components/DashboardTile.test.tsx",
-    "tests/features/dashboard/ui/components/DataInstallerTile.test.tsx",
-    "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
     "tests/features/eds/services/configJsonFatalFailure.test.ts",
-    "tests/features/prerequisites/ui/prerequisiteRenderers.test.tsx",
-    "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts",
-    "tests/webview-ui/shared/hooks/useDebouncedLoading.test.ts"
+    "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts"
   ]
 }

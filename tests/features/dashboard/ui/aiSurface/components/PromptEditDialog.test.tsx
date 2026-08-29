@@ -16,9 +16,7 @@ import { PromptEditDialog } from '@/features/dashboard/ui/aiSurface/components/P
 import type { AiPrompt } from '@/types/base';
 import '@testing-library/jest-dom';
 
-function renderDialog(
-    props: Partial<React.ComponentProps<typeof PromptEditDialog>> = {},
-) {
+function renderDialog(props: Partial<React.ComponentProps<typeof PromptEditDialog>> = {}) {
     const defaults: React.ComponentProps<typeof PromptEditDialog> = {
         mode: 'create',
         initialPrompt: undefined,
@@ -29,7 +27,7 @@ function renderDialog(
     const utils = render(
         <Provider theme={defaultTheme}>
             <PromptEditDialog {...merged} />
-        </Provider>,
+        </Provider>
     );
     return { ...utils, ...merged };
 }

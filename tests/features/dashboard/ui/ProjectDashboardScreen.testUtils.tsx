@@ -86,51 +86,80 @@ jest.mock('@adobe/react-spectrum', () => {
     // The SHARED filter (tests/__mocks__/@adobe/react-spectrum.tsx). Required
     // inside the factory because jest.mock is hoisted above imports.
     const { filterSpectrumProps } = jest.requireActual('../../../__mocks__/@adobe/react-spectrum');
-    return ({
-    View: ({ children, ...props }: any) => <div {...filterSpectrumProps(props)}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...filterSpectrumProps(props)}>{children}</div>,
-    Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
-        return <Tag {...filterSpectrumProps(props)}>{children}</Tag>;
-    },
-    Text: ({ children, ...props }: any) => <span {...filterSpectrumProps(props)}>{children}</span>,
-    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...filterSpectrumProps(props)}>{children}</button>
-    ),
-    ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...filterSpectrumProps(props)}>{children}</button>
-    ),
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => (
-        <div role="menu">
-            {React.Children.map(children, (child: any) => {
-                if (!child) return null;
-                const key = child.key ?? child.props?.['data-key'];
-                return (
-                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                        {child.props?.children}
-                    </button>
-                );
-            })}
-        </div>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
-    // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
-    // TooltipTrigger; both render inline so the tooltip text is queryable
-    // without a hover. Added when the runtime status moved off the surface and
-    // into these tooltips.
-    TooltipTrigger: ({ children }: any) => <>{children}</>,
-    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-    Divider: () => <hr />,
-    Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-        <a onClick={onPress} data-testid="sign-in-link" {...filterSpectrumProps(props)}>{children}</a>
-    ),
-    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
-    TextField: ({ label, value, onChange, ...props }: any) => (
-        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...filterSpectrumProps(props)} />
-    ),
-    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...filterSpectrumProps(props)} />,
-    });
+    return {
+        View: ({ children, ...props }: any) => (
+            <div {...filterSpectrumProps(props)}>{children}</div>
+        ),
+        Flex: ({ children, ...props }: any) => (
+            <div style={{ display: 'flex' }} {...filterSpectrumProps(props)}>
+                {children}
+            </div>
+        ),
+        Heading: ({ children, level, ...props }: any) => {
+            const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
+            return <Tag {...filterSpectrumProps(props)}>{children}</Tag>;
+        },
+        Text: ({ children, ...props }: any) => (
+            <span {...filterSpectrumProps(props)}>{children}</span>
+        ),
+        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+            <button
+                onClick={onPress}
+                disabled={isDisabled}
+                data-variant={variant}
+                data-testid="back-button"
+                {...filterSpectrumProps(props)}
+            >
+                {children}
+            </button>
+        ),
+        ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} {...filterSpectrumProps(props)}>
+                {children}
+            </button>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => (
+            <div role="menu">
+                {React.Children.map(children, (child: any) => {
+                    if (!child) return null;
+                    const key = child.key ?? child.props?.['data-key'];
+                    return (
+                        <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                            {child.props?.children}
+                        </button>
+                    );
+                })}
+            </div>
+        ),
+        Item: ({ children }: any) => <>{children}</>,
+        // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
+        // TooltipTrigger; both render inline so the tooltip text is queryable
+        // without a hover. Added when the runtime status moved off the surface and
+        // into these tooltips.
+        TooltipTrigger: ({ children }: any) => <>{children}</>,
+        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+        Divider: () => <hr />,
+        Link: ({ children, onPress, _isQuiet, ...props }: any) => (
+            <a onClick={onPress} data-testid="sign-in-link" {...filterSpectrumProps(props)}>
+                {children}
+            </a>
+        ),
+        DialogContainer: ({ children }: any) => (
+            <div data-testid="dialog-container">{children}</div>
+        ),
+        TextField: ({ label, value, onChange, ...props }: any) => (
+            <input
+                aria-label={label}
+                value={value ?? ''}
+                onChange={(e) => onChange?.(e.target.value)}
+                {...filterSpectrumProps(props)}
+            />
+        ),
+        ProgressCircle: ({ ...props }: any) => (
+            <div data-testid="progress-circle" {...filterSpectrumProps(props)} />
+        ),
+    };
 });
 
 // Stub the capabilities modal — its real implementation renders the shared
@@ -138,7 +167,15 @@ jest.mock('@adobe/react-spectrum', () => {
 // AiCapabilitiesModal is exercised in its own test; here we only assert the
 // dashboard opens it and wires its props.
 jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
-    AiCapabilitiesModal: ({ skills, mcps, hasSkillsError, hasMcpsError, onClose, onRegenerate, isBusy }: any) => (
+    AiCapabilitiesModal: ({
+        skills,
+        mcps,
+        hasSkillsError,
+        hasMcpsError,
+        onClose,
+        onRegenerate,
+        isBusy,
+    }: any) => (
         <div
             data-testid="ai-capabilities-modal"
             data-skills-error={String(Boolean(hasSkillsError))}
@@ -148,15 +185,21 @@ jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
             <span data-testid="ai-capabilities-modal-skills-count">{skills.length}</span>
             <span data-testid="ai-capabilities-modal-mcps-count">{mcps.length}</span>
             {skills.map((s: any) => (
-                <div key={s.path} data-testid="ai-capabilities-modal-skill">{s.name}</div>
+                <div key={s.path} data-testid="ai-capabilities-modal-skill">
+                    {s.name}
+                </div>
             ))}
             {mcps.map((m: any) => (
-                <div key={m.id} data-testid="ai-capabilities-modal-mcp">{m.id}</div>
+                <div key={m.id} data-testid="ai-capabilities-modal-mcp">
+                    {m.id}
+                </div>
             ))}
             <button data-testid="ai-capabilities-modal-regenerate" onClick={() => onRegenerate()}>
                 Regenerate AI files
             </button>
-            <button data-testid="ai-capabilities-modal-close" onClick={onClose}>Close</button>
+            <button data-testid="ai-capabilities-modal-close" onClick={onClose}>
+                Close
+            </button>
         </div>
     ),
 }));

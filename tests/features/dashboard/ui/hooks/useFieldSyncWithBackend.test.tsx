@@ -146,9 +146,11 @@ describe('useFieldSyncWithBackend', () => {
     describe('Sync Status', () => {
         it('should set isSyncing true during backend call', async () => {
             let resolveRequest: () => void = () => {};
-            mockRequest.mockReturnValue(new Promise(resolve => {
-                resolveRequest = () => resolve({ success: true });
-            }));
+            mockRequest.mockReturnValue(
+                new Promise((resolve) => {
+                    resolveRequest = () => resolve({ success: true });
+                })
+            );
 
             const { result } = renderHook(() =>
                 useFieldSyncWithBackend({

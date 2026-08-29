@@ -27,15 +27,13 @@ function renderGrid(props: Partial<React.ComponentProps<typeof PromptGrid>> = {}
     return render(
         <Provider theme={defaultTheme}>
             <PromptGrid {...defaults} {...props} />
-        </Provider>,
+        </Provider>
     );
 }
 
 describe('PromptGrid', () => {
     it('does NOT render a "Suggested prompts" section (curated removed)', () => {
-        renderGrid({ userPrompts: [
-            { id: 'u1', title: 'My prompt', prompt: 'do thing' },
-        ] });
+        renderGrid({ userPrompts: [{ id: 'u1', title: 'My prompt', prompt: 'do thing' }] });
         expect(screen.queryByText(/suggested prompts/i)).not.toBeInTheDocument();
     });
 
@@ -51,9 +49,7 @@ describe('PromptGrid', () => {
     });
 
     it('renders the "+ New prompt" tile alongside user cards', () => {
-        renderGrid({ userPrompts: [
-            { id: 'u1', title: 'My prompt', prompt: 'do thing' },
-        ] });
+        renderGrid({ userPrompts: [{ id: 'u1', title: 'My prompt', prompt: 'do thing' }] });
         expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
     });
 
@@ -64,18 +60,14 @@ describe('PromptGrid', () => {
 
     it('clicking the "+ New prompt" tile fires onNew', () => {
         const onNew = jest.fn();
-        renderGrid({ userPrompts: [
-            { id: 'u1', title: 'My prompt', prompt: 'do thing' },
-        ], onNew });
+        renderGrid({ userPrompts: [{ id: 'u1', title: 'My prompt', prompt: 'do thing' }], onNew });
         screen.getByTestId('ai-new-prompt-tile').click();
         expect(onNew).toHaveBeenCalledTimes(1);
     });
 
     it('clicking a user card body fires onLaunchUser with the prompt', () => {
         const onLaunchUser = jest.fn();
-        const userPrompts = [
-            { id: 'u1', title: 'My first', prompt: 'do thing one' },
-        ];
+        const userPrompts = [{ id: 'u1', title: 'My first', prompt: 'do thing one' }];
         renderGrid({ userPrompts, onLaunchUser });
         const card = screen.getByText('My first').closest('[data-testid="ai-prompt-card"]');
         expect(card).not.toBeNull();
@@ -95,9 +87,11 @@ describe('PromptGrid', () => {
         it('renders pinned prompts first, then unpinned, alphabetical within each group', () => {
             renderGrid({ userPrompts: PROMPTS });
             // Visible cards in DOM order should be: Apple, Avocado, Banana, Cherry
-            const titles = screen.getAllByTestId('ai-prompt-card').map(card =>
-                card.querySelector('.text-sm')?.textContent ?? card.textContent ?? '',
-            );
+            const titles = screen
+                .getAllByTestId('ai-prompt-card')
+                .map(
+                    (card) => card.querySelector('.text-sm')?.textContent ?? card.textContent ?? ''
+                );
             expect(titles[0]).toContain('Apple');
             expect(titles[1]).toContain('Avocado');
             expect(titles[2]).toContain('Banana');

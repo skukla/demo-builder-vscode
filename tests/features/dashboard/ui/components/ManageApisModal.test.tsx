@@ -349,7 +349,11 @@ describe('ManageApisModal', () => {
     // Signed-out is NOT a retryable error — Retry re-runs the same unauthenticated
     // call. The house treatment (AdobeAuthStep) offers a sign-in action instead.
     describe('signed out offers sign-in, not Retry', () => {
-        const signedOut = { success: false, error: 'Adobe sign-in required.', code: 'AUTH_REQUIRED' };
+        const signedOut = {
+            success: false,
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+        };
 
         it('shows Sign In with Adobe and NO Retry', async () => {
             getClient().request.mockResolvedValue(signedOut);
@@ -372,8 +376,9 @@ describe('ManageApisModal', () => {
 
             // reAuthenticate itself, plus the reload it triggers.
             expect(getClient().request.mock.calls.length).toBeGreaterThan(before + 1);
-            expect(getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate'))
-                .toBe(true);
+            expect(
+                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate')
+            ).toBe(true);
         });
 
         it('still offers Retry for a NON-auth failure', async () => {
@@ -398,7 +403,7 @@ describe('ManageApisModal', () => {
      * view is this same modal without one.
      */
     describe('per-integration scope (step 05)', () => {
-        it('asks for THIS integration\'s rows', async () => {
+        it("asks for THIS integration's rows", async () => {
             mockRequest();
             renderModal({ componentId: 'erp-sync' });
             await flush();
@@ -432,7 +437,5 @@ describe('ManageApisModal', () => {
 
             expect(getClient().request).toHaveBeenCalledWith('listConsoleApis', undefined);
         });
-
     });
-
 });

@@ -43,7 +43,12 @@ const consumerEntry: AppBuilderComponentCatalogEntry = {
     kind: 'integration',
     source: { owner: 'acme', repo: 'sf', branch: 'main' },
     envSchema: [
-        { name: 'MESH_ENDPOINT', type: 'text', label: 'Mesh endpoint', providedBy: 'commerce-paas-mesh' },
+        {
+            name: 'MESH_ENDPOINT',
+            type: 'text',
+            label: 'Mesh endpoint',
+            providedBy: 'commerce-paas-mesh',
+        },
     ],
 };
 
@@ -54,11 +59,18 @@ const seedMeshEntry: AppBuilderComponentCatalogEntry = {
     kind: 'mesh',
     source: { owner: 'skukla', repo: 'commerce-paas-mesh', branch: 'main' },
     envSchema: [
-        { name: 'COMMERCE_ENDPOINT', type: 'text', label: 'Commerce endpoint', derivedFrom: 'connect-commerce' },
+        {
+            name: 'COMMERCE_ENDPOINT',
+            type: 'text',
+            label: 'Commerce endpoint',
+            derivedFrom: 'connect-commerce',
+        },
     ],
 };
 
-function renderSection(props: Partial<React.ComponentProps<typeof AppBuilderComponentFieldsSection>> = {}) {
+function renderSection(
+    props: Partial<React.ComponentProps<typeof AppBuilderComponentFieldsSection>> = {}
+) {
     const onTextChange = jest.fn();
     const onSecretChange = jest.fn();
     const utils = render(
@@ -71,7 +83,7 @@ function renderSection(props: Partial<React.ComponentProps<typeof AppBuilderComp
                 onTextChange={props.onTextChange ?? onTextChange}
                 onSecretChange={props.onSecretChange ?? onSecretChange}
             />
-        </Provider>,
+        </Provider>
     );
     return { ...utils, onTextChange, onSecretChange };
 }
@@ -108,7 +120,11 @@ describe('AppBuilderComponentFieldsSection', () => {
 
         expect(onSecretChange).toHaveBeenCalledWith('erp-integration', 'ERP_API_KEY', FAKE_SECRET);
         // The secret edit must NOT travel the componentConfigs (text) path.
-        expect(onTextChange).not.toHaveBeenCalledWith('erp-integration', 'ERP_API_KEY', expect.anything());
+        expect(onTextChange).not.toHaveBeenCalledWith(
+            'erp-integration',
+            'ERP_API_KEY',
+            expect.anything()
+        );
     });
 
     it('does not echo a stored secret value back into the field (only "is set")', () => {
@@ -117,7 +133,9 @@ describe('AppBuilderComponentFieldsSection', () => {
             secretFlags: { 'erp-integration': { ERP_API_KEY: true } },
         });
 
-        const secretInput = document.getElementById('field-ERP_API_KEY')?.querySelector('input') as HTMLInputElement;
+        const secretInput = document
+            .getElementById('field-ERP_API_KEY')
+            ?.querySelector('input') as HTMLInputElement;
         // Field shows empty (value never round-trips); a "set" affordance is shown instead.
         expect(secretInput.value).toBe('');
         expect(screen.getByText(/set/i)).toBeInTheDocument();

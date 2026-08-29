@@ -12,14 +12,17 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, ...props }: any) => (
-        <button onClick={onPress} {...props}>
-            {children}
-        </button>
-    ),
-    ProgressCircle: (props: any) => <div role="progressbar" aria-label={props['aria-label']} />,
-}));
+jest.mock('@adobe/react-spectrum', () => {
+    const { domProps } = jest.requireActual('../../../../helpers/spectrumStubProps');
+    return {
+        ActionButton: ({ children, onPress, ...props }: any) => (
+            <button onClick={onPress} {...domProps(props)}>
+                {children}
+            </button>
+        ),
+        ProgressCircle: (props: any) => <div role="progressbar" aria-label={props['aria-label']} />,
+    };
+});
 jest.mock('@spectrum-icons/workflow/ChevronDown', () => ({
     __esModule: true,
     default: () => <span />,

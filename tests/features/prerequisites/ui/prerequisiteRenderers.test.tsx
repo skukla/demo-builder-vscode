@@ -1,6 +1,9 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
+import {
+    renderPrerequisiteMessage,
+    shouldShowPluginDetails,
+} from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
 import type { PrerequisiteCheck } from '@/types/webview';
 
 /**

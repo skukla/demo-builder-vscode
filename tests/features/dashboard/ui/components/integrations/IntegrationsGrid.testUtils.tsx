@@ -37,7 +37,9 @@ jest.mock('@adobe/react-spectrum', () => ({
             {require('react').Children.map(children, (child: any) =>
                 child ? (
                     <li>
-                        <button onClick={() => onAction?.(child.key)}>{child.props.children}</button>
+                        <button onClick={() => onAction?.(child.key)}>
+                            {child.props.children}
+                        </button>
                     </li>
                 ) : null
             )}
@@ -96,7 +98,12 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any, i: number) => (
-                <button key={i} onClick={b.onPress} data-variant={b.variant} disabled={b.isDisabled}>
+                <button
+                    key={i}
+                    onClick={b.onPress}
+                    data-variant={b.variant}
+                    disabled={b.isDisabled}
+                >
                     {b.label}
                 </button>
             ))}
@@ -226,11 +233,7 @@ export function renderGrid({
     onReAuthenticate = jest.fn(),
 }: RenderOptions = {}) {
     const project = { appBuilderComponents } as never;
-    const integrationCards = buildIntegrationCards(
-        listAppBuilderComponents(project),
-        {},
-        CATALOG,
-    );
+    const integrationCards = buildIntegrationCards(listAppBuilderComponents(project), {}, CATALOG);
     const cards = withMesh
         ? [
               deriveMeshCard(
@@ -241,7 +244,7 @@ export function renderGrid({
                   // Same SINGLE resolver the screen uses — id and state from one
                   // lookup, so the harness cannot pass a mismatched pair the real
                   // screen could never produce.
-                  getIdentifiedMeshAppBuilderComponent(project)?.id,
+                  getIdentifiedMeshAppBuilderComponent(project)?.id
               ),
               ...integrationCards,
           ]
@@ -252,7 +255,7 @@ export function renderGrid({
             cards={cards}
             onDeployMesh={onDeployMesh}
             onReAuthenticate={onReAuthenticate}
-        />,
+        />
     );
     return { ...result, onDeployMesh, onReAuthenticate };
 }
@@ -272,7 +275,7 @@ export function card(name: string, statusLabel: string): HTMLElement {
 export async function openPanel(
     user: ReturnType<typeof userEvent.setup>,
     name: string,
-    statusLabel: string,
+    statusLabel: string
 ): Promise<HTMLElement> {
     await user.click(card(name, statusLabel));
     return screen.getByLabelText(`${name} details`);
