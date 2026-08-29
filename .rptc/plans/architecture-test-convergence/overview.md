@@ -24,12 +24,12 @@ it were the program.
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
 | 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
-| 4 | Noise burn-down | **NOT STARTED** | 68 suites still on the console allowlist; done when empty |
+| 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
 | 6 | Craft + coverage follow-ups | **NOT STARTED** | hollow suite, throw-style, and three named coverage gaps untouched |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 
-**4 of 8 done, 4 not started.**
+**5 of 8 done, 3 not started.**
 
 Phase 2's close is worth recording because passing was not the criterion —
 "would FAIL if the conversion broke its collaborator calls" was. Both defects

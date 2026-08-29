@@ -1,8 +1,35 @@
 # ADR-015: Dependency architecture — fetch at the boundary, inject below, wire in the root
 
 **Status:** Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit)
+**Scope:** the EXTENSION HOST only — see below. The webview side is **ADR-017**.
 **Enforced by:** `tests/sop/architecture-rules.test.ts` (build-failing, with a
 reasoned exemption ledger)
+
+## Scope: this ADR governs the extension host
+
+Added 2026-08-29 (PL-17). This document was written from the host's evidence and
+applied to the whole repo. It should not have been, because the two halves do not
+share the mechanism this ADR is about.
+
+|  | Extension host | Webviews |
+|---|---|---|
+| Runtime | Node, with the `vscode` API | browser bundles, no `vscode` API |
+| Composition root | `src/extension.ts` | 8 bundle entries (`WEBVIEW_ENTRIES`) |
+| How dependencies arrive | constructor / function arguments | React props |
+| Shared-service lookup | a locator, confined to the boundary | impossible — different bundle |
+
+The tell that the scope was wrong: this ADR mentions "webview", "browser",
+"React" and "hook" **zero times**, and yet one of the six checks enforced under
+its name was a pure React rule (custom-hook calls taking inline `[]`/`{}`
+literals). It lived here because there was nowhere else to put it. It has moved
+to ADR-017 along with its exemptions.
+
+**So:** the rules below apply to `src/` EXCEPT webview code — `**/ui/**` and
+`*.tsx`. That exclusion is implemented in the enforcement file, not left to
+judgement.
+
+This is a narrowing of jurisdiction, not a relaxation. The webview side is
+governed by ADR-017, which is stricter in the places its runtime allows.
 
 ## Context
 

@@ -112,6 +112,11 @@ The dashboard is minimal/dark — conform, don't invent.
 - **`StatusDisplay` (feedback/) is a full-height centered block** for empty/error screens — NOT
   for inline notices.
 ### A CSS class working in one webview proves NOTHING about another
+> **This one is ARCHITECTURE, and its home is now `docs/architecture/adr/017-webview-architecture.md` §6.**
+> It is kept here because this is where you are when it bites. The ADR is where
+> the rule is decided; the line it sits on is: a rule is architecture if breaking
+> it breaks a boundary, style if breaking it produces a wrong-looking result.
+> Everything else in this skill is the second kind.
 Each webview is its own esbuild entry (`WEBVIEW_ENTRIES`), and a feature stylesheet reaches a
 bundle only via a side-effect `import` somewhere in *that* entry's graph. So a class can be
 styled in one surface and simply absent in the next — the element renders raw, with no error

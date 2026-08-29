@@ -131,7 +131,22 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
-## Architecture law (ADR-015, owner-ratified 2026-08-28)
+## Architecture law — TWO documents, one per runtime
+
+This repo is two programs. **ADR-015 governs the extension host; ADR-017 governs
+the webviews.** They split 2026-08-29: ADR-015 had been applied to all 896 files
+including 291 browser-bundle ones, in a document that mentions React zero times.
+Each has its own enforcer (`tests/sop/architecture-rules.test.ts` and
+`tests/sop/webview-architecture-rules.test.ts`) and its own ledger.
+
+**Webview side (ADR-017)**: the composition root is the bundle entry (8 of them);
+dependencies arrive as props, not context; the message channel is a RATIFIED
+singleton (`acquireVsCodeApi()` is once-per-webview, so there is nothing to
+vary); hooks are the service layer; and a feature stylesheet reaches only the
+bundles whose entry imports it — a class can be styled on one surface and absent
+on the next with no error anywhere.
+
+### ADR-015 (extension host, owner-ratified 2026-08-28)
 
 **Services are fetched only at the boundary** (`extension.ts`, `commands/`,
 `handlers/`, MCP tool registrars); everywhere else dependencies arrive as

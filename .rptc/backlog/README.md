@@ -267,7 +267,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (17)
+### platform  (19)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -287,7 +287,9 @@ each item's own file; what has already landed against an item is in its
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-13` | chore | [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | backlog |
 | `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | backlog |
-| `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | backlog |
+| `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
+| `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | backlog |
+| `PL-19` | fix | [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -433,7 +435,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*39 item(s) sit outside the A–G chain.*
+*41 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

@@ -1,0 +1,10 @@
+{
+    "_what": "ADR-017 enforcement ledger (WEBVIEW ONLY). Same contract as ADR-015's: an entry is a KNOWN pre-ruling violation with its reason; the test fails on an unlisted violation, on a listed entry that no longer violates, and on an entry without a reason. Moved here 2026-08-29 (PL-17) from the ADR-015 ledger, where a pure React rule had been enforced under a document that mentions React zero times.",
+    "hookRefs": {
+        "src/core/ui/hooks/useActivateOnKey.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
+        "src/core/ui/hooks/useFocusOnMount.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
+        "src/features/components/ui/hooks/useStoreDiscovery.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
+        "src/features/dashboard/ui/hooks/useDashboardStatus.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
+        "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference"
+    }
+}

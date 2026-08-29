@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: backlog
+status: shipped
 title: Frontend architecture has rules but no document — ADR-015 covers only the extension host
 ---
 
@@ -99,3 +99,7 @@ exporting a singleton of itself with a class building its own collaborators.
 Separating those categories is what exposed that the file had no lawful option
 at all. Recorded because the mis-ranking is instructive: counting how often
 something is mocked says nothing about why.
+
+## Shipped so far
+
+- 2026-08-29  Answered and implemented 2026-08-29. ADR-015 scoped to the extension host; ADR-017 written for the webview side (composition root = bundle entry, props not context, message singleton RATIFIED on the once-per-webview constraint, hooks are the service layer, stylesheet belongs to its bundle's graph). Enforcement split into two files sharing one scan module; hookRefs ledger moved to ADR-017's; WebviewClient's construction row retired by the ratification. Owner ruled the singleton; the architecture-vs-style line is 'breaks a boundary vs looks wrong'. Follow-ups: PL-18 (the missing stylesheet check), PL-19 (sidebar convergence).

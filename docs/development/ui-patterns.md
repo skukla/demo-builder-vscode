@@ -188,7 +188,13 @@ Two-column responsive layout for better space utilization:
 ## CSS Architecture
 
 ### File Organization
-- `wizard.css`: Component-specific styles for the wizard interface
+- `src/core/ui/styles/wizard.css`: wizard-interface styles. NOTE it lives under
+  `core/ui/styles/`, not in the wizard feature — editing it can affect any bundle
+  whose entry imports it, not just the wizard.
+- Which bundle a stylesheet reaches is architecture, not style: see
+  **ADR-017 §6**. A feature sheet under `src/features/*/ui/styles/` is loaded only
+  by entries that import it, so a class can be styled on one surface and simply
+  absent on the next, with no error anywhere.
 - Applied styles use high specificity with `!important` to override React Spectrum defaults
 - Minimal inline styles except where required (cursor on Pickers)
 
@@ -223,7 +229,8 @@ Two-column responsive layout for better space utilization:
    - Example: Picker cursor styles required inline approach
 
 4. **Test incrementally**
-   - Each CSS change needs webpack rebuild
+   - Each CSS change needs an esbuild rebuild (`npm run watch:all` picks it up;
+     reload the Extension Dev Host window with Cmd+R to see it)
    - Browser DevTools essential for debugging Spectrum components
 
 5. **Document prop values**

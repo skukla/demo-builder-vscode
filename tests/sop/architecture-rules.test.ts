@@ -20,38 +20,31 @@
  * Map: docs/architecture/where-code-goes.md
  */
 
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
-const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
-const FILES = execSync(`git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`, {
-    encoding: 'utf8',
-    cwd: ROOT,
-})
-    .trim()
-    .split('\n');
-
-const LEDGER = JSON.parse(
-    readFileSync(join(__dirname, 'architecture-rules.exemptions.json'), 'utf8')
-) as Record<string, Record<string, string> | number | string>;
+import {
+    ALL_FILES,
+    isWebview,
+    readStripped,
+    loadLedger,
+    expectClean as expectCleanAgainst,
+} from './architectureScan';
 
 /**
- * Source with comments removed.
+ * ADR-015 governs the EXTENSION HOST. Webview files are excluded here and
+ * enforced by `webview-architecture-rules.test.ts` under ADR-017.
  *
- * Detectors match CODE, never prose: a doc comment showing
- * `new PrerequisitesCacheManager()` as usage is not a construction site, and
- * five ledger rows were phantom debt for exactly that reason (found
- * 2026-08-28, first file of the phase-2 pass). Stripping here fixes the whole
- * class rather than annotating each victim.
+ * Added 2026-08-29 (PL-17). Before it, 291 browser-bundle files were judged by
+ * rules written from the host's evidence — a document that mentions React zero
+ * times — and one of the six checks below was a pure React rule that lived here
+ * only because there was nowhere else to put it. It has moved, with its
+ * exemptions.
  */
-function stripComments(source: string): string {
-    return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-}
+const FILES = ALL_FILES.filter((f) => !isWebview(f));
 
-const src = new Map<string, string>();
-for (const f of FILES) {
-    src.set(f, stripComments(readFileSync(join(ROOT, f), 'utf8')));
+const LEDGER = loadLedger('architecture-rules.exemptions.json');
+const src = readStripped(FILES);
+
+function expectClean(check: string, violations: string[]): void {
+    expectCleanAgainst(LEDGER, check, violations);
 }
 
 /** Boundary membership per ADR-015: where fetching is allowed. */
@@ -68,34 +61,6 @@ function mayFetch(f: string): boolean {
 /** Where construction is allowed: the root, deps builders, and the boundary. */
 function mayConstruct(f: string): boolean {
     return mayFetch(f) || /[Dd]eps\.tsx?$/.test(f);
-}
-
-function diffAgainstLedger(
-    check: string,
-    violations: string[]
-): { unlisted: string[]; stale: string[]; reasonless: string[] } {
-    const ledger = (LEDGER[check] ?? {}) as Record<string, string>;
-    const vset = new Set(violations);
-    return {
-        unlisted: violations.filter((v) => !(v in ledger)),
-        stale: Object.keys(ledger).filter((k) => !vset.has(k)),
-        reasonless: Object.entries(ledger)
-            .filter(([, reason]) => !reason || !reason.trim())
-            .map(([k]) => k),
-    };
-}
-
-function expectClean(check: string, violations: string[]): void {
-    const { unlisted, stale, reasonless } = diffAgainstLedger(check, violations);
-    expect({
-        newViolations: unlisted,
-        staleExemptions_deleteWithTheFix: stale,
-        exemptionsWithoutReasons: reasonless,
-    }).toEqual({
-        newViolations: [],
-        staleExemptions_deleteWithTheFix: [],
-        exemptionsWithoutReasons: [],
-    });
 }
 
 describe('ADR-015: fetch boundary — logic never fetches', () => {
@@ -170,26 +135,6 @@ describe('ADR-015: types files carry no runtime imports', () => {
 
     it('every runtime-importing types file is a reasoned ledger entry', () => {
         expectClean('typesPurity', violations);
-    });
-});
-
-describe('ADR-015: custom-hook calls do not take inline []/{} literals', () => {
-    // Coarse by design: React's own hooks (useState/useEffect/...) are
-    // excluded — their literals are idiomatic. Custom-hook literals are the
-    // re-render trap the memory records; flagged files are adjudicated in
-    // the ledger, not silently ignored.
-    const HOOK_CALL =
-        /\buse(?!State|Effect|Memo|Callback|Ref\b|Context|Reducer|LayoutEffect|Id\b|Sync)[A-Z]\w*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
-    const violations = FILES.filter((f) => {
-        const s = src.get(f) as string;
-        for (const m of s.matchAll(HOOK_CALL)) {
-            if (/(?:^|[,(\s])(\[\]|\{\})\s*(?:,|$)/.test(m[1])) return true;
-        }
-        return false;
-    });
-
-    it('every flagged file is a reasoned ledger entry', () => {
-        expectClean('hookRefs', violations);
     });
 });
 
