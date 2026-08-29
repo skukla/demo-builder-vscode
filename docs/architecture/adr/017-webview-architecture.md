@@ -2,8 +2,9 @@
 
 **Status:** Accepted (owner-ratified 2026-08-29)
 **Scope:** the WEBVIEW side only — `**/ui/**` and `*.tsx`. The extension host is **ADR-015**.
-**Enforced by:** `tests/sop/webview-architecture-rules.test.ts` (build-failing,
-with a reasoned exemption ledger)
+**Enforced by:** `tests/sop/webview-architecture-rules.test.ts` (§5's hook rule)
+and `tests/sop/webview-stylesheet-bundles.test.ts` (§6), both build-failing, over
+one reasoned exemption ledger
 
 ## Context
 
@@ -129,11 +130,28 @@ lives in a sheet the TARGET bundle loads. `custom-spectrum.css`, `index.css` and
 `vscode-theme.css` are imported by every entry; anything under
 `src/features/*/ui/styles/` is not.
 
-**Not yet enforced.** No check exists for this today — verified 2026-08-29.
-Writing one means walking each entry's import graph, collecting reachable
-classes, and flagging components that use classes their bundle cannot see. That
-is real work and is tracked as its own item. Until then this rule is carried by
-review, and it is the weakest link in this document.
+**Enforced** by `tests/sop/webview-stylesheet-bundles.test.ts` since 2026-08-29
+(PL-18). It builds each entry with the real esbuild config — the same
+`WEBVIEW_ENTRIES` and the same alias plugin, so the check cannot drift from the
+build — reads the graph esbuild emits, and flags any class a component uses that
+no stylesheet in that bundle defines. ~1.2s for all eight.
+
+Its first run found **8 sites across 3 classes**, all fixed in the same commit
+rather than ledgered: `.text-orange-500`/`.text-orange-600` moved out of EDS's
+feature sheet into `custom-spectrum.css`, and `.number-badge` out of
+`wizard.css` (which only 4 of 8 entries import) — each keeping its original
+layer, because moving a rule between `@layer theme` and unlayered changes the
+cascade and that would be a different bug from the one being fixed.
+
+Two limits, stated because a clean result should not imply more than it means:
+
+- **151 class lists cannot be read statically** — template literals whose class
+  list is assembled at runtime. The check counts them and ratchets that number
+  downward; a violation can still hide in one.
+- **A class defined in NO stylesheet anywhere is not reported here.** That is a
+  different defect (dead markup, or an element nobody styled) and there are 38
+  of them. Folding them in would bury this rule's findings under a much larger
+  set that needs its own judgement pass.
 
 ## What is NOT architecture
 
@@ -168,8 +186,10 @@ check, not to reclassify the rule.
 - ADR-015 no longer judges 291 webview files by rules that never considered them.
 - The hook rule has a home where someone would look for it.
 - `WebviewClient` leaves the construction ledger — decided, not deferred.
-- Section 6 is stated but unenforced, so it can rot. That is a known, named
-  weakness rather than an omission, and the check that closes it is filed.
+- Every section is now enforced except §§1–2 and §5's prop rule, which are
+  design rules rather than mechanical ones. §6 gained its check on the day this
+  ADR shipped, and the check paid for itself immediately: 3 real cross-bundle
+  dependencies, all shipped, none visible to any other tool.
 
 ## Rejected alternatives
 

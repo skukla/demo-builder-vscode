@@ -343,7 +343,19 @@ async function main() {
     }
 }
 
-main().catch(e => {
-    console.error(e);
-    process.exit(1);
-});
+// Only build when RUN, not when required.
+//
+// `tests/sop/webview-stylesheet-bundles.test.ts` requires this file to reuse the
+// real WEBVIEW_ENTRIES and the real alias resolution. Without this guard that
+// require would kick off a full build. The exports below exist so the check
+// cannot drift from the build it is checking — a second copy of the alias
+// resolver would eventually disagree with this one, and the check would be
+// confidently wrong about which files are in a bundle.
+if (require.main === module) {
+    main().catch(e => {
+        console.error(e);
+        process.exit(1);
+    });
+}
+
+module.exports = { WEBVIEW_ENTRIES, aliasPlugin };

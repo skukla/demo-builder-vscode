@@ -1,10 +1,13 @@
 {
-    "_what": "ADR-017 enforcement ledger (WEBVIEW ONLY). Same contract as ADR-015's: an entry is a KNOWN pre-ruling violation with its reason; the test fails on an unlisted violation, on a listed entry that no longer violates, and on an entry without a reason. Moved here 2026-08-29 (PL-17) from the ADR-015 ledger, where a pure React rule had been enforced under a document that mentions React zero times.",
+    "_what": "ADR-017 enforcement ledger (WEBVIEW ONLY). Same contract as ADR-015's: an entry is a KNOWN pre-ruling violation with its reason; the test fails on an unlisted violation, on a listed entry that no longer violates, and on an entry without a reason. Moved here 2026-08-29 (PL-17) from the ADR-015 ledger, where a pure React rule had been enforced under a document that mentions React zero times. `bundleStylesheets` rows are ADR-017 \u00a76 violations found by webview-stylesheet-bundles.test.ts. `dynamicClassSiteCeiling` is a RATCHET, not an exemption: it counts className expressions this check cannot read statically (template literals), so it measures how much of the surface is NOT covered. It may only go down.",
     "hookRefs": {
         "src/core/ui/hooks/useActivateOnKey.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
         "src/core/ui/hooks/useFocusOnMount.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
         "src/features/components/ui/hooks/useStoreDiscovery.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
         "src/features/dashboard/ui/hooks/useDashboardStatus.ts": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference",
         "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx": "flagged by the coarse inline-literal detector \u2014 adjudicate: legitimate default value vs unstable reference"
-    }
+    },
+    "bundleStylesheets": {},
+    "dynamicClassSiteCeiling": 151,
+    "_bundleStylesheets_note": "EMPTY, and it started at 8 rows across 3 classes on this check's first run (2026-08-29). All three were fixed in the same commit rather than filed: .text-orange-500 and .text-orange-600 moved from EDS's feature sheet to custom-spectrum.css (kept UNLAYERED, because eds-steps.css declares no @layer and putting them in one would have lowered their cascade priority), and .number-badge moved from wizard.css to custom-spectrum.css inside @layer theme (its original layer, so its cascade position did not move). Keeping the empty key rather than deleting it: the check still runs, so a new violation fails immediately instead of starting a fresh pile."
 }

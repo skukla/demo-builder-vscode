@@ -28,8 +28,9 @@ it were the program.
 | 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
 | 6 | Craft + coverage follow-ups | **NOT STARTED** | hollow suite, throw-style, and three named coverage gaps untouched |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
+| 8 | Frontend architecture (PL-17) | **DONE 2026-08-29** | ADR-017 written + enforced (`webview-architecture-rules.test.ts`); ADR-015 scoped to the host; hook rule + ledger rehomed; WebviewClient's row retired by ratifying the singleton. Three positive controls, incl. one on the jurisdiction itself |
 
-**5 of 8 done, 3 not started.**
+**6 of 9 done, 3 not started** (phase 8 was added after the original eight).
 
 Phase 2's close is worth recording because passing was not the criterion —
 "would FAIL if the conversion broke its collaborator calls" was. Both defects
@@ -162,6 +163,11 @@ zero times, yet one of the six checks enforced under its name is a pure React
 rule (custom hooks must not take inline `[]`/`{}`, the re-render trap) with five
 files on its ledger. Frontend rules already exist and are already enforced —
 under a document that does not claim them.
+
+**SHIPPED 2026-08-29** — see the status table. Note the scope below said
+"props/context"; research found there is NO context in the frontend
+(`createContext`: zero occurrences), so ADR-017 rules props and records why a
+context would be symmetry for its own sake.
 
 Tracked as **PL-17**. Scope: declare ADR-015's scope as the extension host,
 write the frontend ADR (composition root = the bundle entries; dependencies

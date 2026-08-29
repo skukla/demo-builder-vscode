@@ -59,13 +59,12 @@
     color: var(--spectrum-global-color-blue-500);
 }
 
-.text-orange-500 {
-    color: var(--spectrum-global-color-orange-500);
-}
-
-.text-orange-600 {
-    color: var(--spectrum-global-color-orange-600);
-}
+/* .text-orange-500 / .text-orange-600 moved to custom-spectrum.css (ADR-017 §6).
+   They are used by CORE components — StatusDisplay, AdobeAuthStep — which render
+   on surfaces whose bundles never load this feature sheet, so the colour simply
+   did not apply there. Kept UNLAYERED at the destination: this file declares no
+   @layer, so these rules currently outrank layered ones, and moving them into
+   `@layer theme` would have quietly lowered their priority. */
 
 /* ========== Layout Utilities ========== */
 .flex-shrink-0 {

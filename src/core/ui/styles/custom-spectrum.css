@@ -6152,3 +6152,48 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+
+/* ============================================
+   TEXT COLOUR UTILITIES  (unlayered — see below)
+   ============================================
+   Moved here from src/features/eds/ui/styles/eds-steps.css on 2026-08-29 by the
+   ADR-017 §6 check, which found core components depending on them from bundles
+   that never load that feature sheet: StatusDisplay (dashboard, dataInstaller,
+   integrations, projectsList) and AdobeAuthStep (integrations).
+
+   DELIBERATELY OUTSIDE `@layer theme`. eds-steps.css declares no layer, so these
+   rules were unlayered author rules and outranked every layered one. Putting them
+   in a layer here would preserve the text but change the cascade, which is a
+   different kind of bug from the one being fixed. */
+.text-orange-500 {
+    color: var(--spectrum-global-color-orange-500);
+}
+
+.text-orange-600 {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+/* ============================================
+   NUMBER BADGE  (moved 2026-08-29, ADR-017 §6)
+   ============================================
+   From src/core/ui/styles/wizard.css, which only 4 of the 8 bundle entries
+   import — while `NumberedInstructions` and `FieldHelpButton` are core
+   components any surface can render. Wrapped in `@layer theme` exactly as it was
+   at its old home, so the cascade position does not move with it. */
+@layer theme {
+    .number-badge {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--vscode-badge-background, var(--db-status-info));
+        color: var(--vscode-badge-foreground, #ffffff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+}

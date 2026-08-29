@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: backlog
+status: shipped
 title: Enforce ADR-017 §6 — a component may not use a CSS class its bundle cannot load
 ---
 
@@ -67,3 +67,7 @@ accidents can be listed rather than blocking the first run.
 The check runs in CI, fails on a planted violation, and its ledger carries a
 reason per existing accident. ADR-017 §6's "not yet enforced" paragraph is
 deleted in the same commit.
+
+## Shipped so far
+
+- 2026-08-29  Shipped 2026-08-29. Check builds each of the 8 entries with the REAL esbuild config (reused WEBVIEW_ENTRIES + aliasPlugin via a require.main guard) and reads esbuild's own graph — ~1.2s. First run found 8 sites across 3 classes, all FIXED rather than ledgered, each keeping its original cascade layer. Ledger ships EMPTY. Positive control fires; the first control I wrote did NOT (picked a class that was also defined globally), which is why the control is mandatory. Two stated limits: 151 unreadable template-literal class lists (ratcheted), and the 38 defined-nowhere classes deliberately left to their own pass.
