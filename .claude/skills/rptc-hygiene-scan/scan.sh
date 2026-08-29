@@ -80,7 +80,15 @@ for ov in "$RPTC"/plans/*/overview.md "$RPTC"/plans/*/HANDOFF.md; do
     [ -f "$ov" ] || continue
     if grep -qiE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' "$ov"; then
         echo "  CLAIMS SHIPPED  $(dirname "$ov")"
-        grep -m1 -iE 'shipped|complete' "$ov" | cut -c1-96 | sed 's/^/      /'
+        # Print the line that ACTUALLY triggered it, not a looser re-grep. The
+        # evidence used to be `grep -m1 -iE 'shipped|complete'`, which finds the
+        # first loose match anywhere in the file — so a plan flagged on a
+        # `**SHIPPED**` heading at line 251 was reported with prose from line 18
+        # that merely contained the word "completely". The finding was right and
+        # the evidence pointed somewhere else, which costs more time than no
+        # evidence would.
+        grep -n -m1 -iE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' \
+            "$ov" | cut -c1-96 | sed 's/^/      /'
         found=$((found + 1))
     fi
 done

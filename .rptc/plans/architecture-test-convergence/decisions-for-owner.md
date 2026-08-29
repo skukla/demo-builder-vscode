@@ -175,7 +175,7 @@ Two facts, both read from the repo rather than reasoned about:
    asking the caller to pick a combination rather than a job.
 
 2. **It has already caused a live failure.** The witness for reset step 7
-   (`tests/.../edsResetConfigStep.test.ts:13`) records incident 2 in its own
+   (`tests/features/eds/services/reset/edsResetConfigStep.test.ts:13`) records incident 2 in its own
    words: "the tokenProvider reaches HelixService — without it the CDN keeps
    serving a stale config.json (401, seen live 2026-08-15)". A HelixService
    built without the right credential compiled, ran, and left the CDN serving
