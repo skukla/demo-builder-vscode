@@ -23,6 +23,21 @@ const mockRegisterSite = jest.fn();
 const mockUpdateSiteConfig = jest.fn();
 const mockDeleteSiteConfig = jest.fn();
 
+// `createSetupServices` now takes its GitHub clients from `getGitHubServices`
+// (ADR-015 / D-2 — the cache holds the token-validation result). That builder
+// calls `getLogger()`, which throws unless the logger is initialised. Same mock
+// the other suites of getGitHubServices consumers use.
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        trace: jest.fn(),
+    }),
+    initializeLogger: jest.fn(),
+}));
+
 jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
         registerSite: mockRegisterSite,

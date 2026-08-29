@@ -24,7 +24,6 @@ import { executeEdsPipeline } from '../../services/edsPipeline';
 import { GitHubAppService } from '../../services/github/githubAppService';
 import { GitHubFileOperations } from '../../services/github/githubFileOperations';
 import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
-import { GitHubTokenService } from '../../services/github/githubTokenService';
 import { HelixService } from '../../services/helix/helixService';
 import {
     createPatchReport,
@@ -39,6 +38,7 @@ import { executePhaseCodeSync } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { ServiceLocator } from '@/core/di';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -54,7 +54,7 @@ export type { BlockLibraryOptions } from './storefrontSetupPhase2';
 
 /** Create all service dependencies for storefront setup */
 function createSetupServices(context: HandlerContext): SetupServices {
-    const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
+    const { tokenService: githubTokenService } = getGitHubServices(context);
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {

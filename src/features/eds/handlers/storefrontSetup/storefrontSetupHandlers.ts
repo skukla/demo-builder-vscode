@@ -20,8 +20,6 @@ import {
     createDaLiveServiceTokenProvider,
 } from '../../services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
-import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
-import { GitHubTokenService } from '../../services/github/githubTokenService';
 import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {
@@ -37,6 +35,7 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type {
     StorefrontSetupCompletePayload,
@@ -432,8 +431,10 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     }
 
     // Create service dependencies
-    const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-    const githubRepoOps = new GitHubRepoOperations(githubTokenService, ServiceLocator.getCommandExecutor(), context.logger);
+    // Both come from the cache — it builds the repo operations FROM the same
+    // token service, so building them here produced a second pair with a cold
+    // validation cache (D-2).
+    const { repoOperations: githubRepoOps } = getGitHubServices(context);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);

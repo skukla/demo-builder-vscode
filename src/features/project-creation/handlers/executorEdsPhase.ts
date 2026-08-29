@@ -16,6 +16,7 @@ import { ensureEdsContent } from '../services';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
@@ -145,12 +146,8 @@ async function fetchTemplateCommitSha(
     }
 
     try {
-        const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
-        const { GitHubFileOperations } = await import(
-            '@/features/eds/services/github/githubFileOperations'
-        );
-        const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-        const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
+        // Both from the cache; the two dynamic imports went with them.
+        const { fileOperations: githubFileOps } = getGitHubServices(context);
         const sha =
             (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main')) ??
             undefined;

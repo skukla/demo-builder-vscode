@@ -23,6 +23,21 @@ jest.setTimeout(5000);
 // Mocks - defined before imports
 // =============================================================================
 
+// `createSetupServices` now takes its GitHub clients from `getGitHubServices`
+// (ADR-015 / D-2 — the cache holds the token-validation result). That builder
+// calls `getLogger()`, which throws unless the logger is initialised. Same mock
+// the other suites of getGitHubServices consumers use.
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        trace: jest.fn(),
+    }),
+    initializeLogger: jest.fn(),
+}));
+
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),

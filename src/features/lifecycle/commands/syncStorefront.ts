@@ -30,7 +30,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
 import {
     PushRejectedError,
@@ -80,7 +80,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         });
         if (!commitMessage) return; // user cancelled
 
-        const tokenService = new GitHubTokenService(this.context.secrets, this.logger);
+        const { tokenService } = getGitHubServices({ context: this.context });
         const tokenEntry = await tokenService.getToken();
         const githubToken = tokenEntry?.token;
         const daLiveToken = await this.readDaLiveToken();

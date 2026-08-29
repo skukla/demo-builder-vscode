@@ -40,6 +40,7 @@ import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {
     probeConfigService,
@@ -54,7 +55,6 @@ import {
     probeGitHubCredential,
     type CredentialProbeResult,
 } from '@/features/eds/services/github/githubCredentialProbe';
-import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
@@ -280,7 +280,7 @@ export class DiagnosticsCommand {
     private async checkGitHubCredential(): Promise<CredentialProbeResult> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         const repoFullName = getEdsGithubRepo(project);
-        const tokenService = new GitHubTokenService(this.context.secrets, this.logger);
+        const { tokenService } = getGitHubServices({ context: this.context });
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 

@@ -96,6 +96,12 @@ const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
         'builds HandlerContext for the webview side — the handler dependency bundle itself',
     'src/features/ai/server/headlessHandlerContext.ts':
         'builds the same bundle for the MCP side, where there is no panel',
+    'src/features/eds/handlers/edsServiceCache.ts':
+        "the EDS feature's client builder — assembles the four GitHub clients and the " +
+        'DA.live auth service, CACHES them, and is used by 18 files. D-2 established it as ' +
+        'the settled answer for this feature: the policy question was already decided in ' +
+        'code. Its caching is load-bearing, not incidental — GitHubTokenService holds a ' +
+        'token-validation cache, so a file building its own re-validates against GitHub.',
 };
 
 function mayConstruct(f: string): boolean {

@@ -15,12 +15,12 @@ import * as vscode from 'vscode';
 import { DaLiveConfigService } from '../services/daLive/daLiveConfigService';
 import { DaLiveContentOperations } from '../services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
-import { GitHubTokenService } from '../services/github/githubTokenService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
     siteName: string;
@@ -40,7 +40,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         // wizard's picker — personal GitHub account + every org the user is
         // a member of. Replaces the legacy free-text input + the removed
         // demoBuilder.daLive.defaultOrg lookup.
-        const orgName = await pickNamespace(context, logger);
+        const orgName = await pickNamespace(context);
         if (!orgName) {
             return; // User cancelled or no namespace available
         }
@@ -267,9 +267,8 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
  */
 async function pickNamespace(
     context: vscode.ExtensionContext,
-    logger: ReturnType<typeof getLogger>,
 ): Promise<string | undefined> {
-    const tokenService = new GitHubTokenService(context.secrets, logger);
+    const { tokenService } = getGitHubServices({ context });
     const validation = await tokenService.validateToken();
     if (!validation.valid || !validation.user) {
         vscode.window.showErrorMessage(
