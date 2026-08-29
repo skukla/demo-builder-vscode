@@ -61,7 +61,7 @@ function catalogEnvVarNames(): string[] {
 }
 
 describe('SOP: credential env vars are registered as secrets', () => {
-    it('reads the catalog at all — the check is pointed somewhere real', () => {
+    it('CONTROL: reads the catalog at all — the check is pointed somewhere real', () => {
         // Positive control. A wrong path makes every assertion below pass over an
         // empty list, which is the "clean result from a check that never ran"
         // failure this repo keeps hitting.

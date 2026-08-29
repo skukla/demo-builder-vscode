@@ -73,7 +73,7 @@ function collectTestFiles(dir: string): string[] {
 
 describe('SOP: no config-leaf mocks', () => {
     describe('detector', () => {
-        it('flags a jest.mock of a config/*.json leaf', () => {
+        it('CONTROL: flags a jest.mock of a config/*.json leaf', () => {
             // Built by concatenation so this literal does not trip the scanner.
             const sample = "jest.mock('@/features/project-creation/config/" + "demo-packages.json', () => ({}));";
             expect(findConfigLeafMocks(sample)).toEqual([1]);

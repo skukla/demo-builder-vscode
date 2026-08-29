@@ -88,6 +88,16 @@ describe('SOP: Magic Timeout Constants', () => {
         return files;
     }
 
+    it('CONTROL: the scan sees a corpus worth scanning', () => {
+        // Every "should not have X" assertion below passes vacuously if the walk
+        // returns nothing — a broken path, a changed layout, a glob that stopped
+        // matching. A zero from a probe that cannot look is indistinguishable
+        // from a zero from a probe that found nothing, which is the failure this
+        // repo keeps paying for.
+        const src = path.resolve(__dirname, '../../src');
+        expect(getTypeScriptFiles(src).length).toBeGreaterThan(300);
+    });
+
     describe('FRONTEND_TIMEOUTS constants exist', () => {
         it('should have FRONTEND_TIMEOUTS file', () => {
             expect(fs.existsSync(frontendTimeoutsPath)).toBe(true);

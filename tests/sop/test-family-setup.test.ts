@@ -58,7 +58,7 @@ function familiesWithoutSharedSetup(): string[] {
 describe('split test families share their setup', () => {
     const current = familiesWithoutSharedSetup();
 
-    it('positive control: the detector sees families that DO share a testUtils', () => {
+    it('CONTROL: positive control: the detector sees families that DO share a testUtils', () => {
         // 59 .testUtils.* files exist; if this is 0 the detector is broken,
         // not the tree clean.
         const shared = execSync(`git ls-files 'tests/**/*.testUtils.*' | wc -l`, {

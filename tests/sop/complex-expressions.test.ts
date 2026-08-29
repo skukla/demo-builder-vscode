@@ -130,6 +130,14 @@ describe('SOP: Complex Expression Extraction', () => {
     }
 
     describe('Nested ternary operators', () => {
+
+        it('CONTROL: the scan sees a corpus worth scanning', () => {
+            // Without this, a walk that returned nothing would make every assertion
+            // below pass while checking no files at all.
+            const srcDir = path.resolve(__dirname, '../../src');
+            expect(getTypeScriptFiles(srcDir).length).toBeGreaterThan(300);
+        });
+
         it('should not have nested ternary operators in source files', () => {
             const files = getTypeScriptFiles(srcDir);
             const allViolations: { file: string; violations: { line: number; content: string }[] }[] = [];

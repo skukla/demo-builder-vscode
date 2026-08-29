@@ -74,7 +74,7 @@ describe('SOP: sleeps route through the shared sleep()', () => {
         expect(violations).toEqual([]);
     });
 
-    it('still recognises the idiom it is meant to catch', () => {
+    it('CONTROL: still recognises the idiom it is meant to catch', () => {
         // Without this, a broken regex would make the check above vacuously pass —
         // which is exactly how a guard rots into decoration.
         expect(BARE_SLEEP.test('await new Promise(resolve => setTimeout(resolve, 100));')).toBe(

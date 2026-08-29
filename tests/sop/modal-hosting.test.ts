@@ -69,7 +69,7 @@ function modalConsumers(): { file: string; name: string; source: string }[] {
 }
 
 describe('SOP: Modal hosting', () => {
-    it('finds the modal consumers at all — the check is pointed somewhere real', () => {
+    it('CONTROL: finds the modal consumers at all — the check is pointed somewhere real', () => {
         // A positive control. Without it, a broken path or a changed import
         // spelling makes every assertion below pass over an EMPTY list, which is
         // the exact "clean result from a check that never ran" this repo keeps

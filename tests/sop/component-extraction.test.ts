@@ -92,6 +92,13 @@ describe('SOP: Component Extraction', () => {
         return count;
     }
 
+    it('CONTROL: the scan sees a corpus worth scanning', () => {
+        // A walk that returned nothing would make every "should not have X"
+        // below pass while examining no files at all.
+        expect(getTypeScriptFiles(srcDir).length).toBeGreaterThan(300);
+        expect(getTypeScriptFiles(srcDir, ['.tsx']).length).toBeGreaterThan(100);
+    });
+
     describe('Abstract classes', () => {
         it('should not have abstract classes with fewer than 2 implementations', () => {
             const files = getTypeScriptFiles(srcDir);

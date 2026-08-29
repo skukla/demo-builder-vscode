@@ -68,7 +68,7 @@ describe('ADR-015: fetch boundary — logic never fetches', () => {
         (f) => /ServiceLocator\.get/.test(src.get(f) as string) && !mayFetch(f)
     );
 
-    it('positive control: the detector sees fetching where fetching is allowed', () => {
+    it('CONTROL: positive control: the detector sees fetching where fetching is allowed', () => {
         const boundaryFetches = FILES.filter(
             (f) => /ServiceLocator\.get/.test(src.get(f) as string) && mayFetch(f)
         );

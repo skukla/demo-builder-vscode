@@ -58,7 +58,7 @@ describe('credential-sink settings', () => {
 
     // Positive control: the reader actually finds settings. Without this, a
     // path or shape change would empty the map and pass every assertion below.
-    it('reads the contributed settings at all', () => {
+    it('CONTROL: reads the contributed settings at all', () => {
         expect(Object.keys(settings).length).toBeGreaterThan(10);
         expect(settings['demoBuilder.dataInstaller.apiBaseUrl']).toBeDefined();
     });

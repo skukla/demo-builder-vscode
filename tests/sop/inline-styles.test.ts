@@ -126,6 +126,14 @@ describe('SOP: Inline Styles', () => {
     }
 
     describe('Inline style documentation', () => {
+
+        it('CONTROL: the scan sees a corpus worth scanning', () => {
+            // Every count below is taken over this walk. If it returns nothing the
+            // counts are all zero and the suite passes while looking at no files.
+            const srcDir = path.resolve(__dirname, '../../src');
+            expect(getTsxFiles(srcDir).length).toBeGreaterThan(100);
+        });
+
         it('should have all files with inline styles documented', () => {
             const files = getTsxFiles(srcDir);
             const undocumented: string[] = [];

@@ -148,7 +148,7 @@ describe('SOP: no per-test timeout below the file budget', () => {
         expect(violations).toEqual([]);
     });
 
-    it('scans a corpus big enough to be worth scanning', () => {
+    it('CONTROL: scans a corpus big enough to be worth scanning', () => {
         // A walk that silently returned nothing would make the check above
         // vacuously pass — the failure mode this whole file exists to prevent.
         expect(files.length).toBeGreaterThan(500);
