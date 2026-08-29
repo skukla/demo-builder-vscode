@@ -1,7 +1,11 @@
 # ADR-018: CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism
 
-**Status:** PROPOSED 2026-08-29. §§1–2 are measured and ready to ratify; §7 names
-what is deliberately still open.
+**Status:** PROPOSED 2026-08-29.
+**Ratifying the RULES and authorising the MIGRATION are separate decisions.**
+All six sections are safe to adopt as rules for NEW code today. Migrating the
+8,044 existing lines under §§1–2 is NOT yet supported by the evidence — see
+"The evidence bar for MIGRATING existing CSS" below, which names four specific
+gaps found by auditing this ADR's own measurements before asking for it.
 **Scope:** every stylesheet under `src/`, and vendor CSS as the build injects it.
 **Relationship:** ADR-017 §6 rules WHICH BUNDLE a stylesheet reaches. This rules
 WHAT WINS once it is there.
@@ -140,6 +144,49 @@ one that has them.
 - **The 19 classes defined nowhere** (PL-20) — each is either a rule nobody wrote
   or dead markup, and only a person can say which.
 
+## The evidence bar for MIGRATING existing CSS (§§1–2)
+
+Ratifying these as RULES costs nothing: new CSS should not reach for
+`!important` to beat Spectrum regardless, and that is safe from today.
+
+**Migrating the 8,044 existing lines is a different authorisation**, and the
+measurement behind §§1–2 does not yet reach it. Four gaps, stated because "5 of 8
+surfaces identical" reads stronger than it is:
+
+1. **The clean result is concentrated where there was least to test.** The three
+   surfaces with real content — dashboard (72 elements), integrations (46),
+   dataInstaller (36) — ALL moved. The five that held still are the five with
+   almost nothing rendered: 8, 5, 15, 22 and 5 elements. So the honest figure is
+   23 of 154 content-bearing elements moved (15%), not 23 of 209.
+
+2. **467 declarations live in properties the fingerprint does not capture**, and
+   **108 of them carry `!important`** — box-shadow (34 important), border-radius
+   (64), z-index (10), plus transform, overflow, outline, gap and grid columns.
+   The `!important` sweep would touch declarations whose effect the snapshot
+   literally cannot see, and report a clean diff either way.
+
+3. **The 23 moved elements were never LOOKED at.** We know what changed
+   numerically — `font-size: 14px -> 18px`, `width: 762.969px -> 769.969px` — not
+   whether the result is right. Some are probably our intent finally applying;
+   some may be regressions. Nobody has judged which.
+
+4. **Only the default state, only the harness.** No hover, focus, disabled or
+   error states were captured — and those are exactly where Spectrum's own rules
+   concentrate. Nor was any of this confirmed in a real VS Code webview; the
+   harness supplies theme variables by hand.
+
+**Before the migration is authorised, all of:**
+
+- build the four missing surface fixtures, so "identical" means something on
+  every surface
+- extend the fingerprint to box-shadow, border-radius, z-index, transform,
+  overflow, outline and gap at minimum
+- capture interaction states (hover, focus, disabled, error)
+- re-run the before/after, and have a HUMAN look at every moved element
+- confirm the result in the Extension Development Host, not only the harness
+
+That is roughly a day of work, and it is phase 4's step 0 in PL-21 either way.
+
 ## Consequences
 
 - §1 is a **global precedence change**. It moves 23 elements across 3 of 8
@@ -171,6 +218,15 @@ verified the same day.
 
 ## Ratification needed
 
-§§1–2 are measured and I recommend accepting them. §§3–4 are already enforced.
-§§5–6 are judgement calls stated with reasons and are the ones most worth
-arguing with.
+**As rules for new code — all six, recommended.** §§3–4 are already enforced and
+carry no risk. §§5–6 are judgement calls stated with their reasons, and are the
+ones most worth arguing with. §§1–2 as rules cost nothing: nobody should be
+writing `!important` to beat Spectrum in new CSS whatever we do about the old.
+
+**As authorisation to migrate existing CSS — NOT YET.** The evidence bar above
+lists what is missing, and the honest summary is that the measurement was run on
+a corpus where the surfaces that stayed clean are the surfaces with the least
+rendered, and against a property list that cannot see 108 of the `!important`
+declarations the sweep would delete.
+
+Roughly a day of work closes it, and that work is phase 4's step 0 regardless.
