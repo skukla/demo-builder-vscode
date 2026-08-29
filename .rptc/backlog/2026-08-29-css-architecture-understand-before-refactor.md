@@ -60,49 +60,56 @@ changes hundreds of rules with no mechanism that can tell you which one broke.
 An ADR written before that is fixed would be an opinion, and a refactor before it
 is a gamble.
 
-## Phase 1 — SPIKE: ANSWERED 2026-08-29, it is possible
+## Phase 1 — VERIFIED 2026-08-29. The path is clean.
 
-The owner asked the right question — *"is such a visual regression strategy even
-possible for us?"* — against an item whose phase 1 had assumed the answer.
-It was spiked rather than assumed. Full writeup:
-`.rptc/research/webview-visual-testing/research.md`; the working harness is
-beside it.
+Spiked, then fully verified at the owner's request ("can you do all of the CSS
+verification so we have a clean path when we get there?"). Every open question is
+closed. Full writeup + working harness:
+`.rptc/research/webview-visual-testing/`.
 
-**Proven, by running it:**
+| Question | Answer |
+|---|---|
+| Do all eight surfaces mount outside VS Code? | **Yes, all eight** |
+| Is the sidebar a holdout (it acquires the API itself)? | **No** — it mounts too |
+| Must the Provider's theme scope be reproduced by hand? | **No** — mounting the real entry produces it |
+| Is the signal stable? | **Identical across runs**, 6/6 values, no tolerance needed |
+| How slow? | ~2s per surface, dominated by a removable fixed sleep |
+| Can it detect the bug class we care about? | **Yes, demonstrated** |
 
-- a webview bundle loads in a plain browser with no VS Code involved, given a
-  root div, a stubbed `acquireVsCodeApi` and the `--vscode-*` theme variables
-- the CSS pipeline works standalone — 35 style tags, 1,392 rules, because
-  `cssInjectionPlugin` makes the CSS travel inside the JS
-- the Data Installer surface MOUNTED and rendered real UI, then issued real
-  requests the harness answered with canned data — so states are drivable
-- our own rules resolve: `.page-container-padded` computed to `padding: 0 32px`
+**The detection proof.** Probing inside the dashboard's themed subtree after
+today's fixes: `text-orange-600` → `rgb(232,116,0)`, `text-orange-700` →
+`rgb(249,137,23)`, `text-red-500` → `rgb(238,67,49)`, and a nonexistent class →
+inherited `rgb(235,235,235)`. The same probes returned inherited grey against the
+PRE-FIX bundle, so the instrument distinguishes broken from fixed.
 
-**And the trap that would have wrecked a naive attempt.** `.text-orange-600`
-probed as inherited grey, which reads as "the utility is broken". It is not:
-`--spectrum-global-color-orange-600` is defined in all eight bundles but scoped
-to Spectrum's theme selector, and the harness probed outside the Provider's
-subtree. A naive harness **silently under-styles**, so a diff against it reports
-regressions that do not exist — or invites a "fix" that breaks the real thing.
-That mechanism is a strong candidate for the owner's "things we could never make
-render properly".
+**Two traps, both found the hard way and both written down:**
 
-**So the harness needs a positive control of its own**, asserting that a known
-Spectrum variable resolves and a known rule applies, and ABORTING rather than
-reporting if it does not. A visual check that cannot prove it is faithful is
-worse than none.
+1. The handshake reply must not be immediate. `setTimeout(..., 0)` lands in the
+   gap before the client registers its listener, and the app waits forever. 30ms
+   works. This produced a wrong intermediate conclusion — "six of eight cannot
+   mount" — when in truth none had been answered.
+2. The Spectrum theme scope exists only once the app has MOUNTED. An un-mounted
+   harness resolves no Spectrum variable, so every themed rule reads as broken.
+   **A harness that fails to mount reports a screenful of false regressions**, so
+   the instrument must assert it is faithful and ABORT rather than report.
 
-**Narrowed deliverable:** computed-style assertions FIRST — Playwright reads
-resolved values, which is far steadier than pixel diffing and would have caught
-all three CSS bugs found on 2026-08-29. Screenshot diffing is a separate, later
-question, unattempted.
+**Approach chosen: computed-style assertions, not screenshots.** Exact string
+equality, no pixel tolerance, no font drift — and it already catches the failures
+this codebase actually has. Screenshot diffing stays unattempted and unneeded.
 
-**Still open:** whether all eight surfaces mount as readily (only `dataInstaller`
-was tried; the sidebar is the likeliest holdout since it acquires the API itself
-— PL-19); whether the Provider's theme scope is best reproduced statically or by
-rendering the real entry inside a real `Provider`; run-to-run stability; and
-whether this belongs in CI at all, since Playwright is not currently a
-dependency.
+**The one real cost — and the recommendation.** No browser driver is installed
+(no Playwright or Puppeteer, direct or transitive), and CI deliberately runs
+`npm ci --ignore-scripts` so the webview bundles are never built there. So CI
+would need both a driver (~100MB, cacheable) and a build step.
+
+Recommend **a release-cut instrument, not a CI gate** — same shape as
+`codebase-sweep` and `npm run eds:drift`. That buys the safety net with none of
+the CI cost, and CI can follow if it earns its place.
+
+**Remaining work is building it, not discovering whether it is possible.** Four
+surfaces (configure, sidebar, aiOverview, dashboard's deeper states) render empty
+under the trivial init payload used for the spike; they need realistic fixtures.
+That is a known, bounded task.
 
 ## Phase 2 — AUDIT: how does this CSS actually work?
 
@@ -166,3 +173,7 @@ layout failures, which no static check can see. Only phase 1 addresses those.
   architecture, and it is worth reading before phase 2.
 - `docs/development/ui-patterns.md` — currently teaches `!important` as the
   technique; phase 2 decides whether that stands.
+
+## Shipped so far
+
+- 2026-08-29  Phase 1 VERIFIED 2026-08-29 at the owner's request. All 8 webview bundles mount outside VS Code; Spectrum theme resolves in all 8; signal identical across runs (6/6); detection proven against pre-fix vs post-fix bundles. Two traps recorded: the handshake reply must be ~30ms not 0ms (a 0ms reply lands before the client's listener and everything hangs), and the Spectrum theme scope only exists once mounted (so an unmounted harness reports false regressions and must abort). Chose computed-style assertions over screenshots. Cost: no browser driver installed and CI skips the build, so recommend a release-cut instrument rather than a CI gate. Remaining work is building it.
