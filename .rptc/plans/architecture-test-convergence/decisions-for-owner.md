@@ -306,22 +306,94 @@ way to hold them to it.
 checkGitHubAppHandler (github); publishKeyRegistrar, projectDeletionService
 (daLive).
 
-### The decided shape
+### NOT factories — the owner asked whether they belong here, and they do not
 
-    helixForCodeSync(githubTokenService, logger?)          //  5 sites (2 + the 3 over-passers)
-    helixForPublishing(daLiveTokenProvider, logger?)       //  2 sites
-    helixForSetupPipeline(github, daLive, logger?)         //  7 sites
+ADR-015 names six element kinds — Command, Handler, MCP tool, Service,
+`create...Deps`, Accessor. Factory is not one, and the only element permitted to
+construct outside `extension.ts` is a deps builder, defined as assembling **a
+feature's service bundle** — not one object configured for one job. A factory
+beside `HelixService` would also contain `new HelixService(` in a file that is
+neither `extension.ts` nor `*Deps`, so it would ADD a construction-ledger row.
+`helixService.ts` is in that ledger nowhere today.
 
-All parameters REQUIRED. Nothing left optional, so the omission behind the
-2026-08-15 stale-config 401 stops compiling. `helixForStatus` is not written —
-still zero users.
+So: no factories. That part stands.
 
-Note one nuance found while tracing, which does NOT change the shape but explains
-why the 401 was silent rather than loud: `getDaLiveToken` falls back to an
-activation-registered default provider when none is passed. A site omitting the
-credential therefore works whenever that default happens to be registered, and
-fails when it is not. That is precisely the kind of works-until-it-doesn't the
-required parameters remove.
+### THE TRACE ABOVE WAS WRONG, and the incident's own witness test caught it
+
+Attempted 2026-08-29 as a discriminated credential set — `job: 'codeSync' |
+'publishing' | 'pipeline'`, each carrying exactly its credentials, all required.
+Built it, converted all 14 sites plus 9 test constructions, both typecheckers
+green. Three tests failed. One was this, in `edsResetConfigStep.test.ts`:
+
+    hands the tokenProvider to HelixService — without it the CDN serves a stale config
+
+That test exists BECAUSE of the 2026-08-15 incident. It failed on the change
+meant to prevent that incident, which is the strongest signal available that the
+change was wrong.
+
+**The mistake:** the method→credential map was built with a regex looking for
+`this.auth` / `getDaLiveToken` in each method body. `previewCode`, `purgeCacheAll`
+and `getResourceStatus` reach the DA.live credential through a PRIVATE hop —
+`this.tryAdminBearer()` → `auth.tryAdminBearer()` → `getDaLiveToken()` — which
+the regex never followed. So all three were classified GitHub-only when they are
+not.
+
+**What follows:** the "three over-passers" were not over-passing.
+`edsResetService:100`, `edsResetConfigStep:62` and `authoringExperienceFlip:155`
+pass a DA.live provider because `previewCode` genuinely uses it.
+
+### The real shape of the variance — and why a closed job set cannot express it
+
+`tryAdminBearer` swallows its own failure, deliberately, and the comment says
+why: *"Operations that never needed a DA.live token before must keep working
+without one on an UNPROTECTED site; only a protected site actually requires it,
+and there the 401 message says so."*
+
+So whether a code-sync call needs the DA.live credential is a property of THE
+SITE AT RUNTIME — is it access-protected? — not of the job being performed. A
+`job: 'codeSync'` that FORBIDS a DA.live provider would have broken code-sync on
+every protected site: the 401, the stale config.json, the 2026-08-15 incident,
+recreated by the type meant to prevent it.
+
+### What is actually true, and the two latent hazards it exposes
+
+| Credential | Required by |
+|---|---|
+| GitHub | every Admin-API call: previewCode, purgeCacheAll, getResourceStatus, preview/publishPage |
+| DA.live | all content ops (publish/list/unpublish, admin keys) AND any call above **on a protected site** |
+
+Two sites pass GitHub only and call `previewCode`:
+
+    configSyncService:170        previewCode(owner, repo, '/config.json')
+    checkGitHubAppHandler:111    previewCode(...)
+
+On an unprotected site they work. On a protected one they are the 2026-08-15
+failure waiting to happen — the same call, the same missing header, the same
+silent stale config. **Neither is currently in any ledger, because nothing
+expresses this requirement.**
+
+### Recommendation — needs the owner, and the question has changed
+
+The safe shape is two jobs, not three, with DA.live required wherever the Admin
+API is touched:
+
+    { job: 'content';  daLive }            // publish/list/unpublish, admin keys — no GitHub needed
+    { job: 'adminApi'; github; daLive }    // everything else; daLive required because
+                                           // site protection is not statically knowable
+
+That closes both latent hazards by construction. **Its cost is real and is the
+decision:** `configSyncService` and `checkGitHubAppHandler` would have to obtain a
+DA.live token provider they do not have today. That is not a mechanical edit —
+it means finding the right provider at each of those call sites.
+
+The alternative is to keep DA.live optional for admin-API jobs, document why, and
+accept that the two sites stay latent.
+
+**What I got wrong here, recorded because it is the useful part:** a regex over
+method bodies is not a call graph. It missed one private hop and produced a
+confident, wrong classification that survived a full build and both typecheckers.
+The only thing that caught it was a test written by someone who had already been
+burned by this exact failure.
 
 ---
 
