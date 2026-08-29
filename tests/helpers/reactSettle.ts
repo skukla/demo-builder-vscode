@@ -39,6 +39,26 @@
  * So the rule is: **drain before you query, not after.** `press` and `change`
  * below bake that in — they settle after the interaction, which is the same
  * moment as "before whatever the spec asserts next".
+ *
+ * THE COROLLARY, and it is the one that costs the most to rediscover: **no
+ * `await` may sit between the render (or interaction) and its settle.** An await
+ * yields, and the response resolves in that yield — after the render, before the
+ * settle can start, out of reach of anything the spec does.
+ *
+ * RepoSelectionInline is the case that proved it. Its render helper was a
+ * dynamic `import(...).then(render)`, so awaiting the import opened exactly that
+ * gap. Six settle placements were tried and every one left the count at exactly
+ * 20 — because none of them could run early enough. Tracing the order showed it
+ * plainly:
+ *
+ *     before-render -> request -> RESOLVED -> after-render
+ *
+ * The response had already committed before the helper returned. Hoisting the
+ * import into `beforeAll` closed the gap and took the suite to zero, with all
+ * 116 tests unchanged.
+ *
+ * If a suite resists every settle placement, look for an await between the
+ * render and the settle before looking anywhere else.
  */
 
 import { act, fireEvent } from '@testing-library/react';

@@ -25,7 +25,6 @@
     "tests/features/data-installer/ui/components/ExportDatapackModal.test.tsx",
     "tests/features/data-installer/ui/views/DatapackCatalogView.test.tsx",
     "tests/features/eds/services/configJsonFatalFailure.test.ts",
-    "tests/features/eds/ui/steps/RepoSelectionInline.test.tsx",
     "tests/features/prerequisites/ui/prerequisiteRenderers.test.tsx",
     "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.later-and-variants.test.tsx",
     "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.test.tsx",

@@ -20,6 +20,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+import { settle } from '../../../../helpers/reactSettle';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState, EDSConfig } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -84,23 +86,48 @@ describe('RepoSelectionInline', () => {
         mockRequest.mockResolvedValue({ success: true });
     });
 
-    const renderInline = (
+    /**
+     * The component, imported ONCE rather than per render.
+     *
+     * This used to be a dynamic `import(...).then(render)` inside renderInline,
+     * and that await boundary was the whole reason this suite could not be
+     * silenced. Tracing it: the component's mount effect fires check-github-app,
+     * whose response resolves on a microtask; awaiting the import then YIELDS,
+     * and the resolution ran in that gap — after render, before any settle could
+     * start. Nothing placed inside the test could reach it, which is why six
+     * different settle placements all left the count at exactly 20.
+     *
+     * Importing in beforeAll removes the gap: render and settle now sit in one
+     * uninterrupted stretch, so the response commits inside act().
+     *
+     * (A static top-level import would work too — jest.mock is hoisted above it
+     * either way. beforeAll is the smaller change and keeps the mock preamble
+     * reading as it did.)
+     */
+    let RepoSelectionInline: typeof import('@/features/eds/ui/steps/RepoSelectionInline').RepoSelectionInline;
+
+    beforeAll(async () => {
+        ({ RepoSelectionInline } = await import('@/features/eds/ui/steps/RepoSelectionInline'));
+    });
+
+    const renderInline = async (
         state: WizardState,
-        phase: 'repository' | 'code-sync' = 'repository',
-    ) =>
-        import('@/features/eds/ui/steps/RepoSelectionInline').then(({ RepoSelectionInline }) => {
-            render(
-                <TestWrapper>
-                    <RepoSelectionInline
-                        state={state}
-                        updateState={mockUpdateState}
-                        phase={phase}
-                        onRepoValidChange={mockOnRepoValidChange}
-                        onCodeSyncValidChange={mockOnCodeSyncValidChange}
-                    />
-                </TestWrapper>,
-            );
-        });
+        phase: 'repository' | 'code-sync' = 'repository'
+    ) => {
+        render(
+            <TestWrapper>
+                <RepoSelectionInline
+                    state={state}
+                    updateState={mockUpdateState}
+                    phase={phase}
+                    onRepoValidChange={mockOnRepoValidChange}
+                    onCodeSyncValidChange={mockOnCodeSyncValidChange}
+                />
+            </TestWrapper>
+        );
+        // No await between render and this: see the note on the import above.
+        await settle();
+    };
 
     describe('repository phase', () => {
         it('should render the new-repo form in new mode', async () => {
@@ -122,7 +149,12 @@ describe('RepoSelectionInline', () => {
         it('should show the "New" action to switch to create mode (existing)', async () => {
             const state = createDefaultState({ repoMode: 'existing' });
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+                {
+                    id: 'repo-1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                    htmlUrl: 'https://github.com/testuser/my-repo',
+                },
             ];
             await renderInline(state, 'repository');
             expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
@@ -147,11 +179,21 @@ describe('RepoSelectionInline', () => {
         it('should report repo VALID when an existing repo is selected', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+                selectedRepo: {
+                    id: 'repo-1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                    htmlUrl: 'https://github.com/testuser/my-repo',
+                },
             });
             // Pre-populate cache so isLoading starts false.
             (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
-                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+                {
+                    id: 'repo-1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                    htmlUrl: 'https://github.com/testuser/my-repo',
+                },
             ];
 
             await renderInline(state, 'repository');
@@ -179,7 +221,12 @@ describe('RepoSelectionInline', () => {
         it('should report code-sync VALID for an existing repo (gate deferred)', async () => {
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+                selectedRepo: {
+                    id: 'repo-1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                    htmlUrl: 'https://github.com/testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
@@ -194,7 +241,12 @@ describe('RepoSelectionInline', () => {
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-repo',
-                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+                createdRepo: {
+                    owner: 'testuser',
+                    name: 'my-repo',
+                    url: '',
+                    fullName: 'testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
@@ -212,7 +264,12 @@ describe('RepoSelectionInline', () => {
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-repo',
-                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+                createdRepo: {
+                    owner: 'testuser',
+                    name: 'my-repo',
+                    url: '',
+                    fullName: 'testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
@@ -228,7 +285,12 @@ describe('RepoSelectionInline', () => {
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-repo',
-                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+                createdRepo: {
+                    owner: 'testuser',
+                    name: 'my-repo',
+                    url: '',
+                    fullName: 'testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
@@ -245,7 +307,12 @@ describe('RepoSelectionInline', () => {
             const state = createDefaultState({
                 repoMode: 'new',
                 repoName: 'my-repo',
-                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+                createdRepo: {
+                    owner: 'testuser',
+                    name: 'my-repo',
+                    url: '',
+                    fullName: 'testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
@@ -257,9 +324,7 @@ describe('RepoSelectionInline', () => {
             // DEFINITIVE shape behind it (inner code.status 404). The user is
             // told when it will actually be checked instead.
             await waitFor(() => {
-                expect(
-                    screen.getByText(/Code Sync is checked after setup/i)
-                ).toBeInTheDocument();
+                expect(screen.getByText(/Code Sync is checked after setup/i)).toBeInTheDocument();
             });
             expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
         });
@@ -295,7 +360,12 @@ describe('RepoSelectionInline', () => {
             const selected = () =>
                 createDefaultState({
                     repoMode: 'existing',
-                    selectedRepo: { id: 'r1', name: 'kukla-bodea', fullName: 'skukla/kukla-bodea', htmlUrl: 'https://github.com/skukla/kukla-bodea' },
+                    selectedRepo: {
+                        id: 'r1',
+                        name: 'kukla-bodea',
+                        fullName: 'skukla/kukla-bodea',
+                        htmlUrl: 'https://github.com/skukla/kukla-bodea',
+                    },
                 });
 
             it('never asks Adobe a question Adobe cannot answer', async () => {
@@ -306,10 +376,7 @@ describe('RepoSelectionInline', () => {
                 await waitFor(() => {
                     expect(screen.getByText(/checked after setup/i)).toBeInTheDocument();
                 });
-                expect(mockRequest).not.toHaveBeenCalledWith(
-                    'check-github-app',
-                    expect.anything(),
-                );
+                expect(mockRequest).not.toHaveBeenCalledWith('check-github-app', expect.anything());
             });
 
             it('says why, instead of telling them to install what they have', async () => {
@@ -322,12 +389,10 @@ describe('RepoSelectionInline', () => {
                 // the site is a Configuration Service record created during
                 // setup, and storefront content does not create one.
                 await waitFor(() => {
-                    expect(
-                        screen.getByText(/doesn't have a site for/i),
-                    ).toBeInTheDocument();
+                    expect(screen.getByText(/doesn't have a site for/i)).toBeInTheDocument();
                 });
                 expect(
-                    screen.queryByText(/Install the AEM Code Sync App/i),
+                    screen.queryByText(/Install the AEM Code Sync App/i)
                 ).not.toBeInTheDocument();
             });
 
@@ -350,7 +415,12 @@ describe('RepoSelectionInline', () => {
             mockRequest.mockResolvedValue({ success: true, isInstalled: false, codeStatus: 404 });
             const state = createDefaultState({
                 repoMode: 'existing',
-                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+                selectedRepo: {
+                    id: 'r1',
+                    name: 'my-repo',
+                    fullName: 'testuser/my-repo',
+                    htmlUrl: 'https://github.com/testuser/my-repo',
+                },
             });
 
             await renderInline(state, 'code-sync');
