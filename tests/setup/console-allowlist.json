@@ -13,7 +13,6 @@
     "tests/core/state/stateManager-getCurrentProject-diskPointer.test.ts",
     "tests/core/state/stateManager-getCurrentProject-reload.test.ts",
     "tests/core/state/stateManager-utilities.test.ts",
-    "tests/core/ui/components/ErrorBoundary.test.tsx",
     "tests/core/ui/components/WebviewApp.test.tsx",
     "tests/features/ai/mcpServer-config.test.ts",
     "tests/features/components/ui/hooks/useComponentConfig.test.ts",
@@ -41,17 +40,13 @@
     "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.later-and-variants.test.tsx",
     "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.test.tsx",
     "tests/features/project-creation/ui/steps/IntegrationsStep.test.tsx",
-    "tests/features/project-creation/ui/wizard/WizardContainer-errorBoundary.test.tsx",
-    "tests/features/project-creation/ui/wizard/WizardContainer-hiddenPackage.test.tsx",
     "tests/features/project-creation/ui/wizard/WizardContainer-import.test.tsx",
     "tests/features/project-creation/ui/wizard/WizardContainer-initialization.test.tsx",
     "tests/features/project-creation/ui/wizard/WizardContainer-layout.test.tsx",
     "tests/features/project-creation/ui/wizard/WizardContainer-navigation.test.tsx",
     "tests/features/project-creation/ui/wizard/WizardContainer-state.test.tsx",
-    "tests/features/project-creation/ui/wizard/hooks/useWizardState-editSeeding.test.tsx",
     "tests/features/project-creation/ui/steps/ProjectCreationStep.test.tsx",
     "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts",
-    "tests/features/projects-dashboard/ui/ProjectsDashboard.test.tsx",
     "tests/webview-ui/shared/hooks/useDebouncedLoading.test.ts"
   ]
 }

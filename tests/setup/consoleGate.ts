@@ -17,10 +17,15 @@
  * Deliberate design notes:
  * - Allowlisting is per SUITE FILE, not per test: the ledger stays readable
  *   and a cleaned suite leaves in one line.
- * - A suite that installs its OWN console spy (`jest.spyOn(console, 'error')`)
- *   replaces this wrapper for that test, so the gate sees nothing and stays
- *   silent — deliberate: a suite asserting on its own logging is already
- *   accounting for its output.
+ * - A suite that installs its OWN console spy replaces this wrapper, so the gate
+ *   sees nothing — deliberate: a suite accounting for its own logging has
+ *   absorbed it. BUT THE HOOK MATTERS, and the original wording did not say so:
+ *   this gate wraps console in a `beforeEach` registered by the setup file,
+ *   which therefore runs FIRST. A spy installed in `beforeEach` replaces the
+ *   gate's wrapper and is invisible to it, as intended — but one installed in
+ *   `beforeAll` runs EARLIER, so the gate wraps the SPY and still counts every
+ *   call. Two error-boundary suites suppressed console for years and were on the
+ *   allowlist anyway; moving the spy to `beforeEach` was the whole fix.
  * - `console.log` is NOT gated. Tests legitimately print (the file-size suite
  *   prints its own report); it is errors and warnings that indicate a defect.
  */
