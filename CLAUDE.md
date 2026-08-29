@@ -287,6 +287,32 @@ across all four. When the thing under test is HOW a collaborator is invoked — 
 field, a scoped id, which client is passed — assert the ARGUMENT, or drive the real
 collaborator with `jest.requireActual`. Asserting the outcome tests the mock.
 
+**A shape written where the compiler cannot read it WILL be invented.** This is
+not a discipline problem and cannot be fixed by another rule: "never write a
+shape you have not read" is already in `mcp-tool-authoring`,
+`webview-test-authoring` AND ADR-016 rule 3 — three documents — and on
+2026-08-29 five shapes were invented anyway, in one file, in one afternoon. Each
+was caught only when a surface visibly crashed: a keyed-object registry passed
+where an array was expected, an invented `statusUpdate` payload that emptied two
+whole screens, the wrong message envelope (`data` where the client hands over
+`payload`), a manifest missing the `path` its loader adds, and a response shaped
+`{type:'response', requestId}` when the client matches `isResponse` +
+`responseToId` — so no request was answered for hours while everything looked
+fine.
+
+Every one of those had an exported type in `src/types/` that would have failed to
+compile. The fix is mechanical, not motivational: **put the literal in a
+typechecked file and type it to the real interface.** `tsconfig.test.json`
+includes `tests/**`, so a shape living in `tests/helpers/` is read by
+`npm run typecheck:tests` in CI. `tests/helpers/webviewFixtures.ts` is the
+worked example, and both failures above were replayed against it as controls —
+tsc rejects each one by name.
+
+The corollary is the checkable part: **an object literal in a `.mjs`, a `.json`,
+or a template string has opted out of the only check that works.** If a shape
+crosses a boundary — a message, a payload, a fixture, a config — and it is not
+in a typed file, that is the smell, whatever the comment above it claims.
+
 **Read before you Edit.** `grep`/`awk`/`sed`/`git show` do not satisfy Edit's precondition —
 Read the file, or the range, before editing anything you located with a shell command. The
 format-on-edit hook can also invalidate your own read, so when an edit fails on a string you
