@@ -187,6 +187,13 @@ describe('Executor - Mesh Component Loading', () => {
         jest.clearAllMocks();
         getComponentByIdCalls = [];
         mockContext = createMockContext();
+        // The registry now arrives ON the context (ADR-015): the handler stopped
+        // constructing one. Reuse this suite's existing module-mock fake rather
+        // than inventing a second — the mock stays, it just gets handed in now.
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
 
         // Default mock implementations for mesh services
         mockDeployMeshComponent.mockResolvedValue({ success: true });

@@ -17,6 +17,15 @@ export { createMockLogger };
 export function createPrereqHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     const baseContext: HandlerContext = {
         prereqManager: {} as HandlerContext['prereqManager'],
+        /**
+         * `shared.ts` reads the registry off the context now instead of building
+         * one behind a dynamic import (ADR-015). The suites here already
+         * module-mock ComponentRegistryManager; this hands that same fake in.
+         */
+        componentRegistry: new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )(),
         authManager: {} as HandlerContext['authManager'],
         errorLogger: {} as HandlerContext['errorLogger'],
         progressUnifier: {} as HandlerContext['progressUnifier'],

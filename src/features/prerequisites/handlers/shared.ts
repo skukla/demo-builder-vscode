@@ -8,6 +8,7 @@
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { ComponentSelection } from '@/types/components';
 import { isTimeout, toAppError } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
@@ -296,10 +297,7 @@ export async function getNodeVersionMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import(
-            '../../components/services/ComponentRegistryManager'
-        );
-        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+        const registryManager = componentRegistryFrom(context);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getNodeVersionToComponentMapping(...params);
 
@@ -340,10 +338,7 @@ export async function getNodeVersionIdMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import(
-            '../../components/services/ComponentRegistryManager'
-        );
-        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+        const registryManager = componentRegistryFrom(context);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getNodeVersionToComponentIdMapping(...params);
 
@@ -373,10 +368,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
     }
 
     try {
-        const { ComponentRegistryManager } = await import(
-            '../../components/services/ComponentRegistryManager'
-        );
-        const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+        const registryManager = componentRegistryFrom(context);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getRequiredNodeVersions(...params);
         // Sort versions in ascending order (18, 20, 24) for predictable installation order

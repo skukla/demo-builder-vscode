@@ -20,6 +20,7 @@ import {
     toDependencyData,
     withEnvVarKeys,
 } from '../services/componentTransforms';
+import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import {
     ComponentRegistryManager,
     DependencyResolver,
@@ -37,7 +38,7 @@ import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/w
  * Create a ComponentRegistryManager for the current extension context
  */
 function createRegistryManager(context: HandlerContext): ComponentRegistryManager {
-    return new ComponentRegistryManager(context.context.extensionPath);
+    return componentRegistryFrom(context);
 }
 
 /**

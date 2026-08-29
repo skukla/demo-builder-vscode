@@ -43,6 +43,16 @@ export function createMockHandlerContext(
         logger: mockLogger,
         debugLogger: {} as jest.Mocked<HandlerContext['debugLogger']>,
         /**
+         * Handlers read this through `componentRegistryFrom`, which THROWS when
+         * it is absent — deliberately, so a wiring bug names itself instead of
+         * quietly building a second registry. Suites that assert on registry
+         * contents override it; the rest just need it present.
+         */
+        componentRegistry: {
+            getComponentRegistry: jest.fn().mockResolvedValue({ components: {} }),
+            loadRegistry: jest.fn().mockResolvedValue({ components: {} }),
+        } as unknown as HandlerContext['componentRegistry'],
+        /**
          * `globalState` gets METHODS for the same reason `stateManager` does
          * (see the note below). Production reads it through `showOneTimeTip`,
          * so any handler that shows a one-time tip failed here with

@@ -29,6 +29,10 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     beforeEach(() => {
         mockContext = createComponentHandlerContext();
         mockRegistryManager = createMockRegistryManager();
+        // The handler reads the registry off the context now (ADR-015); it no
+        // longer constructs one, so hand this suite's fake in directly. The
+        // constructor mock below stays for DependencyResolver's sake.
+        mockContext.componentRegistry = mockRegistryManager;
         mockDependencyResolver = createMockDependencyResolver();
 
         // Mock the ComponentRegistryManager constructor

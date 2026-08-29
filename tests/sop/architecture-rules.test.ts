@@ -76,8 +76,30 @@ function mayFetch(f: string): boolean {
  * an intention as though it were a mechanism. Tightening the predicate to the
  * ADR's own words is what makes that sentence true.
  */
+/**
+ * Composition points recognised by ROLE, not by filename.
+ *
+ * ADR-015 permits construction in `extension.ts` and a feature's
+ * `create...Deps` builder. The `*Deps.ts` regex below finds builders that happen
+ * to be NAMED that way; these two do the same job under older names. Both
+ * assemble `HandlerContext` — the dependency bundle every handler receives, and
+ * which already carries `prereqManager`, `errorLogger` and `progressUnifier`.
+ * They are the composition point handlers are meant to pull services FROM.
+ *
+ * Listed explicitly rather than renamed: a file renamed to satisfy a regex is
+ * gaming the check, and the next composition point would be misnamed again. An
+ * allowlist with reasons is the same discipline as the exemption ledger — the
+ * difference is that these are RULINGS, not debt, so they do not need to shrink.
+ */
+const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
+    'src/commands/handlerContextFactory.ts':
+        'builds HandlerContext for the webview side — the handler dependency bundle itself',
+    'src/features/ai/server/headlessHandlerContext.ts':
+        'builds the same bundle for the MCP side, where there is no panel',
+};
+
 function mayConstruct(f: string): boolean {
-    return f === 'src/extension.ts' || /[Dd]eps\.tsx?$/.test(f);
+    return f === 'src/extension.ts' || /[Dd]eps\.tsx?$/.test(f) || f in COMPOSITION_POINTS;
 }
 
 describe('ADR-015: fetch boundary — logic never fetches', () => {

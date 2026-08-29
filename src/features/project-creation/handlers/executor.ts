@@ -46,6 +46,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
@@ -278,10 +279,7 @@ export async function executeProjectCreation(
 
     progressTracker('Loading Components', 20, 'Preparing component definitions...');
 
-    const { ComponentRegistryManager } = await import(
-        '@/features/components/services/ComponentRegistryManager'
-    );
-    const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+    const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();
 
     // Create unified setup context (eliminates parameter threading)

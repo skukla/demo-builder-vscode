@@ -166,6 +166,10 @@ describe('Executor - EDS Standard Flow', () => {
         componentDefinitionIds = [];
         clonedComponents.clear();
         mockContext = createMockContext();
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
     });
 
     describe('EDS Frontend Inclusion in componentDefinitions', () => {
@@ -238,6 +242,10 @@ describe('Executor - EDS Standard Flow', () => {
             });
 
             mockContext = createMockContext();
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -272,6 +280,10 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -315,6 +327,10 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
             // Capture saved projects to verify metadata
             mockContext.stateManager = {
                 getCurrentProject: jest.fn().mockResolvedValue(null),
@@ -387,6 +403,10 @@ describe('Executor - EDS Standard Flow', () => {
             });
 
             mockContext = createMockContext();
+        mockContext.componentRegistry = new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );

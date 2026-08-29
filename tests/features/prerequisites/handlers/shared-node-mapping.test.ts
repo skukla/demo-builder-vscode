@@ -104,11 +104,19 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
         );
     });
 
-    it('should create ComponentRegistryManager with extension path', async () => {
+    it('uses the registry from the context rather than building its own', async () => {
+        // REPLACES a test that asserted `new ComponentRegistryManager(extensionPath)`
+        // was called with the right path. That pinned the construction ADR-015
+        // forbids at this layer; the registry now arrives on HandlerContext,
+        // built once at the composition point. Asserting the handler READS the
+        // one it was handed is the contract that survived the change.
         mockGetNodeVersionToComponentMapping.mockResolvedValue({});
 
+        const handedIn = {
+            getNodeVersionToComponentMapping: jest.fn().mockResolvedValue({ '22': 'react-app' }),
+        };
         const context = createPrereqHandlerContext({
-            context: { extensionPath: '/custom/path' } as HandlerContext['context'],
+            componentRegistry: handedIn as unknown as HandlerContext['componentRegistry'],
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -120,9 +128,9 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
 
         await getNodeVersionMapping(context);
 
-        const { ComponentRegistryManager } = await import(
-            '@/features/components/services/ComponentRegistryManager'
-        );
-        expect(ComponentRegistryManager).toHaveBeenCalledWith('/custom/path');
+        // The registry it was HANDED is the one it used — not a second one it
+        // built for itself, which is what the old test allowed.
+        expect(handedIn.getNodeVersionToComponentMapping).toHaveBeenCalled();
+        expect(await getNodeVersionMapping(context)).toEqual({ '22': 'react-app' });
     });
 });

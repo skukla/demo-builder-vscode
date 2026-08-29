@@ -28,6 +28,7 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, getStepLogger } from '@/core/logging';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 
@@ -53,6 +54,7 @@ export function createPanelHandlerContext(parts: PanelContextParts): HandlerCont
 
     return {
         prereqManager: new PrerequisitesManager(parts.context.extensionPath, logger, ServiceLocator.getCommandExecutor()),
+        componentRegistry: new ComponentRegistryManager(parts.context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: new ErrorLogger(parts.context),
         progressUnifier: new ProgressUnifier(logger),
