@@ -1,3 +1,8 @@
+---
+name: webview-visual-baseline
+description: Prove a CSS or webview change is behaviour-preserving by fingerprinting every element's computed styles before and after. Use before ANY CSS refactor (ADR-018 / PL-21), or when a change must be shown to move exactly the elements it intended and nothing else.
+---
+
 # Webview visual snapshot — how to run it
 
 The safety net PL-21 phase 4 is gated on, and the instrument that measured
@@ -21,8 +26,11 @@ failures actually are.
 | `harness.html` | loads one bundle standalone, stubs the VS Code API, serves fixtures |
 | `build-fixtures.mjs` | generates `fixtures.json` from REAL artifacts |
 | `capture.js` | the fingerprint + faithfulness control + diff, run in the browser |
-| `research.md` | how the approach was proven |
-| `important-is-not-necessary.md` | the `!important` / cascade-layer finding |
+
+The two writeups stayed in `.rptc/research/webview-visual-testing/` — that tier is
+for findings, this one is for the instrument: `research.md` (how the approach was
+proven) and `important-is-not-necessary.md` (the `!important` / cascade-layer
+finding). ADR-018 cites both.
 
 ## Procedure
 
@@ -33,8 +41,8 @@ npm run compile
 # 2. Stage bundles, styles, harness and fixtures together
 mkdir -p /tmp/vr && cp dist/webview/*-bundle.js /tmp/vr/
 cp src/core/ui/styles/reset.css src/core/ui/styles/tokens.css /tmp/vr/
-cp .rptc/research/webview-visual-testing/harness.html /tmp/vr/h.html
-node .rptc/research/webview-visual-testing/build-fixtures.mjs /tmp/vr
+cp .claude/skills/webview-visual-baseline/harness.html /tmp/vr/h.html
+node .claude/skills/webview-visual-baseline/build-fixtures.mjs /tmp/vr
 
 # 3. Serve where the browser can reach it
 cd /tmp/vr && python3 -m http.server 8899

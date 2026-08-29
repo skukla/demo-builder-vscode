@@ -14,10 +14,19 @@
  * the wrong total (the same-scope control rule).
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const HARNESS = new URL('.', import.meta.url).pathname;
-const sh = (cmd) => execSync(cmd, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
+// Anchored to the repo root, the way program-metrics.mjs already was.
+//
+// WHY, in blood: every command below is a `git ls-files 'src/…'` or a `grep -r
+// src`, and execSync inherits the caller's cwd. Run from this harness directory
+// — the obvious place to run it from — they match NOTHING, every universe comes
+// back empty, and the script cheerfully writes a ledger with zero rows over the
+// real one. That happened on 2026-08-29: 998 rows to 5, no error, exit 0.
+const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+const sh = (cmd) => execSync(cmd, { encoding: 'utf8', cwd: ROOT, maxBuffer: 64 * 1024 * 1024 }).trim();
 const lines = (cmd) => { const out = sh(cmd + ' || true'); return out ? out.split('\n') : []; };
 
 const srcFiles = lines(`git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`);
@@ -31,7 +40,7 @@ const add = (unit, pattern, verdict, evidence) => rows.push({ unit, pattern, ver
 
 // ── P1: di-style — every src file ───────────────────────────────────────────
 for (const f of srcFiles) {
-    const s = readFileSync(f, 'utf8');
+    const s = readFileSync(join(ROOT, f), 'utf8');
     const locator = (s.match(/ServiceLocator\.get/g) ?? []).length;
     const construct = (s.match(/new [A-Z][A-Za-z]*(Service|Manager|Client)\(/g) ?? []).length;
     if (f === 'src/extension.ts') {
@@ -49,7 +58,7 @@ for (const f of srcFiles) {
 
 // ── P2: response envelope — tool registrar files (already test-enforced) ────
 for (const f of registrarFiles) {
-    const s = readFileSync(f, 'utf8');
+    const s = readFileSync(join(ROOT, f), 'utf8');
     if (f.endsWith('mcpToolResult.ts')) {
         add(f, 'envelope', 'exempt', 'the builder itself');
         continue;
@@ -61,7 +70,7 @@ for (const f of registrarFiles) {
 
 // ── P3: handler-map shape — files exporting handler maps ────────────────────
 for (const f of handlerFiles) {
-    const s = readFileSync(f, 'utf8');
+    const s = readFileSync(join(ROOT, f), 'utf8');
     const hasMap = /defineHandlers\(|:\s*MessageHandler/.test(s);
     const adHocSwitch = /switch\s*\(\s*(message|type|messageType)\b/.test(s);
     if (!hasMap) add(f, 'handler-map', 'deviating', 'handler file without typed MessageHandler exports');
@@ -71,7 +80,7 @@ for (const f of handlerFiles) {
 
 // ── P4: UI-in-services — service/manager classes showing VS Code UI ─────────
 for (const f of serviceFiles) {
-    const s = readFileSync(f, 'utf8');
+    const s = readFileSync(join(ROOT, f), 'utf8');
     const uiCalls = (s.match(/vscode\.window\.show\w+/g) ?? []).length;
     add(f, 'ui-in-services', uiCalls === 0 ? 'conforming' : 'deviating',
         uiCalls === 0 ? 'no VS Code UI from the service layer'
@@ -88,5 +97,21 @@ const ledger = {
     },
     rows,
 };
-writeFileSync(`${HARNESS}/ledger.json`, JSON.stringify(ledger, null, 1));
+// A regenerated ledger should grow or hold steady as the codebase does. A
+// COLLAPSE means the universes came back empty — a bad cwd, a moved directory, a
+// grep that stopped matching — and writing it would destroy the audit rather
+// than update it. Refuse, and say what to do.
+const LEDGER = `${HARNESS}/ledger.json`;
+if (existsSync(LEDGER)) {
+    const previous = JSON.parse(readFileSync(LEDGER, 'utf8')).rows?.length ?? 0;
+    if (previous > 0 && rows.length < previous * 0.9) {
+        console.error(
+            `REFUSED: would shrink the ledger ${previous} -> ${rows.length} rows.\n` +
+                `That is a collapsed universe, not a smaller codebase. Run from the repo\n` +
+                `root and check the grep/ls-files scopes above. Pass --force to override.`,
+        );
+        if (!process.argv.includes('--force')) process.exit(1);
+    }
+}
+writeFileSync(LEDGER, JSON.stringify(ledger, null, 1));
 console.log(`ledger written: ${rows.length} rows across ${Object.keys(ledger.universes).length} patterns`);

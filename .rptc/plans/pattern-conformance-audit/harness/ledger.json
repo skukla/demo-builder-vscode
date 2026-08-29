@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-08-28T15:44:42.152Z",
+ "generatedAt": "2026-08-29T15:15:17.845Z",
  "universes": {
   "di-style": "src_files",
   "envelope": "tool_registrar_files",
@@ -53,7 +53,7 @@
    "unit": "src/commands/handlerContextFactory.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/commands/manageSiteAccess.ts",
@@ -280,6 +280,12 @@
   {
    "unit": "src/core/shell/commandExecutor.ts",
    "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/core/shell/commandExecutorDeps.ts",
+   "pattern": "di-style",
    "verdict": "conforming",
    "evidence": "style=construction (2 site(s))"
   },
@@ -316,8 +322,8 @@
   {
    "unit": "src/core/shell/fileWatcher.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/core/shell/index.ts",
@@ -1432,8 +1438,8 @@
   {
    "unit": "src/features/ai/server/applyUpdatesTool.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
   },
   {
    "unit": "src/features/ai/server/authTools.ts",
@@ -1535,7 +1541,7 @@
    "unit": "src/features/ai/server/edsResetTool.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "evidence": "style=locator (3 site(s))"
   },
   {
    "unit": "src/features/ai/server/edsToolGuards.ts",
@@ -1559,7 +1565,7 @@
    "unit": "src/features/ai/server/headlessHandlerContext.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/features/ai/server/inExtensionMcpServer.ts",
@@ -1580,7 +1586,19 @@
    "evidence": "acquires no services"
   },
   {
+   "unit": "src/features/ai/server/mcpProxyReconnect.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
    "unit": "src/features/ai/server/mcpProxyRetry.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/ai/server/mcpProxySession.ts",
    "pattern": "di-style",
    "verdict": "exempt",
    "evidence": "acquires no services"
@@ -2188,14 +2206,14 @@
   {
    "unit": "src/features/components/services/componentDependencies.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/components/services/componentInstallation.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/components/services/componentManager.ts",
@@ -2315,7 +2333,7 @@
    "unit": "src/features/dashboard/commands/configure.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 2 direct construction(s)"
+   "evidence": "MIXES styles: 3 locator reach-in(s) + 2 direct construction(s)"
   },
   {
    "unit": "src/features/dashboard/commands/configureEnvLoader.ts",
@@ -2344,8 +2362,8 @@
   {
    "unit": "src/features/dashboard/handlers/aiHandlers.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
   },
   {
    "unit": "src/features/dashboard/handlers/aiPromptHandlers.ts",
@@ -2357,7 +2375,7 @@
    "unit": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "evidence": "style=locator (7 site(s))"
   },
   {
    "unit": "src/features/dashboard/handlers/appBuilderComponentSecrets.ts",
@@ -2368,8 +2386,8 @@
   {
    "unit": "src/features/dashboard/handlers/appManagementInstallHandlers.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (1 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 3 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/features/dashboard/handlers/configureHandlers.ts",
@@ -2392,8 +2410,8 @@
   {
    "unit": "src/features/dashboard/handlers/destinationHandlers.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
   },
   {
    "unit": "src/features/dashboard/handlers/edsContentHandlers.ts",
@@ -2434,14 +2452,14 @@
   {
    "unit": "src/features/dashboard/handlers/projectManagementHandlers.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (4 site(s))"
   },
   {
    "unit": "src/features/dashboard/handlers/statusHandlers.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "evidence": "style=locator (5 site(s))"
   },
   {
    "unit": "src/features/dashboard/services/dashboardStatusService.ts",
@@ -2494,8 +2512,8 @@
   {
    "unit": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/dashboard/services/onOpenChecks/types.ts",
@@ -3178,8 +3196,8 @@
   {
    "unit": "src/features/eds/handlers/edsServiceCache.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (3 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
   },
   {
    "unit": "src/features/eds/handlers/index.ts",
@@ -3208,8 +3226,8 @@
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (4 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 4 direct construction(s)"
   },
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts",
@@ -3238,8 +3256,8 @@
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (4 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 4 direct construction(s)"
   },
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupTypes.ts",
@@ -3538,8 +3556,8 @@
   {
    "unit": "src/features/eds/services/github/githubRepoOperations.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/eds/services/github/githubTokenService.ts",
@@ -3712,8 +3730,8 @@
   {
    "unit": "src/features/eds/services/reset/edsResetMeshHelper.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/eds/services/reset/edsResetParams.ts",
@@ -3736,8 +3754,8 @@
   {
    "unit": "src/features/eds/services/reset/edsResetUI.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/eds/services/resourceCleanupHelpers.ts",
@@ -3814,8 +3832,8 @@
   {
    "unit": "src/features/eds/services/toolManager.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 4 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/eds/services/types.ts",
@@ -3867,6 +3885,12 @@
   },
   {
    "unit": "src/features/eds/ui/helpers/codeSyncInstallContent.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/eds/ui/helpers/edsConfigDefaults.ts",
    "pattern": "di-style",
    "verdict": "exempt",
    "evidence": "acquires no services"
@@ -3952,14 +3976,14 @@
   {
    "unit": "src/features/lifecycle/services/projectResetService.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/mesh/commands/deployMesh.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (3 site(s))"
   },
   {
    "unit": "src/features/mesh/handlers/checkHandler.ts",
@@ -3976,8 +4000,8 @@
   {
    "unit": "src/features/mesh/handlers/deployHandler.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (3 site(s))"
   },
   {
    "unit": "src/features/mesh/handlers/index.ts",
@@ -4006,8 +4030,8 @@
   {
    "unit": "src/features/mesh/services/deployMeshHeadless.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/mesh/services/deployMeshWithFeedback.ts",
@@ -4030,8 +4054,8 @@
   {
    "unit": "src/features/mesh/services/meshDeploymentVerifier.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/mesh/services/meshEndpoint.ts",
@@ -4042,8 +4066,8 @@
   {
    "unit": "src/features/mesh/services/meshRedeploy.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/mesh/services/meshStatusResolver.ts",
@@ -4060,14 +4084,14 @@
   {
    "unit": "src/features/mesh/services/meshVerifier.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/mesh/services/stalenessDetector.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (2 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/mesh/services/types.ts",
@@ -4109,7 +4133,7 @@
    "unit": "src/features/prerequisites/handlers/installHandler.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "evidence": "style=locator (3 site(s))"
   },
   {
    "unit": "src/features/prerequisites/handlers/prerequisitesHandlers.ts",
@@ -4126,8 +4150,8 @@
   {
    "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/prerequisites/services/installation/InstallStepBuilder.ts",
@@ -4162,8 +4186,8 @@
   {
    "unit": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (3 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/prerequisites/services/versioning/NodeVersionParser.ts",
@@ -4174,8 +4198,8 @@
   {
    "unit": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/prerequisites/services/versioning/index.ts",
@@ -4223,7 +4247,7 @@
    "unit": "src/features/project-creation/commands/createProject.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "evidence": "MIXES styles: 3 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts",
@@ -4258,14 +4282,14 @@
   {
    "unit": "src/features/project-creation/handlers/executor.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (1 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (3 site(s))"
+   "evidence": "style=locator (5 site(s))"
   },
   {
    "unit": "src/features/project-creation/handlers/executorComponentLoading.ts",
@@ -4289,7 +4313,7 @@
    "unit": "src/features/project-creation/handlers/executorMeshPhase.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "evidence": "style=locator (3 site(s))"
   },
   {
    "unit": "src/features/project-creation/handlers/executorPreflight.ts",
@@ -4330,8 +4354,8 @@
   {
    "unit": "src/features/project-creation/helpers/envFileGenerator.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/project-creation/helpers/formatters.ts",
@@ -4378,8 +4402,8 @@
   {
    "unit": "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/project-creation/services/aiBundle/aiToolingGate.ts",
@@ -4432,8 +4456,8 @@
   {
    "unit": "src/features/project-creation/services/appBuilderComponentRunnerDeps.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 4 locator reach-in(s) + 2 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
   },
   {
    "unit": "src/features/project-creation/services/appBuilderComponentSelection.ts",
@@ -4480,8 +4504,8 @@
   {
    "unit": "src/features/project-creation/services/meshSetupService.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (4 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/project-creation/services/projectFinalizationService.ts",
@@ -4882,8 +4906,8 @@
   {
    "unit": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=locator (6 site(s))"
   },
   {
    "unit": "src/features/projects-dashboard/handlers/index.ts",
@@ -5062,8 +5086,8 @@
   {
    "unit": "src/features/updates/commands/checkUpdates.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (3 site(s))"
+   "verdict": "deviating",
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
   },
   {
    "unit": "src/features/updates/commands/updateExecutor.ts",
@@ -5092,8 +5116,8 @@
   {
    "unit": "src/features/updates/services/adobeMcpUpdateCore.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=locator (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/updates/services/collaboratorGate.ts",
@@ -5110,8 +5134,8 @@
   {
    "unit": "src/features/updates/services/componentUpdater.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 3 locator reach-in(s) + 2 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
   },
   {
    "unit": "src/features/updates/services/extensionUpdater.ts",
@@ -5140,8 +5164,8 @@
   {
    "unit": "src/features/updates/services/templateSyncService.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 3 locator reach-in(s) + 2 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=construction (2 site(s))"
   },
   {
    "unit": "src/features/updates/services/templateUpdateChecker.ts",

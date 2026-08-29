@@ -213,7 +213,8 @@ Everything asserted above was measured, not reasoned:
 - 1,866 `!important` declarations stripped and the surfaces re-snapshotted
 - the whole experiment reverted; working tree verified clean
 
-Writeups: `.rptc/research/webview-visual-testing/`, in particular
+Instrument: the `webview-visual-baseline` skill. Writeups stay in
+`.rptc/research/webview-visual-testing/`, in particular
 `important-is-not-necessary.md`. The snapshot instrument itself is PL-21 phase 1,
 verified the same day.
 

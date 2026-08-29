@@ -447,15 +447,15 @@ const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
     },
     {
         id: 'webview-visual-baseline',
-        kind: 'rptc-instrument',
+        kind: 'skill',
         cadence: 'on-demand',
         resultKind: 'report',
-        path: '.rptc/research/webview-visual-testing/build-fixtures.mjs',
+        path: '.claude/skills/webview-visual-baseline/build-fixtures.mjs',
         what: 'computed-style fingerprint of every webview — the baseline that makes an ADR-018 CSS change provable',
-        runs: 'node .rptc/research/webview-visual-testing/build-fixtures.mjs <outdir>',
+        runs: 'node .claude/skills/webview-visual-baseline/build-fixtures.mjs <outdir>',
         writes: true,
         unwiredReason:
-            'takes an output directory and drives a browser; PL-21 is its consumer, and it needs a durable home before that starts',
+            'takes an output directory and drives a browser — a person reads the diff. Moved out of .rptc/research on 2026-08-29: PL-21 runs it repeatedly, and a research folder is where findings live, not instruments',
     },
 ];
 
@@ -476,8 +476,6 @@ export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
         'one-shot MCP elicitation probe; answered in AI-7',
     '.rptc/research/consent-in-the-chat/probe-capabilities.mjs':
         'one-shot MCP capability probe; answered in AI-7',
-    '.rptc/research/webview-visual-testing/capture.js':
-        'browser-side half of webview-visual-baseline, injected by it rather than run directly',
     '.rptc/complete/frontend-architecture-cleanup/update-imports.sh':
         'migration script for completed work',
     '.rptc/complete/frontend-architecture-cleanup/update-test-imports.sh':

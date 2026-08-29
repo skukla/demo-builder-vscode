@@ -65,7 +65,8 @@ is a gamble.
 Spiked, then fully verified at the owner's request ("can you do all of the CSS
 verification so we have a clean path when we get there?"). Every open question is
 closed. Full writeup + working harness:
-`.rptc/research/webview-visual-testing/`.
+the `webview-visual-baseline` skill (instrument) and
+`.rptc/research/webview-visual-testing/` (the writeups).
 
 | Question | Answer |
 |---|---|
