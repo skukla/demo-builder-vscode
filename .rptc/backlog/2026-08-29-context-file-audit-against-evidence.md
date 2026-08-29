@@ -169,3 +169,7 @@ seams and the bump discipline).
   whether the agent surface actually works; the natural place to run step 3
 - `tests/templates/ai-bundle-coherence.test.ts` — the static half of bundle
   checking, which will need updating if sections are removed
+
+## Shipped so far
+
+- 2026-08-29  docs(backlog): AI-8 — audit our context files against the evidence, not the fashion (`0772b2a03`)

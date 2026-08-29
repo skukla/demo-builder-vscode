@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Give StateManager and Project fixtures a shared builder, the way HandlerContext has one
@@ -172,3 +172,14 @@ numbers are the whole measure; nothing here needs a subjective judgement.
 
 `node .claude/skills/test-divergence-scan/scan.mjs tests`, at release cuts. The
 table above is the baseline a later run is compared against.
+
+## Shipped so far
+
+- 2026-08-28  refactor(tests): type the builders that stand for real interfaces (`969e91786`)
+- 2026-08-28  refactor(tests): type the mesh-result builders — and make them USE the canonical (`7b324e19d`)
+- 2026-08-28  docs: correct the "47 wrong fixtures" claim — 186 more exist and none are defects (`abd4217fa`)
+- 2026-08-28  refactor(tests): canonical Project fixture — the consolidation queue is DONE (`6ad910167`)
+- 2026-08-28  refactor(tests): context builders get honest, suite-specific names (`16e38b901`)
+- 2026-08-28  refactor(tests): handler contexts delegate to the canonical — and one must not (`cc3d77168`)
+- 2026-08-28  refactor(tests): canonical ExtensionContext fake; the ratchet caught me twice (`2a0415207`)
+- 2026-08-28  refactor(tests): canonical command-executor fake — nine definitions become one (`ea5d2b9ee`)

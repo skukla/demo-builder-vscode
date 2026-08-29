@@ -104,3 +104,7 @@ validateSelection
 
 Reproduce with `bash .claude/skills/ai-coverage-scan/scan.sh --list`, or see the
 scan in context via `npm run sweep`.
+
+## Shipped so far
+
+- 2026-08-29  docs(backlog): AI-1r — is the 34% agent-surface gap real? (`c55a8d44b`)

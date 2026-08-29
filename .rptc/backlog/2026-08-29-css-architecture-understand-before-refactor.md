@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 title: CSS has no architecture and no safety net — understand it before changing any of it
 ---
 
@@ -331,3 +331,13 @@ layout failures, which no static check can see. Only phase 1 addresses those.
 - 2026-08-29  ADR-018 written (PROPOSED) and its central claims MEASURED by implementing the layer fix, snapshotting all 8 surfaces before/after, stripping all 1866 !important from custom-spectrum.css, re-snapshotting, then reverting everything. Layer fix alone: 5/8 surfaces identical, 23 of ~209 elements moved, each naming its element and property. Layer fix + 1866 !important removed: 7/8 surfaces IDENTICAL, 7 elements moved. That is the proof that the !importants were compensating for the layer wrapper. Not shipped — the change belongs in phase 4 under the snapshot with each move adjudicated. Also: §6 REVERSES my earlier recommendation (utilities go in @layer overrides, not unlayered) because the measurement changed the answer.
 - 2026-08-29  SELF-AUDIT of ADR-018 before ratification. §§1-2 are safe to ratify as RULES but the evidence does NOT yet authorise migrating existing CSS. Four gaps recorded in the ADR: (1) '5 of 8 surfaces identical' is weaker than it reads — the 3 content-bearing surfaces ALL moved, the 5 that held still have 5-22 elements each, so the honest figure is 23 of 154 content elements, 15%; (2) 467 declarations sit in properties the fingerprint does not capture and 108 of those carry !important (box-shadow 34, border-radius 64, z-index 10) so the sweep would touch things the snapshot cannot see; (3) the 23 moved elements were never visually reviewed; (4) no interaction states captured and never confirmed in a real VS Code host. Bar before migration: fixtures, extended property list, interaction states, human review of every move, Dev Host confirmation. ~1 day.
 - 2026-08-29  FIXTURES BUILT 2026-08-29. All 8 surfaces now render real content: 209 -> 455 elements, none under 30, 8/8 stable. Property list extended 16 -> 23 (box-shadow, border-radius, z-index, transform, overflow, outline, gap), closing the audit gap where 467 declarations incl 108 !important were invisible. Four fixture shapes were INVENTED first and each broke something visibly — registry keyed-vs-array crashed configure, an invented statusUpdate payload crashed dashboard AND integrations to an empty root, the wrong message envelope (data vs payload) crashed them again, and the manifest's missing path/status left projectsList loading forever. Biggest find: WebviewClient matches responses on isResponse+responseToId, not type:'response'+requestId — so NO request had ever been answered in any earlier run; surfaces rendered from init alone and it looked fine. Also: the CSS animation freeze could not beat .animate-pulse because that is !important inside @layer theme and the harness rule is unlayered — the instrument bitten by ADR-018 §1 itself; fixed with the Web Animations API.
+- 2026-08-29  fix(fixtures): make the compiler read the shapes, because the rule alone does not (`a9a7381d0`)
+- 2026-08-29  docs(css): ratify ADR-018 for new code, and build the fixtures its audit demanded (`5afb5a21a`)
+- 2026-08-29  docs(css): audit ADR-018's own evidence before asking for ratification (`b13234633`)
+- 2026-08-29  docs(css): ADR-018 — written, and its central claim MEASURED by doing it (`71dcf0c21`)
+- 2026-08-29  docs(css): !important is NOT necessary here — it compensates for our own layer wrapper (`69b5e9e02`)
+- 2026-08-29  docs(css): rewrite PL-21 phase 4 as an operating procedure, not a gated maybe (`0dd89b778`)
+- 2026-08-29  docs(css): the baseline/change/re-snapshot workflow WORKS — proven on all eight surfaces (`b8de84875`)
+- 2026-08-29  docs(css): correct the driver claim — we DO have Playwright, and it ran the spike (`e846b2a5a`)
+- 2026-08-29  docs(css): PL-21 phase 1 VERIFIED — all eight surfaces, stable, and it detects the bug (`7367668b8`)
+- 2026-08-29  docs(css): file PL-20/PL-21, and SPIKE the question the owner asked (`6183e20c4`)
