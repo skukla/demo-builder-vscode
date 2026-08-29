@@ -111,6 +111,18 @@ This repeats the CONTRACT tier's rule for external systems because the same
 failure occurs internally: an invented shape typechecks and fails only when a
 real accessor touches it.
 
+**3b. A domain fixture is CONTENT over a canonical SHAPE, not a re-implementation
+of it.** Added 2026-08-28 after the owner asked, of eleven freshly-typed
+builders, "are all of these the canonical pattern?" They were not. Annotating
+`createDeployedStatusResponse(): CommandResult` made the compiler check the
+shape, and left the function still assembling `{ code, stdout, stderr, duration }`
+by hand — a twelfth private copy of a shape the suite already has a builder for.
+They now read `return createSuccessResult(JSON.stringify({ meshStatus: 'deployed' }))`:
+the mesh-specific part is the content, and the shape comes from one place.
+
+Typing a fixture and canonicalising it are two separate obligations, and the
+first can be satisfied while the second silently is not.
+
 **4. One builder name, one definition.** Enforced by
 `tests/sop/builder-uniqueness.test.ts`, whose ledger of 14 duplicated names may
 only shrink. It does not force consolidation; it stops the count growing while
