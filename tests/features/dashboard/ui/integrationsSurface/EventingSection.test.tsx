@@ -34,7 +34,9 @@ jest.mock('@spectrum-icons/workflow/Refresh', () => ({
     default: () => <span />,
 }));
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+
+import { press, settle } from '../../../../helpers/reactSettle';
 import React from 'react';
 import { EventingSection } from '@/features/dashboard/ui/integrationsSurface/EventingSection';
 
@@ -43,8 +45,11 @@ describe('EventingSection', () => {
         jest.clearAllMocks();
     });
 
-    it('loads NOTHING until expanded — a screen open costs no Console round-trip', () => {
+    it('loads NOTHING until expanded — a screen open costs no Console round-trip', async () => {
         render(<EventingSection />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
         expect(mockRequest).not.toHaveBeenCalled();
     });
 
@@ -55,8 +60,11 @@ describe('EventingSection', () => {
             registrations: [{ id: 'reg-1', name: 'erp-journal' }],
         });
         render(<EventingSection />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
-        fireEvent.click(screen.getByText('Event providers'));
+        await press(screen.getByText('Event providers'));
 
         await waitFor(() => expect(screen.getByText('ERP events')).toBeTruthy());
         expect(mockRequest).toHaveBeenCalledWith('getEventEntities', {});
@@ -71,8 +79,11 @@ describe('EventingSection', () => {
             reason: 'This project has no Adobe Console context yet.',
         });
         render(<EventingSection />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
-        fireEvent.click(screen.getByText('Event providers'));
+        await press(screen.getByText('Event providers'));
 
         await waitFor(() =>
             expect(screen.getByText('This project has no Adobe Console context yet.')).toBeTruthy()
@@ -89,10 +100,13 @@ describe('EventingSection', () => {
             .mockResolvedValueOnce({ deleted: true })
             .mockResolvedValueOnce({ available: true, providers: [], registrations: [] });
         render(<EventingSection />);
-        fireEvent.click(screen.getByText('Event providers'));
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
+        await press(screen.getByText('Event providers'));
         await waitFor(() => expect(screen.getByText('ERP events')).toBeTruthy());
 
-        fireEvent.click(screen.getByLabelText('Delete provider ERP events'));
+        await press(screen.getByLabelText('Delete provider ERP events'));
 
         await waitFor(() =>
             expect(mockRequest).toHaveBeenCalledWith('deleteEventEntity', {
@@ -114,10 +128,13 @@ describe('EventingSection', () => {
             })
             .mockResolvedValueOnce({ deleted: false, cancelled: true });
         render(<EventingSection />);
-        fireEvent.click(screen.getByText('Event providers'));
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
+        await press(screen.getByText('Event providers'));
         await waitFor(() => expect(screen.getByText('ERP events')).toBeTruthy());
 
-        fireEvent.click(screen.getByLabelText('Delete provider ERP events'));
+        await press(screen.getByLabelText('Delete provider ERP events'));
 
         await waitFor(() => expect(mockRequest).toHaveBeenCalledTimes(2));
         expect(screen.getByText('ERP events')).toBeTruthy();

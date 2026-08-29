@@ -112,7 +112,12 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
         );
 
         expect(rows.map((r) => [r.id, r.kind, r.name, r.sourceLine])).toEqual([
-            ['firefly-image-gen', 'blank', 'Firefly Image Gen', 'Custom integration · built with AI'],
+            [
+                'firefly-image-gen',
+                'blank',
+                'Firefly Image Gen',
+                'Custom integration · built with AI',
+            ],
             ['acme-widget', 'custom', 'widget', 'Custom integration · acme/widget'],
         ]);
     });

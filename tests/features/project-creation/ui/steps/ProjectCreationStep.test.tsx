@@ -1,4 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
+
+import { settle } from '../../../../helpers/reactSettle';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
@@ -85,6 +87,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete and transition to creating phase
             await waitFor(() => {
@@ -102,6 +107,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             await waitFor(() => {
                 expect(screen.getByText('Creating project directory')).toBeInTheDocument();
@@ -118,13 +126,16 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             await waitFor(() => {
                 expect(screen.getByText('Setting up project structure...')).toBeInTheDocument();
             });
         });
 
-        it('should display progress percentage', () => {
+        it('should display progress percentage', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -134,6 +145,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component uses LoadingDisplay which always shows progressbar (even in checking phase)
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -149,6 +163,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component doesn't display logs in UI - shows current operation only
             await waitFor(() => {
@@ -156,7 +173,7 @@ describe('ProjectCreationStep', () => {
             });
         });
 
-        it('should show loading indicator during creation', () => {
+        it('should show loading indicator during creation', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -166,6 +183,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Loading spinner or progress indicator should be visible (even in checking phase)
             const progressBar = screen.getByRole('progressbar');
@@ -184,6 +204,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks and phase transition to 'completed'
             await waitFor(() => {
@@ -201,6 +224,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component doesn't show percentages - shows success message instead
             await waitFor(() => {
@@ -218,6 +244,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component shows "View Projects" button for navigating to projects list
             await waitFor(() => {
@@ -235,6 +264,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Success state only shows "View Projects" button, no "Close" button
             await waitFor(() => {
@@ -254,6 +286,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for button to appear after async transitions
             await waitFor(() => {
@@ -271,7 +306,7 @@ describe('ProjectCreationStep', () => {
     });
 
     describe('Error Conditions - Creation Failure', () => {
-        it('should display error message when creation fails', () => {
+        it('should display error message when creation fails', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -281,13 +316,16 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component shows failure heading and error field (not message or logs)
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();
             expect(screen.getByText('npm ERR! network timeout')).toBeInTheDocument();
         });
 
-        it('should display Back button on error', () => {
+        it('should display Back button on error', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -297,12 +335,15 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Error state shows Back button
             expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
         });
 
-        it('should show error icon or status', () => {
+        it('should show error icon or status', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -312,6 +353,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Error state should be visually distinct
             expect(screen.getByText(/npm ERR!/i)).toBeInTheDocument();
@@ -320,7 +364,7 @@ describe('ProjectCreationStep', () => {
         // Renamed 2026-08-28: this shared the previous test's title while
         // asserting something else entirely (the failure message, not the
         // Back button) — jest/no-identical-title caught it.
-        it('should display the failure message on error', () => {
+        it('should display the failure message on error', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -330,13 +374,16 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             expect(screen.getByText(/Failed/i)).toBeInTheDocument();
         });
     });
 
     describe('Edge Cases - Progress Updates', () => {
-        it('should show loading state regardless of progress value', () => {
+        it('should show loading state regardless of progress value', async () => {
             const initialState = {
                 ...baseState,
                 creationProgress: {
@@ -354,6 +401,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Component shows loading indicator (even in checking phase)
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -378,6 +428,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete
             await waitFor(() => {
@@ -403,6 +456,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete
             await waitFor(() => {
@@ -428,6 +484,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete
             await waitFor(() => {
@@ -452,6 +511,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete
             await waitFor(() => {
@@ -479,6 +541,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete
             await waitFor(() => {
@@ -488,7 +553,7 @@ describe('ProjectCreationStep', () => {
     });
 
     describe('Accessibility', () => {
-        it('should have progress indicator with proper role', () => {
+        it('should have progress indicator with proper role', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -498,6 +563,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // LoadingDisplay provides progressbar role (even in checking phase)
             const progressBar = screen.getByRole('progressbar');
@@ -514,6 +582,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete and transition to completed phase
             await waitFor(() => {
@@ -521,7 +592,7 @@ describe('ProjectCreationStep', () => {
             });
         });
 
-        it('should have clear error state for screen readers', () => {
+        it('should have clear error state for screen readers', async () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -531,6 +602,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Error message should be clear
             expect(screen.getByText(/Failed/i)).toBeInTheDocument();
@@ -546,6 +620,9 @@ describe('ProjectCreationStep', () => {
                     />
                 </Provider>
             );
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             // Wait for async pre-flight checks to complete and transition to completed phase
             await waitFor(() => {

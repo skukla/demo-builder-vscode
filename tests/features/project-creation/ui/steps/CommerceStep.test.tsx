@@ -103,11 +103,7 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: (props: { setCanProceed: (v: boolean) => void }) => (
         <div data-testid="adobe-auth-panel">
-            <button
-                type="button"
-                data-testid="auth-noop"
-                onClick={() => props.setCanProceed(true)}
-            >
+            <button type="button" data-testid="auth-noop" onClick={() => props.setCanProceed(true)}>
                 ping setCanProceed
             </button>
         </div>
@@ -141,10 +137,10 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             const label = screen
                 .getAllByText('Commerce')
                 .find(
-                    el =>
+                    (el) =>
                         (el.compareDocumentPosition(list as Node) &
                             Node.DOCUMENT_POSITION_FOLLOWING) !==
-                        0,
+                        0
                 );
             expect(label).toBeTruthy();
         });
@@ -182,9 +178,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
 
         it('should show a "Not available" note on the disabled ACCS card for buildright', () => {
             setup({ selectedPackage: 'buildright' });
-            expect(screen.getByTestId(`backend-note-${ACCS}`)).toHaveTextContent(
-                /not available/i,
-            );
+            expect(screen.getByTestId(`backend-note-${ACCS}`)).toHaveTextContent(/not available/i);
         });
 
         it('should render a check affordance only on the selected backend card', () => {
@@ -197,29 +191,29 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             const checks = cards.querySelectorAll('[data-testid="backend-card-check"]');
             expect(checks).toHaveLength(1);
             expect(screen.getByTestId(`backend-card-${ACCS}`)).toContainElement(
-                checks[0] as HTMLElement,
+                checks[0] as HTMLElement
             );
             expect(
-                screen.getByTestId(`backend-card-${PAAS}`).querySelector(
-                    '[data-testid="backend-card-check"]',
-                ),
+                screen
+                    .getByTestId(`backend-card-${PAAS}`)
+                    .querySelector('[data-testid="backend-card-check"]')
             ).toBeNull();
         });
     });
 
     describe('summary architecture label', () => {
         it('should show the committed stack name when a full stack is selected', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
-            expect(architectureLine()).toHaveTextContent(
-                'Edge Delivery + PaaS',
-            );
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+            });
+            expect(architectureLine()).toHaveTextContent('Edge Delivery + PaaS');
         });
 
         it('should show the pending placeholder when nothing is chosen', () => {
             setup();
-            expect(architectureLine()).toHaveTextContent(
-                /architecture pending/i,
-            );
+            expect(architectureLine()).toHaveTextContent(/architecture pending/i);
         });
     });
 
@@ -257,7 +251,11 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
 
     describe('dedicated view — active step content + persistence passthrough', () => {
         it('should render the config form in the dedicated view when a config step is active', () => {
-            setup({ selectedPackage: 'buildright', selectedBackend: PAAS, selectedStack: 'eds-paas' });
+            setup({
+                selectedPackage: 'buildright',
+                selectedBackend: PAAS,
+                selectedStack: 'eds-paas',
+            });
             const panel = screen.getByTestId('connect-store-panel');
             // The committed PaaS stack opens connection first → the form fills the view.
             expect(stepView()).toContainElement(panel);
@@ -283,7 +281,9 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
         });
 
         it('should keep passing persisted props so a remount rehydrates (no re-fetch)', () => {
-            const storeDiscoveryData = { websites: [] } as unknown as WizardState['storeDiscoveryData'];
+            const storeDiscoveryData = {
+                websites: [],
+            } as unknown as WizardState['storeDiscoveryData'];
             const componentConfigs = {
                 'adobe-commerce': { [PAAS_STORE_VIEW_CODE]: 'default' },
             } as unknown as ComponentConfigs;
@@ -304,7 +304,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             // Persisted store structure + configs reach the active config panel.
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-has-store-discovery',
-                'yes',
+                'yes'
             );
             fireEvent.click(stepTab('business-structure'));
             // After the step switch (remount), the SAME persisted props are passed
@@ -327,7 +327,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             expect(isLocked('catalog')).toBe(true);
             expect(stepTab('connection')).toHaveAttribute(
                 'title',
-                expect.stringMatching(/sign in to adobe/i),
+                expect.stringMatching(/sign in to adobe/i)
             );
         });
 
@@ -400,7 +400,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             // completion changes can no longer move it via the derived fallback.
             const { updateState } = setup({ selectedPackage: 'citisignal' });
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ activeCommerceStep: 'backend' }),
+                expect.objectContaining({ activeCommerceStep: 'backend' })
             );
         });
 
@@ -412,9 +412,8 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 selectedStack: 'eds-accs',
                 activeCommerceStep: 'signin',
             });
-            const seededCalls = updateState.mock.calls.filter(
-                ([partial]) =>
-                    Object.prototype.hasOwnProperty.call(partial, 'activeCommerceStep'),
+            const seededCalls = updateState.mock.calls.filter(([partial]) =>
+                Object.prototype.hasOwnProperty.call(partial, 'activeCommerceStep')
             );
             expect(seededCalls).toHaveLength(0);
         });
@@ -433,7 +432,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             });
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-section',
-                'business-structure',
+                'business-structure'
             );
         });
     });

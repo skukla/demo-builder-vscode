@@ -44,11 +44,11 @@ describe('ViewSwitcher', () => {
 
         expect(screen.getByRole('button', { name: 'Installed' })).toHaveAttribute(
             'aria-pressed',
-            'true',
+            'true'
         );
         expect(screen.getByRole('button', { name: 'Catalog' })).toHaveAttribute(
             'aria-pressed',
-            'false',
+            'false'
         );
     });
 

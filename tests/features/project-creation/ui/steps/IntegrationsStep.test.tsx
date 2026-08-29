@@ -24,6 +24,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+
+import { change, press, settle } from '../../../../helpers/reactSettle';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
@@ -117,7 +119,7 @@ function baseState(overrides: Partial<WizardState> = {}): WizardState {
     } as WizardState;
 }
 
-function renderStep(state: WizardState, updateState = jest.fn()) {
+async function renderStep(state: WizardState, updateState = jest.fn()) {
     render(
         <Provider theme={defaultTheme}>
             <IntegrationsStep
@@ -129,6 +131,9 @@ function renderStep(state: WizardState, updateState = jest.fn()) {
             />
         </Provider>
     );
+    // Mount effects fire requests; settle so their responses commit inside
+    // act() rather than in the next query's wait loop.
+    await settle();
     return { updateState };
 }
 
@@ -158,8 +163,8 @@ function menuOf(cardEl: HTMLElement): HTMLElement {
 }
 
 /** Press one item in a card's kebab. */
-function pickMenuItem(cardEl: HTMLElement, label: RegExp): void {
-    fireEvent.click(within(menuOf(cardEl)).getByRole('menuitem', { name: label }));
+async function pickMenuItem(cardEl: HTMLElement, label: RegExp): Promise<void> {
+    await press(within(menuOf(cardEl)).getByRole('menuitem', { name: label }));
 }
 
 beforeEach(() => {
@@ -180,36 +185,36 @@ beforeEach(() => {
 });
 
 describe('IntegrationsStep — results-only layout', () => {
-    it('renders the Integrations area heading with NO sub-step rail', () => {
-        renderStep(baseState());
+    it('renders the Integrations area heading with NO sub-step rail', async () => {
+        await renderStep(baseState());
         expect(screen.getByText('Integrations')).toBeInTheDocument();
         expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     });
 
-    it('shows the empty state and the Add Integration button when nothing is configured', () => {
-        renderStep(baseState());
+    it('shows the empty state and the Add Integration button when nothing is configured', async () => {
+        await renderStep(baseState());
         expect(screen.getByText('No integrations yet.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Add Integration' })).toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('does not render the old deployable type-rows', () => {
-        renderStep(baseState());
+    it('does not render the old deployable type-rows', async () => {
+        await renderStep(baseState());
         expect(screen.queryByText('Pre-built integration')).not.toBeInTheDocument();
         expect(screen.queryByText('Import a repo')).not.toBeInTheDocument();
         expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
     });
 
-    it('hides the empty state once a row exists', () => {
-        renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
+    it('hides the empty state once a row exists', async () => {
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(screen.queryByText('No integrations yet.')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Add Integration' })).toBeInTheDocument();
     });
 });
 
 describe('IntegrationsStep — result cards from state', () => {
-    it('renders a selected mesh as a card, with the destination unset', () => {
-        renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
+    it('renders a selected mesh as a card, with the destination unset', async () => {
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
         expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
         expect(
@@ -217,9 +222,9 @@ describe('IntegrationsStep — result cards from state', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders a PACKAGE-SEEDED mesh (arriving via selectedAppBuilderComponents) as a card', () => {
+    it('renders a PACKAGE-SEEDED mesh (arriving via selectedAppBuilderComponents) as a card', async () => {
         // onStackSelect seeds a required mesh into selectedAppBuilderComponents (D3).
-        renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
         expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
     });
@@ -227,16 +232,16 @@ describe('IntegrationsStep — result cards from state', () => {
     // The destination is ONE project and ONE workspace for the whole build. It
     // used to print on every card, identically. `getByText` throws on a second
     // match, so these two assertions fail if the repetition returns.
-    it('shows the committed destination ONCE, above the cards, with Change', () => {
-        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
+    it('shows the committed destination ONCE, above the cards, with Change', async () => {
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         expect(
             within(destinationLine()).getByRole('button', { name: 'Change' })
         ).toBeInTheDocument();
     });
 
-    it('prints the destination once even with several integrations configured', () => {
-        renderStep(
+    it('prints the destination once even with several integrations configured', async () => {
+        await renderStep(
             baseState({
                 ...COMMITTED_DEST,
                 selectedAppBuilderComponents: [MESH_ID, 'cat-reco', 'acme-widget'],
@@ -247,8 +252,8 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(document.querySelectorAll('.integration-card').length).toBeGreaterThan(1);
     });
 
-    it('puts the source line and API count in the card subline', () => {
-        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
+    it('puts the source line and API count in the card subline', async () => {
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
         expect(
             within(custom).getByText(/Custom integration · acme\/widget · 1 API$/)
@@ -256,26 +261,26 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
     });
 
-    it('renders a catalog integration card from its catalog entry', () => {
-        renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
+    it('renders a catalog integration card from its catalog entry', async () => {
+        await renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
         const reco = row('Recommendations');
         expect(
             within(reco).getByText(/Personalized product recommendations · 2 APIs$/)
         ).toBeInTheDocument();
     });
 
-    it('renders a card for a committed blank "Build custom" app', () => {
+    it('renders a card for a committed blank "Build custom" app', async () => {
         // Regression: the blank shell was resolved against the blank-FILTERED catalog,
         // so a committed "Build custom" app produced no row.
-        renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
+        await renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
         expect(row('Custom Integration')).not.toBeNull();
     });
 
     // The count replaces the old collapsible "APIs in use" list. The NAMES now
     // live one click away in the picker (Manage APIs), so only the count is
     // pinned on the face.
-    it('counts baseline + picks on a custom card', () => {
-        renderStep(
+    it('counts baseline + picks on a custom card', async () => {
+        await renderStep(
             baseState({
                 ...CUSTOM_ADDED,
                 selectedConsoleApis: { 'acme-widget': ['AnalyticsSDK', 'CampaignSDK'] },
@@ -285,13 +290,13 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(within(row('widget')).getByText(/· 3 APIs$/)).toBeInTheDocument();
     });
 
-    it('counts baseline + requiredApis on a catalog card', () => {
-        renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
+    it('counts baseline + requiredApis on a catalog card', async () => {
+        await renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
         expect(within(row('Recommendations')).getByText(/· 2 APIs$/)).toBeInTheDocument();
     });
 
-    it('counts a committed mesh without ever subscribing', () => {
-        renderStep(
+    it('counts a committed mesh without ever subscribing', async () => {
+        await renderStep(
             baseState({
                 selectedAppBuilderComponents: [MESH_ID],
                 ...SIGNED_IN,
@@ -310,8 +315,8 @@ describe('IntegrationsStep — result cards from state', () => {
     // Deterministic APIs are not editable, and a card with nothing to open must
     // not claim to be a control (IntegrationCard drops role/tabIndex without
     // onOpen).
-    it('offers Manage APIs on custom cards only', () => {
-        renderStep(
+    it('offers Manage APIs on custom cards only', async () => {
+        await renderStep(
             baseState({
                 ...COMMITTED_DEST,
                 selectedAppBuilderComponents: [MESH_ID, 'cat-reco', 'acme-widget'],
@@ -328,8 +333,8 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(within(meshMenu).queryByRole('menuitem', { name: /Manage APIs/i })).toBeNull();
     });
 
-    it('leaves mesh and catalog cards non-interactive (no dead control)', () => {
-        renderStep(
+    it('leaves mesh and catalog cards non-interactive (no dead control)', async () => {
+        await renderStep(
             baseState({
                 ...COMMITTED_DEST,
                 selectedAppBuilderComponents: [MESH_ID, 'acme-widget'],
@@ -342,9 +347,9 @@ describe('IntegrationsStep — result cards from state', () => {
 });
 
 describe('IntegrationsStep — modal wiring', () => {
-    it('the Add Integration button opens the flow modal in add mode', () => {
-        renderStep(baseState());
-        fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
+    it('the Add Integration button opens the flow modal in add mode', async () => {
+        await renderStep(baseState());
+        await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Add Integration' })
@@ -355,9 +360,9 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
     });
 
-    it("the destination line's Set up opens the modal in destination mode", () => {
-        renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...SIGNED_IN }));
-        fireEvent.click(within(destinationLine()).getByRole('button', { name: 'Set up' }));
+    it("the destination line's Set up opens the modal in destination mode", async () => {
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...SIGNED_IN }));
+        await press(within(destinationLine()).getByRole('button', { name: 'Set up' }));
         const dialog = screen.getByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Deployment Destination' })
@@ -365,9 +370,9 @@ describe('IntegrationsStep — modal wiring', () => {
         expect(within(dialog).getByTestId('project-field')).toBeInTheDocument();
     });
 
-    it("the destination line's Change opens the modal in destination mode", () => {
-        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
-        fireEvent.click(within(destinationLine()).getByRole('button', { name: 'Change' }));
+    it("the destination line's Change opens the modal in destination mode", async () => {
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
+        await press(within(destinationLine()).getByRole('button', { name: 'Change' }));
         const dialog = screen.getByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Deployment Destination' })
@@ -376,8 +381,8 @@ describe('IntegrationsStep — modal wiring', () => {
     });
 
     it("a custom card's Manage APIs opens the modal in api-edit mode (the picker)", async () => {
-        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
-        pickMenuItem(row('widget'), /Manage APIs/i);
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
+        await pickMenuItem(row('widget'), /Manage APIs/i);
         const dialog = await screen.findByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Edit API Access' })
@@ -386,26 +391,26 @@ describe('IntegrationsStep — modal wiring', () => {
     });
 
     it('pressing a custom card opens the same picker (its only detail)', async () => {
-        renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
-        fireEvent.click(row('widget'));
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
+        await press(row('widget'));
         const dialog = await screen.findByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Edit API Access' })
         ).toBeInTheDocument();
     });
 
-    it('the optional-name stage shows NO collision errors — identity is minted at commit', () => {
+    it('the optional-name stage shows NO collision errors — identity is minted at commit', async () => {
         // Optional-name model (owner, 2026-08-27): the label is a convenience;
         // a colliding label is deduped silently at mint time, so the stage has
         // no error affordance at all.
-        renderStep(baseState());
-        fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
+        await renderStep(baseState());
+        await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        fireEvent.click(within(dialog).getByRole('button', { name: /Build custom/ }));
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
+        await press(within(dialog).getByRole('button', { name: 'Continue' }));
         const input = within(dialog).getByLabelText(/Name \(optional\)/);
         const DUPLICATE = 'That name is already used by another part of this project.';
-        fireEvent.change(input, { target: { value: 'App Builder Shell' } });
+        await change(input, 'App Builder Shell');
         expect(within(dialog).queryByText(DUPLICATE)).not.toBeInTheDocument();
         expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeEnabled();
     });
@@ -434,12 +439,12 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
 
     /** Start an inline rename on a card and return its editor field. */
     async function startRename(cardEl: HTMLElement): Promise<HTMLElement> {
-        fireEvent.click(within(cardEl).getByRole('button', { name: /rename/i }));
+        await press(within(cardEl).getByRole('button', { name: /rename/i }));
         return await within(cardEl).findByRole('textbox');
     }
 
-    it('offers the rename pencil on instance cards only — never import, catalog, or mesh', () => {
-        renderStep(
+    it('offers the rename pencil on instance cards only — never import, catalog, or mesh', async () => {
+        await renderStep(
             baseState({
                 ...INSTANCES_ADDED,
                 selectedAppBuilderComponents: [
@@ -460,11 +465,11 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
     });
 
     it('commits an inline rename, writing sources[id].name ONLY', async () => {
-        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        const { updateState } = await renderStep(baseState(INSTANCES_ADDED));
         const field = await startRename(row('Firefly Image Gen'));
         expect(field).toHaveValue('Firefly Image Gen');
 
-        fireEvent.change(field, { target: { value: 'Firefly Video Gen' } });
+        await change(field, 'Firefly Video Gen');
         fireEvent.keyDown(field, { key: 'Enter' });
 
         // Display-name only: the id (source-map key), selection, and picks are untouched.
@@ -484,10 +489,10 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
     });
 
     it("rejects another card's display name inline, writing nothing", async () => {
-        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        const { updateState } = await renderStep(baseState(INSTANCES_ADDED));
         const field = await startRename(row('Firefly Image Gen'));
 
-        fireEvent.change(field, { target: { value: 'order sync' } });
+        await change(field, 'order sync');
         fireEvent.keyDown(field, { key: 'Enter' });
 
         expect(
@@ -501,10 +506,10 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
     // empty name writes nothing and simply leaves edit mode; there is no message,
     // and the step carries no branch for one.
     it('discards an empty name without writing', async () => {
-        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        const { updateState } = await renderStep(baseState(INSTANCES_ADDED));
         const field = await startRename(row('Firefly Image Gen'));
 
-        fireEvent.change(field, { target: { value: '   ' } });
+        await change(field, '   ');
         fireEvent.keyDown(field, { key: 'Enter' });
 
         await waitFor(() =>
@@ -514,10 +519,10 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
     });
 
     it('Escape discards the rename without writing', async () => {
-        const { updateState } = renderStep(baseState(INSTANCES_ADDED));
+        const { updateState } = await renderStep(baseState(INSTANCES_ADDED));
         const field = await startRename(row('Order Sync'));
 
-        fireEvent.change(field, { target: { value: 'Something Else' } });
+        await change(field, 'Something Else');
         fireEvent.keyDown(field, { key: 'Escape' });
 
         expect(updateState).not.toHaveBeenCalled();
@@ -528,28 +533,30 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
 // what these pin, and it is unchanged: a mesh clears its selection (the single
 // authority since D3 — no legacy dependency key exists to clear).
 describe('IntegrationsStep — Remove routing', () => {
-    it('mesh Remove routes through the component toggle (selection cleared)', () => {
-        const { updateState } = renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
-        pickMenuItem(row(MESH_NAME), /Remove/i);
+    it('mesh Remove routes through the component toggle (selection cleared)', async () => {
+        const { updateState } = await renderStep(
+            baseState({ selectedAppBuilderComponents: [MESH_ID] })
+        );
+        await pickMenuItem(row(MESH_NAME), /Remove/i);
         expect(updateState).toHaveBeenCalledWith({
             selectedAppBuilderComponents: [],
         });
     });
 
-    it('custom Remove clears the selection AND its source', () => {
-        const { updateState } = renderStep(baseState(CUSTOM_ADDED));
-        pickMenuItem(row('widget'), /Remove/i);
+    it('custom Remove clears the selection AND its source', async () => {
+        const { updateState } = await renderStep(baseState(CUSTOM_ADDED));
+        await pickMenuItem(row('widget'), /Remove/i);
         expect(updateState).toHaveBeenCalledWith({
             selectedAppBuilderComponents: [],
             appBuilderComponentSources: {},
         });
     });
 
-    it('catalog Remove routes through onRemoveAppBuilderComponent', () => {
-        const { updateState } = renderStep(
+    it('catalog Remove routes through onRemoveAppBuilderComponent', async () => {
+        const { updateState } = await renderStep(
             baseState({ selectedAppBuilderComponents: ['cat-reco'] })
         );
-        pickMenuItem(row('Recommendations'), /Remove/i);
+        await pickMenuItem(row('Recommendations'), /Remove/i);
         expect(updateState).toHaveBeenCalledWith({
             selectedAppBuilderComponents: [],
             appBuilderComponentSources: {},
@@ -586,10 +593,13 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
     it('Add commits the mesh row immediately and NEVER subscribes in the modal', async () => {
         mockRequest.mockResolvedValue({ success: true });
         render(<StatefulStep />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
+        await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        fireEvent.click(within(dialog).getByRole('button', { name: /API Mesh/ }));
+        await press(within(dialog).getByRole('button', { name: /API Mesh/ }));
         // A committed destination is a context LINE, not a step, and the deterministic
         // mesh has no api-access — so the KIND stage is terminal. Selection NEVER
         // provisions.
@@ -602,7 +612,7 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
         });
 
         // A single Add press commits + closes; the card appears with its API count.
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
         await waitFor(() => {
             expect(within(row(MESH_NAME)).getByText(/· 2 APIs$/)).toBeInTheDocument();
         });

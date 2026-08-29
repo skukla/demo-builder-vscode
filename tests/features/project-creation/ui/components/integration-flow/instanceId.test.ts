@@ -107,9 +107,7 @@ describe('buildReservedIds', () => {
     it('empty inputs still yield the baked-in domain (components + sentinel)', () => {
         const reserved = buildReservedIds(inputs());
         expect(reserved.has('eds-storefront')).toBe(true);
-        expect(reserved.size).toBeGreaterThanOrEqual(
-            Object.values(COMPONENT_IDS).length + 1
-        );
+        expect(reserved.size).toBeGreaterThanOrEqual(Object.values(COMPONENT_IDS).length + 1);
     });
 });
 

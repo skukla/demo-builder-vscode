@@ -44,11 +44,9 @@ describe('watchedActivation', () => {
     it.each([['dryRun'], ['provision'], [null]])(
         'falls back to whichever job exists when the last action was %s',
         (action) => {
-            expect(
-                watchedActivation(action as never, 'act-import', undefined),
-            ).toBe('act-import');
+            expect(watchedActivation(action as never, 'act-import', undefined)).toBe('act-import');
             expect(watchedActivation(action as never, undefined, 'act-reset')).toBe('act-reset');
-        },
+        }
     );
 
     it('has nothing to watch before any job starts', () => {

@@ -99,9 +99,11 @@ describe('WelcomeStep', () => {
             await user.type(input, 'x');
 
             // Verify updateState was called with the typed character appended
-            expect(mockUpdateState).toHaveBeenCalledWith(expect.objectContaining({
-                projectName: expect.stringContaining('x'),
-            }));
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    projectName: expect.stringContaining('x'),
+                })
+            );
         });
 
         it('should enable Continue button when name is valid', () => {
@@ -195,7 +197,10 @@ describe('WelcomeStep', () => {
         });
 
         it('should reject project name longer than 30 characters', () => {
-            const invalidState = { ...baseState, projectName: 'this-is-a-very-long-project-name-that-exceeds-thirty' };
+            const invalidState = {
+                ...baseState,
+                projectName: 'this-is-a-very-long-project-name-that-exceeds-thirty',
+            };
 
             render(
                 <Provider theme={defaultTheme}>

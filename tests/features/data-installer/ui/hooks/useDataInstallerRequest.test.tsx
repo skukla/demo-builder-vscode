@@ -46,7 +46,7 @@ function lastRequest(): { type: unknown; payload: unknown } {
 /** A probe that renders every field of the hook's return, plus a retry. */
 function Probe(): React.JSX.Element {
     const { load, loading, value, failure } = useDataInstallerRequest<{ items: string[] }>(
-        'find-datapacks',
+        'find-datapacks'
     );
 
     React.useEffect(() => {
@@ -80,7 +80,7 @@ describe('useDataInstallerRequest', () => {
             expect(lastRequest()).toEqual({
                 type: 'find-datapacks',
                 payload: { includeCommunity: false },
-            }),
+            })
         );
     });
 
@@ -103,7 +103,7 @@ describe('useDataInstallerRequest', () => {
         render(<Probe />);
 
         await waitFor(() =>
-            expect(screen.getByTestId('failure')).toHaveTextContent('Adobe sign-in is required.'),
+            expect(screen.getByTestId('failure')).toHaveTextContent('Adobe sign-in is required.')
         );
         expect(screen.getByTestId('code')).toHaveTextContent('AUTH_REQUIRED');
         expect(screen.getByTestId('value')).toHaveTextContent('none');
@@ -116,8 +116,8 @@ describe('useDataInstallerRequest', () => {
 
         await waitFor(() =>
             expect(screen.getByTestId('failure')).toHaveTextContent(
-                'Request timeout: find-datapacks',
-            ),
+                'Request timeout: find-datapacks'
+            )
         );
         expect(screen.getByTestId('code')).toHaveTextContent('none');
     });
@@ -137,7 +137,11 @@ describe('useDataInstallerRequest', () => {
 
     it('reports loading while a request is in flight', async () => {
         let resolve: (value: unknown) => void = () => undefined;
-        mockRequest.mockReturnValue(new Promise((r) => { resolve = r; }));
+        mockRequest.mockReturnValue(
+            new Promise((r) => {
+                resolve = r;
+            })
+        );
 
         render(<Probe />);
 
@@ -171,8 +175,8 @@ describe('failure data passthrough', () => {
 
         await waitFor(() =>
             expect(screen.getByTestId('failure-data')).toHaveTextContent(
-                '{"needsAccsCredentials":true}',
-            ),
+                '{"needsAccsCredentials":true}'
+            )
         );
     });
 });

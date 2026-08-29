@@ -17,7 +17,9 @@
  * @jest-environment jsdom
  */
 
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+
+import { change } from '../../../../../helpers/reactSettle';
 import {
     mockRequest,
     setPhases,
@@ -115,11 +117,11 @@ describe('AddIntegrationFlowModal — kind stage', () => {
         expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
     });
 
-    it('disables Back and Continue at the unpicked kind stage; a pick enables Continue', () => {
+    it('disables Back and Continue at the unpicked kind stage; a pick enables Continue', async () => {
         renderModal();
         expectDisabled('Back');
         expectDisabled('Continue');
-        click(/Import a repo/);
+        await click(/Import a repo/);
         expectEnabled('Continue');
         expectDisabled('Back');
     });
@@ -128,10 +130,10 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
     it('walks kind → project → workspace (terminal), then commits on Add — no api-access step', async () => {
         const { builder, updateSpy, onClose } = renderModal();
-        walkMeshToProject();
+        await walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
-        click('pick-project');
-        click('Continue');
+        await click('pick-project');
+        await click('Continue');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeProject: { id: 'p-picked', name: 'picked', title: 'Picked Project' },
             adobeWorkspace: undefined,
@@ -141,10 +143,10 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         // api-access step): its footer button reads "Add Integration" and commits +
         // closes in a single press, which also commits the pending workspace.
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
-        click('pick-ws');
+        await click('pick-ws');
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
-        click('Add Integration');
+        await click('Add Integration');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
@@ -158,9 +160,9 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('mesh later-add finishes on the KIND stage: no dest step, no api-access, no fetch', () => {
+    it('mesh later-add finishes on the KIND stage: no dest step, no api-access, no fetch', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
+        await click(/API Mesh/);
         // A committed destination is a context LINE, not a step, and the deterministic
         // mesh has no api-access — so picking the kind is the whole flow.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
@@ -173,11 +175,11 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expectEnabled('Add Integration');
     });
 
-    it('a mesh finish writes no selectedConsoleApis and never subscribes', () => {
+    it('a mesh finish writes no selectedConsoleApis and never subscribes', async () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/); // kind is terminal — dest is a line, mesh has no api-access
+        await click(/API Mesh/); // kind is terminal — dest is a line, mesh has no api-access
         expectEnabled('Add Integration');
-        click('Add Integration');
+        await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
@@ -188,10 +190,10 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         );
     });
 
-    it('Back from dest-project returns to the kind stage', () => {
+    it('Back from dest-project returns to the kind stage', async () => {
         renderModal();
-        walkMeshToProject();
-        click('Back');
+        await walkMeshToProject();
+        await click('Back');
         expect(button(/API Mesh/)).toBeInTheDocument();
         expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
     });
@@ -199,18 +201,18 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
 
 describe('AddIntegrationFlowModal — build custom (optional-name model)', () => {
     /** kind → source-blank (the starting-point + optional-name stage). */
-    function walkToBlankStage(): HTMLElement {
-        click(/Build custom/);
-        click('Continue');
+    async function walkToBlankStage(): Promise<HTMLElement> {
+        await click(/Build custom/);
+        await click('Continue');
         return screen.getByLabelText(/Name \(optional\)/);
     }
 
-    it('Continue is enabled immediately — the name never gates', () => {
+    it('Continue is enabled immediately — the name never gates', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankStage();
+        const input = await walkToBlankStage();
         expectEnabled('Continue');
         // Typing does not introduce a gate either — no validation exists here.
-        fireEvent.change(input, { target: { value: 'App Builder Shell' } });
+        await change(input, 'App Builder Shell');
         expect(
             screen.queryByText('That name is already used by another part of this project.')
         ).not.toBeInTheDocument();
@@ -219,10 +221,10 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
 
     it('an empty name commits the minted DEFAULT instance ("Custom Integration")', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        walkToBlankStage();
-        click('Continue');
+        await walkToBlankStage();
+        await click('Continue');
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
-        click('Add Integration');
+        await click('Add Integration');
         await waitFor(() =>
             expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
                 { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
@@ -234,14 +236,14 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
 
     it('walks kind → source-blank → api-access and commits the typed name', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankStage();
-        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        const input = await walkToBlankStage();
+        await change(input, 'Firefly Image Gen');
         // Straight to api-access: the committed destination rides along as the
         // context line instead of costing a step.
-        click('Continue');
+        await click('Continue');
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
-        click('Add Integration');
+        await click('Add Integration');
         // The commit routes through the custom add with the MINTED identity —
         // never the fixed-id toggle (which capped a project at one shell).
         await waitFor(() =>
@@ -303,8 +305,8 @@ describe('AddIntegrationFlowModal — only genuine pre-built entries reach the g
     it('keeps the mesh and the shell OUT of the gallery', async () => {
         // Reachable only when something real exists, so ERP opens the door.
         renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
-        click(/Pre-built/);
-        click('Continue');
+        await click(/Pre-built/);
+        await click('Continue');
 
         expect(await screen.findByText(ERP.name)).toBeInTheDocument();
         expect(screen.queryByText(BLANK.name)).not.toBeInTheDocument();

@@ -16,6 +16,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+
+import { change, press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -57,7 +59,7 @@ function lastRequest(): { type: unknown; payload: unknown } {
 function makeSummary(
     name: string,
     version: string,
-    overrides: Partial<DatapackSummary> = {},
+    overrides: Partial<DatapackSummary> = {}
 ): DatapackSummary {
     return {
         id: { name, version },
@@ -85,15 +87,95 @@ function resolveWith(items: DatapackSummary[]) {
     });
 }
 
+/**
+ * Catalog + detail, the one definition.
+ *
+ * This existed TWICE under this exact name — once in the `detail flyout`
+ * describe and once in `the import modal` — with different inventories and,
+ * worse, different fallback semantics. One answered every unrecognised request
+ * with the DETAIL payload; the other answered `data: null`. The catch-all was a
+ * real fixture bug: the import modal reads `get-datapack-import-status`, so it
+ * received a detail payload where it expected a job record and rendered its
+ * result view instead of its form. That went unnoticed because the request was
+ * still in flight when the tests asserted; settling made the modal deterministic
+ * and the wrong answer visible.
+ *
+ * One name, two behaviours, is exactly the trap the fixture consolidation work
+ * exists to close (ADR-016 § Fixtures and fakes, rule 4).
+ *
+ * @param inventory - what the service HOLDS for this datapack. The only thing
+ *   the two copies legitimately varied, so it is the only parameter.
+ */
+function resolveCatalogThenDetail(inventory: {
+    present: string[];
+    missing: string[];
+    presentCount: number;
+    missingCount: number;
+    requestedCount: number;
+}) {
+    mockRequest.mockImplementation((type: string) => {
+        if (type === 'find-datapacks') {
+            return Promise.resolve({
+                success: true,
+                data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+            });
+        }
+        if (type === 'get-datapack-detail') {
+            return Promise.resolve({
+                success: true,
+                data: {
+                    detail: { ...CATALOG[0], description: 'B2B office supplies' },
+                    inventory,
+                },
+            });
+        }
+        // Serves two consumers that share this request: the view's own
+        // projectContext (DatapackCatalogView.tsx:102) and the import modal's
+        // target (ImportDatapackModal.tsx:149) — same shape, same request.
+        // Without an instance the modal renders "This project has no Commerce
+        // instance" rather than the type list.
+        if (type === 'get-datapack-import-target') {
+            return Promise.resolve({
+                success: true,
+                data: { instance: 'inst', projectName: 'demo-1' },
+            });
+        }
+        // Everything else is genuinely unasked. `null` is what "no record" looks
+        // like — never a stand-in payload, which is what caused the bug above.
+        return Promise.resolve({ success: true, data: null });
+    });
+}
+
+/** What the flyout specs used: nothing missing. */
+const INVENTORY_COMPLETE = {
+    present: ['products'],
+    missing: [],
+    presentCount: 1,
+    missingCount: 0,
+    requestedCount: 1,
+};
+
+/** What the modal specs used: one type the service does not hold. */
+const INVENTORY_WITH_GAP = {
+    present: ['products'],
+    missing: ['giftcards'],
+    presentCount: 1,
+    missingCount: 1,
+    requestedCount: 2,
+};
+
 describe('DatapackCatalogView', () => {
     beforeEach(() => {
         mockRequest.mockReset();
     });
 
-    it('shows the loading display while the first request is in flight', () => {
+    it('shows the loading display while the first request is in flight', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
 
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         expect(screen.getByText(/loading datapacks/i)).toBeInTheDocument();
     });
@@ -102,12 +184,15 @@ describe('DatapackCatalogView', () => {
         resolveWith(CATALOG);
 
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
                 payload: { includeCommunity: false },
-            }),
+            })
         );
     });
 
@@ -115,6 +200,9 @@ describe('DatapackCatalogView', () => {
         resolveWith(CATALOG);
 
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(3));
     });
@@ -123,6 +211,9 @@ describe('DatapackCatalogView', () => {
         resolveWith(CATALOG);
 
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         const cards = await screen.findAllByTestId('datapack-card');
         expect(within(cards[0]).getByTestId('spectrum-picker')).toHaveTextContent('main');
@@ -132,6 +223,9 @@ describe('DatapackCatalogView', () => {
         resolveWith(CATALOG);
 
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
         const cards = await screen.findAllByTestId('datapack-card');
 
         fireEvent.change(within(cards[0]).getByTestId('spectrum-picker-select'), {
@@ -148,15 +242,18 @@ describe('DatapackCatalogView', () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await screen.findAllByTestId('datapack-card');
 
-            fireEvent.click(screen.getByRole('checkbox', { name: /community/i }));
+            await press(screen.getByRole('checkbox', { name: /community/i }));
 
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'find-datapacks',
                     payload: { includeCommunity: true },
-                }),
+                })
             );
         });
     });
@@ -166,9 +263,12 @@ describe('DatapackCatalogView', () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await screen.findAllByTestId('datapack-card');
 
-            fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'wknd' } });
+            await change(screen.getByRole('searchbox'), 'wknd');
 
             expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
         });
@@ -177,9 +277,12 @@ describe('DatapackCatalogView', () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await screen.findAllByTestId('datapack-card');
 
-            fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'CitiSignal' } });
+            await change(screen.getByRole('searchbox'), 'CitiSignal');
 
             expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
         });
@@ -188,9 +291,12 @@ describe('DatapackCatalogView', () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await screen.findAllByTestId('datapack-card');
 
-            fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'nothing-here' } });
+            await change(screen.getByRole('searchbox'), 'nothing-here');
 
             expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
             expect(screen.getByText(/no datapacks match/i)).toBeInTheDocument();
@@ -199,98 +305,89 @@ describe('DatapackCatalogView', () => {
 
     describe('detail flyout', () => {
         /** Resolve find-datapacks, then the detail request that follows. */
-        function resolveCatalogThenDetail() {
-            mockRequest.mockImplementation((type: string) => {
-                if (type === 'find-datapacks') {
-                    return Promise.resolve({
-                        success: true,
-                        data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
-                    });
-                }
-                return Promise.resolve({
-                    success: true,
-                    data: {
-                        detail: { ...CATALOG[0], description: 'B2B office supplies' },
-                        inventory: {
-                            present: ['products'],
-                            missing: [],
-                            presentCount: 1,
-                            missingCount: 0,
-                            requestedCount: 1,
-                        },
-                    },
-                });
-            });
-        }
-
         it('stays closed until a card is pressed', async () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await screen.findAllByTestId('datapack-card');
 
             expect(screen.getByRole('dialog', { hidden: true })).not.toHaveClass('open');
         });
 
         it('asks for the detail of the pressed card, at its selected version', async () => {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_COMPLETE);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
 
-            fireEvent.click(cards[0]);
+            await press(cards[0]);
 
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
                     payload: { datapackName: 'bodea', version: 'main' },
-                }),
+                })
             );
         });
 
         it('opens the flyout with the loaded detail', async () => {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_COMPLETE);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
 
-            fireEvent.click(cards[0]);
+            await press(cards[0]);
 
             await waitFor(() => expect(screen.getByRole('dialog')).toHaveClass('open'));
             expect(await screen.findByText('B2B office supplies')).toBeInTheDocument();
         });
 
         it('follows the version the user picked', async () => {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_COMPLETE);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
 
             fireEvent.change(within(cards[0]).getByTestId('spectrum-picker-select'), {
                 target: { value: 'tierpricingfix' },
             });
-            fireEvent.click(cards[0]);
+            await press(cards[0]);
 
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
                     payload: { datapackName: 'bodea', version: 'tierpricingfix' },
-                }),
+                })
             );
         });
 
         it('closes from the flyout', async () => {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_COMPLETE);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
-            fireEvent.click(cards[0]);
+            await press(cards[0]);
             await waitFor(() => expect(screen.getByRole('dialog')).toHaveClass('open'));
 
-            fireEvent.click(screen.getByRole('button', { name: /close details/i }));
+            await press(screen.getByRole('button', { name: /close details/i }));
 
             await waitFor(() =>
-                expect(screen.getByRole('dialog', { hidden: true })).not.toHaveClass('open'),
+                expect(screen.getByRole('dialog', { hidden: true })).not.toHaveClass('open')
             );
         });
     });
@@ -304,48 +401,40 @@ describe('DatapackCatalogView', () => {
      * flyout view-only. This follows that.
      */
     describe('the import modal', () => {
-        function resolveCatalogThenDetail() {
-            mockRequest.mockImplementation((type: string) => {
-                if (type === 'find-datapacks') {
-                    return Promise.resolve({
-                        success: true,
-                        data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
-                    });
-                }
-                if (type === 'get-datapack-detail') {
-                    return Promise.resolve({
-                        success: true,
-                        data: {
-                            detail: { ...CATALOG[0], description: 'B2B office supplies' },
-                            inventory: {
-                                present: ['products'],
-                                missing: ['giftcards'],
-                                presentCount: 1,
-                                missingCount: 1,
-                                requestedCount: 2,
-                            },
-                        },
-                    });
-                }
-                return Promise.resolve({ success: true, data: null });
-            });
-        }
-
         /** Open the flyout for the first card, then press its Import affordance. */
         async function openImport() {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_WITH_GAP);
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
-            fireEvent.click(cards[0]);
-            fireEvent.click(await screen.findByRole('button', { name: /^import/i }));
+            await press(cards[0]);
+            // Opening a card fetches its detail, and the modal's checkbox list is
+            // built from that detail's inventory. One settle round is not the same
+            // as the findBy wait loop this replaced — the loop happened to give
+            // the detail time to arrive. Settle explicitly instead of relying on
+            // the timing of a query.
+            await settle();
+            await press(await screen.findByRole('button', { name: /^import/i }));
+            // The modal is its own component with its own mount requests (its
+            // import target and job status). Opening it is one interaction, but
+            // its requests are only ISSUED once it has mounted — which the
+            // press's own settle is what causes. So the responses need a further
+            // round of their own.
+            await settle();
+            await settle();
         }
 
         it('is closed until Import is pressed', async () => {
-            resolveCatalogThenDetail();
+            resolveCatalogThenDetail(INVENTORY_WITH_GAP);
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const cards = await screen.findAllByTestId('datapack-card');
 
-            fireEvent.click(cards[0]);
+            await press(cards[0]);
             await screen.findByRole('button', { name: /^import/i });
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
@@ -354,7 +443,9 @@ describe('DatapackCatalogView', () => {
         it('opens when the flyout raises Import', async () => {
             await openImport();
 
-            expect(await screen.findByRole('button', { name: /start import/i })).toBeInTheDocument();
+            expect(
+                await screen.findByRole('button', { name: /start import/i })
+            ).toBeInTheDocument();
         });
 
         // The types on offer are what the service HOLDS, from the detail
@@ -363,6 +454,7 @@ describe('DatapackCatalogView', () => {
             await openImport();
             await screen.findByRole('button', { name: /start import/i });
 
+            screen.debug(undefined, 8000);
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
         });
@@ -371,7 +463,7 @@ describe('DatapackCatalogView', () => {
             await openImport();
             await screen.findByRole('button', { name: /start import/i });
 
-            fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+            await press(screen.getByRole('button', { name: /^close$/i }));
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
             // The flyout is still open — the modal was a sibling, not a child.
@@ -384,6 +476,9 @@ describe('DatapackCatalogView', () => {
             resolveWith([]);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             expect(await screen.findByText('No datapacks found')).toBeInTheDocument();
             expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
@@ -399,6 +494,9 @@ describe('DatapackCatalogView', () => {
             });
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             expect(await screen.findByText('Adobe sign-in required')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
@@ -413,9 +511,12 @@ describe('DatapackCatalogView', () => {
             });
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
 
             expect(
-                await screen.findByText('The Data Installer is not configured'),
+                await screen.findByText('The Data Installer is not configured')
             ).toBeInTheDocument();
             expect(screen.getByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).toBeInTheDocument();
         });
@@ -425,9 +526,12 @@ describe('DatapackCatalogView', () => {
             resolveWith(CATALOG);
 
             render(<DatapackCatalogView />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             const retry = await screen.findByRole('button', { name: /try again/i });
 
-            fireEvent.click(retry);
+            await press(retry);
 
             await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(3));
         });
@@ -515,6 +619,9 @@ describe('the project’s recorded sample data', () => {
             return Promise.resolve({ success: true, data: null });
         });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         const check = await screen.findByTestId('datapack-card-project-check');
 
@@ -531,11 +638,14 @@ describe('the project’s recorded sample data', () => {
     it('CONTROL — asks only about this project’s instance', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await waitFor(() =>
             expect(
-                mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks'),
-            ).toBeDefined(),
+                mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks')
+            ).toBeDefined()
         );
         const call = mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks');
         expect(call?.[1]).toEqual({ commerceInstance: 'inst-1' });
@@ -545,6 +655,9 @@ describe('the project’s recorded sample data', () => {
     it('marks the pack this project was created for', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         const check = await screen.findByTestId('datapack-card-project-check');
 
@@ -558,6 +671,9 @@ describe('the project’s recorded sample data', () => {
     it('CONTROL — marks only that one card', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await screen.findByTestId('datapack-card-project-check');
 
@@ -612,27 +728,33 @@ describe('the project’s recorded sample data', () => {
             return Promise.resolve({ success: true, data: null });
         });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         const cards = await screen.findAllByTestId('datapack-card');
-        fireEvent.click(cards[0]);
-        fireEvent.click(await screen.findByRole('button', { name: /^import/i }));
+        await press(cards[0]);
+        await press(await screen.findByRole('button', { name: /^import/i }));
         await screen.findByRole('button', { name: /start import/i });
 
         const before = mockRequest.mock.calls.filter(
-            (c) => c[0] === 'get-datapack-import-target',
+            (c) => c[0] === 'get-datapack-import-target'
         ).length;
-        fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+        await press(screen.getByRole('button', { name: /^close$/i }));
 
         await waitFor(() =>
             expect(
-                mockRequest.mock.calls.filter((c) => c[0] === 'get-datapack-import-target').length,
-            ).toBeGreaterThan(before),
+                mockRequest.mock.calls.filter((c) => c[0] === 'get-datapack-import-target').length
+            ).toBeGreaterThan(before)
         );
     });
 
     it('marks nothing when the project recorded no choice', async () => {
         withRecordedChoice(undefined);
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(0));
         expect(screen.queryByTestId('datapack-card-project-check')).not.toBeInTheDocument();
@@ -642,10 +764,15 @@ describe('the project’s recorded sample data', () => {
     it('no longer shows a "set up for" banner', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await screen.findByTestId('datapack-card-project-check');
 
         expect(screen.queryByText(/set up for/i)).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /review and install/i })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: /review and install/i })
+        ).not.toBeInTheDocument();
     });
 });

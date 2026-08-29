@@ -21,15 +21,8 @@
     "tests/features/dashboard/ui/components/DashboardTile.test.tsx",
     "tests/features/dashboard/ui/components/DataInstallerTile.test.tsx",
     "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
-    "tests/features/data-installer/ui/DataInstallerScreen.test.tsx",
-    "tests/features/data-installer/ui/components/ExportDatapackModal.test.tsx",
-    "tests/features/data-installer/ui/views/DatapackCatalogView.test.tsx",
     "tests/features/eds/services/configJsonFatalFailure.test.ts",
     "tests/features/prerequisites/ui/prerequisiteRenderers.test.tsx",
-    "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.later-and-variants.test.tsx",
-    "tests/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.test.tsx",
-    "tests/features/project-creation/ui/steps/IntegrationsStep.test.tsx",
-    "tests/features/project-creation/ui/steps/ProjectCreationStep.test.tsx",
     "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts",
     "tests/webview-ui/shared/hooks/useDebouncedLoading.test.ts"
   ]

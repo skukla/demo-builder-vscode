@@ -11,7 +11,9 @@
  * @jest-environment jsdom
  */
 
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+
+import { change } from '../../../../../helpers/reactSettle';
 import {
     mockRequest,
     setPhases,
@@ -46,10 +48,10 @@ function renderModal(options: Omit<RenderOptions, 'reservedIds' | 'blankComponen
  * the source stage is terminal (the press is "Add Integration"); without one it
  * advances to dest-project.
  */
-function walkCatalogToPick(): void {
-    click(/Pre-built integration/);
-    click('Continue');
-    click(/ERP Sync/);
+async function walkCatalogToPick(): Promise<void> {
+    await click(/Pre-built integration/);
+    await click('Continue');
+    await click(/ERP Sync/);
 }
 
 beforeEach(() => {
@@ -60,16 +62,16 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add: the KIND stage is terminal, then Add commits + closes (never subscribes)', () => {
+    it('mesh later-add: the KIND stage is terminal, then Add commits + closes (never subscribes)', async () => {
         // No dest-summary step any more: a committed destination shows as a context
         // LINE, so picking the kind lands straight on the commit.
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
+        await click(/API Mesh/);
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         // The modal provisions nothing — Add commits + closes in one press.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
-        click('Add Integration');
+        await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
@@ -79,43 +81,43 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('catalog later-add finishes on the SOURCE stage (no dest step, no api-access)', () => {
+    it('catalog later-add finishes on the SOURCE stage (no dest step, no api-access)', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogToPick(); // kind → source-catalog → pick (terminal — dest is a line)
+        await walkCatalogToPick(); // kind → source-catalog → pick (terminal — dest is a line)
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
-        click('Add Integration');
+        await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('Change on the destination CONTEXT LINE re-enters dest-project', () => {
+    it('Change on the destination CONTEXT LINE re-enters dest-project', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
-        click('Change');
+        await click(/API Mesh/);
+        await click('Change');
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
     });
 });
 
 describe('AddIntegrationFlowModal — catalog first-add walk', () => {
-    it('gates Continue on the catalog stage until an entry is picked', () => {
+    it('gates Continue on the catalog stage until an entry is picked', async () => {
         renderModal();
-        click(/Pre-built integration/);
-        click('Continue');
+        await click(/Pre-built integration/);
+        await click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         expect(button(/CRM Connect/)).toBeInTheDocument();
         expectDisabled('Continue');
-        click(/ERP Sync/);
+        await click(/ERP Sync/);
         expectEnabled('Continue');
     });
 
-    it('walks the dest stages to the terminal workspace step — no api-access, no fetch', () => {
+    it('walks the dest stages to the terminal workspace step — no api-access, no fetch', async () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['other-app'] } });
-        walkCatalogToPick();
-        click('Continue'); // no committed destination — advances to dest-project
-        click('pick-project');
-        click('Continue');
-        click('pick-ws');
+        await walkCatalogToPick();
+        await click('Continue'); // no committed destination — advances to dest-project
+        await click('pick-project');
+        await click('Continue');
+        await click('pick-ws');
         // dest-workspace is terminal for the deterministic catalog kind — no
         // api-access step and no org-API list fetch.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
@@ -127,10 +129,10 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
         expectEnabled('Add Integration');
     });
 
-    it('a catalog finish writes no selectedConsoleApis (deterministic API access)', () => {
+    it('a catalog finish writes no selectedConsoleApis (deterministic API access)', async () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogToPick(); // source-catalog is terminal (dest is a context line)
-        click('Add Integration');
+        await walkCatalogToPick(); // source-catalog is terminal (dest is a context line)
+        await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(updateSpy).not.toHaveBeenCalledWith(
             expect.objectContaining({ selectedConsoleApis: expect.anything() })
@@ -139,59 +141,59 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
 });
 
 describe('AddIntegrationFlowModal — signed-out routing', () => {
-    it('routes a signed-out add through dest-signin with a gated Continue', () => {
+    it('routes a signed-out add through dest-signin with a gated Continue', async () => {
         renderModal({ initial: SIGNED_OUT });
-        walkCatalogToPick();
-        click('Continue'); // signed out — the destination stages still run as steps
+        await walkCatalogToPick();
+        await click('Continue'); // signed out — the destination stages still run as steps
         expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
         expectDisabled('Continue');
     });
 });
 
 describe('AddIntegrationFlowModal — custom integration', () => {
-    it('gates Continue until a valid URL and flags duplicates', () => {
+    it('gates Continue until a valid URL and flags duplicates', async () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['acme-widget'] } });
-        click(/Import a repo/);
-        click('Continue');
+        await click(/Import a repo/);
+        await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
-        fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
+        await change(input, 'https://github.com/acme/widget');
         expect(screen.getByText('This integration is already added.')).toBeInTheDocument();
         expectDisabled('Continue');
-        fireEvent.change(input, { target: { value: 'https://github.com/acme/other' } });
+        await change(input, 'https://github.com/acme/other');
         expectEnabled('Continue');
     });
 
-    it('disables Continue again when a previously valid URL is cleared or invalidated', () => {
+    it('disables Continue again when a previously valid URL is cleared or invalidated', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        click(/Import a repo/);
-        click('Continue');
+        await click(/Import a repo/);
+        await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
-        fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
+        await change(input, 'https://github.com/acme/widget');
         expectEnabled('Continue');
 
-        fireEvent.change(input, { target: { value: '' } });
+        await change(input, '');
         expectDisabled('Continue');
 
-        fireEvent.change(input, { target: { value: 'not-a-url' } });
+        await change(input, 'not-a-url');
         expectDisabled('Continue');
     });
 
     it('finishes a custom add on Add (interactive picker, no confirmation hold)', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        click(/Import a repo/);
-        click('Continue');
+        await click(/Import a repo/);
+        await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
-        fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
+        await change(input, 'https://github.com/acme/widget');
         // No dest step: source-custom advances straight to api-access, with the
         // committed destination riding along as the context line.
-        click('Continue');
+        await click('Continue');
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         // Custom/import gets the INTERACTIVE picker (it can add any entitled API),
         // which fetches the org's list — not the informational deterministic panel.
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
         expect(mockRequest).toHaveBeenCalledWith('list-org-console-apis', expect.anything());
         // Add commits the repo + closes in a SINGLE press — no in-modal confirmation.
-        click('Add Integration');
+        await click('Add Integration');
         await waitFor(() =>
             expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
                 { owner: 'acme', repo: 'widget' },
@@ -225,13 +227,13 @@ describe('AddIntegrationFlowModal — org-API prefetch (warm the cache)', () => 
 });
 
 describe('AddIntegrationFlowModal — destination mode', () => {
-    it('walks project → workspace and Saves without builder calls', () => {
+    it('walks project → workspace and Saves without builder calls', async () => {
         const { builder, updateSpy, onClose } = renderModal({ mode: 'destination' });
-        click('pick-project');
-        click('Continue');
+        await click('pick-project');
+        await click('Continue');
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
-        click('pick-ws');
-        click('Save');
+        await click('pick-ws');
+        await click('Save');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
@@ -242,21 +244,21 @@ describe('AddIntegrationFlowModal — destination mode', () => {
 });
 
 describe('AddIntegrationFlowModal — cancel & reopen', () => {
-    it('Cancel calls onClose without builder calls or state writes', () => {
+    it('Cancel calls onClose without builder calls or state writes', async () => {
         const { builder, updateSpy, onClose } = renderModal();
-        walkMeshToProject();
-        click('pick-project');
-        click('Cancel');
+        await walkMeshToProject();
+        await click('pick-project');
+        await click('Cancel');
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(updateSpy).not.toHaveBeenCalled();
         expect(builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
         expect(builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
     });
 
-    it('reopening starts a fresh journey at the kind stage', () => {
+    it('reopening starts a fresh journey at the kind stage', async () => {
         const { setOpen } = renderModal();
-        click(/Pre-built integration/);
-        click('Continue');
+        await click(/Pre-built integration/);
+        await click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         setOpen(false);
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -267,10 +269,10 @@ describe('AddIntegrationFlowModal — cancel & reopen', () => {
 });
 
 describe('AddIntegrationFlowModal — phase-running bridge', () => {
-    it('a running destination phase disables Continue (setPhaseRunning seam)', () => {
+    it('a running destination phase disables Continue (setPhaseRunning seam)', async () => {
         const { setOpen } = renderModal();
-        walkMeshToProject();
-        click('pick-project');
+        await walkMeshToProject();
+        await click('pick-project');
         expectEnabled('Continue');
         setPhases({ phase: 'creating', phaseMessage: 'Creating project…' });
         setOpen(true);

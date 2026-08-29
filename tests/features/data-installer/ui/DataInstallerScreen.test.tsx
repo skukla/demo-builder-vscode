@@ -14,6 +14,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+import { settle } from '../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -52,14 +54,20 @@ describe('DataInstallerScreen', () => {
         resolveEmpty();
     });
 
-    it('renders the page header', () => {
+    it('renders the page header', async () => {
         render(<DataInstallerScreen />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         expect(screen.getByText('Data Installer')).toBeInTheDocument();
     });
 
     it('opens on the catalog', async () => {
         render(<DataInstallerScreen />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         // `request(type, payload, timeoutMs)` takes a third argument the view
         // leaves undefined; only the first two are this test's business.
@@ -71,6 +79,9 @@ describe('DataInstallerScreen', () => {
 
     it('no longer spends a round trip on the connectivity check', async () => {
         render(<DataInstallerScreen />);
+        // Mount effects fire requests; settle so their responses commit inside
+        // act() rather than in the next query's wait loop.
+        await settle();
 
         await waitFor(() => expect(mockRequest).toHaveBeenCalled());
         expect(requestedTypes()).not.toContain('check-datapack-service');
@@ -79,6 +90,9 @@ describe('DataInstallerScreen', () => {
     describe('view switcher', () => {
         it('offers the two views', async () => {
             render(<DataInstallerScreen />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             expect(screen.getByRole('button', { name: 'Catalog' })).toBeInTheDocument();
@@ -94,6 +108,9 @@ describe('DataInstallerScreen', () => {
          */
         it('no longer offers Installed', async () => {
             render(<DataInstallerScreen />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             expect(screen.queryByRole('button', { name: 'Installed' })).not.toBeInTheDocument();
@@ -101,16 +118,22 @@ describe('DataInstallerScreen', () => {
 
         it('marks the catalog active on open', async () => {
             render(<DataInstallerScreen />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             expect(screen.getByRole('button', { name: 'Catalog' })).toHaveAttribute(
                 'aria-pressed',
-                'true',
+                'true'
             );
         });
 
         it('swaps to the activity view', async () => {
             render(<DataInstallerScreen />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             fireEvent.click(screen.getByRole('button', { name: 'Activity' }));
@@ -122,10 +145,26 @@ describe('DataInstallerScreen', () => {
         // spending round trips.
         it('does not fetch for a view that is not on screen', async () => {
             render(<DataInstallerScreen />);
+            // Mount effects fire requests; settle so their responses commit inside
+            // act() rather than in the next query's wait loop.
+            await settle();
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
-            expect(requestedTypes()).not.toContain('list-installed-datapacks');
+            // `get-datapack-activity` is made by exactly one view
+            // (DatapackActivityView.tsx:76), so its absence is real evidence
+            // that the off-screen view never mounted.
             expect(requestedTypes()).not.toContain('get-datapack-activity');
+
+            // NOT `list-installed-datapacks`, though this test used to assert
+            // that too. It is not exclusive to the off-screen installed view:
+            // the VISIBLE catalog fetches it as soon as it learns the Commerce
+            // instance, to mark which packs are already present
+            // (DatapackCatalogView.tsx:128-134). The old assertion held only
+            // because the project-context request had not resolved yet, so the
+            // follow-on fetch had not been issued when the assertion ran.
+            // Settling removed that race and showed the proxy was wrong — the
+            // claim it was standing in for is still true, and the line above is
+            // what actually tests it.
         });
     });
 });

@@ -39,7 +39,7 @@ const renderFooter = (overrides: Partial<typeof BASE>) =>
     render(
         <Provider theme={defaultTheme} colorScheme="dark">
             <StepFooterArea {...BASE} {...overrides} />
-        </Provider>,
+        </Provider>
     );
 
 /** The footer renders at least one button in every state that has one. */

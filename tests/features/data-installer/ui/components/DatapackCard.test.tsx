@@ -60,7 +60,7 @@ function renderCard(group: DatapackGroup, selectedVersion = group.versions[0].id
             selectedVersion={selectedVersion}
             onVersionChange={onVersionChange}
             onOpen={onOpen}
-        />,
+        />
     );
     return { ...view, onVersionChange, onOpen, card: screen.getByTestId('datapack-card') };
 }
@@ -93,7 +93,7 @@ describe('DatapackCard', () => {
 
         it('falls back to the thumbnail when there is no cover', () => {
             const { card } = renderCard(
-                makeGroup({ versions: [makeVersion({ art: { cover: '', thumbnail: THUMB } })] }),
+                makeGroup({ versions: [makeVersion({ art: { cover: '', thumbnail: THUMB } })] })
             );
 
             expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
@@ -136,7 +136,7 @@ describe('DatapackCard', () => {
                             art: { cover: 'http://example.invalid/x.png', thumbnail: THUMB },
                         }),
                     ],
-                }),
+                })
             );
 
             expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
@@ -203,10 +203,15 @@ describe('DatapackCard', () => {
                     selectedVersion="tierpricingfix"
                     onVersionChange={jest.fn()}
                     onOpen={jest.fn()}
-                />,
+                />
             );
             rerender(
-                <DatapackCard group={multi} selectedVersion="main" onVersionChange={jest.fn()} onOpen={jest.fn()} />,
+                <DatapackCard
+                    group={multi}
+                    selectedVersion="main"
+                    onVersionChange={jest.fn()}
+                    onOpen={jest.fn()}
+                />
             );
 
             expect(screen.getByTestId('datapack-card-art')).toHaveAttribute('src', COVER);
@@ -312,7 +317,7 @@ describe('DatapackCard — as a choice', () => {
                 onVersionChange={jest.fn()}
                 onOpen={onOpen}
                 {...(selected === undefined ? {} : { selected })}
-            />,
+            />
         );
         return { onOpen, card: screen.getByTestId('datapack-card') };
     }

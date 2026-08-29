@@ -66,8 +66,6 @@ describe('DatapackCatalogView — the frame before the fetch', () => {
     it('shows no search bar, which belongs to a list that has not arrived', () => {
         render(<DatapackCatalogView />);
 
-        expect(
-            screen.queryByRole('searchbox', { name: /filter|search/i }),
-        ).not.toBeInTheDocument();
+        expect(screen.queryByRole('searchbox', { name: /filter|search/i })).not.toBeInTheDocument();
     });
 });

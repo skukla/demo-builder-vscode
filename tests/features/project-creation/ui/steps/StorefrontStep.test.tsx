@@ -40,9 +40,7 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getAvailableBlockLibraries: jest.fn(() => [
         { id: 'lib-a', name: 'Library A', description: 'Adds A blocks' },
     ]),
-    getNativeBlockLibraries: jest.fn(() => [
-        { id: 'native-1', name: 'Native Blocks' },
-    ]),
+    getNativeBlockLibraries: jest.fn(() => [{ id: 'native-1', name: 'Native Blocks' }]),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));
@@ -88,10 +86,14 @@ jest.mock('@/features/eds/ui/hooks/useDaLiveAuth', () => ({
 // Service cards — stub so we assert presence within the storefront modal.
 jest.mock('@/features/eds/ui/components', () => ({
     GitHubServiceCard: (props: { isAuthenticated: boolean }) => (
-        <div data-testid="github-card" data-authed={String(props.isAuthenticated)}>GitHub</div>
+        <div data-testid="github-card" data-authed={String(props.isAuthenticated)}>
+            GitHub
+        </div>
     ),
     DaLiveServiceCard: (props: { isAuthenticated: boolean }) => (
-        <div data-testid="dalive-card" data-authed={String(props.isAuthenticated)}>DA.live</div>
+        <div data-testid="dalive-card" data-authed={String(props.isAuthenticated)}>
+            DA.live
+        </div>
     ),
 }));
 
@@ -103,10 +105,18 @@ jest.mock('@/features/eds/ui/steps/RepoSelectionInline', () => ({
         onCodeSyncValidChange: (valid: boolean) => void;
     }) => (
         <div data-testid="repo-selection-inline" data-phase={props.phase}>
-            <button type="button" data-testid="repo-valid" onClick={() => props.onRepoValidChange(true)}>
+            <button
+                type="button"
+                data-testid="repo-valid"
+                onClick={() => props.onRepoValidChange(true)}
+            >
                 repo valid
             </button>
-            <button type="button" data-testid="repo-invalid" onClick={() => props.onRepoValidChange(false)}>
+            <button
+                type="button"
+                data-testid="repo-invalid"
+                onClick={() => props.onRepoValidChange(false)}
+            >
                 repo invalid
             </button>
             <button
@@ -179,7 +189,10 @@ function authedEdsConfig() {
         daLiveOrg: '',
         daLiveSite: '',
         repoMode: 'existing' as const,
-        githubAuth: { isAuthenticated: true, user: { login: 'testuser', email: null, name: null, avatarUrl: null } },
+        githubAuth: {
+            isAuthenticated: true,
+            user: { login: 'testuser', email: null, name: null, avatarUrl: null },
+        },
         daLiveAuth: { isAuthenticated: true },
     };
 }
@@ -346,7 +359,7 @@ describe('StorefrontStep', () => {
             expect(updateState).toHaveBeenCalledWith(
                 expect.objectContaining({
                     selectedBlockLibraries: expect.arrayContaining(['lib-a']),
-                }),
+                })
             );
         });
 
@@ -409,5 +422,4 @@ describe('StorefrontStep', () => {
             expect(setCanProceed).toHaveBeenLastCalledWith(true);
         });
     });
-
 });

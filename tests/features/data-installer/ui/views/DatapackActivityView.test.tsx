@@ -52,7 +52,7 @@ function makeEntry(overrides: Partial<ActivityEntry> = {}): ActivityEntry {
 function resolveWith(
     items: ActivityEntry[],
     total = items.length,
-    instance: string | null = 'TENANT123',
+    instance: string | null = 'TENANT123'
 ) {
     mockRequest.mockImplementation(async (type: string) => {
         if (type === 'get-datapack-import-target') {
@@ -76,7 +76,10 @@ function resolveSequence(pages: Array<{ items: ActivityEntry[]; total: number }>
             return { success: true, data: { instance: 'TENANT123', projectName: 'demo-1' } };
         }
         const page = pages[Math.min(next++, pages.length - 1)];
-        return { success: true, data: { items: page.items, count: page.items.length, total: page.total } };
+        return {
+            success: true,
+            data: { items: page.items, count: page.items.length, total: page.total },
+        };
     });
 }
 
@@ -87,9 +90,8 @@ function activityCallCount(): number {
 
 /** The most recent ACTIVITY request, ignoring the target lookup. */
 function lastActivityRequest(): { type: unknown; payload: unknown } {
-    const call = [...mockRequest.mock.calls]
-        .reverse()
-        .find((c) => c[0] === 'get-datapack-activity') ?? [];
+    const call =
+        [...mockRequest.mock.calls].reverse().find((c) => c[0] === 'get-datapack-activity') ?? [];
     return { type: call[0], payload: call[1] };
 }
 
@@ -112,7 +114,7 @@ describe('DatapackActivityView', () => {
             expect(lastActivityRequest()).toEqual({
                 type: 'get-datapack-activity',
                 payload: { limit: 50, skip: 0, commerceInstance: 'TENANT123' },
-            }),
+            })
         );
     });
 
@@ -160,8 +162,13 @@ describe('DatapackActivityView', () => {
             await waitFor(() =>
                 expect(lastActivityRequest()).toEqual({
                     type: 'get-datapack-activity',
-                    payload: { limit: 50, skip: 0, commerceInstance: 'TENANT123', operationMode: 'export' },
-                }),
+                    payload: {
+                        limit: 50,
+                        skip: 0,
+                        commerceInstance: 'TENANT123',
+                        operationMode: 'export',
+                    },
+                })
             );
         });
 
@@ -185,7 +192,7 @@ describe('DatapackActivityView', () => {
                 expect(lastActivityRequest()).toEqual({
                     type: 'get-datapack-activity',
                     payload: { limit: 50, skip: 0, commerceInstance: 'TENANT123' },
-                }),
+                })
             );
         });
     });
@@ -196,7 +203,9 @@ describe('DatapackActivityView', () => {
 
             render(<DatapackActivityView />);
 
-            expect(await screen.findByRole('button', { name: /load 50 more/i })).toBeInTheDocument();
+            expect(
+                await screen.findByRole('button', { name: /load 50 more/i })
+            ).toBeInTheDocument();
         });
 
         it('does not offer more once everything is shown', async () => {
@@ -218,7 +227,7 @@ describe('DatapackActivityView', () => {
                 expect(lastActivityRequest()).toEqual({
                     type: 'get-datapack-activity',
                     payload: { limit: 50, skip: 1, commerceInstance: 'TENANT123' },
-                }),
+                })
             );
         });
 
@@ -311,9 +320,9 @@ describe('DatapackActivityView — scoped to the project', () => {
         render(<DatapackActivityView />);
 
         await waitFor(() =>
-            expect(
-                mockRequest.mock.calls.some((c) => c[0] === 'get-datapack-import-target'),
-            ).toBe(true),
+            expect(mockRequest.mock.calls.some((c) => c[0] === 'get-datapack-import-target')).toBe(
+                true
+            )
         );
     });
 
@@ -325,7 +334,7 @@ describe('DatapackActivityView — scoped to the project', () => {
         await waitFor(() =>
             expect(lastActivityRequest().payload).toMatchObject({
                 commerceInstance: 'TENANT123',
-            }),
+            })
         );
     });
 
@@ -342,7 +351,7 @@ describe('DatapackActivityView — scoped to the project', () => {
             expect(lastActivityRequest().payload).toMatchObject({
                 commerceInstance: 'TENANT123',
                 operationMode: 'import',
-            }),
+            })
         );
     });
 
@@ -356,9 +365,9 @@ describe('DatapackActivityView — scoped to the project', () => {
         render(<DatapackActivityView />);
 
         await waitFor(() =>
-            expect(
-                mockRequest.mock.calls.some((c) => c[0] === 'get-datapack-import-target'),
-            ).toBe(true),
+            expect(mockRequest.mock.calls.some((c) => c[0] === 'get-datapack-import-target')).toBe(
+                true
+            )
         );
         expect(mockRequest.mock.calls.some((c) => c[0] === 'get-datapack-activity')).toBe(false);
     });

@@ -15,23 +15,32 @@ describe('ReviewStep', () => {
     // headless-paas stack uses: frontend='headless', backend='adobe-commerce-paas', dependencies=['headless-commerce-mesh']
     const mockComponentsData = {
         frontends: [
-            { id: 'headless', name: 'CitiSignal Next.js', description: 'Next.js frontend' }
+            { id: 'headless', name: 'CitiSignal Next.js', description: 'Next.js frontend' },
         ],
         backends: [
-            { id: 'adobe-commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' }
+            { id: 'adobe-commerce-paas', name: 'Commerce PaaS', description: 'Commerce backend' },
         ],
         dependencies: [],
         mesh: [
-            { id: 'headless-commerce-mesh', name: 'Headless Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
+            {
+                id: 'headless-commerce-mesh',
+                name: 'Headless Commerce API Mesh',
+                description: 'GraphQL mesh',
+                subType: 'mesh',
+            },
         ],
         integrations: [
             { id: 'aem', name: 'Adobe Experience Manager', description: 'AEM integration' },
-            { id: 'experience-platform', name: 'Adobe Experience Platform', description: 'Experience Platform integration' }
+            {
+                id: 'experience-platform',
+                name: 'Adobe Experience Platform',
+                description: 'Experience Platform integration',
+            },
         ],
         appBuilder: [
             { id: 'custom-app-1', name: 'Custom App 1', description: 'Custom app' },
-            { id: 'custom-app-2', name: 'Custom App 2', description: 'Custom app 2' }
-        ]
+            { id: 'custom-app-2', name: 'Custom App 2', description: 'Custom app 2' },
+        ],
     };
 
     // Complete state for headless-paas stack
@@ -284,10 +293,21 @@ describe('ReviewStep', () => {
             // eds-paas stack uses eds-commerce-mesh instead of headless-commerce-mesh
             const edsComponentsData = {
                 ...mockComponentsData,
-                frontends: [{ id: 'eds-storefront', name: 'Edge Delivery Storefront', description: 'EDS frontend' }],
+                frontends: [
+                    {
+                        id: 'eds-storefront',
+                        name: 'Edge Delivery Storefront',
+                        description: 'EDS frontend',
+                    },
+                ],
                 dependencies: [],
                 mesh: [
-                    { id: 'eds-commerce-mesh', name: 'EDS Commerce API Mesh', description: 'GraphQL mesh', subType: 'mesh' },
+                    {
+                        id: 'eds-commerce-mesh',
+                        name: 'EDS Commerce API Mesh',
+                        description: 'GraphQL mesh',
+                        subType: 'mesh',
+                    },
                 ],
             };
 

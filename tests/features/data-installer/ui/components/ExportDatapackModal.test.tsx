@@ -19,6 +19,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+import { change, press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -66,8 +68,12 @@ function withService(over: Record<string, unknown> = {}) {
     });
 }
 
-function renderModal() {
-    return render(<ExportDatapackModal onClose={jest.fn()} />);
+async function renderModal() {
+    const result = render(<ExportDatapackModal onClose={jest.fn()} />);
+    // Mount effects fire requests; settle so their responses commit inside act()
+    // rather than in the next query's wait loop (tests/helpers/reactSettle.ts).
+    await settle();
+    return result;
 }
 
 /**
@@ -77,16 +83,16 @@ function renderModal() {
 function expectExportDisabled(disabled: boolean): void {
     expect(screen.getByRole('button', { name: /^export$/i })).toHaveAttribute(
         'aria-disabled',
-        String(disabled),
+        String(disabled)
     );
 }
 
 /** Fill the identity the export requires, then press Export. */
 async function exportAs(name: string, version: string) {
-    fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), { target: { value: name } });
-    fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: version } });
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'Attribute sets' }));
-    fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
+    await change(screen.getByRole('textbox', { name: /datapack name/i }), name);
+    await change(screen.getByRole('textbox', { name: /version/i }), version);
+    await press(await screen.findByRole('checkbox', { name: 'Attribute sets' }));
+    await press(screen.getByRole('button', { name: /^export$/i }));
 }
 
 beforeEach(() => {
@@ -96,10 +102,10 @@ beforeEach(() => {
 
 describe('ExportDatapackModal', () => {
     it('offers the EXPORT type list, which is not the import one', async () => {
-        renderModal();
+        await renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument(),
+            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument()
         );
         const call = mockRequest.mock.calls.find((c) => c[0] === 'list-datapack-data-types');
         // `operationMode` is the handler's key; `mode` is refused.
@@ -108,15 +114,19 @@ describe('ExportDatapackModal', () => {
 
     /** Naming the target is the user's job — nothing here guesses it. */
     it('cannot export until a name, a version and a type are given', async () => {
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         expectExportDisabled(true);
 
-        fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), { target: { value: 'captured' } });
+        fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), {
+            target: { value: 'captured' },
+        });
         expectExportDisabled(true);
 
-        fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: 'v1' } });
+        fireEvent.change(screen.getByRole('textbox', { name: /version/i }), {
+            target: { value: 'v1' },
+        });
         expectExportDisabled(true);
 
         fireEvent.click(screen.getByRole('checkbox', { name: 'Attribute sets' }));
@@ -124,7 +134,7 @@ describe('ExportDatapackModal', () => {
     });
 
     it('sends the typed identity and the chosen types', async () => {
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -151,7 +161,7 @@ describe('ExportDatapackModal', () => {
                 },
             },
         });
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -183,7 +193,7 @@ describe('ExportDatapackModal', () => {
                 },
             },
         });
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -195,7 +205,7 @@ describe('ExportDatapackModal', () => {
         withService({
             'start-datapack-export': { success: false, error: 'Open a project before exporting.' },
         });
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -207,10 +217,15 @@ describe('ExportDatapackModal', () => {
         withService({
             'start-datapack-export': {
                 success: true,
-                data: { success: true, perType: [{ dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 }] },
+                data: {
+                    success: true,
+                    perType: [
+                        { dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 },
+                    ],
+                },
             },
         });
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -219,7 +234,7 @@ describe('ExportDatapackModal', () => {
         fireEvent.click(back);
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument(),
+            expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument()
         );
     });
 
@@ -239,7 +254,7 @@ describe('ExportDatapackModal', () => {
      */
     describe('type list, shared with the import modal', () => {
         it('lays the types out in the shared grid, not a private copy', async () => {
-            const { container } = renderModal();
+            const { container } = await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             expect(container.querySelector('.datapack-type-grid')).toBeInTheDocument();
@@ -247,7 +262,7 @@ describe('ExportDatapackModal', () => {
         });
 
         it('offers Select all, the way the import list does', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -257,7 +272,7 @@ describe('ExportDatapackModal', () => {
         });
 
         it('turns into Clear all once everything is selected', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -269,7 +284,7 @@ describe('ExportDatapackModal', () => {
 
         /** Selecting all must send CODES — the labels are presentation only. */
         it('sends the codes it selected, never the names it showed', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -290,10 +305,16 @@ describe('ExportDatapackModal', () => {
         });
 
         /** No list yet, nothing to act on — a bulk toggle over zero types is noise. */
-        it('withholds Select all while the types are still loading', () => {
-            renderModal();
+        it('withholds Select all while the types are still loading', async () => {
+            // Deliberately NOT `renderModal()`: that settles, and settling loads
+            // the types — which is the exact state this test exists to rule out.
+            // Bare render, assert the in-flight view, then settle at the end so
+            // the response still commits inside act().
+            render(<ExportDatapackModal onClose={jest.fn()} />);
 
             expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
+
+            await settle();
         });
     });
 
@@ -305,7 +326,7 @@ describe('ExportDatapackModal', () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-data-types'
                 ? { success: false, error: 'An operation mode is required.' }
-                : { success: true, data: null },
+                : { success: true, data: null }
         );
         render(<ExportDatapackModal onClose={jest.fn()} />);
 

@@ -44,9 +44,7 @@ const INVENTORY: DataItemInventory = {
     requestedCount: 3,
 };
 
-function renderPanel(
-    over: Partial<React.ComponentProps<typeof DatapackDetailPanel>> = {},
-) {
+function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPanel>> = {}) {
     const onClose = jest.fn();
     const view = render(
         <DatapackDetailPanel
@@ -59,7 +57,7 @@ function renderPanel(
             onRetry={jest.fn()}
             onImport={jest.fn()}
             {...over}
-        />,
+        />
     );
     return { ...view, onClose };
 }
@@ -85,7 +83,7 @@ describe('DatapackDetailPanel', () => {
 
         expect(screen.getByRole('dialog')).toHaveAttribute(
             'aria-label',
-            expect.stringContaining('Bodea'),
+            expect.stringContaining('Bodea')
         );
     });
 

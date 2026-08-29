@@ -105,8 +105,20 @@ const CATALOG = {
     // The REAL DatapackSummary shape: identity is a nested `id: {name, version}`,
     // not flat fields. A flat fixture looks right and crashes groupDatapacks.
     items: [
-        { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true, dataTypes: [], art: {} },
-        { id: { name: 'bodea', version: 'hold' }, displayName: 'Bodea', shared: true, dataTypes: [], art: {} },
+        {
+            id: { name: 'bodea', version: 'main' },
+            displayName: 'Bodea',
+            shared: true,
+            dataTypes: [],
+            art: {},
+        },
+        {
+            id: { name: 'bodea', version: 'hold' },
+            displayName: 'Bodea',
+            shared: true,
+            dataTypes: [],
+            art: {},
+        },
         {
             id: { name: 'citisignal_new', version: 'main' },
             displayName: 'CitiSignal',
@@ -125,7 +137,7 @@ function renderStep(state: Partial<WizardState> = {}) {
             state={state as WizardState}
             updateState={updateState}
             setCanProceed={jest.fn()}
-        />,
+        />
     );
     return { ...view, updateState };
 }
@@ -179,7 +191,7 @@ describe('SampleDataStep', () => {
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
                 datapack: { name: 'bodea', version: 'main' },
-            }),
+            })
         );
     });
 
@@ -226,7 +238,10 @@ describe('SampleDataStep', () => {
 
         await waitFor(() => expect(cardFor('Bodea')).toHaveAttribute('aria-checked', 'true'));
         expect(cardFor('CitiSignal')).toHaveAttribute('aria-checked', 'false');
-        expect(screen.getByRole('radio', { name: 'None' })).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('radio', { name: 'None' })).toHaveAttribute(
+            'aria-checked',
+            'false'
+        );
     });
 
     /** The group is never blank: None carries the mark when nothing else does. */
@@ -236,8 +251,8 @@ describe('SampleDataStep', () => {
         await waitFor(() =>
             expect(screen.getByRole('radio', { name: 'None' })).toHaveAttribute(
                 'aria-checked',
-                'true',
-            ),
+                'true'
+            )
         );
     });
 
@@ -247,7 +262,9 @@ describe('SampleDataStep', () => {
         renderStep();
 
         await waitFor(() =>
-            expect(screen.getByText(/The Data Installer service is unreachable\./i)).toBeInTheDocument(),
+            expect(
+                screen.getByText(/The Data Installer service is unreachable\./i)
+            ).toBeInTheDocument()
         );
         expect(screen.queryByTestId('datapack-card')).not.toBeInTheDocument();
     });
@@ -266,7 +283,7 @@ describe('SampleDataStep', () => {
             // findAllBy: the handler's own message names the key and the shared
             // renderer's detail line names it again. Both are legitimate.
             expect(
-                (await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).length,
+                (await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).length
             ).toBeGreaterThan(0);
         });
 
@@ -300,10 +317,10 @@ describe('SampleDataStep', () => {
             mockState = refusal('The Data Installer service is unreachable.');
             renderStep();
 
-            await waitFor(() =>
-                expect(screen.getByText(/unreachable/i)).toBeInTheDocument(),
-            );
-            expect(screen.queryByRole('button', { name: /open settings/i })).not.toBeInTheDocument();
+            await waitFor(() => expect(screen.getByText(/unreachable/i)).toBeInTheDocument());
+            expect(
+                screen.queryByRole('button', { name: /open settings/i })
+            ).not.toBeInTheDocument();
         });
     });
 });
@@ -425,7 +442,9 @@ describe('SampleDataStep — loading', () => {
         mockState = pending();
         renderStep();
 
-        expect(screen.queryByRole('searchbox', { name: /filter datapacks/i })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('searchbox', { name: /filter datapacks/i })
+        ).not.toBeInTheDocument();
     });
 
     /**

@@ -13,6 +13,8 @@
 
 import React, { useCallback, useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
+import { settle } from '../../../../../helpers/reactSettle';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
@@ -263,8 +265,16 @@ export function button(name: string | RegExp): HTMLElement {
     return screen.getByRole('button', { name });
 }
 
-export function click(name: string | RegExp): void {
+/**
+ * Press a button and let what it dispatched finish, inside act().
+ *
+ * Async because every action in this flow fires a request; see
+ * tests/helpers/reactSettle.ts for why the settle must land here rather than at
+ * the assertion. Callers must await it.
+ */
+export async function click(name: string | RegExp): Promise<void> {
     fireEvent.click(button(name));
+    await settle();
 }
 
 export function expectDisabled(name: string | RegExp): void {
@@ -276,7 +286,7 @@ export function expectEnabled(name: string | RegExp): void {
 }
 
 /** kind → dest-project for a mesh add (signed in, nothing committed). */
-export function walkMeshToProject(): void {
-    click(/API Mesh/);
-    click('Continue');
+export async function walkMeshToProject(): Promise<void> {
+    await click(/API Mesh/);
+    await click('Continue');
 }

@@ -76,7 +76,7 @@ function setup(editTarget: ApiEditTarget, initial: Partial<WizardState> = {}): S
             editTarget,
             meshComponent: undefined,
             catalog: EMPTY_CATALOG,
-                reservedIds: new Set<string>(),
+            reservedIds: new Set<string>(),
             builder,
             onClose,
         } as UseIntegrationFlowArgs)
