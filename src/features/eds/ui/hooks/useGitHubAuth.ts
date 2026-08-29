@@ -10,6 +10,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
 import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload, GitHubUser } from '@/types/webviewPayloads';
+import { edsConfigStringDefaults } from '../helpers/edsConfigDefaults';
 
 const log = webviewLogger('useGitHubAuth');
 
@@ -76,12 +77,7 @@ export function useGitHubAuth({
         updateState({
             edsConfig: {
                 ...edsConfig,
-                accsHost: edsConfig?.accsHost || '',
-                storeViewCode: edsConfig?.storeViewCode || '',
-                customerGroup: edsConfig?.customerGroup || '',
-                repoName: edsConfig?.repoName || '',
-                daLiveOrg: edsConfig?.daLiveOrg || '',
-                daLiveSite: edsConfig?.daLiveSite || '',
+                ...edsConfigStringDefaults(edsConfig),
                 githubAuth: {
                     ...githubAuth,
                     isAuthenticated: githubAuth?.isAuthenticated || false,

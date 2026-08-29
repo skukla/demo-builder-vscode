@@ -45,10 +45,9 @@ import {
 } from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
+import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
 import '../styles/eds-steps.css';
 
-/** The wizard's edsConfig, exactly as state carries it (optional included). */
-type WizardEdsConfig = BaseStepProps['state']['edsConfig'];
 
 /** Which part of the repo/code-sync flow to render (validities stay live for both). */
 export type RepoSelectionPhase = 'repository' | 'code-sync';
@@ -64,36 +63,6 @@ export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 
 }
 
 
-
-/**
- * The string fields every `edsConfig` write must carry, defaulted to `''`.
- *
- * Both writers below spread this before applying their own changes. It was
- * written out twice — six near-identical `|| ''` lines each — which is most of
- * what pushed this component past the complexity limit, and meant a new required
- * field had to be remembered in two places.
- *
- * `undefined` is not an acceptable value for these: they feed controlled inputs,
- * and React silently switches an input to uncontrolled the moment its value goes
- * undefined, discarding what the user typed with no error anywhere.
- */
-function edsConfigStringDefaults(edsConfig: WizardEdsConfig): {
-    accsHost: string;
-    storeViewCode: string;
-    customerGroup: string;
-    repoName: string;
-    daLiveOrg: string;
-    daLiveSite: string;
-} {
-    return {
-        accsHost: edsConfig?.accsHost || '',
-        storeViewCode: edsConfig?.storeViewCode || '',
-        customerGroup: edsConfig?.customerGroup || '',
-        repoName: edsConfig?.repoName || '',
-        daLiveOrg: edsConfig?.daLiveOrg || '',
-        daLiveSite: edsConfig?.daLiveSite || '',
-    };
-}
 
 /**
  * The repo-selection values this component derives from `edsConfig`.
