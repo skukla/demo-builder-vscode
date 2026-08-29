@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>webview visual harness</title>
+<style>
+  /* VS Code injects these into every webview; a standalone page must supply
+     them or every themed rule falls back. Values lifted from Dark Modern. */
+  :root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    --vscode-font-size: 13px;
+    --vscode-foreground: #cccccc;
+    --vscode-editor-background: #1f1f1f;
+    --vscode-descriptionForeground: #9d9d9d;
+    --vscode-badge-background: #616161;
+    --vscode-badge-foreground: #f8f8f8;
+    --vscode-button-background: #0078d4;
+    --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #2b2b2b;
+    --vscode-focusBorder: #0078d4;
+    --vscode-errorForeground: #f85149;
+    --vscode-textLink-foreground: #4daafc;
+    --vscode-input-background: #313131;
+    --vscode-input-foreground: #cccccc;
+  }
+  body { margin: 0; background: var(--vscode-editor-background); color: var(--vscode-foreground);
+         font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  // Stand in for VS Code's API. The bundle's client posts `__webview_ready__`
+  // and waits for `__handshake_complete__`, then for an `init` payload.
+  window.__HARNESS_SENT__ = [];
+  // async, as the real host is — a synchronous reply lands mid-initialisation
+  const reply = (msg) => setTimeout(() => window.dispatchEvent(new MessageEvent('message', { data: msg })), 0);
+  window.acquireVsCodeApi = () => ({
+    postMessage: (m) => {
+      window.__HARNESS_SENT__.push(m);
+      if (m.type === '__webview_ready__') {
+        reply({ id: 'h', type: '__handshake_complete__', timestamp: Date.now() });
+        reply({ id: 'i', type: 'init', payload: window.__INIT__ || {}, timestamp: Date.now() });
+      }
+      // Answer every request with a benign empty success so the surface settles.
+      if (m.expectsResponse) {
+        reply({ id: m.id + '-r', type: 'response', requestId: m.id,
+                payload: { success: true, data: null }, timestamp: Date.now() });
+      }
+    },
+    getState: () => undefined, setState: () => {},
+  });
+  window.__INIT__ = { theme: 'dark' };
+</script>
+<script src="./dataInstaller-bundle.js"></script>
+</body>
+</html>
