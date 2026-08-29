@@ -194,11 +194,80 @@ stylesheet belongs to its bundle's graph, and
 `tests/sop/stylesheet-bundles.test.ts` plus the `classesDefinedNowhere` rule are
 running.
 
-## Phase 4 — REFACTOR: only if the ADR requires it, and only behind phase 1
+## Phase 4 — REFACTOR: the workflow, now that the safety net is proven
 
-Explicitly gated. If phase 1 fails to produce a safety net, phase 4 does not
-happen — the ADR governs NEW code and existing CSS is left alone. That is a
-legitimate outcome and better than the alternative this item exists to avoid.
+No longer "gated on a maybe". The net exists, so this is an operating procedure.
+
+### The unit of work is ONE change, not one session
+
+Because the definition of done is "returns to baseline exactly", the cycle is
+worth only as much as its resolution. A batch of twelve edits that moves the
+snapshot tells you twelve things might be wrong. One edit that moves it tells you
+exactly what did.
+
+    build -> capture -> ONE change -> rebuild -> re-capture -> diff -> commit or revert
+
+Roughly 20s per cycle for all eight surfaces today, most of it a removable sleep.
+Cheap enough to do per-rule.
+
+### Two kinds of change, and they have different done-conditions
+
+- **Behaviour-preserving** (the majority: moving rules, splitting files,
+  consolidating duplicates, deleting dead rules). **Done = empty diff.** A
+  non-empty diff is a bug in the refactor, full stop.
+- **Intentional** (the ADR says a rule should change). **Done = the diff contains
+  exactly the expected elements and nothing else**, and the new fingerprint is
+  committed as the new baseline with the reason in the commit message. An
+  unexpected element in the diff is a cascade side effect — the thing that has
+  always bitten us — and it is now visible instead of shipped.
+
+Never accept a new baseline to make a red cycle go green. That converts the
+instrument back into the manual process it replaces.
+
+### Do the cheap safety work FIRST
+
+- **Build the missing fixtures.** Four surfaces (configure, aiOverview, sidebar,
+  and the dashboard's deeper states) render near-empty, so rules only exercised
+  there are UNPROTECTED. Refactoring them blind is exactly the old workflow.
+  Fixture coverage decides what may safely be touched.
+- **Extend the property list before you need it.** The fingerprint captures 16
+  properties. Touching `z-index`, `box-shadow`, `transform` or `overflow` means
+  adding them first — otherwise the check passes because it is not looking.
+
+### Sequence, safest to riskiest
+
+1. **Delete verified-dead rules** (PL-20's dead-markup half). Expect an empty
+   diff. If deleting a rule MOVES the snapshot, it was not dead — a free finding.
+2. **Split `custom-spectrum.css`.** 6,217 lines against a 500-line SOP ceiling,
+   and the highest-value structural change available. Import the pieces in the
+   SAME order and the cascade is preserved — but note the file interleaves
+   `@layer theme`, `@layer overrides`, `@layer theme` again, and unlayered
+   content, so "same order" is subtler than it looks. Expect an empty diff, and
+   trust the snapshot rather than the reasoning.
+3. **Consolidate the 19 double-defined classes.** Keep the winner, delete the
+   loser, expect an empty diff. A non-empty one means something depended on the
+   loser.
+4. **Reduce `!important`.** One at a time, each its own cycle. Expect an empty
+   diff — where it is empty, that `!important` was cargo and is now gone; where
+   it is not, it was load-bearing and stays. This is the only way to tell the
+   1,957 apart, and it is now mechanical rather than brave.
+5. **Normalise layers — LAST, and expect movement.** Highest risk by far, because
+   of the reversal below. Adjudicate every moved element individually.
+
+### The rule that governs all of it
+
+**`!important` inside `@layer` beats `!important` outside it.** Cascade layers
+reverse precedence for important declarations. So:
+
+- appending an override at the end of `custom-spectrum.css` does NOT override
+  anything inside `@layer theme`, importantly or otherwise
+- moving a rule INTO a layer lowers its important-priority and raises its
+  normal-priority — in opposite directions at once
+- this is backwards from most people's CSS intuition, which is why it is a
+  standing candidate for "we could never make that render properly"
+
+Every step above either avoids moving rules across that boundary, or treats doing
+so as an intentional change requiring adjudication.
 
 ## Why the ADR alone is not enough
 
