@@ -222,6 +222,57 @@ token provider and are therefore already safer — they may need nothing).
 **If we do nothing:** the shape that produced one live 401 stays in place, and
 the next call site to guess wrong fails the same silent way.
 
+### MEASURED 2026-08-29, and it corrects the proposal above
+
+Every construction site was read — both what it PASSES and what it then CALLS.
+Two things change:
+
+**There are 14 sites, not 11.** The three missed ones (`edsResetService` has two,
+`contentAuthoringTools`, `catalogPrewarmPhase`) all pass both credentials.
+
+**The proposed factory set does not fit the evidence:**
+
+| What the site passes | Sites | D-3's factory |
+|---|---|---|
+| BOTH github + daLive | **10** | none proposed |
+| github only | 2 | `helixForCodeSync` |
+| daLive only | 2 | `helixForPublishing` |
+| logger only | **0** | `helixForStatus` — no users at all |
+
+So `helixForStatus` would be speculative, and the majority case — a flow doing
+code-sync AND publishing, which every reset/setup/republish path is — has no
+factory at all. Naming three jobs when the real distribution is 10/2/2 pushes ten
+sites back onto the raw constructor, leaving the hazard where it is.
+
+**The ten:** storefrontSetupPhases, storefrontRepublishService, edsResetService
+(x2), edsResetConfigStep, refreshBlockLibraryHeadless, authoringExperienceFlip,
+edsContentSetup, contentAuthoringTools, catalogPrewarmPhase.
+**The two github-only:** configSyncService, checkGitHubAppHandler — both call
+only `previewCode`.
+**The two daLive-only:** publishKeyRegistrar (`createAdminApiKey`),
+projectDeletionService (`deleteAdminApiKey`, `listAllPages`, `unpublishPages`).
+
+### What the evidence supports instead
+
+Three factories sized to the actual distribution, each taking its credentials as
+REQUIRED parameters:
+
+    helixForCodeSync(githubTokenService, logger?)        // 2 sites
+    helixForPublishing(daLiveTokenProvider, logger?)     // 2 sites
+    helixForSetupPipeline(github, daLive, logger?)       // 10 sites
+
+The win is the one D-3 argued for, landing on the majority case rather than the
+margins: on the ten, BOTH credentials become required, so the omission behind the
+2026-08-15 stale-config 401 stops compiling. On the four, the compiler rejects a
+publishing call built with GitHub credentials.
+
+`helixForStatus` is not written until something needs it.
+
+**Still needs a human, and this is the narrowed question:** are all ten genuinely
+doing both jobs, or is some of that defensive over-passing? A site passing a
+`daLiveTokenProvider` it never uses belongs on `helixForCodeSync`. That is the one
+thing reading constructor arguments cannot settle.
+
 ---
 
 ## D-4. A class building its own private parts — not allowed, and now measured
