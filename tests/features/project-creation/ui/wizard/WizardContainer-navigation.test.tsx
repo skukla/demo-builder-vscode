@@ -11,7 +11,7 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 describe('WizardContainer - Navigation', () => {
@@ -27,7 +27,7 @@ describe('WizardContainer - Navigation', () => {
     describe('Happy Path - Step Navigation', () => {
         it('should advance to next step when Continue is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -42,14 +42,17 @@ describe('WizardContainer - Navigation', () => {
             await user.click(continueButton);
 
             // Wait for transition (300ms delay in navigateToStep)
-            await waitFor(() => {
-                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
         });
 
         it('should navigate backwards when Back button is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -60,22 +63,28 @@ describe('WizardContainer - Navigation', () => {
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
-            await waitFor(() => {
-                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // Navigate back
             const backButton = screen.getByRole('button', { name: /back/i });
             await user.click(backButton);
 
-            await waitFor(() => {
-                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
         });
 
         it('should mark steps as completed when navigating forward', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -86,14 +95,20 @@ describe('WizardContainer - Navigation', () => {
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
             await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // Timeline should show welcome and welcome as completed
             // (Verified through TimelineNav completedSteps prop)
@@ -106,7 +121,7 @@ describe('WizardContainer - Navigation', () => {
 
         it('should allow backward navigation via sidebar message', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -117,9 +132,12 @@ describe('WizardContainer - Navigation', () => {
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
-            await waitFor(() => {
-                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // Simulate sidebar sending navigation message (go back to step 0)
             // The sidebar integration is tested in sidebar tests
@@ -127,14 +145,17 @@ describe('WizardContainer - Navigation', () => {
             const backButton = screen.getByRole('button', { name: /back/i });
             await user.click(backButton);
 
-            await waitFor(() => {
-                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
         });
 
         it('should not allow skipping steps via Continue', async () => {
             const _user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -154,7 +175,7 @@ describe('WizardContainer - Navigation', () => {
     describe('Happy Path - Backend Call on Continue', () => {
         it('should call backend when selecting project and clicking Continue', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -175,16 +196,19 @@ describe('WizardContainer - Navigation', () => {
             await user.click(continueButton);
 
             // Verify navigation proceeds to the next step
-            await waitFor(() => {
-                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
         });
     });
 
     describe('Integration - Full Wizard Flow', () => {
         it('should complete entire wizard flow from auth to project creation', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}

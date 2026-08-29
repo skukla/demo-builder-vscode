@@ -11,7 +11,7 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 /**
@@ -32,8 +32,8 @@ describe('WizardContainer - Layout Components', () => {
     });
 
     describe('PageHeader - Header Display', () => {
-        it('should display "Create Demo Project" as the main title', () => {
-            renderWithTheme(
+        it('should display "Create Demo Project" as the main title', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -41,11 +41,13 @@ describe('WizardContainer - Layout Components', () => {
             );
 
             // PageHeader renders H1 with the title
-            expect(screen.getByRole('heading', { level: 1, name: /create demo project/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', { level: 1, name: /create demo project/i })
+            ).toBeInTheDocument();
         });
 
-        it('should display current step name as the header subtitle crumb', () => {
-            const { container } = renderWithTheme(
+        it('should display current step name as the header subtitle crumb', async () => {
+            const { container } = await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -60,7 +62,7 @@ describe('WizardContainer - Layout Components', () => {
 
         it('should update the subtitle crumb when navigating to a different step', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const { container } = renderWithTheme(
+            const { container } = await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -82,8 +84,8 @@ describe('WizardContainer - Layout Components', () => {
     });
 
     describe('PageFooter - Footer Buttons', () => {
-        it('should display Cancel button in footer left content', () => {
-            renderWithTheme(
+        it('should display Cancel button in footer left content', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -94,8 +96,8 @@ describe('WizardContainer - Layout Components', () => {
             expect(cancelButton).toBeInTheDocument();
         });
 
-        it('should display Continue button in footer right content (Back hidden on first step)', () => {
-            renderWithTheme(
+        it('should display Continue button in footer right content (Back hidden on first step)', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -111,7 +113,7 @@ describe('WizardContainer - Layout Components', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const { mockPostMessage } = require('./WizardContainer.testUtils');
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -127,7 +129,7 @@ describe('WizardContainer - Layout Components', () => {
         it('should have enabled Cancel and Continue buttons on first step', async () => {
             // This test verifies that buttons are enabled initially (not during loading)
             // Back button is hidden on first step (fix from d1b31df)
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -150,7 +152,7 @@ describe('WizardContainer - Layout Components', () => {
                 { id: 'create-project', name: 'Create Project', enabled: true },
             ];
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={minimalSteps}
@@ -177,7 +179,7 @@ describe('WizardContainer - Layout Components', () => {
         it('should still display loading overlay during backend calls', async () => {
             // The loading overlay is rendered in step content area, not in footer
             // This verifies the overlay mechanism still works after layout component adoption
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}

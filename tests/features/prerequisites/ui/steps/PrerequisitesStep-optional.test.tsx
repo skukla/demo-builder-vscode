@@ -4,10 +4,10 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
-    mockOnMessage,
     baseState,
-    setupScrollMock,
     resetAllMocks,
+    setupMessageCallbacks,
+    setupScrollMock,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
 
@@ -45,17 +45,7 @@ describe('PrerequisitesStep - Optional Prerequisites', () => {
     });
 
     it('should allow continue even if optional prerequisites fail', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -70,11 +60,11 @@ describe('PrerequisitesStep - Optional Prerequisites', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
                 { id: 'node', name: 'Node.js', description: 'Runtime', optional: false },
-                { id: 'tool', name: 'Optional Tool', description: 'Optional', optional: true }
-            ]
+                { id: 'tool', name: 'Optional Tool', description: 'Optional', optional: true },
+            ],
         });
 
         await waitFor(() => {
@@ -82,8 +72,8 @@ describe('PrerequisitesStep - Optional Prerequisites', () => {
         });
 
         // Required passes, optional fails
-        statusCallback({ index: 0, status: 'success', message: 'Installed' });
-        statusCallback({ index: 1, status: 'error', message: 'Not found', canInstall: false });
+        fire.fireStatus({ index: 0, status: 'success', message: 'Installed' });
+        fire.fireStatus({ index: 1, status: 'error', message: 'Not found', canInstall: false });
 
         await waitFor(() => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -91,14 +81,7 @@ describe('PrerequisitesStep - Optional Prerequisites', () => {
     });
 
     it('should display optional label for optional prerequisites', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -113,10 +96,10 @@ describe('PrerequisitesStep - Optional Prerequisites', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
-                { id: 'tool', name: 'Optional Tool', description: 'Optional', optional: true }
-            ]
+                { id: 'tool', name: 'Optional Tool', description: 'Optional', optional: true },
+            ],
         });
 
         await waitFor(() => {

@@ -13,7 +13,7 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 /**
@@ -54,7 +54,7 @@ describe('WizardContainer — a project on a hidden package', () => {
     beforeEach(() => {
         setupTest();
         (getPackageById as jest.Mock).mockImplementation(async (id: string) =>
-            id === 'test-package' ? { id: 'test-package', name: 'Test Package' } : { id, name: id },
+            id === 'test-package' ? { id: 'test-package', name: 'Test Package' } : { id, name: id }
         );
     });
 
@@ -64,12 +64,12 @@ describe('WizardContainer — a project on a hidden package', () => {
     });
 
     it('resolves its own package by id when the selectable list omits it', async () => {
-        renderWithTheme(
+        await renderWizard(
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={createMockWizardSteps()}
                 editProject={editProjectOn('hidden-brand') as never}
-            />,
+            />
         );
 
         await waitFor(() => {
@@ -84,12 +84,12 @@ describe('WizardContainer — a project on a hidden package', () => {
      * about hidden packages.
      */
     it('CONTROL — does not look up a package the selectable list already has', async () => {
-        renderWithTheme(
+        await renderWizard(
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={createMockWizardSteps()}
                 editProject={editProjectOn('test-package') as never}
-            />,
+            />
         );
 
         await waitFor(() => {
@@ -99,11 +99,11 @@ describe('WizardContainer — a project on a hidden package', () => {
     });
 
     it('looks nothing up when the project has no package selected', async () => {
-        renderWithTheme(
+        await renderWizard(
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={createMockWizardSteps()}
-            />,
+            />
         );
 
         await waitFor(() => {

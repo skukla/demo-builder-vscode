@@ -11,7 +11,7 @@ import {
     createMockImportedSettings,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 /**
@@ -34,10 +34,10 @@ describe('WizardContainer - Import Flow', () => {
     });
 
     describe('Import Settings Pre-population', () => {
-        it('should pre-populate project name from imported settings', () => {
+        it('should pre-populate project name from imported settings', async () => {
             const importedSettings = createMockImportedSettings();
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -50,10 +50,10 @@ describe('WizardContainer - Import Flow', () => {
             expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
-        it('should generate unique project name when original exists', () => {
+        it('should generate unique project name when original exists', async () => {
             const importedSettings = createMockImportedSettings();
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -68,13 +68,13 @@ describe('WizardContainer - Import Flow', () => {
     });
 
     describe('Edge Cases - Import without Adobe context', () => {
-        it('should handle import without Adobe binding', () => {
+        it('should handle import without Adobe binding', async () => {
             const settingsWithoutAdobe = {
                 ...createMockImportedSettings(),
                 adobe: undefined,
             };
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -87,7 +87,7 @@ describe('WizardContainer - Import Flow', () => {
             expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
-        it('should handle import with partial Adobe context', () => {
+        it('should handle import with partial Adobe context', async () => {
             const settingsWithPartialAdobe = {
                 ...createMockImportedSettings(),
                 adobe: {
@@ -97,7 +97,7 @@ describe('WizardContainer - Import Flow', () => {
                 },
             };
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -112,10 +112,10 @@ describe('WizardContainer - Import Flow', () => {
     });
 
     describe('Edge Cases - Import with existing selections', () => {
-        it('should preserve component selections from import', () => {
+        it('should preserve component selections from import', async () => {
             const importedSettings = createMockImportedSettings();
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}

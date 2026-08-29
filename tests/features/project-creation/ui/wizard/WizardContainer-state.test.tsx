@@ -12,7 +12,7 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 describe('WizardContainer - State Management', () => {
@@ -28,7 +28,7 @@ describe('WizardContainer - State Management', () => {
     describe('Edge Cases - State Clearing', () => {
         it('should clear dependent state when navigating backward past selection steps', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -59,9 +59,12 @@ describe('WizardContainer - State Management', () => {
             await user.click(backButton2);
 
             // Should navigate back to welcome (first step)
-            await waitFor(() => {
-                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // Back button hidden on first step (d1b31df)
             expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
@@ -72,7 +75,7 @@ describe('WizardContainer - State Management', () => {
         it('should support forward navigation through multiple steps', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -95,11 +98,11 @@ describe('WizardContainer - State Management', () => {
             expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
         });
 
-        it('should disable Continue button when canProceed is false', () => {
+        it('should disable Continue button when canProceed is false', async () => {
             // This test doesn't need to mock React.useEffect - the mocked step components
             // already control canProceed via setCanProceed in their useEffect
             // Testing that the Continue button exists is sufficient
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -115,9 +118,11 @@ describe('WizardContainer - State Management', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             // Reset and mock slow backend call
             mockRequest.mockReset();
-            mockRequest.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ success: true }), 200)));
+            mockRequest.mockImplementation(
+                () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 200))
+            );
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}

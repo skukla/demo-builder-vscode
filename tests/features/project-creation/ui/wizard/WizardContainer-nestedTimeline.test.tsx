@@ -39,7 +39,7 @@ import {
     createMockComponentDefaults,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 // ---------------------------------------------------------------------------
@@ -84,8 +84,8 @@ const buildFirstSteps = [
     { id: 'create-project', name: 'Create Project', enabled: true },
 ];
 
-function renderOnBuildStep() {
-    return renderWithTheme(
+async function renderOnBuildStep() {
+    return await renderWizard(
         <WizardContainer
             componentDefaults={createMockComponentDefaults()}
             wizardSteps={buildFirstSteps}
@@ -133,7 +133,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
     });
 
     it('passes the visible Build areas to TimelineNav as child steps (rail sub-nav)', async () => {
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // The visible areas (Storefront is hidden for this non-EDS stack) render as
@@ -147,7 +147,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
     });
 
     it('clicking an AHEAD rail area is gated — forward stays on Continue', async () => {
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // Active area is the first (Commerce). Clicking the ahead Integrations area is
@@ -166,7 +166,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
 
     it('Continue walks the Commerce SUB-STEPS before leaving the Commerce area', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // First Continue advances a SUB-STEP (backend → connection), NOT the area —
@@ -194,7 +194,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
 
     it('Continue on the LAST sub-step of the LAST area advances the wizard step', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // Walk all Commerce sub-steps (last sub-step Continue → integrations area).
@@ -215,7 +215,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
 
     it('Back from the integrations area (null driver) returns to the previous area', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // Walk onto the integrations area (all Commerce sub-steps, then the area hop).
@@ -236,7 +236,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
 
     it('Back steps a Commerce SUB-STEP back (currentStep unchanged)', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // Advance one sub-step (backend → connection); Back renders now.
@@ -255,7 +255,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         // On the first sub-step (backend) of the first area (commerce), Back must
         // navigate the WIZARD step back to welcome (goBack).
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderWithTheme(
+        await renderWizard(
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={[
@@ -287,7 +287,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
 
     it('canGoBack is true once a Commerce sub-step has been advanced', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        renderOnBuildStep();
+        await renderOnBuildStep();
         await screen.findByTestId('build-your-project-step');
 
         // build-your-project is the FIRST wizard step → no Back at the first sub-step.

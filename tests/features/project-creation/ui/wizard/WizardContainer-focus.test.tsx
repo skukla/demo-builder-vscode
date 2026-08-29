@@ -11,9 +11,8 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
-
 
 describe('WizardContainer - Focus Management', () => {
     beforeEach(() => {
@@ -35,7 +34,7 @@ describe('WizardContainer - Focus Management', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const focusSpy = jest.spyOn(HTMLElement.prototype, 'focus');
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -50,15 +49,21 @@ describe('WizardContainer - Focus Management', () => {
 
             // welcome → welcome
             await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // welcome → prerequisites
             await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
-            }, { timeout: 500 });
+            await waitFor(
+                () => {
+                    expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
+                },
+                { timeout: 500 }
+            );
 
             // Now on prerequisites step (self-managed focus)
             expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();

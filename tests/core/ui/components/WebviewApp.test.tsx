@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // Create mocks that can be accessed before Jest hoisting
@@ -48,11 +48,15 @@ describe('WebviewApp', () => {
         document.body.className = '';
     });
 
-    // Helper to trigger a message
+    // Helper to trigger a message.
+    //
+    // act()-wrapped: this pushes a message straight into the component's
+    // subscriber, so the state update has no React event behind it and warns
+    // when bare. A synchronous act is correct — the handlers set state directly.
     const triggerMessage = (type: string, data: unknown) => {
         const handler = messageHandlers.get(type);
         if (handler) {
-            handler(data);
+            act(() => handler(data));
         }
     };
 
@@ -196,7 +200,14 @@ describe('WebviewApp', () => {
     describe('render props pattern', () => {
         it('supports function children (render props)', async () => {
             render(
-                <WebviewApp>{(data) => <div>Data: {String((data as { customProp?: string } | null)?.customProp ?? 'none')}</div>}</WebviewApp>
+                <WebviewApp>
+                    {(data) => (
+                        <div>
+                            Data:{' '}
+                            {String((data as { customProp?: string } | null)?.customProp ?? 'none')}
+                        </div>
+                    )}
+                </WebviewApp>
             );
 
             triggerMessage('init', { customProp: 'test-value' });
