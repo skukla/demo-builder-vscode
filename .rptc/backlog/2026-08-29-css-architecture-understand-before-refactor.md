@@ -97,14 +97,27 @@ PRE-FIX bundle, so the instrument distinguishes broken from fixed.
 equality, no pixel tolerance, no font drift — and it already catches the failures
 this codebase actually has. Screenshot diffing stays unattempted and unneeded.
 
-**The one real cost — and the recommendation.** No browser driver is installed
-(no Playwright or Puppeteer, direct or transitive), and CI deliberately runs
-`npm ci --ignore-scripts` so the webview bundles are never built there. So CI
-would need both a driver (~100MB, cacheable) and a build step.
+**Who can run it — CORRECTED.** An earlier version of this item said "no browser
+driver is installed". That was wrong in the way that mattered: **Playwright is
+what ran the whole verification**, via MCP. What is missing is only a
+*repo-level* dependency.
 
-Recommend **a release-cut instrument, not a CI gate** — same shape as
-`codebase-sweep` and `npm run eds:drift`. That buys the safety net with none of
-the CI cost, and CI can follow if it earns its place.
+| Route | Available now | Who runs it | Cost |
+|---|---|---|---|
+| Agent-driven via MCP | **yes — used today** | an agent | **zero** |
+| Repo dependency | no | anyone / any npm script | 5 MB package; browsers already cached (1.7 GB in `~/Library/Caches/ms-playwright`) |
+| CI | no | CI | the above + a build step, since CI runs `npm ci --ignore-scripts` and never builds the bundles |
+
+**Recommendation: start agent-driven, because it works today at zero cost** and
+matches how this repo already runs periodic instruments — `codebase-sweep`,
+`dream` and `eds:drift` are all agent-invoked at a release cut, not CI gates. Add
+the 5 MB dependency when a human or script needs to run it without an agent.
+Consider CI last; the build step is the awkward part there, not the driver.
+
+One constraint on the MCP route: that browser runs in a container, so the harness
+must be served over HTTP at an address the container can reach —
+`host.docker.internal`, not `localhost`. A `python3 -m http.server` in the bundle
+directory is enough.
 
 **Remaining work is building it, not discovering whether it is possible.** Four
 surfaces (configure, sidebar, aiOverview, dashboard's deeper states) render empty
@@ -177,3 +190,4 @@ layout failures, which no static check can see. Only phase 1 addresses those.
 ## Shipped so far
 
 - 2026-08-29  Phase 1 VERIFIED 2026-08-29 at the owner's request. All 8 webview bundles mount outside VS Code; Spectrum theme resolves in all 8; signal identical across runs (6/6); detection proven against pre-fix vs post-fix bundles. Two traps recorded: the handshake reply must be ~30ms not 0ms (a 0ms reply lands before the client's listener and everything hangs), and the Spectrum theme scope only exists once mounted (so an unmounted harness reports false regressions and must abort). Chose computed-style assertions over screenshots. Cost: no browser driver installed and CI skips the build, so recommend a release-cut instrument rather than a CI gate. Remaining work is building it.
+- 2026-08-29  CORRECTION: an earlier note said 'no browser driver is installed'. Wrong — Playwright via MCP is what ran the entire verification, at zero cost. Only a REPO-LEVEL dependency is missing (5 MB package; browsers already cached locally at 1.7 GB). Revised recommendation: start agent-driven like codebase-sweep/dream/eds:drift, add the dependency when a human or script needs it, consider CI last. MCP constraint: its browser is containerised, so the harness must be served at host.docker.internal, not localhost.

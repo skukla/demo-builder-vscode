@@ -116,21 +116,52 @@ This is why **computed-style assertions beat screenshot diffing here**: exact
 string equality, no pixel tolerance, no font-rendering drift, and it already
 catches the failures this codebase actually has.
 
-## The one real cost: CI
+## Who can run it, and what each option costs
 
-- **No browser driver is installed.** Neither Playwright nor Puppeteer is a
-  dependency, direct or transitive. Adding one means a package plus a browser
-  download (~100MB, cacheable).
-- **CI does not build the webviews.** `.github/workflows/ci.yml` runs
-  `npm ci --ignore-scripts` precisely to skip `npm run compile`, because tsc,
-  eslint and jest do not need build output. A visual check DOES — it needs
-  `dist/webview/*-bundle.js`. So CI would need an explicit build step (seconds
-  with esbuild) in addition to the driver.
+**CORRECTION 2026-08-29.** An earlier version of this document said "no browser
+driver is installed", which was wrong in the way that mattered: **we do have
+Playwright** — the entire verification above was run through it. What is absent
+is a *repo-level dependency*, which is a different and much smaller gap. The
+three options are genuinely different and the wrong one was nearly recommended.
 
-**Recommendation: do not put this in CI first.** Make it a release-cut
-instrument, like `codebase-sweep` and `npm run eds:drift` — run deliberately,
-before a cut or before touching CSS. That gets the safety net with none of the
-CI cost, and CI can follow later if it earns its place.
+| Route | Available now | Who can run it | Cost |
+|---|---|---|---|
+| **Agent-driven via MCP** | **Yes — this is what ran every result above** | an agent | **zero** |
+| **Repo dependency** | no | anyone, any npm script, eventually CI | `playwright` is 5 MB unpacked; browsers already cached |
+| **CI** | no | CI | the above, plus a build step |
+
+Facts behind that table:
+
+- `playwright` is **not** in this repo's dependencies and not in `node_modules`;
+  a jest test here cannot `require('playwright')` today.
+- It is **not** installed globally either.
+- But **the browsers are already on this machine** — `~/Library/Caches/ms-playwright`
+  holds 1.7 GB including `chromium-1200`, `chromium-1217` and the MCP Chrome
+  builds. The "~100 MB download" cost cited earlier is already paid here, though
+  a fresh CI runner would still pay it.
+- The npm package itself is **5 MB unpacked** (v1.62.1). Adding it is cheap.
+- CI additionally runs `npm ci --ignore-scripts` specifically to skip
+  `npm run compile`, so `dist/webview/*-bundle.js` does not exist there. Any
+  CI-run visual check needs an explicit build step regardless of driver.
+
+### The MCP route has one real constraint
+
+The MCP browser runs **in a container**. `localhost:878` was unreachable from it;
+`host.docker.internal:878` worked. So the harness must be served over HTTP on an
+address the container can reach — a `python3 -m http.server` in the bundle
+directory is enough, and is what the spike used. Not a blocker, but it is why the
+instrument cannot simply open a `file://` path.
+
+### Recommendation, revised
+
+**Start with the agent-driven route, because it works today at zero cost** and
+matches how this repo already runs its periodic instruments — `codebase-sweep`,
+`dream`, `eds:drift` are all invoked deliberately by an agent at a release cut,
+not by CI.
+
+Add the 5 MB repo dependency when a human or a script needs to run it without an
+agent. Consider CI last, and only if the instrument has earned it — the build
+step is the awkward part there, not the driver.
 
 ## What this makes safe
 
