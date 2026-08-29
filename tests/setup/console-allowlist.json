@@ -1,20 +1,5 @@
 {
   "_what": "PL-15 burn-down ledger (ADR-016). Suites that emit console.error/warn during a PASSING run, measured 2026-08-28. This list may only SHRINK: fix the cause, delete the line. A suite NOT listed here fails the moment it emits.",
   "_seededFrom": "CONSOLE_GATE=collect full-suite run at commit a1bc7c5 (1,179 suites, 68 offenders)",
-  "suites": [
-    "tests/core/logging/errorLogger.test.ts",
-    "tests/core/state/manifestFormatSweep.test.ts",
-    "tests/core/state/manifestValidation.test.ts",
-    "tests/core/state/projectFileLoader-shapeWarnDedup.test.ts",
-    "tests/core/state/projectFileLoader.test.ts",
-    "tests/core/state/stateManager-basic.test.ts",
-    "tests/core/state/stateManager-componentVersions.test.ts",
-    "tests/core/state/stateManager-context.test.ts",
-    "tests/core/state/stateManager-getCurrentProject-diskPointer.test.ts",
-    "tests/core/state/stateManager-getCurrentProject-reload.test.ts",
-    "tests/core/state/stateManager-utilities.test.ts",
-    "tests/features/ai/mcpServer-config.test.ts",
-    "tests/features/eds/services/configJsonFatalFailure.test.ts",
-    "tests/features/project-creation/ui/wizard/wizardHelpers-state-config.test.ts"
-  ]
+  "suites": []
 }

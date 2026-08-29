@@ -173,9 +173,17 @@ describe('ErrorLogger', () => {
             (getLogger as jest.Mock).mockImplementationOnce(() => {
                 throw new Error('Logger not initialized');
             });
+            // ASSERT-AND-ABSORB (ADR-016): this path logs to console by design —
+            // it is the one place ErrorLogger cannot report through the logger,
+            // because the logger is what is missing. Assert it says so, rather
+            // than letting the line leak into the run as untracked noise.
+            const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
             // Should not throw
             expect(() => new ErrorLogger(mockContext)).not.toThrow();
+            expect(consoleError).toHaveBeenCalledWith('ErrorLogger: DebugLogger not initialized');
+
+            consoleError.mockRestore();
         });
     });
 
@@ -201,7 +209,12 @@ describe('ErrorLogger', () => {
             (getLogger as jest.Mock).mockImplementationOnce(() => {
                 throw new Error('Logger not initialized');
             });
+            // Constructing without a logger prints the same console line the
+            // test above pins; absorb it here, where the subject is what happens
+            // AFTERWARDS.
+            const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
             const loggerWithoutDebug = new ErrorLogger(mockContext);
+            consoleError.mockRestore();
             jest.clearAllMocks();
 
             loggerWithoutDebug.logInfo('Test message');

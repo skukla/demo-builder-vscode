@@ -1,206 +1,174 @@
 /**
- * Unit Tests: config.json Push Failure - Fatal Behavior
+ * A failed config.json sync must STOP project creation.
  *
- * Phase 6: Make config.json push failure fatal
+ * WHY IT MATTERS. The storefront is already live by the time this runs. If
+ * config.json never reaches GitHub, the site serves but every Commerce feature
+ * on it is dead — a half-built demo that looks finished. So the failure has to
+ * be loud and fatal rather than logged and stepped over.
  *
- * Tests verify:
- * 1. config.json push failure should throw an error (not just log)
- * 2. Error message should indicate Commerce features won't work
- * 3. Error message should include the underlying error
+ * WHAT THIS FILE USED TO BE, because the replacement is the point. It was 206
+ * lines that imported NOTHING. Every test declared an inline function
+ * reproducing what the code was believed to do, ran it, and asserted on its own
+ * reproduction — including a pair named "old behavior (BAD)" and "new behavior
+ * (GOOD)" that compared two simulations to each other. It could not fail if
+ * production changed, because production was never on the stack.
+ *
+ * That mattered here more than usual: the fatal throw it described lives at
+ * `executorEdsPhase.ts:216`, and nothing else in the suite asserted it. The
+ * behaviour was, in practice, untested — while a green 206-line file sat next to
+ * it looking like coverage. The simulation had also drifted: it asserted the
+ * SERVICE throws, and `syncConfigToRemote` does not. It returns a result with
+ * `error` set, and the CALLER decides that is fatal.
+ *
+ * These tests drive the real `syncEdsConfigToRemote` and assert on what it does.
  */
 
-describe('config.json Push Failure - Fatal Behavior', () => {
-    describe('Error Handling Requirements', () => {
-        /**
-         * Old behavior (problematic):
-         * - config.json push fails
-         * - Error logged, warning shown
-         * - Project creation continues
-         * - User unaware Commerce features broken
-         *
-         * New behavior (correct):
-         * - config.json push fails
-         * - Throw error with clear message
-         * - Project creation STOPS
-         * - User knows Commerce won't work
-         */
+const mockSyncConfigToRemote = jest.fn();
+const mockExistsSync = jest.fn((_p: string) => true);
+const mockReadFileSync = jest.fn((_p: string, _enc?: string) => '{}');
 
-        it('should throw error when config.json push fails', () => {
-            // When config.json push fails, the error should be thrown
-            // not caught and logged silently
+jest.mock('@/features/eds/services/configSyncService', () => ({
+    syncConfigToRemote: (...args: unknown[]) => mockSyncConfigToRemote(...args),
+}));
 
-            const pushError = new Error('GitHub API returned 403');
-            const shouldThrow = true;
+jest.mock('fs', () => ({
+    existsSync: (p: string) => mockExistsSync(p),
+    readFileSync: (p: string, enc: string) => mockReadFileSync(p, enc),
+}));
 
-            // In the new behavior, errors are NOT caught silently
-            expect(shouldThrow).toBe(true);
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
+    updateStorefrontState: jest.fn(),
+}));
 
-            // The error should propagate up
-            const errorThrown = () => {
-                throw pushError;
-            };
-            expect(errorThrown).toThrow('GitHub API returned 403');
+import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
+import type { HandlerContext } from '@/types/handlers';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
+
+const EDS_PATH = '/projects/demo/components/eds-storefront';
+
+/** The shape Phase 5 needs to get past its skip guards and actually sync. */
+function readyConfig(): ProjectCreationConfig {
+    return {
+        edsConfig: {
+            preflightComplete: true,
+            repoUrl: 'https://github.com/acme/demo-storefront',
+        },
+    } as unknown as ProjectCreationConfig;
+}
+
+function runPhase5(context: HandlerContext, config = readyConfig()) {
+    return syncEdsConfigToRemote(context, createMockProject(), config, true, EDS_PATH, jest.fn());
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue('{}');
+});
+
+describe('a failed config.json sync stops project creation', () => {
+    it('THROWS when the sync reports failure — it does not log and continue', async () => {
+        mockSyncConfigToRemote.mockResolvedValue({
+            success: false,
+            error: 'GitHub returned 403',
+            githubPushed: false,
         });
 
-        it('should include clear error message indicating Commerce failure', () => {
-            // Error message should clearly indicate:
-            // 1. What failed (config.json push)
-            // 2. What consequence (Commerce features won't work)
-            // 3. What user can do (manual fix or retry)
-
-            const originalError = new Error('Rate limit exceeded');
-            const errorMessage =
-                `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                `The storefront is live but Commerce features will not work. ` +
-                `Error: ${originalError.message}`;
-
-            expect(errorMessage).toContain('Commerce configuration failed');
-            expect(errorMessage).toContain('config.json');
-            expect(errorMessage).toContain('Commerce features will not work');
-            expect(errorMessage).toContain('Rate limit exceeded');
-        });
-
-        it('should preserve original error message', () => {
-            // The wrapped error should include the original error message
-            // so users can diagnose the root cause
-
-            const originalErrors = [
-                'Rate limit exceeded',
-                'Repository not found',
-                'Authentication failed',
-                'Network timeout',
-            ];
-
-            originalErrors.forEach((originalMsg) => {
-                const wrappedMessage =
-                    `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                    `The storefront is live but Commerce features will not work. ` +
-                    `Error: ${originalMsg}`;
-
-                expect(wrappedMessage).toContain(originalMsg);
-            });
-        });
+        await expect(runPhase5(createMockHandlerContext())).rejects.toThrow(
+            /Commerce configuration failed/
+        );
     });
 
-    describe('Behavior Comparison', () => {
-        /**
-         * Tests contrasting old vs new behavior
-         */
-
-        it('old behavior: logged error but continued (BAD)', () => {
-            // Old behavior simulated
-            let projectCreationContinued = false;
-
-            const oldBehavior = () => {
-                try {
-                    throw new Error('Push failed');
-                } catch (error) {
-                    // Old: Just log and continue
-                    console.error('Failed to push config.json', error);
-                    console.warn('Site may show configuration error...');
-                    projectCreationContinued = true;
-                }
-            };
-
-            oldBehavior();
-            expect(projectCreationContinued).toBe(true); // BAD - silently continued
+    it('says the storefront is LIVE but Commerce is broken — the half-built case', async () => {
+        // The specific thing the user has to understand: the site exists and
+        // looks fine. An error that only said "sync failed" would read as
+        // nothing having happened.
+        mockSyncConfigToRemote.mockResolvedValue({
+            success: false,
+            error: 'GitHub returned 403',
+            githubPushed: false,
         });
 
-        it('new behavior: throw error to stop project creation (GOOD)', () => {
-            // New behavior simulated
-            const newBehavior = () => {
-                try {
-                    throw new Error('Push failed');
-                } catch (error) {
-                    // New: Re-throw with clear message
-                    throw new Error(
-                        `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                        `The storefront is live but Commerce features will not work. ` +
-                        `Error: ${(error as Error).message}`,
-                    );
-                }
-            };
-
-            expect(newBehavior).toThrow('Commerce configuration failed');
-            expect(newBehavior).toThrow('Commerce features will not work');
-        });
+        await expect(runPhase5(createMockHandlerContext())).rejects.toThrow(
+            /storefront is live but Commerce features will not work/i
+        );
     });
 
-    describe('Error Message Format', () => {
-        /**
-         * Tests for error message structure and content
-         */
-
-        it('should follow error message template', () => {
-            // Template:
-            // "Commerce configuration failed: Could not push config.json to GitHub.
-            //  The storefront is live but Commerce features will not work.
-            //  Error: {original_error_message}"
-
-            const template = (originalError: string) =>
-                `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                `The storefront is live but Commerce features will not work. ` +
-                `Error: ${originalError}`;
-
-            const message = template('GitHub API rate limit exceeded');
-
-            // Verify all required parts
-            expect(message).toMatch(/^Commerce configuration failed:/);
-            expect(message).toContain('config.json');
-            expect(message).toContain('GitHub');
-            expect(message).toContain('Commerce features will not work');
-            expect(message).toContain('storefront is live');
-            expect(message).toMatch(/Error: .+$/);
+    it("preserves the service's own reason rather than replacing it", async () => {
+        mockSyncConfigToRemote.mockResolvedValue({
+            success: false,
+            error: 'GitHub returned 403',
+            githubPushed: false,
         });
 
-        it('should communicate that storefront is still live', () => {
-            // Important: User should know the storefront works
-            // but Commerce integration specifically doesn't
-
-            const errorMessage =
-                `Commerce configuration failed: Could not push config.json to GitHub. ` +
-                `The storefront is live but Commerce features will not work. ` +
-                `Error: Network timeout`;
-
-            expect(errorMessage).toContain('storefront is live');
-            expect(errorMessage).toContain('but');
-            expect(errorMessage).toContain('Commerce features will not work');
-        });
+        await expect(runPhase5(createMockHandlerContext())).rejects.toThrow(/GitHub returned 403/);
     });
 
-    describe('Skip Conditions', () => {
-        /**
-         * Tests for conditions where config.json push should be skipped
-         * (and therefore no error should be thrown)
-         */
-
-        it('should skip config.json for non-PaaS backends', () => {
-            // config.json is only needed for PaaS backend
-            // For ACCS or other backends, no push needed = no error possible
-
-            const isPaasBackend = false;
-            const shouldPushConfigJson = isPaasBackend;
-
-            expect(shouldPushConfigJson).toBe(false);
+    it('does NOT throw when the sync succeeds', async () => {
+        mockSyncConfigToRemote.mockResolvedValue({
+            success: true,
+            githubPushed: true,
+            cdnPublished: true,
         });
 
-        it('should skip config.json if mesh deployment failed', () => {
-            // If mesh deployment failed, there's no endpoint to put in config.json
-            // Skip the push entirely (mesh failure is the primary error)
+        await expect(runPhase5(createMockHandlerContext())).resolves.toBeUndefined();
+    });
+});
 
-            const hasMeshEndpoint = false;
-            const shouldPushConfigJson = hasMeshEndpoint;
+describe('config.json is validated BEFORE the sync is attempted', () => {
+    it('throws when config.json is missing — Phase 4 did not produce it', async () => {
+        mockExistsSync.mockReturnValue(false);
 
-            expect(shouldPushConfigJson).toBe(false);
-        });
+        await expect(runPhase5(createMockHandlerContext())).rejects.toThrow(
+            /config\.json not found/
+        );
+        // The point of validating first: no pointless round trip to GitHub.
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
 
-        it('should skip config.json if EDS setup did not complete', () => {
-            // If EDS setup failed earlier, no config.json push needed
+    it('throws when config.json is present but not parseable', async () => {
+        mockReadFileSync.mockReturnValue('{ not json');
 
-            const edsSetupComplete = false;
-            const shouldPushConfigJson = edsSetupComplete;
+        await expect(runPhase5(createMockHandlerContext())).rejects.toThrow();
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
+});
 
-            expect(shouldPushConfigJson).toBe(false);
-        });
+describe('the skip conditions — when Phase 5 has no work', () => {
+    it('skips a non-EDS stack entirely', async () => {
+        const context = createMockHandlerContext();
+
+        await syncEdsConfigToRemote(
+            context,
+            createMockProject(),
+            readyConfig(),
+            false,
+            EDS_PATH,
+            jest.fn()
+        );
+
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
+
+    it('skips when EDS preflight never completed', async () => {
+        const config = {
+            edsConfig: { preflightComplete: false, repoUrl: 'https://github.com/acme/x' },
+        } as unknown as ProjectCreationConfig;
+
+        await runPhase5(createMockHandlerContext(), config);
+
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
+
+    it('skips when there is no repo URL to sync to', async () => {
+        const config = {
+            edsConfig: { preflightComplete: true },
+        } as unknown as ProjectCreationConfig;
+
+        await runPhase5(createMockHandlerContext(), config);
+
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
     });
 });

@@ -31,7 +31,25 @@ function getValidator(): ValidateFunction {
     if (!compiled) {
         // strict:false — the generated schema carries formats (date-time) we
         // do not ship format plugins for; they are documentation, not checks.
-        compiled = new Ajv({ allErrors: true, strict: false }).compile(manifestSchema);
+        const ajv = new Ajv({ allErrors: true, strict: false });
+
+        // Say that out loud to Ajv, rather than only in the comment above.
+        // `strict: false` stops the format being an ERROR but Ajv still logs
+        // `unknown format "date-time" ignored` every time this schema compiles —
+        // which is a real logged warning, and it was the single largest source
+        // of console noise in the suite: ten test files carried it.
+        //
+        // Registering it as always-valid encodes the decision already made here
+        // (the field is ours, written by us, and documented rather than checked)
+        // without reaching for `logger: false`, which would also swallow
+        // warnings about genuine schema mistakes.
+        //
+        // If date-time should actually be VALIDATED, the change is to add
+        // `ajv-formats` and drop this line — a deliberate tightening, not a
+        // silencing, and not something to do while chasing log noise.
+        ajv.addFormat('date-time', true);
+
+        compiled = ajv.compile(manifestSchema);
     }
     return compiled;
 }

@@ -213,6 +213,13 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
                 selectedStack: 'eds-accs',
+                // A stack with no package is a state production WARNS about
+                // (wizardHelpers.ts:477) — "architecture is selected but
+                // brand/package is missing". The warning was right; the fixture
+                // was the unrealistic half. Naming a package here makes this a
+                // state the wizard can actually reach, and the mesh-derivation
+                // claim below is unaffected by it.
+                selectedPackage: 'bodea',
                 selectedAppBuilderComponents: ['eds-accs-mesh', 'erp-sync'],
             };
 
@@ -225,6 +232,8 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
                 selectedStack: 'eds-accs',
+                // See the note above: stack without package is a warned state.
+                selectedPackage: 'bodea',
                 selectedAppBuilderComponents: ['erp-sync'],
             };
 
