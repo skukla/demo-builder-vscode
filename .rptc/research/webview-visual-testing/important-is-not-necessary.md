@@ -93,11 +93,39 @@ layering intact AND puts vendor below us, which is what layers are for.
 Option B is the modern, intended use of cascade layers: vendor first, ours after,
 no specificity war. It is what the `@layer theme` wrapper was reaching for.
 
-**Not yet verified.** The plugin change is small and the mechanism is confirmed,
-but the change itself has not been made or measured. Do it behind the snapshot
-workflow: it will move baselines everywhere, and every move needs adjudicating —
-this is the highest-risk change in the whole CSS programme precisely because it
-flips precedence globally.
+## VERIFIED 2026-08-29 — Option B implemented and measured, then reverted
+
+The plugin change was made, all eight surfaces snapshotted before and after, and
+the whole experiment reverted. Results:
+
+**The layer fix alone** (vendor wrapped in `@layer vendor`, order declared):
+
+| surfaces identical | 5 of 8 |
+|---|---|
+| elements moved | 23 of ~209, across dashboard / integrations / dataInstaller |
+
+Every move named its element and property — e.g. `font-size: 14px -> 18px`,
+`width: 762.969px -> 769.969px`. Adjudicable, not a mystery.
+
+**Then stripping every `!important` from `custom-spectrum.css`** — all 1,866 —
+on top of the layer fix:
+
+| surfaces identical | **7 of 8** |
+|---|---|
+| elements moved | **7**, all on the dashboard |
+
+1,866 removals, 7 elements affected. That is the proof: they were compensating
+for the layer wrapper, not holding anything up.
+
+The 7 that moved (heights 32->44 and 65->77, one margin) are the residue that
+needs adjudicating — plus whatever must stay for Spectrum's JS-set inline styles,
+which no stylesheet rule can beat.
+
+**Not shipped.** This was an experiment to answer "is it possible", and the
+answer is yes. The change itself belongs in PL-21 phase 4 under the snapshot
+workflow, with each of the 23 moves reviewed — shipping a global precedence
+change on the strength of a computed-style diff alone is exactly the recklessness
+this programme exists to avoid.
 
 ## Sequencing consequence
 
