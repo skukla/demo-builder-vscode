@@ -1,6 +1,7 @@
 # ADR-018: CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism
 
-**Status:** PROPOSED 2026-08-29.
+**Status:** ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of
+existing CSS under §§1–2 is **not yet authorised** — see the evidence bar below.
 **Ratifying the RULES and authorising the MIGRATION are separate decisions.**
 All six sections are safe to adopt as rules for NEW code today. Migrating the
 8,044 existing lines under §§1–2 is NOT yet supported by the evidence — see
@@ -216,14 +217,14 @@ Writeups: `.rptc/research/webview-visual-testing/`, in particular
 `important-is-not-necessary.md`. The snapshot instrument itself is PL-21 phase 1,
 verified the same day.
 
-## Ratification needed
+## Ratification status
 
-**As rules for new code — all six, recommended.** §§3–4 are already enforced and
+**RATIFIED 2026-08-29 as rules for new code — all six sections.** §§3–4 are already enforced and
 carry no risk. §§5–6 are judgement calls stated with their reasons, and are the
 ones most worth arguing with. §§1–2 as rules cost nothing: nobody should be
 writing `!important` to beat Spectrum in new CSS whatever we do about the old.
 
-**As authorisation to migrate existing CSS — NOT YET.** The evidence bar above
+**Migration of existing CSS: NOT authorised.** The evidence bar above
 lists what is missing, and the honest summary is that the measurement was run on
 a corpus where the surfaces that stayed clean are the surfaces with the least
 rendered, and against a property list that cannot see 108 of the `!important`
