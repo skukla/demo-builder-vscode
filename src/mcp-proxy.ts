@@ -32,7 +32,10 @@
  */
 
 import * as net from 'net';
-import { isRetryableConnectError } from '@/features/ai/server/mcpProxyRetry';
+import {
+    decideOnClose,
+    decideOnConnectError,
+} from '@/features/ai/server/mcpProxyReconnect';
 import { createProxySession } from '@/features/ai/server/mcpProxySession';
 import { resolveProxyTarget } from '@/features/ai/server/mcpSocketDiscovery';
 
@@ -43,10 +46,8 @@ let socketPath = '';
 
 // Per-drop reconnect window (~23s total). Long enough to ride out a window
 // reload, short enough to fail clearly when VS Code has actually closed.
-const RETRY_DELAYS_MS = [250, 500, 1000, 1500, 2000, 2000, 3000, 3000, 5000, 5000];
 // Small pause before reconnecting after a clean close, to avoid a hot loop if
 // the server is crash-restarting.
-const RECONNECT_PAUSE_MS = 250;
 
 let socket: net.Socket | undefined;
 
@@ -88,30 +89,23 @@ function connect(attempt: number, isReconnect: boolean): void {
         connectedThisCycle = true;
         // The session decides WHAT goes out on a fresh connection — the
         // '#cwd:' preamble, the replayed handshake when this is a reconnect,
-        // and anything buffered during the gap — in order. Writing is this
-        // file's job; deciding is not.
-        for (const line of session.onConnected(isReconnect, process.cwd())) {
-            s.write(line);
-        }
+        // and anything buffered during the gap — and writes each through the
+        // same `toServer` sink the steady-state path uses.
+        session.onConnected(isReconnect, process.cwd());
     });
 
     s.on('data', (chunk: Buffer) => session.fromServer(chunk.toString('utf8')));
 
     s.on('error', (err: NodeJS.ErrnoException) => {
-        const retryable = isRetryableConnectError(err.code);
-        if (retryable && attempt < RETRY_DELAYS_MS.length) {
-            setTimeout(() => connect(attempt + 1, isReconnect), RETRY_DELAYS_MS[attempt]);
+        const decision = decideOnConnectError(err.code, err.message, attempt);
+        if (decision.action === 'retry') {
+            setTimeout(() => connect(decision.nextAttempt, isReconnect), decision.delayMs);
             return;
         }
-        if (retryable) {
-            process.stderr.write(
-                'Demo Builder MCP server is not running. Open this project in VS Code ' +
-                    '(the Demo Builder extension hosts the MCP server), then retry.\n',
-            );
-        } else {
-            process.stderr.write(`Demo Builder MCP proxy error: ${err.message}\n`);
+        if (decision.action === 'fail') {
+            process.stderr.write(decision.message);
+            process.exit(1);
         }
-        process.exit(1);
     });
 
     s.once('close', () => {
@@ -122,8 +116,9 @@ function connect(attempt: number, isReconnect: boolean): void {
         // never fired, the error handler above already owns the retry policy;
         // letting close also schedule one creates the parallel-timer cascade
         // described at the top of this function.
-        if (connectedThisCycle) {
-            setTimeout(() => connect(0, true), RECONNECT_PAUSE_MS);
+        const decision = decideOnClose(connectedThisCycle);
+        if (decision.action === 'reconnect') {
+            setTimeout(() => connect(0, true), decision.delayMs);
         }
     });
 }

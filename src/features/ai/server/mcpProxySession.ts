@@ -29,7 +29,17 @@
 
 import { LineBuffer, classifyHandshake, isInitResponse } from './mcpProxyFraming';
 
-/** Where the session sends what it decides to forward. */
+/**
+ * Where the session sends what it decides to forward.
+ *
+ * ONE output mechanism, deliberately. The first version of this module had
+ * `onConnected` RETURN its lines while everything else wrote through a sink —
+ * two ways out of the same object, so a reader had to know which path used
+ * which, and the connect path could not be observed the way the steady-state
+ * path was. The justification given at the time (the caller controls socket
+ * ordering) did not survive inspection: the sink writes to the same socket, in
+ * call order.
+ */
 export interface ProxySessionSinks {
     /** To the server. Called only while connected. */
     toServer(line: string): void;
@@ -43,14 +53,13 @@ export interface ProxySession {
     /** Feed a raw chunk from the server. */
     fromServer(chunk: string): void;
     /**
-     * The connection came up.
+     * The connection came up. Writes the preamble, any replay, and the buffered
+     * backlog through `toServer`, in that order.
      *
      * @param isReconnect - a replay is only correct on a RECONNECT; doing it on
      *   the first connection would send the handshake twice.
-     * @returns the preamble + replay lines to write, in order. Returned rather
-     *   than written so the caller controls socket ordering.
      */
-    onConnected(isReconnect: boolean, cwd: string): string[];
+    onConnected(isReconnect: boolean, cwd: string): void;
     /** The connection dropped; subsequent client lines buffer again. */
     onDisconnected(): void;
     /** Test/diagnostic view. Never used for control flow. */
@@ -116,18 +125,16 @@ export function createProxySession(sinks: ProxySessionSinks): ProxySession {
             // Session-directory preamble — the FIRST bytes on every connection,
             // reconnects included: the fresh server end sniffs each connection
             // anew. MCP lines all start with '{', so '#cwd:' is unambiguous.
-            const out = [`#cwd:${cwd}\n`];
+            sinks.toServer(`#cwd:${cwd}\n`);
 
             if (isReconnect && handshakeCaptured && initLine) {
                 swallowInitId = initId;
-                out.push(initLine);
-                if (initializedLine) out.push(initializedLine);
+                sinks.toServer(initLine);
+                if (initializedLine) sinks.toServer(initializedLine);
             }
 
             // Everything buffered during the gap, in arrival order.
-            while (pending.length) out.push(pending.shift() as string);
-
-            return out;
+            while (pending.length) sinks.toServer(pending.shift() as string);
         },
 
         onDisconnected() {
