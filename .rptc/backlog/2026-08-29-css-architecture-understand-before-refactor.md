@@ -234,6 +234,36 @@ instrument back into the manual process it replaces.
   properties. Touching `z-index`, `box-shadow`, `transform` or `overflow` means
   adding them first — otherwise the check passes because it is not looking.
 
+### CORRECTED 2026-08-29 — the layer fix comes FIRST, not last
+
+The owner asked "are we absolutely confident `!important` is necessary at all?"
+It is not. Measured proof:
+`.rptc/research/webview-visual-testing/important-is-not-necessary.md`.
+
+Spectrum's CSS is UNLAYERED; ours is in `@layer theme`. Normal declarations:
+unlayered beats layered. So every one of our normal rules loses to Spectrum, and
+`!important` is the only way a layered rule can win. **The 1,957 are one systemic
+workaround with one cause, not 1,957 judgements.**
+
+Proven on a real Spectrum Button in the running dashboard: our layered normal
+rule lost (14px unchanged), our UNLAYERED normal rule won (42px) — with no
+`!important` anywhere.
+
+Two consequences for the sequence below:
+
+- **The `!important` policy can be written now**, not after an audit. Fix the
+  cause and most of them become removable mechanically.
+- **The layer fix is a PREREQUISITE for the `!important` sweep, not a follow-on.**
+  Removing an `!important` while our rules are still layered BREAKS the rule,
+  because without it a layered rule loses. The old order (important at step 4,
+  layers last at step 5) would have done exactly that.
+
+Recommended fix is Option B: declare `@layer vendor, reset, theme, overrides;`
+and have `cssInjectionPlugin` wrap `node_modules` CSS in `@layer vendor` — a few
+lines in one place, keeping our internal layering while putting vendor below us.
+Unverified as yet; it flips precedence globally, so it is the highest-risk change
+in the programme and must be done under the snapshot with every move adjudicated.
+
 ### Sequence, safest to riskiest
 
 1. **Delete verified-dead rules** (PL-20's dead-markup half). Expect an empty
@@ -247,12 +277,15 @@ instrument back into the manual process it replaces.
 3. **Consolidate the 19 double-defined classes.** Keep the winner, delete the
    loser, expect an empty diff. A non-empty one means something depended on the
    loser.
-4. **Reduce `!important`.** One at a time, each its own cycle. Expect an empty
-   diff — where it is empty, that `!important` was cargo and is now gone; where
-   it is not, it was load-bearing and stays. This is the only way to tell the
-   1,957 apart, and it is now mechanical rather than brave.
-5. **Normalise layers — LAST, and expect movement.** Highest risk by far, because
-   of the reversal below. Adjudicate every moved element individually.
+4. **Fix the layering** — `@layer vendor, reset, theme, overrides;` with vendor
+   CSS wrapped by the esbuild plugin. HIGHEST RISK: it flips precedence globally,
+   so expect the snapshot to move widely and adjudicate every element. This must
+   come BEFORE step 5, not after — see the correction above.
+5. **Sweep `!important`.** Only once step 4 lands, and then mostly mechanical:
+   one removal per cycle, empty diff means it was cargo. Expect the count to
+   collapse rather than to be whittled — they were compensating for step 4's
+   problem. A residue may remain for genuinely stubborn cases (Spectrum's own
+   inline styles, which no stylesheet rule can beat).
 
 ### The rule that governs all of it
 
@@ -294,3 +327,4 @@ layout failures, which no static check can see. Only phase 1 addresses those.
 - 2026-08-29  Phase 1 VERIFIED 2026-08-29 at the owner's request. All 8 webview bundles mount outside VS Code; Spectrum theme resolves in all 8; signal identical across runs (6/6); detection proven against pre-fix vs post-fix bundles. Two traps recorded: the handshake reply must be ~30ms not 0ms (a 0ms reply lands before the client's listener and everything hangs), and the Spectrum theme scope only exists once mounted (so an unmounted harness reports false regressions and must abort). Chose computed-style assertions over screenshots. Cost: no browser driver installed and CI skips the build, so recommend a release-cut instrument rather than a CI gate. Remaining work is building it.
 - 2026-08-29  CORRECTION: an earlier note said 'no browser driver is installed'. Wrong — Playwright via MCP is what ran the entire verification, at zero cost. Only a REPO-LEVEL dependency is missing (5 MB package; browsers already cached locally at 1.7 GB). Revised recommendation: start agent-driven like codebase-sweep/dream/eds:drift, add the dependency when a human or script needs it, consider CI last. MCP constraint: its browser is containerised, so the harness must be served at host.docker.internal, not localhost.
 - 2026-08-29  Baseline/change/re-snapshot/compare workflow PROVEN end to end on all 8 surfaces: baseline captured, rebuild matched 8/8, a planted CSS change was DETECTED on exactly the 3 affected surfaces, and reverting returned all 8 to baseline exactly. Snapshot = full-tree computed-style fingerprint, not a screenshot. Three prerequisites found by controls that failed first: freeze animations (a pulsing status dot made captures differ), cache-bust the BUNDLE url (the first control compared a build against itself), and — the big one — !important INSIDE @layer beats !important outside it, so appending an override at the bottom of custom-spectrum.css does not override anything in @layer theme. That last one belongs in the ADR.
+- 2026-08-29  MAJOR FINDING 2026-08-29: !important is NOT necessary here. Spectrum's CSS is unlayered, ours is in @layer theme, and unlayered normal declarations beat layered ones — so every one of our normal rules loses to Spectrum and !important is the only way a layered rule can win. The 1,957 are ONE systemic workaround with ONE cause. Proven on a real Spectrum Button: our layered normal rule lost, our unlayered normal rule won, no !important. Consequences: the !important policy can be written NOW rather than after an audit, and the LAYER FIX IS A PREREQUISITE for the !important sweep rather than a follow-on — removing an !important while rules are still layered breaks them. Sequence corrected accordingly.

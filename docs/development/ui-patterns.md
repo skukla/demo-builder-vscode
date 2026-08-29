@@ -187,6 +187,16 @@ Two-column responsive layout for better space utilization:
 
 ## CSS Architecture
 
+> **The `!important` guidance below is being retired.** Measured 2026-08-29:
+> `!important` is NOT necessary to override React Spectrum here. Spectrum's CSS
+> is unlayered and ours sits in `@layer theme`, and unlayered normal declarations
+> beat layered ones — so our plain rules lose and `!important` is the only way a
+> layered rule can win. A plain UNLAYERED rule beats Spectrum with no
+> `!important` at all (proven on a real Spectrum Button: 14px -> 42px).
+> The 1,957 `!important`s in this codebase are one systemic workaround with one
+> cause. See `.rptc/research/webview-visual-testing/important-is-not-necessary.md`
+> and PL-21.
+
 ### File Organization
 - `src/core/ui/styles/wizard.css`: wizard-interface styles. NOTE it lives under
   `core/ui/styles/`, not in the wizard feature — editing it can affect any bundle
