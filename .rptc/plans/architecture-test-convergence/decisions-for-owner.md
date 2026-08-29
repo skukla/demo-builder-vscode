@@ -372,28 +372,71 @@ failure waiting to happen — the same call, the same missing header, the same
 silent stale config. **Neither is currently in any ledger, because nothing
 expresses this requirement.**
 
-### Recommendation — needs the owner, and the question has changed
+### RESOLVED 2026-08-29: the problem D-3 describes was already fixed, thirteen days before D-3 was written
 
-The safe shape is two jobs, not three, with DA.live required wherever the Admin
-API is touched:
+The owner approved the "safe shape" — daLive required wherever the Admin API is
+touched. Checking what those two sites could reach found the reason not to build
+it.
 
-    { job: 'content';  daLive }            // publish/list/unpublish, admin keys — no GitHub needed
-    { job: 'adminApi'; github; daLive }    // everything else; daLive required because
-                                           // site protection is not statically knowable
+`extension.ts:347` registers ONE DA.live token source at activation:
 
-That closes both latent hazards by construction. **Its cost is real and is the
-decision:** `configSyncService` and `checkGitHubAppHandler` would have to obtain a
-DA.live token provider they do not have today. That is not a mechanical edit —
-it means finding the right provider at each of those call sites.
+    // Register the ONE DA.live token source every HelixService falls back
+    // to. There is a single DA.live session per host, so threading it
+    // through each layer that builds a HelixService modelled a plurality
+    // that does not exist — and two construction sites were missing it,
+    // which made a Helix code publish 401 on any admin-locked site and
+    // leave the CDN serving a stale config.json. Registered before anything
+    // can construct one.
 
-The alternative is to keep DA.live optional for admin-API jobs, document why, and
-accept that the two sites stay latent.
+Commit `cbcb927db`, **2026-08-15** — the day of the incident — titled *"register
+one DA.live token source instead of threading it per caller"*. D-3 was raised on
+2026-08-28 and did not account for it.
 
-**What I got wrong here, recorded because it is the useful part:** a regex over
-method bodies is not a call graph. It missed one private hop and produced a
-confident, wrong classification that survived a full build and both typecheckers.
-The only thing that caught it was a test written by someone who had already been
-burned by this exact failure.
+**So D-3's premise is false in production.** A HelixService built without an
+explicit DA.live provider is not credential-less; it falls back to the registered
+source. The optional parameters are an explicit-OVERRIDE layer above a global
+default, not a hole. My "two latent hazards" were not hazards — and
+`checkGitHubAppHandler` already calls `tryCreateDaLiveTokenProvider` twelve lines
+below the construction I flagged.
+
+**Requiring the credential would make things worse, three ways:**
+
+1. It breaks a deliberate degradation. `tryCreateDaLiveTokenProvider` returns
+   `undefined` by design when there is no ExtensionContext — headless, MCP, a
+   test harness — because *"an unprotected site works without it, so a partial or
+   absent ExtensionContext must degrade rather than break a check that used to
+   succeed."* A required parameter leaves those callers nothing to pass.
+2. It duplicates a fix that already exists, in a worse place: fourteen call sites
+   instead of one registration.
+3. It re-adopts the model that commit explicitly rejected. Threading the provider
+   per caller "modelled a plurality that does not exist". D-3's shape is that
+   model with types on it.
+
+### Verdict: close D-3. No constructor change.
+
+The variance is real and is already expressed correctly — one session-wide
+default, an explicit override where a caller has a better one, graceful absence
+where neither exists.
+
+**The one thing still worth doing is small and cosmetic:** `publishKeyRegistrar`
+passes `undefined` positionally to skip a parameter. That is the readability
+smell that made D-3 suspect the shape, and a named-parameter object would fix it
+without touching semantics. Not urgent, and not an architecture question.
+
+### What this cost, recorded because it is the transferable part
+
+Three traces of the same code, two wrong:
+
+1. A regex over method bodies classified three sites as GitHub-only. It missed a
+   private hop (`tryAdminBearer`). Caught by the incident's own witness test,
+   after a full build and both typecheckers passed.
+2. The corrected trace concluded the credential must be required. It never asked
+   whether the hazard still existed — and it had been fixed on the day it
+   happened, in `extension.ts`, with a comment naming the same 401.
+
+The check that would have prevented both, cheaply, at the start: **read the
+incident's fix before designing a fix for the incident.** `git log -S` on the
+credential took one command and settled what two rounds of tracing did not.
 
 ---
 
