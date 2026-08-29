@@ -82,19 +82,23 @@ jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
 }));
 
 // Mock Adobe React Spectrum components
-jest.mock('@adobe/react-spectrum', () => ({
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+jest.mock('@adobe/react-spectrum', () => {
+    // The SHARED filter (tests/__mocks__/@adobe/react-spectrum.tsx). Required
+    // inside the factory because jest.mock is hoisted above imports.
+    const { filterSpectrumProps } = jest.requireActual('../../../__mocks__/@adobe/react-spectrum');
+    return ({
+    View: ({ children, ...props }: any) => <div {...filterSpectrumProps(props)}>{children}</div>,
+    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...filterSpectrumProps(props)}>{children}</div>,
     Heading: ({ children, level, ...props }: any) => {
         const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
-        return <Tag {...props}>{children}</Tag>;
+        return <Tag {...filterSpectrumProps(props)}>{children}</Tag>;
     },
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    Text: ({ children, ...props }: any) => <span {...filterSpectrumProps(props)}>{children}</span>,
     Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...filterSpectrumProps(props)}>{children}</button>
     ),
     ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
+        <button onClick={onPress} disabled={isDisabled} {...filterSpectrumProps(props)}>{children}</button>
     ),
     MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
     Menu: ({ children, onAction }: any) => (
@@ -119,14 +123,15 @@ jest.mock('@adobe/react-spectrum', () => ({
     Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     Divider: () => <hr />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-        <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
+        <a onClick={onPress} data-testid="sign-in-link" {...filterSpectrumProps(props)}>{children}</a>
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
     TextField: ({ label, value, onChange, ...props }: any) => (
-        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
+        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...filterSpectrumProps(props)} />
     ),
-    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
-}));
+    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...filterSpectrumProps(props)} />,
+    });
+});
 
 // Stub the capabilities modal — its real implementation renders the shared
 // Modal (Spectrum internals not covered by this file's minimal mock). The real

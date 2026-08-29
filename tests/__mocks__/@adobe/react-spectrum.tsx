@@ -29,11 +29,24 @@ const SPECTRUM_PROPS = [
     'selectedKeys', 'defaultSelectedKeys', 'onSelectionChange', 'errorMessage',
     'description', 'items', 'renderEmptyState', 'loadingState', 'onLoadMore',
     'textValue', 'autoFocus', 'isKeyboardDismissDisabled', 'isDismissable',
-    'isLoading', 'isReadOnly', 'inputMode', 'inputValue', 'onInputChange'
+    'isLoading', 'isReadOnly', 'inputMode', 'inputValue', 'onInputChange',
+    // Added 2026-08-29 (phase 4). Each was MEASURED leaking to the DOM by
+    // emptying the console allowlist and reading what React complained about —
+    // not guessed. The filter was already applied in 37 places; the list simply
+    // did not name these.
+    'backgroundColor', 'borderRadius', 'borderWidth', 'borderColor',
+    'onDismiss', 'isRequired', 'isDisabled', 'maxValue', 'minValue',
 ];
 
 // Helper to filter out Spectrum-specific props
-const filterSpectrumProps = (props: Record<string, any>): Record<string, any> => {
+/**
+ * EXPORTED 2026-08-29 (phase 4). Twenty suites define their own Spectrum mock
+ * — the per-suite convention is correct, and documented in
+ * `webview-test-authoring` — but each spread props onto DOM nodes without this
+ * filter, which is where the surviving React warnings came from. The filter was
+ * here all along; it just was not reachable.
+ */
+export const filterSpectrumProps = (props: Record<string, any>): Record<string, any> => {
     const filtered: Record<string, any> = {};
     for (const [key, value] of Object.entries(props)) {
         if (!SPECTRUM_PROPS.includes(key)) {
