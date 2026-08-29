@@ -58,9 +58,26 @@ function mayFetch(f: string): boolean {
     );
 }
 
-/** Where construction is allowed: the root, deps builders, and the boundary. */
+/**
+ * Where construction is allowed: `extension.ts` and `create...Deps` builders.
+ * That is ALL of it.
+ *
+ * This used to read `mayFetch(f) || /Deps/`, which let every command, handler and
+ * MCP registrar construct freely. ADR-015 does not say that. Its layer table
+ * gives Commands, Handlers and MCP tools "May fetch" — fetch, not construct — and
+ * its ruling says `create...Deps` files "plus `extension.ts`, are the only places
+ * that construct services".
+ *
+ * The gap was found on 2026-08-29 by the pattern-conformance audit, which
+ * reported 14 boundary files MIXING locator fetches and direct construction in
+ * one file. None appeared in this ledger, because this rule permitted exactly
+ * what they were doing. ADR-015 §"what dies" had claimed those files were
+ * "tracked; each carried an exemption row until cleaned" — a sentence describing
+ * an intention as though it were a mechanism. Tightening the predicate to the
+ * ADR's own words is what makes that sentence true.
+ */
 function mayConstruct(f: string): boolean {
-    return mayFetch(f) || /[Dd]eps\.tsx?$/.test(f);
+    return f === 'src/extension.ts' || /[Dd]eps\.tsx?$/.test(f);
 }
 
 describe('ADR-015: fetch boundary — logic never fetches', () => {
@@ -80,7 +97,7 @@ describe('ADR-015: fetch boundary — logic never fetches', () => {
     });
 });
 
-describe('ADR-015: construction boundary — new Service() only in the root, deps builders, and the boundary', () => {
+describe('ADR-015: construction boundary — new Service() only in the root and deps builders', () => {
     const violations = FILES.filter(
         (f) =>
             /new [A-Z][A-Za-z]*(Service|Manager|Client)\(/.test(src.get(f) as string) &&

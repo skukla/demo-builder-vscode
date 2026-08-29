@@ -93,8 +93,18 @@ cannot drift apart.
 
 ## Consequences
 
-- The 17 style-mixing files converge to this ruling (tracked; each carried an
-  exemption row until cleaned).
+- The style-mixing files converge to this ruling — each carries an exemption row
+  until cleaned. **This became true on 2026-08-29; when first written it was an
+  intention stated as a mechanism.** The construction-boundary predicate had been
+  implemented as "anywhere fetching is allowed, plus deps builders", so every
+  command, handler and MCP registrar could construct freely — precisely what the
+  mixing files were doing, so none of them could ever appear in the ledger. The
+  pattern-conformance audit still measured them (14 mixers at the time) and the
+  gap showed as ZERO overlap between the audit's deviations and the ledger.
+  Tightening the predicate to this document's own words — `extension.ts` and
+  `create...Deps` only — took the ledger from 31 rows to 55 and put all 14 in it.
+  The lesson is the one this repo keeps paying for: a document describing what
+  code does is a claim, and only the enforcer makes it true.
 - New violations fail CI with the offending path in the failure message.
 - Exemptions are possible but never silent: each is a named entry with a
   written reason in the test's ledger — the same named-floor discipline the
