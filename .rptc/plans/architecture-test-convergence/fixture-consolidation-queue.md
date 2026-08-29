@@ -126,7 +126,33 @@ Three separate regressions, all the same mistake:
 
 Real SHAPE, neutral CONTENT.
 
-**Typing the fakes found 47 wrong fixtures.** Once the executor fake returned the
+**Typing ONE fake found 47 required fixes — and 186 more that are not defects.**
+
+Typing the command-executor fake to its real return type made 51 call sites fail
+to compile: result literals missing `duration`, sometimes `stderr` and `code`.
+All were completed, and the full suite passing unchanged afterwards is the
+evidence they did not move behaviour.
+
+A follow-up scan then found 186 MORE incomplete result-shaped literals elsewhere,
+which the owner reasonably read as "so there are 186 still broken". Investigated
+2026-08-28; there are not. The count fell 205 -> 52 -> 31 -> effectively zero as
+the detector was corrected and the survivors were READ:
+
+- 119 omit only `duration`, which production reads guarded (`if (result.duration)`).
+- 22 omit `code` in files whose subject never reads it.
+- 6 are ERROR fixtures passed to `mockRejectedValue`; they carry `message` and
+  correctly have no `code`. The subject's `.code` reads are an org code and an
+  error code — different things entirely.
+- ~30 matched only because a crude regex counted `{ success, error }` results and
+  TYPE ANNOTATIONS (`{ stdout: string }`) as fixtures.
+
+The distinction worth keeping: **incomplete against a type is not the same as
+wrong.** The 47 mattered because the compiler required them. The rest are
+invisible precisely because nothing depends on what they omit — and they will
+surface the same way, one fake at a time, as each remaining fake is typed to its
+real interface. That is the mechanism working, not a backlog.
+
+**(superseded phrasing below)** Typing the fakes found 47 wrong fixtures. Once the executor fake returned the
 real type, 51 call sites failed to compile — CommandResult literals missing
 `duration`, sometimes `stderr` and `code`. They had always been wrong; nothing
 could see it while the fake was `any`.
