@@ -511,9 +511,22 @@ export const INSTRUMENTS: readonly Instrument[] = [
 ];
 
 /** The periodic tier that `npm run sweep` can actually execute. */
-export function sweepable(): readonly Instrument[] {
+/**
+ * May `npm run sweep` run this unattended?
+ *
+ * Exported as a PREDICATE rather than folded into the filter below, so a test can
+ * hand it a writer and watch it say no. The first version of this rule was tested
+ * as `sweepable().filter(i => i.writes)` — empty by construction, a test that
+ * could not fail. Flipping `classify` (a writer) to `periodic` passed every
+ * check; only planting that mutation revealed it.
+ */
+export function isSweepable(i: Instrument): boolean {
     // A writer is EXCLUDED however it is otherwise classified. A sweep is
     // something you run without thinking about it; an instrument that rewrites an
-    // audit ledger is not. `tooling-registry.test.ts` pins that.
-    return INSTRUMENTS.filter((i) => i.cadence === 'periodic' && i.runs !== null && !i.writes);
+    // audit ledger is not.
+    return i.cadence === 'periodic' && i.runs !== null && !i.writes;
+}
+
+export function sweepable(): readonly Instrument[] {
+    return INSTRUMENTS.filter(isSweepable);
 }

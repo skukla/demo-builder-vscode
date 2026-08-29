@@ -21,7 +21,13 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { execFileSync } from 'child_process';
-import { INSTRUMENTS, sweepable, NON_INSTRUMENT_SCRIPTS, type Instrument } from './toolingRegistry';
+import {
+    INSTRUMENTS,
+    sweepable,
+    isSweepable,
+    NON_INSTRUMENT_SCRIPTS,
+    type Instrument,
+} from './toolingRegistry';
 
 const REPO_ROOT = join(__dirname, '..', '..');
 const SKILLS_DIR = join(REPO_ROOT, '.claude', 'skills');
@@ -188,18 +194,43 @@ describe('every entry says enough to be actionable', () => {
         expect([...kinds].sort()).toEqual(['gate', 'report']);
     });
 
-    it('never lets the sweep run an instrument that WRITES', () => {
-        // The safety property, learned the hard way: `classify.mjs` rewrites the
-        // audit ledger and was run blind to see if it still worked, taking it
-        // from 998 rows to 5. A sweep is something you run without thinking; a
-        // writer is not.
-        const writersInSweep = sweepable()
-            .filter((i) => i.writes)
-            .map((i) => i.id);
-        expect(writersInSweep).toEqual([]);
+    /**
+     * The safety property, learned the hard way: `classify.mjs` rewrites the
+     * audit ledger and was run blind to see if it still worked, taking it from
+     * 998 rows to 5. A sweep is something you run without thinking; a writer is
+     * not.
+     *
+     * Tested through the PREDICATE, against a constructed writer. The first
+     * version asserted `sweepable().filter(i => i.writes)` was empty — true by
+     * construction, so it could not fail, and flipping a real writer to
+     * `periodic` passed it. Planting that mutation is what found the hole.
+     */
+    const writerThatWantsToBeSwept: Instrument = {
+        id: 'planted-writer',
+        kind: 'rptc-instrument',
+        cadence: 'periodic',
+        resultKind: 'report',
+        what: 'a constructed writer, to prove the guard actually refuses one',
+        runs: 'node nowhere.mjs',
+        writes: true,
+    };
+
+    it('refuses a periodic instrument that writes', () => {
+        expect(isSweepable(writerThatWantsToBeSwept)).toBe(false);
     });
 
-    it('CONTROL: the registry does contain writers, so the rule above has work to do', () => {
+    it('CONTROL: the same instrument IS sweepable once it stops writing', () => {
+        // Without this, a predicate hardcoded to `false` would pass the test above.
+        expect(isSweepable({ ...writerThatWantsToBeSwept, writes: false })).toBe(true);
+    });
+
+    it('keeps every real writer out of the sweep', () => {
+        expect(
+            sweepable()
+                .filter((i) => i.writes)
+                .map((i) => i.id)
+        ).toEqual([]);
+        // ...and the registry really does contain writers, so that means something.
         expect(INSTRUMENTS.filter((i) => i.writes).length).toBeGreaterThan(0);
     });
 
