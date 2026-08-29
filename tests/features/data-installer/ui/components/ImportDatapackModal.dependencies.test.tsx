@@ -19,8 +19,8 @@
  * checkbox label, so a name-based query would match the wrong node.
  */
 
-import { fireEvent, screen, within } from '@testing-library/react';
-import { awaitForm, renderModal, resetModalMocks } from './ImportDatapackModal.testUtils';
+import { screen, within } from '@testing-library/react';
+import { awaitForm, press, renderModal, resetModalMocks } from './ImportDatapackModal.testUtils';
 
 const box = (name: string) => screen.getByRole('checkbox', { name });
 const notice = () => screen.queryByText(/not in this datapack/i);
@@ -34,7 +34,7 @@ describe('selecting a type selects what it needs', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         expect(box('Products')).toBeChecked();
         expect(box('Categories')).toBeChecked();
@@ -44,7 +44,7 @@ describe('selecting a type selects what it needs', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Categories'));
+        await press(box('Categories'));
 
         expect(box('Categories')).toBeChecked();
         expect(box('Products')).not.toBeChecked();
@@ -56,7 +56,7 @@ describe('a needed type cannot be unticked', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         expect(box('Categories')).toBeDisabled();
     });
@@ -65,8 +65,8 @@ describe('a needed type cannot be unticked', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
+        await press(box('Products'));
 
         expect(box('Products')).not.toBeChecked();
         expect(box('Categories')).not.toBeDisabled();
@@ -76,8 +76,8 @@ describe('a needed type cannot be unticked', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
+        await press(box('Products'));
 
         // Otherwise one click leaves categories selected that nobody chose, and
         // the next Start imports it into a live instance.
@@ -90,9 +90,9 @@ describe('a needed type cannot be unticked', () => {
 
         // Deliberate order: categories is the user's choice before products
         // ever borrows it, so unticking products must not throw it away.
-        fireEvent.click(box('Categories'));
-        fireEvent.click(box('Products'));
-        fireEvent.click(box('Products'));
+        await press(box('Categories'));
+        await press(box('Products'));
+        await press(box('Products'));
 
         expect(box('Categories')).toBeChecked();
     });
@@ -105,9 +105,9 @@ describe('a needed type cannot be unticked', () => {
 
         // products and customers both need customer_groups. Dropping products
         // must not strip what customers still depends on.
-        fireEvent.click(box('Products'));
-        fireEvent.click(box('Customers'));
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
+        await press(box('Customers'));
+        await press(box('Products'));
 
         expect(box('Customer groups')).toBeChecked();
         expect(box('Customer groups')).toBeDisabled();
@@ -117,7 +117,7 @@ describe('a needed type cannot be unticked', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         expect(box('Products')).not.toBeDisabled();
     });
@@ -128,7 +128,7 @@ describe('dependencies the pack does not contain', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         const warning = notice();
         expect(warning).toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('dependencies the pack does not contain', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         expect(notice()).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /start import/i })).not.toBeDisabled();
@@ -161,7 +161,7 @@ describe('dependencies the pack does not contain', () => {
         renderModal();
         await awaitForm();
 
-        fireEvent.click(box('Categories'));
+        await press(box('Categories'));
 
         expect(notice()).not.toBeInTheDocument();
     });
@@ -172,7 +172,7 @@ describe('dependencies the pack does not contain', () => {
         });
         await awaitForm();
 
-        fireEvent.click(box('Products'));
+        await press(box('Products'));
 
         expect(notice()).not.toBeInTheDocument();
     });

@@ -8,6 +8,12 @@
  */
 
 import React from 'react';
+
+// The canonical act-settling helpers (ADR-016) — re-exported so specs keep a
+// single import. The rule they encode: settle BEFORE a findBy*, never after.
+import { change, press, settle } from '../../../../helpers/reactSettle';
+
+export { change, press, settle };
 import { render, screen } from '@testing-library/react';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -70,5 +76,9 @@ export async function defaultResponse(type: string): Promise<unknown> {
  * there is nothing to type, and readiness means the seeded instance has landed.
  */
 export async function awaitForm(): Promise<void> {
+    await settle();
     await screen.findByRole('checkbox', { name: 'Categories' });
 }
+
+
+

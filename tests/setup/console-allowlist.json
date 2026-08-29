@@ -25,8 +25,6 @@
     "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
     "tests/features/data-installer/ui/DataInstallerScreen.test.tsx",
     "tests/features/data-installer/ui/components/ExportDatapackModal.test.tsx",
-    "tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx",
-    "tests/features/data-installer/ui/components/ImportDatapackModal.test.tsx",
     "tests/features/data-installer/ui/views/DatapackCatalogView.test.tsx",
     "tests/features/eds/services/configJsonFatalFailure.test.ts",
     "tests/features/eds/ui/steps/RepoSelectionInline.test.tsx",
