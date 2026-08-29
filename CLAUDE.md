@@ -98,6 +98,33 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → Check "Demo Builder: Debug Logs" output channel
 → `docs/systems/debugging.md`
 
+## The quality instruments — one registry, four cadences
+
+`tests/sop/toolingRegistry.ts` lists every instrument this repo owns and how
+often it runs. `tests/sop/tooling-registry.test.ts` fails the build when the
+registry and the disk disagree **in either direction** — an unregistered skill is
+red, and so is a registry entry for something deleted.
+
+| Cadence | What runs | Who triggers it |
+|---|---|---|
+| per-tool-call | 9 hook rules in `.claude/hooks/rules/` | automatic |
+| per-jest-run | 18 enforcer suites in `tests/sop/` | automatic |
+| per-push | lint, both typecheckers, 2 validators | CI |
+| periodic | 8 scripted checks + 9 guided reviews | **`npm run sweep`** |
+
+Read a sweep by its labels, not its exit code: a `reported` row always exits 0
+and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
+RUN` is a broken instrument rather than a finding. That distinction exists
+because the first sweep printed "clean" over a scan that had just measured a 34%
+agent-surface gap.
+
+Why it exists: the 2026-08-29 audit found ~50 instruments and no index. Two scans
+were in no list at all, `validate:test-guidelines` had been failing unseen on a
+bug in its OWN export detector, and `docs:check` called a Python file that no
+longer existed —
+three failures, one cause. An instrument nothing lists and nothing runs decays
+without producing a signal.
+
 ## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
 
 **Skills are invoked, not transcribed.** A backticked skill name in a plan, doc, or step (e.g. "run `gate`") is an instruction to INVOKE that skill — not a shell command to reproduce from memory. Reproducing the steps by hand silently skips the rules in the skill's body; the 2026-07-30 dream run found a whole feature delivered this way, hand-running a scoped lint and missing `gate` §6's whole-repo lint that CI enforces.
@@ -118,6 +145,9 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
+- `reuse-first` — the same question asked BEFORE the duplicate exists: find the house component/hook/pattern that already does the job. Enforced by a PreToolUse rule (`30-reuse-first.rule`), so it fires when you create a file under a `ui/` directory rather than at a release cut
+- `ai-coverage-scan` — which extension features an AGENT can actually reach: the gap between the human surface (handler types behind every webview button) and the agent surface (MCP tools), which dispatch into the same handler maps
+- `agent-gap-scan` — the same gap read from the other end: what agents ACTUALLY did in real session transcripts — tools nobody calls, jobs done with Bash because no tool existed, tools that failed. No instrumentation; it reads Claude Code's own transcripts
 - `test-divergence-scan` — how many DIFFERENT ways the suite builds the same fake. The sibling of the duplication scans aimed at TESTS: not copy-paste, but divergence nobody agreed to (26 StateManager fakes across 48 uses; 32 Project shapes across 38). HandlerContext is its control — 165 suites share a builder and 4 hand-roll, which is what happens when the builder exists
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"

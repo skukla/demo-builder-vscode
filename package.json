@@ -469,6 +469,7 @@
     "test:typecheck": "tsc --noEmit",
     "typecheck:tests": "tsc -p tsconfig.test.json",
     "metrics:baseline": "node scripts/capture-baseline-metrics.js",
+    "sweep": "node scripts/sweep.mjs",
     "validate:jest-config": "node scripts/validate-jest-config.js",
     "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
     "validate:test-guidelines": "node scripts/validate-test-guidelines.js",

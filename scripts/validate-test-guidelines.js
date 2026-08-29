@@ -79,7 +79,15 @@ async function validateExistingTestUtils() {
   // Verify pattern consistency
   for (const file of testUtilsFiles) {
     const content = fs.readFileSync(file, 'utf8');
-    const hasExports = /export\s+(const|function|interface|type)/.test(content);
+    // Covers every export form a testUtils file actually uses. The original
+    // pattern was `export\s+(const|function|interface|type)` and reported
+    // inExtensionMcpServer.testUtils.ts as having none — it has six and eight
+    // importers. It misses `export class`, `export ASYNC function`, and the
+    // re-export `export { X } from '...'`, which is how a testUtils file hands
+    // the SUT to its specs. Nothing caught it because nothing ran this script.
+    const hasExports =
+        /export\s+(async\s+)?(const|function|class|interface|type|enum|default)\b/.test(content) ||
+        /export\s*\{/.test(content);
     const hasMocks = /jest\.mock/.test(content) || /Mock/.test(content);
 
     if (!hasExports) {
