@@ -12,6 +12,45 @@ the owner asked for a consolidated plan and loop-readiness.
 - **Backlog**: PL-11 (epic) with PL-9/PL-14/PL-15; PL-13 (convergence queue).
   PL-13 and PL-11's execution are ONE stream — the batch below pays both.
 
+## VALIDATED STATUS — 2026-08-29
+
+Checked against reality, not recall, after the owner said "I'm not convinced
+it's completely done." They were right: I had been reporting phase 3 as though
+it were the program.
+
+| # | Phase | Status | Evidence |
+|---|---|---|---|
+| 1 | Gates | **DONE** | all four present and running |
+| 2 | Strengthen 7 weak witnesses | **6 of 7** | the one flagged BLIND — prerequisitesCacheManager, 8 suites — still has ZERO call assertions (control: a converted witness has 5). Its collaborators are a logger and a TTL function, so the criterion applies |
+| 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
+| 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
+| 4 | Noise burn-down | **NOT STARTED** | 68 suites still on the console allowlist; done when empty |
+| 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
+| 6 | Craft + coverage follow-ups | **NOT STARTED** | hollow suite, throw-style, and three named coverage gaps untouched |
+| 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
+
+**3 of 8 done, 1 partial, 4 not started.**
+
+### Measured impact so far
+
+    architecture exemptions   75 to 45  (-30)
+      of which fetch          23 to 0   (-23)
+      of which construction   39 to 32  (-7)
+    module-mock-wall suites   83 to 74  (-9)
+    test clones              160 to 158 (-2)
+
+Two numbers moved the WRONG way and are recorded rather than omitted:
+light-mocks doubles 532 to 544, and logicInTests 161 to 164. The first is
+expected — a converted suite trades a module wall for light fakes — but it
+means the double count REDISTRIBUTED rather than fell. The second is a small
+regression nobody asked for; phase 6 should look at it.
+
+### Work done outside this plan
+
+Not tracked by any phase above: the canonical fixture consolidation (PL-16,
+43 redundant builders to 0), the merge of the second test tree, the
+builder-uniqueness ratchet, the placement rule, and PL-17's filing.
+
 ## Phases, in dependency order
 
 | # | Phase | Done when | Item |

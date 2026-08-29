@@ -255,49 +255,49 @@
   {
    "unit": "tests/core/shell/commandExecutor-adobe-cli.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-basic-execution.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-cancellation.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-delegation.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-orgContext.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-orgTargetingGuard.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-stdinTruncation.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor-timeout.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandExecutor.security.test.ts",
    "flags": [
     "logicInTests"
    ],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/commandSequencer-helpers.test.ts",
@@ -2230,6 +2230,11 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/components/services/componentInstallation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/components/services/componentManager-install-git-clone.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -2625,7 +2630,7 @@
   {
    "unit": "tests/features/dashboard/services/onOpenChecks/orgContextCheck.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-actions.test.tsx",
@@ -3278,6 +3283,11 @@
    "doubleStyle": "wall+partial"
   },
   {
+   "unit": "tests/features/eds/handlers/edsHandlers-githubAuth.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/eds/handlers/edsHandlers.test.ts",
    "flags": [
     "logicInTests"
@@ -3438,6 +3448,33 @@
    "flags": [
     "logicInTests"
    ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/catalogPrewarmService-failureModes.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/catalogPrewarmService-projectGuard.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/catalogPrewarmService-sampleScope.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/catalogPrewarmService.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/cleanupService.test.ts",
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3705,6 +3742,11 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/eds/services/errorFormatters.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/eds/services/ewSettingChangeListener.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -3780,6 +3822,13 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/eds/services/helix/helixService-auth-keys.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/eds/services/helix/helixService-credentialRefused.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
@@ -3788,6 +3837,25 @@
    "unit": "tests/features/eds/services/helix/helixService-diagnostics.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService-persistent-keys.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService-preview-publish.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/eds/services/helix/helixService-rate-limiting.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/helix/helixService.test.ts",
@@ -3848,6 +3916,26 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/eds/services/pdp/pdp404HandlerPublisher.eagerRedirect.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/pdp/pdp404HandlerPublisher.install.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/pdp/pdp404HandlerPublisher.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/pdp/pdpUrlEncoding.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/eds/services/pdp/publishKeyRegistrar.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -3865,7 +3953,22 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/eds/services/quickEditAnchorMatch.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/eds/services/quickEditPublisher.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/eds/services/refreshBlockLibraryHeadless.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/reset/edsResetConfigStep.test.ts",
    "flags": [],
    "doubleStyle": "module-wall"
   },
@@ -3998,6 +4101,14 @@
    "unit": "tests/features/eds/services/storefrontRepublishContent.test.ts",
    "flags": [],
    "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/eds/services/toolManager.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "wall+partial"
   },
   {
    "unit": "tests/features/eds/ui/components/DaLiveServiceCard.test.tsx",
@@ -4325,6 +4436,11 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/mesh/services/meshRedeploy.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/mesh/services/meshStatusResolver.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -4376,6 +4492,11 @@
   },
   {
    "unit": "tests/features/mesh/services/stalenessDetector-stateDetection.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/mesh/services/stalenessDetector.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
   },
@@ -4564,6 +4685,31 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/prerequisites/services/cacheManager-invalidation.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/cacheManager-operations.test.ts",
+   "flags": [
+    "nondeterminism"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/cacheManager-security.test.ts",
+   "flags": [
+    "nondeterminism",
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/parallelExecution.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-operations.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -4579,6 +4725,16 @@
     "logicInTests"
    ],
    "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/versioning/MultiVersionDetector.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/versioning/VersionSatisfactionChecker.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/prerequisites/ui/prerequisiteRenderers.test.tsx",
@@ -4824,6 +4980,11 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/project-creation/services/ProjectSetupContext.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh.isolation.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
@@ -4833,6 +4994,11 @@
    "flags": [
     "logicInTests"
    ],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/aiBundle/aiBundleService-aiContextProgress.test.ts",
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4933,6 +5099,11 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/project-creation/services/catalogPrewarmPhase.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
    "unit": "tests/features/project-creation/services/componentInstallationOrchestrator.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -4941,6 +5112,11 @@
    "unit": "tests/features/project-creation/services/customBlockLibraryUtils.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/services/edsContentSetup.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
   },
   {
    "unit": "tests/features/project-creation/services/envVarClassifier.test.ts",
@@ -4960,7 +5136,17 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/project-creation/services/meshSetupService.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/project-creation/services/projectFinalizationService-meshEndpoint.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/services/projectFinalizationService.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
   },
@@ -5170,12 +5356,22 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/project-creation/ui/steps/ProjectCreationStep.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/project-creation/ui/steps/ReviewStep-predicates.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/project-creation/ui/steps/ReviewStep.helpers.test.tsx",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/ReviewStep.test.tsx",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
@@ -5203,6 +5399,11 @@
   },
   {
    "unit": "tests/features/project-creation/ui/steps/WelcomeStep-projectTitle.test.tsx",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/project-creation/ui/steps/WelcomeStep.test.tsx",
    "flags": [],
    "doubleStyle": "light-mocks"
   },
@@ -5345,21 +5546,6 @@
    "unit": "tests/features/project-creation/ui/wizard/stepFiltering.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/features/project-creation/ui/wizard/steps/ProjectCreationStep.test.tsx",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/features/project-creation/ui/wizard/steps/ReviewStep.test.tsx",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/features/project-creation/ui/wizard/steps/WelcomeStep.test.tsx",
-   "flags": [],
-   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/ui/wizard/storefrontSetupRename.test.ts",
@@ -5600,7 +5786,7 @@
   {
    "unit": "tests/features/updates/services/componentUpdater-core.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/services/componentUpdater-envMigration.test.ts",
@@ -5612,7 +5798,7 @@
   {
    "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/services/extensionUpdater.test.ts",
@@ -5733,6 +5919,13 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/sop/builder-uniqueness.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/sop/complex-expressions.test.ts",
    "flags": [
     "logicInTests"
@@ -5773,6 +5966,13 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/sop/mirror-placement.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/sop/modal-hosting.test.ts",
    "flags": [
     "logicInTests"
@@ -5796,6 +5996,13 @@
   },
   {
    "unit": "tests/sop/no-lowered-test-timeout.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/test-family-setup.test.ts",
    "flags": [
     "logicInTests"
    ],
@@ -5947,162 +6154,6 @@
    "unit": "tests/types/webview.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/handlers/edsHandlers.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/catalogPrewarmService-failureModes.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/catalogPrewarmService-projectGuard.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/catalogPrewarmService-sampleScope.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/catalogPrewarmService.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/cleanupService.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/errorFormatters.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/helix/helixService-auth-keys.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/helix/helixService-persistent-keys.test.ts",
-   "flags": [
-    "nondeterminism"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/helix/helixService-preview-publish.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/helix/helixService-rate-limiting.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.eagerRedirect.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.install.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/pdp/pdp404HandlerPublisher.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/pdp/pdpUrlEncoding.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/quickEditAnchorMatch.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/quickEditPublisher.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/eds/services/toolManager.test.ts",
-   "flags": [
-    "nondeterminism",
-    "logicInTests"
-   ],
-   "doubleStyle": "wall+partial"
-  },
-  {
-   "unit": "tests/unit/features/mesh/services/stalenessDetector.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/project-creation/services/ProjectSetupContext.test.ts",
-   "flags": [],
-   "doubleStyle": "deps-object-or-pure"
-  },
-  {
-   "unit": "tests/unit/features/project-creation/services/aiBundle/aiBundleService-aiContextProgress.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/project-creation/services/edsContentSetup.test.ts",
-   "flags": [],
-   "doubleStyle": "module-wall"
-  },
-  {
-   "unit": "tests/unit/features/project-creation/services/meshSetupService.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/features/project-creation/services/projectFinalizationService.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/prerequisites/cacheManager-invalidation.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/prerequisites/cacheManager-operations.test.ts",
-   "flags": [
-    "nondeterminism"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/prerequisites/cacheManager-security.test.ts",
-   "flags": [
-    "nondeterminism",
-    "logicInTests"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
-   "unit": "tests/unit/prerequisites/parallelExecution.test.ts",
-   "flags": [],
-   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/utils/autoUpdater.test.ts",
