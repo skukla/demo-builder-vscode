@@ -6174,6 +6174,24 @@ div[class*="spectrum"] input[type="search"] {
     color: var(--spectrum-global-color-orange-600);
 }
 
+/* .text-orange-700 and .text-red-500 were USED but defined nowhere a component
+   could rely on — found 2026-08-29 by the ADR-017 §6 check's sibling rule.
+   Both render as "no colour applied", which is a visible bug rather than dead
+   markup: warning text that is not amber, and an ERROR icon that is not red.
+
+   .text-red-500 did exist, but only inside VerifiedField's inline <style>
+   block, so it applied wherever that component happened to be mounted and
+   nowhere else. AdobeAuthStep uses it on the auth-failure icon and never gets
+   it. Defining it here makes it real everywhere and leaves the inline copy
+   harmlessly redundant. */
+.text-orange-700 {
+    color: var(--spectrum-global-color-orange-700);
+}
+
+.text-red-500 {
+    color: var(--spectrum-semantic-negative-color-icon);
+}
+
 /* ============================================
    NUMBER BADGE  (moved 2026-08-29, ADR-017 §6)
    ============================================

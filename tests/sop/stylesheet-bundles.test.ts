@@ -10,6 +10,15 @@
  * The machinery lives in `webviewBundleClasses.ts`; it builds each entry with
  * the REAL esbuild config and reads the graph esbuild produces.
  *
+ * NAMED `stylesheet-` rather than `webview-`, deliberately. The split-family
+ * check (`test-family-setup.test.ts`) groups suites by their first hyphenated
+ * token, so a second `webview-*` file here would read as a two-suite FAMILY
+ * expected to share a `.testUtils`. It is not one: this and
+ * `webview-architecture-rules.test.ts` enforce different rules and already
+ * share what they should (`architectureScan.ts`). Adding a ledger row to record
+ * debt that does not exist would be worse than choosing a name that tells the
+ * truth.
+ *
  * WHAT THIS DOES NOT CHECK. Classes defined in no stylesheet anywhere — dead
  * markup, or elements nobody styled — are a separate and much larger finding
  * (38 as of 2026-08-29). Mixing them in would bury this rule's three real hits
@@ -67,6 +76,16 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
             .flatMap(([cls, sites]) => [...sites].map((site) => `${cls} @ ${site}`))
             .sort();
         expectClean(LEDGER, 'bundleStylesheets', violations);
+    });
+
+    it('every class defined NOWHERE is a reasoned ledger entry', () => {
+        // The sibling defect. `bundleStylesheets` is "the sheet exists but this
+        // bundle does not load it"; this is "no sheet defines it at all", which
+        // is either dead markup or a rule nobody wrote. Same ledger contract,
+        // separate key, because the fixes are different and only a human can say
+        // which applies.
+        const violations = [...report.definedNowhere.keys()].sort();
+        expectClean(LEDGER, 'classesDefinedNowhere', violations);
     });
 
     it('reports how many class lists it could NOT read', () => {

@@ -30,6 +30,7 @@ import { ActionButton, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectr
 import React from 'react';
 import { StatusDot, type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 
+import { cn } from '@/core/ui/utils/classNames';
 /** A dot and the words for it — inseparable by construction. */
 export interface DashboardTileStatus {
     variant: StatusDotVariant;
@@ -72,7 +73,7 @@ export function DashboardTile({
             onPress={onPress}
             isQuiet
             isDisabled={isDisabled}
-            UNSAFE_className={`dashboard-action-button${className ? ` ${className}` : ''}`}
+            UNSAFE_className={cn('dashboard-action-button', className)}
             data-action={action}
         >
             {icon}

@@ -1,6 +1,7 @@
 import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import React, { ReactNode, useCallback } from 'react';
 
+import { cn } from '@/core/ui/utils/classNames';
 export interface ActionButton {
     label: string;
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
@@ -107,7 +108,7 @@ function FocusableButton({ variant, onPress, isDisabled, children }: FocusableBu
             tabIndex={isDisabled ? -1 : 0}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className={`modal-button ${variantClass}${isDisabled ? ' modal-button-disabled' : ''}`}
+            className={cn('modal-button', variantClass, isDisabled && 'modal-button-disabled')}
             aria-disabled={isDisabled}
         >
             {children}

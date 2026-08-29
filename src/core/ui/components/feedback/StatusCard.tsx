@@ -2,6 +2,7 @@ import { Link } from '@adobe/react-spectrum';
 import React, { ReactNode } from 'react';
 import { StatusDot } from '../ui/StatusDot';
 
+import { cn } from '@/core/ui/utils/classNames';
 /**
  * Contextual remediation CTA rendered beside a status badge (a quiet Link).
  *
@@ -90,7 +91,7 @@ export const StatusCard = React.memo<StatusCardProps>(({
     };
 
     return (
-        <div className={className ? `status-row ${className}` : 'status-row'}>
+        <div className={cn('status-row', className)}>
             <StatusDot variant={getVariant()} size={getSizeInPixels()} />
             {label && <span className="status-label">{label}</span>}
             <span className="status-text">

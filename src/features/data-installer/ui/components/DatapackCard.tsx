@@ -32,6 +32,7 @@ import type { DatapackArt, DatapackId, DatapackSummary } from '../../types';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
+import { cn } from '@/core/ui/utils/classNames';
 export interface DatapackCardProps {
     /** Every version of one datapack, already ordered by the catalog service. */
     group: DatapackGroup;
@@ -118,7 +119,7 @@ export function DatapackCard({
             // for the same reason a chosen card does: it is the one that matters
             // in this grid. The two never conflict — a wizard card that is both
             // wants one border, not two.
-            className={`datapack-card${selected || isInstalled ? ' is-selected' : ''}`}
+            className={cn('datapack-card', (selected || isInstalled) && 'is-selected')}
             data-testid="datapack-card"
             data-datapack={group.name}
             onClick={handleOpen}

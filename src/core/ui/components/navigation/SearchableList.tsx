@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
 import { useScrollToSelectedRow } from './useScrollToSelectedRow';
 
+import { cn } from '@/core/ui/utils/classNames';
 export interface SearchableListItem {
     id: string;
     title?: string;
@@ -159,7 +160,7 @@ export function SearchableList<T extends SearchableListItem>({
             {/* List Container (with refresh opacity) */}
             <div
                 ref={listContainerRef}
-                className={`list-refresh-container ${isRefreshing ? 'refreshing' : ''}`}
+                className={cn('list-refresh-container', isRefreshing && 'refreshing')}
             >
                 <ListView
                     items={filteredItems}

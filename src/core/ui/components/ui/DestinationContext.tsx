@@ -13,6 +13,7 @@
 
 import React from 'react';
 
+import { cn } from '@/core/ui/utils/classNames';
 export interface DestinationContextProps {
     /** Adobe project display name. */
     project?: string;
@@ -39,7 +40,7 @@ export function DestinationContext({
 }: DestinationContextProps): React.ReactElement | null {
     if (!project || !workspace) return null;
     return (
-        <span className={className ? `dest-context ${className}` : 'dest-context'}>
+        <span className={cn('dest-context', className)}>
             <span className="dest-context-value">
                 {project} · {workspace}
             </span>

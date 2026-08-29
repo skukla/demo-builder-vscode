@@ -20,7 +20,8 @@ import * as esbuild from 'esbuild';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
- 
+import { stripComments } from './architectureScan';
+
 const { WEBVIEW_ENTRIES, aliasPlugin } = require('../../esbuild.config.js') as {
     WEBVIEW_ENTRIES: Record<string, string>;
     aliasPlugin: esbuild.Plugin;
@@ -45,14 +46,66 @@ const CLASS_ATTR = /(?:UNSAFE_)?className\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^}]*)
 const CN_CALL = /\bcn\(([^)]*)\)/g;
 const STRING_LITERAL = /['"`]([^'"`]*)['"`]/g;
 
+/**
+ * Drop strings that sit on the right of a comparison — they are VALUES, not classes.
+ *
+ * `cn('cursor-pointer', viewMode === 'cards' && 'is-selected')` uses two
+ * classes; `'cards'` is what `viewMode` is tested against. Reading it as a class
+ * invents one no stylesheet will ever define.
+ *
+ * This check created that false positive for ITSELF: those expressions used to
+ * be template literals, which were skipped wholesale, and converting them to
+ * `cn()` to make them readable is what exposed the comparison operands. A fix
+ * that makes more of the surface visible has to cope with what it then sees.
+ */
+function stripComparisons(expression: string): string {
+    return expression.replace(/[=!]==?\s*['"`][^'"`]*['"`]/g, '');
+}
+
 /** Spectrum's own classes come from the library, not from our sheets. */
 const VENDOR_PREFIX = /^spectrum-/;
+
+/**
+ * Rules written inside a component's own `<style>` block.
+ *
+ * Four components do this (TimelineNav, ConfigurationSummary, VerifiedField,
+ * WizardContainer), defining 12 classes between them — including
+ * `.text-red-500`, which `AdobeAuthStep` also uses. Those classes exist only
+ * while the defining component is MOUNTED, which is a stranger dependency than
+ * the one this file was written to catch, but they are not undefined and
+ * reporting them as such would be a false positive.
+ *
+ * Counted as defined here, and called out in the ADR as its own smell.
+ */
+const STYLE_BLOCK = /<style>([\s\S]*?)<\/style>/g;
+
+function classesInStyleBlocks(source: string): Set<string> {
+    const found = new Set<string>();
+    for (const block of source.matchAll(STYLE_BLOCK)) {
+        const css = block[1].replace(/\{[^{}]*\}/g, '{}');
+        for (const m of css.matchAll(CLASS_DEF)) found.add(m[1]);
+    }
+    return found;
+}
 
 export interface UsageReport {
     /** class -> "<bundle>:<file>" sites that use it without the bundle styling it */
     crossBundle: Map<string, Set<string>>;
     /** Sites whose class list could not be read statically. Reported, never hidden. */
     dynamicSites: number;
+    /**
+     * class -> files using it, where NO stylesheet in the repo defines it.
+     *
+     * A different defect from `crossBundle`, and it needs a different fix. Some
+     * are dead markup left after a redesign; some are elements nobody ever
+     * styled, which renders as a real visual bug — `.text-red-500` on an error
+     * icon means the icon is not red.
+     *
+     * Reported separately rather than merged, because the fix for one is "load
+     * the right sheet" and the fix for the other is "write the rule, or delete
+     * the markup", and only a human can tell which.
+     */
+    definedNowhere: Map<string, Set<string>>;
 }
 
 function classesDefinedIn(cssPath: string): Set<string> {
@@ -75,7 +128,14 @@ function classesDefinedIn(cssPath: string): Set<string> {
  * drops what it cannot parse reports clean for the wrong reason.
  */
 function classesUsedIn(filePath: string): { used: Set<string>; dynamic: number } {
-    const source = readFileSync(filePath, 'utf8');
+    // COMMENTS STRIPPED FIRST. Without this, prose inside a `cn(...)` call is
+    // read as class names: StepRail explains a transition with `// ... (e.g.
+    // "Sign in" when ACCS is chosen)` and the extractor dutifully produced the
+    // classes `Sign` and `in`. Harmless there, but a comment containing a word
+    // that happens to be a real feature-scoped class would manufacture a
+    // cross-bundle violation that does not exist — and a false positive is the
+    // one failure that makes a check worse than nothing.
+    const source = stripComments(readFileSync(filePath, 'utf8'));
     const used = new Set<string>();
     let dynamic = 0;
 
@@ -98,7 +158,7 @@ function classesUsedIn(filePath: string): { used: Set<string>; dynamic: number }
             continue;
         }
         let sawLiteral = false;
-        for (const lit of expression.matchAll(STRING_LITERAL)) {
+        for (const lit of stripComparisons(expression).matchAll(STRING_LITERAL)) {
             addAll(lit[1]);
             sawLiteral = true;
         }
@@ -107,7 +167,7 @@ function classesUsedIn(filePath: string): { used: Set<string>; dynamic: number }
 
     for (const m of source.matchAll(CN_CALL)) {
         if (m[1].includes('${')) continue;
-        for (const lit of m[1].matchAll(STRING_LITERAL)) addAll(lit[1]);
+        for (const lit of stripComparisons(m[1]).matchAll(STRING_LITERAL)) addAll(lit[1]);
     }
 
     return { used, dynamic };
@@ -139,7 +199,10 @@ export function classesDefinedAnywhere(root: string): Set<string> {
 export async function reportBundleClassUsage(root: string): Promise<UsageReport> {
     const definedAnywhere = classesDefinedAnywhere(root);
     const crossBundle = new Map<string, Set<string>>();
+    const definedNowhere = new Map<string, Set<string>>();
     let dynamicSites = 0;
+    /** Classes any VENDOR stylesheet defines — Spectrum's, not ours. */
+    const vendorDefined = new Set<string>();
 
     for (const [bundle, entry] of Object.entries(WEBVIEW_ENTRIES)) {
         const result = await esbuild.build({
@@ -166,20 +229,43 @@ export async function reportBundleClassUsage(root: string): Promise<UsageReport>
         const inputs = Object.keys(result.metafile.inputs);
         const styledHere = new Set<string>();
         for (const css of inputs.filter((f) => f.endsWith('.css'))) {
-            for (const c of classesDefinedIn(join(root, css))) styledHere.add(c);
+            const defined = classesDefinedIn(join(root, css));
+            for (const c of defined) styledHere.add(c);
+            // Vendor sheets define plenty of classes that are legitimately not
+            // `spectrum-` prefixed; without collecting them, every one of those
+            // would look undefined.
+            if (css.includes('node_modules')) for (const c of defined) vendorDefined.add(c);
         }
 
-        for (const file of inputs.filter((f) => /\.tsx?$/.test(f) && f.startsWith('src/'))) {
+        const sourceFiles = inputs.filter((f) => /\.tsx?$/.test(f) && f.startsWith('src/'));
+
+        // TWO PASSES, and the order matters. Collecting `<style>` classes in the
+        // same loop that consumes them would make the answer depend on the order
+        // esbuild happened to list the inputs: a file processed before the
+        // component that defines its class would see it as undefined, and one
+        // processed after would not.
+        for (const file of sourceFiles) {
+            for (const c of classesInStyleBlocks(readFileSync(join(root, file), 'utf8'))) {
+                styledHere.add(c);
+            }
+        }
+
+        for (const file of sourceFiles) {
             const { used, dynamic } = classesUsedIn(join(root, file));
             dynamicSites += dynamic;
             for (const cls of used) {
                 if (styledHere.has(cls) || VENDOR_PREFIX.test(cls)) continue;
-                if (!definedAnywhere.has(cls)) continue;
+                if (vendorDefined.has(cls)) continue;
+                if (!definedAnywhere.has(cls)) {
+                    if (!definedNowhere.has(cls)) definedNowhere.set(cls, new Set());
+                    definedNowhere.get(cls)?.add(file);
+                    continue;
+                }
                 if (!crossBundle.has(cls)) crossBundle.set(cls, new Set());
                 crossBundle.get(cls)?.add(`${bundle}:${file}`);
             }
         }
     }
 
-    return { crossBundle, dynamicSites };
+    return { crossBundle, dynamicSites, definedNowhere };
 }

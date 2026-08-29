@@ -345,7 +345,7 @@ async function main() {
 
 // Only build when RUN, not when required.
 //
-// `tests/sop/webview-stylesheet-bundles.test.ts` requires this file to reuse the
+// `tests/sop/stylesheet-bundles.test.ts` requires this file to reuse the
 // real WEBVIEW_ENTRIES and the real alias resolution. Without this guard that
 // require would kick off a full build. The exports below exist so the check
 // cannot drift from the build it is checking — a second copy of the alias

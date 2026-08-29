@@ -47,6 +47,7 @@ import {
 } from '@/features/data-installer';
 import type { BaseStepProps } from '@/types/wizard';
 
+import { cn } from '@/core/ui/utils/classNames';
 /**
  * What a query is matched against — the id and the label, nothing else.
  *
@@ -236,7 +237,7 @@ function NoSampleData({
             aria-checked={isSelected}
             aria-label="None"
             tabIndex={0}
-            className={`sample-data-none${isSelected ? ' is-selected' : ''}`}
+            className={cn('sample-data-none', isSelected && 'is-selected')}
             onClick={onSelect}
             onKeyDown={handleKeyDown}
         >

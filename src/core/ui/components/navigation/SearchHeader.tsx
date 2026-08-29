@@ -37,6 +37,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
 
+import { cn } from '@/core/ui/utils/classNames';
 /** Available view modes */
 export type ViewMode = 'cards' | 'rows';
 
@@ -130,7 +131,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
+                    UNSAFE_className={cn('cursor-pointer', viewMode === 'cards' && 'is-selected')}
                     UNSAFE_style={{
                         backgroundColor:
                             viewMode === 'cards'
@@ -149,7 +150,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
+                    UNSAFE_className={cn('cursor-pointer', viewMode === 'rows' && 'is-selected')}
                     UNSAFE_style={{
                         backgroundColor:
                             viewMode === 'rows'
