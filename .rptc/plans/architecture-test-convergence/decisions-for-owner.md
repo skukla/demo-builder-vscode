@@ -268,10 +268,60 @@ publishing call built with GitHub credentials.
 
 `helixForStatus` is not written until something needs it.
 
-**Still needs a human, and this is the narrowed question:** are all ten genuinely
-doing both jobs, or is some of that defensive over-passing? A site passing a
-`daLiveTokenProvider` it never uses belongs on `helixForCodeSync`. That is the one
-thing reading constructor arguments cannot settle.
+### ANSWERED 2026-08-29 by tracing, not by asking
+
+The open question was whether the ten genuinely do both jobs. Traced each one to
+the methods actually invoked — through the bundles and factories they are handed
+to, not just the constructor call. **Seven genuinely need both. Three do not.**
+
+The credential each method needs, read from `HelixAdminAuth`:
+
+    getDaLiveToken()  <- previewPage, publishPage, createAdminApiKey,
+                         deleteAdminApiKey, listAllPages, publishAllSiteContent,
+                         previewAllContent, publishAllContent
+    getGitHubToken()  <- getResourceStatus, previewCode, purgeCacheAll,
+                         previewPage, publishPage
+
+`previewAndPublishPage` calls previewPage THEN publishPage, so anything reaching
+it needs both. That is what three of the passed-on instances turned out to be.
+
+**Genuinely both (7)** — storefrontSetupPhases (pipeline: publishAllSiteContent +
+purgeCacheAll + unpublishPages) · storefrontRepublishService (previewCode +
+publishAllSiteContent + purgeCacheAll) · edsContentSetup (publishAllSiteContent +
+purgeCacheAll) · contentAuthoringTools (preview/publish) · edsResetService:196,
+refreshBlockLibraryHeadless and catalogPrewarmPhase (all reach
+`previewAndPublishPage` — via blockLibraryPublish and PdpPublisher).
+
+**Over-passing (3)** — each hands over a `daLiveTokenProvider` it never uses, and
+calls only `previewCode`:
+
+    edsResetService:100     variable is literally named helixServiceForCodeSync
+    edsResetConfigStep:62   variable is literally named helixServiceForCode
+    authoringExperienceFlip:155
+
+Two of the three say what they are in the variable name. The type system had no
+way to hold them to it.
+
+**Already single-credential and correct (4)** — configSyncService,
+checkGitHubAppHandler (github); publishKeyRegistrar, projectDeletionService
+(daLive).
+
+### The decided shape
+
+    helixForCodeSync(githubTokenService, logger?)          //  5 sites (2 + the 3 over-passers)
+    helixForPublishing(daLiveTokenProvider, logger?)       //  2 sites
+    helixForSetupPipeline(github, daLive, logger?)         //  7 sites
+
+All parameters REQUIRED. Nothing left optional, so the omission behind the
+2026-08-15 stale-config 401 stops compiling. `helixForStatus` is not written —
+still zero users.
+
+Note one nuance found while tracing, which does NOT change the shape but explains
+why the 401 was silent rather than loud: `getDaLiveToken` falls back to an
+activation-registered default provider when none is passed. A site omitting the
+credential therefore works whenever that default happens to be registered, and
+fails when it is not. That is precisely the kind of works-until-it-doesn't the
+required parameters remove.
 
 ---
 
