@@ -21,7 +21,7 @@ it were the program.
 | # | Phase | Status | Evidence |
 |---|---|---|---|
 | 1 | Gates | **DONE** | all four present and running |
-| 2 | Strengthen 7 weak witnesses | **6 of 7** | the one flagged BLIND — prerequisitesCacheManager, 8 suites — still has ZERO call assertions (control: a converted witness has 5). Its collaborators are a logger and a TTL function, so the criterion applies |
+| 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
 | 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
 | 4 | Noise burn-down | **NOT STARTED** | 68 suites still on the console allowlist; done when empty |
@@ -29,7 +29,23 @@ it were the program.
 | 6 | Craft + coverage follow-ups | **NOT STARTED** | hollow suite, throw-style, and three named coverage gaps untouched |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 
-**3 of 8 done, 1 partial, 4 not started.**
+**4 of 8 done, 4 not started.**
+
+Phase 2's close is worth recording because passing was not the criterion —
+"would FAIL if the conversion broke its collaborator calls" was. Both defects
+were planted and the source restored:
+
+- **discard the jitter result, use the raw TTL** → the one test written for it
+  failed; the other five passed. Precise.
+- **constructor ignores its logger and fetches one** → first attempt failed all
+  six, but for the WRONG REASON: `getLogger()` throws "Logger not initialized"
+  in tests, so the suite died on the throw, not the assertion. That is a pass
+  for the wrong reason and would have been recorded as proof. Stubbing the
+  fallback to a WORKING logger re-ran it: exactly the three logger-seam tests
+  failed, by assertion.
+
+The second is the lesson: a planted defect that fails the suite is not proof the
+ASSERTION caught it. Check which test failed and why.
 
 ### Measured impact so far
 
