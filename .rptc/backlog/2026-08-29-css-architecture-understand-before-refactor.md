@@ -124,6 +124,39 @@ surfaces (configure, sidebar, aiOverview, dashboard's deeper states) render empt
 under the trivial init payload used for the spike; they need realistic fixtures.
 That is a known, bounded task.
 
+## The baseline workflow is PROVEN (owner's proposal, 2026-08-29)
+
+*"Capture each and every webview as a baseline snapshot, try our CSS architecture
+on it, take another snapshot, compare. Definition of done is that it returns back
+to the baseline exactly."* — run end to end against all eight surfaces:
+
+| Step | Result |
+|---|---|
+| capture baseline | 8 hashes |
+| rebuild, no change | 8/8 match |
+| plant a CSS change | **3 DETECTED** — precisely the surfaces rendering the affected element |
+| revert | **8/8 back to baseline exactly** |
+
+A snapshot is a full-tree computed-style fingerprint (every element, keyed by
+structural path, 16 properties), not a screenshot.
+
+**Three things must be right, all found by controls that failed first:**
+
+1. **Freeze animations.** The dashboard's pulsing `.status-dot` made captures
+   differ by opacity 0.736 vs 0.766. With animations and transitions disabled,
+   five surfaces captured twice were byte-identical.
+2. **Cache-bust the BUNDLE url**, not just the page. The first control reported
+   "no change" for a change that was in the bundle — the harness was comparing a
+   build against itself.
+3. **`!important` inside `@layer` beats `!important` outside it.** Cascade layers
+   REVERSE precedence for important declarations. `custom-spectrum.css` wraps its
+   rules in `@layer theme`, so a rule appended at the bottom of that same file
+   loses to one inside the layer even with `!important`. "Append an override at
+   the end" — the obvious move — **does not work here**, and that is a strong
+   candidate for the owner's "things we never could make render properly".
+
+Point 3 is the single most valuable thing the spike found and belongs in the ADR.
+
 ## Phase 2 — AUDIT: how does this CSS actually work?
 
 Only once phase 1 can prove a change is safe. The audit answers what nobody can
@@ -191,3 +224,4 @@ layout failures, which no static check can see. Only phase 1 addresses those.
 
 - 2026-08-29  Phase 1 VERIFIED 2026-08-29 at the owner's request. All 8 webview bundles mount outside VS Code; Spectrum theme resolves in all 8; signal identical across runs (6/6); detection proven against pre-fix vs post-fix bundles. Two traps recorded: the handshake reply must be ~30ms not 0ms (a 0ms reply lands before the client's listener and everything hangs), and the Spectrum theme scope only exists once mounted (so an unmounted harness reports false regressions and must abort). Chose computed-style assertions over screenshots. Cost: no browser driver installed and CI skips the build, so recommend a release-cut instrument rather than a CI gate. Remaining work is building it.
 - 2026-08-29  CORRECTION: an earlier note said 'no browser driver is installed'. Wrong — Playwright via MCP is what ran the entire verification, at zero cost. Only a REPO-LEVEL dependency is missing (5 MB package; browsers already cached locally at 1.7 GB). Revised recommendation: start agent-driven like codebase-sweep/dream/eds:drift, add the dependency when a human or script needs it, consider CI last. MCP constraint: its browser is containerised, so the harness must be served at host.docker.internal, not localhost.
+- 2026-08-29  Baseline/change/re-snapshot/compare workflow PROVEN end to end on all 8 surfaces: baseline captured, rebuild matched 8/8, a planted CSS change was DETECTED on exactly the 3 affected surfaces, and reverting returned all 8 to baseline exactly. Snapshot = full-tree computed-style fingerprint, not a screenshot. Three prerequisites found by controls that failed first: freeze animations (a pulsing status dot made captures differ), cache-bust the BUNDLE url (the first control compared a build against itself), and — the big one — !important INSIDE @layer beats !important outside it, so appending an override at the bottom of custom-spectrum.css does not override anything in @layer theme. That last one belongs in the ADR.

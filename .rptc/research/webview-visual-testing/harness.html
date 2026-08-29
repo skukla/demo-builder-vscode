@@ -11,6 +11,16 @@
     --vscode-input-background: #313131; --vscode-input-foreground: #cccccc;
     --vscode-sideBar-background: #181818; --vscode-list-hoverBackground: #2a2d2e;
   }
+  /* FREEZE EVERYTHING TIME-DEPENDENT.
+     Without this a snapshot is not reproducible: the dashboard's .status-dot
+     pulses, and two captures 2s apart caught opacity 0.736 vs 0.766. Animations
+     and transitions are the only nondeterminism found in a 72-element full-tree
+     fingerprint — kill them and the capture is exact. */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    caret-color: transparent !important;
+  }
   body { margin:0; background:var(--vscode-editor-background); color:var(--vscode-foreground);
          font-family:var(--vscode-font-family); font-size:var(--vscode-font-size); }
 </style></head><body>
@@ -36,6 +46,11 @@
   });
   const bundle = new URLSearchParams(location.search).get('b') || 'dataInstaller';
   const s = document.createElement('script');
-  s.src = './' + bundle + '-bundle.js';
+  // CACHE-BUST THE BUNDLE, not just the page. Without this the browser serves
+  // the previously-fetched bundle and a before/after comparison silently
+  // compares a build against ITSELF — which reports "no change" for a change
+  // that is definitely present. Caught by a planted-change control 2026-08-29.
+  const cb = new URLSearchParams(location.search).get('cb') || '';
+  s.src = './' + bundle + '-bundle.js' + (cb ? '?cb=' + cb : '');
   document.body.appendChild(s);
 </script></body></html>

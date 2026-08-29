@@ -192,3 +192,126 @@ built.
 
 Phase 1 is verified. The remaining work is building the instrument, not
 discovering whether one is possible.
+
+---
+
+# The baseline / change / re-snapshot / compare workflow — PROVEN
+
+**Owner's proposal, 2026-08-29:** *"capture each and every webview as a baseline
+snapshot, try our CSS architecture on it, take another snapshot, and then compare
+the two. Definition of done for each factor should be that it returns back to the
+baseline exactly."*
+
+**It works, demonstrated end to end.** The full cycle was run against all eight
+surfaces:
+
+| Step | Result |
+|---|---|
+| 1. Capture baseline | 8 hashes recorded |
+| 2. Rebuild, no source change | **8/8 match** |
+| 3. Plant a CSS change | **3 surfaces DETECTED** — exactly the ones rendering the affected element; the other 5 correctly unchanged |
+| 4. Revert the change | **8/8 back to baseline exactly** |
+
+That last row is the owner's definition of done, and it held.
+
+## What a snapshot is
+
+A **full-tree computed-style fingerprint**, not a screenshot. Walk every element
+from `body`, key it by structural path (`/0/2/1/…`) plus tag name, and record 16
+computed properties: color, background-color, font-size, font-weight, padding,
+margin, display, position, width, height, border, flex-direction, align-items,
+justify-content, opacity, text-align. Hash the result.
+
+Sizes are modest — dashboard 72 elements, integrations 46, dataInstaller 36,
+projectsList 22, sidebar 15, wizard 8, configure/aiOverview 5 each. The small
+ones are surfaces whose fixtures are not built yet, not surfaces that fail.
+
+Hashes are for reporting; the stored artifact should be the full line list, so a
+diff can name the element and property that moved rather than only saying
+"changed".
+
+## Three things that must be right, all found the hard way
+
+### 1. Freeze animations, or the snapshot is not reproducible
+
+The first full-tree comparison came back 71/72 identical. The one difference was
+the dashboard's pulsing `.status-dot`, caught mid-animation: opacity `0.736531`
+vs `0.766540`.
+
+The harness now injects:
+
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        caret-color: transparent !important;
+    }
+
+After that, five surfaces captured twice were **byte-identical, zero diffs**.
+Animation was the only nondeterminism in the entire corpus.
+
+### 2. Cache-bust the BUNDLE url, not just the page
+
+The first planted-change control reported "no change" on all eight surfaces —
+for a change that was verifiably in the built bundle. The harness cache-busted
+its own URL but loaded `./<name>-bundle.js` with no query, so the browser served
+the previously-fetched bundle and **the comparison was a build against itself**.
+
+Without that control, the earlier "identical across a rebuild" result would have
+been recorded as proof of stability. It was true, but for the wrong reason.
+
+### 3. THE BIG ONE — `!important` inside a layer beats `!important` outside it
+
+After fixing the cache, the control STILL did not fire. The planted rule was
+present in the loaded stylesheets, with `!important`, and the element still
+computed the old value.
+
+Cause: **CSS cascade layers reverse precedence for `!important` declarations.**
+For normal declarations, unlayered wins over layered. For `!important`, the order
+inverts — a layered `!important` beats an unlayered one.
+
+`custom-spectrum.css` wraps its rules in `@layer theme`, and
+`.page-container-padded` sets `padding-left: … !important` at line 626. A rule
+appended at the END of that same file, outside the layer, loses **even with
+`!important`**.
+
+This is load-bearing for the whole CSS effort:
+
+- "Append an override at the bottom of `custom-spectrum.css`" — the obvious
+  move — **does not override anything inside `@layer theme`**, importantly or
+  otherwise. It is a strong candidate for the owner's "things we never could make
+  render properly".
+- It also caveats the fix made earlier the same day: `.text-orange-*` and
+  `.text-red-500` were appended unlayered and DO apply — but only because no
+  competing rule exists. Had one existed in the layer, the fix would have
+  silently done nothing. (Verified working: `text-orange-600` computes
+  `rgb(232,116,0)` in the dashboard bundle.)
+- Any refactor moving rules between layered and unlayered contexts changes
+  outcomes in a direction most people's CSS intuition gets backwards.
+
+The control only fired once it modified the EXISTING layered rule. That is the
+correct shape for a control here: change something that can actually win.
+
+## The workflow, as it should be run
+
+1. **Build.** `npm run compile` — CI does not do this, so the instrument must.
+2. **Serve** the bundle directory over HTTP (`python3 -m http.server`), reachable
+   at `host.docker.internal` if driven through the containerised MCP browser.
+3. **Capture** each of the eight surfaces into a fingerprint file, cache-busting
+   the bundle URL. Commit these as the baseline.
+4. **Assert the harness is faithful** before trusting anything — a known
+   Spectrum variable resolves, a known rule of ours applies. Abort if not.
+5. **Change** the CSS.
+6. **Rebuild, re-capture, diff.** Empty diff = the refactor is behaviour-
+   preserving. Non-empty = it names the element and property that moved.
+
+## Honest limits
+
+- **Only what the 16 properties capture.** A change invisible to all of them —
+  a different `z-index`, a `box-shadow`, a `transform` — passes. The list is
+  extensible; it is a choice, not a boundary.
+- **Only the states the fixtures produce.** Four surfaces currently render near-
+  empty, so their baselines are thin. Hover, focus, error and modal states are
+  not captured at all yet.
+- **Not a pixel check.** Two different rules producing the same computed values
+  are indistinguishable, which is usually what you want and occasionally is not.
+- **The animation freeze hides animation regressions** by construction.
