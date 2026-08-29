@@ -77,15 +77,19 @@ export function createComponentManager(): ComponentManagerLike {
     };
 }
 
-export function createCommandManager() {
-    return {
-        execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-    };
+/** The canonical executor fake (ADR-016), with this suite's success default. */
+export function createCommandManager(): jest.Mocked<CommandExecutor> {
+    return createMockCommandExecutor({
+        execute: jest.fn().mockResolvedValue(createSuccessResult()),
+    });
 }
 
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
 import { createMockLogger as createLogger } from '../../../helpers/loggerFake';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+import type { CommandExecutor } from '@/core/shell';
 export { createLogger };
 
 export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {

@@ -29,6 +29,7 @@ jest.mock('fs', () => ({
 
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
+import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 
 export interface TestMocks {
     logger: jest.Mocked<Logger>;
@@ -117,7 +118,7 @@ export function setupConfigLoader(config = mockConfig) {
 /**
  * Creates a prerequisite with perNodeVersion flag
  */
-export function createPerNodePrerequisite(overrides?: any) {
+export function createPerNodePrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
     return {
         id: 'aio-cli',
         name: 'Adobe I/O CLI',
@@ -134,7 +135,7 @@ export function createPerNodePrerequisite(overrides?: any) {
 /**
  * Creates a standard prerequisite
  */
-export function createStandardPrerequisite(overrides?: any) {
+export function createStandardPrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
     return {
         id: 'git',
         name: 'Git',
@@ -150,14 +151,17 @@ export function createStandardPrerequisite(overrides?: any) {
 /**
  * Creates a prerequisite with dynamic installation
  */
-export function createDynamicInstallPrerequisite(overrides?: any) {
+export function createDynamicInstallPrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
     return {
         id: 'node',
         name: 'Node.js',
         description: 'JavaScript runtime',
         check: {
-            command: 'node',
-            args: ['--version'],
+            // `args: ['--version']` sat here until 2026-08-28. `PrerequisiteCheck`
+            // has no such field, production never reads `check.args`, and it
+            // appears zero times in prerequisites.json — an invented field that
+            // nothing could see while this builder was untyped.
+            command: 'node --version',
         },
         install: {
             dynamic: true,

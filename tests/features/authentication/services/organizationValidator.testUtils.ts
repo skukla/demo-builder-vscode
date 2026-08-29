@@ -1,4 +1,6 @@
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { createFailureResult } from '../../../helpers/commandResultFake';
+import type { CommandResult } from '@/core/shell/types';
 
 /**
  * OrganizationValidator Test Utilities
@@ -35,14 +37,7 @@ export { createMockLogger } from '../../../helpers/loggerFake';
 /** Canonical command result (ADR-016). */
 export { createSuccessResult } from '../../../helpers/commandResultFake';
 
-/**
- * Creates an error command execution result.
- */
-export function createErrorResult(stderr: string, code = 1) {
-    return {
-        stdout: '',
-        stderr,
-        code,
-        duration: 100
-    };
+/** The canonical failure result (ADR-016); `code` stays overridable. */
+export function createErrorResult(stderr: string, code = 1): CommandResult {
+    return { ...createFailureResult(stderr), code };
 }
