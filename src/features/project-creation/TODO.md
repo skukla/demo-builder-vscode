@@ -3,7 +3,7 @@
 **Status**: Partially migrated (Phase 3.8 migration incomplete)
 
 **What needs to happen**:
-- Complete migration from `src/commands/createProjectWebview.ts`
+- Complete migration from `src/commands/`
 - Move remaining handlers from `src/commands/handlers/` to `handlers/`
 - Create services layer for project creation logic
 - Add README.md

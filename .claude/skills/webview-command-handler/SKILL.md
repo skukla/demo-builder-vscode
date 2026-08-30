@@ -52,7 +52,7 @@ each fix exposing the next — check all four before wiring:
    `list-org-console-apis` lives in `ProjectCreationHandlerRegistry`; the integrations panel
    registers `dashboardHandlers`, so the API picker hung until timeout. An unregistered type
    is not an error, it is silence: the request never resolves.
-   *Guarded:* `tests/features/dashboard/commands/showIntegrations-handlerCoverage.test.ts`
+   *Guarded:* `tests/features/dashboard/commands/` (the suite beside `showIntegrations.ts`)
    scans the reused flow's source for every `webviewClient` request/postMessage literal and
    fails if the host panel doesn't register it. Copy that test for a new reuse.
 2. **State the component's LOGIC reads** — supply what its gates actually test, not what looks

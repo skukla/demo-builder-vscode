@@ -252,7 +252,7 @@ This extension is part of Adobe's Demo Builder toolkit. For development setup:
 
 ### Documentation
 
-- **Technical Documentation**: See `docs/technical.md`
+- **Technical Documentation**: See `docs/README.md` for the documentation index
 - **Styling Guide**: See `docs/development/styling-guide.md` for CSS architecture
 - **Architecture**: See `docs/architecture/` for system design documents
 - **Changelog**: See `docs/CHANGELOG.md` for version history

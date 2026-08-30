@@ -56,6 +56,18 @@ const ALLOWED: Record<string, string> = {
     'docs/patterns/error-handling.md::@/core/errors':
         'names the deleted module on a "Previous Approach" line — the point is that it is gone',
     'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
+    '.claude/skills/gate/SKILL.md::tests/oversized.test.ts':
+        'invented filename in a worked example of the file-size check — the point is that it is over the limit, so it must not exist',
+    '.claude/skills/gate/SKILL.md::tests/subdir/test.test.ts':
+        'invented filename showing how the scan walks nested directories',
+    '.claude/skills/rptc-hygiene-scan/SKILL.md::src/a/foo.ts':
+        'invented path in an example of a citation the scan flags as dead',
+    '.claude/skills/rptc-hygiene-scan/SKILL.md::src/features/x/old.ts':
+        'invented path in the same example — a file that was deleted is the case being shown',
+    'CONTRIBUTING.md::src/features/authentication/services/authService.ts':
+        'shortened name in an example of the test-mirroring convention; the real file is authenticationService.ts and naming it would make the example harder to read',
+    'CONTRIBUTING.md::tests/features/authentication/services/authService.test.ts':
+        'the mirrored half of the same illustrative pair',
     'docs/development/sop/consistency-patterns.md::@/features/mesh':
         'a deliberate COUNTER-example — the line is marked ❌ and shows the feature-barrel \n         import ADR-022 forbids. It must not resolve; that is the point of showing it.',
 };
@@ -110,6 +122,30 @@ function imports(md: string): string[] {
         .filter((s) => !isPlaceholder(s))
         // A capture containing a regex metacharacter came from a search pattern.
         .filter((s) => !/[[\]^*$()|]/.test(s));
+}
+
+/**
+ * A REPO path written in backticks, not as a markdown link.
+ *
+ * Docs cite files both ways, and only the link form was checked. The validation
+ * README carried two dead ones for that reason — `docs/security/validation.md` and
+ * `src/core/command-execution/README.md`, neither of which exists — sitting in a
+ * "See Also" list in backticks, invisible to a checker that only read `](...)`.
+ *
+ * Restricted to paths that name a FILE with an extension. A bare directory in
+ * backticks is usually prose ("everything under `src/features/`"), and a trailing
+ * slash or a `{placeholder}` segment is a shape rather than a path.
+ *
+ * Scoped to src/, docs/ and tests/ ON PURPOSE. This extension GENERATES projects,
+ * and their documentation cites paths inside the generated project — `.claude/mcp.json`,
+ * a storefront's `scripts/delayed.js`. Those are correct references to files that do
+ * not exist HERE, and flagging them would train people to ignore this check.
+ */
+function backtickedPaths(md: string): string[] {
+    const out = [...md.matchAll(/`((?:src|docs|tests)\/[\w./-]+\.\w+)`/g)]
+        .map((m) => m[1])
+        .filter((s) => !s.includes('{') && !s.includes('...'));
+    return [...new Set(out)];
 }
 
 function scan(pick: (md: string) => string[], resolve: (s: string) => boolean | null) {
@@ -177,6 +213,25 @@ describe('module paths cited by current-tense documents resolve', () => {
             }
         }
         expect([...new Set(bad)].sort()).toEqual([]);
+    });
+
+    it('every backticked repo path names a file that exists', () => {
+        // The link check below only reads `](...)`. Docs cite files in backticks too,
+        // and two dead ones lived in a See Also list that way for months.
+        const bad: string[] = [];
+        for (const f of docs()) {
+            for (const p of backtickedPaths(readFileSync(join(ROOT, f), 'utf8'))) {
+                if (!existsSync(join(ROOT, p)) && !ALLOWED[`${f}::${p}`]) bad.push(`${f}  ${p}`);
+            }
+        }
+        expect([...new Set(bad)].sort()).toEqual([]);
+    });
+
+    it('CONTROL: the backticked-path extractor finds paths and skips prose', () => {
+        expect(backtickedPaths('see `src/core/validation/README.md` for detail'))
+            .toEqual(['src/core/validation/README.md']);
+        expect(backtickedPaths('everything under `src/features/` is a feature')).toEqual([]);
+        expect(backtickedPaths('a `src/features/{name}/index.ts` barrel')).toEqual([]);
     });
 
     it('CONTROL: the link check can fail', () => {

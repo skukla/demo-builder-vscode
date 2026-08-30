@@ -303,7 +303,7 @@ private async validateEnvVars(
 ## Documentation Updates
 
 ### For Component Authors
-**File**: `docs/components/env-variable-guidelines.md`
+**File**: `components.json`
 
 **Topics**:
 - Semantic versioning for config changes
@@ -312,7 +312,7 @@ private async validateEnvVars(
 - Migration metadata format (if implemented)
 
 ### For Extension Users
-**File**: `docs/user-guide/updating-components.md`
+**File**: `docs/architecture/component-version-management.md`
 
 **Topics**:
 - What happens during component updates
@@ -356,5 +356,5 @@ private async validateEnvVars(
 
 - `src/features/updates/services/componentUpdater.ts` - Update logic
 - `src/features/project-creation/helpers/envFileGenerator.ts` - Env generation
-- `tests/features/updates/services/componentUpdater-envMigration.test.ts` - Test coverage
-- `docs/architecture/service-resolution.md` - Service architecture
+- `tests/features/updates/services/` - Test coverage
+- `docs/architecture/service-resolution-pattern.md` - Service architecture

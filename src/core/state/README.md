@@ -410,7 +410,7 @@ When you find feature-specific state management used in multiple places:
 
 ### From Old Utils
 
-This module was migrated from `src/utils/stateManager.ts` as part of the shared infrastructure refactoring. Key improvements:
+This module was migrated from `src/core/state/stateManager.ts` as part of the shared infrastructure refactoring. Key improvements:
 
 - Consistent error handling
 - Better event support

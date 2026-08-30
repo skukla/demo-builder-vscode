@@ -169,7 +169,7 @@ Available for querying
 ### Used By
 - `src/features/project-creation` - Component selection and dependency resolution
 - `src/features/prerequisites` - Component requirements mapping
-- `src/webviews/components/wizard/steps/ComponentStep.tsx` - Component selection UI
+- `src/features/project-creation/ui/steps/BuildYourProjectStep.tsx` - Component selection UI
 
 ## Usage Examples
 

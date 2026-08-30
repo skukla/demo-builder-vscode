@@ -233,8 +233,8 @@ Mesh deployed? → YES → checkMeshStatusAsync()
 - `vscode` - Commands, window, env APIs
 
 ### Used By
-- `src/commands/dashboard.ts` - Dashboard command registration
-- `src/webviews/components/dashboard/ProjectDashboard.tsx` - Dashboard UI
+- `src/features/dashboard/commands/` - Dashboard command registration
+- `src/features/dashboard/ui/ProjectDashboardScreen.tsx` - Dashboard UI
 
 ## Usage Examples
 

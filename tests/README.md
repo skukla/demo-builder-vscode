@@ -75,7 +75,7 @@ tests/
 - **Location:** `tests/integration/`, `tests/features/*/handlers/`
 - **Purpose:** Test interactions between components
 - **Environment:** Node.js (via ts-jest)
-- **Example:** `tests/integration/prerequisites/prerequisitesManager.test.ts`
+- **Example:** `tests/features/prerequisites/services/`
 
 ### React Component Tests
 - **Location:** `tests/webview-ui/`
