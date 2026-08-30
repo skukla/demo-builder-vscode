@@ -23,9 +23,9 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C (20 family extractions) untouched |
+| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C RE-PLANNED, not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C measured: duplication is real (~5,486 lines) but only 4 of 44 families are mechanically extractable; the other 40 have divergent preambles and need per-file judgment. Splits into C1 (4, mechanical) and C2 (40, judgment) — see the finding below |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
-| 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
+| 5 | Release-cut instruments | **DONE 2026-08-30** | `test-strategy-scan` skill (runs the three censuses + the verdict table saying which columns track defects) and the Stryker pilot (`npm run test:mutation`, baseline 93.37% over 166 mutants in 33s). Both registered and both reached by `npm run sweep` / `cut-release` |
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 | 8 | Frontend architecture (PL-17) | **DONE 2026-08-29** | ADR-017 written + enforced (`webview-architecture-rules.test.ts`); ADR-015 scoped to the host; hook rule + ledger rehomed; WebviewClient's row retired by ratifying the singleton. Three positive controls, incl. one on the jurisdiction itself |
@@ -307,6 +307,76 @@ in arithmetic instead of in judgment.
 
 **Lane A is therefore DONE at 12 of 15.** The residual 3 are unfixable by design and
 should not be carried as debt.
+
+### Lane C is a DIVERGENCE problem, not an extraction problem — measured 2026-08-30
+
+Lane C was scoped as "20 ranked family extractions": split test families that never
+pulled their shared `jest.mock` preamble into a `.testUtils`, fixed by extracting it.
+That framing is wrong for almost all of them, and working it as planned would have
+silently changed what the tests test.
+
+**The duplication is real.** Unlike lane A, these are genuine cross-file clones: 140
+pairs, ~5,486 duplicated lines, and 119 verified at ≥95% shared text present in BOTH
+files. (The verifier needs that tolerance — jscpd's fragment boundary is token-aligned,
+so the reported text overshoots the true match by a few characters. A strict
+whole-fragment test reported 6 of 140 and was simply wrong; one pair read by hand is
+what caught it.)
+
+**But much of it is not mechanically extractable.** Grouping the clone-linked spec
+files into families and comparing each file's SET of `jest.mock(...)` calls
+(balanced-paren extracted, whitespace-normalised):
+
+- 44 families with ≥2 clone-linked spec files
+- **18** share an identical mock set — safe to extract (lane C1)
+- **26** have DIVERGENT mock sets — need judgment per file (lane C2)
+
+*Measurement note, because the first attempt was wrong and the difference matters.*
+An earlier pass defined "preamble" as everything up to the first `import {` and
+reported 4 safe / 40 divergent. That definition cuts each file at a different place —
+several files import a type before their mocks — so it compared unequal text and
+overstated divergence more than tenfold. The corrected method extracts every
+`jest.mock(...)` call wherever it sits, and carries two controls: the normaliser must
+match a file against itself, and must still separate two `installHandler` files known
+to differ. Both pass. **18/26 is the number to plan against, not 4/40.**
+
+`installHandler` is the worked example: 11 clone-linked spec files, **9 distinct
+preambles**, all naming the same four mocked modules. The differences are semantic,
+not cosmetic:
+
+- 7 files partially mock `handlers/shared` via `requireActual`; 5 fully automock it.
+  Those are different subjects under test — automock replaces every export with a
+  `jest.fn()` returning undefined.
+- three different sets of named function mocks (one group adds `getNodeVersionKeys`)
+- the `debugLogger` module mock carries `trace` in 4 files and not in the other 7
+
+Collapsing them onto one canonical preamble would hand real implementations to files
+that deliberately automocked, or automocks to files that deliberately did not. Every
+suite would still be green, because a mock answers the same whatever it is handed.
+
+**What CAUSED it is written down in the family's own helper.** The docblock at the top
+of `installHandler.testUtils.ts` instructs every consumer to paste the preamble at the
+top of their file. The duplication was not an oversight; it was the documented
+procedure. That instruction has also drifted from what the files actually do — it shows
+a bare `jest.mock('.../shared')` where 7 files use a `requireActual` factory — which is
+the "a comment describing another module is a claim, not documentation" rule, in the
+place best positioned to mislead.
+
+**Not investigated:** whether the `trace` gap is reachable. It is not, for these tests —
+the only `getLogger()` caller in the feature is `prerequisitesCacheManager`, and these
+suites mock `@/core/di`. Checked before claiming a hazard.
+
+**Recommended re-plan.** Lane C splits in two:
+
+- **C1 (mechanical, 18 families)** — identical mock sets; extract to `.testUtils` using
+  the testUtils-owns-the-SUT-import pattern (§3 of `webview-test-authoring`; 59
+  precedents in this repo). Largest first: `blockCollectionHelpers` (6 files),
+  `daLiveContentOperations` (4), `AdobeAuthStep` (4), then eleven 2–3 file families.
+  This is the lane that matches the original "family extractions" plan.
+- **C2 (judgment, 26 families)** — decide per file which mocking strategy is correct,
+  THEN extract. This is `test-divergence-scan` work wearing a duplication hat. Worst
+  first: `installHandler` (11 files / 5 mock sets), `dashboardHandlers` (6/6),
+  `edsResetService` (5/5), `ComponentRegistryManager` (8/2), `helixService` (4/2).
+  Do not start C2 without making that decision deliberately, family by family.
 
 ### templateSyncService — stated 2026-08-29, before the work
 
