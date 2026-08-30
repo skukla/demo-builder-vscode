@@ -66,4 +66,10 @@ direction rather than the comprehension one.
 
 ## Shipped so far
 
-- 2026-08-30  docs(claude-md): add the glossary, drop nine unverifiable stamps (`5bd339c85`)
+- 2026-08-30  docs(claude-md): add the glossary, drop nine unverifiable stamps (`fda58735e`)
+
+  The sha here was first written as `5bd339c85`, which is dangling. `unlogged
+  --write` recorded the sha, and folding its own edit back in with `git commit
+  --amend` then replaced that commit — so the record named an object no longer in
+  branch history. Log, then commit the log as its OWN commit; never amend after
+  logging.
