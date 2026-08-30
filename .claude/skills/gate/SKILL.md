@@ -104,13 +104,30 @@ base**, so errors inherited from the base branch or sibling worktree work surfac
 pushing, match CI exactly:
 
 ```bash
-npm run lint                                  # whole repo — the one that's easy to miss
-npx tsc --noEmit
-npm run typecheck:tests                       # test tree — CI gates on this too
-npm run validate:tsc-blindspots               # files tsc silently skips (basename shadowing) — CI gates on this
-npx jest --no-coverage > "$SCRATCH/gate-jest.txt" 2>&1   # full suite; never pipe through tail
-bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
+npm run gate     # all six, in order, stopping at the first failure
 ```
+
+**One command, deliberately.** This used to be the six commands below, listed for
+you to run by hand — and a list of six is a memory test you eventually fail. The
+2026-07-30 dream run found a whole feature shipped after someone hand-ran a scoped
+lint and skipped the whole-repo one; on 2026-08-30 a session ran three of the six
+all day and only noticed while auditing this skill. Both times the missing steps
+would have passed. That is what makes it hard to catch: the failure is silent until
+the day it is not.
+
+What `npm run gate` runs, so you can read a failure without opening package.json:
+
+| | | |
+|---|---|---|
+| 1 | `npm run lint` | whole repo — the one that is easy to miss |
+| 2 | `npx tsc --noEmit` | `src/` (tsconfig.json excludes tests) |
+| 3 | `npm run typecheck:tests` | the test tree; CI gates on this too |
+| 4 | `npm run validate:tsc-blindspots` | files tsc silently skips (basename shadowing) |
+| 5 | `npx jest --no-coverage` | full suite |
+| 6 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
+
+It stops at the first failure, so fix and re-run rather than reading ahead. Run
+jest on its own if you need the output in a file — never pipe it through `tail`.
 
 The scan is advisory, not a gate: ts-prune reports entry points and DI/config-registered
 symbols as unused. Read it, do not obey it. What IS reliable is its doc-drift section —

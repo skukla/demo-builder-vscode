@@ -131,6 +131,28 @@ describe('the tooling registry matches what is on disk', () => {
         expect(unregistered).toEqual([]);
     });
 
+    it('the gate skill and the gate script run the same number of steps', () => {
+        // PL-27's answer. `gate` is the most-invoked skill here and its pre-push
+        // section used to be six commands listed for a human to run by hand. A list
+        // of six is a memory test, and it had already been failed twice — once in
+        // 2026-07-30's dream run, once by a session that ran three of the six all
+        // day. It is now `npm run gate`, and the skill documents the steps in a
+        // table so a failure is readable without opening package.json.
+        //
+        // That table is a second copy of the chain, so it is pinned to it.
+        const script = packageScripts['gate'];
+        expect(typeof script).toBe('string');
+        const steps = script.split('&&').length;
+        expect(steps).toBeGreaterThan(3);
+
+        const skill = readFileSync(join(SKILLS_DIR, 'gate', 'SKILL.md'), 'utf-8');
+        const rows = [...skill.matchAll(/^\| \d+ \| `/gm)].length;
+        expect({ scriptSteps: steps, documentedRows: rows }).toEqual({
+            scriptSteps: steps,
+            documentedRows: steps,
+        });
+    });
+
     it('names every skill in the root CLAUDE.md, which is what makes it loadable', () => {
         // Registration and ROUTING are different things, and this is the gap between
         // them. `mutation-test-pilot` and `test-strategy-scan` were both registered

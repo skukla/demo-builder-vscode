@@ -9,6 +9,11 @@ status: open
 
 # Is any of our 37 skills doing a job a check should hold?
 
+> **Answered 2026-08-30: yes, one — `gate` — and it had already failed twice.**
+> Fixed the same day (`npm run gate`). Kept `open` because a question closes on
+> evidence and this one should be re-asked at the next release cut; the answer is
+> recorded below so it is not re-derived.
+
 The escalation order this repo already follows says: eliminate a problem in the
 architecture if you can; failing that make it a lint rule, a test, or CI; only
 then write a rule or a skill; a human last. On that ordering a skill is a safety
@@ -56,6 +61,48 @@ someone else's service.
 A skill that is correctly placed but never invoked is a `tool-verdicts` /
 [[PL-25]] question about routing and wording, not an argument for removing it.
 Two different findings; keep them apart.
+
+## The answer (2026-08-30)
+
+**One skill, and it was the most-used one.** `gate` — 32 invocations across 54
+transcripts, cited 69 times in the repo — carried its pre-push sequence as SIX
+shell commands listed for a human to run by hand. No script ran them together.
+
+A list of six is a memory test, and the record shows it being failed twice:
+
+- **2026-07-30**, already written into CLAUDE.md: the dream run found a whole
+  feature delivered after someone hand-ran a scoped lint and skipped `gate` §6's
+  whole-repo lint, which CI enforces.
+- **2026-08-30**, found while answering this item: the session doing the auditing
+  had run three of the six all day — jest, tsc, lint — and never
+  `typecheck:tests`, `validate:tsc-blindspots`, or the dead-code scan. All three
+  passed when finally run, which is exactly why nobody noticed.
+
+Both times the skipped steps would have passed. That is the shape of this defect:
+silent until the day it is not.
+
+**Fixed:** `npm run gate` runs all six in order and stops at the first failure. The
+skill now points at the script and keeps the steps as a readable table, and
+`tooling-registry.test.ts` pins the table's row count to the script's step count,
+so adding a seventh step fails until the skill names it.
+
+### The prediction was wrong, and how it was wrong is the useful part
+
+This item was filed expecting "few or none", on the reasoning that the conventions
+programme had already pushed the enforceable rules down a layer. That was right
+about the RULES and blind to the PROCEDURES. The examples it proposed all survived:
+
+- `reuse-first` — the hook fires on file creation; the prose holds the judgement
+  about whether two things are the same job, which no hook can make.
+- `decompose-god-file` — the scans FIND oversized files; the skill is the fix.
+  Finding and fixing are different jobs and only one is checkable.
+- The external-reality skills (`adobe-docs-lookup`, `eds-publish-and-config`,
+  `adobe-org-context`) were correctly ruled out of scope: nothing in CI can check
+  a claim about someone else's service.
+
+The candidate nobody suspected was the one everybody runs. **Look for a skill whose
+body is an ordered list of commands** — that is the shape that should be a script,
+and being well-used makes it more urgent, not less.
 
 ## Provenance
 
