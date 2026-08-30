@@ -46,6 +46,23 @@ look hung. Redirect to a file and read that. A PreToolUse hook blocks it. The
 redirect order matters too: `> file 2>&1`, never `2>&1 > file`, because jest writes
 results to stderr and the wrong order lands an empty file that reads as a clean pass.
 
+### Narrower runs, and what each actually changes
+
+| Script | Flags it adds | For |
+|---|---|---|
+| `test:watch` | `--watch` | the TDD loop — the fastest feedback there is |
+| `test:file` | `--maxWorkers=1` | one file, without paying for worker startup |
+| `test:changed` | `--onlyChanged` | what your working tree touched |
+| `test:fast` | `--maxWorkers=75% --forceExit` | a full run tuned for wall clock |
+| `test:safe` | `--maxWorkers=1`, 1GB heap | a machine that is already struggling |
+
+All of them raise the heap except `test:safe`, which deliberately lowers it.
+
+**The full suite takes about 20 seconds**, so reach for these to stay in flow rather
+than to avoid a slow run. Figures of 3–5 minutes belong to a build long since tuned
+away; a stale one teaches you to walk away from a run that has already finished.
+`npm test` is the slowest of them, because its `pretest` compiles and lints first.
+
 ## Control the test, not just the code
 
 **A test that passes against the disabled feature tests nothing.** After writing a

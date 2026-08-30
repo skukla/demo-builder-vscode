@@ -1,146 +1,64 @@
-# Build Instructions
-
-## Quick Start
-
-After checking out any branch, run:
+# Building from source
 
 ```bash
-npm run setup
+npm run setup     # install, then compile everything
 ```
 
-This single command will:
+Then press **F5** in VS Code to launch the Extension Development Host.
 
-1. Install all dependencies
-2. Compile TypeScript
-3. Build webview bundles
+`postinstall` runs the compile, so a plain `npm install` already leaves you built.
 
-## Manual Build Steps
-
-If you prefer to run steps individually:
+## While you work
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Compile the extension
-npm run compile
+npm run watch:all   # extension + webviews
+npm run watch       # extension only
 ```
 
-## Development Mode
+With a watch running, reload the dev-host window with **Cmd+R**. F5 is only needed
+when the extension host itself has to restart — a change to activation, command
+registration, or anything else that runs before a webview exists.
 
-For active development with file watching:
+## What the build actually does
 
-```bash
-# Watch all files (TypeScript + Webview)
-npm run watch:all
-```
+**esbuild, not webpack.** There is no webpack in this repository — no dependency, no
+config file. If you find instructions about webpack caching or module federation,
+they predate the switch and are describing a build that no longer exists.
 
-## Troubleshooting
+`npm run compile` clears the webview output, copies `media/`, then runs
+`esbuild.config.js --production`, which emits three things:
 
-### Extension Not Working After Checkout
+| Output | From |
+|---|---|
+| `dist/extension.js` | `src/extension.ts` — CommonJS for the Node extension host |
+| `dist/mcp-proxy.js` | `src/mcp-proxy.ts` — the stdio↔socket forwarder Claude Code spawns |
+| `dist/webview/*-bundle.js` | one IIFE browser bundle per entry in `WEBVIEW_ENTRIES` |
 
-The most common issue is missing built files. The `dist/` folder and `node_modules/` are not committed to git (by design). You must build the project locally:
+Narrower targets exist when you need them: `compile:webview` rebuilds only the
+bundles, `compile:typescript` runs `tsc` plus `tsc-alias` against
+`tsconfig.build.json`.
 
-```bash
-git checkout mvp/integration  # or any branch
-npm run setup                  # Installs and builds everything
-```
+**Type checking is separate from bundling.** esbuild strips types without checking
+them, so a build succeeding tells you nothing about type errors. `npm run gate` runs
+both checkers along with everything else CI does.
 
-### Build Errors
+## When it goes wrong
 
-If you encounter build errors:
+**Nothing works after switching branches.** `dist/` and `node_modules/` are not
+committed, by design. Run `npm run setup`.
 
-1. Clean install dependencies:
+**Stale behaviour after a rebuild.** `npm run clean && npm run compile`.
+`clean:webview` alone drops just the bundles.
 
-   ```bash
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
+**Module resolution errors mentioning `@/core/...`.** Path aliases have to be
+rewritten to relative imports in the emitted JavaScript; `tsc-alias` does that, and
+it runs as part of `compile:typescript`. Invoking `tsc` by hand skips it, which is
+the usual cause.
 
-2. Clean build:
+**A type error the build did not catch.** Expected — see above. Run `npm run gate`.
 
-   ```bash
-   rm -rf dist
-   npm run compile
-   ```
+## Packaging
 
-### Missing Types
-
-If TypeScript complains about missing types:
-
-```bash
-npm install
-```
-
-### Path Alias Resolution Issues
-
-If the extension fails to load with module resolution errors after using TypeScript path aliases (e.g., `@/core/base`):
-
-**Problem**: TypeScript compiles successfully but doesn't transform path aliases in JavaScript output, causing Node.js to fail at runtime.
-
-**Solution**: The build process automatically handles this via `tsc-alias`:
-
-```bash
-npm run compile:typescript
-# Runs: tsc && tsc-alias && mv dist/src/* dist/
-```
-
-This ensures:
-1. TypeScript path aliases transform to relative imports in compiled JS
-2. Output directory flattened from `dist/src/` to `dist/` for VS Code
-
-**Note**: If manually compiling TypeScript without npm scripts, you must run `tsc-alias` afterward.
-
-### Webpack Caching Issues
-
-If the extension shows stale behavior after rebuilding (e.g., old code running despite successful compilation):
-
-**Problem**: Webpack can cache output bundles even with `output.clean: true`, causing the extension to load outdated code.
-
-**Solution**: The build scripts now explicitly clean before webpack compilation:
-
-```bash
-npm run compile:webview
-# Runs: npm run clean:webview && webpack --mode production
-```
-
-**Manual Cleanup** (if needed):
-```bash
-# Clean all build output
-npm run clean
-
-# Clean only webview bundles
-npm run clean:webview
-
-# Then rebuild
-npm run compile
-```
-
-**Why This Happens**:
-- Webpack's persistent caching can survive clean operations in some cases
-- Module federation or code splitting can leave orphaned chunks
-- Build errors partway through can leave partial output
-
-**Prevention**:
-- Always use `npm run compile` instead of direct `webpack` commands
-- The compile scripts automatically clean before building
-- If suspicious behavior persists, run `npm run clean` manually
-
-## Build Output
-
-After successful build, you should have:
-
-- `dist/extension.js` - Main extension file
-- `dist/webview/` - Webview bundles
-- `dist/commands/` - Command implementations
-- `dist/utils/` - Utility modules
-
-## Testing the Build
-
-1. Open VS Code
-2. Press `F5` to launch Extension Development Host
-3. Run command: `Demo Builder: Create Project`
-
-## CI/CD Note
-
-The `postinstall` script in package.json automatically runs compilation after `npm install`, making the setup process simpler for new developers and CI/CD pipelines.
+`npm run package` produces the `.vsix`. Cutting an actual release is more than that
+one command; the `cut-release` skill has the sequence, and it publishes to real
+users.
