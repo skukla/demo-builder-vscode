@@ -120,6 +120,39 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         expect(second.getCacheManager().getCachedResult('node')).toBeDefined();
     });
 
+    it('an invalidation on one message is VISIBLE on the next', () => {
+        /**
+         * The property the fix newly depends on, and which nothing checked.
+         *
+         * `installHandler` invalidates after an install, and `checkHandler`
+         * clears everything on Recheck — both through `context.prereqManager`.
+         * While that was a fresh instance per message those calls cleared a cache
+         * about to be discarded: correct-looking no-ops whose effect could not be
+         * observed. They are load-bearing now.
+         *
+         * If anyone later builds a manager outside `getPrerequisitesManager`,
+         * invalidation silently stops working and the staleness window becomes
+         * the full 5-minute TTL. This is the test that would notice.
+         */
+        const [first, second] = twoMessages();
+
+        first.getCacheManager().setCachedResult('node', { installed: true } as never);
+        first.getCacheManager().invalidate('node'); // as installHandler does
+
+        expect(second.getCacheManager().getCachedResult('node')).toBeUndefined();
+    });
+
+    it('a Recheck clears what earlier messages cached', () => {
+        // checkHandler's `isRecheck` path calls clearAll() — the user's escape
+        // hatch when something changed OUTSIDE the extension.
+        const [first, second] = twoMessages();
+
+        first.getCacheManager().setCachedResult('node', { installed: true } as never);
+        first.getCacheManager().clearAll();
+
+        expect(second.getCacheManager().getCachedResult('node')).toBeUndefined();
+    });
+
     it('resetPrerequisitesManager drops it — the reload path', () => {
         // A manager surviving an extension-host reload would carry a cache built
         // against the previous session's CLI state.
