@@ -55,3 +55,7 @@ Each is small and does what its name says.
 
 - [`@/core/validation`](../validation/README.md) — every value reaching a command
   passes through it first; that ordering is a security property, not a preference
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). This is a BOUNDARY module: `handlers/` and `commands/` may fetch services from it, and nothing below that line may. Enforced by `tests/sop/architecture-rules.test.ts`.

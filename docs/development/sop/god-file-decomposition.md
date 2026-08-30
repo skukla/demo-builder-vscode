@@ -65,3 +65,7 @@ is arbitrary. The test is whether each piece can be described without mentioning
 other.
 
 The skill's Gotchas section covers the rest.
+
+## Conventions that bind this
+
+The rules are in [the handbook](../handbook.md). The build-failing limit and the "delete obsolete code" rule are both stated there; this file is the judgement between them.

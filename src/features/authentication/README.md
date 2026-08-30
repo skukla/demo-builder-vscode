@@ -44,3 +44,7 @@ which is why exactly one is constructed, in `extension.ts`.
 
 - [ADR-015](../../../docs/architecture/adr/015-dependency-architecture.md) — why the
   service is built once at the composition root
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Exactly one `AuthenticationService` is constructed, in `extension.ts` — a second would fork its token cache. Org guards go through `ensureOrgContext`, never an ad-hoc comparison.

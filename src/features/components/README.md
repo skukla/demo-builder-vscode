@@ -36,3 +36,7 @@ no longer exists. See
 - [component-system.md](../../../docs/architecture/component-system.md) — the model
 - [`appbuilder-component-authoring`](../../../.claude/skills/appbuilder-component-authoring/SKILL.md)
   — adding a deployable integration
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Registries load through `ConfigurationLoader`, and a config leaf is never mocked in a test — inject the data instead (`tests/sop/no-config-leaf-mocks.test.ts`).

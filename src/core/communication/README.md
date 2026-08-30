@@ -55,3 +55,7 @@ most common bug on this seam.
   — adding a message end-to-end
 - [ADR-017](../../../docs/architecture/adr/017-webview-architecture.md) — the channel
   is a ratified singleton; `acquireVsCodeApi()` can only be called once per webview
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). The channel is a **ratified singleton** — `acquireVsCodeApi()` can only be called once per webview, so a second channel is not a design choice. Enforced by the `messageChannelOwners` ledger.

@@ -40,6 +40,13 @@ read it before touching publish or config. In short:
   renders, so `encodeURIComponent` is unusable for PDP URLs
   ([ADR-007](../../../docs/architecture/adr/007-pdp-sku-url-encoding.md)).
 
+## Configuration goes through the standard path
+
+EDS used to generate its `.env` with custom logic. It does not any more: both `.env`
+and `site.json` are produced by `@/core/config`'s `configFileGenerator` from the
+component registry, the same route every other component takes. If you find a doc
+describing bespoke EDS `.env` generation, it is describing code that was removed.
+
 ## Dropins are vendored, not installed
 
 Commerce dropins load through an import map to committed files under
@@ -52,3 +59,7 @@ was retired. See
 
 - [eds-content-separation.md](../../../docs/architecture/eds-content-separation.md)
 - [eds-byom-pdp-routing.md](../../../docs/architecture/eds-byom-pdp-routing.md)
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Nothing in this feature may reach into another feature; shared code moves to `core/`. Enforced by eslint import boundaries.

@@ -44,3 +44,7 @@ written after that bug.
 ## Related
 
 - [`@/core/base`](../base/README.md) — hands `stateManager` to every command
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). `StateManager` accumulates state, so it is built once at the composition root. That is the construction-boundary rule, and its ruling is in the `architecture-rules` ledger rather than the debt list.

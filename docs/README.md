@@ -16,7 +16,6 @@ Documentation about system design and high-level architecture.
 
 - **[Architecture Overview](./architecture/overview.md)** - Complete system architecture and design decisions
 - **[Component System](./architecture/component-system.md)** - Component-based architecture for frontends, backends, and dependencies
-- **[Graph-Based Dependencies](./architecture/graph-based-dependencies.md)** - Future architecture for flexible entity relationships
 
 #### ⚙️ Systems
 Detailed documentation about specific subsystems.
@@ -100,7 +99,6 @@ Reusable design patterns extracted from the codebase.
 
 **System Architects**
 1. [Architecture Overview](./architecture/overview.md)
-2. [Graph-Based Dependencies](./architecture/graph-based-dependencies.md)
 3. All system documentation in [/systems](./systems/)
 
 ## 📝 Documentation Standards

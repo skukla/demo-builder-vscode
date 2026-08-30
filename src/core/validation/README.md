@@ -56,3 +56,7 @@ not just the personal one.
 - [`@/core/shell`](../shell/README.md) — the main consumer; every value reaching a
   shell command passes through here first
 - [`@/core/logging`](../logging/README.md) — redacts through this module before writing
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Every value reaching a shell command passes through here first. That ordering is the security property, and the shell module depends on it.

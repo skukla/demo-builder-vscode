@@ -37,3 +37,7 @@ about to add a second path for this, that is what happened last time.
 
 - [`appbuilder-component-authoring`](../../../.claude/skills/appbuilder-component-authoring/SKILL.md)
   — catalog entries and the deploy/subscribe contracts
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). One state model, one deploy path. The keyed map is the single authority; a second path for the same action is what `call-path-audit` exists to catch.

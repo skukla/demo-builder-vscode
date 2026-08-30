@@ -48,3 +48,7 @@ need F5; Cmd+R reloads only the webview.
 - [mcp-server.md](../../../docs/systems/mcp-server.md) — the full tool reference
 - [`ai-context-authoring`](../../../.claude/skills/ai-context-authoring/SKILL.md) —
   changing what gets generated into a project
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). A tool response is built with `asText`/`asRawText` and never by hand — enforced by `tests/sop/` in both halves of the server. Destructive tools require `confirm`.

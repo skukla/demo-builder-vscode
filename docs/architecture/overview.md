@@ -510,7 +510,7 @@ For detailed information about specific areas:
 
 - **Adobe Setup Flow**: `docs/architecture/adobe-setup.md`
 - **Component System**: `docs/architecture/component-system.md`
-- **Dependency Resolution**: `docs/architecture/graph-based-dependencies.md`
+- **Dependency Resolution**: proposed only — see the backlog item `2026-08-30-graph-based-dependencies`
 - **Node Version Management**: `docs/architecture/working-directory-and-node-version.md`
 - **Development Strategy**: `docs/CLAUDE.md`
 - **Prerequisites System**: `docs/systems/prerequisites-system.md`

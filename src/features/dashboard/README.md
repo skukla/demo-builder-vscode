@@ -44,3 +44,7 @@ the pin is a cross-scope move, not a flag flip.
   — adding a message this feature handles
 - [`spectrum-webview-ui`](../../../.claude/skills/spectrum-webview-ui/SKILL.md) — the
   Spectrum traps these surfaces hit
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Hooks are the service layer here: a component renders, and the state machine lives in a hook (ADR-017). Handlers return their result rather than pushing it.

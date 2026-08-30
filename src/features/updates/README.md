@@ -42,3 +42,7 @@ bitten this repo before. See
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)
   — the floating stable-tag model that decouples component updates from extension releases
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Generated files are written through the hash-and-skip seam ([ADR-013](../../../docs/architecture/adr/013-generated-file-edit-survival.md)) — a user-edited file is skipped, never overwritten.

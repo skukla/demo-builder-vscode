@@ -29,10 +29,6 @@
   bug.
 - [`error-handling.md`](error-handling.md) — Error handling architecture
   (backend phases complete; frontend migration pending at time of writing).
-- [`graph-based-dependencies.md`](graph-based-dependencies.md) — Planned
-  evolution from the two-level prerequisite/plugin hierarchy to a
-  graph-based dependency system (topological install order, cycle
-  detection).
 - [`working-directory-and-node-version.md`](working-directory-and-node-version.md)
   — Why commands must run from the correct component directory, and how
   per-component Node versions (fnm) are managed.
@@ -45,10 +41,6 @@
 - [`component-update-env-migration.md`](component-update-env-migration.md) —
   Handling environment-variable renames across component updates so `.env`
   files don't rot.
-- [`update-system-refactoring.md`](update-system-refactoring.md) — Dynamic
-  repository resolution from `components.json` instead of hardcoded
-  mappings. Implementation:
-  `src/features/updates/services/updateManager.ts`.
 
 ### Edge Delivery Services (EDS)
 
@@ -59,9 +51,6 @@
   projects are configured based on the selected backend component.
 - [`eds-unified-config-generation.md`](eds-unified-config-generation.md) —
   Registry-based generation of both `.env` and `site.json` in one phase.
-- [`eds-standard-pattern-refactoring.md`](eds-standard-pattern-refactoring.md)
-  — Aligning EDS configuration with the standard component pattern
-  (removing custom `.env` generation logic).
 - [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md) — How
   `/products/{urlKey}/{sku}` URLs work for every storefront: shared
   `render-pdp` overlay, browser-side smart 404, reversible SKU encoding.

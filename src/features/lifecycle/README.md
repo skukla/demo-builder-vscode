@@ -29,3 +29,7 @@ second stop path.
 - [`@/core/shell`](../../core/shell/README.md) — process teardown and port checking
 - [race-conditions.md](../../../docs/systems/race-conditions.md) — the patterns this
   feature is built out of
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Both commands extend `BaseCommand`, and sleeps route through the shared `sleep()` — a hand-rolled one cannot be faked, which makes the tests slow and flaky.

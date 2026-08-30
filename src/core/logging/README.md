@@ -37,3 +37,7 @@ The structured stdout/stderr block **above** a blank error carries the truth; th
 error line itself is often empty. There is a catalog of benign noise and a
 channel-to-feature map in
 [debug-log-triage](../../../.claude/skills/debug-log-triage/SKILL.md).
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). Secrets never reach a log. That rule is enforced twice — a hook rule blocks a secret-shaped write before it happens, and this module redacts before writing.

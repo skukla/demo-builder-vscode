@@ -41,3 +41,7 @@ every check slow again.
 
 - [prerequisites-system.md](../../../docs/systems/prerequisites-system.md) — the
   detection and installation model in full
+
+## Conventions that bind this
+
+The rules are in [the handbook](../../../docs/development/handbook.md). The manager is a session accessor: memoised, built once, and listed as a ruling in the `architecture-rules` ledger rather than as debt.
