@@ -31,16 +31,15 @@ Test-Command Gotchas below.
 
 ## Where RPTC Artifacts Live
 
-`.rptc/` is **fully tracked in git** (only `.rptc/prompt.md` is gitignored).
-Write working artifacts to these locations, never ad-hoc paths:
+**The table lives in the root [`CLAUDE.md`](../CLAUDE.md).** It is there rather than
+here because you need to know where an artifact goes *before* you start writing one,
+and that file is loaded into every session while this one is not — by the time you
+are reading this, you are already in `.rptc/`.
 
-| Stage | Location | What goes there |
-|---|---|---|
-| Working research | `.rptc/research/<topic-slug>/research.md` | Exploratory, in-flight research generated during `/rptc:research` or equivalent |
-| Working plans | `.rptc/plans/<feature-slug>/overview.md` + `step-NN.md` | Active implementation plans being executed via TDD |
-| Completed work | `.rptc/complete/<feature-slug>/` | Plans whose implementation has shipped (move from `.rptc/plans/` when done) |
-| Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly; promote from `.rptc/research/` once durable. |
-| Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active (index: `.rptc/backlog/README.md`) |
+It was duplicated in both for a while. Two copies of a five-row table with nothing
+keeping them in step is a slower version of having none.
+
+`.rptc/` is **fully tracked in git**; only `.rptc/prompt.md` is gitignored.
 
 ### Live-probe writeups: redact before committing
 
