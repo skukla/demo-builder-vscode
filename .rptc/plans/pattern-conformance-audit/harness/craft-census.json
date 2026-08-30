@@ -28,19 +28,19 @@
   {
    "unit": "tests/commands/diagnosticsChecks-aioVersionReuse.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/commands/diagnosticsChecks-auth.test.ts",
    "flags": [
     "nondeterminism"
    ],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/commands/diagnosticsChecks-parallelProbes.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/commands/handlers/HandlerContext.test.ts",
@@ -110,12 +110,12 @@
   {
    "unit": "tests/core/commands/ResetAllCommand.security.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/commands/ResetAllCommand.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/commands/commandManager.test.ts",
@@ -135,17 +135,17 @@
   {
    "unit": "tests/core/communication/webviewCommunicationManager.edge-cases.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/communication/webviewCommunicationManager.handshake.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/communication/webviewCommunicationManager.messaging.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/communication/webviewHandlerCoverage.test.ts",
@@ -994,17 +994,17 @@
   {
    "unit": "tests/core/vscode/envFileWatcherService-changeDetection.mocked.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/vscode/envFileWatcherService-gracePeriodNotifications.mocked.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/vscode/envFileWatcherService-security.mocked.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/vscode/envFileWatcherService.test.ts",
@@ -1189,12 +1189,12 @@
   {
    "unit": "tests/features/ai/server/contentAuthoringTools-sizes.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/contentAuthoringTools.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/createProjectTool.test.ts",
@@ -1632,7 +1632,7 @@
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher-tokenOrgFallback.test.ts",
@@ -1662,7 +1662,7 @@
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher.orgListSingleFlight.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher.renameRemoteProject.test.ts",
@@ -1672,12 +1672,12 @@
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher.servicesCache.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher.teardown.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/services/adobeEntityFetcher.test.ts",
@@ -1941,22 +1941,22 @@
   {
    "unit": "tests/features/authentication/ui/hooks/useSelectionStep-basic.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/hooks/useSelectionStep-errorCodes.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/hooks/useSelectionStep-searchAndErrors.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/hooks/useSelectionStep-stateManagement.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-authentication.test.tsx",
@@ -2026,12 +2026,12 @@
   {
    "unit": "tests/features/components/handlers/componentHandlers-getData.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/components/handlers/componentHandlers.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/components/services/ComponentRegistryManager-appBuilder.test.ts",
@@ -2651,7 +2651,7 @@
   {
    "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel-commerceScope.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel-installation.test.tsx",
@@ -2661,7 +2661,7 @@
   {
    "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/IntegrationsGrid-actions.test.tsx",
@@ -3520,22 +3520,22 @@
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-blockDocPages.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-enumeration.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-library-cdnCopy.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-library-creation.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-referenceDiscovery.test.ts",
@@ -3555,12 +3555,12 @@
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-transform.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-utils.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveSourceOperations.test.ts",
@@ -4056,17 +4056,17 @@
   {
    "unit": "tests/features/lifecycle/commands/startDemo.error.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/lifecycle/commands/startDemo.lifecycle.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/lifecycle/commands/startDemo.portConflict.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/lifecycle/commands/stopDemo.error.test.ts",
@@ -4331,17 +4331,17 @@
   {
    "unit": "tests/features/prerequisites/handlers/continueHandler-edge-cases.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/prerequisites/handlers/continueHandler-errors.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/prerequisites/handlers/continueHandler-operations.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/prerequisites/handlers/continueHandler-perNodeScope.test.ts",
@@ -5544,12 +5544,12 @@
   {
    "unit": "tests/features/updates/services/componentUpdater-core.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/envMerge.test.ts",
