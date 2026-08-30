@@ -52,6 +52,34 @@ function isCheckScript(name: string): boolean {
 
 const registered = new Map<string, Instrument>(INSTRUMENTS.map((i) => [i.id, i]));
 
+/**
+ * The cadence table in the root CLAUDE.md states a COUNT of enforcer suites. A count
+ * in prose is a claim, and this repo's rule is that a claim needs something keeping it
+ * true. It did not have one: the table said 18 while 19 existed on disk, found on
+ * 2026-08-30 while adding the 19th.
+ *
+ * The registry itself carries no `sop-test` entries — enforcer suites run under jest,
+ * so unlike a periodic scan they cannot silently stop running, and listing all 19 would
+ * be bookkeeping for its own sake. What CAN rot is the number written down beside them,
+ * so that is what is checked.
+ */
+describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
+    const CLAUDE_MD = join(__dirname, '..', '..', 'CLAUDE.md');
+
+    it('CONTROL: the cadence row is present and states a number', () => {
+        const row = readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/);
+        expect(row).not.toBeNull();
+    });
+
+    it('the stated count equals the suites in tests/sop/', () => {
+        const claimed = Number(
+            readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/)![1]
+        );
+        const onDisk = readdirSync(__dirname).filter((f) => f.endsWith('.test.ts')).length;
+        expect({ claimed, onDisk }).toEqual({ claimed: onDisk, onDisk });
+    });
+});
+
 describe('the tooling registry matches what is on disk', () => {
     it('CONTROL: the registry and both directory walks are non-empty', () => {
         // Without this, a broken path makes every assertion below pass over an

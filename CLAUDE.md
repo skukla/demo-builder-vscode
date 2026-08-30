@@ -108,7 +108,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 9 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 18 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 19 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | periodic | 8 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
