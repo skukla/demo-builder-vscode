@@ -21,9 +21,11 @@
  * consecutive messages build them, does anything written by the first survive
  * into the second?
  *
- * It asserts the CURRENT behaviour deliberately. If someone makes the cache
- * shared, these tests fail and should be rewritten to assert the opposite —
- * that is the point of pinning it rather than describing it.
+ * FIXED 2026-08-29. `getPrerequisitesManager` memoises one manager for the
+ * session — the same shape `edsServiceCache` uses, and for the same reason. This
+ * suite was written to pin the BROKEN behaviour; it now pins the fixed one, which
+ * is what a pinned test is for. Nothing in the manager is per-project, so one per
+ * session is what the cache assumed all along.
  */
 
 const mockGetLogger = jest.fn();
@@ -52,6 +54,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 }));
 
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { resetPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -68,6 +71,7 @@ function panelParts() {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    resetPrerequisitesManager(); // a shared instance must not leak between tests
     mockGetLogger.mockReturnValue({
         trace: jest.fn(),
         debug: jest.fn(),
@@ -96,25 +100,33 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         expect(cache.getCachedResult('node')).toBeDefined();
     });
 
-    it('gives every message its own PrerequisitesManager', () => {
+    it('hands every message the SAME PrerequisitesManager', () => {
         const [first, second] = twoMessages();
-        expect(first).not.toBe(second);
+        expect(first).toBe(second);
     });
 
-    it('gives every message its own CACHE — so nothing written survives', () => {
+    it('hands every message the same CACHE', () => {
         const [first, second] = twoMessages();
-        expect(first.getCacheManager()).not.toBe(second.getCacheManager());
+        expect(first.getCacheManager()).toBe(second.getCacheManager());
     });
 
-    it('THE FINDING: a result cached on one message is a MISS on the next', () => {
-        // This is the whole cost. Every prerequisite check pays the full
-        // 500-3000ms CLI round trip, on every message, on every surface that
-        // builds its context this way — which is all six of them.
+    it('THE FIX: a result cached on one message is a HIT on the next', () => {
+        // The whole point. Before this, every prerequisite check paid the full
+        // 500-3000ms CLI round trip on every message, on all six surfaces.
         const [first, second] = twoMessages();
 
         first.getCacheManager().setCachedResult('node', { installed: true } as never);
 
-        expect(first.getCacheManager().getCachedResult('node')).toBeDefined();
-        expect(second.getCacheManager().getCachedResult('node')).toBeUndefined();
+        expect(second.getCacheManager().getCachedResult('node')).toBeDefined();
+    });
+
+    it('resetPrerequisitesManager drops it — the reload path', () => {
+        // A manager surviving an extension-host reload would carry a cache built
+        // against the previous session's CLI state.
+        const [first] = twoMessages();
+        resetPrerequisitesManager();
+        const [after] = twoMessages();
+
+        expect(after).not.toBe(first);
     });
 });

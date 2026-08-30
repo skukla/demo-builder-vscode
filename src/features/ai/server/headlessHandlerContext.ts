@@ -21,7 +21,7 @@ import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -41,7 +41,7 @@ export function createHeadlessHandlerContext(
         // gets nothing, iterates zero prerequisites, and `[].every(...)` is `true`
         // — so a prerequisites check would report "everything installed" on a bare
         // machine. Any tool over that handler needs this line first.
-        prereqManager: new PrerequisitesManager(context.extensionPath, logger, ServiceLocator.getCommandExecutor()),
+        prereqManager: getPrerequisitesManager(context.extensionPath, logger),
         componentRegistry: new ComponentRegistryManager(context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         // Deliberately absent on the agent surface. These are OPTIONAL on

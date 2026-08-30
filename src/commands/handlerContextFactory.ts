@@ -29,7 +29,7 @@ import { getLogger, getStepLogger } from '@/core/logging';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 
 /** The panel-specific half — everything the factory cannot know. */
@@ -53,7 +53,7 @@ export function createPanelHandlerContext(parts: PanelContextParts): HandlerCont
     const logger = getLogger();
 
     return {
-        prereqManager: new PrerequisitesManager(parts.context.extensionPath, logger, ServiceLocator.getCommandExecutor()),
+        prereqManager: getPrerequisitesManager(parts.context.extensionPath, logger),
         componentRegistry: new ComponentRegistryManager(parts.context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: new ErrorLogger(parts.context),

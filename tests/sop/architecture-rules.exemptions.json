@@ -29,8 +29,6 @@
     },
     "patternBSendMessageCeiling": 147,
     "compositionPointLifetime": {
-        "src/commands/handlerContextFactory.ts:PrerequisitesManager": "Builds PrerequisitesManager, which owns PrerequisitesCacheManager. This factory runs PER INCOMING MESSAGE on all six webview surfaces (17 call sites), so the cache is empty every time it is read and cannot hit \u2014 a miss costs 500-3000ms of CLI work against a <10ms hit. Proven in tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts. Fix: give the manager a session lifetime (built once, handed to the context) rather than rebuilding it.",
-        "src/features/ai/server/headlessHandlerContext.ts:PrerequisitesManager": "Same class, MCP side. Built per headless context; extension.ts:618/673 wrap it in a factory called per connection, so the same cache-never-hits result applies.",
         "src/commands/handlerContextFactory.ts:ComponentRegistryManager": "Memoises transformToGroupedStructure in transformedRegistry, and is rebuilt per message. Moved HERE on 2026-08-29 from three call sites \u2014 that removed three dynamic imports and an 18-suite mock wall and did nothing for caching: three-per-call became one-per-message, and neither shares. Named plainly because the commit that moved it did not say so.",
         "src/features/ai/server/headlessHandlerContext.ts:ComponentRegistryManager": "Same class, MCP side, same reasoning."
     }
