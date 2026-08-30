@@ -20,7 +20,6 @@ The commands module contains all VS Code command implementations for the Demo Bu
 | `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent web console (`aemcoder.adobe.io`) with a tip about the current project's repo |
 | `refreshBlockLibrary.ts` | Dashboard kebab action (EDS-only) — destructive full re-sync of the DA.live block library from `component-definition.json` |
 | `showPromptsPicker.ts` | `demoBuilder.showPromptsPicker` — prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
-| `handlers/HandlerContext.ts` | Back-compat re-exports of handler types from `@/types/handlers` |
 
 Read the source — each file carries a substantial header comment.
 
@@ -567,5 +566,9 @@ class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
 ---
 
-For webview details, see `../webviews/CLAUDE.md`
-For utility integration, see `../utils/CLAUDE.md`
+For the extension↔webview message round trip, invoke the `webview-command-handler`
+skill; for shared infrastructure a command reaches for, see `../core/CLAUDE.md`.
+
+(This used to point at a webviews and a utils CLAUDE.md. Neither exists: there is
+no src/webviews directory at all, and `src/utils/` is the legacy location holding
+only `autoUpdater.ts`.)
