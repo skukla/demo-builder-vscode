@@ -29,8 +29,24 @@ it were the program.
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 | 8 | Frontend architecture (PL-17) | **DONE 2026-08-29** | ADR-017 written + enforced (`webview-architecture-rules.test.ts`); ADR-015 scoped to the host; hook rule + ledger rehomed; WebviewClient's row retired by ratifying the singleton. Three positive controls, incl. one on the jurisdiction itself |
+| 9 | **Does 93% hold outside the modules we trusted? (PL-22)** | **OPEN — question, not work** | The mutation pilot scores 93.37%, but its four modules were CHOSEN as ones we believed well tested, so it reads our best work, not the average. `envMerge` was in that four and scored 78% with tests written the same day. Point the tool at 4–6 modules nobody is confident about — `module-wall` suites, the coverage laggards phase 6 raised, something old and untouched — and find out. The answer decides whether a strengthening pass is warranted at all |
 
-**6 of 9 done, 3 not started** (phase 8 was added after the original eight).
+**8 of 10 done. Two remain**, and they are different KINDS of thing:
+
+- **Lane C2 (inside phase 3b)** — 29 test families whose shared setup has DRIFTED.
+  Real work, but not mechanical: merging drifted mocks changes what a suite tests
+  while every suite stays green. Each family needs a decision about which version is
+  correct BEFORE the merge, which is why C1 was finished and C2 was not started.
+- **Phase 9 (PL-22)** — a question, not work. Whether the 93% mutation score holds
+  outside the four modules we already trusted. Cheap to answer now the tool exists,
+  and the answer decides whether any further test-strengthening is justified.
+
+Do phase 9 FIRST if you only do one. It is hours, not days, and it tells you whether
+the suite needs strengthening at all — which is a question lane C2 does not answer and
+does not depend on. Lane C2 tidies how tests are written; phase 9 asks whether they
+work.
+
+(Phase 8 was added after the original eight; phase 9 after the pilot shipped.)
 
 Phase 2's close is worth recording because passing was not the criterion —
 "would FAIL if the conversion broke its collaborator calls" was. Both defects
