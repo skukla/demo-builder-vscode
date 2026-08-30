@@ -79,3 +79,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(adr): split ADR-015 — one decision per record, two rules to the handbook (`319031bc5`)
 - 2026-08-30  docs(handbook): rewrite as an orientation document a person can read (`2aa80ef68`)
 - 2026-08-30  docs(handbook): capture every convention this programme exposed, one rule each (`4bab5b4a1`)
+- 2026-08-30  docs(handbook): state each section's POSITION above its conventions (`b879ae9f1`)
