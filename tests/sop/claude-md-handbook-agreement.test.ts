@@ -88,6 +88,33 @@ const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }
     },
 ];
 
+describe('the "hit every surface" list names every surface that exists', () => {
+    // The list exists to stop a change landing on one path and missing the others.
+    // A list that has itself gone stale does the opposite: it tells you that you
+    // covered everything while omitting the surface added last month. So the eight
+    // webview bundles it names are checked against the build config that defines
+    // them, in both directions.
+    const CONFIG = readFileSync(join(ROOT, 'esbuild.config.js'), 'utf8');
+    const entries = (): string[] => {
+        const block = CONFIG.split('WEBVIEW_ENTRIES')[1] ?? '';
+        return [...block.slice(0, block.indexOf('};')).matchAll(/^\s{4}(\w+):\s*'/gm)].map(
+            (m) => m[1]
+        );
+    };
+
+    it('CONTROL: the entry map is found and has several entries', () => {
+        expect(entries().length).toBeGreaterThan(3);
+    });
+
+    it('names each bundle entry, and states the right count', () => {
+        const names = entries();
+        for (const n of names) expect(CLAUDE_MD).toContain(n.toLowerCase());
+        expect(CLAUDE_MD).toContain(
+            `${names.length === 8 ? 'eight' : String(names.length)} webview bundles`
+        );
+    });
+});
+
 describe("the glossary's checkable facts match the code they describe", () => {
     // A glossary earns its keep by being RIGHT. This one already caught CLAUDE.md
     // calling `sample-data` an area when it is a step inside the Commerce strip —

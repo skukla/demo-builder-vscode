@@ -311,6 +311,55 @@ verified — fix now or defer?") rather than a sentence that files it away. A
 "systemic note" in a report is the reporting-instead-of-fixing failure wearing
 its third hat.
 
+## Hit every surface
+
+**The most common defect in this repo is a change that is correct on the path you
+tested and missing everywhere else.** Not a logic bug — a completeness bug, and
+the reason it keeps shipping is that every check passes: the path you changed
+works, and nothing anywhere fails for the paths you did not.
+
+Before calling a change done, walk this list and decide which entries apply. An
+entry that does not apply is a one-line statement, not a silence.
+
+**1. Eight webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
+dashboard, configure, sidebar, projectsList, aiOverview, integrations,
+dataInstaller. A feature stylesheet reaches only the bundles whose entry imports
+it, so a class can be styled on one surface and absent on the next **with no error
+anywhere** (ADR-017). Shared UI touched → ask which of the eight render it.
+
+**2. Creation and regeneration must agree.** Anything project creation writes,
+"Regenerate AI Files" has to reproduce for a project that gains the qualifying
+component later. The two paths are separate call chains; only one of them is
+exercised by the flow you are probably testing.
+
+**3. The AI-bundle gate has four seams — change all or none.**
+`buildMcpConfig`, `installAiDefaultsMcpTools`, `componentInstallationOrchestrator`
+and `handleRegenerateAiFiles` each apply the same predicate. Miss one and creation
+and regenerate silently produce different bundles.
+
+**4. Human surface and agent surface.** A capability reached by a button and a
+capability reached by an MCP tool dispatch into the same handlers, but adding the
+button does not add the tool. If a change gives a person a new action, say whether
+an agent gets it too — `ai-coverage-scan` measures that gap and it is real.
+
+**5. A config field lives in three places.** The JSON registry, its schema, and
+its TypeScript type. Changing one and not the others typechecks fine and fails at
+runtime, or worse, validates against a schema that no longer describes the data.
+
+**6. Changing a contract means auditing its MOCKS, not just its callers.** `tsc`
+and the callers keep each other honest; a hand-written mock is invisible to both
+and keeps answering in the old shape. The suite stays green while asserting
+behaviour that no longer exists.
+
+**7. Docs that state the thing you changed.** Counts, tool lists, and step orders
+are pinned by tests in several places precisely because they drift — if a pin
+fails, the pin is usually right.
+
+One trap that belongs here because it defeats the whole list: an entry point named
+`index.tsx` beside an `index.ts` barrel **is never typechecked**, because tsc keeps
+one file per basename. That is why the dashboard entry is `main.tsx`. A surface
+that is not typechecked will not tell you it was missed.
+
 ## Verifying
 
 **A check whose exit code passes through `head`/`tail`/`wc`/`grep` is not a check.**
