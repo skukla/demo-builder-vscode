@@ -99,3 +99,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): AdobeAuthStep's four specs stop pasting the same 24 lines — lane C1 (`dea9dde05`)
 - 2026-08-30  docs(handoff): lane C1's first family shipped — recipe proven, 16 remain (`3aa8ea08b`)
 - 2026-08-30  refactor(tests): startDemo's three suites stop pasting the same mock block — lane C1 (`6f8ac1971`)
+- 2026-08-30  refactor(tests): envFileWatcherService's mocked suites stop re-declaring the mocks their testUtils already owns — lane C1 (`a7ba8c6f2`)

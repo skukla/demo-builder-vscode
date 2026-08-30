@@ -9,38 +9,15 @@
  */
 
 import { DEFAULT_SHELL } from '@/types/shell';
-import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
-// Mock dependencies
-jest.mock('@/core/logging');
-jest.mock('@/core/validation');
-jest.mock('fs/promises');
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
-jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
-    ComponentRegistryManager: jest.fn().mockImplementation(() => ({
-        getComponentById: jest.fn().mockResolvedValue({
-            id: 'test-component',
-            name: 'Test Component',
-            configuration: {
-                // No buildScript means build step will be skipped
-            },
-        }),
-    })),
-}));
-
-import * as fs from 'fs/promises';
-import * as vscode from 'vscode';
-import type { CommandExecutor } from '@/core/shell';
+import {
+    CommandExecutor,
+    ComponentUpdater,
+    fs,
+    vscode,
+} from './componentUpdater.testUtils';
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
