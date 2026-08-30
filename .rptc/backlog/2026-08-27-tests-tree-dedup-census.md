@@ -101,3 +101,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): startDemo's three suites stop pasting the same mock block — lane C1 (`6f8ac1971`)
 - 2026-08-30  refactor(tests): envFileWatcherService's mocked suites stop re-declaring the mocks their testUtils already owns — lane C1 (`a7ba8c6f2`)
 - 2026-08-30  refactor(tests): componentUpdater's two suites share one testUtils — lane C1 (`571cc0181`)
+- 2026-08-30  refactor(tests): ResetAllCommand's two suites share one testUtils — lane C1 (`63510f83a`)
