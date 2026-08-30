@@ -2,7 +2,7 @@
  * SOP Compliance Test: No config-leaf mocks
  *
  * Enforces the "injection seams over leaf-module mocks" standard
- * (.rptc/sop/testing-guide.md → "Dependency Mocking"). Tests must NOT
+ * (docs/development/sop/testing-guide.md → "Dependency Mocking"). Tests must NOT
  * `jest.mock()` a bundled `config/*.json` leaf — code that reads such a leaf
  * should expose an injectable parameter (defaulting to the bundled data) so
  * tests pass a fixture instead.
@@ -11,7 +11,7 @@
  * only ever shrink: migrate a file to the seam, then remove it from the list.
  * Adding a new entry is not allowed — fix the test instead.
  *
- * @see .rptc/sop/testing-guide.md
+ * @see docs/development/sop/testing-guide.md
  * @see tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts
  */
 

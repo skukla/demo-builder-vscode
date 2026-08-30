@@ -24,7 +24,12 @@ rule_once=0
 rule_match() {
     [ "$1" = "Bash" ] || return 1
     # A pipe into head/tail/wc, then || or && consuming its status.
-    printf '%s' "$2" | grep -qE '\|[[:space:]]*(head|tail|wc)([[:space:]][^|]*)?[[:space:]]*(\|\||&&)'
+    # [^|] also matches NEWLINE, so the span could reach a branch belonging to a
+    # LATER command in a multi-line block and fire on it. Found 2026-08-30 when this
+    # rule blocked a verification script whose pipe and branch were four lines apart
+    # and unrelated — and then blocked the command that came to fix it. Excluding
+    # newline keeps the match inside one command.
+    printf '%s' "$2" | grep -qE '\|[[:space:]]*(head|tail|wc)([ \t][^|\n]*)?[[:space:]]*(\|\||&&)'
 }
 
 rule_message() {

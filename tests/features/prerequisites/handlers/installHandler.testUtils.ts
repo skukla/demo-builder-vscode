@@ -208,6 +208,9 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]),
             checkVersionSatisfaction: jest.fn().mockResolvedValue(false), // Default: not satisfied
+            // Default: no install commands, so the plugin loop skips. Tests that
+            // exercise plugin installation override this.
+            getPluginInstallCommands: jest.fn().mockResolvedValue(undefined),
             getCacheManager: jest.fn().mockReturnValue({
                 invalidate: jest.fn(),
                 get: jest.fn(),
@@ -245,3 +248,52 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
         ...overrides,
     } as never)
 }
+
+/**
+ * The `invalidate` mock the context's cache manager hands out.
+ *
+ * `getCacheManager` is a `mockReturnValue`, so it yields the SAME object every
+ * call and this is a stable reference across the whole handler run.
+ *
+ * It exists as a helper rather than a cast at each call site because reaching it
+ * needs one, and one cast with a reason beats five without. The reason: the mock
+ * is built as `as any` above, so its shape is not visible to the compiler here.
+ *
+ * WHY ANY TEST NEEDS IT. Mutation testing found `invalidateCaches` deletable in
+ * full with every suite still green — nothing asserted the call. The cache manager
+ * itself is well tested, but always by calling `invalidate` DIRECTLY, which proves
+ * the cache works and says nothing about whether the install path uses it. A stale
+ * cache after an install is a user-visible wrong version.
+ */
+export function cacheInvalidateMock(context: HandlerContext): jest.Mock {
+    const manager = context.prereqManager!.getCacheManager() as unknown as {
+        invalidate: jest.Mock;
+    };
+    return manager.invalidate;
+}
+
+/**
+ * A prerequisite that carries a plugin, shaped from the REAL config entry.
+ *
+ * Copied from `aio-cli` in `src/features/prerequisites/config/prerequisites.json`
+ * rather than written from memory — including the detail that matters most for the
+ * tests: the shipped `api-mesh` plugin declares NO `requiredFor`, so production
+ * takes the "no specific version mapping, use targetVersions[0]" branch. A fixture
+ * that invented `requiredFor` would have tested a path nothing uses.
+ *
+ * Why it exists at all: no installHandler fixture defined `plugins`, so
+ * `installPlugins` always hit its `if (!prereq.plugins) return` guard and 89
+ * mutants below it were unreachable — the single largest block of untested code in
+ * the file, and it is the path that installs the API Mesh CLI plugin.
+ */
+export const mockAioCliWithPlugin: PrerequisiteDefinition = {
+    ...mockAdobeCliPrereq,
+    perNodeVersion: true,
+    plugins: [
+        {
+            id: 'api-mesh',
+            name: 'API Mesh Plugin',
+            description: 'Adobe API Mesh management plugin',
+        },
+    ],
+} as PrerequisiteDefinition;

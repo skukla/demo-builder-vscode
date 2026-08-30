@@ -620,14 +620,24 @@ grep -rn "withAuth\|withTheme\|withRouter" src/features/
 
 ### The Pattern
 
-```typescript
-// ❌ INCONSISTENT: Some features expose internals
-// Direct import of internal module:
-import { meshValidator } from '@/features/mesh/services/validators/meshValidator';
+> **Corrected 2026-08-30.** This section used to teach the opposite: that a feature
+> should expose a facade `index.ts` and callers should import from `@/features/mesh`.
+> [ADR-022](../../architecture/adr/022-barrel-files.md) ruled the other way, and the
+> example here went on recommending the forbidden pattern because nothing checked it —
+> the SOPs lived under `.rptc/`, which every documentation check excludes.
 
-// ✅ CONSISTENT: Import from feature's public API
-import { validateMesh } from '@/features/mesh';  // index.ts exports facade
+```typescript
+// ✅ Import the module that DEFINES the symbol
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+
+// ❌ Do NOT add a feature barrel and import through it
+import { detectMeshChanges } from '@/features/mesh';
 ```
+
+`@/core/*` and `@/types` are the exception and are imported through their barrels by
+design — `@/types` alone has 168 importers. The asymmetry is deliberate: core is a
+shared surface worth curating, while a feature barrel mostly makes cross-feature
+imports easy, which is the thing to discourage.
 
 ### Index.ts Patterns
 

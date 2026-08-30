@@ -1,582 +1,65 @@
-# Mesh Feature
+# Mesh
 
-## Purpose
+Deploys the project's API Mesh to Adobe I/O Runtime, and tells the user when the
+deployed mesh no longer matches what is on disk.
 
-The Mesh feature manages Adobe API Mesh deployment, verification, and configuration change detection. It orchestrates mesh configuration building, deployment to Adobe I/O Runtime, endpoint generation, and intelligent staleness detection to prompt users when redeployment is needed.
+## Where to start
 
-This feature provides seamless integration between local mesh configuration and Adobe's API Mesh infrastructure, with real-time deployment status and configuration drift detection.
+`services/meshDeployment.ts` — `deployMeshComponent` is the spine. Everything else
+either feeds it or checks its result.
 
-## Responsibilities
+## The deploy sequence
 
-- **Mesh Deployment**: Deploy mesh.json to Adobe I/O Runtime with validation
-- **Deployment Verification**: Poll for deployment completion with exponential backoff
-- **Endpoint Generation**: Generate workspace-specific mesh endpoint URLs
-- **Configuration Staleness Detection**: Compare local vs deployed configuration
-- **Environment Variable Tracking**: Track mesh-relevant env vars that affect deployment
-- **Source File Hashing**: Detect changes in resolvers, schemas, and mesh config files
-- **Pre-flight Authentication**: Verify auth before mesh operations to prevent surprise browser launches
-- **Deployed Config Fetching**: Retrieve deployed mesh config from Adobe I/O for comparison
-- **Change Detection**: Identify env var changes, source file changes, and unknown deployed states
-- **User-Friendly Error Formatting**: Parse Adobe CLI errors into actionable messages
+Validate `mesh.json` → `aio api-mesh update` → poll for completion
+(`meshDeploymentVerifier`, up to 3 minutes) → verify it exists
+(`meshVerifier`) → record the outcome.
 
-## Key Services
+The poll is not optional. `aio api-mesh update` returns as soon as Adobe accepts the
+request, not when the mesh is live, so a deploy that skipped the poll would report
+success against a mesh that is still building.
 
-### deployMeshComponent
+## Staleness — the part that is not obvious
 
-**Purpose**: Deploy mesh component from cloned repository (used during project creation)
+The extension cannot ask Adobe "is this the same config?", so it decides locally by
+comparing two things captured at deploy time (`stalenessDetector.ts`):
 
-**Parameters**:
-- `componentPath` - Path to mesh component directory containing mesh.json (eds-commerce-mesh or headless-commerce-mesh)
-- `commandManager` - CommandExecutor for executing commands
-- `logger` - Logger for info/error messages
-- `onProgress?` - Optional callback for progress updates
+- **Environment variables** the mesh reads. A changed value means a different mesh
+  even though `mesh.json` is byte-identical.
+- **A hash of the source files** — resolvers, schemas, `mesh.json`.
 
-**Returns**: `MeshDeploymentResult` with success status, meshId, endpoint, or error
+A project whose recorded state is missing reports `unknownDeployedState` rather than
+guessing. That case is deliberate: telling a user their mesh is current when nobody
+knows is worse than asking them to redeploy.
 
-**Example Usage**:
-```typescript
-import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+## Two accessors, and they are not interchangeable
 
-const result = await deployMeshComponent(
-    '/path/to/eds-commerce-mesh',  // or headless-commerce-mesh
-    commandManager,
-    logger,
-    (message, subMessage) => {
-        console.log(`${message}: ${subMessage}`);
-    }
-);
+- `getMeshComponentInstance` — the component instance. Its `status` drives
+  deploying/error in the UI.
+- `getMeshAppBuilderComponent` — the deploy record: endpoint, `lastDeployed`.
 
-if (result.success) {
-    console.log(`Mesh deployed at: ${result.endpoint}`);
-} else {
-    console.error(`Deployment failed: ${result.error}`);
-}
-```
+Code using both is doing it deliberately. Collapsing them reads as a simplification
+and reproduces the 2026-08-04 regression where a deployed mesh displayed
+"Not Deployed".
 
-### verifyMeshDeployment / syncMeshStatus
+## How it fits
 
-**Purpose**: Verify mesh exists in Adobe I/O and sync component status
+Since [ADR-011](../../../docs/architecture/adr/011-app-builder-deployables.md) D3 the
+mesh is **one kind of App Builder component**, not a special case — it lives in the
+keyed `project.appBuilderComponents` map alongside integrations, and shares the
+deploy spine with `features/app-builder`. The singular `meshState` field still on
+older manifests is legacy read-only; manifests migrate on load.
 
-**Key Methods**:
-- `verifyMeshDeployment(project)` - Check if mesh exists in Adobe I/O
-- `syncMeshStatus(project, verification)` - Update project state based on verification result
+Adobe calls are wrapped in `withOrgContext` so they target the project's org rather
+than whatever `aio` was last pointed at — see
+[adobe-org-context](../../../.claude/skills/adobe-org-context/SKILL.md).
 
-**Example Usage**:
-```typescript
-import { verifyMeshDeployment, syncMeshStatus } from '@/features/mesh/services/meshVerifier';
+Authentication is checked BEFORE any mesh operation. Without that, an expired session
+launches a browser in the middle of a deploy, which reads as a crash.
 
-const verification = await verifyMeshDeployment(project);
+## Conventions this feature is bound by
 
-if (!verification.exists) {
-    console.warn('Mesh not found in Adobe I/O - may have been deleted externally');
-    await syncMeshStatus(project, verification);
-    await stateManager.saveProject(project);
-}
-```
-
-### waitForMeshDeployment
-
-**Purpose**: Poll for mesh deployment completion with exponential backoff
-
-**Key Methods**:
-- `waitForMeshDeployment(options)` - Wait up to 3 minutes for deployment to complete
-
-**Example Usage**:
-```typescript
-import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
-
-const result = await waitForMeshDeployment({
-    onProgress: (attempt, maxRetries, elapsedSeconds) => {
-        console.log(`Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)`);
-    },
-    logger
-});
-
-if (result.deployed) {
-    console.log(`Mesh deployed at: ${result.endpoint}`);
-}
-```
-
-### Staleness Detection Services
-
-**Purpose**: Detect configuration changes that require redeployment
-
-**Key Functions**:
-- `getMeshEnvVars(componentConfig)` - Extract mesh-relevant environment variables
-- `fetchDeployedMeshConfig()` - Fetch deployed mesh config from Adobe I/O for comparison
-- `calculateMeshSourceHash(meshPath)` - Hash mesh source files (resolvers, schemas, config)
-- `getCurrentMeshState(project)` - Get stored mesh state from project
-- `detectMeshChanges(project, newConfig)` - Compare local vs deployed configuration
-- `updateMeshState(project)` - Update mesh state after successful deployment
-- `detectFrontendChanges(project)` - Detect if frontend env vars changed (restart needed)
-
-**Example Usage**:
-```typescript
-import { detectMeshChanges, fetchDeployedMeshConfig, updateMeshState } from '@/features/mesh/services/stalenessDetector';
-
-// Detect changes
-const changes = await detectMeshChanges(project, project.componentConfigs!);
-
-if (changes.hasChanges) {
-    console.log('Mesh configuration has changed:');
-    if (changes.envVarsChanged) {
-        console.log(`  - Env vars changed: ${changes.changedEnvVars.join(', ')}`);
-    }
-    if (changes.sourceFilesChanged) {
-        console.log('  - Source files changed');
-    }
-
-    // Prompt user to redeploy
-    const redeploy = await askUser('Redeploy mesh?');
-    if (redeploy) {
-        await deployMesh();
-        await updateMeshState(project);
-    }
-}
-```
-
-### getEndpoint
-
-**Purpose**: Generate mesh endpoint URLs
-
-**Key Functions**:
-- `getEndpoint(workspaceId, orgCode)` - Generate workspace-specific mesh endpoint URL
-
-**Example Usage**:
-```typescript
-import { getEndpoint } from '@/features/mesh/handlers/shared';
-
-const endpoint = getEndpoint(
-    project.adobe.workspace,
-    project.adobe.organization
-);
-// Result: https://graph.adobe.io/api/<workspaceId>/graphql?api_key=<orgCode>
-
-console.log(`Mesh endpoint: ${endpoint}`);
-```
-
-## Types
-
-See `services/types.ts` for type definitions:
-
-- `MeshDeploymentResult` - Deployment result (success, meshId, endpoint, error)
-- `MeshVerificationResult` - Verification result (exists, meshId, endpoint, error)
-- `MeshState` - Stored mesh state (envVars, sourceHash, lastDeployed)
-- `MeshChanges` - Change detection result (hasChanges, envVarsChanged, sourceFilesChanged, changedEnvVars, unknownDeployedState, shouldSaveProject)
-
-## Architecture
-
-**Directory Structure**:
-```
-features/mesh/
-├── index.ts                     # Public API exports
-├── commands/
-│   └── deployMesh.ts           # VS Code command for mesh deployment
-├── handlers/
-│   ├── checkHandler.ts         # Check mesh status
-│   ├── createHandler.ts        # Create new mesh
-│   ├── deleteHandler.ts        # Delete mesh
-│   └── shared.ts               # Shared handler utilities
-├── services/
-│   ├── meshDeployment.ts       # Deploy mesh component
-│   ├── meshEndpoint.ts         # Endpoint URL generation
-│   ├── meshVerifier.ts         # Deployment verification
-│   ├── meshDeploymentVerifier.ts  # Deployment polling
-│   ├── stalenessDetector.ts    # Configuration change detection
-│   └── types.ts                # Type definitions
-└── README.md                   # This file
-```
-
-**Service Flow**:
-```
-Deploy Command (deployMesh.ts)
-    ↓
-deployMeshComponent()
-    ↓
-1. Validate mesh.json
-2. Execute aio api-mesh update
-3. waitForMeshDeployment() (poll up to 3 minutes)
-4. verifyMeshDeployment()
-5. updateMeshState()
-    ↓
-Deployment Complete
-```
-
-**Staleness Detection Flow**:
-```
-Dashboard Load / Configuration UI
-    ↓
-detectMeshChanges(project, newConfig)
-    ↓
-1. Get current mesh state — the keyed appBuilderComponents mesh entry's
-   envVars/sourceHash via getKeyedMeshAppBuilderComponent (per-field legacy
-   meshState fallback for pre-migration in-memory projects)
-2. If the baseline envVars are empty, fetchDeployedMeshConfig() from Adobe I/O
-3. Compare env vars (ADOBE_COMMERCE_GRAPHQL_ENDPOINT, etc.)
-4. Compare source hash (resolvers, schemas, mesh.config.js)
-    ↓
-MeshChanges result
-    ↓
-If hasChanges: Show "Redeploy Mesh" prompt
-```
-
-## Integration Points
-
-### Dependencies
-- `@/core/shell` - CommandExecutor for CLI operations
-- `@/core/logging` - Logger for mesh operations
-- `@/core/state` - getFrontendEnvVars, updateFrontendState for frontend change detection
-- `@/types/typeGuards` - parseJSON for safe JSON parsing
-- `@/core/utils/timeoutConfig` - TIMEOUTS.API_MESH_UPDATE constant
-- `@/features/mesh/utils/errorFormatter` - formatAdobeCliError for user-friendly errors
-- `@/core/di` - ServiceLocator for CommandExecutor access
-
-### Used By
-- `src/features/mesh/commands/deployMesh.ts` - Manual mesh deployment command
-- `src/features/dashboard` - Mesh status display and redeploy prompts
-- `src/features/project-creation` - Mesh deployment during project creation
-- `src/webviews/components/configure/ConfigureView.tsx` - Configuration change detection
-
-## Usage Examples
-
-### Example 1: Deploy Mesh During Project Creation
-```typescript
-import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-
-const result = await deployMeshComponent(
-    meshComponentPath,
-    commandManager,
-    logger,
-    (message, subMessage) => {
-        // Update progress UI
-        progress.report({ message, subMessage });
-    }
-);
-
-if (result.success) {
-    // Update project state (use appropriate mesh component ID based on stack)
-    const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh' for headless stacks
-    project.componentInstances![meshId].status = 'deployed';
-    // The keyed appBuilderComponents mesh entry is the single deploy record —
-    // land it through the writer chokepoint (updateMeshState → recordDeployOutcome).
-    // Readers resolve the endpoint via getMeshEndpointUrl(project).
-    await updateMeshState(project, result.endpoint);
-    await stateManager.saveProject(project);
-}
-```
-
-### Example 2: Check Mesh Status (Dashboard)
-```typescript
-import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { verifyMeshDeployment } from '@/features/mesh/services/meshVerifier';
-
-// Check if configuration has changed
-const changes = await detectMeshChanges(project, project.componentConfigs!);
-
-let meshStatus: 'deployed' | 'config-changed' | 'not-deployed' = 'not-deployed';
-
-if (changes.hasChanges) {
-    meshStatus = 'config-changed';
-} else if (Object.keys(getMeshAppBuilderComponent(project)?.envVars ?? {}).length > 0) {
-    // The keyed mesh entry carries the deployment record (accessor synthesizes
-    // from legacy meshState only for pre-migration in-memory projects).
-    meshStatus = 'deployed';
-
-    // Verify mesh still exists in Adobe I/O (background check)
-    verifyMeshDeployment(project).then(verification => {
-        if (!verification.exists) {
-            // Mesh was deleted externally
-            updateDashboardStatus('not-deployed');
-        }
-    });
-}
-
-// Display status to user
-displayMeshStatus(meshStatus);
-```
-
-### Example 3: Fetch Deployed Config for Comparison
-```typescript
-import { fetchDeployedMeshConfig } from '@/features/mesh/services/stalenessDetector';
-
-// Fetch what's actually deployed in Adobe I/O
-const deployedConfig = await fetchDeployedMeshConfig();
-
-if (deployedConfig) {
-    console.log('Deployed configuration:');
-    console.log('  Commerce endpoint:', deployedConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT);
-    console.log('  Catalog endpoint:', deployedConfig.ADOBE_CATALOG_SERVICE_ENDPOINT);
-
-    // Compare with local config (use appropriate mesh component ID based on stack)
-    const meshId = 'eds-commerce-mesh'; // or 'headless-commerce-mesh'
-    const localConfig = getMeshEnvVars(project.componentConfigs![meshId]);
-
-    if (deployedConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT !== localConfig.ADOBE_COMMERCE_GRAPHQL_ENDPOINT) {
-        console.log('Commerce endpoint has changed - redeploy needed');
-    }
-} else {
-    console.log('Could not fetch deployed config (not authenticated or mesh not found)');
-}
-```
-
-### Example 4: Update Mesh State After Deployment
-```typescript
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
-
-// After successful deployment, capture baseline state
-await updateMeshState(project);
-
-// This lands the deploy record on the keyed appBuilderComponents mesh entry
-// (updateMeshState is the mesh writer chokepoint → recordDeployOutcome):
-// - envVars = current mesh env vars (the staleness baseline)
-// - sourceHash = hash of resolvers/schemas/config
-// - lastDeployed = current timestamp
-
-await stateManager.saveProject(project);
-
-console.log('Mesh state captured - future changes will be detected');
-```
-
-### Example 5: Detect Frontend Changes (Restart Prompt)
-```typescript
-import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-
-// Check if frontend env vars changed while demo is running
-const hasChanges = detectFrontendChanges(project);
-
-if (hasChanges) {
-    const restart = await vscode.window.showInformationMessage(
-        'Frontend configuration changed. Restart demo to apply changes?',
-        'Restart',
-        'Cancel'
-    );
-
-    if (restart === 'Restart') {
-        await vscode.commands.executeCommand('demoBuilder.stopDemo');
-        await vscode.commands.executeCommand('demoBuilder.startDemo');
-    }
-}
-```
-
-## Configuration
-
-### Tracked Environment Variables
-The following env vars affect mesh configuration (tracked for staleness detection):
-- `ADOBE_COMMERCE_GRAPHQL_ENDPOINT` - Commerce GraphQL endpoint
-- `ADOBE_CATALOG_SERVICE_ENDPOINT` - Catalog Service endpoint
-- `ADOBE_CATALOG_API_KEY` - Catalog Service API key
-- `ADOBE_COMMERCE_ENVIRONMENT_ID` - Commerce environment ID
-- `ADOBE_COMMERCE_WEBSITE_CODE` - Website code
-- `ADOBE_COMMERCE_STORE_VIEW_CODE` - Store view code
-- `ADOBE_COMMERCE_STORE_CODE` - Store code
-
-### Tracked Source Files
-The following files are hashed for change detection:
-- `mesh.config.js` - Mesh configuration
-- `build/resolvers/*.js` - Resolver implementations
-- `schema/*.graphql` - GraphQL schema files
-
-### Mesh State Schema
-```typescript
-interface MeshState {
-    envVars: Record<string, string>;    // Deployed env vars
-    sourceHash: string | null;          // Hash of source files
-    lastDeployed: string;               // ISO timestamp
-}
-```
-
-## Error Handling
-
-### Deployment Errors
-```typescript
-import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-
-const result = await deployMeshComponent(
-    meshComponentPath,
-    commandManager,
-    logger
-);
-
-if (!result.success) {
-    // User-friendly error messages using typed error detection
-    // Note: Handlers now return structured errors with error codes
-    // The result.code field contains ErrorCode for typed detection
-    if (result.code === ErrorCode.AUTH_REQUIRED) {
-        showError('Please authenticate with Adobe I/O before deploying mesh');
-    } else if (result.code === ErrorCode.TIMEOUT) {
-        showError('Deployment timed out. Check your network connection and try again.');
-    } else if (result.code === ErrorCode.MESH_CONFIG_INVALID) {
-        showError('Mesh configuration is invalid. Check mesh.json for errors.');
-    } else {
-        showError(`Deployment failed: ${result.error}`);
-    }
-}
-```
-
-### Authentication Errors
-```typescript
-import { fetchDeployedMeshConfig } from '@/features/mesh/services/stalenessDetector';
-
-// Pre-flight auth check before fetching
-const authService = new AuthenticationService(/*...*/);
-const isAuth = await authService.isAuthenticated();
-
-if (!isAuth) {
-    console.log('Not authenticated - skipping deployed config fetch');
-    return null;
-}
-
-// Fetch deployed config (will return null if auth fails)
-const deployedConfig = await fetchDeployedMeshConfig();
-
-if (!deployedConfig) {
-    // Could mean: not authenticated, mesh not found, or network error
-    // Conservative approach: flag as changed to prompt redeployment
-}
-```
-
-### Verification Errors
-```typescript
-import { verifyMeshDeployment } from '@/features/mesh/services/meshVerifier';
-
-const verification = await verifyMeshDeployment(project);
-
-if (!verification.exists) {
-    // Use typed error codes for reliable error detection
-    if (verification.code === ErrorCode.AUTH_REQUIRED) {
-        showError('Please authenticate to verify mesh deployment');
-    } else if (verification.code === ErrorCode.TIMEOUT) {
-        showWarning('Mesh verification timed out - status unknown');
-    } else {
-        showWarning('Mesh not found in Adobe I/O - may have been deleted');
-    }
-}
-```
-
-## Performance Considerations
-
-### Deployment Times
-- **Mesh Update**: ~30-60 seconds (Adobe I/O Runtime deployment)
-- **Verification Polling**: Up to 3 minutes with exponential backoff
-- **Total Deployment**: 1-4 minutes
-
-### Optimization Strategies
-1. **Pre-flight Auth**: Check auth BEFORE deployment to avoid surprise browser launches
-2. **Background Verification**: Verify mesh exists in background, don't block UI
-3. **Cached Deployed Config**: Fetch deployed config once per dashboard load
-4. **Fast Change Detection**: Compare hashes and env vars locally before fetching deployed config
-5. **Exponential Backoff**: Poll with increasing intervals (1s, 2s, 4s, 8s...) to reduce API calls
-
-### Best Practices
-- Always update mesh state after successful deployment
-- Use `detectMeshChanges()` to check if redeployment needed before prompting user
-- Fetch deployed config only when needed (not on every check)
-- Handle authentication failures gracefully (don't crash, return null/false)
-- Show clear progress during deployment (parsing, validating, deploying, verifying)
-
-## Staleness Detection Algorithm
-
-### Detection Logic
-```typescript
-// 1. Get current deployed state
-const currentState = getCurrentMeshState(project);
-
-if (!currentState || Object.keys(currentState.envVars).length === 0) {
-    // No baseline - try to fetch from Adobe I/O
-    const deployedConfig = await fetchDeployedMeshConfig();
-
-    if (deployedConfig) {
-        // Successfully fetched - populate the baseline on the keyed mesh entry
-        getKeyedMeshAppBuilderComponent(project).envVars = deployedConfig;
-        // Continue with comparison
-    } else {
-        // Failed to fetch - unknown deployed state. Conservative: do NOT force a
-        // redeploy on a verdict we could not reach (stalenessDetector.ts).
-        return {
-            hasChanges: false,
-            unknownDeployedState: true
-        };
-    }
-}
-
-// 2. Compare env vars
-//
-// The baseline was read FROM the mesh .env, so the only correct question is
-// "would the generator write something different?". That makes
-// envFileGenerator.resolveFromComponentConfigs the spec, and this resolves the
-// same way:
-//   a) flatten ALL componentConfigs, FIRST definition wins — cross-boundary vars
-//      the mesh needs (the GraphQL endpoint) live under the BACKEND component,
-//      and the generator takes the first component that defines a key;
-//   b) then the BACKEND's copy for the store scope, which every other component
-//      only carries as a duplicate that its own side never updates.
-//
-// 12 of the 13 watched keys are declared by more than one component. This used
-// to flatten LAST-wins — the opposite of the generator for (a), and no (b) at
-// all — so the detector could compare against a value that would never ship.
-const allConfigs = flattenFirstWins(newComponentConfigs);
-applyBackendOwnedScope(allConfigs, newComponentConfigs[backendId]);
-const newEnvVars = getMeshEnvVars(allConfigs);
-
-// Only the vars relevant to THIS mesh type (ACCS vs PaaS), so cross-backend
-// vars in componentConfigs cannot produce false mismatches.
-const changedEnvVars = [];
-
-for (const key of getRelevantMeshEnvVars(meshId)) {
-    // Missing is normalized to empty: a watch-list key no component declares
-    // (ACCS_CUSTOMER_GROUP) is absent on BOTH sides, and counting that as a
-    // difference would mark every ACCS mesh permanently stale.
-    if ((currentState.envVars[key] || '') !== (newEnvVars[key] || '')) {
-        changedEnvVars.push(key);
-    }
-}
-
-// 3. Compare source files
-const newSourceHash = await calculateMeshSourceHash(meshPath);
-const sourceFilesChanged = newSourceHash !== currentState.sourceHash;
-
-// 4. Return result
-return {
-    hasChanges: changedEnvVars.length > 0 || sourceFilesChanged,
-    envVarsChanged: changedEnvVars.length > 0,
-    sourceFilesChanged,
-    changedEnvVars
-};
-```
-
-## Testing
-
-### Manual Testing Checklist
-- [ ] Mesh deploys successfully during project creation
-- [ ] Deployment progress updates show correctly
-- [ ] Deployment verification completes within 3 minutes
-- [ ] Mesh endpoint URL generates correctly
-- [ ] Configuration changes detected accurately
-- [ ] Env var changes trigger staleness warning
-- [ ] Source file changes trigger staleness warning
-- [ ] Deployed config fetches successfully
-- [ ] Pre-flight auth check prevents surprise browser launch
-- [ ] Mesh verification detects externally deleted meshes
-- [ ] Error messages are user-friendly and actionable
-
-### Integration Testing
-- Test mesh deployment during project creation
-- Test manual mesh deployment command
-- Test dashboard mesh status display
-- Test configuration UI change detection
-- Test pre-flight auth checks
-- Test verification polling and backoff
-- Test error scenarios (no auth, invalid config, timeout)
-
-## See Also
-
-- **[Authentication Feature](../authentication/README.md)** - Pre-flight auth checks
-- **[Dashboard Feature](../dashboard/README.md)** - Mesh status display
-- **[Project Creation Feature](../CLAUDE.md)** - Mesh deployment integration
-- **[State Management](../../core/state/README.md)** - Mesh state persistence
-- **[Timeout Configuration](../../core/utils/timeoutConfig.ts)** - TIMEOUTS.API_MESH_UPDATE constant
-
----
-
-For overall architecture, see `../../CLAUDE.md`
-For shared infrastructure, see `../shared/CLAUDE.md`
+The rules live in [the handbook](../../../docs/development/handbook.md); this feature
+has no exemptions from them. The one worth naming here: **there is no
+`features/mesh/index.ts`** and one must not be added
+([ADR-022](../../../docs/architecture/adr/022-barrel-files.md)) — import the module
+that defines the symbol.

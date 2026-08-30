@@ -165,7 +165,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 58 of them, 52 with an enforcer that fails the build — and
+this codebase holds itself to — 62 of them, 56 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

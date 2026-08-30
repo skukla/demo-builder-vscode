@@ -73,10 +73,23 @@ name, a stage Runtime endpoint and two live activation ids.
 - Still per-checkout and ignored: `settings.local.json` (personal permission
   allowlist). Copy it from the main checkout or expect permission prompts.
 
-## Project SOPs (`.rptc/sop/`)
+## Project SOPs — moved to [`docs/development/sop/`](../docs/development/sop/)
 
-Project-specific SOPs override the plugin defaults (resolution order:
-`.rptc/sop/` → `~/.claude/global/sop/` → plugin).
+They left `.rptc/` on 2026-08-30. `.rptc/` holds RPTC WORK — research, plans,
+backlog, completed records — all of which is transient. The SOPs are standing
+guidance cited by five permanent enforcer suites, two skills and ADR-016, so
+filing them here miscategorised them. It had a cost: the documentation reference
+check excludes `.rptc/` precisely because it is work tracking, so 5,257 lines of
+live guidance went unchecked and 31% of their file citations had rotted.
+
+This section used to claim a resolution order — project SOPs "override the plugin
+defaults", `.rptc/sop/` → global → plugin. **No such mechanism exists.** No RPTC
+skill or command reads the project SOP directory at all; the order was prose
+describing something nothing implements. Checked 2026-08-30.
+
+What is true: the SOPs are procedure. The RULE each one asserts lives in
+[the architecture handbook](../docs/development/handbook.md) with its enforcer
+named; the SOP holds the worked examples and the refactoring steps.
 
 | SOP | Covers |
 |---|---|
@@ -119,7 +132,7 @@ Project-specific SOPs override the plugin defaults (resolution order:
   pre-existing error elsewhere. Before pushing: full `npm run lint` +
   `tsc --noEmit` + full jest.
 - Fast iteration during TDD: `npm run test:watch -- <path>` or
-  `npm run test:file -- <path>` (see `.rptc/sop/testing-guide.md` and
+  `npm run test:file -- <path>` (see `docs/development/sop/testing-guide.md` and
   `tests/README.md`).
 
 ## RPTC Configuration

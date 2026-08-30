@@ -98,7 +98,7 @@ long-lived process.
 
 The socket path is derived deterministically from the **projects root** — not
 the workspace folder (`resolveMcpSocketPath` in
-`src/features/ai/server/mcpSocketPath.ts` — a SHA-256 of the absolute path,
+`src/core/utils/mcpSocketPath.ts` — a SHA-256 of the absolute path,
 truncated to keep under the OS's ~104-char UDS limit). This means:
 
 - The config Claude Code reads is **stable across restarts** — no rewriting a
@@ -1018,7 +1018,7 @@ result. The underlying service is mocked; the test asserts the tool's gating
 | File | Role |
 |---|---|
 | `src/features/ai/server/inExtensionMcpServer.ts` | The UDS server; per-connection `McpServer`; logging shim. |
-| `src/features/ai/server/mcpSocketPath.ts` | Deterministic socket path from the projects root (`vscode`-free). |
+| `src/core/utils/mcpSocketPath.ts` | Deterministic socket path from the projects root (`vscode`-free). |
 | `src/mcp-proxy.ts` → `dist/mcp-proxy.js` | stdio↔UDS forwarder Claude Code spawns. |
 | `src/mcp-server.ts` | Shared `registerProjectTools` (`vscode`-free registration facade). Standalone bootstrap retired. |
 | `src/mcp/` | The file-tool implementations behind it: security guards, project/sync/block handlers, publish tails (`vscode`-free). |

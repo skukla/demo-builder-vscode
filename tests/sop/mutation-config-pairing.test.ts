@@ -113,3 +113,53 @@ describe('every mutated module has a test selected to cover it', () => {
         expect(covered(here, 'src/anywhere/mutation-config-pairing.ts')).toBe(true);
     });
 });
+
+describe('the mutation baseline covers what the config mutates', () => {
+    /**
+     * The per-build half of the mutation ratchet. The comparison itself only runs
+     * when Stryker runs (minutes to hours), so what CAN be checked every build is
+     * that the two lists still line up: a module added to `mutate` without a
+     * baseline row would be measured against nothing, and a baseline row for a
+     * module no longer mutated is a number nobody can reproduce.
+     *
+     * Same both-directions contract as every other ledger here.
+     */
+    const BASELINE = join(ROOT, 'reports/mutation/baseline.json');
+
+    it('CONTROL: the baseline exists and is non-empty', () => {
+        expect(existsSync(BASELINE)).toBe(true);
+        const modules = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
+        expect(Object.keys(modules).length).toBeGreaterThan(3);
+    });
+
+    it('the baseline and the sample config agree, in both directions', () => {
+        const modules: Record<string, unknown> = JSON.parse(
+            readFileSync(BASELINE, 'utf8')
+        ).modules;
+        const mutate: string[] = JSON.parse(
+            readFileSync(join(ROOT, 'stryker.pl22.config.json'), 'utf8')
+        ).mutate;
+
+        expect({
+            mutatedWithNoBaseline: mutate.filter((m) => !(m in modules)),
+            baselineForNothingMutated: Object.keys(modules).filter((m) => !mutate.includes(m)),
+        }).toEqual({ mutatedWithNoBaseline: [], baselineForNothingMutated: [] });
+    });
+
+    it('every baseline row carries the fields the ratchet compares', () => {
+        // A row missing `highValueSurvivors` would silently disable the anti-gaming
+        // half of the check while the score half kept passing.
+        const modules: Record<string, Record<string, unknown>> = JSON.parse(
+            readFileSync(BASELINE, 'utf8')
+        ).modules;
+        const incomplete = Object.entries(modules)
+            .filter(
+                ([, r]) =>
+                    typeof r.score !== 'number' ||
+                    typeof r.noCoverage !== 'number' ||
+                    typeof r.highValueSurvivors !== 'number'
+            )
+            .map(([p]) => p);
+        expect(incomplete).toEqual([]);
+    });
+});

@@ -7,7 +7,7 @@
  * - Spectrum's UNSAFE_style pattern
  * - Style spreading with dynamic props
  *
- * @see .rptc/sop/code-patterns.md - CSS Over Inline Styles
+ * @see docs/development/sop/code-patterns.md - CSS Over Inline Styles
  */
 
 import * as fs from 'fs';

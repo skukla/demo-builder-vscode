@@ -319,8 +319,8 @@ expect(await getPackageById('alpha', makeTestPackages())).toBeDefined();
   real data, in a clearly separated block.
 
 **Reference seams:**
-`src/features/project-creation/services/demoPackageLoader.ts` and
-`src/features/eds/services/edsResetParams.ts`. Reference test split:
+`src/features/components/services/demoPackageLoader.ts` and
+`src/features/eds/services/reset/edsResetParams.ts`. Reference test split:
 `tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`.
 
 **When `jest.mock` IS appropriate:** mocking a true collaborator that does I/O

@@ -4,7 +4,7 @@
  * Derived from the real reference: src/features/mesh/handlers/subscribeHandler.ts.
  * Ordering is load-bearing: validate → ensureAuthenticated (Adobe ops only) →
  * service call → shaped { success, error?, code? } return. Return failures,
- * never throw (.rptc/sop/consistency-patterns.md §2).
+ * never throw (docs/development/sop/consistency-patterns.md §2).
  *
  * After creating from this template:
  *  1. Add '<my-message-type>' to the MessageType union in src/types/messages.ts.

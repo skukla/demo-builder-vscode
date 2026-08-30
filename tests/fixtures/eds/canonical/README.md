@@ -14,7 +14,7 @@ extension already uses for storefront create/reset.
 Verbatim `scripts/scripts.js` from
 `hlxsites/aem-boilerplate-commerce@760601940fa7264ea900c9d4b6bf735a5e78f46b`.
 
-Used by `tests/unit/features/eds/services/quickEditAnchorMatch.test.ts` to
+Used by `tests/features/eds/services/quickEditAnchorMatch.test.ts` to
 prove the two literal anchors `quickEditPublisher` search/replaces against
 (`QUICK_EDIT_LOAD_PAGE_ANCHOR`, `QUICK_EDIT_BRANCH_ANCHOR`) still exist in
 the pinned-canonical boilerplate. This anchor-match test is the safety net

@@ -508,7 +508,7 @@ Imported products have no imagery, and that is the intended division of labour,
 not a defect to chase. Three independent confirmations (2026-08-14):
 
 - The service's pack-prep tooling strips them. `data-installer-api-b2b`
-  `docs/CONVERT_CSV_EXPORT.md` §6 "Image Path Removal" clears `base_image`,
+  the datapack conversion notes §6 "Image Path Removal" clears `base_image`,
   `small_image`, `thumbnail`, `swatch_image`, `additional_images` and their
   label fields — stated rationale: "to avoid broken references".
 - Image import is an OPEN QUESTION for the service, not a shipped feature —
@@ -855,7 +855,7 @@ service simply cannot store what it fetches. It will work unchanged once
 setting.** It is an action input in the service's `app.config.yaml`
 (`MONGO_URI: $MONGO_URI`), resolved at deploy time from the deployer's own
 config — `aio app config set MONGO_URI "mongodb+srv://…"` per their
-`docs/DEPLOYMENT.md`. Thirteen actions declare it, `process-datapack` among
+the deployment notes. Thirteen actions declare it, `process-datapack` among
 them. **It is the service's secret, in the service's repo and deployment. We
 neither hold it nor set it, and the extension must never send it.**
 

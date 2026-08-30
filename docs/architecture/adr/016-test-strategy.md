@@ -204,12 +204,12 @@ Each carries a ledger that may only shrink, and each runs its positive controls
 first — a check that matched nothing reads identically to a clean one.
 
 Audited 2026-08-28: of the 14 checks under `tests/sop/`, thirteen are named or
-described in a governing document (this ADR, ADR-015, `.rptc/sop/`, `CLAUDE.md`,
+described in a governing document (this ADR, ADR-015, `docs/development/sop/`, `CLAUDE.md`,
 or `docs/`). The fourteenth — the per-test timeout rule — was enforced and
 documented only in its own header, where nobody looking for the rule would find
 it; it is listed above now. The remaining code-quality checks (magic timeouts,
 complex expressions, inline styles, component extraction) are correctly homed in
-`.rptc/sop/` and `CLAUDE.md` rather than here: they govern how code is written,
+`docs/development/sop/` and `CLAUDE.md` rather than here: they govern how code is written,
 not how it is tested.
 
 Execution is tracked under PL-11 (test health epic); the fixture consolidation

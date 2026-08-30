@@ -100,4 +100,7 @@ tests/setup/console-gate-offenders.txt
 
 # Mutation testing (Stryker) — sandbox copies of the repo + generated reports
 .stryker-tmp*/
-reports/mutation/
+# ...but the BASELINE is the ratchet itself and must be shared. A directory
+# exclusion cannot be undone by a negation inside it, hence the /* form.
+reports/mutation/*
+!reports/mutation/baseline.json
