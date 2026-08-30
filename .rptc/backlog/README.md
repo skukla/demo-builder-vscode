@@ -240,7 +240,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 
-### app-builder  (11)
+### app-builder  (12)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -255,6 +255,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
 | `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | shipped |
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | backlog |
+| `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (2)
 
@@ -443,7 +444,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*45 item(s) sit outside the A–G chain.*
+*46 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

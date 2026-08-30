@@ -38,9 +38,6 @@
 - [`component-version-management.md`](component-version-management.md) —
   Floating stable-tag pattern that decouples component updates from
   extension releases.
-- [`component-update-env-migration.md`](component-update-env-migration.md) —
-  Handling environment-variable renames across component updates so `.env`
-  files don't rot.
 
 ### Edge Delivery Services (EDS)
 
@@ -49,8 +46,6 @@
   configuration.
 - [`eds-backend-configuration.md`](eds-backend-configuration.md) — How EDS
   projects are configured based on the selected backend component.
-- [`eds-unified-config-generation.md`](eds-unified-config-generation.md) —
-  Registry-based generation of both `.env` and `site.json` in one phase.
 - [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md) — How
   `/products/{urlKey}/{sku}` URLs work for every storefront: shared
   `render-pdp` overlay, browser-side smart 404, reversible SKU encoding.

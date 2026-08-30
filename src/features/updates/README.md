@@ -17,8 +17,11 @@ A component update ships a new `.env` template, and the user's file holds their
 credentials. Overwriting it would destroy their configuration; skipping it would
 miss new variables. So the two are merged, with the user's values winning.
 
-Renames are the hard case and have their own document:
-[component-update-env-migration.md](../../../docs/architecture/component-update-env-migration.md).
+**Renames are the case it cannot handle.** If a component renames a variable, the
+merge keeps the old key with the user's value AND adds the new one empty — the
+component then reads the new name, finds nothing, and fails at runtime. That gap is
+documented in `envMerge.ts`'s own header and asserted in its tests; closing it is
+backlog item PL-24.
 
 ## Programmatic writes are suppressed
 

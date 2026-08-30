@@ -45,4 +45,3 @@ env keys, and the schema beside each registry is validated by
 ## Related
 
 - [eds-content-separation.md](eds-content-separation.md) — the two-repo model
-- [eds-unified-config-generation.md](eds-unified-config-generation.md) — the generation phase
