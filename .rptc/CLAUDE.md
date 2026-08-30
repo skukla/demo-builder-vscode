@@ -11,7 +11,7 @@ project.
 - **Platform**: VS Code Extension API
 - **UI**: React + Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites)
+- **Testing**: Jest with ts-jest, @testing-library/react
 - **Database**: none
 
 ## Essential Commands
@@ -112,8 +112,8 @@ named; the SOP holds the worked examples and the refactoring steps.
 - **Write to the session scratchpad, not `/tmp`.** The scratchpad is per-session
   and cleaned up; `/tmp` is neither. This file used to say `/tmp`, which is why
   every measured session used it.
-- The full suite takes **~20 seconds** (1,130 suites / ~14,850 tests as of 2026-08-23; measured over 10
-  consecutive runs on 16 cores, 2026-08-13). It was 3-5 minutes before the worker and
+- The full suite takes **~20 seconds** (measured over 10 consecutive runs on 16
+  cores, 2026-08-13; the suite count is not stated here because it moves weekly). It was 3-5 minutes before the worker and
   transform tuning landed; that figure survived in the docs long after it stopped
   being true, and it teaches you to walk away from a run that is already finished.
   `npm test` is the slow one — its `pretest` runs compile + lint first.
@@ -122,10 +122,16 @@ named; the SOP holds the worked examples and the refactoring steps.
   different suites each time. A concurrent result is noise in both directions. A
   PreToolUse rule (`.claude/hooks/rules/15-jest-concurrent.rule`) blocks the second run;
   if it fires, wait rather than scoping the run down — a scoped run takes the same cores.
-- **CI lints the whole repo** (`npm run lint` covers all of `src/` +
-  `tests/`). A scoped/changed-files lint can pass locally while CI fails on a
-  pre-existing error elsewhere. Before pushing: full `npm run lint` +
-  `tsc --noEmit` + full jest.
+- **Before pushing, run `npm run gate`** — one command, all six checks, stopping at
+  the first failure. It exists because this line used to name three of them
+  (`lint` + `tsc --noEmit` + jest), and a list of commands in a doc is a list
+  somebody transcribes incompletely. That is not hypothetical: a session on
+  2026-08-30 ran exactly those three all day and never touched
+  `typecheck:tests`, `validate:tsc-blindspots` or the dead-code scan, having
+  copied the short list from here.
+- **CI lints the whole repo** (`npm run lint` covers all of `src/` + `tests/`), so a
+  scoped or changed-files lint can pass locally while CI fails on a pre-existing
+  error in a file you never opened. `gate` uses the whole-repo form.
 - Fast iteration during TDD: `npm run test:watch -- <path>` or
   `npm run test:file -- <path>` (see `docs/development/sop/testing-guide.md` and
   `tests/README.md`).
