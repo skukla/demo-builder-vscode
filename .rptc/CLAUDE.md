@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # RPTC Workflow — Project Configuration
 
 Project-specific RPTC configuration for the Adobe Demo Builder VS Code

@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # Architecture Documentation Index
 
 **New to the codebase?** Start with [`overview.md`](overview.md), then

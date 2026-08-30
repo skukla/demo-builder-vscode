@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # Documentation Index
 
 Welcome to the Adobe Demo Builder VS Code Extension documentation. This guide will help you navigate the various documentation resources available.

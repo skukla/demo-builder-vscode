@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-16 -->
 # Features Architecture
 
 ## Overview

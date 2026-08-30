@@ -88,6 +88,41 @@ const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }
     },
 ];
 
+describe("the glossary's checkable facts match the code they describe", () => {
+    // A glossary earns its keep by being RIGHT. This one already caught CLAUDE.md
+    // calling `sample-data` an area when it is a step inside the Commerce strip —
+    // a fact that had drifted with nothing to notice. The same drift will happen
+    // to the glossary unless the checkable part of it is pinned, so it is.
+    const AREAS_SRC = readFileSync(
+        join(ROOT, 'src/features/project-creation/ui/steps/buildYourProjectAreas.ts'),
+        'utf8'
+    );
+    const areaIds = (): string[] => {
+        const block = AREAS_SRC.split('BUILD_AREA_DESCRIPTORS')[1] ?? '';
+        return [...block.slice(0, block.indexOf('\n];')).matchAll(/id: '([a-z-]+)'/g)].map(
+            (m) => m[1]
+        );
+    };
+
+    it('CONTROL: the descriptor list is found and non-empty', () => {
+        expect(areaIds().length).toBeGreaterThan(1);
+    });
+
+    it('names every Build-Your-Project area, and no others', () => {
+        // The glossary states a COUNT in words plus the names. Both must hold, so
+        // adding a fourth area fails here rather than silently making the doc wrong.
+        const ids = areaIds();
+        expect(ids).toEqual(['commerce', 'storefront', 'integrations']);
+        for (const id of ids) expect(CLAUDE_MD).toContain(id);
+        expect(CLAUDE_MD).toContain('three sub-steps');
+    });
+
+    it('does not describe sample-data as an area', () => {
+        // The exact drift this check was born from.
+        expect(CLAUDE_MD).not.toContain("area id `'sample-data'`");
+    });
+});
+
 describe('CLAUDE.md and the handbook still agree on the rules they share', () => {
     it('CONTROL: both documents were read and are substantial', () => {
         // Without this, every assertion below passes vacuously on an empty read —

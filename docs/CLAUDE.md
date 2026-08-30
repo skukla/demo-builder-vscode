@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # Development Strategy
 
 Development principles and conventions for the Adobe Demo Builder extension.

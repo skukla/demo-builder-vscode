@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 ## IMPORTANT: RPTC Workflow
 
 This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
@@ -69,6 +68,32 @@ a setting, field, code path or schema element becomes obsolete, it is deleted in
 the same change that obsoletes it — not left accepted-but-ignored or relabelled
 "(Deprecated)". Write "removed", not "deprecated". (Owner, 2026-05-20.)
 
+## The words this repo uses
+
+Say these back in these words. The glossary is here less so you understand the
+owner — that part usually works — than so you DESCRIBE things in the same terms
+he does, instead of coining a fresh label mid-session and then using it as though
+it were shared.
+
+**SC** — a Solution Consultant: the person this extension is for. They build,
+reset and re-run customer demos, often several a week. Every "user" in this
+codebase is an SC unless it says otherwise. The word appears in 37 files here and
+was, before this entry, spelled out in exactly one of them — a test comment.
+
+| Word | Here it means | Not to be confused with |
+|---|---|---|
+| **catalog entry** | A row in `components.json` — a KIND of thing that can be installed, keyed by id under `frontends`, `backends`, `mesh`, `integrations`, `addons`, `tools`, `services` | a component instance |
+| **component instance** | What one project actually HAS. Lives in `componentInstances`, a `Record` keyed by id — never an array. Carries `status`, `port`, `subType` | the catalog entry it was made from |
+| **stack** | A frontend+backend combination the SC picks (4 of them, a list in `stacks.json`) | a demo package |
+| **demo package** | A brand/scenario bundle — the card on the Welcome step (5 of them, `demo-packages.json`) | a stack, a datapack |
+| **datapack** | The unit of sample DATA, owned by the data-installer service. Exported, versioned and published there, not here | a demo package |
+| **area** | One of the THREE sub-steps inside the single Build Your Project wizard step — Commerce, Storefront, Integrations. Order lives in `BUILD_AREA_DESCRIPTORS`, which is the list that decides | a wizard step; a step INSIDE an area (Commerce has its own strip, including Datapacks) |
+| **surface** | Where a capability is reachable from. The **human surface** is the buttons; the **agent surface** is the MCP tools. Both dispatch into the same handlers, and the gap between them is what the coverage scans measure | a UI screen |
+
+**you** is the agent reading this and changing this repo. **we** and **the owner**
+are Steve, who decides product intent. **the user** is the SC using the shipped
+extension — not the person in this conversation.
+
 ## Technology Stack
 
 - **Extension**: TypeScript, VS Code Extension API
@@ -127,7 +152,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`), `SampleDataStep` (area id `'sample-data'`: records which datapack seeds this project — never imports; always complete, so it cannot gate Continue); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); `SampleDataStep` — **not an area**: it is a step INSIDE the Commerce strip, shown as "Datapacks" (`commerceSections.ts`), and records which datapack seeds this project — never imports; always complete, so it cannot gate Continue; ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
   - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
 → Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations/Sample Data area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
 

@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # Custom React Hooks
 
 ## Overview

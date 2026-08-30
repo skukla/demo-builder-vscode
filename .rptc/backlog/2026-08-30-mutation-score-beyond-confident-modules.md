@@ -88,3 +88,6 @@ beside the existing baseline table, so the next run has something to compare aga
 - 2026-08-30  Sample run mis-scoped: 7 of 8 modules had no test selected (jest config hard-codes the pilot's 4 paths), reported 0% in 19s. Fixed with jest.pl22.config.js + tests/sop/mutation-config-pairing.test.ts; real run in flight.
 - 2026-08-30  ANSWERED: no. Pilot 93.37% (4 pure modules, mean 1 await); representative 8-module sample 59.29% (1329 mutants, 16m15s). Control envMerge reproduced 100% exactly. Score falls monotonically with await count: installHandler (41 awaits) 41.77%. Finding: async+mocked code is what tests fail to constrain.
 - 2026-08-30  test(mutation): PL-22 answered — the pilot's 93% does not generalise (`48b61956e`)
+- 2026-08-30  test(prerequisites): cover the plugin install path, untested until now (`385d7d6ff`)
+- 2026-08-30  test(prerequisites): assert what installHandler's mocks already record (`8568d532e`)
+- 2026-08-30  test(mutation): ratchet the score before improving it, and guard against gaming it (`0fd0974ce`)

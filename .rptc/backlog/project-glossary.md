@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # A glossary, so the agent describes things back in our words
@@ -63,3 +63,7 @@ of memory index already resident — this must be short to be affordable.
 From auditing our agent-facing files against three t3.gg videos (2026-08-30),
 where the glossary is rated highly and specifically for the describe-back
 direction rather than the comprehension one.
+
+## Shipped so far
+
+- 2026-08-30  docs(claude-md): add the glossary, drop nine unverifiable stamps (`5bd339c85`)
