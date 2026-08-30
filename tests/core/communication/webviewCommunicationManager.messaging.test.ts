@@ -6,23 +6,12 @@
  * Target Coverage: 75%+
  */
 
-import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
-import * as vscode from 'vscode';
+import {
+    WebviewCommunicationManager,
+    vscode,
+} from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-
-// Mock VS Code API
-jest.mock('vscode');
-
-// Mock debugLogger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    })
-}));
 
 describe('WebviewCommunicationManager - Messaging', () => {
     let mockPanel: vscode.WebviewPanel;

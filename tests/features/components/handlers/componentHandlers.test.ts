@@ -6,6 +6,10 @@
  */
 
 import {
+    ComponentRegistryManager,
+    DependencyResolver,
+} from './componentHandlers.testUtils';
+import {
     handleLoadDependencies,
     handleValidateSelection,
     handleUpdateComponentSelection,
@@ -15,15 +19,11 @@ import {
     handleLoadPreset,
 } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import {
     createComponentHandlerContext,
     createMockRegistryManager,
     createMockDependencyResolver,
 } from './componentHandlers.testUtils';
-
-// Mock ComponentRegistryManager (DependencyResolver is re-exported from the same module)
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
 describe('componentHandlers - Pattern B (request-response)', () => {
     let mockContext: HandlerContext;
