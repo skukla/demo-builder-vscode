@@ -44,6 +44,8 @@ would be choosing to create.
 **It solves the wrong half.** The manifest ships new *questions*. The reason we
 need new questions constantly is that each check is hard-coded and narrow.
 
+> **The rules live in the handbook.** Its ongoing rules are stated in [the development handbook](../../development/handbook.md#diagnostics-and-agent-surfaces); this ADR keeps the reasoning and the rejected alternatives.
+
 ## Decision
 
 ### 1. Every diagnostic capability has a human surface. That surface is the contract.

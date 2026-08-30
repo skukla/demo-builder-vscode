@@ -31,6 +31,30 @@ judgement.
 This is a narrowing of jurisdiction, not a relaxation. The webview side is
 governed by ADR-017, which is stricter in the places its runtime allows.
 
+> **On this document's size — a deliberate deviation, recorded 2026-08-30.**
+>
+> This ADR carries seven rule sections across roughly seven pages. Practice says an ADR
+> records *"a single decision"* in *"one or two pages"* (Nygard 2011) and that you should
+> *"avoid making decision records design guides"* (Microsoft Well-Architected). By both
+> tests this document is out of bounds, and the audit
+> ([`.rptc/research/adr-audit/research.md`](../../../.rptc/research/adr-audit/research.md))
+> said so.
+>
+> **It is being left as one document anyway**, for three reasons worth stating so the
+> next reader does not re-litigate it:
+>
+> 1. It is the most-reached document in the repository — 123 citations, 32 source files,
+>    73 test files — and an enforcer suite treats it as the full statement.
+> 2. The failure mode the "single decision" rule guards against is a reader having to
+>    resolve a document against itself. That is ADR-004's problem, not this one's: these
+>    seven sections compose, they do not contradict.
+> 3. The practical question — *where do I look for what to do today* — is now answered by
+>    [the development handbook](../../development/handbook.md), which states each rule in
+>    current tense and links here for the reasoning.
+>
+> If it grows another two sections, revisit. The trigger to split is sections that begin
+> to disagree with each other, not page count.
+
 ## Context
 
 The PL-12 audit classified all 896 source files (ledger:

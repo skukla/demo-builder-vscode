@@ -150,6 +150,8 @@ before — a whole tab for three pickers reproduces the single-control-tab probl
 
 ---
 
+> **The rules live in the handbook.** Its two disciplines are stated as rules in [the development handbook](../../development/handbook.md#multisite-readiness); this ADR keeps the reasoning and the deferral.
+
 ## Decision
 
 **No implementation today. Document the seam in this ADR and apply two ongoing disciplines:**

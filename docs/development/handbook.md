@@ -87,6 +87,26 @@ looking at.
 | CSS is vendored in the lowest layer; `!important` is not a mechanism. | [ADR-018](../architecture/adr/018-css-architecture.md) | — (guidance) |
 | Spectrum/webview gotchas (Flex 450px, dimension tokens, box-sizing). | [ui-patterns.md](ui-patterns.md), [styling-guide.md](styling-guide.md) | — (guidance) |
 
+### Diagnostics and agent surfaces
+
+| Rule | Full statement | Enforced by |
+|---|---|---|
+| Every diagnostic capability has a HUMAN surface — a command, a button, a rendered section. It is not built until a person can reach it without an agent. | [ADR-012 § 1](../architecture/adr/012-diagnostic-surfaces.md) | — (guidance) |
+| MCP tools wrap the same core function. They are an **additional** surface, never the only one. | [ADR-012 § 1](../architecture/adr/012-diagnostic-surfaces.md) | `.claude/skills/ai-coverage-scan` |
+| Agents produce EVIDENCE, not fixes — read diagnostics, run probes, compose a report. | [ADR-012 § 3](../architecture/adr/012-diagnostic-surfaces.md) | — (guidance) |
+| Ship capability, not checks. A small set of general tools composes into many questions; do not build a mechanism to ship new checks between releases. | [ADR-012 § 2](../architecture/adr/012-diagnostic-surfaces.md) | — (guidance) |
+
+### Multisite readiness
+
+These two are live disciplines from a decision that was deliberately NOT implemented —
+the seam is documented so the eventual migration is cheap. Both are followed today
+(11 sites default to `'main'`).
+
+| Rule | Full statement | Enforced by |
+|---|---|---|
+| A new metadata field on project state defaults to the `'main'` environment. | [ADR-003](../architecture/adr/003-multisite-architecture-seam.md) | — (guidance) |
+| A new function that depends on `daLiveOrg` / `daLiveSite` / workspace ACCEPTS them as parameters rather than reaching for a global. | [ADR-003](../architecture/adr/003-multisite-architecture-seam.md) | — (guidance) |
+
 ### Patterns
 
 | Rule | Full statement | Enforced by |

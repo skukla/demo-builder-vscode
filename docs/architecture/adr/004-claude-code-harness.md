@@ -1,6 +1,13 @@
 # ADR-004: Claude Code (CLI) as the AI Harness
 
-**Status**: Accepted
+**Status**: Accepted — original decision (Claude Code CLI is the harness) STILL STANDS.
+Its delivery mechanics are **superseded by [ADR-019](019-claude-code-delivery-terminal-only.md)**.
+
+> **Read ADR-019 for what is true today.** The six amendments below were applied to this
+> document in place, each partially superseding the last — amendment 5 retires the
+> extension surface that amendments 2 and 3 established. Resolving them in order is not
+> something a reader should have to do, and the identifiers they name are mostly surfaces
+> that have since been removed. They are kept here as the history they are.
 **Date**: 2026-05-21
 **Decision Maker**: Project Team
 **Implementer**: AI Layer Pivot — Cycles A (2026-05-19), B (2026-05-20), C (2026-05-20), D (2026-05-21)
