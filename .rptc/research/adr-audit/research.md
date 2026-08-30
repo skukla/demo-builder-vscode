@@ -222,3 +222,79 @@ learned while writing it:
   Recovering that needs the authors, not the files.
 - **Whether ADR-012's decision is implemented.** Its Decision section did not parse into
   a testable claim and it has 3 citations; it was not chased further.
+
+---
+
+# Part 2 — Is each one truly valuable? (2026-08-30, after the purpose research)
+
+Part 1 asked whether the documents were *true and reachable*. This asks the harder
+question the owner posed: **is each one worth keeping?**
+
+## The test, and a metric I threw away first
+
+I began by scoring rationale density — counting words like "because", "rather than",
+"trade-off" against descriptive words. **It was a bad measure and I discarded it.**
+ADR-013 scored THIN on it while carrying 66 citations and a live enforcer; ADR-001
+scored THIN while being a completely implemented decision. Counting how often prose
+says "because" measures what a document LOOKS like, not whether its reasoning is
+irreplaceable. That is the fifth time in this programme a shape-metric has been built
+and had to be dropped; it is recorded here rather than quietly deleted.
+
+The test actually used, from the purpose research:
+
+> **If this file vanished, what would we lose that the code does not already show?**
+
+That cannot be counted. It has to be read.
+
+## Verdicts
+
+| ADR | Verdict | What would be lost |
+|---|---|---|
+| 001 | **Low value, keep** | Only the provenance of a name. The rename itself is visible in the code. Nygard expects finished records to sit uncited — this is the system working, not rot |
+| 002 | **Valuable** | *Why* a fallback path exists. Without it, someone "simplifies away" the page-by-page fallback and rediscovers the bulk API's unreliability in production |
+| 003 | **Not a decision** | Its two disciplines are live (11 sites default to `'main'`) but they are RULES — they belong in the handbook. Keep the record for the deferral rationale |
+| 004 | **Valuable core, unreadable form** | The choice of Claude Code CLI over VS Code Chat is irreplaceable. It is buried under 8 amendments and 23 dead identifiers |
+| 005 | **Valuable** | A cross-repo pattern with multi-tenancy and smart-404 reasoning that spans two repositories |
+| 006 | **Highly valuable** | The strongest rationale in the set. "Why don't we just fork?" is a question that WILL be re-asked; this is the answer, and the standing instruction is never to re-propose forks |
+| 007 | **Highly valuable** | The constraint is invisible in code: aem.live's CDN 404s percent-encoded paths, so `encodeURIComponent` is unusable. Without this, someone reaches for it and every PDP breaks |
+| 008 | **Valuable** | Producer half exists (`scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs` + its test). Status's "consumer wiring pending" still looks accurate |
+| 009 | **Valuable** | That wholesale config regeneration CLOBBERS template flags — a failure mode with no trace in the code |
+| 010 | **Valuable** | That the index alone silently drops unindexed fragments. Cites a function name that never existed; fix the name, keep the reasoning |
+| 011 | **Highly valuable** | 83 citations, 33 source files, 25 test files. Load-bearing |
+| 012 | **Valuable, under-cited** | A real principle with a real rejected alternative: "a capability is not built until a person can reach it without an AI agent." Only 3 citations — the rule half belongs in the handbook |
+| 013 | **Highly valuable** | 66 citations and an enforcer. The hash-and-skip contract is why user edits survive regeneration |
+| 014 | **Valuable, under-cited** | Security reasoning — a fail-closed IMS + email-domain guard chain. 4 citations for a decision of this weight is too few |
+| 015 | **Highly valuable, wrong shape** | 123 citations, 32 source and 73 test files. Also seven rule sections in 6.7 pages — a handbook inside an ADR |
+| 016 | **Highly valuable** | 60 citations. The tier model is why tests are written the way they are |
+| 017 | **Highly valuable** | 21 citations and its own enforcer suite |
+| 018 | **Valuable, thin** | The layer order is a real and non-obvious decision. No alternatives section, so the "why not `!important`" argument is asserted rather than reasoned |
+
+## The headline: nothing here is worthless
+
+**All 18 record a real decision, and 16 capture reasoning the code cannot show.** The
+two weakest are not junk either — ADR-001 is a finished decision behaving exactly as the
+literature expects, and ADR-003 is a deferral whose disciplines are genuinely followed.
+
+**So the problem was never value. It is shape and placement:**
+
+1. **ADR-004** — valuable content in an unreadable form. Split into a supersession chain.
+2. **ADR-015** — valuable content in the wrong genre. Its seven rule sections are
+   handbook material; the decision and its rejected alternatives are ADR material.
+3. **ADR-003, ADR-012** — carry live RULES that people need to follow today. Those rules
+   now have a home (`docs/development/handbook.md`); the ADRs keep the reasoning.
+4. **ADR-009, ADR-010** — correct decisions with wrong citations. Ten-minute fixes.
+5. **ADR-014, ADR-012** — valuable and under-cited. Being right and unreachable is its
+   own failure; the handbook now links both.
+
+## What this does NOT say
+
+- **That the decisions are correct.** ADR-005 could be perfectly documented and
+  strategically wrong; nothing here tests that.
+- **That ADR-012's principle is fully upheld.** Its claim is that no capability is
+  agent-only. I did not verify that exhaustively — the existing `ai-coverage-scan`
+  measures the OPPOSITE direction (human surfaces lacking an agent tool), so its 34% gap
+  neither confirms nor contradicts this.
+- **That low citation counts mean low value.** ADR-014 is security-relevant with 4
+  citations. The count measures reach, not worth, and conflating them would have
+  deleted the wrong things.
+

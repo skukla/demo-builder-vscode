@@ -72,3 +72,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  refactor(architecture): two of three registry constructions use the session accessor (`4204789fd`)
 - 2026-08-30  docs(adr): audit all 18 decisions, and generate the index that answers "where is the rule for X" (`fc46598ff`)
 - 2026-08-30  docs(research): what ADRs are actually for — and two corrections to this morning's audit (`d2b00172e`)
+- 2026-08-30  docs(handbook): one home for the conventions, and the ADR/handbook split stated (`72993f9f0`)
