@@ -23,7 +23,7 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
+| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C (20 family extractions) untouched |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
@@ -271,6 +271,42 @@ decision, not a cleanup. The other three flags (`theater` 2, `nondeterminism` 26
 
 Same shape as the construction-boundary finding a day earlier: a metric aimed at
 syntax rather than at the property that matters.
+
+### jscpd's self-clone count is not a duplication count — measured 2026-08-30
+
+The fourth instance of the same shape, and the first one caught BEFORE the work
+rather than after.
+
+Lane A began as 15 reported self-clones. Twelve were genuine and were extracted;
+each was verified by locating the block with jscpd, replacing it by exact string
+match, and diffing the UNIQUE assertion set before and after (unchanged in every
+case). Lane A's remaining three were queued as "the large ones, likely whole-test-body
+duplication needing care" — 251, 178 and 344 reported lines.
+
+They are not duplication at all. Three measurements, in order of decisiveness:
+
+1. **The ranges OVERLAP.** ProjectCard's pair is lines 24–274 against 14–171 in one
+   484-line file. A genuine copy-paste pair cannot overlap itself, and cannot have
+   two spans of different length (250 vs 157).
+2. **The fragment appears ONCE**, whitespace normalised away. The positive control —
+   `PrerequisitesStep-installation` before its fix — reports 3.
+3. **A synthetic control reproduces the signature with zero copy-paste present.** A
+   generated file of 30 tests sharing one skeleton, with every name, id and string
+   literal distinct, produces exactly one self-clone with overlapping ranges and
+   mismatched spans. Nothing in that file can be extracted, because nothing repeats.
+
+So the cause is not a jscpd bug and no threshold fixes it: a file of uniform tests has
+a *periodic* token stream, and a long window matches the same stream shifted by about
+one test block. This fires on well-written uniform test files by design.
+
+**Consequence for the metric:** "self-clones in `tests/`" over-reports, and it
+over-reports worst on the biggest files — exactly the ones that look most alarming and
+cost most to investigate. The detection rule and its confirming test are now written
+into `.claude/skills/code-duplication-scan/SKILL.md` so the next sweep skips this class
+in arithmetic instead of in judgment.
+
+**Lane A is therefore DONE at 12 of 15.** The residual 3 are unfixable by design and
+should not be carried as debt.
 
 ### templateSyncService — stated 2026-08-29, before the work
 
