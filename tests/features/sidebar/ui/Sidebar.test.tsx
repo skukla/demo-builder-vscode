@@ -139,7 +139,7 @@ describe('Sidebar', () => {
                 .filter((b) =>
                     /^(chat|prompts|workbench)$/i.test(b.getAttribute('aria-label') ?? '')
                 );
-            // Two tiles since the Workbench moved to feature/prompt-workbench
+            // Two tiles since the Workbench moved to feature/evaluation-mode-dry-run
             // on 2026-08-26 (AI-3b): Chat and Prompts.
             expect(aiTiles).toHaveLength(2);
         });

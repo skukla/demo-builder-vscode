@@ -11,7 +11,7 @@
  * terminal to run for real, and it LEAVES — the library never grows a
  * transcript or a composer of its own. A second destination (the Prompt
  * Workbench, which simulated rather than ran) moved to
- * `feature/prompt-workbench` on 2026-08-26; see AI-3b. The rule it was built on
+ * `feature/evaluation-mode-dry-run` on 2026-08-26; see AI-3b. The rule it was built on
  * still holds: each surface does one thing.
  */
 

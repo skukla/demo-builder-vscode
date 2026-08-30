@@ -11,7 +11,7 @@
  * character.
  *
  * A third Workbench tile lived here until 2026-08-26, when the prompt-evaluation
- * surface moved to `feature/prompt-workbench` (AI-3b). The wrap breakpoint it
+ * surface moved to `feature/evaluation-mode-dry-run` (AI-3b). The wrap breakpoint it
  * argued for stays at 640px in `.sidebar-view` — it was raised for real slack,
  * not for that tile specifically.
  *

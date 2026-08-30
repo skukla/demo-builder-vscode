@@ -290,7 +290,7 @@ describe('PromptCard', () => {
         it('launches, and offers no second destination', () => {
             // Clicking the card runs the prompt FOR REAL in the terminal. A
             // second kebab row sent it to the Prompt Workbench to be simulated
-            // instead; that surface moved to feature/prompt-workbench on
+            // instead; that surface moved to feature/evaluation-mode-dry-run on
             // 2026-08-26 (AI-3b) and the row went with it. Kept as a negative so
             // it comes back deliberately or not at all.
             const onLaunch = jest.fn();

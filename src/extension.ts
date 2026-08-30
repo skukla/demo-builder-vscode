@@ -116,7 +116,7 @@ let inExtensionMcpServer: InExtensionMcpServer | undefined;
  * per-connection recorder would cut that trace in half at the seam.
  *
  * NOTHING READS IT TODAY. Its only consumer was the prompt-evaluation surface,
- * which moved to `feature/prompt-workbench` — see AI-3b. The recorder stays
+ * which moved to `feature/evaluation-mode-dry-run` — see AI-3b. The recorder stays
  * wired because the write is one array push against a capped buffer and it is
  * the foundation AI-2 ("can you see what the agent is doing") needs; pulling
  * the `trace` hook out would mean surgery inside the core MCP server. If AI-2

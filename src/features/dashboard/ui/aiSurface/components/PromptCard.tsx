@@ -8,7 +8,7 @@
  * IT LAUNCHES, AND THAT IS ALL. Clicking the card hands the prompt to the
  * terminal, where it runs for real. A second kebab row sent the same prompt to
  * the Prompt Workbench to be simulated; that surface moved to
- * `feature/prompt-workbench` on 2026-08-26 (AI-3b) and the row went with it.
+ * `feature/evaluation-mode-dry-run` on 2026-08-26 (AI-3b) and the row went with it.
  * The library stays a launcher: it picks, and something else runs.
  *
  * Title clamps to 1 line and body clamps to 3 lines, so every card has the

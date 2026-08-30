@@ -120,7 +120,7 @@ read as a third feature and pushed the six-tile stack past the panel at editor
 zoom.
 
 **The Prompt Workbench WAS a third tile, and is not any more.** It moved to
-`feature/prompt-workbench` on 2026-08-26 (AI-3b) with the rest of the
+`feature/evaluation-mode-dry-run` on 2026-08-26 (AI-3b) with the rest of the
 prompt-evaluation surface, so AiZone is back to two tiles: Chat and Prompts.
 
 The argument it settled still stands and is why the breakpoint is 640px, not

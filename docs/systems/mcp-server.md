@@ -504,7 +504,7 @@ matters most is exactly when activation may not have finished.
 `demoBuilder.ai.dryRun` made agent mutation impossible rather than discouraged:
 while on, every tool that was not read-shaped stopped in `withToolLogging`
 before its handler and answered what it WOULD have done. It left with the
-prompt-evaluation surface (AI-3b) and is on `feature/prompt-workbench`.
+prompt-evaluation surface (AI-3b) and is on `feature/evaluation-mode-dry-run`.
 
 It was removed for being unused, not for being wrong. It defaulted OFF, so it
 protected nobody unless switched on, and its status bar item showed
@@ -525,7 +525,7 @@ dry run.
 
 The tool spawned a headless `claude -p` run with the dry run forced and answered
 a summary of what a prompt would cost. It left with the prompt-evaluation
-surface (AI-3b); the code is on `feature/prompt-workbench`.
+surface (AI-3b); the code is on `feature/evaluation-mode-dry-run`.
 
 The agent dry run it forced went to the same branch — see the dry-run section
 above. The **consent dialog** stays and is unrelated to both.
