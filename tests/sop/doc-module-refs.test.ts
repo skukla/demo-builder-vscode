@@ -53,7 +53,6 @@ const EXCLUDED = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANGEL
  * merely went stale does NOT belong here — fix the document instead.
  */
 const ALLOWED: Record<string, string> = {
-    'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
     'CLAUDE.md::.rptc/prompt.md':
         'gitignored by design, and the sentence citing it says so — it is named as the one exception to .rptc being tracked, so it must not resolve',
     '.claude/skills/spectrum-webview-ui/SKILL.md::docs/development/ui-patterns.md':

@@ -1,7 +1,8 @@
 # Tests
 
-Tests mirror `src/`. A test for `src/features/eds/services/foo.ts` lives at
-`tests/features/eds/services/foo.test.ts`, named after its source file.
+Tests mirror `src/`, named after their source file:
+`src/core/shell/pollingService.ts` is covered by
+`tests/core/shell/pollingService.test.ts`.
 
 Run `ls tests/` for the current layout rather than trusting a tree here — the tree
 this file used to carry is what went stale, and it described a `webview-ui/`
