@@ -31,6 +31,9 @@
 - [`working-directory-and-node-version.md`](working-directory-and-node-version.md)
   — Why commands must run from the correct component directory, and how
   per-component Node versions (fnm) are managed.
+- [`where-code-goes.md`](where-code-goes.md) — the when-you-want-X table: which
+  layer a new service, handler, hook or component belongs in. ADR-015 defers to it
+  for placement, and the root `CLAUDE.md` sends you here for it.
 
 ### Components and Updates
 

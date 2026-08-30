@@ -194,6 +194,38 @@ function relativeRefs(md: string): string[] {
     return [...new Set(out)];
 }
 
+describe('the architecture index lists every architecture document', () => {
+    // The other direction from a link check. Links resolving proves nothing about
+    // a document that was never listed — and `where-code-goes.md` was exactly that:
+    // present on disk, cited by ADR-015 and by the root CLAUDE.md for placement
+    // rules, and absent from the index that exists to find it.
+    //
+    // The ADR half of that same file was converted to a generated index after it
+    // drifted, stopping at ADR-018 while four more had landed. The doc list was
+    // starting the same way, so it gets a check instead of a generator: twelve
+    // entries do not need a build step, they need something that notices.
+    const INDEX = join(ROOT, 'docs/architecture/CLAUDE.md');
+
+    const topLevelDocs = (): string[] =>
+        execSync("git ls-files 'docs/architecture/*.md'", { encoding: 'utf8', cwd: ROOT })
+            .split('\n')
+            .filter((f) => f.endsWith('.md') && f.split('/').length === 3)
+            .map((f) => f.split('/').pop() as string)
+            .filter((f) => f !== 'CLAUDE.md');
+
+    it('CONTROL: the walk finds architecture documents', () => {
+        expect(topLevelDocs().length).toBeGreaterThan(5);
+    });
+
+    it('names every top-level document in docs/architecture/', () => {
+        // ADRs live in adr/ and are delegated to their own GENERATED index, so they
+        // are deliberately out of scope here.
+        const index = readFileSync(INDEX, 'utf8');
+        const missing = topLevelDocs().filter((d) => !index.includes(d));
+        expect(missing).toEqual([]);
+    });
+});
+
 describe('relative references resolve against the file that makes them', () => {
     const findings = (): string[] => {
         const bad: string[] = [];
