@@ -88,8 +88,38 @@ const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
         'token-validation cache, so a file building its own re-validates against GitHub.',
 };
 
+/**
+ * Stateful construction that is NOT fragmentation — rulings, not debt.
+ *
+ * The state rule flags a file that builds a stateful class. That is the right
+ * question only when a SECOND live instance can exist. These three cannot, and no
+ * static detector can see it: it depends on how many times the constructing code
+ * itself runs.
+ *
+ * They sat in the debt ledger after the 2026-08-29 re-aim, where they would have
+ * stayed forever — a ledger that only shrinks is the wrong home for something
+ * that is already correct.
+ */
+const NOT_FRAGMENTED: Readonly<Record<string, string>> = {
+    'src/features/authentication/services/authenticationService.ts':
+        'builds AdobeSDKClient + AuthCacheManager, and is itself constructed EXACTLY ONCE ' +
+        '(extension.ts:304 — the only non-README site). One owner, one cache.',
+    'src/core/state/stateManager.ts':
+        'builds RecentProjectsManager, and is itself constructed EXACTLY ONCE ' +
+        '(extension.ts:205). Same reasoning.',
+    'src/core/communication/webviewCommunicationManager.ts':
+        'constructs itself in its own factory, once per PANEL. The state it carries — ' +
+        'handshake, disposables, config — is per-panel state, so a second panel SHOULD ' +
+        'have a second instance. Sharing one would be the bug.',
+};
+
 function mayConstruct(f: string): boolean {
-    return f === 'src/extension.ts' || /[Dd]eps\.tsx?$/.test(f) || f in COMPOSITION_POINTS;
+    return (
+        f === 'src/extension.ts' ||
+        /[Dd]eps\.tsx?$/.test(f) ||
+        f in COMPOSITION_POINTS ||
+        f in NOT_FRAGMENTED
+    );
 }
 
 describe('ADR-015: fetch boundary — logic never fetches', () => {
