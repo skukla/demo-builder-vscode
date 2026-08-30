@@ -214,3 +214,36 @@ not how it is tested.
 
 Execution is tracked under PL-11 (test health epic); the fixture consolidation
 under PL-16.
+
+## The mock-wall list, moved here from the ADR-015 ledger (2026-08-29)
+
+Thirteen files construct a STATELESS class that many suites module-mock. Under
+ADR-015 they were construction-boundary rows; that was the wrong home. Nothing
+about them is a dependency-architecture problem — rebuilding these costs nothing
+at runtime. What they cost is TEST DESIGN: a suite that cannot hand the collaborator
+in has to mock the module instead.
+
+That is this ADR's concern, so the list lives here. It is a measure, not a ledger:
+no build fails on it, and it shrinks as suites convert to handed-in fakes.
+
+| Suites mocking it | File | Class(es) |
+|---|---|---|
+| 26 | `projectDeletionService.ts` | HelixService |
+| 26 | `checkGitHubAppHandler.ts` | GitHubAppService, HelixService |
+| 26 | `storefrontRepublishService.ts` | HelixService |
+| 26 | `edsResetService.ts` | ConfigurationService, HelixService |
+| 26 | `edsResetConfigStep.ts` | ConfigurationService, HelixService |
+| 26 | `refreshBlockLibraryHeadless.ts` | HelixService |
+| 26 | `publishKeyRegistrar.ts` | HelixService |
+| 26 | `storefrontSetupPhases.ts` | ConfigurationService, GitHubAppService, HelixService |
+| 26 | `contentAuthoringTools.ts` | HelixService |
+| 12 | `storefrontNameMigrationForProject.ts` | ConfigurationService |
+| 12 | `repairSiteConfigForProject.ts` | ConfigurationService |
+| 12 | `storefrontSetupHandlers.ts` | ConfigurationService |
+| 10 | `edsResetUI.ts` | GitHubAppService |
+
+`HelixService` dominates: 26 suites mock it, across 8 of the 13. Converting those
+suites to hand it in is the single largest test-design win available, and it is
+independent of any ADR-015 work — the construction can stay exactly where it is.
+
+Measured by `.rptc/research/construction-boundary-is-the-wrong-question/`.

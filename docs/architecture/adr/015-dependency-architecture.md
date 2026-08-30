@@ -54,8 +54,18 @@ are only possible where dependencies are handed in.
 `commands/` files, `handlers/` files, and MCP tool-registration files.
 Everywhere else, what a function or class needs arrives as parameters. When
 logic needs a bundle of services, the feature's `create...Deps` /
-`buildDefault...Deps` file builds it — and those files, plus `extension.ts`,
-are the only places that construct services.**
+`buildDefault...Deps` file builds it.**
+
+**Construction: `extension.ts` and `create...Deps` files are where services are
+built. ENFORCED for any class that accumulates state after construction; GUIDANCE
+for the rest** (amended 2026-08-29 — see the amendment below for the measurement
+that split those two).
+
+That split is stated rather than blurred, because this repo keeps paying for the
+other thing. A sentence saying "the only places that construct services" reads as
+law; the enforcer checks stateful classes. Both are useful and they are not the
+same, so the reader is told which is which. Where the guidance is unenforced,
+nothing fails — that is the trade the amendment makes, with its cost named.
 
 This is not an invented arrangement; it is the composition of three named,
 documented patterns:
@@ -111,6 +121,53 @@ cannot drift apart.
   battery uses.
 - The locator itself remains (the boundary needs it); what dies is locator
   use inside logic.
+
+## Amendment 2026-08-29 — the construction rule asks about STATE, not location
+
+**What changed.** "Construct only in `extension.ts` and `create...Deps`" is now
+enforced only for classes that ACCUMULATE STATE after construction. A stateless
+class may be built where it is used.
+
+**Why.** The location rule was a proxy, and measuring it against its own ledger
+showed what it was standing in for. Of 47 rows: 15 built a stateful class
+(rebuilding drops a cache — real), 13 were stateless but module-mocked by ten or
+more suites (a TEST-design cost, now recorded in ADR-016), and **19 protected
+nothing at all**.
+
+It also mis-fired on its largest cluster. `HelixService` held 13 of the 47 rows.
+It is stateless — its credentials arrive at construction and are never mutated —
+and the missing-credential hazard that made it look urgent had been fixed on
+2026-08-15 by registering one DA.live token source at activation (`cbcb927db`).
+Two rounds of design were spent ruling that out. A rule aimed at state would have
+stayed silent, correctly.
+
+**The detector**, in `tests/sop/architectureScan.ts`: a field written outside the
+constructor, OR a container field (`Map`/`Set`/array) mutated in a method. Both
+conditions are needed — a `this.x =` scan alone misses `PrerequisitesCacheManager`,
+which mutates a `Map` it never reassigns.
+
+**Validated against the three cases learned at cost.** It flags
+`GitHubTokenService` (`validationCache` — the D-2 finding, 13 files re-validating
+tokens against GitHub) and `ComponentRegistryManager` (`transformedRegistry`), and
+does not flag `HelixService`. Three for three, pinned as this rule's CONTROL test.
+
+**What this GIVES UP, stated plainly.** Before the amendment, ANY service
+constructed outside the two allowed places failed the build. Now a stateless one
+does not. Concretely, 32 ledger rows stopped being enforced:
+
+- **19** protected nothing measurable — that is the intended saving.
+- **13** are a real cost, just not this ADR's: a stateless class that ten or more
+  suites module-mock. Those moved to ADR-016 as a MEASURE, and a measure is
+  weaker than a check — nothing fails if a new one appears. `HelixService` alone
+  accounts for 8 of the 13, at 26 suites. If that list grows rather than shrinks,
+  the honest response is to give ADR-016 a real check, not to widen this one back.
+
+**What did not change.** The fetch boundary, the composition root, and
+dependencies-arrive-as-parameters all stand. This narrows one enforcement, not the
+architecture: `create...Deps` is still where a feature's bundle is assembled, and
+building a stateless collaborator inline was never the thing that hurt.
+
+Research: `.rptc/research/construction-boundary-is-the-wrong-question/`.
 
 ## Rejected alternatives
 

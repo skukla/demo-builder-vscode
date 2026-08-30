@@ -26,6 +26,8 @@ import {
     readStripped,
     loadLedger,
     expectClean as expectCleanAgainst,
+    accumulatesState,
+    classBodies,
 } from './architectureScan';
 
 /**
@@ -58,24 +60,6 @@ function mayFetch(f: string): boolean {
     );
 }
 
-/**
- * Where construction is allowed: `extension.ts` and `create...Deps` builders.
- * That is ALL of it.
- *
- * This used to read `mayFetch(f) || /Deps/`, which let every command, handler and
- * MCP registrar construct freely. ADR-015 does not say that. Its layer table
- * gives Commands, Handlers and MCP tools "May fetch" — fetch, not construct — and
- * its ruling says `create...Deps` files "plus `extension.ts`, are the only places
- * that construct services".
- *
- * The gap was found on 2026-08-29 by the pattern-conformance audit, which
- * reported 14 boundary files MIXING locator fetches and direct construction in
- * one file. None appeared in this ledger, because this rule permitted exactly
- * what they were doing. ADR-015 §"what dies" had claimed those files were
- * "tracked; each carried an exemption row until cleaned" — a sentence describing
- * an intention as though it were a mechanism. Tightening the predicate to the
- * ADR's own words is what makes that sentence true.
- */
 /**
  * Composition points recognised by ROLE, not by filename.
  *
@@ -125,22 +109,46 @@ describe('ADR-015: fetch boundary — logic never fetches', () => {
     });
 });
 
-describe('ADR-015: construction boundary — new Service() only in the root and deps builders', () => {
-    const violations = FILES.filter(
-        (f) =>
-            /new [A-Z][A-Za-z]*(Service|Manager|Client)\(/.test(src.get(f) as string) &&
-            !mayConstruct(f)
+describe('ADR-015: a class that ACCUMULATES STATE comes from one place', () => {
+    /**
+     * Re-aimed 2026-08-29. This rule used to ask WHERE a service was constructed;
+     * it now asks WHETHER a second instance would silently fork state.
+     *
+     * The location proxy was measured against its own 47-row ledger: 15 rows
+     * built a stateful class, 13 were stateless but module-mocked by 10+ suites
+     * (a test-design cost — ADR-016's job, tracked separately), and 19 protected
+     * nothing whatsoever. It also mis-fired on its largest cluster: HelixService
+     * held 13 rows, is stateless, and its supposed hazard had been fixed on
+     * 2026-08-15. Two rounds of design were spent ruling that out.
+     *
+     * See `.rptc/research/construction-boundary-is-the-wrong-question/`.
+     */
+    const bodies = classBodies(src);
+    const stateful = new Set(
+        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name),
     );
 
-    it('positive control: the detector sees construction in extension.ts', () => {
-        expect(
-            /new [A-Z][A-Za-z]*(Service|Manager|Client)\(/.test(
-                src.get('src/extension.ts') as string
-            )
-        ).toBe(true);
+    const violations = FILES.filter((f) => {
+        if (mayConstruct(f)) return false;
+        const source = src.get(f) as string;
+        for (const m of source.matchAll(/new ([A-Z][A-Za-z]*(?:Service|Manager|Client))\(/g)) {
+            if (stateful.has(m[1])) return true;
+        }
+        return false;
     });
 
-    it('every out-of-boundary construction is a reasoned ledger entry — and nothing more', () => {
+    it('CONTROL: the detector separates stateful from stateless, on known cases', () => {
+        // The three this repo learned at cost. If these ever flip, the rule has
+        // stopped meaning what the research established.
+        expect(stateful.has('GitHubTokenService')).toBe(true); // validationCache
+        expect(stateful.has('ComponentRegistryManager')).toBe(true); // transformedRegistry
+        expect(stateful.has('PrerequisitesCacheManager')).toBe(true); // a mutated Map
+        expect(stateful.has('HelixService')).toBe(false); // credentials, never mutated
+        expect(stateful.size).toBeGreaterThan(3);
+        expect(bodies.size).toBeGreaterThan(30);
+    });
+
+    it('every out-of-boundary construction of a STATEFUL class is a reasoned ledger entry', () => {
         expectClean('constructionBoundary', violations);
     });
 });
