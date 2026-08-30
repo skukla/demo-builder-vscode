@@ -96,3 +96,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): sidebarProvider stops redeclaring its webview fake five times (`02ef32f22`)
 - 2026-08-30  refactor(tests): blockCollectionHelpers multi-library suite stops repeating itself (`866f08ddf`)
 - 2026-08-30  refactor(tests): daLive transform suite stops repeating itself — 334 lines to 199 (`26de46ce0`)
+- 2026-08-30  refactor(tests): AdobeAuthStep's four specs stop pasting the same 24 lines — lane C1 (`dea9dde05`)

@@ -372,10 +372,20 @@ suites mock `@/core/di`. Checked before claiming a hazard.
 
 **Recommended re-plan.** Lane C splits in two:
 
-- **C1 (mechanical, 17 families)** — identical non-empty mock sets; extract to
-  `.testUtils` using the testUtils-owns-the-SUT-import pattern (§3 of
-  `webview-test-authoring`; 59 precedents in this repo). Ordered by payoff:
-  `AdobeAuthStep` (4 files × 2 mocks), `daLiveContentOperations` (4 × 1),
+- **C1 (mechanical, 17 families — 1 DONE 2026-08-30, 16 remain)** — identical
+  non-empty mock sets; extract to `.testUtils` using the testUtils-owns-the-SUT-import
+  pattern (§3 of `webview-test-authoring`; 59 precedents in this repo).
+
+  `AdobeAuthStep` is done and is the worked example (`dea9dde05`): the four specs'
+  mock blocks were confirmed byte-identical BEFORE moving anything, the testUtils took
+  both mocks and re-exported the component, and the result was checked three ways —
+  74 tests green, per-file unique assertion sets unchanged (17/12/3/8), and a PLANTED
+  CONTROL proving the mocks still bind (neutering the WebviewClient mock fails exactly
+  the 4 dependent suites; restoring returns all 7 to green). **Run that control on
+  every C1 family.** Silent unmocking is this refactor's failure mode, and a green run
+  on its own does not exclude it.
+
+  Remaining, ordered by payoff: `daLiveContentOperations` (4 × 1),
   `startDemo` and `envFileWatcherService` (3 × 4), `useSelectionStep`,
   `continueHandler`, `adobeEntityFetcher` (3 × 2), then ten 2-file families of which
   `contentAuthoringTools`, `componentUpdater` and `ResetAllCommand` carry 5 mocks each.

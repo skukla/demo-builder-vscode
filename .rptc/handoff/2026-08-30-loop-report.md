@@ -85,10 +85,18 @@ The cause is written in the family's own helper file: its opening comment *instr
 every test to paste the setup in. The duplication was the documented procedure. That
 instruction has since drifted from what the files actually do.
 
-I stopped there rather than start the extractions. I'd made three measurement
-corrections in the preceding hour, and a mistake in this particular refactor produces
-passing tests that check nothing — the failure that is invisible until it matters. The
-worklist is verified and written down; it's a clean thing to pick up rested.
+I nearly stopped there, on the grounds that I'd made three measurement corrections in
+the preceding hour and this refactor's failure mode is passing tests that check
+nothing. Then I reconsidered, because that reasoning only holds for the 26 drifted
+families. For the 17 identical ones the failure is *loud*: if the setup stops
+applying, the tests go red immediately.
+
+So I did the first one — the `AdobeAuthStep` family, four files each carrying the same
+24 lines. It's now done, and more importantly it establishes the recipe, including the
+check that makes it safe: I deliberately broke the shared setup and confirmed exactly
+the four dependent test files failed, then restored it and confirmed all seven passed
+again. Without that step, "the tests are green" would only tell me the tests ran. That
+control is written into the plan as required for each of the remaining sixteen.
 
 ---
 
