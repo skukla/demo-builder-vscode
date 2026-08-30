@@ -371,7 +371,7 @@ are sure is present, re-Read rather than re-deriving it from memory.
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
-- **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`.
+- **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `.claude/skills/spectrum-webview-ui/` and `docs/development/styling-guide.md`.
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung. Redirect to a file instead (enforced by a PreToolUse hook; details in `tests/README.md`).
 - **Webview communication** uses a handshake protocol with message queuing (`src/core/communication/`); async handlers must be awaited or the UI receives Promise objects.
 

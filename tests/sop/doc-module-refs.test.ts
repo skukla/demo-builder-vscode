@@ -54,6 +54,8 @@ const EXCLUDED = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANGEL
  */
 const ALLOWED: Record<string, string> = {
     'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
+    '.claude/skills/spectrum-webview-ui/SKILL.md::docs/development/ui-patterns.md':
+        'names the document this skill ABSORBED on 2026-08-30, so the reader knows where 585 lines went. It must not resolve — that is the fact being recorded.',
     '.claude/skills/gate/SKILL.md::tests/oversized.test.ts':
         'invented filename in a worked example of the file-size check — the point is that it is over the limit, so it must not exist',
     '.claude/skills/gate/SKILL.md::tests/subdir/test.test.ts':
@@ -233,6 +235,23 @@ describe('module paths cited by current-tense documents resolve', () => {
             .toEqual(['src/core/validation/README.md']);
         expect(backtickedPaths('everything under `src/features/` is a feature')).toEqual([]);
         expect(backtickedPaths('a `src/features/{name}/index.ts` barrel')).toEqual([]);
+    });
+
+    it('no markdown link target contains a space', () => {
+        // A target with a space is not a link at all — and the link check above
+        // cannot see it, because its pattern requires a space-free target. A
+        // find-and-replace produced `](./development/spectrum-webview-ui skill)`
+        // on 2026-08-30 and every reference check stayed green.
+        const bad: string[] = [];
+        for (const f of docs()) {
+            const md = readFileSync(join(ROOT, f), 'utf8');
+            for (const m of md.matchAll(/\]\(([^)]*\s[^)]*)\)/g)) {
+                const t = m[1];
+                if (/^https?:/.test(t) || /^\S+\s+"[^"]*"$/.test(t)) continue; // URL, or title syntax
+                bad.push(`${f}  ](${t})`);
+            }
+        }
+        expect([...new Set(bad)].sort()).toEqual([]);
     });
 
     it('CONTROL: the link check can fail', () => {

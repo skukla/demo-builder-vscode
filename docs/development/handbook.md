@@ -325,7 +325,7 @@ declared in one place, with vendor styles below ours.
 > [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
 > `importantCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
 
-> **Read before your first component.** [ui-patterns.md](ui-patterns.md) ·
+> **Read before your first component.** [spectrum-webview-ui skill](../../.claude/skills/spectrum-webview-ui/SKILL.md) ·
 > [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
 
 ---

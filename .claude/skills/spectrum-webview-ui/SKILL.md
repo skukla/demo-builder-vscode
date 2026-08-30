@@ -4,10 +4,13 @@ description: Load-bearing Adobe Spectrum + webview-UI gotchas — dimension-toke
 ---
 # Spectrum + Webview UI Gotchas
 
-The handbook is `docs/development/styling-guide.md` (CSS architecture, `cn()`, token
-utilities, class conventions) and `docs/development/ui-patterns.md` (layout constraints,
-menu/dropdown patterns, width debugging). This skill is only the incident-derived facts
-that keep biting — read the docs for the how, read this for the traps.
+The reference is `docs/development/styling-guide.md` — CSS architecture, `cn()`, token
+utilities, class conventions. This skill is the incident-derived facts that keep biting:
+read the guide for the how, read this for the traps.
+
+It absorbed `docs/development/ui-patterns.md` on 2026-08-30. That document held the same
+territory in 585 lines, plus a description of an "Adobe Setup two-column layout" that no
+longer exists — `TwoColumnLayout` has zero uses in authentication.
 
 ## When NOT to use
 - Adding a wizard step / Build-Your-Project area or its layout — use `wizard-step-authoring`.
@@ -93,9 +96,25 @@ Fix either way: put every option in one array and map it once, so the key and th
 cannot drift apart. A test catches this **only if it asserts the payload**
 `onSelectionChange` received; asserting that a request merely fired passes with a mangled key.
 
+### `Picker` dropdown width
+
+- **A `Picker` menu does not inherit its trigger's width, and CSS will not make it.**
+  Use the `menuWidth` prop; every CSS approach tried against this failed, because
+  Spectrum positions the overlay outside the trigger's layout.
+
+### Layout components take Spectrum tokens
+
+- **`GridLayout`, `TwoColumnLayout`, `ControlPanelLayout` and friends accept
+  `DimensionValue`** (`@/core/ui/utils/spectrumTokens`) for dimension props, so
+  `gap="size-300"` is type-checked against the token scale rather than passed as a
+  string. Prefer that over a px literal — see the scale mismatch above for why a
+  hardcoded px cannot track the active scale.
+
 ### Layout width & box model
 - **Spectrum `Flex` caps width at ~450px** — use a plain `<div>` with flex styles for any
-  full-width wizard/webview layout (root `CLAUDE.md` gotcha; see ui-patterns.md "Width Debugging").
+  full-width wizard/webview layout (root `CLAUDE.md` gotcha). To trace where a width is lost, log `getBoundingClientRect()`
+  up the parent chain from the constrained element — the ancestor whose width stops
+  matching its parent is the one applying the constraint.
 - **`box-sizing: border-box` lives in `reset.css`** (lowest cascade priority; unlayered author
   rules win). An input that sets `width:100%` + `padding` + `border` MUST also set
   `box-sizing: border-box` explicitly (or add `.box-border`) or it overflows its container.

@@ -36,7 +36,7 @@ Guides for developers working on the extension.
 - **[Development Strategy](./CLAUDE.md)** - Overall development approach and methodology
 - **[Build Instructions](./build.md)** - How to build and run the extension from source
 - **[Styling Guide](./development/styling-guide.md)** - CSS architecture and React Spectrum styling patterns
-- **[UI Patterns](./development/ui-patterns.md)** - UI/UX decisions and implementation patterns
+- **[Spectrum + webview UI gotchas](../.claude/skills/spectrum-webview-ui/SKILL.md)** - the traps that keep biting
 
 #### 🧩 Patterns
 Reusable design patterns extracted from the codebase.
@@ -65,7 +65,7 @@ Reusable design patterns extracted from the codebase.
 - Adding new components → [Component System - Definition Structure](./architecture/component-system.md#component-definition-structure)
 
 **UI Development**
-- React Spectrum patterns → [UI Patterns](./development/ui-patterns.md)
+- React Spectrum patterns → [spectrum-webview-ui](../.claude/skills/spectrum-webview-ui/SKILL.md)
 - CSS organization → [Styling Guide](./development/styling-guide.md)
 - Webview development → [Webview Loading](./systems/webview-loading.md)
 
