@@ -1,0 +1,79 @@
+---
+id: PL-29
+kind: epic
+area: platform
+needs: []
+value: high
+status: active
+---
+
+# Track 2 — documentation synthesis, and every document enforced
+
+The owner's standard, stated verbatim: *"Every piece of documentation must earn its
+keep. It must be concisely communicated. It must be easy for a human to read and
+understand. It must be useful. And it must be enforced."*
+
+Three phases. The third was added 2026-08-30 and is the one that makes the other two
+stick.
+
+## Phase A — assess and rewrite every document
+
+Read start to finish, verify every claim against source, keep only what a reader
+cannot get from the code, and record any rule stated as law in [[PL-28]] rather than
+deciding about it mid-pass.
+
+**Done (7):** `src/commands`, `src/core`, `src/features`, `src/features/sidebar`,
+`src/features/projects-dashboard` — rewritten, 2,388 → 893 lines. `src/core/ui/hooks`
+and `src/core/ui/components` — verified accurate, kept essentially as written, which
+is a finding in itself: the bar is passable.
+
+**Remaining (6):** `docs/development/styling-guide.md` (497),
+`docs/systems/mcp-server.md` (652), `tests/README.md` (461),
+`docs/testing/test-file-splitting-playbook.md` (462), `CONTRIBUTING.md` (356),
+`docs/troubleshooting/*` (465).
+
+## Phase B — a usefulness pass over everything touched
+
+Re-read the RESULT, not the diff. Assessing a document while rewriting it is not the
+same as judging the finished thing, and the owner has asked twice for the second.
+Two questions per document: is every line that survived actually useful, and does its
+content belong in this file under the canonical structure rather than somewhere else.
+
+The second question already has two answers pending — the hooks gotchas may belong in
+a skill, since traps live in skills here, and the Rule of Three override is
+[[PL-28]] row 2.
+
+## Phase C — every document enforced
+
+**What "enforced" means for a document**, because it is not obvious: every CHECKABLE
+claim in it has a pin that fails the build when the claim stops being true. A claim is
+checkable when it names a count, a list, a symbol, a path, or a file. Prose reasoning —
+*why* the breakpoint is derived, *why* signed-out is never a Retry — cannot be
+enforced, and that is fine. It also must not be phrased as a checkable claim when it
+is not one.
+
+What already exists, all verified by planting the defect rather than by grepping for
+a keyword:
+
+| Check | Covers |
+|---|---|
+| `doc-module-refs.test.ts` | every cited path resolves, in every `*.md`, including relative ones |
+| `claude-md-handbook-agreement.test.ts` | the shared rules, the convention scorecard, the glossary's area names, the 8 bundle names, the stacks and demo-package counts, the four gate seams |
+| `tooling-registry.test.ts` | every skill is registered AND routed in CLAUDE.md; the gate script's step count matches its documented table |
+| `architecture-rules.test.ts` | the ledgered architecture rules, including `layerDirection` |
+
+**The gap to close in this phase:** the seven rewritten per-directory files state
+counts and lists that nothing pins — the sidebar's six tiles and its derived 640px
+breakpoint, the 21 projects-list handlers, the 24 hooks, the 33 components. Each is
+exactly the kind of number that rotted in the originals.
+
+Do not pin a number that churns. `AI_CONTEXT_VERSION` was removed from CLAUDE.md
+rather than pinned, because it bumps on every bundle change and a pin would buy churn
+instead of safety. The test is whether a reader needs the number, not whether it can
+be checked.
+
+## Why an epic
+
+It has children in all but name and outlives any one sitting. It closes when every
+document has been through all three phases — not when the rewrites are done, which is
+the point of Phase C existing.
