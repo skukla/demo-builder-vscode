@@ -62,3 +62,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-29  wip(updates): templateSyncService safety suite, before mutation testing (`b5c478ac0`)
 - 2026-08-29  chore(record): refresh the audit ledger and correct phase 6's status (`f4b0788d8`)
 - 2026-08-30  docs(handoff): 2026-08-30 loop report — programme done bar one lane (`fdfcdb0a3`)
+- 2026-08-30  refactor(census): retire logicInTests and throw-style — owner-approved (`5a12b9f16`)
