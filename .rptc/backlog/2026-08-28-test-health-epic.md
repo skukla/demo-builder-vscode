@@ -75,3 +75,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(handbook): one home for the conventions, and the ADR/handbook split stated (`72993f9f0`)
 - 2026-08-30  docs(adr): part 2 of the audit — is each ADR truly valuable? (`863f1f9b7`)
 - 2026-08-30  fix(adr): every reference now resolves or is declared — 63 unexplained to 0 (`68191d7e6`)
+- 2026-08-30  docs(adr): ADR-019 supersedes ADR-004's amendment chain; rules move to the handbook (`178eb70be`)

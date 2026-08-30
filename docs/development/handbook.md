@@ -58,12 +58,12 @@ looking at.
 |---|---|---|
 | Services are fetched only at the boundary (`extension.ts`, `commands/`, `handlers/`, MCP registrars). Below that, dependencies arrive as parameters. | [ADR-015 § Decision](../architecture/adr/015-dependency-architecture.md) | `tests/sop/architecture-rules.test.ts` |
 | Construction happens in `extension.ts` or a feature's `create...Deps` file. Enforced for any class that accumulates state. | [ADR-015 § Decision](../architecture/adr/015-dependency-architecture.md) | `tests/sop/architecture-rules.test.ts` |
-| A **session accessor** (`getX()` + `resetX()`) is the one other place that may construct — and only for a service whose state must outlive a single call. | [ADR-015 § Session accessors](../architecture/adr/015-dependency-architecture.md) | ledger in `architecture-rules.exemptions.json` |
-| A repeated composition point builds nothing stateful. | [ADR-015 § A cache is only as useful as…](../architecture/adr/015-dependency-architecture.md) | `tests/sop/architecture-rules.test.ts` |
-| **Services** arrive in the feature's ONE deps bundle; **data** arrives as ordinary parameters. A service never takes `HandlerContext`. | [ADR-015 § The dependency ENVELOPE](../architecture/adr/015-dependency-architecture.md) | — (guidance) |
-| `@/core/*` and `@/types` are imported THROUGH their barrels. Features are imported deep and get no new barrel. | [ADR-015 § Barrel files](../architecture/adr/015-dependency-architecture.md) | — (guidance) |
-| Commands extend `BaseCommand` / `BaseWebviewCommand`. | [ADR-015 § Two rules the enforcer checks](../architecture/adr/015-dependency-architecture.md) | `tests/sop/architecture-rules.test.ts` |
-| Files under `src/types/` use `import type` only. | [ADR-015 § Two rules the enforcer checks](../architecture/adr/015-dependency-architecture.md) | `tests/sop/architecture-rules.test.ts` |
+| A **session accessor** (`getX()` + `resetX()`) is the one other place that may construct — and only for a service whose state must outlive a single call. | [ADR-020](../architecture/adr/020-session-accessors.md) | ledger in `architecture-rules.exemptions.json` |
+| A repeated composition point builds nothing stateful. | [ADR-020](../architecture/adr/020-session-accessors.md) | `tests/sop/architecture-rules.test.ts` |
+| **Services** arrive in the feature's ONE deps bundle; **data** arrives as ordinary parameters. A service never takes `HandlerContext`. | [ADR-021](../architecture/adr/021-dependency-envelope.md) | — (guidance) |
+| `@/core/*` and `@/types` are imported THROUGH their barrels. Features are imported deep and get no new barrel. | [ADR-022](../architecture/adr/022-barrel-files.md) | — (guidance) |
+| Commands extend `BaseCommand` / `BaseWebviewCommand` — they get context, disposal and panel lifecycle from the base rather than acquiring them. **No ADR: there is no alternative anyone would argue for.** | *(this row is the statement)* | `tests/sop/architecture-rules.test.ts` |
+| Files under `src/types/` use `import type` only — a runtime import there pulls executable code into every module that wanted a shape, and can form a cycle a type-only import cannot. **No ADR: no alternative worth recording.** | *(this row is the statement)* | `tests/sop/architecture-rules.test.ts` |
 | Where a given kind of code goes. | [where-code-goes.md](../architecture/where-code-goes.md) | `tests/sop/mirror-placement.test.ts` |
 | Features do not import other features; commands may import any feature. | [src/features/CLAUDE.md](../../src/features/CLAUDE.md) | eslint `no-restricted-imports` |
 

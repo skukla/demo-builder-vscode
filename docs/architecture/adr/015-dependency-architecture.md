@@ -31,29 +31,22 @@ judgement.
 This is a narrowing of jurisdiction, not a relaxation. The webview side is
 governed by ADR-017, which is stricter in the places its runtime allows.
 
-> **On this document's size — a deliberate deviation, recorded 2026-08-30.**
+> **Split on 2026-08-30.** This ADR had grown to seven rule sections across ~7 pages,
+> against practice that an ADR records *"a single decision"* in *"one or two pages"*
+> (Nygard 2011) and *"avoid[s] making decision records design guides"* (Microsoft).
+> Several of those sections were separate decisions appended because there was nowhere
+> else to put them — two headings said so outright ("the one construction site this ADR
+> did not name", "Two rules the enforcer checks that this document did not state").
 >
-> This ADR carries seven rule sections across roughly seven pages. Practice says an ADR
-> records *"a single decision"* in *"one or two pages"* (Nygard 2011) and that you should
-> *"avoid making decision records design guides"* (Microsoft Well-Architected). By both
-> tests this document is out of bounds, and the audit
-> ([`.rptc/research/adr-audit/research.md`](../../../.rptc/research/adr-audit/research.md))
-> said so.
+> They now have their own records: [ADR-020](020-session-accessors.md) (session
+> accessors and cache lifetime), [ADR-021](021-dependency-envelope.md) (the dependency
+> envelope), [ADR-022](022-barrel-files.md) (barrel files). Two rules with no rejected
+> alternative — commands extend `BaseCommand`, `src/types/` is `import type` only — moved
+> to [the development handbook](../../development/handbook.md), because a rule nobody
+> would argue against is not a decision.
 >
-> **It is being left as one document anyway**, for three reasons worth stating so the
-> next reader does not re-litigate it:
->
-> 1. It is the most-reached document in the repository — 123 citations, 32 source files,
->    73 test files — and an enforcer suite treats it as the full statement.
-> 2. The failure mode the "single decision" rule guards against is a reader having to
->    resolve a document against itself. That is ADR-004's problem, not this one's: these
->    seven sections compose, they do not contradict.
-> 3. The practical question — *where do I look for what to do today* — is now answered by
->    [the development handbook](../../development/handbook.md), which states each rule in
->    current tense and links here for the reasoning.
->
-> If it grows another two sections, revisit. The trigger to split is sections that begin
-> to disagree with each other, not page count.
+> What remains here is the one decision this ADR is named for: **dependencies flow one
+> way.**
 
 ## Context
 
@@ -117,231 +110,6 @@ documented patterns:
 | Service | Owns a capability; the only layer doing I/O; needs arrive as parameters; never fetches, never shows UI. |
 | `create...Deps` | Assembles one feature's service bundle; the only construction site outside `extension.ts`. |
 | Accessor | Answers a question from existing data; NEVER writes (the `ensureOAuthCredentialId` lesson). |
-
-### Session accessors — the one construction site this ADR did not name
-
-**Raised by the owner** 2026-08-29: *"our architecture ADR allows us to use
-factories? Where is this principle documented?"* — after two `getX()` accessor
-modules appeared the same afternoon, having been told that morning that factories
-have no place here.
-
-**It was documented nowhere.** `edsServiceCache` had done exactly this since
-before the ADR, and was permitted by being named in the enforcement file's
-allowlist. A named exemption is not a principle: it explains one file and teaches
-nothing, so the next two were written by copying it and the ADR never learned.
-
-**The rule, stated:**
-
-> A **session accessor** is a module whose only job is to MEMOISE one instance of
-> a service whose state must outlive a single call — `getX(...)` returning a
-> module-level singleton, plus a `resetX()` for tests and host reload. It may
-> construct. Nothing else may.
-
-**Why it is not the "factory" that was rejected.** That proposal was
-`helixForCodeSync(...)` / `helixForPublishing(...)` — several constructors for the
-same class, chosen per call site, to make a credential set checkable. It creates
-no instance identity and introduces a seventh element kind for a job the type
-system already does. A session accessor creates exactly ONE instance and exists
-for identity alone. Same syntax, opposite purpose.
-
-**When it is warranted, and when it is not.** Only when the thing built
-accumulates state that a second instance would fork. All three live cases are
-caches: EDS clients (a token-validation cache), the component registry (a
-transform memo), prerequisites (CLI results). A stateless service gets no
-accessor — build it where it is used.
-
-**Two lists, because they answer different questions.** The enforcement file
-separates SESSION_ACCESSORS (memoise; build once however often called) from
-per-call COMPOSITION_POINTS (assemble a fresh bundle each time). The lifetime rule
-below applies only to the second. Before the split it excluded `edsServiceCache`
-by filename, which is the same mistake as the allowlist — a name where a property
-belongs.
-
-**How the gap surfaced, because it is the durable part.** The architecture scan
-reads `git ls-files`, so a NEW UNTRACKED FILE is invisible to every rule. The gate
-ran green before the commit and the rule fired after it, against a file the
-scanner could not see when it mattered. Both accessors reached `develop` that way.
-
-### A cache is only as useful as the lifetime of the object that owns it
-
-Added 2026-08-29, and it is the same question the construction rule asks, aimed at
-TIME instead of COUNT. That rule asks *would a second instance fork this state?*
-This one asks *does this instance live long enough for its state to be worth
-carrying?*
-
-**A composition point that runs more than once must not construct a class that
-accumulates state.** `extension.ts` runs once, so it may. `createPanelHandlerContext`
-and `createHeadlessHandlerContext` do not: all six webview surfaces call the panel
-one PER INCOMING MESSAGE — 17 call sites between them.
-
-**The evidence.** `PrerequisitesCacheManager` exists to skip repeated CLI checks;
-its own header says a hit is under 10ms and a miss is 500–3000ms, for "95%
-reduction in repeated prerequisite checks". It is an instance field of
-`PrerequisitesManager`, which the panel composition point builds. So it is empty
-every time it is consulted, and cannot hit — pinned in
-`tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts`, whose
-CONTROL shows the cache works fine when one manager is reused, so the fault is
-lifetime and not a broken cache.
-
-**Three caches of this kind exist, and the comparison is the whole rule:**
-
-| Cache | Owner built | Hits? |
-|---|---|---|
-| `AuthCacheManager` | once, in `extension.ts` | yes |
-| `edsServiceCache` | module-level, memoised | yes |
-| `PrerequisitesCacheManager` | per message | **never** |
-
-Same pattern three times; the only variable is how long the owner lives.
-
-**It caught a change made the same day.** `ComponentRegistryManager` memoises
-`transformToGroupedStructure` in `transformedRegistry`, and was moved INTO the
-panel composition point that morning — a change that removed three dynamic
-imports and an 18-suite mock wall, and did nothing for caching, because it went
-from "three sites each building one per call" to "one factory building one per
-message". Neither shared. The rule says so; the commit message did not.
-
-### Two rules the enforcer checks that this document did not state
-
-Found 2026-08-29 while asking whether this ADR should be split in two. Five
-checks run under its name; the text mentioned `fetch` 10 times and `construct`
-17, and these two **zero** times. They were enforced under a document that never
-ruled on them — the same law/enforcement gap this ADR's Consequences section
-records, pointing the other way. Written down rather than spun into a second ADR:
-both are about how a dependency edge is allowed to form, which is this document's
-subject.
-
-**Commands extend `BaseCommand` or `BaseWebviewCommand`.** A command class under
-`commands/` gets its context, disposal and panel lifecycle from the base. A class
-that does not extend one has to acquire those itself — which is the implicit
-dependency this ADR exists to remove, and it is how a command ends up reaching
-for things the base would have handed it. Ledger: `commandBase`.
-
-**Files under `src/types/` (and `*.types.ts`) use `import type` only.** A types
-file with a runtime import stops being a leaf: it pulls executable code into
-every module that wanted only a shape, and it can form a cycle a type-only import
-never could. The rule is mechanical — a bare `import` in a types file is a
-violation, `import type` is not. Ledger: `typesPurity`.
-
-### The dependency ENVELOPE — one per feature, and only two kinds
-
-This ADR said dependencies "arrive as parameters" and that a feature's
-`create...Deps` file builds the bundle. It never said **how many bundles a feature
-gets**, so the answer became "one per function". Six services need a GitHub token
-service; they receive it six different ways:
-
-| File | Receives it as | Through |
-|---|---|---|
-| `authoringExperienceFlip` | `context.secrets` | `AuthoringExperienceFlipDeps` |
-| `configSyncService` | `secrets` | `ConfigSyncParams` |
-| `catalogPrewarmPhase` | `context.context.secrets` | `HandlerContext` |
-| `edsContentSetup` | `deps.secrets` | `EdsContentDeps` |
-| `templateSyncService` | `this.secrets` | class constructor |
-| `updateCore` | `ctx.secrets` | `UpdateContext` |
-
-Measured 2026-08-30: `create...Deps` — the pattern this ADR named — exists **4
-times in the repo**, while `eds` alone defines **35** distinct `*Deps` / `*Params`
-/ `*Context` types, `project-creation` 13, `updates` 3. The named convention lost
-to the unnamed one by an order of magnitude, because only one of them was written
-down.
-
-**THE CONVENTION. A function or class may receive its dependencies in exactly two
-envelopes, and they are not interchangeable:**
-
-1. **SERVICES arrive in the feature's ONE deps bundle** — the type its
-   `create...Deps` file builds, named `<Feature>Deps`. One per feature. A service
-   that needs a collaborator takes it from that bundle; it does not get its own
-   bespoke bundle type.
-2. **DATA arrives as ordinary parameters** — config values, ids, callbacks,
-   progress reporters. A per-function `XParams` object holding only data is fine
-   and expected; that is not what this rule is about.
-
-**The line between them is "would I otherwise have constructed or fetched this?"**
-If yes it is a service and belongs in envelope 1. If it is a value the caller
-already had, it is data and belongs in envelope 2.
-
-**Forbidden, and why:**
-
-- **A per-function type that carries SERVICES.** This is the thing that produced
-  six shapes for one dependency. It is invisible per file — each looks tidy — and
-  only shows up when you ask how many ways one collaborator is delivered.
-- **A service taking `HandlerContext`.** That is a boundary type carrying the whole
-  world; a service that accepts it has fetched by another name, with the hidden
-  dependencies this ADR exists to remove. Commands, handlers and MCP tools take
-  `HandlerContext` — that is their contract. Services do not.
-- **Mixing services and data in one bespoke type.** `UpdateContext` and
-  `ConfigSyncParams` both do this, which is why neither could be replaced by the
-  shared accessor without changing every caller.
-
-**Status: GUIDANCE, not enforced.** No check counts envelopes today. The
-construction rule already flags the *symptom* — a service building its own
-collaborator — and that ledger is where these six appear. What was missing was any
-statement of what to do instead, so each fix invented its own answer. Enforcing the
-envelope itself needs a detector that can tell a service from a value, which is a
-judgement a regex does not make; until one exists, this section is what a reviewer
-points at.
-
-**Migration is by ledger, not by sweep.** The existing bespoke types are not
-violations to be fixed on sight — they are the state this rule was written to stop
-growing. Convert one when you are already changing the file, and prefer collapsing
-a feature's several bundles into its one `<Feature>Deps` over adding a seventh.
-
-**Where a reasonable person differs:** the alternative is to hand each service its
-collaborator as a bare parameter and have no bundle at all. That is the most
-faithful reading of "dependencies arrive as parameters", and it was rejected here
-only because a service needing four collaborators then takes four parameters that
-every caller must thread. The bundle is the concession; making it one per FEATURE
-rather than one per FUNCTION is what keeps the concession from becoming the drift.
-
-### Barrel files (`index.ts`) — core and types export through them, features do not
-
-`src/features/CLAUDE.md` said feature barrels "were deleted 2026-08-24 — the
-structural baseline measured zero importers for every one of them — so do not add
-an `index.ts`; it will be dead on arrival." Measured 2026-08-30: **48 barrels exist
-and 40 have importers.** The claim was wrong in both directions, which is worse than
-saying nothing, because it is the file agents read as ground truth.
-
-What actually happened is narrower than the doc: commit `75b3b1ce5` deleted the
-*dead* feature barrels. Live ones survived, and the top of the list is not a legacy
-straggler — it is the documented way this codebase imports:
-
-| Barrel | Importers |
-|---|---|
-| `@/types` | 168 |
-| `@/core/shell` | 104 |
-| `@/core/di` | 86 |
-| `@/core/logging` | 78 |
-| `@/core/state` | 58 |
-| `@/core/validation` | 54 |
-
-**THE CONVENTION:**
-
-1. **`@/types` and `@/core/<area>` are imported THROUGH their barrel.** That is the
-   public path, it is what `src/CLAUDE.md`'s examples show, and 500+ import sites
-   depend on it. A deep import into `@/core/state/stateManager` is the exception,
-   not the tidier choice.
-2. **Features are imported DEEP** — `@/features/authentication/services/authenticationService`,
-   never `@/features/authentication`. A feature has no public API surface to curate,
-   because features are not supposed to import each other at all; a feature barrel
-   mostly exists to make that easy, which is the wrong thing to make easy.
-3. **A barrel re-exports and does nothing else.** No logic, no construction, no side
-   effects at import time. A barrel that runs code turns every importer into a
-   dependent of everything it re-exports.
-4. **A barrel with zero importers is dead code and gets deleted**, under the repo's
-   standing no-soft-deprecation rule.
-
-**The five feature-level barrels that remain** (`ai`, `authentication`,
-`data-installer`, `eds`, `sidebar` — 17 importers between them) are legacy under rule
-2. Convert their importers to deep imports when you are already in the file; do not
-sweep. `eds`'s two importers are both in `dashboard/`, so that barrel is currently
-serving exactly the cross-feature import the architecture says should not exist —
-which is the clearest possible argument for rule 2.
-
-**Status: GUIDANCE.** Nothing enforces the core-versus-feature split today. The one
-part that could be checked cheaply is rule 4, and it is deliberately not automated
-yet: a first pass at counting importers on 2026-08-30 produced false matches by
-treating any `from './hooks'` as a reference to one particular `hooks/` directory. A
-dead-barrel check needs real module resolution, not a regex, or it will delete a
-live file.
 
 ### The "when you want to…" table
 

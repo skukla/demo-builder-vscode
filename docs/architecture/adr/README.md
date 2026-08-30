@@ -21,7 +21,7 @@ Every column is measured, not asserted:
 | [001](001-component-naming-standardization.md) | Component Naming Standardization (externalSystems → integrations) | Historical | 3 | — | — | 9 |
 | [002](002-helix-bulk-api-fallback.md) | Helix Bulk API Fallback Strategy | Accepted and Implemented | 9 | — | — | 2 |
 | [003](003-multisite-architecture-seam.md) | Multisite Architecture Seam | Deferred | 3 | — | — | 2 |
-| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted — original decision (Claude Code CLI is the harness) STILL STANDS. | 10 | — | — | 24 |
+| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted — original decision (Claude Code CLI is the harness) STILL STANDS. | 11 | — | — | 24 |
 | [005](005-byom-pdp-routing.md) | BYOM PDP Routing — Canonical Pattern with Multi-Tenancy and Smart-404 Gap-Fill | Accepted | 13 | — | — | 1 |
 | [006](006-thin-layer-storefront-customization.md) | Thin-Layer Storefront Customization — Retire the CitiSignal Forks, Point at Canonical + Code Patches | Accepted | 54 | — | — | 1 |
 | [007](007-pdp-sku-url-encoding.md) | PDP SKU URL Encoding — Reversible, Lowercase-Stable, Helix-Safe | Accepted | 20 | — | — | 2 |
@@ -32,11 +32,14 @@ Every column is measured, not asserted:
 | [012](012-diagnostic-surfaces.md) | Diagnostic Surfaces — Human-First, Agent-Reachable | Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123 | 5 | — | — | — |
 | [013](013-generated-file-edit-survival.md) | Generated AI Files — Hash-and-Skip Edit Survival | Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver | 67 | — | — | 1 |
 | [014](014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service | Implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives | 5 | — | — | 1 |
-| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 127 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — | — |
+| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 126 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — | — |
 | [016](016-test-strategy.md) | Test strategy — three tiers, chosen on the escape record | Accepted (owner-ratified 2026-08-28) | 62 | `architecture-rules.test.ts`, `architectureScan.ts`, `mirror-placement.test.ts`, `test-family-setup.ledger.json`, `test-family-setup.test.ts`, `toolingRegistry.ts` | — | — |
 | [017](017-webview-architecture.md) | Webview architecture — one channel per bundle, props below, styles inside the bundle | Accepted (owner-ratified 2026-08-29) | 23 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `stylesheet-bundles.test.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts`, `webviewBundleClasses.ts` | — | — |
 | [018](018-css-architecture.md) | CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism | ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of | 7 | `toolingRegistry.ts` | — | — |
-| [019](019-claude-code-delivery-terminal-only.md) | Claude Code delivery is terminal-only, and the MCP server runs in-extension | Accepted (2026-08-30). Supersedes the amendment chain of | 0 | — | — | — |
+| [019](019-claude-code-delivery-terminal-only.md) | Claude Code delivery is terminal-only, and the MCP server runs in-extension | Accepted (2026-08-30). Supersedes the amendment chain of | 1 | — | — | — |
+| [020](020-session-accessors.md) | Session accessors — the one place other than the root that may construct | Accepted (2026-08-29, owner-ratified; split from ADR-015 on 2026-08-30) | 2 | `architecture-rules.exemptions.json` | — | — |
+| [021](021-dependency-envelope.md) | The dependency envelope — one bundle per feature, and only two kinds | Accepted (2026-08-30; split from ADR-015 the same day) | 1 | — | — | — |
+| [022](022-barrel-files.md) | Barrel files — core and types export through them, features do not | Accepted (2026-08-30; split from ADR-015 the same day) | 2 | — | — | — |
 
 ## Status vocabulary
 
