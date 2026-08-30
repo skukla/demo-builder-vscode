@@ -49,9 +49,13 @@ function parse() {
 
         const links = [...raw.matchAll(LINK)].map((l) => l[2]);
         const adr = links.find((l) => /adr\/\d+/.test(l)) ?? '';
+        // A callout may LINK the procedure, or name a skill in backticks. The bare
+        // name is not a path — the first version emitted `[procedure](dead-code-scan)`,
+        // which the link checker correctly rejected.
+        const skillName = /`\.claude\/skills\/([\w-]+)`/.exec(raw)?.[1];
         const how =
             links.find((l) => /\/sop\/|skills\//.test(l)) ??
-            (/`\.claude\/skills\/([\w-]+)`/.exec(raw)?.[1] ?? '');
+            (skillName ? `../../.claude/skills/${skillName}/SKILL.md` : '');
 
         // What decides whether it holds.
         const enforcers = [

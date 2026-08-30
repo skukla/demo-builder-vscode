@@ -104,7 +104,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
-| Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](ai-coverage-scan) | *named in prose* |
+| Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 
 ## 9. Tests
 
@@ -132,7 +132,7 @@ it means the rule rests on somebody noticing.
 | Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | `12-unquoted-glob.rule` |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |
-| Delete obsolete code. No deprecated stubs, no accepted-but-ignored options. Enforced by measurement — `.claude/skills/dead-code-scan`. |  | [procedure](dead-code-scan) | *named in prose* |
+| Delete obsolete code. No deprecated stubs, no accepted-but-ignored options. Enforced by measurement — `.claude/skills/dead-code-scan`. |  | [procedure](../../.claude/skills/dead-code-scan/SKILL.md) | *named in prose* |
 | Secrets live in VS Code settings, never in code. This repository is public. Enforced by `.claude/hooks/rules/20-secret-files.rule`, which blocks a write of any `.env` file or secret-shaped content headed for the repo tree; GitGuardian scans every push as the second line. |  |  | `20-secret-files.rule`<br>`GitGuardian` |
 | Commit to `develop`. Reach `master` only through a release. enforced by `.githooks/commit-msg`. |  | [procedure](../../.claude/skills/cut-release/SKILL.md) | `.githooks/` |
 | No backticks inside a double-quoted `git commit -m`. Write the message to a file and use `git commit -F`. |  |  | `14-commit-backtick.rule` |
