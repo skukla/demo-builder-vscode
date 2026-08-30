@@ -158,3 +158,38 @@ export function classBodies(sources: Map<string, string>): Map<string, string> {
     }
     return bodies;
 }
+
+/**
+ * The stateful set, closed over OWNERSHIP.
+ *
+ * A class is stateful here if it accumulates state itself, OR if it constructs
+ * one that does — because rebuilding the owner rebuilds the owned.
+ *
+ * Without the closure the rule misses the case that motivated it.
+ * `PrerequisitesManager` writes no field outside its constructor and mutates no
+ * container; it simply holds
+ * `private cacheManager = new PrerequisitesCacheManager()`. Rebuilding the
+ * manager throws that cache away, which is exactly the defect
+ * `prerequisiteCacheLifetime.test.ts` pins — and a direct-only scan calls the
+ * manager stateless and says nothing.
+ */
+export function statefulClosure(bodies: Map<string, string>): Set<string> {
+    const stateful = new Set(
+        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name),
+    );
+    // Fixpoint: owning a stateful class makes you stateful, transitively.
+    for (let changed = true; changed; ) {
+        changed = false;
+        for (const [name, body] of bodies) {
+            if (stateful.has(name)) continue;
+            for (const m of body.matchAll(/new ([A-Z][A-Za-z]*(?:Service|Manager|Client))\(/g)) {
+                if (m[1] !== name && stateful.has(m[1])) {
+                    stateful.add(name);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+    return stateful;
+}

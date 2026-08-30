@@ -94,6 +94,44 @@ documented patterns:
 | `create...Deps` | Assembles one feature's service bundle; the only construction site outside `extension.ts`. |
 | Accessor | Answers a question from existing data; NEVER writes (the `ensureOAuthCredentialId` lesson). |
 
+### A cache is only as useful as the lifetime of the object that owns it
+
+Added 2026-08-29, and it is the same question the construction rule asks, aimed at
+TIME instead of COUNT. That rule asks *would a second instance fork this state?*
+This one asks *does this instance live long enough for its state to be worth
+carrying?*
+
+**A composition point that runs more than once must not construct a class that
+accumulates state.** `extension.ts` runs once, so it may. `createPanelHandlerContext`
+and `createHeadlessHandlerContext` do not: all six webview surfaces call the panel
+one PER INCOMING MESSAGE — 17 call sites between them.
+
+**The evidence.** `PrerequisitesCacheManager` exists to skip repeated CLI checks;
+its own header says a hit is under 10ms and a miss is 500–3000ms, for "95%
+reduction in repeated prerequisite checks". It is an instance field of
+`PrerequisitesManager`, which the panel composition point builds. So it is empty
+every time it is consulted, and cannot hit — pinned in
+`tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts`, whose
+CONTROL shows the cache works fine when one manager is reused, so the fault is
+lifetime and not a broken cache.
+
+**Three caches of this kind exist, and the comparison is the whole rule:**
+
+| Cache | Owner built | Hits? |
+|---|---|---|
+| `AuthCacheManager` | once, in `extension.ts` | yes |
+| `edsServiceCache` | module-level, memoised | yes |
+| `PrerequisitesCacheManager` | per message | **never** |
+
+Same pattern three times; the only variable is how long the owner lives.
+
+**It caught a change made the same day.** `ComponentRegistryManager` memoises
+`transformToGroupedStructure` in `transformedRegistry`, and was moved INTO the
+panel composition point that morning — a change that removed three dynamic
+imports and an 18-suite mock wall, and did nothing for caching, because it went
+from "three sites each building one per call" to "one factory building one per
+message". Neither shared. The rule says so; the commit message did not.
+
 ### Two rules the enforcer checks that this document did not state
 
 Found 2026-08-29 while asking whether this ADR should be split in two. Five

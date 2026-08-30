@@ -28,6 +28,7 @@ import {
     expectClean as expectCleanAgainst,
     accumulatesState,
     classBodies,
+    statefulClosure,
 } from './architectureScan';
 
 /**
@@ -180,6 +181,48 @@ describe('ADR-015: a class that ACCUMULATES STATE comes from one place', () => {
 
     it('every out-of-boundary construction of a STATEFUL class is a reasoned ledger entry', () => {
         expectClean('constructionBoundary', violations);
+    });
+});
+
+describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => {
+    /**
+     * The lifetime half of the construction rule. That one asks whether a second
+     * instance would fork state; this asks whether the instance lives long enough
+     * for its state to be worth carrying.
+     *
+     * `extension.ts` runs once, so state built there is shared for the session.
+     * The other composition points do not: all six webview surfaces call
+     * `createPanelHandlerContext` PER INCOMING MESSAGE, 17 call sites between
+     * them. A cache built there is empty every time it is read.
+     *
+     * Found by `PrerequisitesCacheManager`, which advertises a 95% reduction in
+     * repeated CLI checks (a hit <10ms, a miss 500-3000ms) and cannot hit at all.
+     * Pinned in `prerequisiteCacheLifetime.test.ts`.
+     */
+    const REPEATED_COMPOSITION_POINTS = Object.keys(COMPOSITION_POINTS).filter(
+        (f) => f !== 'src/features/eds/handlers/edsServiceCache.ts', // memoises at module level
+    );
+
+    const stateful = statefulClosure(classBodies(src));
+
+    const violations: string[] = [];
+    for (const f of REPEATED_COMPOSITION_POINTS) {
+        const source = src.get(f);
+        if (!source) continue;
+        for (const m of source.matchAll(/new ([A-Z][A-Za-z]*(?:Service|Manager|Client))\(/g)) {
+            if (stateful.has(m[1])) violations.push(`${f}:${m[1]}`);
+        }
+    }
+
+    it('CONTROL: the repeated composition points exist and are being read', () => {
+        // A typo in a path would empty the loop and report a clean result.
+        expect(REPEATED_COMPOSITION_POINTS.length).toBeGreaterThan(1);
+        for (const f of REPEATED_COMPOSITION_POINTS) expect(src.has(f)).toBe(true);
+        expect(stateful.size).toBeGreaterThan(3);
+    });
+
+    it('every stateful class built in a repeated composition point is a reasoned ledger entry', () => {
+        expectClean('compositionPointLifetime', violations);
     });
 });
 
