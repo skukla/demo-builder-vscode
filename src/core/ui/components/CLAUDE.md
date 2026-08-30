@@ -71,6 +71,6 @@ sentence is what stops the next person re-litigating it.
 ## Related
 
 - `../hooks/CLAUDE.md` — the shared hook vocabulary (the same rule applies)
-- `.claude/skills/spectrum-webview-ui/` — layout mechanics, the Spectrum `Flex` 450px trap
+- `spectrum-webview-ui` skill — layout mechanics and the load-bearing Spectrum
+  gotchas, including the `Flex` 450px trap this table's layout row points at
 - `docs/development/styling-guide.md` — CSS architecture, `cn()`, token utilities
-- `.claude/skills/spectrum-webview-ui` — the load-bearing Spectrum/webview gotchas
