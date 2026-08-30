@@ -64,6 +64,19 @@ Exactly two, and "leave it as prose" is not among them:
 | # | Rule | Stated where | Ratified? | Enforced? | Obeyed? | Outcome |
 |---|---|---|---|---|---|---|
 | 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | no → **now yes** | no → **now yes** | no, 7 crossings | **Ratified** 2026-08-30. Handbook convention + `layerDirection` ledger, shrink-only |
+| 2 | Extract shared UI at the **third** instance — **but at the second** when the same behaviour has already been fixed separately on two surfaces, because that is demonstrated drift | `src/core/ui/components/CLAUDE.md` | **no** — absent from the handbook and the conventions index | **no** | unmeasured | **Pending** |
+
+**Row 2 detail.** The plain Rule of Three is ordinary practice and would not be worth
+a row. The *override* is the decision: it lowers the threshold to two on evidence of
+drift, which is a genuine judgement about when duplication is proven rather than
+suspected. It is stated once, in one directory's prose, and nothing carries it
+anywhere else.
+
+Adjudicating it needs an answer to a question nobody has asked yet: **is it
+obeyed?** That means finding cases where the same behaviour was fixed twice on two
+surfaces and checking whether it then got extracted. Until that is measured, ratify
+and delete are both guesses — which is exactly why it sits here rather than being
+decided in passing.
 
 Files assessed so far: `src/commands/CLAUDE.md` (no unratified rules found — its
 content was stale rather than prescriptive), `src/core/CLAUDE.md` (row 1).
