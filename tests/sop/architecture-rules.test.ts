@@ -280,6 +280,36 @@ describe('ADR-015: commands extend the base classes', () => {
     });
 });
 
+describe('handbook: core does not import features or commands', () => {
+    // The direction rule: features and commands build ON core, so core knows about
+    // neither. It is what keeps the dependency graph acyclic, which is why a cycle
+    // scan is worth running at all.
+    //
+    // Ratified 2026-08-30, and the history is the reason it is here. The rule was
+    // stated as absolute law in `src/core/CLAUDE.md`, with a "❌" that read as a
+    // guarantee — while appearing in no handbook entry, no ADR and no convention,
+    // being enforced by nothing, and being violated seven times. A prohibition that
+    // only exists in one directory's prose is a wish.
+    //
+    // Webview files are already excluded from FILES, so `core/ui/` is out of scope.
+    const violations = FILES.filter(
+        (f) => /^src\/core\//.test(f) && /from '@\/(features|commands)/.test(src.get(f) as string)
+    );
+
+    it('positive control: the detector can see the LEGAL direction', () => {
+        // Without this, a broken path or a changed alias makes the rule pass by
+        // finding nothing — which is indistinguishable from a clean codebase.
+        const featureUsesCore = FILES.some(
+            (f) => /^src\/features\//.test(f) && /from '@\/core/.test(src.get(f) as string)
+        );
+        expect(featureUsesCore).toBe(true);
+    });
+
+    it('every crossing is a reasoned ledger entry', () => {
+        expectClean('layerDirection', violations);
+    });
+});
+
 describe('ADR-015: types files carry no runtime imports', () => {
     const violations = FILES.filter((f) => {
         if (!/^src\/types\//.test(f) && !/\.types\.tsx?$/.test(f)) return false;

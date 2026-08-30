@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **62** conventions, **56** enforced
+- **63** conventions, **57** enforced
 - **19** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -33,6 +33,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
+| Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
 | `@/core/*` and `@/types` are imported through their barrel file. Features are imported directly, and get no barrel. Enforced by the `featureBarrels` ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the set may only shrink. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
 

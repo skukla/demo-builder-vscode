@@ -1,38 +1,48 @@
 {
-    "_what": "Enforcement ledger for the EXTENSION HOST dependency rules (webview files are enforced by webview-architecture-rules.test.ts under ADR-017). The keys map to rules that live in different records since the 2026-08-30 split: fetchBoundary and constructionBoundary -> ADR-015; compositionPointLifetime -> ADR-020; commandBase and typesPurity -> the development handbook (no ADR — neither has a rejected alternative worth recording). Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
-    "fetchBoundary": {},
-    "constructionBoundary": {
-        "src/features/data-installer/handlers/dataInstallerHandlers.ts": "Boundary file constructing DataInstallerClient directly. ADR-015 gives Commands/Handlers/MCP tools 'May fetch', not may construct; fetch these too, or take them from a create...Deps bundle. Caught 2026-08-29 when mayConstruct was tightened to the ADR's own words.",
-        "src/features/eds/services/authoringExperienceFlip.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/eds/services/configSyncService.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/prerequisites/services/PrerequisitesManager.ts": "D-4 (measured 2026-08-28): constructs PrerequisitesCacheManager itself. ADR-015 allows construction only in extension.ts and create...Deps files, so this violates the rule as written — but it forces NO module mock in any suite today, so the cost is currently zero. Lowest priority; convert when the file is touched.",
-        "src/features/project-creation/services/catalogPrewarmPhase.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/project-creation/services/edsContentSetup.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/updates/services/componentUpdater.ts": "D-4: constructs ComponentRegistryManager itself. CONVERSION ATTEMPTED AND REVERTED 2026-08-30 — its two sites reach the registry through `await import(...)` INSIDE the method, and jest.config sets resetMocks:true, so the dynamic import was load-bearing for the TEST SETUP: it re-ran the jest.mock factory during each test, after the reset stripped the implementation. A static import evaluates the factory once at load and the reset then wipes it. Priming the mock in beforeEach fixed 33 of 34 tests; the last depends on mock timing I could not explain, so the change was rolled back rather than forced. Its two siblings (deployMeshHeadless, projectResetService) converted cleanly.",
-        "src/features/updates/services/templateSyncService.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/updates/services/updateCore.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
-        "src/features/dashboard/commands/configure.ts": "Boundary file constructing ComponentRegistryManager directly, alongside 3 ServiceLocator fetch(es) — MIXES both styles in one file. DEFERRED 2026-08-29 while its three siblings converted: those are handlers that already RECEIVE a HandlerContext, so they just read the registry off it. This is a command that builds its context on demand, and routing a registry read through createHandlerContext drags in PrerequisitesManager, the ServiceLocator and the logger — a heavier graph than the read needs, and getInitialData's test proved it by failing on each in turn. Needs the registry handed to the command itself, not fetched through a handler context."
-    },
-    "commandBase": {
-        "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command — exempt by role",
-        "src/commands/diagnostics.ts:DiagnosticsCommand": "pre-ADR-015: converge to BaseCommand"
-    },
-    "typesPurity": {
-        "src/types/typeGuards.ts": "runtime type guards colocated in types/ by long-standing convention — candidate for ratification",
-        "src/types/errors.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
-        "src/types/handlers.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
-        "src/types/shell.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
-        "src/types/state.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
-        "src/types/webview.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)"
-    },
-    "patternBSendMessageCeiling": 142,
-    "compositionPointLifetime": {},
-    "featureBarrels": {
-        "src/features/authentication/index.ts": "Pre-ruling. 7 importers across 17 export lines — the largest survivor, and the one whose removal touches the most callers. Measured 2026-08-30.",
-        "src/features/ai/index.ts": "Pre-ruling. 3 importers, 5 export lines. Measured 2026-08-30.",
-        "src/features/eds/index.ts": "Pre-ruling. Only 2 importers but 42 export lines — the widest surface of the five, so the barrel hides the most. Measured 2026-08-30.",
-        "src/features/sidebar/index.ts": "Pre-ruling. 2 importers, 3 export lines. Measured 2026-08-30.",
-        "src/features/data-installer/index.ts": "Pre-ruling. 1 importer, 12 export lines — the cheapest to retire. Measured 2026-08-30."
-    },
-    "_featureBarrels_note": "ADR-022 forbids NEW feature barrels; these five predate it. The ledger only shrinks, so retiring one means deleting its row in the same commit. Counts are importers of the bare `@/features/<name>` specifier, measured 2026-08-30."
+  "_what": "Enforcement ledger for the EXTENSION HOST dependency rules (webview files are enforced by webview-architecture-rules.test.ts under ADR-017). The keys map to rules that live in different records since the 2026-08-30 split: fetchBoundary and constructionBoundary -> ADR-015; compositionPointLifetime -> ADR-020; commandBase and typesPurity -> the development handbook (no ADR — neither has a rejected alternative worth recording). Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
+  "fetchBoundary": {},
+  "constructionBoundary": {
+    "src/features/data-installer/handlers/dataInstallerHandlers.ts": "Boundary file constructing DataInstallerClient directly. ADR-015 gives Commands/Handlers/MCP tools 'May fetch', not may construct; fetch these too, or take them from a create...Deps bundle. Caught 2026-08-29 when mayConstruct was tightened to the ADR's own words.",
+    "src/features/eds/services/authoringExperienceFlip.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/eds/services/configSyncService.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/prerequisites/services/PrerequisitesManager.ts": "D-4 (measured 2026-08-28): constructs PrerequisitesCacheManager itself. ADR-015 allows construction only in extension.ts and create...Deps files, so this violates the rule as written — but it forces NO module mock in any suite today, so the cost is currently zero. Lowest priority; convert when the file is touched.",
+    "src/features/project-creation/services/catalogPrewarmPhase.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/project-creation/services/edsContentSetup.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/updates/services/componentUpdater.ts": "D-4: constructs ComponentRegistryManager itself. CONVERSION ATTEMPTED AND REVERTED 2026-08-30 — its two sites reach the registry through `await import(...)` INSIDE the method, and jest.config sets resetMocks:true, so the dynamic import was load-bearing for the TEST SETUP: it re-ran the jest.mock factory during each test, after the reset stripped the implementation. A static import evaluates the factory once at load and the reset then wipes it. Priming the mock in beforeEach fixed 33 of 34 tests; the last depends on mock timing I could not explain, so the change was rolled back rather than forced. Its two siblings (deployMeshHeadless, projectResetService) converted cleanly.",
+    "src/features/updates/services/templateSyncService.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/updates/services/updateCore.ts": "D-2 group 1: constructs its own GitHubTokenService instead of asking edsServiceCache.getGitHubServices, whose instance carries a token-VALIDATION cache. A fresh instance re-validates against GitHub. Route it through the builder, or take the token service as a parameter where no handler context is reachable.",
+    "src/features/dashboard/commands/configure.ts": "Boundary file constructing ComponentRegistryManager directly, alongside 3 ServiceLocator fetch(es) — MIXES both styles in one file. DEFERRED 2026-08-29 while its three siblings converted: those are handlers that already RECEIVE a HandlerContext, so they just read the registry off it. This is a command that builds its context on demand, and routing a registry read through createHandlerContext drags in PrerequisitesManager, the ServiceLocator and the logger — a heavier graph than the read needs, and getInitialData's test proved it by failing on each in turn. Needs the registry handed to the command itself, not fetched through a handler context."
+  },
+  "commandBase": {
+    "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command — exempt by role",
+    "src/commands/diagnostics.ts:DiagnosticsCommand": "pre-ADR-015: converge to BaseCommand"
+  },
+  "typesPurity": {
+    "src/types/typeGuards.ts": "runtime type guards colocated in types/ by long-standing convention — candidate for ratification",
+    "src/types/errors.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
+    "src/types/handlers.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
+    "src/types/shell.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
+    "src/types/state.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)",
+    "src/types/webview.ts": "pre-ADR-015: runtime import in a types file — adjudicate (move code out, or ratify the exception)"
+  },
+  "patternBSendMessageCeiling": 142,
+  "compositionPointLifetime": {},
+  "featureBarrels": {
+    "src/features/authentication/index.ts": "Pre-ruling. 7 importers across 17 export lines — the largest survivor, and the one whose removal touches the most callers. Measured 2026-08-30.",
+    "src/features/ai/index.ts": "Pre-ruling. 3 importers, 5 export lines. Measured 2026-08-30.",
+    "src/features/eds/index.ts": "Pre-ruling. Only 2 importers but 42 export lines — the widest surface of the five, so the barrel hides the most. Measured 2026-08-30.",
+    "src/features/sidebar/index.ts": "Pre-ruling. 2 importers, 3 export lines. Measured 2026-08-30.",
+    "src/features/data-installer/index.ts": "Pre-ruling. 1 importer, 12 export lines — the cheapest to retire. Measured 2026-08-30."
+  },
+  "_featureBarrels_note": "ADR-022 forbids NEW feature barrels; these five predate it. The ledger only shrinks, so retiring one means deleting its row in the same commit. Counts are importers of the bare `@/features/<name>` specifier, measured 2026-08-30.",
+  "layerDirection": {
+    "src/core/commands/ResetAllCommand.ts": "MISPLACED, not miswritten: a command that orchestrates features is doing exactly what commands are for — it is in the wrong DIRECTORY. Fix by moving it to src/commands/, not by changing what it does.",
+    "src/core/commands/ResetAiOnboardingCommand.ts": "same as ResetAllCommand — a command living under core/. Moves with it.",
+    "src/core/di/serviceLocator.ts": "`import type` only (AuthenticationService, SidebarProvider): no runtime coupling and no cycle, so this is the benign one. Fix by moving both interfaces to @/types, or ratify it as permanent — a locator has to name what it locates.",
+    "src/core/state/apiOwners.ts": "runtime: reaches into a feature's catalog loader (getAppBuilderComponentEntry) from core/state.",
+    "src/core/state/projectFileLoader.ts": "runtime: stripDuplicateBackendOwnedScope from features/components/config.",
+    "src/core/state/projectStateSync.ts": "runtime: envVarKeys constants from features/components/config. Config constants a feature owns, read by core.",
+    "src/core/utils/progressUnifier/ProgressUnifier.ts": "runtime import of InstallStep, which appears to be a TYPE — likely fixable with `import type` alone, making this the cheapest row to clear."
+  },
+  "_layerDirection_note": "Direction rule: nothing under src/core/ imports @/features or @/commands. Ratified 2026-08-30 after the rule was found stated as law in src/core/CLAUDE.md, present in NO handbook/ADR/convention, enforced by nothing, and violated seven times. Webview files are out of scope (isWebview), so core/ui/ is excluded. The set may only shrink: clearing a file means fixing it AND deleting its row."
 }

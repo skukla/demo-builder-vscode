@@ -64,6 +64,24 @@ A feature uses `core/`. A feature does not reach into another feature — if two
 need the same thing, it moves to `core/`. Commands are the exception: their job is to
 orchestrate, so they may use any feature.
 
+That arrangement only holds if it points one way. Features and commands are built on
+core, so core must not know either of them exists; the moment it does, the graph can
+close into a cycle and "move it to `core/`" stops being a safe answer.
+
+> **Convention.** Nothing under `src/core/` imports `@/features` or `@/commands`.
+> [src/core/CLAUDE.md](../../src/core/CLAUDE.md) · Enforced by the `layerDirection`
+> ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule
+> and the set may only shrink.
+> *Why:* it is what keeps the dependency graph acyclic, which is the premise the cycle
+> scan and "move it to core" both rest on.
+>
+> **This rule was ratified on 2026-08-30, and how it got here is worth knowing.** It had
+> been stated as absolute law in `src/core/CLAUDE.md` — with a "❌", which reads as a
+> guarantee — while appearing in no handbook entry, no ADR and no convention, enforced by
+> nothing, and violated seven times. Two of the seven are commands that merely live in the
+> wrong directory, one is `import type` only, and four are real. A prohibition that exists
+> in one directory's prose is a wish; this is the version with a check behind it.
+
 > **Convention.** Features do not import other features; commands may.
 > [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
@@ -527,7 +545,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 62 conventions. 56 of them are enforced; 6 are not.**
+**This handbook states 63 conventions. 57 of them are enforced; 6 are not.**
 
 The six that remain are not one thing, and treating them as one is what kept them open:
 
