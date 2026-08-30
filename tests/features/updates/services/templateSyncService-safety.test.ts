@@ -54,6 +54,7 @@ function edsProject(): Project {
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
+                name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
                 metadata: {
@@ -187,5 +188,57 @@ describe('CRITERION 2 — a failed git step never pushes', () => {
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(result.success).toBe(false);
+    });
+});
+
+describe('CRITERION 3 — conflicts surface rather than resolving silently', () => {
+    /** Make the conflict probe report two conflicted files. */
+    function withConflicts() {
+        mockExecute.mockImplementation(async (cmd: string) =>
+            /diff --name-only --diff-filter=U/.test(cmd)
+                ? { code: 0, stdout: 'blocks/hero/hero.js\nstyles/styles.css\n', stderr: '' }
+                : { code: 0, stdout: '', stderr: '' },
+        );
+    }
+
+    it('CONTROL: with no conflicts the result carries none', async () => {
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+        expect(result.conflicts ?? []).toEqual([]);
+    });
+
+    it('names the conflicted files in the result', async () => {
+        withConflicts();
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result.conflicts).toEqual(['blocks/hero/hero.js', 'styles/styles.css']);
+    });
+
+    it('THE BEHAVIOUR WORTH KNOWING: a conflicted merge becomes a RESET', async () => {
+        // A user picks "merge" to KEEP their local work. On conflict the service
+        // aborts the merge and resets to the template instead — which discards
+        // exactly what they were trying to keep. It is flagged after the fact,
+        // never asked about beforehand.
+        //
+        // Pinned rather than judged: changing it is a product decision, and this
+        // test is what makes the current behaviour visible to whoever makes it.
+        withConflicts();
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result.fallbackOccurred).toBe(true);
+        expect(gitCalls().some((c) => /merge --abort/.test(c))).toBe(true);
+    });
+
+    it('the preserved files still survive the fallback reset', async () => {
+        // The one guarantee that must hold even when the strategy changes
+        // underneath the user.
+        withConflicts();
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        const written = mockWriteFile.mock.calls.map((c) => String(c[0]));
+        expect(written.some((p) => p.endsWith('fstab.yaml'))).toBe(true);
+        expect(written.some((p) => p.endsWith('config.json'))).toBe(true);
     });
 });
