@@ -1,20 +1,11 @@
-import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
-import { ServiceLocator } from '@/core/di';
-import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
 
-// Mock dependencies
-jest.mock('vscode');
-jest.mock('@/core/di');
-jest.mock('fs/promises');
-jest.mock('@/features/eds/handlers/edsHelpers');
-
-// Mock validatePathSafety since it uses dynamic import
-const mockValidatePathSafety = jest.fn();
-jest.mock('@/core/validation', () => ({
-    ...jest.requireActual('@/core/validation'),
-    validatePathSafety: (...args: any[]) => mockValidatePathSafety(...args),
-}));
+import {
+    ResetAllCommand,
+    ServiceLocator,
+    fs,
+    mockValidatePathSafety,
+    vscode,
+} from './ResetAllCommand.testUtils';
 
 describe('ResetAllCommand - Adobe CLI cleanup', () => {
     let command: ResetAllCommand;
