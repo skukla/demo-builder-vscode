@@ -5818,16 +5818,14 @@
    "doubleStyle": "light-mocks"
   },
   {
-   "unit": "tests/features/updates/services/componentUpdater-envMigration.test.ts",
-   "flags": [
-    "theater"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
    "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/envMerge.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/extensionUpdater.test.ts",

@@ -26,7 +26,7 @@ it were the program.
 | 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
-| 6 | Craft + coverage follow-ups | **IN PROGRESS** | mcp-proxy and projectDeletionService closed 2026-08-29; templateSyncService, the hollow suite and throw-style remain |
+| 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 | 8 | Frontend architecture (PL-17) | **DONE 2026-08-29** | ADR-017 written + enforced (`webview-architecture-rules.test.ts`); ADR-015 scoped to the host; hook rule + ledger rehomed; WebviewClient's row retired by ratifying the singleton. Three positive controls, incl. one on the jurisdiction itself |
 
