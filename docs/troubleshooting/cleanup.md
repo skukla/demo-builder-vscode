@@ -1,194 +1,73 @@
-# Manual Cleanup Guide
+# Removing projects and data
 
-This guide explains how to manually clean up Demo Builder projects and data if needed.
+## Delete a project from the UI — not with `rm -rf`
 
-## Automatic Cleanup (Preferred)
+**Use the project card's kebab menu → Delete.** It is a real command
+(`demoBuilder.deleteProject`), reached from the projects grid and the project
+dashboard, and it is the only path that cleans up everything.
 
-Demo Builder now handles cleanup automatically in these scenarios:
+Deleting a project by hand removes the local folder and **leaves its cloud
+resources behind**: the GitHub repository, the DA.live content, the Helix site
+registration, and backend resources. Those keep existing, keep counting against
+your org, and the next project of the same name collides with them.
 
-1. **Pre-flight Check**: Before creating a project, checks if directory exists and cleans it up
-2. **Failure Cleanup**: If project creation fails, automatically removes partial project data
-3. **Retry Support**: You can retry project creation immediately without manual intervention
+This guide previously said a Delete Project command was something "future versions
+may add" and gave `rm -rf` as the answer. That was wrong, and the advice orphaned
+resources every time it was followed.
 
-**You rarely need to manually clean up!**
+An agent can do the same thing with the `delete_project` tool, which requires the
+project's name echoed back exactly — a fuzzy match cannot destroy the wrong one.
 
----
+## What cleans up on its own
 
-## Manual Cleanup Options
+- **A failed creation** removes its own partial project.
+- **Retrying a name that already exists** clears the previous directory first, so a
+  retry needs no manual step.
 
-### Option 1: Delete Specific Project (Command Line)
+A successfully created project is never removed automatically. That is deliberate.
 
-If you need to manually remove a specific project:
+## Where things live
 
-```bash
-# Replace "my-commerce-demo" with your project name
-rm -rf ~/.demo-builder/projects/my-commerce-demo
 ```
-
-**Location**: `~/.demo-builder/projects/<project-name>/`
-
-**What's inside**:
-- `components/` - Cloned Git repositories
-- `logs/` - Project-specific logs
-- `.env` - Environment configuration
-- `.demo-builder.json` - Project manifest
-
----
-
-### Option 2: Delete All Projects
-
-To remove all projects but keep extension settings:
-
-```bash
-rm -rf ~/.demo-builder/projects
-```
-
----
-
-### Option 3: Reset Everything (Development Mode Only)
-
-Demo Builder includes a **Reset All** command that:
-- ✅ Deletes all projects
-- ✅ Clears VSCode workspace state
-- ✅ Removes stored secrets (license key)
-- ✅ Resets status bar
-- ✅ Stops running processes
-
-**To use**:
-1. Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
-2. Type: `Demo Builder: Reset All`
-3. Confirm the action
-4. Reload VSCode window
-
-**⚠️ This command is only available in development mode** (when running the extension from source).
-
----
-
-## What Gets Cleaned Up Automatically
-
-### On Project Creation Failure
-
-When project creation fails (timeout, cancellation, error):
-```typescript
-// Automatically removes:
 ~/.demo-builder/projects/<project-name>/
+├── components/          cloned component repositories
+├── logs/
+├── .env                 environment configuration
+└── .demo-builder.json   the project manifest
 ```
 
-### On Project Creation Retry
+Override the root with `DEMO_BUILDER_PROJECTS_DIR`.
 
-When you retry creating a project with an existing name:
-```typescript
-// Pre-flight check automatically:
-1. Detects existing directory
-2. Counts files inside
-3. Removes directory if not empty
-4. Proceeds with fresh creation
-```
+## When manual removal is still reasonable
 
-**You'll see**: "Preparing Project" → "Removing existing project data..."
+Reclaiming disk space from projects whose cloud resources are already gone, or
+clearing a machine you are done with. Each project is typically 100–500 MB.
 
----
-
-## Directory Structure
-
-```
-~/.demo-builder/
-├── projects/
-│   ├── my-commerce-demo/
-│   │   ├── components/
-│   │   │   ├── citisignal-nextjs/       # Frontend (Git clone)
-│   │   │   └── commerce-mesh/            # API Mesh (Git clone)
-│   │   ├── logs/
-│   │   ├── .env                          # Environment vars
-│   │   └── .demo-builder.json            # Project manifest
-│   └── another-project/
-│       └── ...
-└── state.json                            # Extension state
-```
-
----
-
-## When to Manually Clean Up
-
-You **rarely** need to manually clean up, but it might be useful if:
-
-1. **Disk Space**: You want to reclaim disk space from old projects
-2. **Corruption**: A project's files were manually edited and are now corrupted
-3. **Testing**: You're testing the extension and want a completely clean slate
-4. **Migration**: You're moving to a new machine and don't need old projects
-
----
-
-## Troubleshooting
-
-### "Directory already exists" Error
-
-**Symptom**: Git clone fails with "destination path already exists and is not empty"
-
-**Solution**: This should never happen now! The pre-flight check handles it.
-
-If you still see this error:
-1. Check logs: `Demo Builder: User Logs` output channel
-2. Look for: `[Project Creation] Found X existing files/folders, cleaning up...`
-3. If cleanup failed, manually remove: `rm -rf ~/.demo-builder/projects/<name>`
-
----
-
-### Projects Not Appearing in Sidebar
-
-**Symptom**: Created projects don't show in "Current Projects" sidebar
-
-**Solution**: Projects are tracked in extension state, not just filesystem.
-
-To rescan:
-1. Reload VSCode: `Cmd+Shift+P` → "Developer: Reload Window"
-2. Or restart VSCode
-
----
-
-### Disk Space Full
-
-**Symptom**: Running out of disk space from many projects
-
-**Solution**: Each project is typically 100-500MB (depending on components).
-
-To clean up:
 ```bash
-# See size of all projects
 du -sh ~/.demo-builder/projects/*
-
-# Remove specific projects
-rm -rf ~/.demo-builder/projects/old-demo-1
-rm -rf ~/.demo-builder/projects/old-demo-2
-
-# Or remove all projects
-rm -rf ~/.demo-builder/projects
+rm -rf ~/.demo-builder/projects/<name>
 ```
 
----
+**If the project still has cloud resources, delete it from the UI first**, then
+remove any leftover directory.
 
-## FAQ
+## Reset All
 
-**Q: Will Demo Builder ever cleanup my projects automatically?**
-A: Only in these cases:
-- When project creation fails (the partial project)
-- When you retry a project with the same name (the existing one)
-- Never cleans up successfully created projects
+`Demo Builder: Reset All` deletes every project, clears workspace state, removes
+stored secrets, and stops running processes.
 
-**Q: How do I "uninstall" a project?**
-A: Currently, manual deletion via command line. Future versions may add a "Delete Project" command in the UI.
+Its title says "(Dev Only)" but nothing enforces that — the command has no `when`
+clause, so it is visible in the palette for everyone. Treat the label as a warning
+rather than a guard.
 
-**Q: What happens if I manually delete a project folder?**
-A: Demo Builder will still track it in state. You'll see it in the sidebar but can't interact with it. Use "Reset All" (dev mode) or reload VSCode to clear stale state.
+## A project folder deleted by hand still shows up
 
-**Q: Can I move a project to a different location?**
-A: Not currently supported. Projects must be in `~/.demo-builder/projects/<name>`. Moving them manually will break the extension's tracking.
+The extension tracks projects in its own state, not only on disk, so a
+hand-deleted project can linger in the list. Reload the window
+(`Developer: Reload Window`) to clear it.
 
----
+## Related
 
-## Related Documentation
-
-- [Adobe CLI timeouts](adobe-cli-timeouts.md)
-- [Error Logging System](../systems/error-logging.md)
-- [Project Structure](../architecture/overview.md)
-
+- [Adobe CLI timeouts](adobe-cli-timeouts.md) — when a slow `aio` call looks like a
+  failure
+- [`../architecture/overview.md`](../architecture/overview.md)
