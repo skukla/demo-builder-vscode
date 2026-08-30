@@ -42,8 +42,15 @@ module.exports = {
       // otherwise crawl the whole repo — including agent worktrees under
       // `.claude/worktrees/`, which carry stale duplicate copies of every test.
       // Ignore them so runs are deterministic regardless of in-flight worktrees.
-      testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/worktrees/'],
-      modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
+      testPathIgnorePatterns: [
+          '/node_modules/',
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
+      modulePathIgnorePatterns: [
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
       transform: {
         '^.+\\.ts$': ['@swc/jest', {
           jsc: {
@@ -98,8 +105,15 @@ module.exports = {
       ],
       // See node project: ignore agent worktrees so their stale duplicate test
       // copies don't run against the live source via the `@/` aliases.
-      testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/worktrees/'],
-      modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
+      testPathIgnorePatterns: [
+          '/node_modules/',
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
+      modulePathIgnorePatterns: [
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
       transform: {
         '^.+\\.(ts|tsx)$': ['@swc/jest', {
           jsc: {

@@ -71,6 +71,30 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
         expect(row).not.toBeNull();
     });
 
+    it('the handbook states the same two counts as CLAUDE.md does', () => {
+        // The handbook lists the enforcement layers with counts of its own. Written
+        // in prose, unchecked, and wrong within the hour of being edited — the fifth
+        // instance of this failure found on 2026-08-30, and the reason it is pinned.
+        const hb = readFileSync(join(REPO_ROOT, 'docs/development/handbook.md'), 'utf8');
+        const suites = hb.match(/(\d+) in `tests\/sop\/`/);
+        const hooks = hb.match(/(\d+) rules in `\.claude\/hooks\/rules\/`/);
+        expect({ suites: suites?.[1], hooks: hooks?.[1] }).toEqual({
+            suites: String(readdirSync(__dirname).filter((f) => f.endsWith('.test.ts')).length),
+            hooks: String(readdirSync(HOOK_RULES_DIR).filter((f) => f.endsWith('.rule')).length),
+        });
+    });
+
+    it('the stated hook-rule count equals the rules on disk', () => {
+        // Added 2026-08-30 with the tenth rule, when CLAUDE.md still said nine.
+        // The suite count below was pinned; this one was not, so the same class of
+        // unchecked prose count had gone stale in the row directly above it.
+        const claimed = Number(
+            readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-tool-call\s*\|\s*(\d+) hook rules/)![1]
+        );
+        const onDisk = readdirSync(HOOK_RULES_DIR).filter((f) => f.endsWith('.rule')).length;
+        expect({ claimed, onDisk }).toEqual({ claimed: onDisk, onDisk });
+    });
+
     it('the stated count equals the suites in tests/sop/', () => {
         const claimed = Number(
             readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/)![1]

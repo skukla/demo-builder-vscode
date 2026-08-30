@@ -476,3 +476,81 @@ describe('secret-files rule — public repo defense-in-depth', () => {
         expect(r.code).toBe(0);
     });
 });
+
+/**
+ * EVERY rule is reachable — the pre-filter admits at least one payload it blocks.
+ *
+ * WHY THIS EXISTS, from the same mistake made twice. The router opens with a
+ * cheap substring gate: if the payload contains none of a listed set of tokens it
+ * exits before any rule is sourced. That gate is hand-maintained, and a rule whose
+ * token is missing NEVER RUNS — while looking exactly like a rule that simply
+ * never matched. Nothing distinguishes the two from the outside.
+ *
+ * It happened to `12-unquoted-glob` (gating on `--exclude=` silently dropped every
+ * `--exclude-dir=` call) and again on 2026-08-30 to `13-piped-exit-code`, which was
+ * written, reviewed, and proved dead by its own harness before anyone noticed the
+ * gate. The first was caught by a test written for that one rule; this generalises
+ * it so the third time fails immediately.
+ *
+ * The table is checked against the directory in BOTH directions, so a new rule
+ * cannot skip it and a deleted one cannot leave a row behind.
+ */
+describe('every rule is reachable through the pre-filter', () => {
+    const RULES_DIR = path.join(__dirname, '../../.claude/hooks/rules');
+    const REPO2 = path.resolve(__dirname, '../..');
+    const LIVE_JEST = '    1 node /repo/node_modules/.bin/jest --no-coverage';
+    const PIPE_TAIL = '| tail -5';
+    const BAD_ORDER = '2>&1 > out.txt';
+
+    /** One payload per rule that the rule MUST block. */
+    const PROBES: Record<string, () => Result> = {
+        'jest-pipe': () => run(bash(`npx jest --no-coverage ${PIPE_TAIL}`), fresh()),
+        'jest-redirect': () => run(bash(`npx jest --no-coverage ${BAD_ORDER}`), fresh()),
+        'unquoted-glob': () => run(bash('grep -rn x --include=*.css src/'), fresh()),
+        'piped-exit-code': () => run(bash('ls src | wc -l || echo none'), fresh()),
+        'commit-backtick': () => run(bash('git commit -m "fix `thing` today"'), fresh()),
+        'jest-concurrent': () =>
+            run(bash('npx jest --no-coverage > out.txt 2>&1'), fresh(), {
+                DBV_JEST_PS: psSnapshot([LIVE_JEST]),
+            }),
+        'secret-files': () =>
+            run(write(path.join(REPO2, '.env'), 'X=1'), fresh(), { CLAUDE_PROJECT_DIR: REPO2 }),
+        'reuse-first': () => run(write(path.join(REPO2, 'src/features/x/ui/BrandNew.tsx')), fresh()),
+        'webview-test-skill': () =>
+            run(edit(path.join(REPO2, 'tests/features/x/ui/Thing.test.tsx')), fresh()),
+        'adobe-docs': () => run(mcp('mcp__adobe-exl__search_experience_league'), fresh()),
+    };
+
+    /** `rule_id=` as declared inside each rule file — the name the table keys on. */
+    function idsOnDisk(): string[] {
+        return fs
+            .readdirSync(RULES_DIR)
+            .filter((f) => f.endsWith('.rule'))
+            .map((f) => {
+                const m = fs.readFileSync(path.join(RULES_DIR, f), 'utf-8').match(/^rule_id=(\S+)/m);
+                if (!m) throw new Error(`${f} declares no rule_id`);
+                return m[1];
+            })
+            .sort();
+    }
+
+    it('CONTROL: rules are found on disk and each declares an id', () => {
+        // A zero here would make every assertion below pass over an empty list —
+        // which is the same failure shape this whole describe exists to catch.
+        expect(idsOnDisk().length).toBeGreaterThan(5);
+    });
+
+    it('the probe table and the rules directory agree, in both directions', () => {
+        expect({
+            rulesWithNoProbe: idsOnDisk().filter((id) => !(id in PROBES)),
+            probesForNoRule: Object.keys(PROBES).filter((id) => !idsOnDisk().includes(id)),
+        }).toEqual({ rulesWithNoProbe: [], probesForNoRule: [] });
+    });
+
+    it.each(Object.keys(PROBES))('%s reaches its rule and blocks', (id) => {
+        const r = PROBES[id]();
+        // code 0 here means the pre-filter swallowed it — the rule never ran.
+        expect({ id, code: r.code }).toEqual({ id, code: 2 });
+        expect(r.stderr.trim().length).toBeGreaterThan(0);
+    });
+});
