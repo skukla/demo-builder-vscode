@@ -491,6 +491,7 @@
     "eds:drift": "node scripts/edsDrift.js",
     "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
     "test:mutation": "stryker run",
+    "test:mutation:sample": "stryker run stryker.pl22.config.json",
     "docs:adr-index": "node scripts/generate-adr-index.mjs",
     "docs:adr-check": "node scripts/generate-adr-index.mjs --check"
   },

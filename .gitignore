@@ -99,5 +99,5 @@ jscpd-output/
 tests/setup/console-gate-offenders.txt
 
 # Mutation testing (Stryker) — sandbox copies of the repo + generated reports
-.stryker-tmp/
+.stryker-tmp*/
 reports/mutation/

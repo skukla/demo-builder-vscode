@@ -1,0 +1,57 @@
+/**
+ * Jest config for the PL-22 mutation sample. Not used by `gate` or CI.
+ *
+ * Same reasoning as `jest.stryker.config.js` — Stryker runs the suite once per
+ * mutant in a bare node process, so the scope must be the tests that actually
+ * cover the mutated files, not the whole repo.
+ *
+ * WHY THIS FILE EXISTS RATHER THAN REUSING THE PILOT'S. The pilot config hard-codes
+ * its four test paths, and its own header warns that nothing polices the pairing
+ * with `mutate`. Running the PL-22 sample against it produced exactly what that
+ * warning predicts: the one pilot file in the sample scored 100%, every other file
+ * reported 0% with ALL 1306 mutants in the no-coverage column, and the run finished
+ * in 19 seconds. The number looked like a catastrophic coverage finding and was in
+ * fact a config that never ran those tests.
+ *
+ * The list below is DERIVED, not hand-written: every test file that references one
+ * of the mutated modules. `tests/sop/mutation-config-pairing.test.ts` now checks
+ * that this file and `stryker.pl22.config.json` still agree.
+ */
+const base = require('./jest.config.js');
+
+const node = base.projects.find((p) => p.displayName === 'node');
+
+module.exports = {
+    ...node,
+    displayName: 'stryker-pl22',
+    rootDir: __dirname,
+    testMatch: [
+        '**/tests/commands/claudeCodeFootprint.test.ts',
+        '**/tests/core/commands/commandManager.test.ts',
+        '**/tests/core/utils/mcpSocketPath.test.ts',
+        '**/tests/features/ai/server/mcpSocketDiscovery.test.ts',
+        '**/tests/features/ai/server/realSdkRegistration.test.ts',
+        '**/tests/features/ai/server/siteTools.test.ts',
+        '**/tests/features/components/services/commerceCredentialStore.test.ts',
+        '**/tests/features/components/services/commerceSecretMigration.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts',
+        '**/tests/features/eds/services/patches/codePatchPipelineHelpers.test.ts',
+        '**/tests/features/eds/services/patches/codePatchRegistry.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-adobeCLI.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-adobeCliProgress.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-byId.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-edgeCases.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-errorHandling.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-happyPath.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-nodeVersions.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-sharedUtilities.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-shellOptions.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-versionSatisfaction.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler.test.ts',
+        '**/tests/features/project-creation/services/aiBundle/homeAiContextWriter.test.ts',
+        '**/tests/features/project-creation/services/aiBundle/mcpConfigWriter.test.ts',
+        '**/tests/features/updates/services/envMerge.test.ts',
+    ],
+};

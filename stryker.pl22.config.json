@@ -1,0 +1,33 @@
+{
+    "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+    "_comment": "PL-22 — does the pilot's 93% hold OUTSIDE the four modules it measured? The seven files below were picked by a deterministic stride across all 423 source files that have a matching test (path-sorted, every 59th), so they are a spread rather than a selection. envMerge.ts is the eighth: it is a PILOT file, included as a CONTROL — if the harness no longer reproduces its known score, the other seven numbers mean nothing. See .claude/skills/mutation-test-pilot/SKILL.md for how to read a mutation score.",
+    "packageManager": "npm",
+    "testRunner": "jest",
+    "jest": {
+        "configFile": "jest.pl22.config.js",
+        "enableFindRelatedTests": true
+    },
+    "mutate": [
+        "src/commands/claudeCodeFootprint.ts",
+        "src/core/utils/mcpSocketPath.ts",
+        "src/features/ai/server/siteTools.ts",
+        "src/features/components/services/commerceCredentialStore.ts",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+        "src/features/eds/services/patches/codePatchRegistry.ts",
+        "src/features/prerequisites/handlers/installHandler.ts",
+        "src/features/updates/services/envMerge.ts"
+    ],
+    "reporters": [
+        "clear-text",
+        "json"
+    ],
+    "jsonReporter": {
+        "fileName": "reports/mutation/pl22.json"
+    },
+    "coverageAnalysis": "perTest",
+    "concurrency": 4,
+    "timeoutMS": 20000,
+    "disableTypeChecks": true,
+    "tempDirName": ".stryker-tmp-pl22",
+    "cleanTempDir": true
+}
