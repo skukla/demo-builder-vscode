@@ -1,334 +1,136 @@
-# Sidebar Feature
+# Sidebar
 
-## Overview
-
-The Sidebar feature provides contextual navigation for the Demo Builder extension using a WebviewViewProvider. Layout language matches the Project Dashboard: labeled zones, hero/quiet hierarchy, hidden-not-disabled gating.
-
-## Purpose
-
-- Display contextual navigation based on current screen
-- Provide AI access (Chat + Prompts) scoped to project context
-- Support back navigation and context switching
-
-## Architecture
+A `WebviewViewProvider` giving one persistent surface: AI access plus a utility
+row. Most of this file is layout reasoning, because the sidebar is a narrow panel
+that survives editor zoom, and nearly every obvious CSS choice here has already
+been tried and reverted.
 
 ```
 sidebar/
-├── index.ts                    # Public exports
-├── types.ts                    # Sidebar types (SidebarContext, SidebarMessageType)
-├── providers/
-│   └── sidebarProvider.ts      # WebviewViewProvider implementation
-├── handlers/
-│   └── sidebarHandlers.ts      # Message handlers
-├── ui/
-│   ├── index.tsx               # Webview entry point
-│   ├── Sidebar.tsx             # Main sidebar component
-│   ├── views/
-│   │   └── UtilityBar.tsx      # 4-icon footer row (Tools, Help, Settings, Logs)
-│   └── components/
-│       ├── index.ts            # Component exports
-│       └── AiZone.tsx          # AI icon pair (Chat + Prompts); appears in
-│                               # project mode
-└── CLAUDE.md                   # This file
+├── providers/sidebarProvider.ts   WebviewViewProvider (view id demoBuilder.sidebar)
+├── handlers/sidebarHandlers.ts    message handlers, Pattern B (return, never push)
+├── types.ts                       SidebarContext, SidebarMessageType
+└── ui/
+    ├── Sidebar.tsx                the container
+    ├── components/AiZone.tsx      Chat (a menu) + Prompts
+    └── views/UtilityBar.tsx       Tools · Help · Settings · Logs
 ```
 
-## Layout
+## One layout, every context
 
-The sidebar renders the **same layout in every context**: an `AiZone`
-(Chat + Prompts) above a `UtilityBar` (Tools + Help + Settings + Logs), vertically
-centered as a single group.
+`SidebarContext` has three shapes — `projects`, `projectsList`, `project` — and
+**none of them changes what renders.** The context is retained for the message
+protocol only.
 
-```typescript
-type SidebarContext =
-    | { type: 'projects' }                              // Projects Dashboard (no project loaded)
-    | { type: 'projectsList' }                          // Projects List home grid
-    | { type: 'project'; project: Project };            // Project Detail
-```
+All three render identically because AI is globally available: MCP is wired at the
+extension level rather than per project, so the AI zone always shows. Everything
+that used to be context-specific moved out — the wizard's progress timeline lives
+in the wizard webview's own left column, and Configure is a self-contained tab with
+its own Cancel footer. Neither is a sidebar context.
 
-`SidebarContext` is retained for the message protocol — handlers and the
-provider still send/receive a context — but it does not affect the
-rendered layout. All three contexts render identically because:
-- **AI is globally available** (MCP is wired at the extension level, not
-  per project) — the `AiZone` always renders.
-- The other previously-context-specific surfaces have moved out of the
-  sidebar entirely:
-  - The wizard's progress timeline lives inside the wizard webview's own
-    left column (`WizardContainer`'s `.wizard-timeline-column`).
-  - Configure is a self-contained webview tab with its own Cancel footer.
+Six tiles total: two in `AiZone`, four in `UtilityBar`. No dividers, no project
+name, no nav list.
 
-### Rendered layout (all contexts)
-- `AiZone` with **Chat** and **Prompts** buttons (renders when both
-  `onOpenAiChat` and `onShowPrompts` callbacks are provided — they are
-  always provided in practice).
-- `UtilityBar` in compact mode — four icons: **Tools / Help / Settings / Logs**.
-- Both groups centered as a single vertical block (`justifyContent="center"`,
-  `gap="size-400"`).
-- No dividers, no project name, no nav list. The dashboard, configure
-  webview, and wizard webview own those surfaces.
+*Safety net:* closing the Project Dashboard tab inside a project workspace
+auto-reopens the projects list, so the user is never left without a Demo Builder
+surface (`dashboard/commands/showDashboard.ts::dispose`).
 
-Safety net: when the user closes the Project Dashboard tab inside a project
-workspace, the projects list webview auto-reopens as a new tab so the user
-keeps a Demo Builder navigation surface (see
-`src/features/dashboard/commands/showDashboard.ts::dispose`).
+## AiZone
 
-## Components
+Two tiles. **Chat** is a `MenuTrigger` offering *Continue chat* / *New chat*;
+**Prompts** is a plain button opening the QuickPick. The zone label uses
+`dashboard-zone-label`, shared with the dashboard.
 
-### Sidebar
-
-Main container component that renders context-specific content.
-
-**Props:**
-- `context: SidebarContext` - Current sidebar context
-- `onNavigate: (target: string) => void` - Navigation callback
-- `onBack?: () => void` - Back navigation callback
-- `onOpenAiChat?: () => void` - Backs the Chat button in `AiZone`
-- `onShowPrompts?: () => void` - Backs the Prompts button in `AiZone`
-- (utility callbacks: `onOpenTools`, `onOpenHelp`, `onOpenSettings`, `onOpenLogs`)
-
-### AiZone
-
-Labeled sidebar zone with THREE tiles: Chat ⌄ (a menu), Prompts, Workbench.
-
-**Props:**
-- `onOpenAiChat: () => void` — "Continue chat". Routes to
-  `demoBuilder.openAiExperience` (opens or focuses the Claude terminal,
-  resuming via `claude --continue`).
-- `onShowPrompts: () => void` — the Prompts tile. Routes to
-  `demoBuilder.showPromptsPicker` (shows the prompt QuickPick).
-- `onNewAiChat?: () => void` — OPTIONAL "New chat". Routes to
-  `demoBuilder.newAiChat`, which starts a FRESH conversation. Supplying it is
-  what turns the Chat tile into a menu; without it the tile stays a plain
-  button, so callers predating the menu are unaffected.
-
-**Rendering:**
-- Zone label "AI" (small caps via `dashboard-zone-label`).
-- Chat tile (`MagicWand` icon + label) — a `MenuTrigger` offering
-  **Continue chat** / **New chat**. NO chevron: tried twice and reverted
-  2026-08-24. The tile is a 64px `flex-direction: column` box holding an 18px
-  icon and an 11px label, with no room for a second element on either line. As a
-  third child the chevron became its own row; inline beside the label it squeezed
-  the text until `overflow-wrap: anywhere` broke it to one character per line.
-- Prompts tile (`Chat` icon + label) — plain button, opens the QuickPick.
-- Workbench tile (`Beaker` icon + label) — plain button, opens the Prompt
-  Workbench. The beaker is the same glyph the simulate vocabulary uses on the
-  prompt card's kebab and in the status bar, so one concept keeps one symbol.
-
-**Why Chat is a menu, not a third tile.** Continuing and starting fresh are two
-ways to do one thing, so they live behind one affordance — the same shape as the
-projects toolbar's `New ⌄` button (`ProjectsDashboard.tsx`). A third flat tile
-read as a third feature and pushed the six-tile stack past the panel at editor
-zoom.
-
-**The Prompt Workbench WAS a third tile, and is not any more.** It moved to
-`feature/evaluation-mode-dry-run` on 2026-08-26 (AI-3b) with the rest of the
-prompt-evaluation surface, so AiZone is back to two tiles: Chat and Prompts.
-
-The argument it settled still stands and is why the breakpoint is 640px, not
-600px. Two earlier readings called a third tile impossible on the arithmetic —
-"a seventh tile needs 596px against a 600px breakpoint, four pixels, too thin".
-**Both missed that the stack was CENTRED**, so half the leftover space sat above
-the "AI" label doing nothing while the stack was treated as out of room. The
-owner made the call: top-align, and the slack gathers below the last tile, which
-is exactly where a new tile extends into. Keep that layout — the next tile,
-whatever it is, depends on it.
+Supplying `onNewAiChat` is what turns Chat into a menu — without it the tile stays
+a plain button, so a caller predating the menu is unaffected.
 
 **Why New chat exists at all.** Every launch otherwise resumes, and a resumed
-conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance
-it was born with, however many `AI_CONTEXT_VERSION` bumps ago. This is the only
-route onto the current bundle.
+conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance it
+was born with, however many `AI_CONTEXT_VERSION` bumps ago. This is the only route
+onto the current bundle.
 
-**Top-aligned, 20px above.** `.sidebar-view` uses `justify-content: flex-start`
-so the leftover vertical space gathers BELOW the last tile instead of being split
-above and below it. That is what makes room for tiles without touching the tile
-size. Three versions, each with a reason: `padding-top: 80px` (fixed, had to be
-re-derived per tile count) → `safe center` (self-adjusting, but split the slack)
-→ `flex-start` (self-adjusting AND the slack is usable).
+**Why Chat is a menu rather than a third tile.** Continuing and starting fresh are
+two ways to do one thing, so they sit behind one affordance. A third flat tile read
+as a third feature and pushed the stack past the panel at editor zoom.
 
-`safe` is no longer needed and its hazard goes with it: plain `center` overflowed
-a too-short panel in BOTH directions and pushed the first tile above the scroll
-origin; `flex-start` can only overflow downward, into `.sidebar-provider`'s
-scroll.
+**No chevron on the Chat tile — tried twice, reverted 2026-08-24.** The tile is a
+64px column holding an 18px icon and an 11px label, with no room for a second
+element on either line. As a third child the chevron became its own row; inline
+beside the label it squeezed the text until `overflow-wrap: anywhere` broke it to
+one character per line.
 
-*This paragraph described the 80px offset until 2026-08-25, long after the CSS
-stopped doing it, and the threshold comment cited the 572px figure that offset
-produced. Both corrected, then corrected again when the tile landed.*
+A **Prompt Workbench** was a third tile until 2026-08-26, when it moved to the
+prompt-evaluation branch with the rest of that surface.
 
-**Layout — one column, wrapping 2-up only when short.** Tiles live in
-`.sidebar-tile-grid`, a plain div (not a Spectrum `Flex` — width gotcha). Default
-is one per row, the original look. Under `@media (max-height: 640px)` they wrap
-two per row: stacked, each tile costs 72px, so the roomy layout needs 600px for
-SEVEN tiles and Logs was being clipped on a zoomed panel; wrapped, seven take
-~380px, and an eighth fills the slot beside the seventh without adding a row.
+## The layout rules, and why each one is not the obvious choice
 
-**The 640px threshold is DERIVED, not eyeballed** — it must exceed the height the
-roomy layout actually needs, or the last tile is clipped in the gap between the
-two modes (at 560px it was, by ~12px). Adding tiles means recomputing it, ~72px
-per tile:
+**Top-aligned, not centred.** `.sidebar-view` sets `justify-content: flex-start`
+with `padding-top: 20px`, so leftover vertical space gathers BELOW the last tile
+instead of being split above and below it. That slack is exactly where a new tile
+extends into.
+
+Three versions, each with a reason: `padding-top: 80px` (fixed, had to be re-derived
+per tile count) → `safe center` (self-adjusting, but split the slack) → `flex-start`
+(self-adjusting *and* the slack is usable). Dropping `safe` also dropped its hazard:
+plain `center` overflowed a short panel in BOTH directions and pushed the first tile
+above the scroll origin, where `flex-start` can only overflow downward into the
+provider's scroll.
+
+This is also what settled an argument twice decided wrongly. Two earlier readings
+called a third tile impossible on the arithmetic — "a seventh tile needs 596px
+against a 600px breakpoint, four pixels, too thin". **Both missed that the stack was
+CENTRED**, so half the leftover space sat above the label doing nothing while the
+stack was treated as out of room.
+
+**One column, wrapping 2-up only when short.** Tiles live in `.sidebar-tile-grid` —
+a plain div, not a Spectrum `Flex`, because of the 450px width constraint. Default
+is one per row. Under `@media (max-height: 640px)` they wrap two per row.
+
+**The 640px threshold is DERIVED, not eyeballed.** It must exceed the height the
+roomy layout actually needs, or the last tile is clipped in the gap between the two
+modes — at 560px it was, by about 12px. `custom-spectrum.css` points at this file
+for the arithmetic, so it lives here:
 
 ```
 content = 32 (padding) + per zone: 18 (label) + 8 + rows*64 + (rows-1)*8, + 24 between zones
-6 tiles -> 1-up 524px | 2-up 308px      8 tiles -> 1-up 672px | 2-up 384px
-7 tiles -> 1-up 600px | 2-up 380px      <- TODAY, against a 640px breakpoint
+
+6 tiles -> 1-up 524px | 2-up 308px      <- TODAY
+7 tiles -> 1-up 600px | 2-up 380px
+8 tiles -> 1-up 672px | 2-up 384px
 ```
 
-Centring does not remove the need for the breakpoint: it balances the space that
-exists, while the wrap is what makes the stack FIT in the first place.
+**The breakpoint is currently conservative by one tile.** It was derived when there
+were seven tiles and needed 600px; the Workbench left and nobody recomputed. Six
+tiles need 524px, so the panel wraps to 2-up earlier than it has to. Safe, but if
+you add a tile, recompute from the table rather than assuming 640 still fits.
 
-**Sizing — fixed px, deliberately.** Tiles are a fixed 64px and must NOT be made
-viewport-relative. `clamp(40px, 7.5vh, 64px)` was tried and reverted on
-2026-08-24: `vh` measures the panel in CSS px, and editor zoom makes a CSS px
-physically larger, so the viewport measured in them shrinks as you zoom IN. The
-tiles shrank while every px-sized neighbour grew, and labels began wrapping
-("Prompt / s") beside full-size project cards. Fixed px is what holds them in
-proportion, because the rest of the UI is px too. Where the stack exceeds a short
-panel at heavy zoom, `.sidebar-provider` scrolls — the correct degradation, and
-strictly better than the clipping it used to do.
+**Fixed px, deliberately — do NOT make tiles viewport-relative.**
+`clamp(40px, 7.5vh, 64px)` was tried and reverted on 2026-08-24. `vh` measures the
+panel in CSS px, and editor zoom makes a CSS px physically larger, so the viewport
+measured in them *shrinks as you zoom IN*. The tiles shrank while every px-sized
+neighbour grew, and labels began wrapping ("Prompt / s") beside full-size project
+cards. Fixed px holds them in proportion because the rest of the UI is px too.
+Where the stack exceeds a short panel at heavy zoom, the provider scrolls — the
+correct degradation, and strictly better than the clipping it replaced.
 
-### UtilityBar
+## Messages
 
-Four-icon horizontal utility row. AI is **not** here — it lives in `AiZone`.
+Handlers follow Pattern B: they return a result, never push a message back.
 
-**Props:**
-- `onOpenTools?: () => void` — Tools icon (Wrench)
-- `onOpenHelp?: () => void` — Help icon
-- `onOpenSettings?: () => void` — Settings icon
-- `onOpenLogs?: () => void` — Logs icon (ViewList); reuses `toggleLogsPanel`
-- `compact?: boolean` — auto height instead of `100%` (for footer placement)
+| Message | Direction | Payload |
+|---------|-----------|---------|
+| `getContext` | UI → Extension | — (answered by `contextResponse`) |
+| `contextResponse` / `contextUpdate` | Extension → UI | `{ context }` |
+| `setContext` | UI → Extension | `{ context }` |
+| `navigate` | UI → Extension | `{ target }` |
+| `back` | UI → Extension | — |
+| `openAiChat` | UI → Extension | routes to `demoBuilder.openAiExperience` |
+| `showPrompts` | UI → Extension | routes to `demoBuilder.showPromptsPicker` |
+| `openLogs` | UI → Extension | routes to `toggleLogsPanel` |
 
-Buttons render only when their callback prop is provided.
+## Related
 
-## Provider
-
-### SidebarProvider
-
-Implements `vscode.WebviewViewProvider` for the sidebar.
-
-**View ID:** `demoBuilder.sidebar`
-
-**Methods:**
-- `resolveWebviewView()` - Called when sidebar needs to be resolved
-- `sendMessage(type, data)` - Send message to webview
-- `updateContext(context)` - Update sidebar context
-
-## Handlers
-
-All handlers follow **Pattern B** (return values, not sendMessage):
-
-### handleNavigate
-
-Handles navigation requests.
-
-```typescript
-const result = await handleNavigate(context, { target: 'projects' });
-// { success: true }
-```
-
-### handleGetContext
-
-Returns current sidebar context.
-
-```typescript
-const result = await handleGetContext(context);
-// { success: true, data: { context: { type: 'projects' } } }
-```
-
-### handleSetContext
-
-Sets sidebar context (used by commands to push a new context to the webview).
-
-```typescript
-const result = await handleSetContext(context, { context: { type: 'projectsList' } });
-// { success: true }
-```
-
-## Message Types
-
-| Message | Direction | Payload | Response |
-|---------|-----------|---------|----------|
-| `getContext` | UI → Extension | - | `contextResponse` |
-| `contextResponse` | Extension → UI | `{ context }` | - |
-| `contextUpdate` | Extension → UI | `{ context }` | - |
-| `navigate` | UI → Extension | `{ target }` | - |
-| `back` | UI → Extension | - | - |
-| `openAiChat` | UI → Extension | - | Routes to `demoBuilder.openAiExperience` |
-| `showPrompts` | UI → Extension | - | Routes to `demoBuilder.showPromptsPicker` |
-| `openLogs` | UI → Extension | - | Routes to `toggleLogsPanel` (lifecycle) |
-| `setContext` | UI → Extension | `{ context }` | - |
-
-## Styling
-
-Uses existing design system:
-- React Spectrum components (Flex, Text, ActionButton, Divider)
-- VS Code theme variables
-- Spectrum design tokens
-- `sidebar-zone-label` class for zone headers (matches dashboard's
-  `dashboard-zone-label` pattern)
-
-## Testing
-
-Tests located in `tests/features/sidebar/`:
-
-```
-tests/features/sidebar/
-├── testUtils.ts                          # Shared test utilities
-├── handlers/
-│   └── sidebarHandlers.test.ts           # Handler tests
-├── providers/
-│   └── sidebarProvider.test.ts           # Provider tests
-├── integration/
-│   ├── extensionActivation.test.ts       # Activation wiring
-│   └── navigationCommands.test.ts        # Navigation routing
-└── ui/
-    ├── Sidebar.test.tsx                  # Main component tests
-    └── views/
-        ├── UtilityBar.test.tsx           # Utility bar tests
-        └── views-removal.test.ts         # Legacy view-removal regression
-```
-
-## Dependencies
-
-- `@/core/state/stateManager` - State management
-- `@/core/logging` - Logging
-- `@/types/base` - Project interface
-- VS Code WebviewViewProvider API
-- React Spectrum components
-
-## Related Features
-
-- **projects-dashboard** - Main content when sidebar shows projects context
-- **project-creation** - Wizard webview that hosts its own progress timeline (no sidebar coupling)
-- **dashboard** - Project detail screen
-- **commands/openInClaude.ts** - Backs `demoBuilder.openAiExperience`,
-  invoked by AiZone's Chat button
-- **commands/showPromptsPicker.ts** - Single-purpose prompt picker, invoked
-  by AiZone's Prompts button
-- **dashboard/handlers/aiHandlers.ts** - Provides `readMergedAiPrompts` for
-  the prompt picker
-
-## Package.json Configuration
-
-The sidebar must be registered in `package.json`:
-
-```json
-"views": {
-  "demoBuilder": [
-    {
-      "id": "demoBuilder.sidebar",
-      "name": "Demo Builder",
-      "type": "webview"
-    }
-  ]
-}
-```
-
-## Build Configuration
-
-The sidebar entry point is registered in `esbuild.config.js` (the project uses
-esbuild, not webpack):
-
-```javascript
-const WEBVIEW_ENTRIES = {
-    // ... existing entries
-    sidebar: 'src/features/sidebar/ui/index.tsx',
-};
-```
+- [`../../commands/CLAUDE.md`](../../commands/CLAUDE.md) — `openInClaude` and
+  `showPromptsPicker`, which the AI tiles dispatch to
+- `spectrum-webview-ui` skill — the Flex width constraint and the other
+  webview layout traps this file keeps running into
