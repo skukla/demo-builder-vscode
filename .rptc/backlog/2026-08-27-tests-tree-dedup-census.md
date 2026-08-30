@@ -110,3 +110,5 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  chore(census): refresh craft-census.json for the merged lane C1 state (`0324961d2`)
 - 2026-08-30  docs(handoff): lane C1 complete — 14 families, and the record updated (`2caf02d32`)
 - 2026-08-30  refactor(tests): stopDemo extracts only what its three suites AGREE on — lane C2 opens (`dba5c486c`)
+- 2026-08-30  refactor(tests): 12 more families extract only what they AGREE on — lane C2 (`ed1760fa0`)
+- 2026-08-30  fix(tests): drop stopDemo from the family-setup ledger (`c88d3df42`)

@@ -23,7 +23,7 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **lane A DONE; lane C1 DONE 2026-08-30**; C2 open | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C1 shipped 14 families: cross-file clone pairs 140 -> 124, duplicated lines 6,739 -> 5,950 (same basis both times). 3 of the 17 turned out not to be single mechanical merges and moved to C2. C2 (26 divergent families + those 3) is open — judgment before merge |
+| 3b | Duplication lanes (PL-9) | **lane A DONE; C1 DONE; C2 partly done 2026-08-30** | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. C1 shipped 14 families (clone pairs 140 -> 124, lines 6,739 -> 5,950). C2 then shipped 13 more WITHOUT resolving any disagreement, by extracting only the mocks every spec in a family already declared identically and leaving disputed ones inline (110 pairs, 5,331 lines). What remains is the genuinely contested residue: ~26 families that share nothing all their specs agree on, and 8 that failed their own gate and were auto-reverted |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **DONE 2026-08-30** | `test-strategy-scan` skill (runs the three censuses + the verdict table saying which columns track defects) and the Stryker pilot (`npm run test:mutation`, baseline 93.37% over 166 mutants in 33s). Both registered and both reached by `npm run sweep` / `cut-release` |
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
@@ -33,10 +33,14 @@ it were the program.
 
 **8 of 10 done. Two remain**, and they are different KINDS of thing:
 
-- **Lane C2 (inside phase 3b)** — 29 test families whose shared setup has DRIFTED.
-  Real work, but not mechanical: merging drifted mocks changes what a suite tests
-  while every suite stays green. Each family needs a decision about which version is
-  correct BEFORE the merge, which is why C1 was finished and C2 was not started.
+- **Lane C2 (inside phase 3b)** — PARTLY DONE. The tractable half shipped 2026-08-30
+  via a move that takes no decision at all: per family, extract only the mocks EVERY
+  spec already declares IDENTICALLY, leave every disputed one inline. 13 families,
+  619 duplicated lines, behaviour unchanged by construction rather than by inspection.
+  What is left is the residue where that move buys nothing — families whose specs
+  agree on nothing, plus 8 that failed their own gate and were auto-reverted. Those
+  DO need a per-family decision about which version of a mock is correct, and that
+  decision changes what the tests exercise while every suite stays green.
 - **Phase 9 (PL-22)** — a question, not work. Whether the 93% mutation score holds
   outside the four modules we already trusted. Cheap to answer now the tool exists,
   and the answer decides whether any further test-strengthening is justified.
