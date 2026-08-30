@@ -15,8 +15,8 @@ not route around it.
 | 5 | Hand logic a bundle of services | The feature's **`create...Deps`** file | The only construction site outside `extension.ts`; lives beside its consumer | architecture-rules: construction-boundary |
 | 6 | Answer a question from existing data | An **accessor** | Reads only. NEVER creates/writes on a miss | mechanical for tools; review rule elsewhere |
 | 7 | Build screen UI | A **component** in the feature's `ui/` | Feature: `ui/components/`. A wizard/step body: `ui/steps/`. Promote to `core/ui/components/{category}/` (feedback, forms, layout, navigation, selection, ui) only at the SECOND consumer | import-boundary lint + `tests/sop/component-extraction.test.ts` |
-| 8 | Reuse screen behavior | A **hook** | Feature: `ui/hooks/`. Shared: `core/ui/hooks/`, again only at the second consumer. Stable references for array/object args (module-level `EMPTY`) — inline literals re-render forever | architecture-rules: hook-stable-refs |
-| 9 | Add feature configuration | JSON in the feature's `config/` | Loaded through `ConfigurationLoader` | architecture-rules: config-loader |
+| 8 | Reuse screen behavior | A **hook** | Feature: `ui/hooks/`. Shared: `core/ui/hooks/`, again only at the second consumer. Stable references for array/object args (module-level `EMPTY`) — inline literals re-render forever | webview-architecture-rules §5 (hooks are webview code, so ADR-017 governs) |
+| 9 | Add feature configuration | JSON in the feature's `config/` | Loaded through `ConfigurationLoader` | **nothing mechanical yet** — `no-config-leaf-mocks` enforces a different rule (do not MOCK a leaf) |
 | 10 | Declare shared shapes | A types file (`src/types/` or `*.types.ts`) | No runtime code | architecture-rules: types-purity |
 | 11 | Build something two features need | `core/` | Only at the second consumer — never speculatively | import rules + review |
 

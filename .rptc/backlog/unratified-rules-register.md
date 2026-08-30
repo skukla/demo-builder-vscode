@@ -7,117 +7,104 @@ value: high
 status: active
 ---
 
-# Rules stated as law in a CLAUDE.md that no handbook, ADR or check backs
+# Rules stated as law that no handbook, ADR or check backs
 
-The register for the documentation synthesis. Every per-directory `CLAUDE.md`
-carries rules; some are ratified conventions, and some are one directory's prose
-wearing a "❌". Until each is adjudicated, this file is where they live.
+The register for the documentation synthesis. Documents across this repo state
+rules; some are ratified conventions, and some are one file's prose wearing a "❌".
+Until each is adjudicated, this is where they live.
 
 ## The discipline — discovery is not adjudication
 
-Found while rewriting `src/core/CLAUDE.md`: a rule stated as absolute law, present
-in no handbook entry, no ADR and no convention, enforced by nothing, and already
-violated seven times. The first response was to rewrite it as "intent, not fact",
-which demoted a rule without the authority to do so and left it neither enforced
-nor removed — the soft deprecation this repo forbids. The owner caught it.
+Found while rewriting `src/core/CLAUDE.md`: a rule stated as absolute law, in no
+handbook entry, no ADR and no convention, enforced by nothing, and already violated
+seven times. The first response was to rewrite it as "intent, not fact" — which
+demoted a rule without the authority to do so and left it neither enforced nor
+removed, the soft deprecation this repo forbids. The owner caught it.
 
 So, for the rest of the synthesis:
 
-1. **Never weaken a rule you find.** Leave the file's statement exactly as it
-   stands. A rule in a weakened state is worse than either a ratified one or a
-   deleted one, because nothing signals which it is.
-2. **Record it here** with the four facts that decide it (below). Gathering them is
-   mechanical and takes about a minute.
-3. **Keep rewriting everything else in the file.** A rule pending adjudication does
-   not block the rest of the document.
-4. **Adjudicate in one pass at the end**, so seven rules get one consistent
-   decision rather than seven inconsistent ones.
+1. **Never weaken a rule you find.** Leave the statement exactly as it stands. A
+   rule in a weakened state is worse than a ratified or a deleted one, because
+   nothing signals which it is.
+2. **Record it here** with the four facts that decide it.
+3. **Keep rewriting everything else in the file.** A pending rule blocks nothing.
+4. **Adjudicate in one pass at the end**, so N rules get one consistent decision
+   rather than N inconsistent ones.
 
-Nothing is removed from any file by this process. The statement stays put; only
-this register grows.
+Nothing leaves any file by this process. The statement stays; only this register
+grows.
 
 ## The four facts
 
-For each rule, answer these before proposing anything:
+**Stated where** (file and line) · **Ratified?** (handbook, ADR, or conventions
+index) · **Enforced?** (checked by PLANTING the violation, never by grepping for a
+keyword) · **Obeyed?** (does the code follow it today).
 
-| | |
-|---|---|
-| **Stated where** | file and line |
-| **Ratified?** | does the handbook, an ADR, or the conventions index carry it |
-| **Enforced?** | is there a test, hook, or lint rule — checked by PLANTING the violation, never by grepping for a keyword |
-| **Obeyed?** | does the code actually follow it today, and if not, how many exceptions |
-
-The fourth is the one that changes the answer most often, and the one nobody
-checks. A rule the code already violates is not a rule.
+The fourth is the one nobody checks and the one that most often changes the answer.
+**A rule the code already violates is not a rule.**
 
 ## Outcomes
 
-Exactly two, and "leave it as prose" is not among them:
+Exactly two. "Leave it as prose" is the state this register exists to end.
 
 - **Ratify** — into the handbook, with an enforcer, and a shrink-only ledger for
   whatever predates it. Both scorecards and the generated index move together.
-- **Delete** — remove the claim outright and say in the file that the thing is
-  unrestricted.
+- **Delete** — remove the claim and say in the file that the thing is unrestricted.
 
 ## The register
 
-| # | Rule | Stated where | Ratified? | Enforced? | Obeyed? | Outcome |
+| # | Rule | Stated where | Ratified | Enforced | Obeyed | Outcome |
 |---|---|---|---|---|---|---|
-| 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | no → **now yes** | no → **now yes** | no, 7 crossings | **Ratified** 2026-08-30. Handbook convention + `layerDirection` ledger, shrink-only |
-| 2 | Extract shared UI at the **third** instance — **but at the second** when the same behaviour has already been fixed separately on two surfaces, because that is demonstrated drift | `src/core/ui/components/CLAUDE.md` | **no** — absent from the handbook and the conventions index | **no** | unmeasured | **Pending** |
+| 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | now **yes** | now **yes** | no — 7 crossings | **Ratified** 2026-08-30 · `layerDirection` ledger, shrink-only |
+| 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | no | no | unmeasured | Pending |
+| 3 | A destructive tool requires `confirm: true` — deletes, or pushes to a live site. Merely mutating is deliberately not the bar | `docs/systems/mcp-server.md` §10 | no | partly — the registrar checks the flag, nothing checks the right tools carry it | unmeasured | Pending |
+| 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | no | **yes** — `responseEnvelope.test.ts` | yes | Pending — enforced but uncatalogued |
+| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | no | no | unmeasured | Pending |
+| 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | Pending |
+| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | no | no | unmeasured | Pending |
+| 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | unmeasured | Pending |
 
-| 3 | A destructive tool requires `confirm: true` — destructive meaning it deletes, or pushes/publishes to a live site. Merely mutating is deliberately NOT the bar | `docs/systems/mcp-server.md` §10 | **no** | partly — the descriptor registrar checks the flag, but nothing checks that the right tools carry it | unmeasured | **Pending** |
-| 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | **no** | **yes** — `responseEnvelope.test.ts`, both at runtime and by source scan | yes | **Pending** — enforced but uncatalogued |
-| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | **no** | no | unmeasured | **Pending** |
+### Which of these are cheap, and which need a measurement
 
-| 6 | Naming: commands `camelCase`, components `PascalCase`, utilities `camelCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | **no** — absent from both the handbook and the generated index | **no** | unmeasured, but visibly followed | **Pending** |
-| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md` | **no** | **no** | unmeasured | **Pending** |
-
-**Row 7 is the one with teeth.** A stale child selection is how an operation targets
-the wrong resource — pick a different Adobe project, keep the old workspace, and the
-next deploy goes somewhere nobody chose. That failure mode is exactly what
-`withOrgContext` and the org-mismatch guard exist for, so the rule is real; it just
-has no home and no check. Worth measuring how many selection handlers actually clear
-their dependents before deciding how to ratify it.
-
-Row 6 is the opposite: low stakes, visibly obeyed, and cheap to ratify or to drop as
-something the codebase enforces socially. Do not spend the same effort on both.
-
-**Rows 3–5 are a different shape from 1 and 2, and the difference matters.** These
-are not one directory's private opinion — they are stated in a document that calls
+**Rows 3–5 are cataloguing, not judgement.** They are stated in a document calling
 them conventions new tools *must* follow, and row 4 already has a build-failing
-enforcer. So the question for them is not "is this real" but "why is a real,
-enforced convention absent from the place that catalogues conventions". Row 4 in
-particular means the scorecard undercounts what this codebase actually enforces.
+enforcer. The question is not "is this real" but "why is an enforced convention
+absent from the place that catalogues conventions". Row 4 means the scorecard
+undercounts what this codebase actually enforces — as `Pattern B` did before it was
+catalogued on 2026-08-30.
 
-Adjudicating them is mostly a cataloguing job rather than a judgement call, which
-is why they should be quick — but they still go through the same pass, because
-deciding three at once beats deciding them one at a time in three different files.
+**Row 7 has teeth and is stated in three places.** A stale child selection is how an
+operation targets the wrong resource: change the Adobe project, keep the old
+workspace, and the next deploy goes somewhere nobody chose. That is the failure
+`withOrgContext` and the org-mismatch guard exist for. Measure how many selection
+handlers actually clear their dependents before deciding how to ratify it.
 
-**Row 2 detail.** The plain Rule of Three is ordinary practice and would not be worth
-a row. The *override* is the decision: it lowers the threshold to two on evidence of
-drift, which is a genuine judgement about when duplication is proven rather than
-suspected. It is stated once, in one directory's prose, and nothing carries it
-anywhere else.
+**Row 8 is an enforcement gap, not a rule gap.** The rule is real and sits in the
+placement table every agent is pointed at — but the enforcer named beside it was
+never written, so the table asserted a guarantee it did not have. The claim now says
+so; writing the check is the open work. `where-code-goes.md` sets the standard
+itself: if a rule and its test disagree, that is a bug in one of them.
 
-Adjudicating it needs an answer to a question nobody has asked yet: **is it
-obeyed?** That means finding cases where the same behaviour was fixed twice on two
-surfaces and checking whether it then got extracted. Until that is measured, ratify
-and delete are both guesses — which is exactly why it sits here rather than being
-decided in passing.
+**Row 2 needs the obeyed answer first.** The plain Rule of Three is ordinary
+practice. The *override* is the decision, and adjudicating it means finding cases
+where one behaviour was fixed twice on two surfaces and checking whether extraction
+followed. Until that is measured, ratify and delete are both guesses.
 
-Files assessed so far: `src/commands/CLAUDE.md` (no unratified rules found — its
-content was stale rather than prescriptive), `src/core/CLAUDE.md` (row 1).
+**Row 6 is the opposite of row 7** — low stakes, visibly obeyed, cheap either way.
+Do not spend equal effort on them.
 
-Still to assess: `src/features/CLAUDE.md`, `src/features/sidebar/CLAUDE.md`,
-`src/features/projects-dashboard/CLAUDE.md`, `src/core/ui/hooks/CLAUDE.md`,
-`src/core/ui/components/CLAUDE.md`, `docs/development/styling-guide.md`,
-`tests/README.md`, `CONTRIBUTING.md`,
-`docs/testing/test-file-splitting-playbook.md`, `docs/systems/mcp-server.md`,
-`docs/troubleshooting/*`.
+## Resolved without a row
 
-## Why this is a question, not a chore
+- **`Pattern B`** — a handler returns its result; `sendMessage` is for progress only.
+  Named in fifteen files, defined in none, and carrying a build-failing ratchet
+  (`patternBSendMessageCeiling`). Catalogued into the handbook and the glossary
+  2026-08-30. Conventions 63 → 64, enforced 57 → 58.
+- **`hook-stable-refs`** — claimed by `where-code-goes.md` as an
+  `architecture-rules` check. Real, but in `webview-architecture-rules.test.ts`,
+  because hooks are webview code and ADR-017 governs them. Label corrected.
 
-It closes when every per-directory document has been through the synthesis and
-every row has an outcome. The count is not knowable in advance — that is the point
-of keeping the register rather than estimating.
+## Why a question, not a chore
+
+It closes when every document has been through the synthesis and every row has an
+outcome. The count is not knowable in advance — which is the point of keeping the
+register rather than estimating.
