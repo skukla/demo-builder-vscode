@@ -8,7 +8,9 @@ user interface, agents, tests.
 
 Conventions appear as callouts where they apply, like this:
 
-> **Convention.** Where a rule is stated, and what catches you if you break it.
+> **Convention.** The rule itself.
+> *Why:* one line on what it buys you.
+> Where it is stated · and what catches you if you break it.
 
 This file describes how things are today. When something changes, change it here.
 
@@ -27,11 +29,16 @@ Code does not move freely between them. A service that imports `vscode` cannot r
 webview. A React component cannot read a file. The two halves have separate rules,
 because a rule written for one is usually meaningless for the other.
 
-> **Convention.** Host code follows [ADR-015](../architecture/adr/015-dependency-architecture.md).
-> Webview code follows [ADR-017](../architecture/adr/017-webview-architecture.md).
-> Enforced by `tests/sop/architecture-rules.test.ts` and
-> `tests/sop/webview-architecture-rules.test.ts` — two enforcers, because two sets of rules.
-> *Why:* one set of rules cannot fit both — a webview has no file system, a service has no DOM.
+> **Convention.** Host code follows the dependency rules for the extension host.
+> *Why:* a service has no DOM and can reach the file system; its rules are about what it may
+> fetch. [ADR-015](../architecture/adr/015-dependency-architecture.md) ·
+> Enforced by `tests/sop/architecture-rules.test.ts`.
+
+> **Convention.** Webview code follows the webview rules.
+> *Why:* a webview has no file system and no VS Code API; its rules are about composition and
+> what crosses the message boundary.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) ·
+> Enforced by `tests/sop/webview-architecture-rules.test.ts`.
 
 ---
 
@@ -57,7 +64,7 @@ orchestrate, so they may use any feature.
 
 > **Convention.** `@/core/*` and `@/types` are imported through their barrel file.
 > Features are imported directly, and get no barrel.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · **not enforced.**
+> [ADR-022](../architecture/adr/022-barrel-files.md) · **Not enforced.**
 > *Why:* core is a shared surface worth curating; a feature barrel mostly makes cross-feature imports easy, which is the thing to discourage.
 
 ---
@@ -88,8 +95,20 @@ covers the single exception.
 
 > **Convention.** A service takes one dependency bundle per feature. Plain data —
 > configuration, identifiers, callbacks — arrives as ordinary arguments.
-> [ADR-021](../architecture/adr/021-dependency-envelope.md) · **not enforced.**
+> [ADR-021](../architecture/adr/021-dependency-envelope.md) · **Not enforced.**
 > *Why:* six services once received the same collaborator six different ways, so none could be changed without touching all six.
+
+> **Convention.** Time values come from the shared `TIMEOUTS` constants, never a literal.
+> *Why:* a bare `5000` says nothing about which timeout it is or why that length.
+> Enforced by `tests/sop/magic-timeouts.test.ts`.
+
+> **Convention.** Sleeps route through the shared `sleep()`.
+> *Why:* a hand-rolled sleep cannot be faked, so it makes tests slow and flaky.
+> Enforced by `tests/sop/no-bare-sleep.test.ts`.
+
+> **Convention.** A complex inline expression becomes a named function.
+> *Why:* the name is the explanation. Without it every reader re-derives the intent.
+> Enforced by `tests/sop/complex-expressions.test.ts`.
 
 ### When to write a class
 
@@ -130,6 +149,16 @@ not new code. The mechanism generally exists already and takes another entry.
 > template suites under `tests/templates/`.
 > *Why:* the registries are user-facing behaviour. A malformed entry fails at runtime, in someone's demo.
 
+> **Convention.** A credential environment variable is registered as a secret.
+> *Why:* an unregistered one is written in the clear and read back by anything.
+> Enforced by `tests/sop/credential-env-vars-registered.test.ts`.
+
+> **Convention.** A setting that receives credentials is scoped to the user, never the
+> workspace.
+> *Why:* a workspace-scoped credential setting gets committed by someone eventually, and
+> this repository is public.
+> Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
+
 > **Where to start.** [component-system.md](../architecture/component-system.md) ·
 > [prerequisites-system.md](../systems/prerequisites-system.md)
 
@@ -156,7 +185,8 @@ every time" and nothing tells you.
 
 > **Convention.** A session accessor is the only construction site outside the root, and
 > only for something whose state must outlive one call.
-> [ADR-020](../architecture/adr/020-session-accessors.md) · tracked in the exemption ledger.
+> [ADR-020](../architecture/adr/020-session-accessors.md) · Enforced by the exemption ledger
+> in `tests/sop/architecture-rules.exemptions.json`.
 > *Why:* two instances mean two caches and neither is used. One instance is the entire benefit.
 
 > **Convention.** Anything that runs repeatedly builds nothing stateful.
@@ -183,7 +213,7 @@ handler that is not awaited returns a promise to the webview, which will not be 
 meant.
 
 > **Convention.** A handler translates and returns. It never renders.
-> [ADR-015](../architecture/adr/015-dependency-architecture.md).
+> [ADR-015](../architecture/adr/015-dependency-architecture.md) · **Not enforced.**
 > *Why:* a handler that renders cannot be called by anything else — including an agent, which needs the same capability.
 
 > **Convention.** Message shapes come from a typed file, never written from memory into a
@@ -214,9 +244,32 @@ declared in one place, with vendor styles below ours.
 > *Why:* it puts the wiring in one readable place per surface, and keeps components testable without a running extension.
 
 > **Convention.** Vendor CSS sits in the lowest layer. `!important` is not how you win a
-> specificity argument. [ADR-018](../architecture/adr/018-css-architecture.md) ·
-> **not enforced.**
+> specificity argument. [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced.**
 > *Why:* layers settle specificity by declaration rather than by escalation, so nobody needs `!important` to win.
+
+> **Convention.** No inline styles.
+> *Why:* they escape the cascade layers, so they cannot be themed or overridden.
+> Enforced by `tests/sop/inline-styles.test.ts`.
+
+> **Convention.** Markup repeated in three or more places becomes a component.
+> *Why:* three is where copies start drifting apart instead of being found.
+> Enforced by `tests/sop/component-extraction.test.ts`.
+
+> **Convention.** Modals are hosted in one place, not mounted wherever they are opened.
+> *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
+> Enforced by `tests/sop/modal-hosting.test.ts`.
+
+> **Convention.** A CSS class used in a bundle is styled by that bundle.
+> *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled
+> on one surface and silently bare on the next, with no error anywhere.
+> Enforced by `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** Before writing a new UI component, check whether the shared vocabulary
+> already has it.
+> *Why:* this codebase has repeatedly grown a second version of a component that already
+> existed.
+> Enforced by `.claude/hooks/rules/30-reuse-first.rule`, which interrupts at the moment you
+> create the file.
 
 > **Read before your first component.** [ui-patterns.md](ui-patterns.md) ·
 > [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
@@ -235,8 +288,8 @@ cannot be the only path. Agents gather evidence and compose reports; they do not
 fixes on their own.
 
 > **Convention.** Every capability has a human surface. MCP tools are additional.
-> [ADR-012](../architecture/adr/012-diagnostic-surfaces.md) · measured by
-> `.claude/skills/ai-coverage-scan`.
+> [ADR-012](../architecture/adr/012-diagnostic-surfaces.md) · Enforced by measurement —
+> `.claude/skills/ai-coverage-scan` reports the gap at release cuts.
 > *Why:* not everyone uses an agent, and the agent channel is the one that silently disappears.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
@@ -262,7 +315,8 @@ result. And coverage does not tell you a test would catch a bug: `npm run test:m
 breaks the code on purpose and reports what nothing noticed.
 
 > **Convention.** The three tiers, and which applies.
-> [ADR-016](../architecture/adr/016-test-strategy.md).
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
+> a judgement about what you are testing.
 > *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
 
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
@@ -275,10 +329,40 @@ breaks the code on purpose and reports what nothing noticed.
 > `npm run validate:test-file-sizes`.
 > *Why:* past that nobody reads the whole file, so tests get duplicated rather than found.
 
-> **Convention.** Never pipe jest through `tail`, `head` or `grep` — buffering makes a
-> finished run look hung. Redirect with `> file 2>&1`. Never run two jest runs at once.
+> **Convention.** A test file lives at the path mirroring the source file it covers.
+> *Why:* it is how you find the tests for a file without searching, and how a missing suite
+> becomes visible. Enforced by `tests/sop/mirror-placement.test.ts`.
+
+> **Convention.** A fixture builder name has exactly one definition.
+> *Why:* twenty-six different fakes of one object means nobody knows what the fake should be.
+> Enforced by `tests/sop/builder-uniqueness.test.ts`.
+
+> **Convention.** Do not mock a configuration leaf.
+> *Why:* the test then checks the mock rather than the shipped configuration.
+> Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
+
+> **Convention.** Do not lower one test's timeout below the file's budget.
+> *Why:* it hides a slow path instead of fixing it, and fails on a busier machine.
+> Enforced by `tests/sop/no-lowered-test-timeout.test.ts`.
+
+> **Convention.** When you change a test's structure, diff the set of things it asserts
+> before and after — and prove shared setup is load-bearing by breaking it on purpose and
+> checking the right suites fail.
+> *Why:* the failure mode of a test refactor is a suite that still passes while checking
+> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
+> is doing it.
+
+> **Convention.** Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with
+> `> file 2>&1` and read that.
+> *Why:* buffering makes a finished run look hung, and the redirect order matters — the
+> other way round produces an empty file that reads as a clean pass.
 > Enforced by `.claude/hooks/rules/10-jest-pipe.rule` and
-> `.claude/hooks/rules/15-jest-concurrent.rule`.
+> `.claude/hooks/rules/11-jest-redirect.rule`.
+
+> **Convention.** Never start a jest run while another is in flight.
+> *Why:* measured — one at a time failed nothing across ten runs; two at once failed four
+> to six suites every time, in different suites each run. A concurrent result is noise.
+> Enforced by `.claude/hooks/rules/15-jest-concurrent.rule`.
 > *Why:* both mistakes report success. A pipe hides the exit code; two concurrent runs fail suites at random.
 
 ---
@@ -292,13 +376,63 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-Now look back through this document at the callouts marked **not enforced**. Those rules
-depend on someone noticing in review, which means they will drift. That is a known gap
-rather than an oversight, and closing one means either writing an enforcer or demoting
-the rule to advice.
+**This handbook states 45 conventions. 36 of them are enforced; 9 are not.**
+
+Those nine depend on someone noticing in review, which means they will drift. That is a
+known gap rather than an oversight. Closing one means writing an enforcer, or demoting
+the rule to advice and removing it from the count.
+
+The numbers above are checked by `tests/sop/handbook-links.test.ts`, because a count
+written in prose is a claim like any other — this document says so two sections up.
+
+A convention here is **one thing you can violate, with one thing that catches you**. If a
+callout names two enforcers, it is two conventions, unless both guard the same rule.
+
+### Checking things
+
+The rules above are checked by tools. The tools are checked by these, which this
+programme learned the hard way — five separate times a measurement looked clean and was
+not.
+
+> **Convention.** Every scan declares a control: something it is known to find. A
+> detector that has silently stopped detecting reports "all clear" in exactly the same
+> words as one that verified.
+> *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
+> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
+
+> **Convention.** Capture an exit code in a variable. Never read one through a pipe.
+> *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
+> own success and hides the failure underneath.
+> **Not enforced** outside jest — the two hook rules above cover jest runs only.
+
+> **Convention.** A count that measures what code *looks like* is not a count of what is
+> wrong with it. Before working a scan's list, ask what defect it would catch and whether
+> a clean file could score badly.
+> *Why:* three measures in this repo were found to describe style rather than defects.
+> Extracting duplicated setup into a helper — plainly an improvement — made one of them
+> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
+
+> **Convention.** Before naming a cause, name the command that would prove you wrong, and
+> run that first.
+> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
+> check it. **Not enforced.**
+
+> **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
+> pattern is expanded before the command sees it, and an unquoted variable is not split
+> into separate arguments.
+> *Why:* both fail in ways that look like a clean result rather than an error — with no
+> match, zsh aborts and the command never runs at all.
+> Enforced by `.claude/hooks/rules/12-unquoted-glob.rule`.
+
+> **Convention.** Anything claiming to be an instrument is in the registry, and the
+> registry and the disk must agree in both directions. A count written in prose has
+> something checking it.
+> *Why:* two scans were once in no list at all, and a validator had been failing silently
+> for months because nothing ran it.
+> Enforced by `tests/sop/tooling-registry.test.ts`.
 
 > **Convention.** Delete obsolete code. No deprecated stubs, no accepted-but-ignored
-> options. [CLAUDE.md](../../CLAUDE.md) · measured by `.claude/skills/dead-code-scan`.
+> options. [CLAUDE.md](../../CLAUDE.md) · Enforced by measurement — `.claude/skills/dead-code-scan`.
 > *Why:* a deprecated stub still has to be read, understood and skipped by everyone who meets it.
 
 > **Convention.** Secrets live in VS Code settings, never in code. This repository is

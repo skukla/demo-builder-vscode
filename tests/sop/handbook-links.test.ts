@@ -60,6 +60,28 @@ describe('the development handbook points at things that exist', () => {
         expect(missing).toEqual([]);
     });
 
+    it('the convention scorecard matches the conventions actually stated', () => {
+        // The handbook prints "states N conventions. M of them are enforced; K are not."
+        // A count in prose is a claim, and this repo's rule is that a claim needs
+        // something keeping it true — the handbook says so itself.
+        const claim = md.match(
+            /states (\d+) conventions\. (\d+) of them are enforced; (\d+) are not/
+        );
+        expect(claim).not.toBeNull();
+        const [, total, enforced, unenforced] = claim!.map(Number);
+
+        const blocks = [...md.matchAll(/> \*\*Convention\.\*\*[\s\S]*?(?=\n\n)/g)]
+            .map((m) => m[0])
+            .filter((b) => !b.includes('The rule itself')); // the sample callout
+        const notEnforced = blocks.filter((b) => /\*\*[Nn]ot enforced/.test(b));
+
+        expect({
+            total: blocks.length,
+            enforced: blocks.length - notEnforced.length,
+            unenforced: notEnforced.length,
+        }).toEqual({ total, enforced, unenforced });
+    });
+
     it('CONTROL: the checks can actually fail', () => {
         // Proves the two assertions above are not passing because the extractors
         // return nothing. A detector that finds no candidates reports "all clear"
