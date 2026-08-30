@@ -597,20 +597,20 @@ written.
 
 ## 13. Adding a new tool
 
-1. Pick the right file in `src/features/ai/server/` (or add one). Simple
-   handler-backed actions fit the descriptor pattern (`actionDescriptors.ts`);
-   anything bespoke gets its own `registerXxxTool(server, ctxFactory)`.
-2. Declare the `inputSchema` with Zod. Add `confirm` (and `confirmName` for
-   irreversible ops) where it mutates state.
-3. In the handler: build the headless context from `ctxFactory()`, pre-flight any
-   auth (return a `needsAuth` handoff if missing), then call the **existing
-   service** — extract a headless core from the UI path if the logic is currently
-   modal-coupled. Return `asText({...})` — or `asRawText(prose)` for a refusal
-   (§10). Never build the envelope by hand; a test fails the build if you do.
-4. Register it from the `registerExtraTools` callback in `src/extension.ts`.
-5. Add a test using the `fakeServer` pattern (§14).
-6. If agents should know about it, mention it in the generated `AGENTS.md`
-   (section text in `agentsMdSections.ts`; `aiContextWriter.ts` orchestrates).
+**Invoke the `mcp-tool-authoring` skill.** It is the procedure, it is kept current,
+and it carries things this section cannot: the three declarations every tool must
+make (read-only annotation, narration phrase, consent copy and target), which tests
+pin counts and will fail when you add one, and the trap that a stub server cannot
+test registration at all — a raw JSON Schema passed as `inputSchema` once killed
+registration for *every* tool while every suite stayed green.
+
+This section used to restate the steps in shorter form. That is how a reader ends up
+following an older procedure than the one being maintained: the skill gained the
+three-declaration rule on 2026-08-25 and this list never did.
+
+What belongs *here* rather than in the skill is why the surface is shaped this way —
+§10 for the conventions a tool must satisfy, §8 for the headless context it runs in,
+and §7 for the path a call actually takes.
 
 ---
 

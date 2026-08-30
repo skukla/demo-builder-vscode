@@ -66,6 +66,21 @@ Exactly two, and "leave it as prose" is not among them:
 | 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | no → **now yes** | no → **now yes** | no, 7 crossings | **Ratified** 2026-08-30. Handbook convention + `layerDirection` ledger, shrink-only |
 | 2 | Extract shared UI at the **third** instance — **but at the second** when the same behaviour has already been fixed separately on two surfaces, because that is demonstrated drift | `src/core/ui/components/CLAUDE.md` | **no** — absent from the handbook and the conventions index | **no** | unmeasured | **Pending** |
 
+| 3 | A destructive tool requires `confirm: true` — destructive meaning it deletes, or pushes/publishes to a live site. Merely mutating is deliberately NOT the bar | `docs/systems/mcp-server.md` §10 | **no** | partly — the descriptor registrar checks the flag, but nothing checks that the right tools carry it | unmeasured | **Pending** |
+| 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | **no** | **yes** — `responseEnvelope.test.ts`, both at runtime and by source scan | yes | **Pending** — enforced but uncatalogued |
+| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | **no** | no | unmeasured | **Pending** |
+
+**Rows 3–5 are a different shape from 1 and 2, and the difference matters.** These
+are not one directory's private opinion — they are stated in a document that calls
+them conventions new tools *must* follow, and row 4 already has a build-failing
+enforcer. So the question for them is not "is this real" but "why is a real,
+enforced convention absent from the place that catalogues conventions". Row 4 in
+particular means the scorecard undercounts what this codebase actually enforces.
+
+Adjudicating them is mostly a cataloguing job rather than a judgement call, which
+is why they should be quick — but they still go through the same pass, because
+deciding three at once beats deciding them one at a time in three different files.
+
 **Row 2 detail.** The plain Rule of Three is ordinary practice and would not be worth
 a row. The *override* is the decision: it lowers the threshold to two on evidence of
 drift, which is a genuine judgement about when duplication is proven rather than
