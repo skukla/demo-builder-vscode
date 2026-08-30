@@ -103,3 +103,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): componentUpdater's two suites share one testUtils — lane C1 (`571cc0181`)
 - 2026-08-30  refactor(tests): ResetAllCommand's two suites share one testUtils — lane C1 (`63510f83a`)
 - 2026-08-30  refactor(tests): useSelectionStep's four suites share one testUtils — lane C1 (`021c31fcf`)
+- 2026-08-30  refactor(tests): diagnosticsChecks' three suites share one testUtils — lane C1 (`b6f2c7d61`)
