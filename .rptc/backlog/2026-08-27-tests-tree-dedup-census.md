@@ -109,3 +109,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): webviewCommunicationManager + componentHandlers share their testUtils; lane C1 closes at 14 (`9e7e2877c`)
 - 2026-08-30  chore(census): refresh craft-census.json for the merged lane C1 state (`0324961d2`)
 - 2026-08-30  docs(handoff): lane C1 complete — 14 families, and the record updated (`2caf02d32`)
+- 2026-08-30  refactor(tests): stopDemo extracts only what its three suites AGREE on — lane C2 opens (`dba5c486c`)
