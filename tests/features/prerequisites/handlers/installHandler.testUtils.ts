@@ -208,6 +208,9 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]),
             checkVersionSatisfaction: jest.fn().mockResolvedValue(false), // Default: not satisfied
+            // Default: no install commands, so the plugin loop skips. Tests that
+            // exercise plugin installation override this.
+            getPluginInstallCommands: jest.fn().mockResolvedValue(undefined),
             getCacheManager: jest.fn().mockReturnValue({
                 invalidate: jest.fn(),
                 get: jest.fn(),
@@ -268,3 +271,29 @@ export function cacheInvalidateMock(context: HandlerContext): jest.Mock {
     };
     return manager.invalidate;
 }
+
+/**
+ * A prerequisite that carries a plugin, shaped from the REAL config entry.
+ *
+ * Copied from `aio-cli` in `src/features/prerequisites/config/prerequisites.json`
+ * rather than written from memory — including the detail that matters most for the
+ * tests: the shipped `api-mesh` plugin declares NO `requiredFor`, so production
+ * takes the "no specific version mapping, use targetVersions[0]" branch. A fixture
+ * that invented `requiredFor` would have tested a path nothing uses.
+ *
+ * Why it exists at all: no installHandler fixture defined `plugins`, so
+ * `installPlugins` always hit its `if (!prereq.plugins) return` guard and 89
+ * mutants below it were unreachable — the single largest block of untested code in
+ * the file, and it is the path that installs the API Mesh CLI plugin.
+ */
+export const mockAioCliWithPlugin: PrerequisiteDefinition = {
+    ...mockAdobeCliPrereq,
+    perNodeVersion: true,
+    plugins: [
+        {
+            id: 'api-mesh',
+            name: 'API Mesh Plugin',
+            description: 'Adobe API Mesh management plugin',
+        },
+    ],
+} as PrerequisiteDefinition;

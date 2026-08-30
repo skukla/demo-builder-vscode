@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "PL-22 first fair-sample run, 2026-08-30: the numbers BEFORE any strengthening pass.",
+    "_note": "Pass 1 batch 1 (cache invalidation + final status message, 8 tests): installHandler 41.77% -> 49.17%, branch/block 89 -> 73, uncovered 122 -> 112. Accepted by the ratchet as a real improvement. The 8 plugin tests are NOT in these numbers — they landed after this run.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -58,20 +58,20 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 41.77,
-            "killed": 226,
-            "survived": 193,
-            "noCoverage": 122,
+            "score": 49.17,
+            "killed": 266,
+            "survived": 163,
+            "noCoverage": 112,
             "timeout": 0,
             "survivorCategories": {
-                "block": 15,
-                "branch": 74,
-                "other": 29,
-                "string": 19,
-                "logPresentation": 43,
-                "optionalChain": 13
+                "block": 8,
+                "branch": 65,
+                "other": 22,
+                "string": 10,
+                "logPresentation": 44,
+                "optionalChain": 14
             },
-            "highValueSurvivors": 89
+            "highValueSurvivors": 73
         },
         "src/core/utils/mcpSocketPath.ts": {
             "score": 77.78,
