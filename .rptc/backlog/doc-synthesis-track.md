@@ -27,10 +27,25 @@ deciding about it mid-pass.
 and `src/core/ui/components` — verified accurate, kept essentially as written, which
 is a finding in itself: the bar is passable.
 
-**Remaining (6):** `docs/development/styling-guide.md` (497),
-`docs/systems/mcp-server.md` (652), `tests/README.md` (461),
-`docs/testing/test-file-splitting-playbook.md` (462), `CONTRIBUTING.md` (356),
-`docs/troubleshooting/*` (465).
+**Done (13 total):** the seven above plus `tests/README.md`,
+`docs/systems/mcp-server.md` (kept at 652 — two sections re-placed, nothing cut),
+`docs/development/styling-guide.md`, `docs/testing/test-file-splitting-playbook.md`,
+`CONTRIBUTING.md`, and both `docs/troubleshooting/` guides. 5,281 → 2,090 lines.
+
+**MISSED, and the "Phase A complete" claim was wrong (4 files, 606 lines):**
+`src/CLAUDE.md` (244), `docs/CLAUDE.md` (124), `docs/architecture/CLAUDE.md` (103),
+`.rptc/CLAUDE.md` (135).
+
+Each was *edited* during the pass — a stamp removed, a dead link fixed — and never
+*read through*. Found on 2026-08-30 by measuring description-vs-instruction across
+the per-directory files: `src/CLAUDE.md` came back at 20% description against 0–10%
+for the seven that had been done, which is what a file looks like when nobody has
+read it.
+
+The check that produced the wrong "all assessed" answer was `git log --since` per
+file, which reports *touched*. Touched is not assessed, and nine of these were
+touched by one stamp-removal commit. **The register of what has had the treatment
+has to be kept by hand; git cannot answer it.**
 
 ## Phase B — a usefulness pass over everything touched
 
