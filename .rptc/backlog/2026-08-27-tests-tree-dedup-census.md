@@ -107,3 +107,5 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): daLiveContentOperations, adobeEntityFetcher and contentAuthoringTools share testUtils — lane C1 (`0f8b70d6e`)
 - 2026-08-30  refactor(tests): continueHandler and IntegrationDetailPanel share their testUtils — lane C1 (`1190306f2`)
 - 2026-08-30  refactor(tests): webviewCommunicationManager + componentHandlers share their testUtils; lane C1 closes at 14 (`9e7e2877c`)
+- 2026-08-30  chore(census): refresh craft-census.json for the merged lane C1 state (`0324961d2`)
+- 2026-08-30  docs(handoff): lane C1 complete — 14 families, and the record updated (`2caf02d32`)

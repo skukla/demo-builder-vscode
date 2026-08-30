@@ -84,3 +84,4 @@ beside the existing baseline table, so the next run has something to compare aga
 
 - 2026-08-30  Filed. The pilot and its 93.37% baseline landed the same day
   (`c4118338e`); this asks the question that number cannot answer on its own.
+- 2026-08-30  docs(plan): file PL-22 — does 93% hold outside the modules we already trusted? (`0c1b8bf7e`)

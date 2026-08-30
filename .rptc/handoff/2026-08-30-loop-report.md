@@ -111,19 +111,26 @@ control is written into the plan as required for each of the remaining sixteen.
 | `envMerge` tests strengthened | 78% → 100%; 5 surviving mutants killed, re-run proves it |
 | Unhandled-rejection bug in `componentUpdater-core` | Fixed; found by the pilot's dry run |
 | Missing ledger row for `envMerge.ts` | Ledger back to green (1001 rows), self-test control still detects a planted hole |
+| **14 test families stopped pasting their shared setup** | Each verified three ways: tests green, per-file assertion sets unchanged, and a planted control proving the shared setup still binds. Duplicated blocks across files 140 → 124; duplicated lines 6,739 → 5,950 |
+| **Two misleading measurements retired** | `logicInTests` deleted from the survey (detector, self-test and all); `throw-style` struck from the plan. The survey now reports only numbers worth acting on |
+| Merged into develop and pushed | Full suite green on develop after the merge: 15,423 tests, 1,198 files, both typecheckers, whole-repo lint |
 
 ## Handed off
 
-**Lane C — the last item in the programme.** Verified worklist, split by what the
-work actually is:
+**29 families whose shared setup has drifted apart.** Real work, and deliberately not
+started: merging drifted setup changes what the tests check while every test still
+passes — the failure you cannot see. Each family needs a decision about which version
+is correct first.
 
-- **17 families** — identical setup, safe to merge into a shared helper. Ordered by
-  payoff in the plan; `AdobeAuthStep` and `daLiveContentOperations` first.
-- **26 families** — drifted setup. Each needs a decision about which version is
-  correct *before* anything is merged. Worst first: `installHandler` (11 files, 5
-  versions), `dashboardHandlers` (6/6), `edsResetService` (5/5).
-- **1 family** — `blockCollectionHelpers`, 6 files, no mocks at all; its duplication
-  is fixtures and test bodies, so the shared-helper recipe doesn't apply.
+Worst first: `installHandler` (11 files carrying 5 different versions of the same
+setup), `dashboardHandlers` (6 files, 6 versions), `edsResetService` (5/5). Three more
+arrived here from the mechanical group once it became clear they were not single
+merges: `appBuilderComponentRunner` is really two separate groups needing two different
+shared files, and `skillsWriter` and `daLiveAuthService` have files that mock the same
+thing in different ways.
+
+One separate case: `blockCollectionHelpers`, 6 files with no mocks at all — its
+duplication is fixtures and test bodies, so the shared-setup recipe does not apply.
 
 ## Filed, not forced
 
@@ -166,12 +173,34 @@ package.json's user-facing setting descriptions. Caught and reverted; the commit
 diff is the script plus the two dependencies and nothing else. `cut-release` warns
 about exactly this for `npm version` — it applies to any programmatic edit of that file.
 
-## Your decisions
+## What you decided, and what happened
 
-1. **Merge `loop/2026-08-29-convergence-phases` into develop?** 15 commits, gate green
-   on each.
-2. **Retire `logicInTests` and `throw-style` from the craft census?** Both measured and
-   found not to track defects. They're currently marked as such in the new skill but
-   still counted. Retiring a column from an owner-facing instrument is your call.
-3. **Lane C: start C1 (the 17 mechanical families), or leave the whole lane?** It's the
-   only unfinished item in the programme.
+All three questions this report originally parked were answered the same day and
+carried out:
+
+1. **Merge into develop** — done, and pushed. Develop and the remote are in sync.
+   Full suite green on the pushed state.
+2. **Retire the two misleading measurements** — done. `logicInTests` deleted outright
+   rather than footnoted, because a known-bad number left in the output gets acted on
+   by whoever did not read the warning. The reasoning, and the bar any replacement has
+   to clear, sit where the detector used to be.
+3. **Finish the mechanical merges** — done. 14 shipped; 3 of the original 17 turned
+   out not to be single merges and moved in with the drifted group.
+
+## What is left
+
+Two things, and they are different kinds of thing.
+
+**Phase 9 — does the 93% hold?** (filed as PL-22.) The mutation score covers four
+modules chosen *because* we believed they were well tested, so it reads our best work
+rather than the average — and one of those four still scored 78%. Point the same tool
+at four to six modules nobody is confident about: suites the survey flags as
+`module-wall`, the two coverage laggards phase 6 raised by writing new tests, and
+something old and load-bearing. Hours, not days.
+
+**Lane C2 — the 29 drifted families**, described above.
+
+**Do phase 9 first.** It is cheaper, it does not depend on lane C2, and it answers a
+question lane C2 cannot: C2 tidies how the tests are written, phase 9 asks whether they
+work. If the answer comes back near 93%, the case for a strengthening pass largely
+goes away — which is worth knowing before spending days on one.
