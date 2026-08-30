@@ -3090,12 +3090,12 @@
   {
    "unit": "tests/features/eds/handlers/authoringExperience-ewCanvasBranch.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/handlers/authoringExperience.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/handlers/blockLibraryPublish.test.ts",
@@ -3832,12 +3832,12 @@
   {
    "unit": "tests/features/eds/services/reset/edsResetUI-auth.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/reset/edsResetUI-sampleData.test.ts",
    "flags": [],
-   "doubleStyle": "wall+partial"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/resourceCleanupHelpers.test.ts",
@@ -3974,12 +3974,12 @@
   {
    "unit": "tests/features/eds/ui/steps/StorefrontSetupStep-cancelOnUnmount.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/ui/steps/StorefrontSetupStep-startGuard.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/ui/steps/codeSyncStatusView-longWait.test.tsx",
@@ -4071,7 +4071,7 @@
   {
    "unit": "tests/features/lifecycle/commands/stopDemo.error.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/lifecycle/commands/stopDemo.lifecycle.test.ts",
@@ -4580,12 +4580,12 @@
   {
    "unit": "tests/features/project-creation/commands/createProject-configListener.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/commands/createProject-context.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/commands/createProject-initialData.test.ts",
@@ -4852,7 +4852,7 @@
   {
    "unit": "tests/features/project-creation/services/aiBundle/mcpConfigWriter.settingsMerge.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/mcpConfigWriter.test.ts",
@@ -4977,17 +4977,17 @@
   {
    "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.advanced.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.sections.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/ui/components/ConnectStoreStepContent.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/ui/components/commerceSectionValidity.test.ts",
@@ -5339,7 +5339,7 @@
   {
    "unit": "tests/features/projects-dashboard/commands/showProjectsList.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/projects-dashboard/handlers/dashboardHandlers-adminPanel.test.ts",
@@ -5489,12 +5489,12 @@
   {
    "unit": "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/commands/checkUpdates.security.test.ts",
@@ -5599,17 +5599,17 @@
   {
    "unit": "tests/features/updates/services/updateManager-channels.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/updateManager-checking.test.ts",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/updateManager-components.test.ts",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/updates/services/updateManager-earlyAccess.test.ts",

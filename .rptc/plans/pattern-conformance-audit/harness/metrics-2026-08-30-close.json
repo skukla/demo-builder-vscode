@@ -1,0 +1,39 @@
+{
+ "label": "2026-08-30-close",
+ "commit": "3cdd49557",
+ "takenAt": "2026-08-30T11:34:53.236Z",
+ "srcFiles": 907,
+ "srcLines": 176996,
+ "testFiles": 1331,
+ "testLines": 303516,
+ "archExemptions": {
+  "fetchBoundary": 0,
+  "constructionBoundary": 12,
+  "commandBase": 2,
+  "typesPurity": 6,
+  "hookRefs": 5,
+  "sendMessageCeiling": 147
+ },
+ "archExemptionTotal": 25,
+ "archExemptionRows": 25,
+ "suites": 1198,
+ "doubleStyles": {
+  "deps-object-or-pure": 607,
+  "light-mocks": 512,
+  "module-wall": 60,
+  "wall+partial": 19
+ },
+ "craftFlags": {
+  "nondeterminism": 26,
+  "realWaits": 16,
+  "theater": 1
+ },
+ "testClones": 113,
+ "testClonePct": 1.83,
+ "coverage": {
+  "lines": 84.17,
+  "branches": 73.18,
+  "functions": 85.94,
+  "artifactAge": "2026-08-28T16:28:25.430Z"
+ }
+}
