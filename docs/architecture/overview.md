@@ -1,525 +1,62 @@
-# Adobe Demo Builder - Architecture Overview
+# Architecture overview
 
-**Last Updated**: April 2026
-**Version**: 1.7.0 (AI layer — Phase 1)
-**Status**: Current Production Architecture
+**Start here.** Then read [the handbook](../development/handbook.md), which states
+the rules this architecture is held to.
 
-## Executive Summary
+## What this is
 
-The Adobe Demo Builder is a VS Code extension that streamlines the creation and management of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with integrated Adobe services, local development environments, and automated deployment capabilities.
+A VS Code extension that builds Adobe Commerce demo projects — it creates the
+backends, the storefronts and the integrations, then runs and maintains them.
 
-## High-Level Architecture
+## One repository, two programs
+
+| | Runs in | Can reach |
+|---|---|---|
+| **Extension host** | Node | VS Code API, the file system, Adobe's APIs |
+| **Webviews** | a browser page — eight separate React bundles | neither Node nor VS Code |
+
+They communicate by passing messages, and nothing else. A service importing `vscode`
+cannot run in a webview; a React component cannot read a file. **This is the first
+thing to understand, because every other rule follows from it** — and the two halves
+have separate architecture records, [ADR-015](adr/015-dependency-architecture.md) for
+the host and [ADR-017](adr/017-webview-architecture.md) for the webviews.
+
+## How the code is arranged
+
+Grouped by what it does for the user, not by what kind of thing it is:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   VS Code Extension Host                     │
-├─────────────────────────────────────────────────────────────┤
-│  Extension Core (extension.ts)                              │
-│  ├── Command Registration                                   │
-│  ├── State Management (StateManager)                        │
-│  ├── Provider Registration (Tree Views, Status Bar)         │
-│  └── File Watcher System                                   │
-├─────────────────────────────────────────────────────────────┤
-│  Core Commands                                              │
-│  ├── Create Project (Webview Wizard)                       │
-│  ├── Start/Stop Demo (Process Management)                  │
-│  ├── Configure Project (Settings UI)                       │
-│  ├── Deploy Mesh (Adobe I/O Integration, conditional)      │
-│  └── Check for Updates (Auto-Update System)                │
-├─────────────────────────────────────────────────────────────┤
-│  Utilities & Systems                                        │
-│  ├── Adobe Auth Manager (SDK + CLI)                        │
-│  ├── Component Manager (Git-based Components)              │
-│  ├── Update Manager (GitHub Releases)                      │
-│  ├── External Command Manager (Shell Execution)            │
-│  └── Mesh Staleness Detector                               │
-├─────────────────────────────────────────────────────────────┤
-│  Webview Layer (React + Adobe Spectrum)                    │
-│  ├── Welcome Screen                                         │
-│  ├── Project Creation Wizard                               │
-│  ├── Project Dashboard                                     │
-│  └── AI Overview Screen (skills, prompts, AI health)      │
-├─────────────────────────────────────────────────────────────┤
-│  AI Context Layer (harness: Claude Code CLI)               │
-│  ├── aiContextWriter — Generates AGENTS.md + CLAUDE.md ptr │
-│  ├── skillsWriter — 13 Demo-Builder skills (+ gated)       │
-│  ├── mcpConfigWriter — Generates .mcp.json + tool settings │
-│  └── MCP Server (in-extension, via mcp-proxy.js) — agent  │
-│      tool surface; file-based subset shown below:          │
-│      list_projects · get_project · get_component_config ·  │
-│      update_project_config · sync_storefront · list_blocks │
-│      · promote_block_to_library                              │
-└─────────────────────────────────────────────────────────────┘
+src/features/<name>/     one feature's whole vertical slice: services, handlers, ui
+src/core/                shared infrastructure — logging, state, shell, communication
+src/commands/            the entry points VS Code calls
 ```
 
-## Technology Stack
-
-### Extension Layer
-- **Framework**: VS Code Extension API
-- **Language**: TypeScript (strict mode)
-- **Build**: TypeScript Compiler + Webpack
-- **Package Manager**: npm
-
-### UI Layer
-- **Framework**: React 18+
-- **Component Library**: Adobe React Spectrum
-- **Styling**: CSS + PostCSS
-- **Bundling**: Webpack
-
-### External Integrations
-- **Adobe I/O CLI**: Authentication and mesh deployment
-- **Adobe Console SDK**: Fast org/project operations (30x faster than CLI)
-- **Git**: Component management and cloning
-- **Node.js**: Multi-version management via fnm
-
-## Key Components
-
-### 1. Project Creation Wizard
-
-Multi-step React-based wizard for guided project setup:
-
-**Steps**:
-1. Welcome & Project Details
-2. Component Selection (Frontend, Backend, Dependencies)
-3. Prerequisites Check & Installation
-4. Adobe Authentication (auth, project, workspace — conditional on mesh dependency)
-5. Connect Commerce (store connection, progressive disclosure — all flows)
-6. Connect Services — GitHub + DA.live auth (EDS stacks only)
-7. Repository Config — GitHub repo selection/creation (EDS stacks only)
-8. Data Source Config — Commerce endpoint and store selection (EDS stacks only)
-9. Review & Creation
-10. Storefront Setup — GitHub repo, Helix config, content pipeline (EDS stacks only)
-
-**Key Features**:
-- Backend Call on Continue pattern (instant UI feedback)
-- Progressive disclosure (complexity revealed gradually)
-- Two-column layout (active content + configuration summary)
-- Adobe Spectrum components (quiet mode for minimal chrome)
-
-### 2. State Management System
-
-**StateManager** (`src/core/state/stateManager.ts`):
-- Persists project configuration in `.demo-builder.json`
-- Tracks component instances, versions, and status
-- Manages workspace state via VS Code API
-- Event-driven updates (StateChanged events)
-
-**Project Structure**:
-```json
-{
-  "name": "my-demo",
-  "created": "2025-01-15T10:00:00Z",
-  "status": "ready|running|stopped|error",
-  "componentInstances": {
-    "citisignal-nextjs": {
-      "id": "citisignal-nextjs",
-      "path": "/path/to/component",
-      "status": "ready",
-      "port": 3000,
-      "version": "main"
-    }
-  },
-  "componentVersions": {
-    "citisignal-nextjs": {
-      "version": "1.0.0",
-      "lastUpdated": "2025-01-15T10:30:00Z"
-    }
-  },
-  "appBuilderComponents": {
-    "mesh": {
-      "kind": "mesh",
-      "status": "deployed",
-      "source": { "owner": "skukla", "repo": "commerce-mesh" },
-      "endpoint": "https://edge-graph.adobe.io/api/.../graphql",
-      "envVars": {...},
-      "sourceHash": "abc123",
-      "lastDeployed": "2025-01-15T10:35:00Z",
-      "providesEnvVars": { "MESH_ENDPOINT": "https://edge-graph.adobe.io/api/.../graphql" }
-    },
-    "firefly-image-gen": {
-      "kind": "integration",
-      "name": "Firefly Image Gen",
-      "status": "deployed",
-      "source": { "owner": "skukla", "repo": "app-builder-shell" },
-      "url": "https://....adobeio-static.net",
-      "lastDeployed": "2025-01-15T10:40:00Z"
-    }
-  },
-  "additionalConsoleApis": ["FireflyAPISDK"]
-}
-```
-
-### 3. Component System
-
-**Git-Based Components**:
-- Frontend applications (e.g., citisignal-nextjs)
-- API Mesh configurations (commerce-mesh)
-
-**Component Management**:
-- Cloning from GitHub repositories
-- Version tracking and updates
-- Dependency resolution
-- `.env` file generation and merging
-
-### 4. Adobe Integration
-
-**Authentication**:
-- Adobe I/O CLI for browser-based login
-- Adobe Console SDK for fast API operations
-- Token caching with TTL (5 minutes)
-- Organization and project selection
-
-**Optimization Strategy**:
-```typescript
-// Quick token check (< 1 second)
-isAuthenticatedQuick() // Token + expiry only
-
-// Full auth with SDK (30x faster than pure CLI)
-ensureSDKInitialized() // Uses Adobe Console SDK
-getCurrentOrganization() // SDK-powered, 1-minute cache
-```
-
-**API Mesh Deployment**:
-- Builds GraphQL mesh configuration
-- Deploys to Adobe I/O Runtime
-- Verifies deployment success
-- Tracks mesh state for staleness detection
-
-### 5. Process Management
-
-**Demo Lifecycle**:
-- Start: Spawns Next.js dev server via terminal
-- Stop: Terminates process via PID
-- Monitor: Tracks logs via output channel
-- Status: Updates status bar in real-time
-
-**Port Management**:
-- Automatic port availability checking
-- Conflict detection before start
-- Configurable default port (3000)
-
-### 6. Auto-Update System
-
-**Components**:
-- **UpdateManager**: Checks GitHub Releases for extension and components
-- **ComponentUpdater**: Updates git-based components with snapshot/rollback
-- **ExtensionUpdater**: Downloads and installs VSIX files
-
-**Safety Features**:
-- Automatic snapshot before component updates
-- Automatic rollback on ANY failure
-- Post-update verification (package.json validation)
-- Smart .env merging (preserves user values)
-- Concurrent update lock
-
-**Update Flow**:
-```
-1. Check GitHub Releases (stable/beta channel)
-2. Show notification if updates available
-3. User confirms → Check demo not running
-4. For each component:
-   - Create snapshot
-   - Download & extract
-   - Verify structure
-   - Merge .env files
-   - Update version tracking
-   - Remove snapshot
-5. Extension update (if available) → Prompt reload
-```
-
-### 7. File Watcher System
-
-**Purpose**: Detect `.env` file changes and prompt restart
-
-**Key Features**:
-- Hash-based change detection (ignores file system events without content changes)
-- Programmatic write suppression (Configure UI and updater don't trigger)
-- Show-once-per-session notifications (no notification spam)
-- 10-second startup grace period
-
-**Integration Points**:
-- Configure Project command
-- Component Updater
-- Start Demo command (initializes hashes)
-
-### 8. Mesh Staleness Detection
-
-**Purpose**: Detect when local mesh configuration differs from deployed mesh
-
-### 9. AI Context Layer
-
-**Purpose**: Generate AI agent context files at project creation and on demand, then introspect the resulting skills and MCPs for the standalone AI Overview screen and the dashboard's "AI Ready" badge.
-
-**Components**:
-- **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Sanitization helpers used by the AGENTS.md section builders (`agentsMdSections` is the sole importer). `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
-- **`aiContextWriter`** (`src/features/project-creation/services/aiBundle/aiContextWriter.ts`): Generates `AGENTS.md` at the project root with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). Writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. The section builders are extracted to `agentsMdSections.ts` (same directory), where all user-supplied values pass through the shared sanitization helpers before interpolation.
-- **`skillsWriter`** (`src/features/project-creation/services/aiBundle/skillsWriter.ts`): Writes the thirteen first-party skills declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai` — four lifecycle including `create-eds-project.md`, `diagnose-demo.md`, six EDS site-scraping, two block-library registration) plus the conditional `extend-app-builder-app.md`. The three Playwright-driven scraping skills are delivery-gated per `SKILL_MCP_TOOL_DEPENDENCIES` — written only when `@playwright/mcp` is actually installed. Additional Adobe AEM skills come from the `@adobe-commerce/commerce-extensibility-tools` package when the EDS Storefront component is installed.
-- **`mcpConfigWriter`** (`src/features/project-creation/services/aiBundle/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Cursor and Codex read `.mcp.json` natively — no per-tool config files.
-- **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Runs four file-presence checks in parallel with `gatherInventory()`; returns `AiVerificationResult` with `{ status, checks, inventory }`.
-- **`skillInspector`, `mcpInspector`, `sessionMcpDetector`** (`src/features/ai/`, Cycle C): Three `vscode-free` services that populate the `inventory` payload. `mcpInspector` uses `@modelcontextprotocol/sdk` (stdio client) with a 5-min TTL cache and the SDK's safe env allowlist (no host-secret leakage). `sessionMcpDetector` reads `~/.claude.json::claudeAiMcpEverConnected` cross-referenced with `~/.claude/mcp-needs-auth-cache.json` (best-effort; undocumented Claude Code internal state).
-- **MCP Server** (`src/features/ai/server/inExtensionMcpServer.ts`): In-extension server on a per-workspace Unix socket, reached through the `dist/mcp-proxy.js` stdio↔socket forwarder. Because it runs in the extension host it reuses the extension's services, so tools do the same work as the UI. Exposes the full agent tool surface (auth, project lifecycle, cloud resources, storefront, updates); the `vscode`-free `src/mcp-server.ts` provides the shared file-based subset (`list_projects`, `get_project`, `get_component_config`, `update_project_config`, `sync_storefront`, `list_blocks`, `get_block_source`, `promote_block_to_library`) via `registerProjectTools`. **Full reference: [`../systems/mcp-server.md`](../systems/mcp-server.md).** (The old standalone `dist/mcp-server.js` process is retired.)
-
-**Integration Point**: `aiBundleService.generateAIContextFiles()` orchestrates all three writers (each writing through the ADR-013 `GeneratedFileWriter` hash-and-skip seam) as Phase 6 of project creation. The standalone AI Overview screen calls `verify-ai-setup` (returning checks + inventory) and offers `regenerate-ai-files`; global `~/.claude.json` enrollment is the explicit "Demo Builder: Register Global MCP" command, never automatic.
-
-**Harness**: Claude Code (CLI). Users open a generated project with `claude` from the project directory; the Demo Builder MCP server is discoverable via the global `~/.claude/.mcp.json` entry written on extension activation, and via the project-local `.mcp.json` written during project creation. Adobe-hosted MCPs (DA.live, Commerce, AEM Content) are available at Claude Code's session level via its catalog.
-
-**Comparison Strategy**:
-```typescript
-// Compare:
-// Last deployed state — the keyed mesh entry's envVars, read via the accessor
-getMeshAppBuilderComponent(project)?.envVars
-componentConfigs     // Current local configuration
-
-// If empty, fetch deployed config from Adobe I/O
-fetchDeployedMeshConfig() // aio api-mesh:get --active --json
-```
-
-**Staleness Indicators**:
-- **Green**: Configuration matches deployed mesh
-- **Amber**: Configuration changed, needs redeployment
-- **Red**: Deployment error or not deployed
-
-## Key Design Decisions
-
-### 1. VS Code Extension vs Standalone Application
-
-**Chosen**: VS Code Extension
-
-**Rationale**:
-- Target users already use VS Code for demo development
-- Rich webview capabilities (full React apps)
-- Natural workflow: Create project → Edit code → Run demo
-- Easy distribution (VSIX or Marketplace)
-- 4-5 week development time vs 12-16 weeks for Electron
-
-### 2. React + Adobe Spectrum vs Native VS Code UI
-
-**Chosen**: React + Adobe Spectrum (for complex UIs)
-
-**Rationale**:
-- Adobe brand consistency
-- Enterprise-ready components
-- WCAG 2.1 AA accessibility built-in
-- Rich interactions (searchable lists, multi-step forms)
-- Native VS Code UI for simple commands (Quick Pick, Input Box)
-
-### 3. Git-Based Components vs NPM Packages
-
-**Chosen**: Git-Based Components
-
-**Rationale**:
-- Allows customization and local development
-- Easy to link local repositories for development
-- Version control friendly
-- Supports multiple component types (frontend, mesh, app builder)
-
-### 4. Adobe I/O CLI + Console SDK Hybrid
-
-**Chosen**: CLI for authentication, SDK for operations
-
-**Rationale**:
-- CLI handles browser-based login flow
-- SDK 30x faster for org/project operations
-- Automatic fallback to CLI if SDK fails
-- Best of both worlds
-
-### 5. Snapshot-Based Component Updates
-
-**Chosen**: Full directory snapshot + automatic rollback
-
-**Rationale**:
-- Safest update strategy
-- Handles partial extraction failures
-- Preserves user modifications (via .env merging)
-- Simple to reason about (snapshot exists = can rollback)
-
-## Development Workflow
-
-### Building the Extension
-
-```bash
-# Install dependencies
-npm install
-
-# Build extension + webviews
-npm run compile
-
-# Watch mode (development)
-npm run watch
-
-# Package for distribution
-npm run package
-```
-
-### Running in Development
-
-1. Open project in VS Code
-2. Press F5 to launch Extension Development Host
-3. Test commands and features
-4. Check output channels for logs
-
-### Adding New Commands
-
-1. Create command file in `src/commands/`
-2. Extend `BaseCommand` or `BaseWebviewCommand`
-3. Register in `src/commands/commandManager.ts`
-4. Add to `package.json` contributions
-5. Document in `src/commands/CLAUDE.md`
-
-### Adding New Utilities
-
-Prefer adding to `src/features/<feature>/services/` or `src/core/utils/` rather than the legacy `src/utils/` directory (being phased out).
-
-1. Create utility file in the relevant feature or core module
-2. Add TypeScript types
-3. Document in the feature's CLAUDE.md or README
-4. Add unit tests
-
-## File Organization
-
-```
-demo-builder-vscode/
-├── src/
-│   ├── extension.ts              # VS Code extension entry point
-│   ├── mcp-server.ts             # Shared file-based tool registration (registerProjectTools), no vscode
-│   ├── mcp-proxy.ts              # stdio↔Unix-socket forwarder Claude Code spawns (→ dist/mcp-proxy.js)
-│   ├── commands/                 # Command implementations
-│   │   ├── createProjectWebview.ts   # Main wizard
-│   │   ├── startDemo.ts             # Start demo
-│   │   ├── stopDemo.ts              # Stop demo
-│   │   ├── deployMesh.ts            # Deploy mesh
-│   │   └── checkUpdates.ts          # Auto-update
-│   ├── utils/                    # Legacy utilities (being phased out — prefer src/features/ or src/core/)
-│   ├── providers/                # VS Code providers
-│   │   ├── projectTreeProvider.ts   # Project tree view
-│   │   └── statusBar.ts             # Status bar
-│   ├── features/project-creation/ui/ # Wizard React app (entry point)
-│   └── types/                    # TypeScript definitions
-├── webview-ui/src/               # Webview React apps (outside src/)
-│   ├── welcome/                     # Welcome screen
-│   ├── dashboard/                   # Project dashboard
-│   ├── configure/                   # Project configuration UI
-│   └── shared/                      # Shared utilities (WebviewClient)
-├── docs/                         # Documentation
-│   ├── architecture/                # Architecture docs
-│   ├── patterns/                    # Design patterns
-│   └── systems/                     # System docs
-└── dist/                         # Compiled output
-```
-
-## Error Handling Strategy
-
-### User-Facing Errors
-
-```typescript
-try {
-  await riskyOperation();
-} catch (error) {
-  // Log full details for debugging
-  this.logger.error('[Operation] Failed', error as Error);
-  
-  // Show user-friendly message
-  const message = formatUserFriendlyError(error);
-  vscode.window.showErrorMessage(message, 'Retry', 'View Logs');
-}
-```
-
-### Error Formatting
-
-- Network errors → "No internet connection. Please check your network."
-- Timeout errors → "Operation timed out. Please try again."
-- HTTP errors → "Server error. Please try again later."
-- Validation errors → "Invalid configuration: [specific issue]"
-
-## Performance Considerations
-
-### Authentication Optimization
-
-- **Quick check first**: `isAuthenticatedQuick()` < 1 second (token only)
-- **SDK initialization**: Async, non-blocking (5 seconds max)
-- **Organization cache**: 1 minute TTL (reduces API calls)
-- **Console.where cache**: 3 minutes TTL (expensive 2s+ call)
-
-### Webview Loading
-
-- **Initial render**: < 100ms (loading state with pure HTML/CSS)
-- **Minimum display time**: 1.5 seconds (prevents flashing)
-- **Lazy loading**: Step components loaded on demand
-- **Message queuing**: Queues messages until handshake complete
-
-### Component Operations
-
-- **Shallow clones**: `--depth=1` for faster cloning
-- **Parallel operations**: Install dependencies in parallel when possible
-- **Progress streaming**: Real-time progress updates during long operations
-
-## Security Considerations
-
-### Credential Management
-
-- **VS Code Secret Storage**: All API keys and tokens
-- **Never log credentials**: Mask in logs and error messages
-- **Secure transmission**: HTTPS only for API calls
-
-### Process Execution
-
-- **Array form only**: `spawn(['cmd', 'arg'])` prevents injection
-- **Input validation**: All user inputs validated before execution
-- **No shell interpretation**: Avoid `{ shell: true }` in spawn
-
-### Webview Security
-
-- **Content Security Policy**: Strict CSP for all webviews
-- **Nonce-based scripts**: Inline scripts use nonces
-- **Message validation**: Validate all webview messages
-
-### Workspace Trust
-
-- **Trust requirement**: Operations require trusted workspace
-- **Restricted in untrusted**: File operations blocked
-- **Clear messaging**: Inform users why trust is required
-
-## Future Enhancements
-
-### Shipped in Phase 1 (AI layer, Cycles A–D)
-- AI context file generation at project creation (AGENTS.md, 3 lifecycle skills, MCP config)
-- In-extension Demo Builder MCP server exposing the full agent tool surface (see [`../systems/mcp-server.md`](../systems/mcp-server.md))
-- AI Configuration tab in Configure screen — verifies AI files, inspects skills and MCP servers and session MCPs, manages global MCP registration, and regenerates AI context files (Cycle D; since replaced by the standalone AI Overview screen — see §9)
-- Claude Code (CLI) as the primary AI harness — see [ADR-004](adr/004-claude-code-harness.md)
-- `@adobe-commerce/commerce-extensibility-tools` skill bundle installed per EDS project; updates surfaced by `AdobeMcpUpdateChecker` (Cycle B + D)
-- `demoBuilder.ai.engine` + `demoBuilder.ai.surface` (default `'terminal'`, with capability-aware extension-detected offer) + `demoBuilder.ai.dockToRight` (unified position preference syncing `claudeCode.preferredLocation`) settings + `OpenInClaudeCommand` + dashboard tile + project-card menu item + AI surface prompt cards (workspace-anchor + pending-prompt mechanism for prompt clicks; kebab Copy prompt; Browse Claude sessions link + one-time auto-open; surface-aware multi-click contract note)
-- AI inventory backend (`skillInspector`, `mcpInspector`, `sessionMcpDetector`, `gatherInventory`) consumed by the AI Configuration tab (Cycle C; today it feeds the AI Overview screen and the AI Capabilities modal)
-
-### Near-term (3-6 months)
-- Automated testing framework
-- Performance monitoring and analytics
-- Enhanced error reporting (telemetry)
-- Multi-project management
-- Project import/export
-
-### Long-term (6-12 months)
-- Cloud synchronization
-- Team collaboration features
-- Advanced component templates
-- CI/CD integration
-- Custom component SDK
-
-## Cross-References
-
-For detailed information about specific areas:
-
-- **Adobe Setup Flow**: `docs/architecture/adobe-setup.md`
-- **Component System**: `docs/architecture/component-system.md`
-- **Dependency Resolution**: proposed only — see the backlog item `2026-08-30-graph-based-dependencies`
-- **Node Version Management**: `docs/architecture/working-directory-and-node-version.md`
-- **Development Strategy**: `docs/CLAUDE.md`
-- **Prerequisites System**: `docs/systems/prerequisites-system.md`
-- **Race Condition Solutions**: `docs/systems/race-conditions.md`
-- **Logging System**: `docs/systems/logging-system.md`
-
----
-
-**Document Status**: Current and maintained  
-**Last Review**: February 2026
-**Next Review**: May 2026 or after major architectural changes
-
+A feature uses `core/`. A feature does not reach into another feature. Commands are
+the exception — orchestrating is their job.
+
+**Which kind of thing to write, and where it goes:**
+[where-code-goes.md](where-code-goes.md).
+
+## Much of the behaviour is data
+
+Twelve schema-backed JSON registries describe what the extension supports —
+components, stacks, demo packages, prerequisites, block libraries. Adding support for
+something is usually a row, not a class. Each has a schema beside it, validated by
+`tests/templates/config-contracts.test.ts`.
+
+## Where to go next
+
+| To understand | Read |
+|---|---|
+| the rules code is held to | [the handbook](../development/handbook.md) |
+| every convention and what enforces it | [conventions.md](../development/conventions.md) |
+| what a component is | [component-system.md](component-system.md) |
+| where state lives | [state-ownership.md](state-ownership.md) |
+| Adobe auth and org context | [adobe-setup.md](adobe-setup.md) |
+| EDS storefronts | [eds-content-separation.md](eds-content-separation.md) |
+| the agent surface | [../systems/mcp-server.md](../systems/mcp-server.md) |
+| why a decision was made | [adr/README.md](adr/README.md) |
+
+Each feature also has a README describing what only it can say —
+[`src/features/mesh/README.md`](../../src/features/mesh/README.md) is the shape they
+all follow.

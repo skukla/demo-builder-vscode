@@ -1,419 +1,49 @@
-# State Ownership Documentation
+# State ownership
 
-**Created:** 2025-12-30
-**Purpose:** Establish single-source-of-truth principle for project state management
-**Trigger:** Mesh endpoint dual-storage bug revealed inconsistent state patterns
+**Every piece of data lives in exactly one authoritative place.** Written after the
+mesh endpoint was stored in two, and the two disagreed.
 
----
+Duplicated state fails in a specific way: a write can succeed in one place and fail
+in the other, and then a read returns a different answer depending which location it
+happened to check. Nothing errors. The symptom appears somewhere unrelated, later.
 
-## Single-Source-of-Truth Principle
+## Who owns what
 
-**Core Rule**: Every piece of data MUST live in exactly ONE authoritative location.
+The manifest is `.demo-builder.json` in the project directory. Its shape is in
+`src/types/base.ts`, and the traps in reading it are in
+[`src/core/state/README.md`](../../src/core/state/README.md).
 
-When data is stored in multiple places:
-1. Writes can fail partially, causing inconsistent state
-2. Reads may return different values depending on which location is checked
-3. Debugging becomes exponentially harder ("which version is correct?")
-4. Bug fixes require changes in multiple places
+| Field | Owns |
+|---|---|
+| `componentInstances` | installed components, **keyed by id** — ports, paths, status |
+| `componentConfigs` | per-component configuration values |
+| `commerceStoreStructure` | the discovered store hierarchy |
+| `appBuilderComponents` | **the keyed deployables map — the single source of truth** for mesh and integrations ([ADR-011](adr/011-app-builder-deployables.md) D3) |
+| `componentApiPicks` | Console API selections, per component |
+| `frontendEnvState` | the storefront's environment snapshot |
 
-**Enforcement**: Before writing any data to project state, ask:
-- "Where is the authoritative source for this data?"
-- "Am I writing to the authoritative source?"
-- "If this is a derived/cached value, where is it derived from?"
+## The two legacy shapes
 
----
+`meshState` and `appState` are **manifest-only and read-only**. They predate the
+keyed map; manifests migrate on load and forward-migrate on first save. Nothing
+should write them.
 
-## Project State Fields
+`additionalConsoleApis` is the flat legacy form of `componentApiPicks`. Same rule.
 
-The `Project` type (`src/types/base.ts`) contains these key state containers:
+Both still exist because old manifests do. Neither is a place to put new state.
 
-| Field | Purpose | Authoritative For |
-|-------|---------|-------------------|
-| `componentInstances` | Runtime state | Component status, PID, port |
-| `componentConfigs` | Configuration | Environment variables per component |
-| `commerceStoreStructure` | Name catalog | Turning a Commerce store CODE back into its human NAME |
-| `componentSelections` | User choices | Which components were selected |
-| `appBuilderComponents` | App Builder deploy state (keyed) | Mesh endpoint + staleness baseline, per-integration URLs/status |
-| `additionalConsoleApis` | User-picked APIs | Extra Adobe Console APIs picked beyond the required sets |
-| `meshState` | MANIFEST-ONLY (legacy) | Nothing — migration input for old manifests; removed from `Project` by PL-1 phase 2 |
-| `appState` | MANIFEST-ONLY (legacy) | Nothing — migration input for old manifests; removed from `Project` by PL-1 phase 2 |
-| `frontendEnvState` | Config snapshot | Frontend env vars at demo start |
-| `componentVersions` | Version tracking | Component versions for updates |
+## The failure this prevents
 
----
+The mesh endpoint was once written to both `meshState` and the component instance.
+Deploy updated one; the dashboard read the other. A deployed mesh displayed "Not
+Deployed", and the bug looked like a status problem rather than a storage one.
 
-## Field Ownership Mapping
+That is also why `getMeshComponentInstance` and `getMeshAppBuilderComponent` are two
+accessors and not one — they answer different questions, and collapsing them
+reproduces the same class of bug.
 
-### componentInstances
+## Conventions that bind this
 
-**Purpose**: Track RUNTIME state of installed components
-
-**Authoritative Fields**:
-- `status` - Current lifecycle status (ready, running, stopped, error)
-- `pid` - Process ID when running locally
-- `port` - Port number when running locally
-- `lastUpdated` - Timestamp of last status change
-- `metadata` - Runtime metadata (NOT configuration)
-
-**NOT Authoritative For**:
-- `endpoint` - DEPRECATED: resolve the mesh endpoint via `getMeshEndpointUrl(project)` (keyed `appBuilderComponents` mesh entry)
-- Configuration values - Use `componentConfigs`
-
-**Write Authority**:
-- `src/features/components/services/componentManager.ts` - Status, lastUpdated, metadata
-- `src/features/lifecycle/` - PID, port when starting/stopping
-
-**Read Locations**: Dashboard, lifecycle commands, mesh verification
-
----
-
-### componentConfigs
-
-**Purpose**: Store CONFIGURATION (environment variables) for each component
-
-**Authoritative Fields**:
-- Component-keyed environment variables
-- User-provided configuration values
-- Default values from component definitions
-
-**Write Authority**:
-- `src/features/dashboard/commands/configure.ts` - User configuration changes
-- `src/features/project-creation/handlers/executor.ts` - Initial setup from mesh .env
-
-**Read Locations**: Configure UI, env file generation, staleness detection
-
-Every resolver over `componentConfigs` must take the Commerce store scope (website /
-store / store-view codes) from the BACKEND component — mesh entries carry a duplicate
-copy that only the backend's side updates. Call the shared
-`src/features/components/config/backendOwnedScope.ts` rather than hand-rolling it; three
-resolvers each rolled their own and the third silently returned the stale copy.
-
----
-
-### commerceStoreStructure
-
-**Purpose**: The discovered Commerce hierarchy — websites, store groups and store views,
-each with its `code` AND its human `name`.
-
-The pickers show the user "CitiSignal Store" and only `citisignal_store` was ever kept, so
-every later surface made them translate. The structure is the one thing holding both, and
-discovery fetched it and threw it away every time. Persisting it makes a name an offline
-lookup BY CODE on any surface — which is also why nothing pairs a name with a code
-defensively: the code IS the lookup key, so a name cannot land on the wrong one.
-
-A CATALOG, not a selection. It is refreshed wholesale whenever discovery runs, and a code
-it does not contain simply renders bare.
-
-**Deliberately NOT inside `componentConfigs`**: it is reference data, not a deployable
-value, and nothing that walks `componentConfigs` into a `.env` may see it (pinned by
-`tests/features/project-creation/helpers/envFileGenerator-storeStructureExcluded.test.ts`).
-
-**Write Authority**:
-- `src/features/dashboard/handlers/configureHandlers.ts`
-  (`handleDiscoverStoreStructureAndPersist`) — wraps the shared discovery handler and saves
-  what it fetched. Wrapped rather than folded in, because the same handler is registered by
-  the WIZARD, where there is no project yet and `getCurrentProject()` would return whatever
-  was last open
-- `src/features/project-creation/handlers/executor.ts` — creation, carrying the wizard's
-  own `storeDiscoveryData` through `buildProjectConfig`
-
-**Read Locations**: `deriveMeshCard`, to name the Commerce scope codes a mesh was deployed
-against. Absent until discovery has run once; consumers then show the bare code.
-
----
-
-### appBuilderComponents (keyed — the single source of truth)
-
-**Purpose**: Track App Builder DEPLOY state — one keyed entry per deployable
-(the mesh is one `kind: 'mesh'` entry; each custom integration is a
-`kind: 'integration'` entry). This is the **AUTHORITATIVE** and only persisted
-model (ADR-011 D3; the singular `meshState`/`appState` write-side was retired
-in Step 07).
-
-**Authoritative Fields** (per entry):
-- `status` - deployed / stale / error / not-deployed
-- `endpoint` - **AUTHORITATIVE** mesh GraphQL endpoint URL (mesh kind)
-- `envVars` - Deployed env-var baseline for staleness detection (mesh kind)
-- `sourceHash` - Hash of source files at deployment
-- `lastDeployed` - ISO timestamp of last successful deployment
-- `userDeclinedUpdate` / `declinedAt` - The "Later" decline flow (mesh kind)
-- `url` / `deployedUrls` - Deployed integration URLs (integration kind)
-- `source` / `name` - Per-integration provenance + display name
-
-**Write Authority**:
-- `src/features/mesh/services/stalenessDetector.ts` (`updateMeshState`) - THE
-  mesh writer chokepoint (creation, EDS reset, project reset, headless deploy)
-- `src/features/app-builder/services/appBuilderDeployOutcome.ts`
-  (`recordDeployOutcome`) - the shared keyed-write seam
-- `src/features/app-builder/services/appBuilderComponentRunner.ts` - keyed runner
-- `src/features/mesh/services/meshVerifier.ts` - when the mesh is gone remotely,
-  mark the keyed mesh entry `not-deployed` (volatile deploy record cleared,
-  identity fields kept so a redeploy re-lands on the same entry)
-- `src/features/app-builder/services/appBuilderComponentRunner.ts`
-  (`removeAppBuilderComponent`) - remove an entry
-
-**Read Locations**: Everything reads through the accessors —
-`getMeshEndpointUrl` (typeGuards), `getMeshAppBuilderComponent` /
-`getIntegrationAppBuilderComponents` / `listAppBuilderComponents`
-(appBuilderComponentState) — never the legacy singletons directly (enforced by
-`tests/core/state/singularStateAccessGuard.test.ts`).
-
----
-
-### componentApiPicks (flat `additionalConsoleApis` is LEGACY-READ-ONLY)
-
-**Purpose**: The extra Adobe Console APIs the user picked beyond each
-integration's required set, keyed by the integration that wanted them
-(`Record<componentId, string[]>`). Attribution is the point: the workspace
-credential subscribes ONE union across N integrations, so without an owner per
-pick nothing can answer "is this API still needed if I remove that
-integration?". Picks whose owner is unrecoverable (pre-attribution manifests,
-adds made from the union view) live under the reserved `__existing__` key —
-recorded as unowned rather than guessed.
-
-**Read**: `resolveDesiredApis` (`src/core/state/componentApiPicks.ts`) computes
-the union every subscription reconcile PUTs; it falls back to the legacy flat
-field only when no keyed map exists.
-
-**Write Authority**:
-- Creation: the wizard's keyed picks (`selectedConsoleApis`) serialize through
-  `sanitizeConsoleApiPicks` (`wizardHelpers.ts`) into the creation config's
-  `componentApiPicks`, persisted by `buildInitialProject` (`executor.ts`)
-- The Manage-APIs reconcile (dashboard UI and the `add_console_apis` /
-  `set_console_apis` MCP tools — same handlers,
-  `src/features/dashboard/handlers/consoleApiHandlers.ts`), which preserves
-  attribution via `applyDesiredApis`
-- `removeAppBuilderComponent` (`appBuilderComponentRunner.ts`) drops the
-  removed integration's key
-- Load-time migration: `projectFileLoader` runs `migrateApiPicks`, folding a
-  legacy flat `additionalConsoleApis` under `__existing__` (read side only;
-  the manifest changes on next save)
-
-**Persistence**: Manifest-persisted since the §E fix (2026-07-16, then flat);
-keyed since attribution step 01, and the flat write was retired with step 07
-(2026-08-23) — `projectConfigWriter` writes only `componentApiPicks`, while
-the read side keeps migrating legacy manifests forever. Unlike integration
-sources — which are DERIVED from the keyed `appBuilderComponents` map — the
-picked APIs are NOT derivable from anything else: before the §E fix they lived
-only in memory, so a reload lost them and the next redeploy silently
-unsubscribed them.
-
----
-
-### meshState / appState (MANIFEST-ONLY, legacy)
-
-**Purpose**: Load legacy manifests only. Old `.demo-builder.json` files (of
-arbitrary age) carry the singular `meshState`/`appState`; the loader reads them
-off the MANIFEST and `migrateLegacyToAppBuilderComponents` folds them into the
-keyed map. On the project's first save the manifest is forward-migrated: the
-keyed map is written and the legacy singulars are dropped.
-
-**PL-1 phase 2 (2026-08-27)**: the fields were removed from the in-memory
-`Project` type entirely — they exist only on `ProjectManifest`
-(`LegacyManifestMeshState`/`LegacyManifestAppState` in `projectFileLoader`),
-read by the quarantined migration, which is also the activation sweep's load
-path. The accessor-level synthesis fallbacks, per-field fallbacks, and clearing
-writes were all deleted; `singularStateAccessGuard` pins the migration as the
-one remaining reader.
-
-**Write Authority**: NONE. No production code writes these fields anywhere.
-
-**CRITICAL**: The legacy `meshState` is never authoritative — the mesh endpoint
-lives on the keyed mesh `appBuilderComponents` entry. Any endpoint stored in
-`componentInstances['commerce-mesh'].endpoint` is DEPRECATED as well.
-
----
-
-### frontendEnvState
-
-**Purpose**: Snapshot frontend configuration at demo start (for restart detection)
-
-**Authoritative Fields**:
-- `envVars` - Frontend env vars captured when demo started
-- `capturedAt` - ISO timestamp of capture
-
-**Write Authority**:
-- `src/core/state/projectStateSync.ts` - On demo start
-- `src/features/lifecycle/commands/stopDemo.ts` - Clear on stop
-
-**Read Locations**: Restart detection, config change detection
-
----
-
----
-
-## WizardState Caches
-
-The wizard-side `WizardState` (React, not persisted to disk) contains caches that survive backward navigation but are cleared on stack or architecture change.
-
-| Field | Purpose | Write Authority | Cleared When |
-|-------|---------|-----------------|--------------|
-| `storeDiscoveryData` | Commerce store hierarchy (websites / store groups / store views) fetched from the REST API during the Connect Commerce step | `WizardContainer` via `onStoreDiscoveryDataChange` callback | Architecture change |
-
-`storeDiscoveryData` is **not** part of the extension-side `Project` type and is **not** persisted to disk. It is a transient wizard cache that drives the progressive store-code pickers.
-
-## SharedState Runtime Fields
-
-`SharedState` (the `context.sharedState` bag on `HandlerContext`) holds transient runtime fields that are never persisted to disk.
-
-`SharedState` holds **no credential-bearing fields**. Store discovery carries PaaS admin credentials in the `discover-store-structure` payload itself (a self-contained request), so no server-side credential cache exists. An earlier `currentComponentConfigs` field plus a `sync-component-configs` message were removed because the separate sync raced the discovery dispatch — see `src/features/eds/handlers/edsHandlers.ts` (`handleDiscoverStoreStructure`).
-
----
-
-## Audit Findings
-
-### Resolved: Mesh Endpoint Single Source of Truth (Fixed)
-
-**Issue**: Mesh endpoint was previously written in multiple locations:
-1. `componentInstances['commerce-mesh'].endpoint` (primary, via deployMesh.ts)
-2. `componentInstances['commerce-mesh'].endpoint` (secondary, via meshVerifier.ts)
-3. `componentConfigs['commerce-mesh'].MESH_ENDPOINT` (configuration storage)
-
-**Resolution** (Phase 1 - 2025-12-30):
-- Removed redundant writes in `meshVerifier.ts`
-- Consolidated to single write location in `deployMesh.ts`
-
-**Resolution** (Phase 2 - 2025-12-31):
-- `meshState.endpoint` is now the AUTHORITATIVE location for mesh endpoint
-- Added `endpoint` field to `meshState` type definition
-- All writes go to `meshState.endpoint` via `updateMeshState()`
-- All reads use `getMeshEndpoint()` or check `meshState.endpoint` first
-- `componentInstances['commerce-mesh'].endpoint` marked as `@deprecated`
-- Backward compatibility: reads fall back to legacy location for old projects
-
-**Resolution** (Phase 3 - 2026-07-15 - ADR-011 D3 Step 07 - CURRENT):
-- The keyed `appBuilderComponents` map is now the single persisted authority
-  for ALL App Builder deploy state (mesh endpoint + staleness baseline,
-  per-integration URLs/status)
-- `writeManifest` no longer serializes `meshState`/`appState`; legacy manifests
-  keep loading via the read-migration and forward-migrate on first save
-- `updateMeshState()` writes the keyed mesh entry (the writer chokepoint) and
-  clears the in-memory legacy singleton
-- All reads go through the keyed-first accessors (`getMeshEndpointUrl`,
-  `getMeshAppBuilderComponent`, …) — enforced by
-  `tests/core/state/singularStateAccessGuard.test.ts`
-
-**Status**: COMPLETED. Single source of truth is the keyed mesh
-`appBuilderComponents` entry (`meshState.endpoint` was the Phase-2 authority,
-now legacy-read-only).
-Files updated (Phase 2, historical):
-- `src/types/base.ts` - Added `endpoint` to `meshState`, deprecated on `ComponentInstance`
-- `src/features/mesh/services/stalenessDetector.ts` - `updateMeshState()` sets endpoint
-- `src/features/mesh/commands/deployMesh.ts` - Writes to `meshState.endpoint`
-- `src/features/project-creation/services/meshSetupService.ts` - Writes to `meshState.endpoint`
-- `src/features/project-creation/handlers/executor.ts` - Writes to `meshState.endpoint`
-- `src/features/dashboard/services/dashboardStatusService.ts` - `getMeshEndpoint()` updated
-- All read locations updated with fallback for backward compatibility
-
----
-
-### Potential Overlap: Environment Variable Storage
-
-**Observation**: Environment variables can appear in multiple locations:
-- `componentConfigs[componentId]` - Configuration UI values
-- the keyed `appBuilderComponents` mesh entry's `envVars` - Snapshot at deployment time
-- `frontendEnvState.envVars` - Snapshot at demo start
-
-**Analysis**: These are NOT overlaps but intentional snapshots:
-- `componentConfigs` = Current user configuration (AUTHORITATIVE)
-- keyed mesh entry `envVars` = Config at last deployment (HISTORICAL for staleness)
-- `frontendEnvState.envVars` = Config at demo start (HISTORICAL for restart)
-
-**Verdict**: Not a violation. Each serves a distinct purpose.
-
-`commerceStoreStructure` is NOT a fourth member of this set and needs no snapshot. It is a
-catalog keyed by code, not a record of what was selected or deployed: the mesh entry's
-`envVars` already says which codes shipped, and the structure only supplies their labels.
-
----
-
-## Remediation Items
-
-### Completed
-
-1. **[DONE] Remove legacy endpoint writes in meshVerifier.ts**
-   - File: `src/features/mesh/services/meshVerifier.ts`
-   - Lines: 153, 295, 299
-   - Action: Removed writes to `meshComponent.endpoint` in verifier
-   - Result: Single source of truth for endpoint writes is now `deployMesh.ts`
-   - Completed: 2025-12-30
-
-2. **[DONE] Migrate endpoint to meshState (single source of truth)**
-   - Added `endpoint` field to `meshState` type in `src/types/base.ts`
-   - Updated all write locations to use `meshState.endpoint`
-   - Updated all read locations to check `meshState.endpoint` first
-   - Added `@deprecated` annotation to `ComponentInstance.endpoint`
-   - Backward compatibility maintained via fallback reads
-   - Completed: 2025-12-31
-
-### Low Priority (Future)
-
-3. **Remove deprecated endpoint from ComponentInstance type**
-   - File: `src/types/base.ts`
-   - Action: After sufficient migration period, remove `endpoint` field entirely
-   - Note: Currently kept for backward compatibility with old project files
-   - Prerequisite: All users have opened their projects at least once (auto-migrates)
-   - Target: Consider for next major version
-
-### Medium Priority
-
-4. **Document write authority in code comments**
-   - Add TSDoc comments on `componentInstances`, `componentConfigs`, `appBuilderComponents`
-   - Link to this documentation
-
-5. **Add runtime validation**
-   - Consider adding development-mode warnings when writing to deprecated fields
-
----
-
-## Appendix: Full Audit Results
-
-### componentInstances Write Locations
-
-| File | Line | Field | Operation |
-|------|------|-------|-----------|
-| `componentManager.ts` | 241 | (init) | Initialize empty object |
-| `componentManager.ts` | 248 | status | Update status |
-| `componentManager.ts` | 249 | lastUpdated | Update timestamp |
-| `componentManager.ts` | 252-253 | metadata | Merge metadata |
-| `componentManager.ts` | 307 | (delete) | Remove component |
-| `deployMesh.ts` | 250 | endpoint | **AUTHORITATIVE** Set on successful deployment |
-| ~~`meshVerifier.ts`~~ | ~~153~~ | ~~endpoint~~ | ~~REMOVED - was redundant~~ |
-| ~~`meshVerifier.ts`~~ | ~~295~~ | ~~endpoint~~ | ~~REMOVED - was redundant~~ |
-| ~~`meshVerifier.ts`~~ | ~~299~~ | ~~endpoint~~ | ~~REMOVED - was redundant~~ |
-
-### componentConfigs Write Locations
-
-| File | Line | Field | Operation |
-|------|------|-------|-----------|
-| `configure.ts` | 154 | (full) | Replace all configs |
-| `executor.ts` | 454-456 | commerce-mesh | Initial mesh config |
-
-### meshState Write Locations (HISTORICAL — retired by ADR-011 D3)
-
-The singular `meshState` write-side is retired; the table below is the
-pre-D3 record. Current write authority is the keyed-writer table above
-("Write Authority" under the keyed `appBuilderComponents` section).
-
-| File | Line | Field | Operation |
-|------|------|-------|-----------|
-| `stalenessDetector.ts` | 514 | (full) | Set after deployment |
-| `meshVerifier.ts` | 293 | (clear) | Clear on error |
-| `meshStatusHelpers.ts` | 249 | (full) | Import scenario |
-| `dashboardHandlers.ts` | 131 | (full) | Unknown context |
-
-### frontendEnvState Write Locations
-
-| File | Line | Field | Operation |
-|------|------|-------|-----------|
-| `projectStateSync.ts` | 56 | (full) | Capture on demo start |
-| `stopDemo.ts` | 179 | (clear) | Clear on demo stop |
-
----
-
-## References
-
-- Over-Engineering Analysis: `.rptc/research/over-engineering-analysis.md`
-- Project Type Definition: `src/types/base.ts`
-- Component Manager: `src/features/components/services/componentManager.ts`
-- Mesh Staleness Detection: `src/features/mesh/services/stalenessDetector.ts`
+The rules are in [the handbook](../development/handbook.md). `StateManager` is built
+once at the composition root; a second instance would fork the caches that make this
+map meaningful.
