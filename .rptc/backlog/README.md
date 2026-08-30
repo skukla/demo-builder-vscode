@@ -297,8 +297,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-19` | fix | [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
 | `PL-20` | fix | [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | backlog |
 | `PL-21` | question | [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
-| `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | backlog |
-| `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | backlog |
+| `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
+| `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-27` | question | [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 
 <!-- END GENERATED registry -->
