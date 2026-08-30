@@ -1,7 +1,13 @@
 # Overnight loop — 2026-08-30
 
-Branch `loop/2026-08-29-convergence-phases`, 15 commits ahead of develop. Full
-gate (tests + both typechecks + whole-repo lint) green on every commit.
+Worked on `loop/2026-08-29-convergence-phases`, now **merged into develop and
+pushed**; the branch is kept as a backup. Full gate (tests + both typechecks +
+whole-repo lint) green on every commit, and green again on develop after the merge:
+15,423 tests across 1,198 files.
+
+(This line said "15 commits ahead of develop" for most of the run. It was true when
+written and stopped being true twice over — the run kept going, and then it merged.
+The count is left out now rather than pinned to a number that ages the same way.)
 
 ---
 
