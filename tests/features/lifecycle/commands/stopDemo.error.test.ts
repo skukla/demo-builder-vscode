@@ -10,43 +10,16 @@
  * ALL TESTS ARE FULLY MOCKED - No real process spawning or port binding.
  */
 
-import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
-import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import {
+    ProcessCleanup,
+    StopDemoCommand,
+    mockCommandExecutor,
+} from './stopDemo.testUtils';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 
-// Mock ProcessCleanup
-jest.mock('@/core/shell/processCleanup');
 const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
-
-// Mock ServiceLocator for CommandExecutor (lsof commands)
-const mockCommandExecutor = {
-    execute: jest.fn(),
-};
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(() => mockCommandExecutor),
-        reset: jest.fn(),
-    },
-}));
-
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
 
 describe('StopDemoCommand - Error Handling', () => {
     let command: StopDemoCommand;
