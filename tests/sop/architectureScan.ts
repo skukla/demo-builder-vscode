@@ -19,12 +19,23 @@ import { join } from 'path';
 export const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
 /** Every tracked source file, both runtimes. Callers narrow with `isWebview`. */
-export const ALL_FILES = execSync(
-    `git ls-files 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`,
-    { encoding: 'utf8', cwd: ROOT }
-)
-    .trim()
-    .split('\n');
+export const ALL_FILES = (() => {
+    // `ls-files` alone lists TRACKED files only, so a brand-new file is invisible
+    // to every rule in this directory until it is committed. That is not
+    // theoretical: on 2026-08-29 two session-accessor modules passed a green gate
+    // and turned the build red the moment they were committed, because the scan
+    // could not see them at the one time it mattered — before the commit.
+    //
+    // `--others --exclude-standard` adds untracked-but-not-ignored files, so a
+    // new file is judged by the same rules as every existing one, on the run
+    // BEFORE it lands.
+    const out = execSync(
+        `git ls-files --cached --others --exclude-standard ` +
+            `'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`,
+        { encoding: 'utf8', cwd: ROOT },
+    ).trim();
+    return [...new Set(out ? out.split('\n') : [])].sort();
+})();
 
 /**
  * Does this file run in a webview bundle rather than the extension host?

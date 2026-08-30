@@ -94,6 +94,50 @@ documented patterns:
 | `create...Deps` | Assembles one feature's service bundle; the only construction site outside `extension.ts`. |
 | Accessor | Answers a question from existing data; NEVER writes (the `ensureOAuthCredentialId` lesson). |
 
+### Session accessors — the one construction site this ADR did not name
+
+**Raised by the owner** 2026-08-29: *"our architecture ADR allows us to use
+factories? Where is this principle documented?"* — after two `getX()` accessor
+modules appeared the same afternoon, having been told that morning that factories
+have no place here.
+
+**It was documented nowhere.** `edsServiceCache` had done exactly this since
+before the ADR, and was permitted by being named in the enforcement file's
+allowlist. A named exemption is not a principle: it explains one file and teaches
+nothing, so the next two were written by copying it and the ADR never learned.
+
+**The rule, stated:**
+
+> A **session accessor** is a module whose only job is to MEMOISE one instance of
+> a service whose state must outlive a single call — `getX(...)` returning a
+> module-level singleton, plus a `resetX()` for tests and host reload. It may
+> construct. Nothing else may.
+
+**Why it is not the "factory" that was rejected.** That proposal was
+`helixForCodeSync(...)` / `helixForPublishing(...)` — several constructors for the
+same class, chosen per call site, to make a credential set checkable. It creates
+no instance identity and introduces a seventh element kind for a job the type
+system already does. A session accessor creates exactly ONE instance and exists
+for identity alone. Same syntax, opposite purpose.
+
+**When it is warranted, and when it is not.** Only when the thing built
+accumulates state that a second instance would fork. All three live cases are
+caches: EDS clients (a token-validation cache), the component registry (a
+transform memo), prerequisites (CLI results). A stateless service gets no
+accessor — build it where it is used.
+
+**Two lists, because they answer different questions.** The enforcement file
+separates SESSION_ACCESSORS (memoise; build once however often called) from
+per-call COMPOSITION_POINTS (assemble a fresh bundle each time). The lifetime rule
+below applies only to the second. Before the split it excluded `edsServiceCache`
+by filename, which is the same mistake as the allowlist — a name where a property
+belongs.
+
+**How the gap surfaced, because it is the durable part.** The architecture scan
+reads `git ls-files`, so a NEW UNTRACKED FILE is invisible to every rule. The gate
+ran green before the commit and the rule fired after it, against a file the
+scanner could not see when it mattered. Both accessors reached `develop` that way.
+
 ### A cache is only as useful as the lifetime of the object that owns it
 
 Added 2026-08-29, and it is the same question the construction rule asks, aimed at

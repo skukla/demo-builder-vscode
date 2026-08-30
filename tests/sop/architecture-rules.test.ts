@@ -76,17 +76,42 @@ function mayFetch(f: string): boolean {
  * allowlist with reasons is the same discipline as the exemption ledger — the
  * difference is that these are RULINGS, not debt, so they do not need to shrink.
  */
-const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
-    'src/commands/handlerContextFactory.ts':
-        'builds HandlerContext for the webview side — the handler dependency bundle itself',
-    'src/features/ai/server/headlessHandlerContext.ts':
-        'builds the same bundle for the MCP side, where there is no panel',
+/**
+ * SESSION ACCESSORS — they MEMOISE, so they build once however often they are
+ * called. That is the property the lifetime rule cares about, and it is why they
+ * are listed apart from the per-call factories below rather than filtered out of
+ * them by filename.
+ */
+const SESSION_ACCESSORS: Readonly<Record<string, string>> = {
     'src/features/eds/handlers/edsServiceCache.ts':
         "the EDS feature's client builder — assembles the four GitHub clients and the " +
-        'DA.live auth service, CACHES them, and is used by 18 files. D-2 established it as ' +
-        'the settled answer for this feature: the policy question was already decided in ' +
-        'code. Its caching is load-bearing, not incidental — GitHubTokenService holds a ' +
-        'token-validation cache, so a file building its own re-validates against GitHub.',
+        'DA.live auth service and CACHES them; 18 files use it. Its caching is ' +
+        'load-bearing: GitHubTokenService holds a token-validation cache, so a file ' +
+        'building its own re-validates against GitHub (D-2).',
+    'src/features/components/services/componentRegistryInstance.ts':
+        'memoises ONE ComponentRegistryManager so its transformToGroupedStructure memo ' +
+        'survives past a single message.',
+    'src/features/prerequisites/services/prerequisitesManagerInstance.ts':
+        'memoises ONE PrerequisitesManager so its CLI-result cache can hit at all — a ' +
+        'hit is <10ms against a 500-3000ms miss.',
+};
+
+/**
+ * PER-CALL composition points — they assemble a fresh bundle every time they are
+ * called, so anything stateful they construct is forked at that rate. Recognised
+ * by ROLE rather than filename: both build `HandlerContext`, the dependency
+ * bundle every handler receives, which already carries `prereqManager`,
+ * `errorLogger` and `progressUnifier`.
+ *
+ * Listed rather than renamed to match a regex — a file renamed to satisfy a check
+ * is gaming it, and the next composition point would be misnamed again.
+ */
+const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
+    'src/commands/handlerContextFactory.ts':
+        'builds HandlerContext for the webview side; called PER INCOMING MESSAGE by all ' +
+        'six surfaces (17 call sites)',
+    'src/features/ai/server/headlessHandlerContext.ts':
+        'builds the same bundle for the MCP side, where there is no panel',
 };
 
 /**
@@ -119,6 +144,7 @@ function mayConstruct(f: string): boolean {
         f === 'src/extension.ts' ||
         /[Dd]eps\.tsx?$/.test(f) ||
         f in COMPOSITION_POINTS ||
+        f in SESSION_ACCESSORS ||
         f in NOT_FRAGMENTED
     );
 }
@@ -199,9 +225,9 @@ describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => 
      * repeated CLI checks (a hit <10ms, a miss 500-3000ms) and cannot hit at all.
      * Pinned in `prerequisiteCacheLifetime.test.ts`.
      */
-    const REPEATED_COMPOSITION_POINTS = Object.keys(COMPOSITION_POINTS).filter(
-        (f) => f !== 'src/features/eds/handlers/edsServiceCache.ts', // memoises at module level
-    );
+    // Every per-call point. Session accessors are a separate list precisely so
+    // this does not need a filename exclusion — memoising IS the distinction.
+    const REPEATED_COMPOSITION_POINTS = Object.keys(COMPOSITION_POINTS);
 
     const stateful = statefulClosure(classBodies(src));
 
