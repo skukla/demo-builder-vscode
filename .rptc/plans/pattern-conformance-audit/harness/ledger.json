@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-08-29T15:15:17.845Z",
+ "generatedAt": "2026-08-30T03:24:52.105Z",
  "universes": {
   "di-style": "src_files",
   "envelope": "tool_registrar_files",
@@ -34,8 +34,8 @@
   {
    "unit": "src/commands/diagnostics.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 5 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=locator (5 site(s))"
   },
   {
    "unit": "src/commands/diagnosticsChecks.ts",
@@ -52,8 +52,8 @@
   {
    "unit": "src/commands/handlerContextFactory.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
   },
   {
    "unit": "src/commands/manageSiteAccess.ts",
@@ -1564,8 +1564,8 @@
   {
    "unit": "src/features/ai/server/headlessHandlerContext.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=locator (2 site(s))"
   },
   {
    "unit": "src/features/ai/server/inExtensionMcpServer.ts",
@@ -2146,8 +2146,8 @@
   {
    "unit": "src/features/components/handlers/componentHandlers.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/components/services/ComponentRegistryManager.ts",
@@ -2220,6 +2220,18 @@
    "pattern": "di-style",
    "verdict": "exempt",
    "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/componentRegistryAccess.ts",
+   "pattern": "di-style",
+   "verdict": "exempt",
+   "evidence": "acquires no services"
+  },
+  {
+   "unit": "src/features/components/services/componentRegistryInstance.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/components/services/componentTransforms.ts",
@@ -3107,7 +3119,7 @@
    "unit": "src/features/eds/commands/cleanupDaLiveSites.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 2 direct construction(s)"
+   "evidence": "MIXES styles: 2 locator reach-in(s) + 1 direct construction(s)"
   },
   {
    "unit": "src/features/eds/commands/manageGitHubRepos.ts",
@@ -3227,7 +3239,7 @@
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 2 locator reach-in(s) + 4 direct construction(s)"
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
   },
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts",
@@ -3257,7 +3269,7 @@
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
    "pattern": "di-style",
    "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 4 direct construction(s)"
+   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
   },
   {
    "unit": "src/features/eds/handlers/storefrontSetup/storefrontSetupTypes.ts",
@@ -3959,7 +3971,7 @@
    "unit": "src/features/lifecycle/commands/syncStorefront.ts",
    "pattern": "di-style",
    "verdict": "conforming",
-   "evidence": "style=construction (2 site(s))"
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/features/lifecycle/commands/viewStatus.ts",
@@ -4144,8 +4156,8 @@
   {
    "unit": "src/features/prerequisites/handlers/shared.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 3 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
   },
   {
    "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
@@ -4167,6 +4179,12 @@
   },
   {
    "unit": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+   "pattern": "di-style",
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
+  },
+  {
+   "unit": "src/features/prerequisites/services/prerequisitesManagerInstance.ts",
    "pattern": "di-style",
    "verdict": "conforming",
    "evidence": "style=construction (1 site(s))"
@@ -4282,8 +4300,8 @@
   {
    "unit": "src/features/project-creation/handlers/executor.ts",
    "pattern": "di-style",
-   "verdict": "deviating",
-   "evidence": "MIXES styles: 1 locator reach-in(s) + 1 direct construction(s)"
+   "verdict": "conforming",
+   "evidence": "style=locator (1 site(s))"
   },
   {
    "unit": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
@@ -4306,8 +4324,8 @@
   {
    "unit": "src/features/project-creation/handlers/executorEdsPhase.ts",
    "pattern": "di-style",
-   "verdict": "conforming",
-   "evidence": "style=construction (1 site(s))"
+   "verdict": "exempt",
+   "evidence": "acquires no services"
   },
   {
    "unit": "src/features/project-creation/handlers/executorMeshPhase.ts",
@@ -5338,8 +5356,8 @@
   {
    "unit": "src/types/handlers.ts",
    "pattern": "di-style",
-   "verdict": "exempt",
-   "evidence": "acquires no services"
+   "verdict": "conforming",
+   "evidence": "style=construction (1 site(s))"
   },
   {
    "unit": "src/types/index.ts",
