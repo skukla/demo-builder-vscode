@@ -380,3 +380,45 @@ describe('ADR-022: features get no new barrel', () => {
         expectClean('featureBarrels', barrels);
     });
 });
+
+describe('a cast at a call boundary is a silenced type error', () => {
+    /**
+     * `as any` / `as never` on an ARGUMENT tells the compiler to stop checking the
+     * one thing it is best at: whether the caller and callee agree.
+     *
+     * This is not a style preference. Four times in this repo a cast in argument
+     * position hid a field the callee dispatches on, and each time the result was a
+     * silent no-op in production that every test agreed with — because a mock
+     * answers the same whatever it is handed, so a wrong-shaped argument is
+     * indistinguishable from a correct one. Twelve tests stayed green across all
+     * four. The failures: the import handler resolving every real project to `''`,
+     * reset never offering sample-data removal, removal unable to resolve
+     * credentials, and the poller handed a client with no `getJobStatus`.
+     *
+     * `src/` is clean at 904 files, so this is a hard rule with no ledger. If a cast
+     * is needed to pass something, the shape is wrong — build the object the callee
+     * declares and let it fail at compile time.
+     */
+    const PAT = /[(,]\s*[^(),;{}]{1,80}?\s+as\s+(?:any|never)\s*(?=[,)])/;
+
+    it('CONTROL: the detector catches argument casts and ignores the others', () => {
+        // A zero below must mean "none found", not "never looked" — and must not
+        // mean "matched everything", which would be equally useless.
+        expect(PAT.test('handler(payload as any)')).toBe(true);
+        expect(PAT.test('dispatch(ctx, message as any, extra)')).toBe(true);
+        expect(PAT.test('foo(a, b as never)')).toBe(true);
+        expect(PAT.test('const x = y as any;')).toBe(false); // a declaration, not a call
+        expect(PAT.test('return z as never;')).toBe(false); // a return, not a call
+        expect(PAT.test('foo(a as Project)')).toBe(false); // a real type is fine
+    });
+
+    it('no argument is passed as any or never', () => {
+        const violations: string[] = [];
+        for (const f of FILES) {
+            (src.get(f) as string).split('\n').forEach((line, i) => {
+                if (PAT.test(line)) violations.push(`${f}:${i + 1}  ${line.trim().slice(0, 80)}`);
+            });
+        }
+        expect(violations).toEqual([]);
+    });
+});

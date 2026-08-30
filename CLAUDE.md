@@ -108,7 +108,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 10 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 20 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 21 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | periodic | 8 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
@@ -161,6 +161,17 @@ without producing a signal.
 - `ai-bundle-coherence` — do real projects' AI bundles match their shape: delivered skill sets vs composition, bundle sources that exist, .mcp.json/package agreement (live half; the static half runs every commit in `tests/templates/ai-bundle-coherence.test.ts`)
 - `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
+
+## The conventions live in one place
+
+**[docs/development/handbook.md](docs/development/handbook.md)** states every convention
+this codebase holds itself to — 58 of them, 52 with an enforcer that fails the build — and
+explains each one for a human reader. Read it once, start to finish.
+
+Some rules appear both there and here, deliberately: this file is loaded into every agent
+session and the handbook is not, so a rule that must steer the work has to be in both. The
+pairs are pinned by `tests/sop/claude-md-handbook-agreement.test.ts`, which fails when one
+copy is edited away — the duplication is allowed, the silent divergence is not.
 
 ## Architecture law — TWO documents, one per runtime
 
