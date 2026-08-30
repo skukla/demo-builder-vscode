@@ -1,0 +1,109 @@
+{
+    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
+    "_note": "PL-22 first fair-sample run, 2026-08-30: the numbers BEFORE any strengthening pass.",
+    "modules": {
+        "src/commands/claudeCodeFootprint.ts": {
+            "score": 83.33,
+            "killed": 120,
+            "survived": 16,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 11,
+                "string": 5
+            },
+            "highValueSurvivors": 11
+        },
+        "src/features/ai/server/siteTools.ts": {
+            "score": 57.33,
+            "killed": 129,
+            "survived": 93,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 21,
+                "branch": 16,
+                "string": 51,
+                "optionalChain": 5
+            },
+            "highValueSurvivors": 16
+        },
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
+            "score": 67.04,
+            "killed": 179,
+            "survived": 53,
+            "noCoverage": 35,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 19,
+                "other": 9,
+                "string": 10,
+                "optionalChain": 2,
+                "block": 4,
+                "logPresentation": 9
+            },
+            "highValueSurvivors": 23
+        },
+        "src/features/eds/services/patches/codePatchRegistry.ts": {
+            "score": 84.54,
+            "killed": 82,
+            "survived": 14,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "branch": 6,
+                "logPresentation": 4
+            },
+            "highValueSurvivors": 6
+        },
+        "src/features/prerequisites/handlers/installHandler.ts": {
+            "score": 41.77,
+            "killed": 226,
+            "survived": 193,
+            "noCoverage": 122,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 15,
+                "branch": 74,
+                "other": 29,
+                "string": 19,
+                "logPresentation": 43,
+                "optionalChain": 13
+            },
+            "highValueSurvivors": 89
+        },
+        "src/core/utils/mcpSocketPath.ts": {
+            "score": 77.78,
+            "killed": 7,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 0
+        },
+        "src/features/components/services/commerceCredentialStore.ts": {
+            "score": 95.65,
+            "killed": 22,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0
+        },
+        "src/features/updates/services/envMerge.ts": {
+            "score": 100,
+            "killed": 23,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "highValueSurvivors": 0
+        }
+    }
+}
