@@ -65,10 +65,6 @@ const ALLOWED: Record<string, string> = {
         'invented path in an example of a citation the scan flags as dead',
     '.claude/skills/rptc-hygiene-scan/SKILL.md::src/features/x/old.ts':
         'invented path in the same example — a file that was deleted is the case being shown',
-    'CONTRIBUTING.md::src/features/authentication/services/authService.ts':
-        'shortened name in an example of the test-mirroring convention; the real file is authenticationService.ts and naming it would make the example harder to read',
-    'CONTRIBUTING.md::tests/features/authentication/services/authService.test.ts':
-        'the mirrored half of the same illustrative pair',
 };
 
 function docs(): string[] {

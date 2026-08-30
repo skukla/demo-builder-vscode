@@ -1,356 +1,113 @@
-# Contributing to Adobe Demo Builder
+# Contributing
 
-Thank you for your interest in contributing to the Adobe Demo Builder VS Code extension! This document provides guidelines for contributing to the project.
+## Setup
 
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Code Quality Standards](#code-quality-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Commit Message Guidelines](#commit-message-guidelines)
-
-## Code of Conduct
-
-Please be respectful and professional in all interactions. We're building this together!
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18 or later
-- VS Code 1.74.0 or later
-- npm or yarn
-
-### Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/skukla/demo-builder-vscode.git
-   cd demo-builder-vscode
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Build the extension:**
-   ```bash
-   npm run compile
-   ```
-
-4. **Run tests:**
-   ```bash
-   npm test
-   ```
-
-5. **Launch the extension:**
-   - Press `F5` in VS Code to open the Extension Development Host
-   - Or: Run > Start Debugging
-
-## Development Workflow
-
-### Branch Strategy
-
-- `master` - Stable production branch
-- `develop` - Active development branch
-- `feature/*` - New features
-- `fix/*` - Bug fixes
-- `refactor/*` - Code improvements
-
-### Making Changes
-
-1. **Create a feature branch:**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes** following the code quality standards below
-
-3. **Run tests** to ensure nothing broke:
-   ```bash
-   npm test
-   ```
-
-4. **Commit your changes** following commit message guidelines
-
-5. **Push to your branch:**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-6. **Create a Pull Request** on GitHub
-
-## Code Quality Standards
-
-### TypeScript
-
-- **Strict mode enabled** - All TypeScript strict checks are enforced
-- **No `any` types** - Use proper typing or `unknown` with type guards
-- **Path aliases** - Use `@/` aliases for imports:
-  ```typescript
-  // ✅ Good
-  import { StateManager } from '@/core/state';
-
-  // ❌ Avoid
-  import { StateManager } from '../../../src/core/state';
-  ```
-
-### Code Organization
-
-- **Feature-based architecture** - Group related files by feature in `src/features/`
-- **Mirror structure in tests** - Test files should mirror source file locations
-- **Single Responsibility** - Each file/class should have one clear purpose
-
-### Linting
-
-All code must pass ESLint:
+You need **VS Code 1.84 or later** (`engines.vscode` is `^1.84.0` — an older editor
+will refuse to install the extension) and a current Node LTS.
 
 ```bash
-npm run lint
+git clone https://github.com/skukla/demo-builder-vscode.git
+cd demo-builder-vscode
+npm install
+npm run compile
 ```
 
-**Key ESLint Rules:**
-- Max line length: 120 characters
-- No unused variables or imports
-- Consistent code formatting (use Prettier)
+Press **F5** to launch the Extension Development Host.
 
-### Formatting
+While iterating, run `npm run watch:all` in the background: after that you only
+reload the dev-host window with Cmd+R, and F5 is needed only when the extension host
+itself must restart.
 
-Code is automatically formatted with Prettier:
+## Branches
+
+`master` is stable and is reached only through the release process. `develop` is
+where work lands. Feature work uses `feature/*`, `fix/*` or `refactor/*`.
+
+## Before you push: `npm run gate`
+
+One command runs everything CI checks, in order, stopping at the first failure:
+whole-repo lint, `tsc` over `src/` and over the test tree, the file-set validator,
+the full suite, and the dead-code scan.
 
 ```bash
-# Check formatting
-npm run format:check
-
-# Auto-format all files
-npm run format
+npm run gate
 ```
 
-## Testing Guidelines
+Run it rather than the individual commands. The lint CI runs is **whole-repo**, so a
+scoped local lint can pass while CI fails on a file you never touched — and a
+sequence of six commands is a memory test that has already been failed twice here.
 
-### Test-Driven Development (TDD)
+## Commits
 
-We follow TDD for all new features:
+**Conventional Commits**, plus a `Backlog:` trailer:
 
-1. **Write tests first** (RED phase)
-2. **Implement minimal code** to pass tests (GREEN phase)
-3. **Refactor** for quality (REFACTOR phase)
+```
+feat(authentication): use the Console SDK for auth checks
 
-### Test File Size Limits
+Replaces CLI calls with the SDK, adds a 5-minute TTL cache, and keeps the
+existing auth flow working unchanged.
 
-**Keep test files focused and maintainable:**
-
-| File Size | Action Required |
-|-----------|----------------|
-| < 300 lines | ✅ Keep as-is |
-| 300-500 lines | ⚠️ Monitor, consider splitting |
-| 500-750 lines | 🟡 **Split recommended** |
-| > 750 lines | 🔴 **Split required** (CI blocks) |
-
-**Why 500 lines?**
-- Industry standard (Google, Airbnb, Microsoft guidelines)
-- Reduces cognitive load (understandable in < 5 minutes)
-- Improves test isolation and focus
-- Reduces memory usage (40-50% improvement measured)
-
-**Validation:**
-```bash
-# Check test file sizes locally
-npm run validate:test-file-sizes
+Backlog: none
 ```
 
-**CI/CD Enforcement:**
-- GitHub Actions automatically checks test file sizes on PRs
-- Files > 750 lines will block PR merging
-- See `docs/testing/test-file-splitting-playbook.md` for splitting guidance
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `style`.
 
-### Test Coverage
-
-- **Minimum coverage:** 80% overall
-- **Critical paths:** 100% coverage required
-- **Run coverage:**
-  ```bash
-  npm run test:coverage
-  ```
-
-### Test Structure
-
-Follow the **AAA pattern** (Arrange, Act, Assert):
-
-```typescript
-describe('myFunction', () => {
-  it('should return expected result when given valid input', () => {
-    // Arrange: Set up test data
-    const input = { key: 'value' };
-
-    // Act: Execute code under test
-    const result = myFunction(input);
-
-    // Assert: Verify outcome
-    expect(result).toEqual({ processedKey: 'processedValue' });
-  });
-});
-```
-
-### Test Location
-
-**Rule:** Mirror the source file structure:
-- Source: `src/features/authentication/services/authService.ts`
-- Test: `tests/features/authentication/services/authService.test.ts`
-
-### Running Tests
+**The trailer is required and git enforces it.** `Backlog: none` is a first-class
+answer — most commits belong to no tracked item, and forcing a fake id would be
+worse than no rule. What the rule buys is that you answered. Switch the hooks on
+once per clone:
 
 ```bash
-# All tests
-npm test
-
-# Specific test file
-npm test -- tests/features/authentication/services/authService.test.ts
-
-# Watch mode (for active development)
-npm run test:watch
-
-# Coverage report
-npm run test:coverage
+npm run hooks:git
 ```
 
-See `tests/README.md` for comprehensive testing documentation.
+Two things the hook will refuse: a trailer naming an id that does not exist, and any
+`Co-Authored-By` line crediting an AI tool. A human co-author is fine.
 
-## Pull Request Process
+## Code
 
-### Before Submitting
+**TypeScript strict**, path aliases (`@/core/...`) for anything crossing a module
+boundary, relative imports only within a directory. Prettier owns formatting at 100
+columns — run `npm run format`, and do not hand-tune whitespace.
 
-Ensure your PR meets these requirements:
+Prefer `unknown` plus a type guard over `any`. A cast at a call boundary is a
+silenced type error, and it has hidden four real defects here: each produced a silent
+no-op in production that every test agreed with.
 
-- [ ] All tests pass (`npm test`)
-- [ ] Code is linted (`npm run lint`)
-- [ ] Code is formatted (`npm run format`)
-- [ ] Test coverage maintained or improved
-- [ ] Test files are under 750 lines
-- [ ] No console.log or debugger statements
-- [ ] Documentation updated (if applicable)
+Where code goes, and the conventions the build enforces, are in
+[the handbook](docs/development/handbook.md) — 63 of them, 57 with an enforcer.
+Read it once.
 
-### PR Description Template
+## Tests
 
-```markdown
-## Description
-Brief description of changes
+Tests mirror `src/` under `tests/`, named after their source file. TDD is the
+expected rhythm: a failing test, the smallest code that passes it, then refactor.
 
-## Type of Change
-- [ ] Bug fix (non-breaking change fixing an issue)
-- [ ] New feature (non-breaking change adding functionality)
-- [ ] Breaking change (fix or feature causing existing functionality to not work as expected)
-- [ ] Documentation update
+Coverage is gated at 80% for branches and statements. Test files warn at 500 lines
+and CI blocks a merge past 750.
 
-## Testing
-Describe testing performed:
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Manual testing performed
+The rule that matters most is not size, though — **a test that passes against the
+disabled feature tests nothing.** After writing one, break the behaviour it covers
+and confirm it fails. [`tests/README.md`](tests/README.md) explains why, with two
+cases where that check found tests asserting nothing.
 
-## Checklist
-- [ ] Code follows project style guidelines
-- [ ] Self-review performed
-- [ ] Comments added for complex code
-- [ ] Documentation updated
-- [ ] No new warnings generated
-- [ ] Tests added proving fix is effective or feature works
-- [ ] All tests passing
-```
+## Pull requests
 
-### Review Process
+- `npm run gate` passes
+- new behaviour has a test, and you have watched that test fail
+- no `console.log` or `debugger` left behind
+- documentation updated when behaviour changed
 
-1. **Automated checks run** - CI/CD pipeline validates:
-   - All tests pass
-   - Linting passes
-   - Test file sizes within limits
-   - Code formatted correctly
+Describe **what problem this solves** before what you changed. A reviewer who has to
+reconstruct the intent from a file list is doing your work.
 
-2. **Code review** - Maintainers review for:
-   - Code quality and readability
-   - Adherence to architecture patterns
-   - Test coverage and quality
-   - Documentation completeness
+## Where to look
 
-3. **Approval and merge** - Once approved, PR is merged to `develop`
+| | |
+|---|---|
+| [`docs/development/handbook.md`](docs/development/handbook.md) | every convention, and which are enforced |
+| [`CLAUDE.md`](CLAUDE.md) | what this extension never compromises on, and the words it uses |
+| [`docs/architecture/overview.md`](docs/architecture/overview.md) | how the pieces fit |
+| [`tests/README.md`](tests/README.md) | testing in depth |
 
-## Commit Message Guidelines
-
-We follow **Conventional Commits** specification:
-
-### Format
-
-```
-<type>(<scope>): <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-### Types
-
-- `feat`: New feature
-- `fix`: Bug fix
-- `refactor`: Code refactoring (no functionality change)
-- `test`: Adding or updating tests
-- `docs`: Documentation changes
-- `chore`: Build process, tooling, dependencies
-- `perf`: Performance improvements
-- `style`: Code style changes (formatting, missing semicolons, etc.)
-
-### Examples
-
-```
-feat(authentication): add Adobe SDK integration for faster auth checks
-
-Replaces Adobe CLI calls with Adobe SDK for 30x performance improvement.
-- Adds caching layer with 5-minute TTL
-- Implements async SDK initialization
-- Maintains backward compatibility with existing auth flow
-```
-
-```
-fix(dashboard): resolve fire-and-forget async test failures
-
-Mocks meshVerifier module to prevent Jest environment teardown errors
-during async status checking operations.
-
-Closes #123
-```
-
-```
-test(staleness): split stalenessDetector tests into focused files
-
-Splits 925-line test file into 6 focused files:
-- Edge cases (10 tests)
-- File comparison (6 tests)
-- Hash calculation (4 tests)
-- Initialization (5 tests)
-- State detection (7 tests)
-- Main integration tests (30 tests)
-
-Reduces memory usage by 45% and improves test execution time.
-```
-
-## Additional Resources
-
-- **Project Documentation:** See `CLAUDE.md` and `src/CLAUDE.md`
-- **Architecture Guide:** `docs/architecture/overview.md`
-- **Testing Guide:** `tests/README.md`
-- **Test Splitting Playbook:** `docs/testing/test-file-splitting-playbook.md`
-
-## Questions?
-
-If you have questions about contributing, please:
-1. Check existing documentation in `docs/` directory
-2. Review `CLAUDE.md` for development guidelines
-3. Open an issue on GitHub for clarification
-
----
-
-**Thank you for contributing to Adobe Demo Builder!** 🎉
+Questions: open an issue.
