@@ -163,7 +163,12 @@ describe('module paths cited by current-tense documents resolve', () => {
         // Without this, every assertion below passes vacuously on an empty file list.
         expect(docs().length).toBeGreaterThan(50);
         const found = docs().flatMap((f) => citations(readFileSync(join(ROOT, f), 'utf8')));
-        expect(found.length).toBeGreaterThan(100);
+        // Guards against the extractor returning NOTHING, which would make every
+        // assertion below pass vacuously. The floor is deliberately well under the
+        // real count: it was 100 against a corpus of ~500-line READMEs, and cutting
+        // those to what they had to say dropped the total to 90 — a legitimate fall
+        // that failed a control calibrated to the bloat.
+        expect(found.length).toBeGreaterThan(40);
     });
 
     it('every cited module location exists', () => {
