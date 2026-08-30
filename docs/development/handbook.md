@@ -283,6 +283,31 @@ declared in one place, with vendor styles below ours.
 
 ---
 
+> **Convention.** Hooks are the webview's service layer. A component renders and handles
+> interaction; the state machine, the calls to the host and the derived data live in a hook.
+> *Why:* it is what makes a component testable without a running extension, and it stops
+> render code growing opinions about what the data means.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) · Enforced by the `hookRefs`
+> ledger in `tests/sop/webview-architecture-rules.exemptions.json`.
+
+> **Convention.** One message channel per bundle, and it is a singleton.
+> *Why:* `acquireVsCodeApi()` can only be called once per webview, so there is nothing to
+> vary. A second channel is not a design choice, it is a bug waiting for a race.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) · **Not enforced.**
+
+> **Convention.** A CSS class a component uses is defined somewhere.
+> *Why:* an undefined class fails silently — the element simply renders unstyled, on one
+> surface, with no error anywhere.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `classesDefinedNowhere` ledger in `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** A class used by shared components lives in a globally-loaded sheet, not
+> in one bundle's stylesheet.
+> *Why:* a shared component appears on several surfaces; a class defined in one bundle
+> styles it on that surface and nowhere else.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
+> check in `tests/sop/stylesheet-bundles.test.ts`.
+
 #### Also checked here
 
 Enforced automatically. You do not need to hold these in your head — if you break one, the
@@ -311,6 +336,29 @@ check says so and names the file.
 > existed.
 > Enforced by `.claude/hooks/rules/30-reuse-first.rule`, which interrupts at the moment you
 > create the file.
+
+> **Convention.** A component's own style block styles that component only.
+> *Why:* a component that reaches out to style its neighbours makes both un-moveable.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced.**
+
+> **Convention.** Utility classes live in the overrides layer, not scattered through
+> component sheets.
+> *Why:* a utility defined beside a component is invisible to everyone who could reuse it,
+> so it gets written again.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/inline-styles.test.ts`.
+
+> **Convention.** Styling reaches Spectrum through `UNSAFE_className` and the `cn()`
+> helper, not through style objects.
+> *Why:* it keeps styling in the cascade layers where it can be themed and overridden.
+> [styling-guide.md](styling-guide.md) · **Not enforced** directly — the inline-styles
+> check is the closest proxy.
+
+> **Convention.** Class names are not assembled dynamically beyond a small ceiling.
+> *Why:* a class built from a variable cannot be traced to a definition, so the check that
+> every class exists goes blind.
+> Enforced by the `dynamicClassSiteCeiling` ledger in
+> `tests/sop/webview-architecture-rules.exemptions.json`.
 
 ## 8. Agents are a second door, never the only one
 
@@ -427,7 +475,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 45 conventions. 36 of them are enforced; 9 are not.**
+**This handbook states 53 conventions. 41 of them are enforced; 12 are not.**
 
 Those nine depend on someone noticing in review, which means they will drift. That is a
 known gap rather than an oversight. Closing one means writing an enforcer, or demoting
