@@ -46,7 +46,7 @@ removal requires positive proof of authorship. A writer that calls `writeFile`
 directly has quietly opted out of that.
 
 **3. Existing projects keep working.** Projects live on disk for months across
-many extension versions. This is why `AI_CONTEXT_VERSION` (currently 31) exists
+many extension versions. This is why `AI_CONTEXT_VERSION` exists
 and why the activation sweep refreshes stale bundles instead of prompting. A
 change that only works for newly created projects is half a change — the
 regenerate path and the creation path must produce the same result.

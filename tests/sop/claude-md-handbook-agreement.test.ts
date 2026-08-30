@@ -22,6 +22,7 @@
  * survived an edit, not that the wording stayed in agreement. Reading them is
  * still a release-cut job.
  */
+import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -87,6 +88,63 @@ const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }
         handbook: 'declares a control',
     },
 ];
+
+describe('the counts CLAUDE.md states match the registries they count', () => {
+    // Added after planting each of these as a drift and watching the suite pass.
+    // A stated number is a claim with a maintainer, and these had none: the glossary
+    // says how many stacks and demo packages exist, and both would have gone stale
+    // the next time either registry grew.
+    //
+    // AI_CONTEXT_VERSION is deliberately NOT here. It bumps on every bundle change,
+    // so pinning prose to it buys churn rather than safety — the fix there was to
+    // stop stating the number at all.
+    const registry = (file: string, key: string): number => {
+        const json = JSON.parse(
+            readFileSync(join(ROOT, `src/features/components/config/${file}`), 'utf8')
+        ) as Record<string, unknown[]>;
+        return json[key].length;
+    };
+
+    it('CONTROL: both registries parse and are non-empty', () => {
+        expect(registry('stacks.json', 'stacks')).toBeGreaterThan(0);
+        expect(registry('demo-packages.json', 'packages')).toBeGreaterThan(0);
+    });
+
+    it('states the right number of stacks', () => {
+        expect(CLAUDE_MD).toContain(`(${registry('stacks.json', 'stacks')} of them, a list`);
+    });
+
+    it('states the right number of demo packages', () => {
+        expect(CLAUDE_MD).toContain(`(${registry('demo-packages.json', 'packages')} of them,`);
+    });
+});
+
+describe('the AI-bundle gate seams named in CLAUDE.md all still exist', () => {
+    // "Change all or none" is only useful if the list is the real list. A seam that
+    // gets renamed and quietly dropped from the doc turns a change-all-or-none rule
+    // into a change-three-of-four rule, which is the exact defect it prevents.
+    const SEAMS = [
+        'buildMcpConfig',
+        'installAiDefaultsMcpTools',
+        'componentInstallationOrchestrator',
+        'handleRegenerateAiFiles',
+    ];
+
+    it('CONTROL: the seam names are real symbols in src/', () => {
+        for (const s of SEAMS) {
+            const hits = execSync(`git grep -l ${s} -- src | wc -l`, {
+                encoding: 'utf8',
+                cwd: ROOT,
+            }).trim();
+            expect({ seam: s, found: Number(hits) > 0 }).toEqual({ seam: s, found: true });
+        }
+    });
+
+    it('names every seam, and says how many there are', () => {
+        for (const s of SEAMS) expect(CLAUDE_MD).toContain(s.toLowerCase());
+        expect(CLAUDE_MD).toContain(`${SEAMS.length === 4 ? 'four' : String(SEAMS.length)} seams`);
+    });
+});
 
 describe('the "hit every surface" list names every surface that exists', () => {
     // The list exists to stop a change landing on one path and missing the others.
