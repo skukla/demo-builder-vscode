@@ -236,6 +236,43 @@ describe('the inventories that claim to be complete, are', () => {
     });
 });
 
+describe('the documentation index lists every document under docs/', () => {
+    // It listed 18 of 41 — omitting all four SOPs, both troubleshooting guides, both
+    // testing docs, ten of thirteen architecture docs, and the HANDBOOK. The document
+    // stating every convention this codebase holds itself to was absent from the index
+    // of documentation, and nothing noticed because links resolving is the only thing
+    // anyone had ever checked.
+    //
+    // Three exclusions, each because the documents are indexed somewhere that is
+    // ITSELF checked, so listing them twice would create two indexes to drift:
+    //   docs/architecture/*  -> architecture/CLAUDE.md, enforced by the check below
+    //   docs/architecture/adr/* -> adr/README.md, generated
+    //   docs/research/*, CHANGELOG -> records, not documentation. That distinction
+    //                                 is the first thing docs/README.md states.
+    const INDEX = join(ROOT, 'docs/README.md');
+    const indexed = (): string[] =>
+        execSync("git ls-files 'docs/'", { encoding: 'utf8', cwd: ROOT })
+            .split('\n')
+            .filter(
+                (f) =>
+                    f.endsWith('.md') &&
+                    !f.startsWith('docs/architecture/') &&
+                    !f.startsWith('docs/research/') &&
+                    f !== 'docs/CHANGELOG.md' &&
+                    f !== 'docs/README.md'
+            );
+
+    it('CONTROL: the walk finds documents to index', () => {
+        expect(indexed().length).toBeGreaterThan(20);
+    });
+
+    it('names every one of them', () => {
+        const body = readFileSync(INDEX, 'utf8');
+        const missing = indexed().filter((f) => !body.includes(f.replace('docs/', '')));
+        expect(missing).toEqual([]);
+    });
+});
+
 describe('the architecture index lists every architecture document', () => {
     // The other direction from a link check. Links resolving proves nothing about
     // a document that was never listed — and `where-code-goes.md` was exactly that:
