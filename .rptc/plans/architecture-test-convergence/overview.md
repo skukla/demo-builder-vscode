@@ -23,7 +23,7 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C RE-PLANNED, not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C measured: duplication is real (~5,486 lines). Splits into C1 (17 families, identical mock sets, mechanical — 1 DONE) , C1b (1, no mocks at all) and C2 (26, divergent mock sets, judgment first). The 4/40 split first written here was wrong and is retracted in the finding below |
+| 3b | Duplication lanes (PL-9) | **lane A DONE; lane C1 DONE 2026-08-30**; C2 open | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C1 shipped 14 families: cross-file clone pairs 140 -> 124, duplicated lines 6,739 -> 5,950 (same basis both times). 3 of the 17 turned out not to be single mechanical merges and moved to C2. C2 (26 divergent families + those 3) is open — judgment before merge |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **DONE 2026-08-30** | `test-strategy-scan` skill (runs the three censuses + the verdict table saying which columns track defects) and the Stryker pilot (`npm run test:mutation`, baseline 93.37% over 166 mutants in 33s). Both registered and both reached by `npm run sweep` / `cut-release` |
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
@@ -378,7 +378,7 @@ suites mock `@/core/di`. Checked before claiming a hazard.
 
 **Recommended re-plan.** Lane C splits in two:
 
-- **C1 (mechanical, 17 families — 1 DONE 2026-08-30, 16 remain)** — identical
+- **C1 — DONE 2026-08-30, 14 families shipped.** Identical
   non-empty mock sets; extract to `.testUtils` using the testUtils-owns-the-SUT-import
   pattern (§3 of `webview-test-authoring`; 59 precedents in this repo).
 
@@ -391,7 +391,18 @@ suites mock `@/core/di`. Checked before claiming a hazard.
   every C1 family.** Silent unmocking is this refactor's failure mode, and a green run
   on its own does not exclude it.
 
-  Remaining, ordered by payoff: `daLiveContentOperations` (4 × 1),
+  **Three of the original 17 were NOT single mechanical merges** and moved to C2:
+  `appBuilderComponentRunner` is two disjoint pairs with different mock sets (one
+  shared file cannot serve both), `skillsWriter`'s specs mock the same module
+  differently, and `daLiveAuthService`'s four specs carry four distinct mock sets.
+  Classifying a family by comparing its specs to EACH OTHER is not enough; the
+  subsets have to be grouped by mock signature first.
+
+  Shipped, ordered as worked: `AdobeAuthStep`, `startDemo`, `envFileWatcherService`,
+  `componentUpdater`, `ResetAllCommand`, `useSelectionStep`, `diagnosticsChecks`,
+  `continueHandler`, `IntegrationDetailPanel`, `daLiveContentOperations` (6 specs),
+  `adobeEntityFetcher`, `contentAuthoringTools`, `webviewCommunicationManager`,
+  `componentHandlers`. Superseded list: `daLiveContentOperations` (4 × 1),
   `startDemo` and `envFileWatcherService` (3 × 4), `useSelectionStep`,
   `continueHandler`, `adobeEntityFetcher` (3 × 2), then ten 2-file families of which
   `contentAuthoringTools`, `componentUpdater` and `ResetAllCommand` carry 5 mocks each.

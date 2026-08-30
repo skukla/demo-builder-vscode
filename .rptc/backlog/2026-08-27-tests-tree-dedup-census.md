@@ -106,3 +106,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): diagnosticsChecks' three suites share one testUtils — lane C1 (`b6f2c7d61`)
 - 2026-08-30  refactor(tests): daLiveContentOperations, adobeEntityFetcher and contentAuthoringTools share testUtils — lane C1 (`0f8b70d6e`)
 - 2026-08-30  refactor(tests): continueHandler and IntegrationDetailPanel share their testUtils — lane C1 (`1190306f2`)
+- 2026-08-30  refactor(tests): webviewCommunicationManager + componentHandlers share their testUtils; lane C1 closes at 14 (`9e7e2877c`)
