@@ -198,6 +198,127 @@ every module that wanted only a shape, and it can form a cycle a type-only impor
 never could. The rule is mechanical — a bare `import` in a types file is a
 violation, `import type` is not. Ledger: `typesPurity`.
 
+### The dependency ENVELOPE — one per feature, and only two kinds
+
+This ADR said dependencies "arrive as parameters" and that a feature's
+`create...Deps` file builds the bundle. It never said **how many bundles a feature
+gets**, so the answer became "one per function". Six services need a GitHub token
+service; they receive it six different ways:
+
+| File | Receives it as | Through |
+|---|---|---|
+| `authoringExperienceFlip` | `context.secrets` | `AuthoringExperienceFlipDeps` |
+| `configSyncService` | `secrets` | `ConfigSyncParams` |
+| `catalogPrewarmPhase` | `context.context.secrets` | `HandlerContext` |
+| `edsContentSetup` | `deps.secrets` | `EdsContentDeps` |
+| `templateSyncService` | `this.secrets` | class constructor |
+| `updateCore` | `ctx.secrets` | `UpdateContext` |
+
+Measured 2026-08-30: `create...Deps` — the pattern this ADR named — exists **4
+times in the repo**, while `eds` alone defines **35** distinct `*Deps` / `*Params`
+/ `*Context` types, `project-creation` 13, `updates` 3. The named convention lost
+to the unnamed one by an order of magnitude, because only one of them was written
+down.
+
+**THE CONVENTION. A function or class may receive its dependencies in exactly two
+envelopes, and they are not interchangeable:**
+
+1. **SERVICES arrive in the feature's ONE deps bundle** — the type its
+   `create...Deps` file builds, named `<Feature>Deps`. One per feature. A service
+   that needs a collaborator takes it from that bundle; it does not get its own
+   bespoke bundle type.
+2. **DATA arrives as ordinary parameters** — config values, ids, callbacks,
+   progress reporters. A per-function `XParams` object holding only data is fine
+   and expected; that is not what this rule is about.
+
+**The line between them is "would I otherwise have constructed or fetched this?"**
+If yes it is a service and belongs in envelope 1. If it is a value the caller
+already had, it is data and belongs in envelope 2.
+
+**Forbidden, and why:**
+
+- **A per-function type that carries SERVICES.** This is the thing that produced
+  six shapes for one dependency. It is invisible per file — each looks tidy — and
+  only shows up when you ask how many ways one collaborator is delivered.
+- **A service taking `HandlerContext`.** That is a boundary type carrying the whole
+  world; a service that accepts it has fetched by another name, with the hidden
+  dependencies this ADR exists to remove. Commands, handlers and MCP tools take
+  `HandlerContext` — that is their contract. Services do not.
+- **Mixing services and data in one bespoke type.** `UpdateContext` and
+  `ConfigSyncParams` both do this, which is why neither could be replaced by the
+  shared accessor without changing every caller.
+
+**Status: GUIDANCE, not enforced.** No check counts envelopes today. The
+construction rule already flags the *symptom* — a service building its own
+collaborator — and that ledger is where these six appear. What was missing was any
+statement of what to do instead, so each fix invented its own answer. Enforcing the
+envelope itself needs a detector that can tell a service from a value, which is a
+judgement a regex does not make; until one exists, this section is what a reviewer
+points at.
+
+**Migration is by ledger, not by sweep.** The existing bespoke types are not
+violations to be fixed on sight — they are the state this rule was written to stop
+growing. Convert one when you are already changing the file, and prefer collapsing
+a feature's several bundles into its one `<Feature>Deps` over adding a seventh.
+
+**Where a reasonable person differs:** the alternative is to hand each service its
+collaborator as a bare parameter and have no bundle at all. That is the most
+faithful reading of "dependencies arrive as parameters", and it was rejected here
+only because a service needing four collaborators then takes four parameters that
+every caller must thread. The bundle is the concession; making it one per FEATURE
+rather than one per FUNCTION is what keeps the concession from becoming the drift.
+
+### Barrel files (`index.ts`) — core and types export through them, features do not
+
+`src/features/CLAUDE.md` said feature barrels "were deleted 2026-08-24 — the
+structural baseline measured zero importers for every one of them — so do not add
+an `index.ts`; it will be dead on arrival." Measured 2026-08-30: **48 barrels exist
+and 40 have importers.** The claim was wrong in both directions, which is worse than
+saying nothing, because it is the file agents read as ground truth.
+
+What actually happened is narrower than the doc: commit `75b3b1ce5` deleted the
+*dead* feature barrels. Live ones survived, and the top of the list is not a legacy
+straggler — it is the documented way this codebase imports:
+
+| Barrel | Importers |
+|---|---|
+| `@/types` | 168 |
+| `@/core/shell` | 104 |
+| `@/core/di` | 86 |
+| `@/core/logging` | 78 |
+| `@/core/state` | 58 |
+| `@/core/validation` | 54 |
+
+**THE CONVENTION:**
+
+1. **`@/types` and `@/core/<area>` are imported THROUGH their barrel.** That is the
+   public path, it is what `src/CLAUDE.md`'s examples show, and 500+ import sites
+   depend on it. A deep import into `@/core/state/stateManager` is the exception,
+   not the tidier choice.
+2. **Features are imported DEEP** — `@/features/authentication/services/authenticationService`,
+   never `@/features/authentication`. A feature has no public API surface to curate,
+   because features are not supposed to import each other at all; a feature barrel
+   mostly exists to make that easy, which is the wrong thing to make easy.
+3. **A barrel re-exports and does nothing else.** No logic, no construction, no side
+   effects at import time. A barrel that runs code turns every importer into a
+   dependent of everything it re-exports.
+4. **A barrel with zero importers is dead code and gets deleted**, under the repo's
+   standing no-soft-deprecation rule.
+
+**The five feature-level barrels that remain** (`ai`, `authentication`,
+`data-installer`, `eds`, `sidebar` — 17 importers between them) are legacy under rule
+2. Convert their importers to deep imports when you are already in the file; do not
+sweep. `eds`'s two importers are both in `dashboard/`, so that barrel is currently
+serving exactly the cross-feature import the architecture says should not exist —
+which is the clearest possible argument for rule 2.
+
+**Status: GUIDANCE.** Nothing enforces the core-versus-feature split today. The one
+part that could be checked cheaply is rule 4, and it is deliberately not automated
+yet: a first pass at counting importers on 2026-08-30 produced false matches by
+treating any `from './hooks'` as a reference to one particular `hooks/` directory. A
+dead-barrel check needs real module resolution, not a regex, or it will delete a
+live file.
+
 ### The "when you want to…" table
 
 The full 11-row placement table lives in

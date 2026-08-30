@@ -70,11 +70,19 @@ features/my-feature/
 - `@/core/*`
 - `@/types`
 
-**Deep imports are the convention.** Import the module that defines a symbol
-(`@/features/authentication/services/authenticationService`), not a feature
-`index.ts`. Feature barrels were deleted 2026-08-24 — the structural baseline
-measured zero importers for every one of them — so do not add an `index.ts`
-"public API" file to a feature; it will be dead on arrival.
+**Deep imports are the convention for FEATURES.** Import the module that defines a
+symbol (`@/features/authentication/services/authenticationService`), not a feature
+`index.ts`, and do not add a new feature barrel.
+
+**This does NOT apply to `@/core/*` or `@/types`,** which are imported through their
+barrels by design — `@/types` has 168 importers, `@/core/shell` 104, `@/core/di` 86.
+See ADR-015 § "Barrel files" for the rule and the measurement.
+
+Corrected 2026-08-30. This paragraph used to say feature barrels "were deleted
+2026-08-24 … zero importers for every one of them … dead on arrival". Only the DEAD
+ones were deleted (`75b3b1ce5`); five feature-level barrels survive with 17 importers
+between them, and the core barrels the sentence implicitly condemned are the
+codebase's main import path.
 
 ## Feature Descriptions
 
