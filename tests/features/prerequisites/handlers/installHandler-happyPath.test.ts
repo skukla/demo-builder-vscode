@@ -55,6 +55,8 @@ import {
     createInstallHandlerContext,
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
+    cacheInvalidateMock,
+    mockNpmPrereq,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Happy Path', () => {
@@ -285,4 +287,164 @@ describe('Install Handler - Happy Path', () => {
         // Default step should only be called once for version 20
         expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(3); // 2 installs + 1 default
     });
+
+    /**
+     * Cache invalidation after an install.
+     *
+     * These exist because mutation testing could delete `invalidateCaches` whole —
+     * body, dependent loop and all — with every suite still green. The cache manager
+     * has thorough tests of its own, but they call `invalidate` directly, which
+     * proves the cache works and says nothing about whether the install path calls
+     * it. The consequence of the gap is user-visible: a prerequisite installed and
+     * then reported at its old version, because the check reads a stale cache.
+     */
+    describe('cache invalidation after install', () => {
+        it('invalidates the cache for the prerequisite it just installed', async () => {
+            const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(result.success).toBe(true);
+            expect(cacheInvalidateMock(mockContext)).toHaveBeenCalledWith(mockNpmPrereq.id);
+        });
+
+        it('also invalidates every prerequisite that DEPENDS on the installed one', async () => {
+            // The dependent loop is a separate deletable block: `invalidate` for the
+            // installed prereq can be asserted while the loop below it is dead.
+            // prereqId 0 is mockNpmPrereq — read from the testUtils state map, not
+            // assumed; the first version of this test guessed `node` and failed.
+            mockContext.sharedState.currentPrerequisites = [
+                mockNpmPrereq,
+                { ...mockAdobeCliPrereq, id: 'aio-cli', depends: [mockNpmPrereq.id] },
+                { ...mockNodePrereq, id: 'some-tool', depends: [mockNpmPrereq.id] },
+                { ...mockManualPrereq, id: 'unrelated', depends: ['something-else'] },
+            ];
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            const invalidate = cacheInvalidateMock(mockContext);
+            expect(invalidate).toHaveBeenCalledWith('aio-cli');
+            expect(invalidate).toHaveBeenCalledWith('some-tool');
+            // Asserting the NEGATIVE too: a loop that invalidated everything would
+            // satisfy the two lines above and still be wrong.
+            expect(invalidate).not.toHaveBeenCalledWith('unrelated');
+        });
+
+        it('installs fine when nothing depends on the prerequisite', async () => {
+            mockContext.sharedState.currentPrerequisites = [mockNpmPrereq];
+
+            const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(result.success).toBe(true);
+            expect(cacheInvalidateMock(mockContext)).toHaveBeenCalledTimes(1);
+        });
+    });
+
+
+    /**
+     * The final status message the user reads when an install finishes.
+     *
+     * `buildFinalStatusMessage` is a pure function with four outcomes and had NO
+     * test of any kind — mutation testing could rewrite every string it returns and
+     * flip both its conditions with the suite still green. It is not exported, so
+     * these drive it through the handler and read the `prerequisite-status` payload,
+     * which is what the webview actually renders.
+     *
+     * Each case asserts the WHOLE message rather than a fragment: a partial match
+     * would survive a mutation that dropped the version list, which is the part
+     * carrying the information.
+     */
+    describe('the final status message', () => {
+        /** The `message` field of the last `prerequisite-status` the handler sent. */
+        function finalStatusMessage(): string | undefined {
+            const calls = (mockContext.sendMessage as jest.Mock).mock.calls.filter(
+                ([type]) => type === 'prerequisite-status'
+            );
+            return calls.at(-1)?.[1]?.message;
+        }
+
+        type NodeStatus = { version: string; component: string; installed: boolean }[];
+
+        /**
+         * `checkMultipleNodeVersions` is called TWICE — once before installing to
+         * decide what is missing, once after to verify. Returning the same value for
+         * both makes the all-installed case unreachable: the handler returns early
+         * and never builds a final message. So `before` must show a gap.
+         */
+        function useNodePrereq(before: NodeStatus, after: NodeStatus) {
+            const states = new Map();
+            states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock)
+                .mockResolvedValueOnce(before)
+                .mockResolvedValue(after);
+        }
+
+        it('lists every version when all required Node versions are present', async () => {
+            useNodePrereq(
+                [
+                    { version: 'Node 18', component: '', installed: false },
+                    { version: 'Node 20', component: 'v20.0.0', installed: true },
+                ],
+                [
+                    { version: 'Node 18', component: 'v18.0.0', installed: true },
+                    { version: 'Node 20', component: 'v20.0.0', installed: true },
+                ]
+            );
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(finalStatusMessage()).toBe('Node.js is installed: Node 18, Node 20');
+        });
+
+        it('names ONLY the missing versions when some Node versions are absent', async () => {
+            const stillMissing = [
+                { version: 'Node 18', component: '', installed: false },
+                { version: 'Node 20', component: 'v20.0.0', installed: true },
+                { version: 'Node 22', component: '', installed: false },
+            ];
+            useNodePrereq(stillMissing, stillMissing);
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            // Node 20 must NOT appear: a filter that reported everything would pass
+            // an assertion that only checked the missing ones were mentioned.
+            expect(finalStatusMessage()).toBe('Node.js is missing in Node 18, Node 22');
+        });
+
+        it('reports the version for an installed non-Node prerequisite', async () => {
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
+                ...mockNodeResult,
+                installed: true,
+                version: '10.2.3',
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(finalStatusMessage()).toBe('npm is installed: 10.2.3');
+        });
+
+        it('omits the colon when an installed prerequisite reports no version', async () => {
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
+                ...mockNodeResult,
+                installed: true,
+                version: undefined,
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(finalStatusMessage()).toBe('npm is installed');
+        });
+
+        it('says not installed when verification finds it absent', async () => {
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
+                ...mockNodeResult,
+                installed: false,
+                version: undefined,
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(finalStatusMessage()).toBe('npm is not installed');
+        });
+    });
+
 });

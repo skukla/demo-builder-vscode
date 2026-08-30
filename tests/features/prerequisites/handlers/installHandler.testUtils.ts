@@ -245,3 +245,26 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
         ...overrides,
     } as never)
 }
+
+/**
+ * The `invalidate` mock the context's cache manager hands out.
+ *
+ * `getCacheManager` is a `mockReturnValue`, so it yields the SAME object every
+ * call and this is a stable reference across the whole handler run.
+ *
+ * It exists as a helper rather than a cast at each call site because reaching it
+ * needs one, and one cast with a reason beats five without. The reason: the mock
+ * is built as `as any` above, so its shape is not visible to the compiler here.
+ *
+ * WHY ANY TEST NEEDS IT. Mutation testing found `invalidateCaches` deletable in
+ * full with every suite still green — nothing asserted the call. The cache manager
+ * itself is well tested, but always by calling `invalidate` DIRECTLY, which proves
+ * the cache works and says nothing about whether the install path uses it. A stale
+ * cache after an install is a user-visible wrong version.
+ */
+export function cacheInvalidateMock(context: HandlerContext): jest.Mock {
+    const manager = context.prereqManager!.getCacheManager() as unknown as {
+        invalidate: jest.Mock;
+    };
+    return manager.invalidate;
+}
