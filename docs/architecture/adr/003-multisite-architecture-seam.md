@@ -279,3 +279,9 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 | **Site (in Config Service sense)** | A registered entry in `admin.hlx.page/config/{org}/sites/{site}.json`. One Demo Builder project today registers one site; multisite registers multiple |
 | **Single-env assumption** | Any code path that reads/writes scalar `daLiveOrg` / `daLiveSite` / workspace instead of a list keyed by env |
 | **Seam** | The boundary in current code where a future multisite refactor will need to insert per-env logic |
+
+## Reference notes
+
+- `selectedEnvironment`, `someEnvSpecificThing` — illustrative placeholders, not real
+  symbols. This ADR documents a seam with no implementation, so its examples are
+  deliberately hypothetical.

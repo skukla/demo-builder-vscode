@@ -84,3 +84,9 @@ the extension owns.
   generator forever, and protects nothing on the paths that already regenerate
   without asking (`updateExecutor` after an Adobe MCP package update) — the
   protection it offers is already inconsistent today.
+
+## Reference notes
+
+- `.claude/mcp.json` — a file this extension GENERATES into a user's project. It does not
+  exist in this repository, and the decision is precisely about how such generated files
+  survive user edits.

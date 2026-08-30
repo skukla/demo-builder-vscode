@@ -234,3 +234,16 @@ const [selectedIntegrations, setSelectedIntegrations] = useState();
 2. Search for "externalSystems" in your branch: `git grep externalSystems`
 3. Replace with "integrations" in your code
 4. Run tests to verify: `npm test`
+
+## Reference notes
+
+Names below intentionally do not resolve in this repository. They are the record, not rot.
+
+- `externalSystems`, `ExternalSystems` — the name this decision REPLACED. Removing them
+  would destroy the thing the ADR exists to record.
+- `src/commands/configureProjectWebview.ts`, `src/features/components/ui/steps/ComponentSelectionStep.tsx`,
+  `src/features/components/ui/steps/ComponentConfigStep.tsx`, `src/features/dashboard/ui/ConfigureScreen.tsx`,
+  `tests/features/prerequisites/handlers/checkHandler.test.ts`, `tests/features/prerequisites/handlers/shared.test.ts`,
+  `tests/features/components/ui/steps/ComponentSelectionStep.test.tsx`, `tests/features/components/ui/steps/ComponentConfigStep.test.tsx`
+  — the files as they stood in November 2025. Several have since moved or been deleted;
+  the paths are accurate to the decision's date.

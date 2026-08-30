@@ -219,3 +219,9 @@ Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live)
 - **External patches repo**: `skukla/eds-demo-content-patches` (`citisignal/patches.json`) — the externalization precedent code patches follow
 - **Related ADRs**: ADR-005 (BYOM PDP routing — vendoring precedent)
 - **Fork evidence commits**: `911b6ac8` (migration of v1 patches into the fork), `907883b3` (selector fix, `citisignal-eds-boilerplate#2`), `f04fd862` (aem-assets import rewrites)
+
+## Reference notes
+
+- `createOptimizedPicture` — lives in the AEM boilerplate's `aem.js`, not in this
+  repository. Naming it is the point: the ADR is about patching canonical upstream code
+  rather than forking it.

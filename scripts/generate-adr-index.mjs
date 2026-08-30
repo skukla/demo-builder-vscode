@@ -14,6 +14,18 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
+/**
+ * `--check` verifies without writing, and FAILS on an unexplained reference.
+ *
+ * The audit first argued this should report and never gate, on the grounds that a gate
+ * would push people to launder a deliberately-removed symbol out of the record. The
+ * `## Reference notes` convention removes that pressure: a name that should not resolve
+ * gets DECLARED with its reason instead of deleted. With an honest escape hatch, a gate
+ * is the right shape — and because it writes nothing, it is safe for `npm run sweep`,
+ * which never runs an instrument that mutates tracked files.
+ */
+const CHECK_ONLY = process.argv.includes('--check');
+
 const DIR = 'docs/architecture/adr';
 const tracked = new Set(execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean));
 
@@ -42,18 +54,37 @@ const rows = files.map((name) => {
     const syms = [...s.matchAll(/`([a-zA-Z_][A-Za-z0-9_]{4,}(?:\.[A-Za-z0-9_]+)?)`/g)]
         .map((m) => m[1])
         .filter((x) => /[a-z][A-Z]/.test(x));
-    const broken =
-        paths.filter((p) => !tracked.has(p)).length +
-        // resolve dotted expressions too: `module.fn` misses otherwise, which is the
-        // ADR-010 case (`extractInternalReferences` never existed) this check exists for
-        syms.filter((x) => !codeBlob.includes(x.includes('.') ? x.split('.').pop() : x)).length;
-    return { num, name, title, status, summary, cites: cites.length, enforcedBy, broken };
+    // An ADR may DECLARE references that intentionally do not resolve here: the name a
+    // decision replaced, a file in the storefront repo, a surface since removed. Those
+    // are correct as written — "fixing" ADR-001 to stop saying `externalSystems` would
+    // destroy the record. Declared names are reported separately, not as rot.
+    // Split on headings rather than regex-to-end-of-file: `\Z` is Python, not
+    // JavaScript, so the first attempt matched nothing and the notes' own backticks
+    // were then counted AS rot — the check inflating the number it exists to reduce.
+    const notesChunk = s
+        .split(/\n(?=##[ \t])/)
+        .find((chunk) => /^##[ \t]*Reference notes/.test(chunk));
+    const declared = new Set(
+        notesChunk ? [...notesChunk.matchAll(/`([^`]+)`/g)].map((m) => m[1]) : []
+    );
+    // Everything inside the notes section is a declaration, never a finding.
+    const body = notesChunk ? s.slice(0, s.indexOf(notesChunk)) : s;
+    const resolves = (x) => codeBlob.includes(x.includes('.') ? x.split('.').pop() : x);
+    const inBody = (x) => body.includes(`\`${x}\``);
+    const brokenPaths = [...new Set(paths.filter((p) => !tracked.has(p) && !declared.has(p) && inBody(p)))];
+    const brokenSyms = [...new Set(syms.filter((x) => !resolves(x) && !declared.has(x) && inBody(x)))];
+    const broken = brokenPaths.length + brokenSyms.length;
+    const declaredCount = new Set([
+        ...paths.filter((p) => !tracked.has(p) && declared.has(p)),
+        ...syms.filter((x) => !resolves(x) && declared.has(x)),
+    ]).size;
+    return { num, name, title, status, summary, cites: cites.length, enforcedBy, broken, declaredCount, brokenPaths, brokenSyms };
 });
 
 const line = (r) =>
     `| [${r.num}](${r.name}) | ${r.summary || r.title} | ${r.status} | ${r.cites} | ` +
     `${r.enforcedBy.length ? '`' + [...new Set(r.enforcedBy)].join('`, `') + '`' : '—'} | ` +
-    `${r.broken || '—'} |`;
+    `${r.broken || '—'} | ${r.declaredCount || '—'} |`;
 
 const out = `# Architectural decisions
 
@@ -66,12 +97,15 @@ Every column is measured, not asserted:
   nothing reaches for it; that is a signal about status, not about correctness.
 - **Enforced by** — suites in \`tests/sop/\` that mention it. An ADR with an enforcer
   fails the build when the code drifts; one without relies on review.
-- **Stale refs** — backticked file paths that no longer exist, plus backticked
-  identifiers found in no tracked source file. Advisory: an ADR that deliberately names
-  a deleted symbol is correct to do so.
+- **Unexplained** — backticked paths or identifiers that resolve nowhere and are not
+  declared. These are the ones worth looking at.
+- **Declared** — references the ADR states on purpose in its \`## Reference notes\`
+  section: the name a decision replaced, a file owned by another repository, a surface
+  since removed. Correct as written. Rewriting ADR-001 to stop naming \`externalSystems\`
+  would destroy the very thing it records.
 
-| # | Decision | Status | Cited by | Enforced by | Stale refs |
-|---|---|---|---|---|---|
+| # | Decision | Status | Cited by | Enforced by | Unexplained | Declared |
+|---|---|---|---|---|---|---|
 ${rows.map(line).join('\n')}
 
 ## Status vocabulary
@@ -101,6 +135,14 @@ The question this index exists to answer — *where is the rule for X?*
 | Webview composition, message channel, hooks-as-services | ADR-017 |
 | CSS layering and vendoring | ADR-018 |
 `;
-writeFileSync(`${DIR}/README.md`, out);
+if (!CHECK_ONLY) writeFileSync(`${DIR}/README.md`, out);
 const stale = rows.reduce((a, r) => a + r.broken, 0);
-console.log(`ADR index: ${rows.length} decisions, ${stale} stale reference(s) across the set`);
+const declared = rows.reduce((a, r) => a + r.declaredCount, 0);
+console.log(
+    `ADR index: ${rows.length} decisions, ${stale} unexplained reference(s), ${declared} declared`
+);
+for (const r of rows.filter((x) => x.broken)) {
+    console.log(`  ADR-${r.num}: ${[...r.brokenPaths, ...r.brokenSyms].join(', ')}`);
+    console.log('    -> fix it, or declare it under `## Reference notes` with the reason');
+}
+if (CHECK_ONLY && stale > 0) process.exit(1);

@@ -151,3 +151,8 @@ Two triggers should cause us to revisit smart-404:
 - **External primary sources**: [BYOM spec](https://www.aem.live/developer/byom), [`adobe-rnd/aem-commerce-prerender`](https://github.com/adobe-rnd/aem-commerce-prerender), [issue #262 — event-driven updates](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262)
 - **Memory entries**: `project-byom-pdp-routing`, `catalog-service-sku-case-insensitive`, `reference-commerce-prerender-unfit`
 - **Related ADRs**: ADR-003 (Multisite Architecture Seam — what Phase 1 doesn't address)
+
+## Reference notes
+
+- `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md` — a backlog item since closed
+  and archived. The path is accurate to the decision's date.

@@ -149,6 +149,14 @@ const PERIODIC: readonly Instrument[] = [
         runs: 'bash .claude/skills/code-duplication-scan/scan.sh src',
     },
     {
+        id: 'docs:adr-check',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: 'every path and identifier an ADR names either resolves, or is DECLARED under its `## Reference notes` with a reason',
+        runs: 'npm run docs:adr-check',
+    },
+    {
         id: 'rptc-hygiene-scan',
         kind: 'skill',
         cadence: 'periodic',

@@ -200,3 +200,8 @@ service we do not own and that demonstrably moves. `scripts/dataInstallerDrift.j
 exists because of that movement — and it had been silently inert for weeks when
 this was being decided, which is the strongest available argument against
 "we can track that service's changes".
+
+## Reference notes
+
+- `CommercePartnersSDK` — an Adobe I/O service entitlement name appearing in the
+  control row of the entitlement table, not a symbol in this codebase.

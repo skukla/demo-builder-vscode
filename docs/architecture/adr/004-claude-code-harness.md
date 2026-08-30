@@ -500,3 +500,22 @@ and the tools do the same work as the UI (single source of truth).
 
 Full architecture, tool catalog, and conventions:
 [`docs/systems/mcp-server.md`](../../systems/mcp-server.md).
+
+## Reference notes
+
+Almost every identifier in the amendments below names a surface that was built and later
+removed as the AI harness changed shape. `src/commands/aiMenu.ts`, `AiSetupTab`,
+`AiConfigurationTab`, `launchViaUri`, `getSurface`, `scheduleSpawnInject`,
+`getSpawnInjectDelayMs`, `browseClaudeSessions`, `handleBrowseClaudeSessions`,
+`markSessionsBrowserAutoShown`, `handleMarkSessionsBrowserAutoShown`,
+`revealSessionsBrowser`, `maybeOpenSessionsBrowserOnce`, `maybeShowFirstLaunchDialog`,
+`maybeShowMismatchWarning`, `maybeOfferExtensionSurface`, `maybeOfferDockToRight`,
+`handleMissingExtensionDialog`, `openProjectAsWorkspace`, `replayPendingClaudeLaunch`,
+`migrateHarnessSetting`, `ensureGlobalMcpRegistration`, `extensionInstalled` and
+`helixToken` resolve nowhere today.
+
+That is a symptom, not a filing error: a 500-line document with eight stacked amendments
+accumulates names faster than anyone reconciles them. The audit
+(`.rptc/research/adr-audit/research.md`) recommends splitting this into a supersession
+chain, at which point most of these names belong to superseded records where they are
+correct.

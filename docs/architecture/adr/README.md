@@ -9,30 +9,33 @@ Every column is measured, not asserted:
   nothing reaches for it; that is a signal about status, not about correctness.
 - **Enforced by** — suites in `tests/sop/` that mention it. An ADR with an enforcer
   fails the build when the code drifts; one without relies on review.
-- **Stale refs** — backticked file paths that no longer exist, plus backticked
-  identifiers found in no tracked source file. Advisory: an ADR that deliberately names
-  a deleted symbol is correct to do so.
+- **Unexplained** — backticked paths or identifiers that resolve nowhere and are not
+  declared. These are the ones worth looking at.
+- **Declared** — references the ADR states on purpose in its `## Reference notes`
+  section: the name a decision replaced, a file owned by another repository, a surface
+  since removed. Correct as written. Rewriting ADR-001 to stop naming `externalSystems`
+  would destroy the very thing it records.
 
-| # | Decision | Status | Cited by | Enforced by | Stale refs |
-|---|---|---|---|---|---|
-| [001](001-component-naming-standardization.md) | Component Naming Standardization (externalSystems → integrations) | Historical | 0 | — | 11 |
-| [002](002-helix-bulk-api-fallback.md) | Helix Bulk API Fallback Strategy | Accepted and Implemented | 8 | — | 4 |
-| [003](003-multisite-architecture-seam.md) | Multisite Architecture Seam | Deferred | 1 | — | 2 |
-| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted | 8 | — | 37 |
-| [005](005-byom-pdp-routing.md) | BYOM PDP Routing — Canonical Pattern with Multi-Tenancy and Smart-404 Gap-Fill | Accepted | 12 | — | 1 |
-| [006](006-thin-layer-storefront-customization.md) | Thin-Layer Storefront Customization — Retire the CitiSignal Forks, Point at Canonical + Code Patches | Accepted | 53 | — | 1 |
-| [007](007-pdp-sku-url-encoding.md) | PDP SKU URL Encoding — Reversible, Lowercase-Stable, Helix-Safe | Accepted | 19 | — | 2 |
-| [008](008-derive-runtime-surface-inventory.md) | Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand | Accepted (2026-06-18) — producer half built and in review; consumer wiring pending | 12 | — | 3 |
-| [009](009-storefront-config-flag-injection.md) | Storefront config.json Flag Injection — the Generator Owns Config, So Template Flags Must Be Re-Injected | Accepted | 2 | — | 3 |
-| [010](010-content-copy-completeness.md) | Content-Copy Completeness — Follow Document References So Unindexed Fragments Aren't Silently Dropped | Accepted | 2 | — | 1 |
-| [011](011-app-builder-deployables.md) | App Builder Deployables — A Keyed Set of Deployable Components in One App Builder Project (Mesh Is One Kind) | Accepted — implemented (D1–D3; D3 merged to develop `5d6f4956`, 2026-07-16); plan at [`.rptc/backlog/appbuilder-deployable-model/`](../../../.rptc/backlog/appbuilder-deployable-model/overview.md) | 83 | — | 1 |
-| [012](012-diagnostic-surfaces.md) | Diagnostic Surfaces — Human-First, Agent-Reachable | Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123 | 3 | — | — |
-| [013](013-generated-file-edit-survival.md) | Generated AI Files — Hash-and-Skip Edit Survival | Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver | 66 | — | 1 |
-| [014](014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service | Implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives | 4 | — | 1 |
-| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 123 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — |
-| [016](016-test-strategy.md) | Test strategy — three tiers, chosen on the escape record | Accepted (owner-ratified 2026-08-28) | 60 | `architecture-rules.test.ts`, `architectureScan.ts`, `mirror-placement.test.ts`, `test-family-setup.ledger.json`, `test-family-setup.test.ts`, `toolingRegistry.ts` | — |
-| [017](017-webview-architecture.md) | Webview architecture — one channel per bundle, props below, styles inside the bundle | Accepted (owner-ratified 2026-08-29) | 21 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `stylesheet-bundles.test.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts`, `webviewBundleClasses.ts` | — |
-| [018](018-css-architecture.md) | CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism | ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of | 5 | `toolingRegistry.ts` | — |
+| # | Decision | Status | Cited by | Enforced by | Unexplained | Declared |
+|---|---|---|---|---|---|---|
+| [001](001-component-naming-standardization.md) | Component Naming Standardization (externalSystems → integrations) | Historical | 3 | — | — | 9 |
+| [002](002-helix-bulk-api-fallback.md) | Helix Bulk API Fallback Strategy | Accepted and Implemented | 9 | — | — | 2 |
+| [003](003-multisite-architecture-seam.md) | Multisite Architecture Seam | Deferred | 2 | — | — | 2 |
+| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted | 10 | — | — | 24 |
+| [005](005-byom-pdp-routing.md) | BYOM PDP Routing — Canonical Pattern with Multi-Tenancy and Smart-404 Gap-Fill | Accepted | 13 | — | — | 1 |
+| [006](006-thin-layer-storefront-customization.md) | Thin-Layer Storefront Customization — Retire the CitiSignal Forks, Point at Canonical + Code Patches | Accepted | 54 | — | — | 1 |
+| [007](007-pdp-sku-url-encoding.md) | PDP SKU URL Encoding — Reversible, Lowercase-Stable, Helix-Safe | Accepted | 20 | — | — | 2 |
+| [008](008-derive-runtime-surface-inventory.md) | Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand | Accepted (2026-06-18) — producer half built and in review; consumer wiring pending | 12 | — | — | 1 |
+| [009](009-storefront-config-flag-injection.md) | Storefront config.json Flag Injection — the Generator Owns Config, So Template Flags Must Be Re-Injected | Accepted | 3 | — | — | 1 |
+| [010](010-content-copy-completeness.md) | Content-Copy Completeness — Follow Document References So Unindexed Fragments Aren't Silently Dropped | Accepted | 3 | — | — | — |
+| [011](011-app-builder-deployables.md) | App Builder Deployables — A Keyed Set of Deployable Components in One App Builder Project (Mesh Is One Kind) | Accepted — implemented (D1–D3; D3 merged to develop `5d6f4956`, 2026-07-16); plan at [`.rptc/backlog/appbuilder-deployable-model/`](../../../.rptc/backlog/appbuilder-deployable-model/overview.md) | 83 | — | — | 1 |
+| [012](012-diagnostic-surfaces.md) | Diagnostic Surfaces — Human-First, Agent-Reachable | Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123 | 4 | — | — | — |
+| [013](013-generated-file-edit-survival.md) | Generated AI Files — Hash-and-Skip Edit Survival | Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver | 67 | — | — | 1 |
+| [014](014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service | Implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives | 5 | — | — | 1 |
+| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 127 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — | — |
+| [016](016-test-strategy.md) | Test strategy — three tiers, chosen on the escape record | Accepted (owner-ratified 2026-08-28) | 62 | `architecture-rules.test.ts`, `architectureScan.ts`, `mirror-placement.test.ts`, `test-family-setup.ledger.json`, `test-family-setup.test.ts`, `toolingRegistry.ts` | — | — |
+| [017](017-webview-architecture.md) | Webview architecture — one channel per bundle, props below, styles inside the bundle | Accepted (owner-ratified 2026-08-29) | 23 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `stylesheet-bundles.test.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts`, `webviewBundleClasses.ts` | — | — |
+| [018](018-css-architecture.md) | CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism | ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of | 7 | `toolingRegistry.ts` | — | — |
 
 ## Status vocabulary
 

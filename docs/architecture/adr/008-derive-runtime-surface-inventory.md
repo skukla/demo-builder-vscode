@@ -221,9 +221,16 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 - **Empirical basis**: `.rptc/research/runtime-surface-derivation/findings.md` (+ `prototype-run-b2b.txt`)
 - **Prototype**: `scripts/runtime-surfaces/` (`deriveRuntimeSurfaces.mjs`, `deriveRuntimeSurfaces.test.mjs`, `README.md`)
-- **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/derive-surfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
+- **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
 - **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), wired into `daLiveContentOperations.backfillEssentialPaths` + `edsResetRepoHelper.fetchPlaceholderFiles`
 - **Static hand list (floor)**: `src/features/eds/services/runtimeSurfaceInventory.ts`
 - **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006
 - **Subject boilerplate**: `adobe-commerce/boilerplate-b2b-template` @ `160b453e`
+
+## Reference notes
+
+- `scripts/lkg-gate.sh` — the last-known-good drift gate this ADR proposed. It was never
+  built; the producer half (`scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`) exists
+  and the consumer wiring remains pending, which the Status line already says. Kept so
+  the unbuilt half stays visible instead of quietly vanishing from the plan.

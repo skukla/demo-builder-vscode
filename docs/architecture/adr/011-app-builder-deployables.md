@@ -124,3 +124,10 @@ Introduce the catalog + keyed state + a `kind`-dispatching add/deploy/remove pat
 - **Model A — keep the singular app + singular mesh (slice 1 as shipped).** Rejected: doesn't express composing independent integrations, and leaves the mesh a permanent special case rather than subsuming it.
 - **Bundle integrations into one multi-package app.** Rejected: couples integration lifecycles and requires a manifest-merge mechanism. Distinct managed-project names make multiple independent apps in one workspace safe, so the bundling buys nothing. (Adobe's "one multi-package app" guidance is about one logical app's domains, not a ban on multiple apps in a workspace.)
 - **Move meshes to `aio app deploy` (unify the deploy verb).** Deferred: the mesh repos deploy via their own `aio api-mesh` scripts, and routing the live mesh through `app deploy` is a bigger, riskier change to the load-bearing mesh→storefront path. The model/catalog/UX unify now; the deploy verb stays per-kind.
+
+## Reference notes
+
+- `subscribeCredentialToServices` — the name used while designing this decision. The
+  shipped function is `ensureMeshApiSubscribed`
+  (`src/features/mesh/handlers/subscribeHandler.ts`). Kept because the ADR records the
+  design as proposed; the current name is given here so a reader can follow it forward.
