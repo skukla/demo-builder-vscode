@@ -15,6 +15,7 @@
  * it proves each target EXISTS, not that the rule still describes reality. Judging
  * staleness is a release-cut job (`.claude/skills/codebase-sweep`).
  */
+import { spawnSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -89,5 +90,29 @@ describe('the development handbook points at things that exist', () => {
         const planted = 'see [nope](./does-not-exist.md) and `tests/sop/not-a-file.ts`';
         expect(linkedPaths(planted).filter((p) => !existsSync(join(ROOT, p)))).toHaveLength(1);
         expect(namedFiles(planted).filter((p) => !existsSync(join(ROOT, p)))).toHaveLength(1);
+    });
+});
+
+/**
+ * The convention index is generated, and generated things go stale silently.
+ *
+ * Every hand-written index in this repo drifted: the ADR table stopped four rows
+ * short while four more had landed, the backlog README hid three items for months,
+ * and two convention counts were wrong within an hour of being written. The index
+ * is derived from the handbook's callouts for that reason — and this makes the
+ * derivation itself fail the build when it is out of date.
+ *
+ * It also checks the harder direction: an enforcer that checks something NO
+ * convention states. That found four on its first run — the commit-backtick,
+ * secret-files, webview-test and adobe-docs hook rules were all enforcing rules the
+ * handbook had never written down.
+ */
+describe('the convention index is current', () => {
+    it('regenerating it would produce no change, and every enforcer has a rule', () => {
+        const r = spawnSync('node', ['scripts/generate-convention-index.mjs', '--check'], {
+            cwd: join(__dirname, '..', '..'),
+            encoding: 'utf8',
+        });
+        expect({ code: r.status, stderr: r.stderr.trim() }).toEqual({ code: 0, stderr: '' });
     });
 });

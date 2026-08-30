@@ -527,7 +527,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 59 conventions. 53 of them are enforced; 6 are not.**
+**This handbook states 62 conventions. 56 of them are enforced; 6 are not.**
 
 The six that remain are not one thing, and treating them as one is what kept them open:
 
@@ -610,12 +610,38 @@ not.
 > *Why:* a deprecated stub still has to be read, understood and skipped by everyone who meets it.
 
 > **Convention.** Secrets live in VS Code settings, never in code. This repository is
-> public. [CLAUDE.md](../../CLAUDE.md) · GitGuardian scans every push.
-> *Why:* git history is permanent and this repository is public.
+> public. [CLAUDE.md](../../CLAUDE.md) · Enforced by
+> `.claude/hooks/rules/20-secret-files.rule`, which blocks a write of any `.env` file or
+> secret-shaped content headed for the repo tree; GitGuardian scans every push as the
+> second line.
+> *Why:* git history is permanent and this repository is public, so a secret committed
+> once is public forever — deleting it later does not help.
 
 > **Convention.** Commit to `develop`. Reach `master` only through a release.
 > [cut-release](../../.claude/skills/cut-release/SKILL.md) · enforced by `.githooks/commit-msg`.
 > *Why:* master is what ships to beta users automatically.
+
+> **Convention.** No backticks inside a double-quoted `git commit -m`. Write the message
+> to a file and use `git commit -F`.
+> *Why:* bash treats `` `x` `` inside double quotes as command substitution, so naming a
+> file in backticks — the natural way to write it — silently executes the word and drops
+> it from the message.
+> Enforced by `.claude/hooks/rules/14-commit-backtick.rule`.
+
+> **Convention.** A new React + Spectrum webview test starts from the webview-test skill.
+> *Why:* the suite runs on fake timers, and a test that does not know it hangs or resolves
+> before React flushes — presenting as a timeout or a phantom missing element, never as a
+> timer error.
+> [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
+> Enforced by `.claude/hooks/rules/40-webview-test.rule`.
+
+> **Convention.** An Adobe documentation lookup goes through the routing skill before the
+> first search.
+> *Why:* five sources cover different corpora and picking wrong returns confident,
+> plausible, off-target results rather than an error. App Builder concepts live on a domain
+> neither doc server indexes.
+> [adobe-docs-lookup](../../.claude/skills/adobe-docs-lookup/SKILL.md) ·
+> Enforced by `.claude/hooks/rules/50-adobe-docs.rule`.
 
 Every link in this file is checked by `tests/sop/handbook-links.test.ts`.
 
