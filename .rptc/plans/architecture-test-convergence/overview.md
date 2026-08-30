@@ -181,6 +181,53 @@ before the work can rationalise it.
 
 Would have failed on the first pass, before anyone had to ask.
 
+### throw-style is not a defect either — measured 2026-08-30
+
+Phase 6 lists "throw-style normalized". Measured before normalising anything.
+
+**116 `throw new Error(...)` occurrences** live in suites that also use
+`expect()`. What they are:
+
+| What it is | Count |
+|---|---|
+| inside a mock implementation — a fake rejecting unexpected input | 74 |
+| a fake THROWING to simulate a failure the SUT must handle | 24 |
+| an assertion or guard after an `if` | 28 |
+| module-scope helper | 11 |
+| other | 3 |
+
+**98 of 116 are SETUP, not assertions.** `onProgress: () => { throw new
+Error('render blew up') }` is an input to the subject, not a claim about it.
+Normalising those to `expect()` is not possible — there is nothing to assert.
+
+The 28 that ARE assertions read like this:
+
+    if (unknown.length > 0) {
+        throw new Error(
+            `stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
+            `Add to StacksConfig (src/types/stacks.ts) or remove from JSON.`
+        );
+    }
+
+That fails the test exactly as `expect` would, and tells the reader which file to
+edit and where the type lives. An `expect(unknown).toEqual([])` would print a
+bare array diff. Normalising these makes the failure messages WORSE.
+
+**What is actually true:** two instruments misread the style, not the tests.
+`theater` greps for `expect(` and so calls a throw-asserting suite empty —
+`type-json-alignment-stacks-components.test.ts` is flagged and is not hollow. That
+is a detector gap, and it is the whole of the finding.
+
+**Recommendation:** drop "throw-style normalized" from phase 6, and teach the
+`theater` detector that a `throw` inside a test body is a verification. One
+genuinely hollow suite existed and has been fixed (`componentUpdater-envMigration`
+→ `envMerge.test.ts`); after it, `theater` should read 0 rather than 1.
+
+Third finding of the same shape in two days — after the construction-boundary
+rule and `logicInTests`. The pattern is worth naming: **a metric that counts
+SYNTAX will keep finding work that is not there.** All three measured what the
+code looks like rather than what it does.
+
 ### logicInTests is not a defect metric — measured 2026-08-30
 
 Phase 6 lists "the logicInTests 161 -> 164 regression" as work, and its criterion
