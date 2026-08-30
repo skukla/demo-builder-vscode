@@ -24,7 +24,7 @@
  */
 
 import { PrerequisitesManager } from './PrerequisitesManager';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 
 let instance: PrerequisitesManager | undefined;
@@ -32,20 +32,24 @@ let instance: PrerequisitesManager | undefined;
 /**
  * The session's PrerequisitesManager, built on first use.
  *
+ * Its dependencies arrive as PARAMETERS rather than being fetched here — this is
+ * a service file, and ADR-015 confines locator lookups to the boundary. The two
+ * composition points that call this are allowed to fetch and already did; the
+ * first version of this module reached for the executor itself and the fetch-
+ * boundary check caught it the same day.
+ *
  * @param extensionPath - where `prerequisites.json` lives; identical on every
  *   call within a session, so the first caller's value wins.
  * @param logger - used only when constructing.
+ * @param commandExecutor - likewise; the memoised manager keeps the first one.
  */
 export function getPrerequisitesManager(
     extensionPath: string,
     logger: Logger,
+    commandExecutor: CommandExecutor,
 ): PrerequisitesManager {
     if (!instance) {
-        instance = new PrerequisitesManager(
-            extensionPath,
-            logger,
-            ServiceLocator.getCommandExecutor(),
-        );
+        instance = new PrerequisitesManager(extensionPath, logger, commandExecutor);
     }
     return instance;
 }
