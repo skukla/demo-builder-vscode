@@ -41,7 +41,15 @@ const suites = execSync(
 ).trim().split('\n');
 
 const detectors = {
-    theater: (s) => /\b(it|test)\s*\(/.test(s) && !/\bexpect\s*\(/.test(s),
+    // A suite VERIFIES if it can fail on purpose. `expect()` is the usual way; a
+    // deliberate `throw new Error(...)` inside a test body is another, and jest
+    // fails the test just the same. Counting only expect() reported
+    // type-json-alignment-stacks-components as "asserts nothing" when every one of
+    // its checks throws with a message telling you which field is wrong.
+    theater: (s) =>
+        /\b(it|test)\s*\(/.test(s) &&
+        !/\bexpect\s*\(/.test(s) &&
+        !/\bthrow new \w*Error\s*\(/.test(s),
     onlySkip: (s) => /\.(only|skip)\s*\(|\bxit\s*\(|\bxdescribe\s*\(/.test(s),
     nondeterminism: (s) => /Math\.random\s*\(/.test(s) ||
         (/Date\.now\s*\(/.test(s) && !/useFakeTimers|jest\.mock\(['"].*date/i.test(s)),
@@ -60,11 +68,23 @@ function doubleStyle(s) {
 // ── Self-tests: every detector must fire on a known-bad snippet ─────────────
 const SELFTEST = {
     theater: `it('runs', () => { doThing(); });`,
+    // ...and the negative control: a suite that verifies by throwing must NOT be
+    // flagged. Without this the detector could regress to counting expect() alone
+    // and nothing would notice.
+    _theaterNegative: `it('checks', () => { if (bad) throw new Error('nope'); });`,
     onlySkip: `it.only('x', () => { expect(1).toBe(1); });`,
     nondeterminism: `const n = Math.random();`,
     realWaits: `await new Promise((r) => setTimeout(r, 500));`,
 };
 for (const [name, snippet] of Object.entries(SELFTEST)) {
+    if (name.startsWith('_')) {
+        const base = name.slice(1).replace(/Negative$/, '');
+        if (detectors[base](snippet)) {
+            console.error(`SELFTEST FAILED: detector "${base}" fired on a GOOD snippet`);
+            process.exit(2);
+        }
+        continue;
+    }
     if (!detectors[name](snippet)) {
         console.error(`SELFTEST FAILED: detector "${name}" missed its known-bad snippet`);
         process.exit(2);
