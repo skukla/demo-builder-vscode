@@ -1,11 +1,15 @@
 # ADR-003: Multisite Architecture Seam
 
-**Status**: Deferred
+**Status**: Accepted — implementation deferred
 
-> Relabelled 2026-08-30 by the ADR audit. Its own Decision opens "No implementation
-> today", so `Accepted` overstated it. The two disciplines it asks for ARE live —
-> 11 sites default a new state field to `'main'` — which is why this is `Deferred`
-> rather than dropped.
+> Verified 2026-08-30. Its Decision opens "No implementation today", and that is
+> still true of the seam itself; the two disciplines it asks for ARE live, with 11
+> sites defaulting a new state field to `'main'`.
+>
+> Briefly relabelled `Deferred` in the same audit, which is reverted: `Deferred` is
+> not part of the ADR vocabulary (Proposed / Accepted / Deprecated / Superseded), and
+> the decision genuinely IS accepted. What is deferred is the work, which the status
+> line now says in words rather than by inventing a term.
 **Date**: 2026-05-18
 **Decision Maker**: Project Team
 **Implementer**: TBD (no implementation today; this ADR documents the seam for future work)
