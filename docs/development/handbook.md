@@ -298,6 +298,21 @@ meant.
 > `tests/sop/architecture-rules.test.ts` — no handler imports React.
 > *Why:* a handler that renders cannot be called by anything else — including an agent, which needs the same capability.
 
+> **Convention.** A handler answers by RETURNING its result — **Pattern B**.
+> `sendMessage` is for progress pushes only, never for the answer itself.
+> [where-code-goes.md](../architecture/where-code-goes.md) row 2 · Enforced by the
+> `patternBSendMessageCeiling` ratchet in
+> `tests/sop/architecture-rules.exemptions.json` — the count may not grow.
+> *Why:* a returned result has one caller waiting for it. A pushed one has whoever
+> happens to be listening, which is nobody when the caller is an agent or a test.
+>
+> **Catalogued 2026-08-30.** The rule and its ratchet already existed; the name
+> "Pattern B" was used across fifteen files — including two source files and two
+> per-directory `CLAUDE.md`s — and defined in none of them. An enforced convention
+> absent from this handbook makes the scorecard below an undercount, which is worth
+> more than the wording: it means "57 of 63 enforced" was measuring the catalogue,
+> not the codebase.
+
 > **Convention.** Message shapes come from a typed file, never written from memory into a
 > string or a `.mjs`. [CLAUDE.md](../../CLAUDE.md) · enforced by `npm run typecheck:tests`.
 > *Why:* an invented shape typechecks and passes its tests while agreeing with nothing. It has cost this repo whole screens.
@@ -545,7 +560,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 63 conventions. 57 of them are enforced; 6 are not.**
+**This handbook states 64 conventions. 58 of them are enforced; 6 are not.**
 
 The six that remain are not one thing, and treating them as one is what kept them open:
 

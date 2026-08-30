@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **63** conventions, **57** enforced
+- **64** conventions, **58** enforced
 - **19** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -78,6 +78,7 @@ it means the rule rests on somebody noticing.
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
 | A handler translates and returns. It never renders. Enforced by `tests/sop/architecture-rules.test.ts` — no handler imports React. | [ADR](../architecture/adr/015-dependency-architecture.md) |  | `architecture-rules.test.ts` |
+| A handler answers by RETURNING its result — **Pattern B**. `sendMessage` is for progress pushes only, never for the answer itself. row 2 · Enforced by the `patternBSendMessageCeiling` ratchet in `tests/sop/architecture-rules.exemptions.json` — the count may not grow. |  |  | *named in prose* |
 | Message shapes come from a typed file, never written from memory into a string or a `.mjs`. enforced by `npm run typecheck:tests`. |  |  | *named in prose* |
 
 ## 7. The user interface

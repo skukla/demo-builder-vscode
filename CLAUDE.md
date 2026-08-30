@@ -89,6 +89,7 @@ was, before this entry, spelled out in exactly one of them — a test comment.
 | **datapack** | The unit of sample DATA, owned by the data-installer service. Exported, versioned and published there, not here | a demo package |
 | **area** | One of the THREE sub-steps inside the single Build Your Project wizard step — Commerce, Storefront, Integrations. Order lives in `BUILD_AREA_DESCRIPTORS`, which is the list that decides | a wizard step; a step INSIDE an area (Commerce has its own strip, including Datapacks) |
 | **surface** | Where a capability is reachable from. The **human surface** is the buttons; the **agent surface** is the MCP tools. Both dispatch into the same handlers, and the gap between them is what the coverage scans measure | a UI screen |
+| **Pattern B** | A handler answers by RETURNING its result; `sendMessage` is for progress pushes only. Named in fifteen files and defined in none until 2026-08-30 — if you meet it in a plan or a code comment, this is it | a push channel; there is no "Pattern A" worth knowing |
 
 **you** is the agent reading this and changing this repo. **we** and **the owner**
 are Steve, who decides product intent. **the user** is the SC using the shipped
@@ -99,7 +100,7 @@ extension — not the person in this conversation.
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites; see `tests/README.md`)
+- **Testing**: Jest with ts-jest, @testing-library/react (see `tests/README.md`)
 
 ## Development Workflow
 
@@ -236,7 +237,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 63 of them, 57 with an enforcer that fails the build — and
+this codebase holds itself to — 64 of them, 58 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
