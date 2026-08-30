@@ -25,7 +25,6 @@
     "tests/features/dashboard/commands/showDashboard",
     "tests/features/dashboard/handlers/configureHandlers",
     "tests/features/data-installer/ui/views/DatapackActivityView",
-    "tests/features/data-installer/ui/views/DatapackCatalogView",
     "tests/features/eds/handlers/daLive/daLiveAuthPrompt",
     "tests/features/eds/handlers/edsHandlers",
     "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers",
