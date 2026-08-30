@@ -327,8 +327,13 @@ files into families and comparing each file's SET of `jest.mock(...)` calls
 (balanced-paren extracted, whitespace-normalised):
 
 - 44 families with ≥2 clone-linked spec files
-- **18** share an identical mock set — safe to extract (lane C1)
+- **17** share a real, non-empty mock preamble — safe to extract (lane C1)
 - **26** have DIVERGENT mock sets — need judgment per file (lane C2)
+- **1** (`blockCollectionHelpers`, 6 files) has NO `jest.mock` calls at all — its
+  duplication is shared fixtures and test bodies, not a preamble, so the
+  testUtils-preamble recipe does not apply to it. Counted as "identical" by a
+  set-comparison until the empty case was excluded; a third correction, same class as
+  the two below.
 
 *Measurement note, because the first attempt was wrong and the difference matters.*
 An earlier pass defined "preamble" as everything up to the first `import {` and
@@ -367,11 +372,16 @@ suites mock `@/core/di`. Checked before claiming a hazard.
 
 **Recommended re-plan.** Lane C splits in two:
 
-- **C1 (mechanical, 18 families)** — identical mock sets; extract to `.testUtils` using
-  the testUtils-owns-the-SUT-import pattern (§3 of `webview-test-authoring`; 59
-  precedents in this repo). Largest first: `blockCollectionHelpers` (6 files),
-  `daLiveContentOperations` (4), `AdobeAuthStep` (4), then eleven 2–3 file families.
+- **C1 (mechanical, 17 families)** — identical non-empty mock sets; extract to
+  `.testUtils` using the testUtils-owns-the-SUT-import pattern (§3 of
+  `webview-test-authoring`; 59 precedents in this repo). Ordered by payoff:
+  `AdobeAuthStep` (4 files × 2 mocks), `daLiveContentOperations` (4 × 1),
+  `startDemo` and `envFileWatcherService` (3 × 4), `useSelectionStep`,
+  `continueHandler`, `adobeEntityFetcher` (3 × 2), then ten 2-file families of which
+  `contentAuthoringTools`, `componentUpdater` and `ResetAllCommand` carry 5 mocks each.
   This is the lane that matches the original "family extractions" plan.
+- **C1b (1 family)** — `blockCollectionHelpers`, 6 files, no mocks; its duplication is
+  fixtures and test bodies. Needs its own read before anything is extracted.
 - **C2 (judgment, 26 families)** — decide per file which mocking strategy is correct,
   THEN extract. This is `test-divergence-scan` work wearing a duplication hat. Worst
   first: `installHandler` (11 files / 5 mock sets), `dashboardHandlers` (6/6),

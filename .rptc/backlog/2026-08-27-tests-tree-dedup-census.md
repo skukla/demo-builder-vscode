@@ -88,3 +88,11 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-28  refactor(tests): the AddIntegrationFlowModal pair shares one preamble (`4d4192dcc`)
 - 2026-08-28  refactor(tests): the extension-activation pair shares one preamble (`767c8ecd6`)
 - 2026-08-28  REFRESHED with the measured composition (owner challenge: 'is 160 acceptable?'). Answer recorded: no — a frozen starting line, not an endpoint; src is 0.62% under the same reviewers. Three lanes now named with owners: A = 16 clones of a suite repeating itself (fix outright, do first, no design question), B = 41 clones / 1,658 lines / 21% inside mock-wall suites (melts as a side effect of the PL-13 conversions, zero separate work), C = 103 clones / ~2,446 removable lines across families (ranked worklist: 20 real targets, 27 small, 42 legitimate splits to adjudicate). Value raised low -> med; guardrails already enforcing (family-setup check + ratchet with its producing command).
+- 2026-08-30  docs(plan): lane C measured — 18 families extractable, 26 need judgment first (`bbc5af7f6`)
+- 2026-08-30  docs(scan): jscpd's overlapping-range "self-clone" is a false positive (`067db15f2`)
+- 2026-08-30  refactor(tests): PrerequisitesStep-installation opens the same 25 lines 3× (`de92b4186`)
+- 2026-08-30  refactor(tests): executor EDS flow stops duplicating its definition-capture mock (`687dbfa3f`)
+- 2026-08-30  refactor(tests): the two blockCollectionHelpers merge suites stop repeating their tails (`c36b9951c`)
+- 2026-08-30  refactor(tests): sidebarProvider stops redeclaring its webview fake five times (`02ef32f22`)
+- 2026-08-30  refactor(tests): blockCollectionHelpers multi-library suite stops repeating itself (`866f08ddf`)
+- 2026-08-30  refactor(tests): daLive transform suite stops repeating itself — 334 lines to 199 (`26de46ce0`)
