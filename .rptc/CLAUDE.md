@@ -94,12 +94,8 @@ named; the SOP holds the worked examples and the refactoring steps.
 | SOP | Covers |
 |---|---|
 | `code-patterns.md` | Mandatory code-clarity patterns: `TIMEOUTS.*` constants, no nested ternaries, helper extraction, etc. |
-| `complexity-reduction.md` | Identifying and reducing code complexity (nesting, long functions, dense expressions) |
-| `component-extraction.md` | When and how to extract React components (size, props, sub-components) |
 | `consistency-patterns.md` | Detecting the same operation implemented differently across the codebase |
-| `dead-code-removal.md` | Removing dead code, unused exports, and duplicate logic |
 | `god-file-decomposition.md` | Detection criteria and decomposition workflows for oversized multi-responsibility files |
-| `hooks-extraction.md` | Extracting React hooks and business logic out of components |
 | `testing-guide.md` | Optimized Jest execution for 5-10s TDD feedback loops (`test:watch`, `test:file`, `test:changed`) |
 
 ## Test-Command Gotchas

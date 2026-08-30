@@ -68,8 +68,6 @@ const ALLOWED: Record<string, string> = {
         'shortened name in an example of the test-mirroring convention; the real file is authenticationService.ts and naming it would make the example harder to read',
     'CONTRIBUTING.md::tests/features/authentication/services/authService.test.ts':
         'the mirrored half of the same illustrative pair',
-    'docs/development/sop/consistency-patterns.md::@/features/mesh':
-        'a deliberate COUNTER-example — the line is marked ❌ and shows the feature-barrel \n         import ADR-022 forbids. It must not resolve; that is the point of showing it.',
 };
 
 function docs(): string[] {

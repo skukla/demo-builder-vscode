@@ -53,7 +53,7 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
 5. **Keep tests in sync** (project rule): moving a method moves its tests to the new unit's test
    file; the facade keeps a delegation/integration test. Don't leave orphaned tests behind.
 
-## Gotchas (anti-patterns — SOP §4)
+## Gotchas
 - **Premature extraction**: don't extract a helper with a single use case. Rule of Three — inline
   until 2+ real callers.
 - **Facade accumulation**: NEW behavior goes into the appropriate specialized service, never as a

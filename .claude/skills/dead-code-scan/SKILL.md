@@ -5,7 +5,6 @@ description: Find dead code — unused exports, unimported files, self-declared 
 
 # Dead-Code Scan
 
-**Taxonomy of dead and duplicate code, plus the safe-removal checklist:** [docs/development/sop/dead-code-removal.md](../../../docs/development/sop/dead-code-removal.md).
 
 Detect code that nothing reaches: exports no one imports, symbols left over after a
 supersession, and comments that admit the code is obsolete. This repo's rule is **no soft

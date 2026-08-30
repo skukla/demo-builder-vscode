@@ -6,7 +6,7 @@
  * - No abstract classes for single implementations
  * - No HOCs or generic wrappers
  *
- * @see docs/development/sop/code-patterns.md - Component Extraction Criteria
+ * @see docs/architecture/where-code-goes.md rows 7-8 — where a component or hook belongs
  */
 
 import * as fs from 'fs';

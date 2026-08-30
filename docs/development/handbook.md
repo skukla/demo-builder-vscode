@@ -172,8 +172,8 @@ check says so and names the file.
 
 > **Convention.** A complex inline expression becomes a named function.
 > *Why:* the name is the explanation. Without it every reader re-derives the intent.
-> [sop/complexity-reduction.md](sop/complexity-reduction.md) for the thresholds and
-> the simplification patterns · enforced by `tests/sop/complex-expressions.test.ts`.
+> [sop/code-patterns.md](sop/code-patterns.md) for where the line is ·
+> enforced by `tests/sop/complex-expressions.test.ts`.
 
 > **Convention.** A file stays under 500 lines; 750 fails the build. Past that it is
 > doing more than one job — split it by responsibility, not by line count.

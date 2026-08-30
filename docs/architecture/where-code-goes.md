@@ -14,8 +14,8 @@ not route around it.
 | 4 | Implement business logic / talk to an external system | A **service** in the feature's `services/` | Needs arrive as parameters; never fetches, never `vscode.window.*` | architecture-rules: fetch-boundary + ui-in-services |
 | 5 | Hand logic a bundle of services | The feature's **`create...Deps`** file | The only construction site outside `extension.ts`; lives beside its consumer | architecture-rules: construction-boundary |
 | 6 | Answer a question from existing data | An **accessor** | Reads only. NEVER creates/writes on a miss | mechanical for tools; review rule elsewhere |
-| 7 | Build screen UI | A **component** in the feature's `ui/` | Promote to `core/ui/` only at the second consumer | import-boundary lint + SOP size/complexity |
-| 8 | Reuse screen behavior | A **hook** | Stable references for array/object args (module-level `EMPTY`) — inline literals re-render forever | architecture-rules: hook-stable-refs |
+| 7 | Build screen UI | A **component** in the feature's `ui/` | Feature: `ui/components/`. A wizard/step body: `ui/steps/`. Promote to `core/ui/components/{category}/` (feedback, forms, layout, navigation, selection, ui) only at the SECOND consumer | import-boundary lint + `tests/sop/component-extraction.test.ts` |
+| 8 | Reuse screen behavior | A **hook** | Feature: `ui/hooks/`. Shared: `core/ui/hooks/`, again only at the second consumer. Stable references for array/object args (module-level `EMPTY`) — inline literals re-render forever | architecture-rules: hook-stable-refs |
 | 9 | Add feature configuration | JSON in the feature's `config/` | Loaded through `ConfigurationLoader` | architecture-rules: config-loader |
 | 10 | Declare shared shapes | A types file (`src/types/` or `*.types.ts`) | No runtime code | architecture-rules: types-purity |
 | 11 | Build something two features need | `core/` | Only at the second consumer — never speculatively | import rules + review |
