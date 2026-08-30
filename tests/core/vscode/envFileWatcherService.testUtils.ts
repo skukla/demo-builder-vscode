@@ -147,3 +147,13 @@ export function resetMocks(): void {
     mockFileContents.clear();
     Object.keys(commandCallbacks).forEach(key => delete commandCallbacks[key]);
 }
+
+// ── The SUT and its collaborators, re-exported ──────────────────────────────
+// Specs MUST import these from here, never from '@/core/vscode/...'. jest.mock
+// hoists above the imports of the module it appears in, NOT across modules, so a
+// spec importing the service directly could load it before the mocks above were
+// registered — which is exactly why all three .mocked specs used to re-declare
+// every mock in this file. Re-exporting removes the ordering question.
+export { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+export { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+export * as vscode from 'vscode';

@@ -98,3 +98,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  refactor(tests): daLive transform suite stops repeating itself — 334 lines to 199 (`26de46ce0`)
 - 2026-08-30  refactor(tests): AdobeAuthStep's four specs stop pasting the same 24 lines — lane C1 (`dea9dde05`)
 - 2026-08-30  docs(handoff): lane C1's first family shipped — recipe proven, 16 remain (`3aa8ea08b`)
+- 2026-08-30  refactor(tests): startDemo's three suites stop pasting the same mock block — lane C1 (`6f8ac1971`)

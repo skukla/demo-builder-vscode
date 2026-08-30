@@ -8,127 +8,16 @@
  * Reference: .rptc/plans/resource-lifecycle-management/TESTING-MOCKING-PATTERNS.md
  */
 
-// Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
-// Import mock exports from testUtils - must be before vscode mock for proper reference
 import {
+    EnvFileWatcherService,
+    WorkspaceWatcherManager,
+    vscode,
     mockWatchers,
     mockFileContents,
     mockStateManager,
     mockLogger,
     resetMocks,
-    commandCallbacks as _commandCallbacks,
 } from './envFileWatcherService.testUtils';
-
-// Mock vscode API - must be in test file for proper hoisting
-jest.mock('vscode', () => {
-    const actual = jest.requireActual('vscode');
-    return {
-        ...actual,
-        workspace: {
-            workspaceFolders: [
-                { uri: { fsPath: '/project1', toString: () => 'file:///project1' }, name: 'project1', index: 0 },
-            ],
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    }),
-                    _simulateChange: (uri: any) => {
-                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
-                    }
-                };
-
-                const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                mockWatchers.push(watcher);
-                return watcher;
-            })
-        },
-        window: {
-            showInformationMessage: jest.fn(() => Promise.resolve(undefined)),
-        },
-        commands: {
-            registerCommand: jest.fn((id, callback) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                commandCallbacks[id] = callback;
-                return { dispose: jest.fn() };
-            }),
-            executeCommand: jest.fn((id, ...args) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                const callback = commandCallbacks[id];
-                if (callback) {
-                    return Promise.resolve(callback(...args));
-                }
-                return Promise.resolve();
-            }),
-        },
-        Uri: {
-            file: (path: string) => ({
-                fsPath: path,
-                toString: () => `file://${path}`
-            }),
-        },
-        RelativePattern: jest.fn().mockImplementation((folder, pattern) => pattern),
-    };
-});
-
-// Mock fs.promises
-jest.mock('fs', () => ({
-    promises: {
-        readFile: jest.fn((filePath: string) => {
-            const { mockFileContents } = require('./envFileWatcherService.testUtils');
-            const content = mockFileContents.get(filePath);
-            if (content === undefined) {
-                return Promise.reject(new Error(`File not found: ${filePath}`));
-            }
-            return Promise.resolve(content);
-        }),
-    },
-}));
-
-// Mock WorkspaceWatcherManager
-jest.mock('@/core/vscode/workspaceWatcherManager', () => {
-    return {
-        WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
-            registerWatcher: jest.fn(),
-            dispose: jest.fn(),
-        })),
-    };
-});
-
-import * as vscode from 'vscode';
-import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
-import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 
 describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
