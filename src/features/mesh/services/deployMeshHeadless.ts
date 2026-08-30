@@ -24,7 +24,7 @@ import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderD
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -104,7 +104,7 @@ export async function deployMeshHeadless(
 
     // App Builder permission gate — IMS role membership can change between the
     // create-time gate and now; re-verify to surface the friendly error.
-    const registry = await new ComponentRegistryManager(extensionPath).loadRegistry();
+    const registry = await getComponentRegistryManager(extensionPath).loadRegistry();
     if (projectRequiresAppBuilder(project, registry)) {
         const permission = await authManager.testDeveloperPermissions();
         if (!permission.hasPermissions) {

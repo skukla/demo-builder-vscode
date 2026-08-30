@@ -14,6 +14,8 @@ jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => 
 jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
     projectRequiresAppBuilder: jest.fn(() => false),
 }));
+import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
+
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ components: {} }),
@@ -100,6 +102,9 @@ function deps(overrides: Record<string, unknown> = {}) {
 describe('deployMeshHeadless', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // The registry manager is a SESSION singleton now; without this the first
+        // test's instance (and its memoised registry) leaks into every later one.
+        resetComponentRegistryManager();
         mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
         const authManager = {
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),

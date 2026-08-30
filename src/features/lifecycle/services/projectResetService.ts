@@ -14,6 +14,7 @@
  * @module features/lifecycle/services/projectResetService
  */
 
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import {
@@ -137,11 +138,7 @@ async function loadComponentDefinitionsFromProject(
     project: Project,
     context: HandlerContext,
 ): Promise<LoadResult> {
-    const { ComponentRegistryManager } = await import(
-        '@/features/components/services/ComponentRegistryManager'
-    );
-
-    const registryManager = new ComponentRegistryManager(context.context.extensionPath);
+    const registryManager = getComponentRegistryManager(context.context.extensionPath);
     const registry = await registryManager.loadRegistry();
     const stack = project.selectedStack ? getStackById(project.selectedStack) : undefined;
 
