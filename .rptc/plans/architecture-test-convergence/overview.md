@@ -23,7 +23,7 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C RE-PLANNED, not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C measured: duplication is real (~5,486 lines) but only 4 of 44 families are mechanically extractable; the other 40 have divergent preambles and need per-file judgment. Splits into C1 (4, mechanical) and C2 (40, judgment) — see the finding below |
+| 3b | Duplication lanes (PL-9) | **lane A DONE 2026-08-30**; lane C RE-PLANNED, not started | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C measured: duplication is real (~5,486 lines). Splits into C1 (17 families, identical mock sets, mechanical — 1 DONE) , C1b (1, no mocks at all) and C2 (26, divergent mock sets, judgment first). The 4/40 split first written here was wrong and is retracted in the finding below |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
 | 5 | Release-cut instruments | **DONE 2026-08-30** | `test-strategy-scan` skill (runs the three censuses + the verdict table saying which columns track defects) and the Stryker pilot (`npm run test:mutation`, baseline 93.37% over 166 mutants in 33s). Both registered and both reached by `npm run sweep` / `cut-release` |
 | 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
@@ -59,8 +59,11 @@ ASSERTION caught it. Check which test failed and why.
 Two numbers moved the WRONG way and are recorded rather than omitted:
 light-mocks doubles 532 to 544, and logicInTests 161 to 164. The first is
 expected — a converted suite trades a module wall for light fakes — but it
-means the double count REDISTRIBUTED rather than fell. The second is a small
-regression nobody asked for; phase 6 should look at it.
+means the double count REDISTRIBUTED rather than fell.
+
+The second no longer exists. Phase 6 did look at it, and the answer was that
+`logicInTests` was never measuring a defect; it was RETIRED 2026-08-30 with the
+owner's approval. Reading a "regression" off it was the mistake, not the number.
 
 ### Work done outside this plan
 
@@ -75,10 +78,10 @@ builder-uniqueness ratchet, the placement rule, and PL-17's filing.
 | 1 | **Gates first** — fail-on-console setup gate (allowlist seeded at today's noise = PL-15's ledger), eslint-plugin-jest at warn, family-testUtils check, tests-clone ratchet pinned into the sweep skill | all four run in CI; new drift fails; no existing test newly broken | PL-14 (A) |
 | 2 | **Strengthen the 7 weak witnesses** — 1 blind (prerequisitesCacheManager, 7 suites, no call assertions), 4 untested, 2 indirect (confirm the parent suites watch the seam) | each has a suite that would FAIL if the conversion broke its collaborator calls | PL-11 |
 | 3 | **Conversion batches** — the ~54 queue files, ~5 per batch | ledger rows deleted per batch; exemption total → adjudicated floor | PL-13 + PL-11 |
-| 3b | **Duplication lanes (PL-9)** — lane A (16 self-repeating suites) fixed outright; lane B melts inside the phase-3 conversions; lane C's 20 ranked family extractions | ratchet at its adjudicated floor; the 42 legitimate splits carry written reasons | PL-9 |
+| 3b | **Duplication lanes (PL-9)** — lane A (self-repeating suites) fixed outright; lane B melts inside the phase-3 conversions; lane C is NOT the 20 flat "family extractions" first assumed — see the measured split into C1/C1b/C2 below | ratchet at its adjudicated floor; the 42 legitimate splits carry written reasons; every C1 family carries a planted-control check | PL-9 |
 | 4 | **Noise burn-down** — act() awaits, mock prop-spreading, expected-error absorption; opportunistic in batches + dedicated passes for top emitters | allowlist empty; gate frozen at zero | PL-15 |
 | 5 | **Release-cut instruments** — `test-strategy-scan` skill (censuses promoted from one-off scripts), Stryker pilot config + runner skill | both run at a release cut and produce reconciled output | PL-14 (B) |
-| 6 | **Craft + coverage follow-ups** — hollow suite characterized, throw-style normalized, coverage gaps (mcp-proxy 0%, projectDeletionService 16%, templateSyncService 18%) | flags at zero; named coverage gaps closed or reasoned | PL-11 |
+| 6 | **Craft + coverage follow-ups** — hollow suite characterized, coverage gaps (mcp-proxy 0%, projectDeletionService 16%, templateSyncService 18%) | named coverage gaps closed or reasoned; the REAL flags (`theater`, `nondeterminism`, `realWaits`) at their adjudicated floor | PL-11 |
 | 7 | **Impact snapshot** — re-run `program-metrics.mjs --label <cut>` | the diff is the impact report | PL-11 |
 
 ## The batch recipe (the repeating unit — phases 2–4)
@@ -218,7 +221,8 @@ bare array diff. Normalising these makes the failure messages WORSE.
 `type-json-alignment-stacks-components.test.ts` is flagged and is not hollow. That
 is a detector gap, and it is the whole of the finding.
 
-**Recommendation:** drop "throw-style normalized" from phase 6, and teach the
+**DONE 2026-08-30, owner-approved:** "throw-style normalized" is struck from phase
+6's scope line above. Still open: teach the
 `theater` detector that a `throw` inside a test body is a verification. One
 genuinely hollow suite existed and has been fixed (`componentUpdater-envMigration`
 → `envMerge.test.ts`); after it, `theater` should read 0 rather than 1.
@@ -263,10 +267,12 @@ subject, so the test agrees with the bug. That is the defect "logic in tests"
 names. It is not the same as containing a loop, and it is not cheap to detect
 statically.
 
-**Recommendation:** drop `logicInTests` from phase 6's "flags at zero" criterion
-and from the craft census, or redefine it as above. Left in place for now — the
-census is an owner-facing instrument and retiring one of its columns is a
-decision, not a cleanup. The other three flags (`theater` 2, `nondeterminism` 26,
+**DONE 2026-08-30, owner-approved:** `logicInTests` is DELETED from
+`craft-census.mjs` — detector, self-test and doc line — and struck from phase 6's
+criterion. The census header now carries the reasoning and the bar any replacement
+must clear (name a clean file it would flag and a buggy one it would miss). It was
+left in place at first because retiring a column of an owner-facing instrument is a
+decision rather than a cleanup; the owner made it. The other three flags (`theater` 2, `nondeterminism` 26,
 `realWaits` 16) are unaffected and remain real.
 
 Same shape as the construction-boundary finding a day earlier: a metric aimed at

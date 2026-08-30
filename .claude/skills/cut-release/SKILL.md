@@ -51,10 +51,12 @@ decide what (if anything) to fix before tagging.
   floor in `unprompted-baseline.json` documents each exclusion.
 - **`test-strategy-scan`** — the strategy read of the test suite (~1 min, offline): runs
   the craft / queue / ledger censuses together and interprets them. Invoke the SKILL, not
-  the three scripts — its value is the verdict table saying which columns track defects,
-  and three of them provably do not (`logicInTests`, `throw-style`, and jscpd's
-  overlapping-range self-clones). Working a worklist off one of those is the failure it
-  exists to prevent. Capture `check-ledger.mjs`'s exit code in a variable; it exits 1 on an
+  the three scripts — its value is the verdict table saying which columns track defects.
+  Two that did not (`logicInTests`, `throw-style`) were RETIRED 2026-08-30 rather than
+  footnoted, so every flag the census still emits is worth acting on; the surviving
+  caveat is jscpd's overlapping-range self-clones, which are not duplication at all.
+  Working a worklist off a number that measures shape is the failure it exists to
+  prevent. Capture `check-ledger.mjs`'s exit code in a variable; it exits 1 on an
   unreconciled ledger and a pipe will report the pipe's 0.
 - **`node .claude/skills/test-divergence-scan/scan.mjs tests`** — how many
   DIFFERENT ways the suite builds the same fake (~2s, offline). Not duplication —

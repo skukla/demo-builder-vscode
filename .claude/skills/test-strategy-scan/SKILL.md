@@ -55,9 +55,22 @@ open a worklist from a column marked *not a defect metric*.
 | `nondeterminism` | **REAL** — act on it | Order- or clock-dependent tests. 26 |
 | `realWaits` | **REAL** — act on it | Wall-clock sleeps in tests. 16 |
 | `doubleStyle: module-wall` / `wall+partial` | **REAL** — the conversion debt | 73 + 20. These are suites mocking whole modules where handed-in fakes would do. This is the lane worth working |
-| `logicInTests` | **NOT a defect metric** | Counts loops/conditionals in test files. Measured 2026-08-30: it counts SHAPE, not the defect "the test re-implements its subject and so agrees with its bugs". 167 and rising for reasons unrelated to test quality |
-| `throw-style` | **NOT a defect metric** | Measured 2026-08-30, same shape |
 | jscpd self-clones in `tests/` | **PARTLY REAL — check the arithmetic** | 15 reported = 12 real + 3 false positives. A pair whose two ranges OVERLAP in one file is never duplication; see `code-duplication-scan` |
+
+Two columns that used to sit here are **gone**, retired 2026-08-30 with the owner's
+approval rather than left in the table as warnings:
+
+- **`logicInTests`** — deleted from `craft-census.mjs`. It matched `for`/`while` at
+  the start of a line, which is a shape, not a defect. The reasoning and the bar any
+  replacement must clear are recorded in the census file's header.
+- **`throw-style`** — never a census column; it was a phase-6 work item
+  ("throw-style normalized") in the convergence plan, and it has been struck from
+  there. It measured whether a suite used `rejects.toThrow` versus a try/catch, which
+  is setup style and says nothing about what a suite would catch.
+
+So the flags the census now emits are exactly the ones worth acting on. If a future
+column earns a "not a defect metric" verdict, delete it too — a known-bad number that
+stays in the output gets acted on by whoever did not read this file.
 
 **The pattern, four times now in this codebase: a count of what code LOOKS like is
 not a count of what is WRONG with it.** Before working any census column, ask what
