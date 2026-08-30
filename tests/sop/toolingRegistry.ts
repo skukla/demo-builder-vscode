@@ -206,6 +206,15 @@ const JUDGEMENT: readonly Instrument[] = [
         unwiredReason: 'guided review over a generated census',
     },
     {
+        id: 'test-strategy-scan',
+        kind: 'skill',
+        cadence: 'periodic',
+        what: "the release-cut read of the test suite's STRATEGY: runs the three censuses (craft, queue, ledger) together and says which of their columns actually track defects",
+        runs: null,
+        unwiredReason:
+            'guided review; it INTERPRETS three registered instruments rather than adding a check of its own, and three of their columns are known not to track defects',
+    },
+    {
         id: 'agent-gap-scan',
         kind: 'skill',
         cadence: 'periodic',
