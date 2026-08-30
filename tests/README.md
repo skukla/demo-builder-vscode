@@ -1,461 +1,154 @@
-# Test Organization
+# Tests
 
-This directory contains all automated tests for the Adobe Demo Builder VS Code extension. Tests are organized to mirror the source code structure for easy discovery and maintenance.
+Tests mirror `src/`. A test for `src/features/eds/services/foo.ts` lives at
+`tests/features/eds/services/foo.test.ts`, named after its source file.
 
-## Directory Structure
+Run `ls tests/` for the current layout rather than trusting a tree here — the tree
+this file used to carry is what went stale, and it described a `webview-ui/`
+directory that no longer exists.
 
-```
-tests/
-├── __mocks__/         # Shared test mocks (vscode, uuid, etc.)
-├── setup/             # Test setup files (react.ts for jsdom)
-├── helpers/           # Test helper utilities
-├── core/              # Core infrastructure tests (mirrors src/core/)
-│   ├── base/          # Base classes and types (TDD placeholder)
-│   ├── commands/      # Command infrastructure tests
-│   ├── communication/ # Webview communication protocol tests
-│   ├── config/        # Configuration management (TDD placeholder)
-│   ├── di/            # Dependency injection (TDD placeholder)
-│   ├── logging/       # Logging system (TDD placeholder)
-│   ├── shell/         # Command execution tests
-│   ├── state/         # State management tests
-│   ├── utils/         # Core utility tests
-│   ├── validation/    # Validation tests
-│   └── vscode/        # VS Code API wrapper tests (TDD placeholder)
-├── features/          # Feature tests (mirrors src/features/)
-│   ├── authentication/
-│   │   ├── handlers/  # Authentication message handlers
-│   │   └── services/  # Authentication services (SDK, cache, tokens)
-│   ├── components/
-│   │   └── services/  # Component management services
-│   ├── dashboard/
-│   │   ├── handlers/  # Dashboard message handlers (EDS reset, etc.)
-│   │   └── ui/        # Dashboard UI predicates
-│   ├── eds/
-│   │   ├── handlers/  # EDS setup/cleanup handlers
-│   │   └── services/  # EDS services (reset, block collection, config, etc.)
-│   ├── lifecycle/
-│   │   └── handlers/  # Lifecycle handlers (start, stop, etc.)
-│   ├── mesh/
-│   │   ├── handlers/  # Mesh deployment handlers
-│   │   ├── services/  # Mesh deployment services
-│   │   └── utils/     # Mesh utilities (error formatting)
-│   ├── prerequisites/
-│   │   └── services/  # Prerequisites checking and installation
-│   ├── project-creation/
-│   │   ├── handlers/  # Project creation executor tests
-│   │   └── ui/        # Wizard step and helper tests
-│   ├── projects-dashboard/
-│   │   ├── handlers/  # Projects list handlers (DA.live auth, etc.)
-│   │   └── ui/        # Dashboard UI component tests
-│   ├── sidebar/       # Sidebar navigation tests
-│   └── updates/
-│       └── services/  # Update manager and component updater tests
-├── integration/       # Integration tests (cross-module testing)
-│   └── prerequisites/ # Prerequisites integration tests
-├── webview-ui/        # React webview tests (mirrors webview-ui/src/)
-│   └── shared/
-│       ├── components/ # Shared UI components
-│       │   ├── ui/         # Basic UI components (Spinner, Badge, etc.)
-│       │   ├── forms/      # Form components (FormField, ConfigSection)
-│       │   ├── feedback/   # Feedback components (ErrorDisplay, StatusCard)
-│       │   └── navigation/ # Navigation components (SearchableList, etc.)
-│       └── hooks/      # React hooks (useAsyncData, etc.)
-└── types/             # Type definition tests
-```
+## Safe to run with an Extension Dev Host open — but only since 2026-08-10
 
-## Test Types
+Two suites call the real `activate()`, which starts the in-extension MCP server. Its
+socket path derives from the projects directory, and the default projects directory
+hashes to the *exact* socket a live Dev Host binds — so `npx jest` used to rename its
+own socket over yours and kill the running MCP session.
 
-### Unit Tests
-- **Location:** `tests/core/`, `tests/features/*/services/`
-- **Purpose:** Test individual functions/classes in isolation
-- **Environment:** Node.js (via ts-jest)
-- **Example:** `tests/core/shell/pollingService.test.ts`
+`tests/setup/node.ts` now points every worker at an isolated socket tree via
+`DEMO_BUILDER_MCP_SOCKET_DIR`. **Do not remove that.** Nothing else keeps a test run
+off the live socket, and from the test's side the failure is completely silent.
 
-### Integration Tests
-- **Location:** `tests/integration/`, `tests/features/*/handlers/`
-- **Purpose:** Test interactions between components
-- **Environment:** Node.js (via ts-jest)
-- **Example:** `tests/features/prerequisites/services/`
+## Two projects, and which one runs your file
 
-### React Component Tests
-- **Location:** `tests/webview-ui/`
-- **Purpose:** Test React components and hooks
-- **Environment:** jsdom (via @testing-library/react)
-- **Example:** `tests/webview-ui/shared/components/ui/Spinner.test.tsx`
+| Project | Environment | Matches |
+|---|---|---|
+| `node` | node | `**/tests/**/*.test.ts`, minus anything under `tests/webview-ui/` |
+| `react` | jsdom | `tests/webview-ui/**` (`.ts` and `.tsx`), `tests/features/**/*.test.tsx`, `tests/core/ui/**/*.test.tsx`, `src/features/**/*.test.tsx` |
 
-## Running Tests
+**A React test does NOT have to live in `tests/webview-ui/`** — that is the legacy
+home and holds a small minority of them. Most sit beside their feature's other tests
+in `tests/features/**`, which the react project matches by `.tsx` extension. If you
+hit `ReferenceError: document is not defined`, the file is being picked up by the
+node project: check the extension is `.tsx` and the path matches a react pattern in
+`jest.config.js`.
 
-> **Safe to run with an Extension Dev Host open — but only since 2026-08-10.**
-> Two suites call the real `activate()`, which starts the in-extension MCP server.
-> Its socket path derives from the projects dir, and the default projects dir
-> hashes to the *exact* socket a live Dev Host binds, so `npx jest` used to rename
-> its own socket over yours and kill the running MCP session. `tests/setup/node.ts`
-> now points every worker at an isolated socket tree via
-> `DEMO_BUILDER_MCP_SOCKET_DIR`. **Do not remove that** — nothing else keeps a test
-> run off the live socket, and the failure is silent from the test's side.
-
-### All Tests
 ```bash
-npm test
+npm test                                  # everything
+npm test -- --selectProjects node         # extension backend only
+npm test -- --selectProjects react        # webview UI only
+npm test -- tests/core/                   # one directory
+npm test -- --listTests                   # what jest actually discovered
 ```
 
-### By Project (Node vs React)
-```bash
-# Node tests only (extension backend)
-npm test -- --selectProjects node
-
-# React tests only (webview UI)
-npm test -- --selectProjects react
-```
-
-### Specific Directory or File
-```bash
-# Run all core tests
-npm test -- tests/core/
-
-# Run specific test file
-npm test -- tests/core/shell/pollingService.test.ts
-
-# Run tests matching pattern
-npm test -- --testPathPattern="authentication"
-```
-
-### With Coverage
-```bash
-# Full coverage report
-npm test -- --coverage
-
-# Coverage for specific directory
-npm test -- tests/features/authentication/ --coverage
-```
-
-### Watch Mode (for active development)
-```bash
-npm test -- --watch
-```
-
-## Test Discovery
-
-Tests are discovered using Jest's `testMatch` patterns defined in `jest.config.js`:
-
-**Node Project (extension backend):**
-- Matches: `**/tests/**/*.test.ts`
-- Excludes: `**/tests/webview-ui/**/*.test.tsx` (React tests)
-
-**React Project (webview UI):**
-- Matches: `**/tests/webview-ui/**/*.test.ts` and `*.test.tsx`
-
-## Path Aliases
-
-Tests use the same path aliases as source code for consistent imports:
-
-```typescript
-// ✅ Good: Use path aliases for cross-module imports
-import { StateManager } from '@/core/state';
-import { AuthService } from '@/features/authentication/services/authenticationService';
-import { HandlerContext } from '@/types/handlers';
-
-// ❌ Avoid: Relative paths for cross-module imports
-import { StateManager } from '../../../src/core/state';
-```
-
-**Available Aliases:**
-- `@/core/*` → `src/core/*`
-- `@/features/*` → `src/features/*`
-- `@/shared/*` → `src/shared/*`
-- `@/types/*` → `src/types/*`
-- `@/webview-ui/*` → `webview-ui/src/*`
-
-## TDD Placeholder Directories
-
-Some test directories contain only `README.md` files with no test files. These are **TDD placeholders** reserved for future tests:
-
-- `tests/core/base/` - Base classes and types (tests written when implementation created)
-- `tests/core/config/` - Configuration management
-- `tests/core/di/` - Dependency injection
-- `tests/core/logging/` - Logging system
-- `tests/core/vscode/` - VS Code API wrappers
-
-**Why Placeholders?** Following TDD (Test-Driven Development), tests should be written **before** implementation. These directories are prepared for when those features need tests, ensuring tests are created first.
-
-## Migration History
-
-**Previous Structure (Removed):**
-- `tests/utils/` - Legacy location for core infrastructure tests (migrated to `tests/core/`)
-- `tests/commands/handlers/` - Legacy location for handlers (migrated to `tests/features/*/handlers/`)
-
-**Migration Plan:** See `.rptc/plans/reorganize-tests-to-match-code-structure/` for full migration details.
-
-**Git History:** Tests retain their git history through `git mv` operations. Use `git log --follow [test-file]` to see full history including pre-migration commits.
-
-## Writing New Tests
-
-### Test File Size Guidelines
-
-**Maximum Recommended Size:** 500 lines per test file
-
-**Enforcement:**
-- ESLint warns at 500 lines (configurable in `.eslintrc.json`)
-- ESLint errors at 750 lines
-- CI/CD checks enforce 750-line hard limit
-
-**When to Split:** See [Test File Splitting Playbook](../docs/testing/test-file-splitting-playbook.md) for comprehensive guidelines.
-
-**Quick Reference:**
-
-| File Size | Action |
-|-----------|--------|
-| <300 lines | Keep as-is |
-| 300-500 lines | Monitor |
-| 500-750 lines | **Split recommended** |
-| >750 lines | **Split required** |
-
-**Why 500 lines?**
-- Industry standard (Google, Airbnb, Microsoft)
-- Reduces cognitive load (understandable in <5 minutes)
-- Improves test isolation and focus
-- Reduces memory usage during test execution (40-50% improvement measured)
-
-**Validation Tools:**
-```bash
-# Check test file sizes locally
-npm run validate:test-file-sizes
-
-# Shows warnings for files >500 lines
-# Exits with error for files >750 lines
-```
-
-**CI/CD Enforcement:**
-- GitHub Actions workflow automatically checks test file sizes on PRs
-- Workflow: `.github/workflows/test-file-size-check.yml`
-- Blocks merging if files exceed 750 lines
-- Exclusions can be added to `.testfilesizerc.json` (use sparingly)
-
-### Test File Naming
-- **Pattern:** `[source-file-name].test.ts` or `.test.tsx`
-- **Example:** `src/core/shell/pollingService.ts` → `tests/core/shell/pollingService.test.ts`
-
-### Test File Location
-- **Rule:** Mirror the source file's location in `src/`
-- **Example:**
-  - Source: `src/features/authentication/services/authenticationService.ts`
-  - Tests: `tests/features/authentication/services/authenticationService-*.test.ts` (split suite + shared `.testUtils`)
-
-### Test Structure (AAA Pattern)
-```typescript
-import { functionUnderTest } from '@/core/utils/someUtility';
-
-describe('functionUnderTest', () => {
-  it('should return expected result when given valid input', () => {
-    // Arrange: Set up test data and conditions
-    const input = { key: 'value' };
-
-    // Act: Execute the code under test
-    const result = functionUnderTest(input);
-
-    // Assert: Verify the outcome
-    expect(result).toEqual({ processedKey: 'processedValue' });
-  });
-});
-```
-
-### React Component Test Structure
-```typescript
-import { render, screen } from '@testing-library/react';
-import { Spinner } from '@/webview-ui/shared/components/ui/Spinner';
-
-describe('Spinner', () => {
-  it('should render with loading message', () => {
-    // Arrange & Act
-    render(<Spinner message="Loading data..." />);
-
-    // Assert
-    expect(screen.getByText('Loading data...')).toBeInTheDocument();
-  });
-});
-```
+**Never pipe jest through `tail`/`head`/`grep`** — output buffering makes the run
+look hung. Redirect to a file and read that. A PreToolUse hook blocks it. The
+redirect order matters too: `> file 2>&1`, never `2>&1 > file`, because jest writes
+results to stderr and the wrong order lands an empty file that reads as a clean pass.
 
 ## Control the test, not just the code
 
 **A test that passes against the disabled feature tests nothing.** After writing a
-test for new behaviour, neuter the behaviour — return early, flip the condition,
-swap the order — and confirm the test fails. If it still passes, it is not covering
-what its name claims.
+test for new behaviour, neuter the behaviour — return early, flip the condition, swap
+the order — and confirm the test fails. If it still passes, it is not covering what
+its name claims.
 
-**Assert the observable ACT, not just a result flag.** Flags like `success: false`
-or an empty array are frequently satisfied by the code doing nothing at all. A
-rollback test asserting `rolledBack === true` and `moved === []` passed against a
-rollback that had been deliberately switched off; it only discriminated once it
-asserted the restoring deploy had actually been issued. Where order is the
-guarantee, assert the SEQUENCE — an order-blind test passes against the
-data-losing order.
+**Assert the observable ACT, not just a result flag.** Flags like `success: false` or
+an empty array are frequently satisfied by the code doing nothing at all. A rollback
+test asserting `rolledBack === true` and `moved === []` passed against a rollback that
+had been deliberately switched off; it only discriminated once it asserted the
+restoring deploy had actually been issued. Where order is the guarantee, assert the
+SEQUENCE — an order-blind test passes against the data-losing order.
 
 Two real examples of what this catches:
 
 - `storefrontSetupHandlers-githubAppCheck.test.ts` defines the values it asserts on
   inside the test (`const shouldCheckGitHubApp = useExistingRepo;`), so it exercises
-  no production code. It has been present since 2026-03-24 and passed unchanged
-  through a change that relocated the behaviour it names.
-- Neutering a guard is how you learn the guard's tests are real. Every guard added
-  on 2026-08-06/07 was control-tested this way, and two of them turned out to need
-  stronger assertions.
+  no production code at all. It has been present since 2026-03-24 and passed
+  unchanged through a change that relocated the behaviour it names.
+- Neutering a guard is how you learn the guard's tests are real. Every guard added on
+  2026-08-06/07 was control-tested this way, and two turned out to need stronger
+  assertions.
 
-## Mock Derivation Guidelines
+## Prefer an injection seam over mocking a config leaf
 
-### Prefer injection seams over leaf-module mocks
+When code reads a bundled JSON leaf (`demo-packages.json`, `stacks.json`, or a thin
+loader over one), give the function an optional parameter defaulting to the bundled
+data — `getPackageById(id, packages = bundled)` — rather than `jest.mock`-ing the
+module.
 
-When code under test reads a config "leaf" (a bundled JSON like
-`demo-packages.json`/`stacks.json`, or a thin loader over one), prefer an
-**injection seam** to `jest.mock(...)` of that module:
+Production callers are unaffected because they take the default. Tests of **logic**
+inject a small fixture and stay green when the shipped config changes; tests of the
+**shipped config itself** call with the default and assert on real data, in a clearly
+separated block.
 
-- Give the function an **optional parameter that defaults to the bundled
-  data** (e.g. `getPackageById(id, packages = bundled)`,
-  `extractResetParams(project, packages = demoPackagesConfig.packages)`).
-  Production callers are unaffected (they use the default); tests pass a
-  small fixture.
-- Tests of **logic** inject a fixture and assert against it — they stay
-  green when the shipped config changes.
-- Tests of the **shipped config itself** (inventory/structure) call the
-  function with the default and assert on the real data, in a clearly
-  separated block.
+Reference seams: `src/features/components/services/demoPackageLoader.ts` and
+`src/features/eds/services/reset/edsResetParams.ts`. Worked split:
+`tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`.
 
-Reference seams: `src/features/components/services/demoPackageLoader.ts`
-and `src/features/eds/services/reset/edsResetParams.ts`. Example test split:
-`tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`
-(injected-fixture logic vs. shipped-config integrity).
+Reach for `jest.mock` when there is no reasonable seam — a network or service
+collaborator, not a static config leaf.
 
-Reach for `jest.mock` only when there is no reasonable seam (e.g. mocking a
-network/service collaborator, not a static config leaf).
+## Derive mocks from the real JSON
 
-### Pattern: Derive Mocks from Actual JSON
+A mock of a config file must be derived from that file's actual structure, because a
+mock carrying the old shape passes while runtime fails. That is not hypothetical: a
+past migration shipped exactly that way.
 
-Test mocks for JSON configuration files MUST be derived from actual file structure to prevent mock drift:
+Three things keep it honest:
 
-1. **Primary pattern**: Use `testUtils.ts` files for shared mock data
-2. **Structure alignment**: Keep mocks aligned with current JSON structure
-3. **Drift detection**: `tests/templates/type-json-alignment-prereqs-logging.test.ts` and `type-json-alignment-stacks-components.test.ts` catch type/JSON misalignment
-4. **Validation tests**: `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` validates mock structure
+- Shared mock data lives in `testUtils.ts` files, not re-invented per suite.
+- `tests/templates/type-json-alignment-prereqs-logging.test.ts` and
+  `type-json-alignment-stacks-components.test.ts` catch type/JSON drift.
+- `ComponentRegistryManager-mockValidation.test.ts` validates mock structure against
+  the registry.
 
-### Example: ComponentRegistryManager.testUtils.ts
+Adding a JSON field means adding it to the mock **and** to the matching
+`type-json-alignment-*` test.
 
-```typescript
-// Current structure (section-based organization)
-export const mockRawRegistry: RawComponentRegistry = {
-    version: '3.0.0',
-    frontends: { eds: {...} },
-    backends: { 'adobe-commerce-paas': {...} },
-    mesh: { 'commerce-mesh': {...} }
-};
-```
+## File size
 
-### When to Update Mocks vs Actual Data
+500 lines is the recommended ceiling; eslint warns there and errors at 750, and CI
+blocks a merge past 750 (`.github/workflows/test-file-size-check.yml`). Check locally
+with `npm run validate:test-file-sizes`; exclusions go in `.testfilesizerc.json`,
+sparingly.
 
-| Scenario | Action |
-|----------|--------|
-| JSON schema changes | Update mock to match new structure |
-| Tests fail after JSON update | Verify mock reflects actual structure |
-| Adding new JSON field | Add field to mock AND the matching `type-json-alignment-*.test.ts` |
-| Removing deprecated fields | Remove from mock and update type definitions |
+The limits live in `eslint.config.mjs` — this repo uses flat config, so there is no
+`.eslintrc.json` to edit.
 
-### Key Files
+When a suite outgrows it, see the
+[splitting playbook](../docs/testing/test-file-splitting-playbook.md). Keep the test
+count identical across a split, and remember that `.testUtils` files are shared by
+the halves — one stale mock there fails several files at once.
 
-- `tests/templates/type-json-alignment-prereqs-logging.test.ts` + `type-json-alignment-stacks-components.test.ts` - Catch JSON/TypeScript type drift
-- `tests/features/components/services/ComponentRegistryManager.testUtils.ts` - Shared component mocks
-- `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` - Mock structure validation
+## Credentials in fixtures
 
-### Why This Matters
+Test fixtures must **never** contain realistic-looking credentials. Secret scanners
+flag a `password:` with a real-looking value as an incident, which blocks CI and has
+to be triaged by hand even though the value is fake.
 
-A past migration revealed that tests using outdated mock structures can pass while actual runtime code fails. This pattern prevents that class of bugs by:
+Use obvious non-secrets — `'test-user'`, `'fake-test-pw-not-a-secret'` — or the
+shared `tests/helpers/testCredentials.ts`. `.gitguardian.yaml` and the GitGuardian
+App both exclude test paths, but the convention is the real safeguard: do not create
+the noise. `.pre-commit-config.yaml` carries an opt-in `ggshield` hook that catches
+genuine secrets locally (`pip install pre-commit && pre-commit install`).
 
-1. **Automated detection**: Type alignment tests catch unknown fields immediately
-2. **Structure validation**: Mock validation tests ensure mocks match current JSON
-3. **Documentation**: Clear comments explaining mock derivation source
+## The worker "failed to exit gracefully" warning is not a leak
 
-## Test Coverage
+Full runs intermittently print `A worker process has failed to exit gracefully`.
+**Diagnosed 2026-08-23: not a test leak** — it is jest-worker's hardcoded 500ms
+end-of-run deadline racing twelve simultaneous worker teardowns. Every suite was
+audited for leaked handles; the two real leaks found (tests making live network
+calls) are fixed.
 
-**Coverage Target:** 80% overall, 100% for critical paths
+Do not hunt a leak on sight of the warning.
+[`docs/testing/jest-force-exit.md`](../docs/testing/jest-force-exit.md) carries the
+diagnosis and the one-run audit recipe that settles whether a NEW leak exists.
 
-**Current Coverage:** Run `npm test -- --coverage` to view latest coverage report.
+`--forceExit` is passed by the `test*` scripts so the main process never hangs.
 
-**Excluded from Coverage:**
-- Type definition files (`*.d.ts`)
-- Main extension entry point (`src/extension.ts`)
-- Test files themselves
+## Related
 
-**Coverage Reports:**
-- Terminal output (summary)
-- `coverage/lcov-report/index.html` (detailed HTML report)
-
-## Troubleshooting
-
-### Test Discovery Issues
-
-**Problem:** Jest doesn't find tests after adding new test file
-
-**Solution:**
-1. Verify file naming: `*.test.ts` or `*.test.tsx`
-2. Verify location matches `testMatch` pattern in `jest.config.js`
-3. Clear Jest cache: `npx jest --clearCache`
-4. List discovered tests: `npm test -- --listTests`
-
-### Import Resolution Failures
-
-**Problem:** `Cannot find module '@/core/...'` or similar
-
-**Solution:**
-1. Verify `moduleNameMapper` in `jest.config.js` includes path alias
-2. Check TypeScript paths in `tsconfig.json` match Jest config
-3. Restart TypeScript server in VS Code
-
-### React Test Errors
-
-**Problem:** `ReferenceError: document is not defined`
-
-**Solution:**
-1. Ensure test file is in `tests/webview-ui/` (React project uses jsdom)
-2. Verify `jest.config.js` React project `testMatch` includes file
-3. Check test imports `@testing-library/react` correctly
-
-### Why `--forceExit`? And the worker "failed to exit gracefully" warning
-
-The `test`, `test:fast`, `test:safe`, and `test:force` scripts in `package.json` all pass `--forceExit` to Jest so the main process never hangs after a run.
-
-Separately, full runs intermittently (~44%, machine-state-sensitive) print `A worker process has failed to exit gracefully and has been force exited`. **Diagnosed 2026-08-23: not a test leak** — jest-worker's hardcoded 500ms end-of-run deadline racing twelve simultaneous worker teardowns. All 1130 suites were audited for leaked handles; the two real leaks found (tests making live network calls) are fixed. Do not hunt a leak on sight of the warning — see [`docs/testing/jest-force-exit.md`](../docs/testing/jest-force-exit.md) for the diagnosis and the one-run audit recipe that settles whether a new leak exists.
-
-## Additional Resources
-
-- **Jest Documentation:** https://jestjs.io/docs/getting-started
-- **Testing Library:** https://testing-library.com/docs/react-testing-library/intro/
-- **VS Code Extension Testing:** https://code.visualstudio.com/api/working-with-extensions/testing-extension
-
----
-
-## Credentials in tests (don't trip the secret scanner)
-
-Test fixtures must **never** contain realistic-looking credentials. Secret
-scanners (GitGuardian's GitHub App, `ggshield`, etc.) flag a hardcoded
-`password:` assigned a real-looking value as an incident — which then
-**block CI** and have to be triaged by hand, even though they're fake.
-
-Rules:
-
-- Use **obvious non-secrets** for credential fields: `'test-user'`,
-  `'fake-test-pw-not-a-secret'`, `'test-only-…'`. Never anything that could pass
-  for a real password/token/key.
-- Prefer the shared **`tests/helpers/testCredentials.ts`** (`FAKE_CREDENTIALS`)
-  over inventing new literals.
-- The repo's `.gitguardian.yaml` already excludes test paths for the `ggshield`
-  CLI, and the GitGuardian App is configured (dashboard) to exclude them too —
-  but the convention above is the real safeguard: don't create the noise.
-
-Two layers back this up:
-
-- **`.pre-commit-config.yaml`** — an opt-in `ggshield` hook that catches *real*
-  secrets locally before they're committed (it honors `.gitguardian.yaml`, so it
-  skips test fixtures). Set up once: `pip install pre-commit && pre-commit install`.
-- The CI **GitGuardian** check is the backstop for anything that slips through.
-
----
-
-**For Development Guidelines:** See `CLAUDE.md` and `src/CLAUDE.md`
-**For Architecture Overview:** See `docs/architecture/overview.md`
+- [`../docs/testing/test-file-splitting-playbook.md`](../docs/testing/test-file-splitting-playbook.md)
+- `webview-test-authoring` skill — the fake-timer contract, the Spectrum mock
+  preamble, and the hoisting trap that makes a split suite bind to real Spectrum
+- [ADR-016](../docs/architecture/adr/016-test-strategy.md) — the three-tier strategy

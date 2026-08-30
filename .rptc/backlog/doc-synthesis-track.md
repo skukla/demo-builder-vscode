@@ -43,6 +43,24 @@ The second question already has two answers pending — the hooks gotchas may be
 a skill, since traps live in skills here, and the Rule of Three override is
 [[PL-28]] row 2.
 
+## Documents that come back for a second pass
+
+Some documents cannot be finished by track 2 alone, because a later track changes
+what they should say. Rewriting them now is still worth it — a document full of dead
+paths and wrong locations is not a better starting point for being canonised — but
+they are **provisional**, and this is the list so nobody assumes otherwise.
+
+| Document | Waits on | Why |
+|---|---|---|
+| `tests/README.md` | **Track 3** (test strategy) | It describes how the suite is organised and run. Track 3 canonises the strategy itself — tiers, mock policy, what a test must constrain — and the README has to follow that rather than lead it. Owner flagged this 2026-08-30 |
+| `docs/testing/test-file-splitting-playbook.md` | **Track 3** | Same reason, narrower: splitting rules are a consequence of the strategy |
+| `src/core/ui/hooks/CLAUDE.md` | **Phase B** of this track | Verified accurate and kept as written. Its gotchas may belong in a skill, since traps live in skills here |
+| `src/core/ui/components/CLAUDE.md` | **Phase B**, and [[PL-28]] row 2 | The pick-by-job table probably stays; the Rule of Three override needs adjudicating |
+
+The rule this implies: **a track-2 rewrite fixes what is FALSE, and does not try to
+settle what a later track owns.** The tests README lost nine dead or wrong claims and
+kept its strategy-shaped content untouched, which is the right split.
+
 ## Phase C — every document enforced
 
 **What "enforced" means for a document**, because it is not obvious: every CHECKABLE
