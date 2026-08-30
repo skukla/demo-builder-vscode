@@ -24,23 +24,10 @@
  * measure the mock.
  */
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        logCommand: jest.fn(),
-    })),
-}));
-
-const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: () => ({ execute: (...a: unknown[]) => mockExecute(...a) }),
-    },
-}));
-
+import {
+    mockExecute,
+    ranCommands,
+} from './diagnosticsChecks.testUtils';
 import { checkAdobeCLI } from '@/commands/diagnosticsChecks';
 import type { CommandCheckResult } from '@/commands/diagnosticsReport';
 
@@ -56,7 +43,6 @@ const AIO_INSTALLED: CommandCheckResult = {
 };
 
 /** Every command string the executor was asked to run. */
-const ranCommands = (): string[] => mockExecute.mock.calls.map((c) => String(c[0]));
 
 /**
  * Let every already-queued microtask run, so anything the code was ready to
