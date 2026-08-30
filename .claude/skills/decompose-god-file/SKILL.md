@@ -4,7 +4,7 @@ description: Split an oversized multi-responsibility file (service, component, h
 ---
 # Decompose a God File
 
-Full pattern catalog, worked examples, and anti-patterns: `.rptc/sop/god-file-decomposition.md`.
+Full pattern catalog, worked examples, and anti-patterns: `docs/development/sop/god-file-decomposition.md`.
 This skill is the tight workflow — read the SOP for the how of each pattern.
 
 ## When NOT to use

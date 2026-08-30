@@ -163,7 +163,8 @@ check says so and names the file.
 
 > **Convention.** Time values come from the shared `TIMEOUTS` constants, never a literal.
 > *Why:* a bare `5000` says nothing about which timeout it is or why that length.
-> Enforced by `tests/sop/magic-timeouts.test.ts`.
+> [sop/code-patterns.md](sop/code-patterns.md) for the constants and how to add one ·
+> enforced by `tests/sop/magic-timeouts.test.ts`.
 
 > **Convention.** Sleeps route through the shared `sleep()`.
 > *Why:* a hand-rolled sleep cannot be faked, so it makes tests slow and flaky.
@@ -171,7 +172,16 @@ check says so and names the file.
 
 > **Convention.** A complex inline expression becomes a named function.
 > *Why:* the name is the explanation. Without it every reader re-derives the intent.
-> Enforced by `tests/sop/complex-expressions.test.ts`.
+> [sop/complexity-reduction.md](sop/complexity-reduction.md) for the thresholds and
+> the simplification patterns · enforced by `tests/sop/complex-expressions.test.ts`.
+
+> **Convention.** A file stays under 500 lines; 750 fails the build. Past that it is
+> doing more than one job — split it by responsibility, not by line count.
+> *Why:* nobody holds a 700-line file in their head, so changes get made in the part
+> that is understood and the rest quietly rots.
+> [sop/god-file-decomposition.md](sop/god-file-decomposition.md) for how to split ·
+> enforced by `max-lines` in `eslint.config.mjs` (warns at 500) and
+> `scripts/check-test-file-sizes.js` (fails CI at 750).
 
 ## 4. Much of the behaviour is data, not code
 
@@ -517,7 +527,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 58 conventions. 52 of them are enforced; 6 are not.**
+**This handbook states 59 conventions. 53 of them are enforced; 6 are not.**
 
 The six that remain are not one thing, and treating them as one is what kept them open:
 

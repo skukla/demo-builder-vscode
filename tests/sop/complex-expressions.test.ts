@@ -8,7 +8,7 @@
  * - Nested ternary operators (§3)
  * - Boolean expressions with 4+ conditions in JSX (§10)
  *
- * @see .rptc/sop/code-patterns.md - Helper Functions, Ternaries, Predicates
+ * @see docs/development/sop/code-patterns.md - Helper Functions, Ternaries, Predicates
  */
 
 import * as fs from 'fs';

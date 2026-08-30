@@ -61,7 +61,7 @@ for the same job-shape).
 ## Related
 
 - `architecture-duplication-scan`, `call-path-audit` (the job-level halves)
-- `.rptc/sop/consistency-patterns.md` (the SOP this would give teeth)
+- `docs/development/sop/consistency-patterns.md` (the SOP this would give teeth)
 - PL-11 (test health) owns the test-side conventions
 
 ## Shipped so far

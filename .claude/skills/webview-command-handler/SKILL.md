@@ -12,10 +12,10 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 ## Procedure
 1. Read the reference pair first: `src/features/mesh/handlers/subscribeHandler.ts` (a real shaped handler) and `src/features/mesh/handlers/meshHandlers.ts` (its feature map).
 2. Add the message type to the `MessageType` union in `src/types/messages.ts`. The union ends in `| string`, so omitting it compiles silently — add it anyway; it is the documented contract.
-3. Create the handler in the owning feature's `handlers/` directory from the bundled [handler-template.ts](handler-template.ts). Keep the reference ordering: validate payload (`@/core/validation` — mandatory for any value that reaches an Adobe CLI command) → `ensureAuthenticated` pre-flight for Adobe operations → service call → shaped `{ success, error?, code? }` return. Return failures; never throw (`.rptc/sop/consistency-patterns.md` §2).
+3. Create the handler in the owning feature's `handlers/` directory from the bundled [handler-template.ts](handler-template.ts). Keep the reference ordering: validate payload (`@/core/validation` — mandatory for any value that reaches an Adobe CLI command) → `ensureAuthenticated` pre-flight for Adobe operations → service call → shaped `{ success, error?, code? }` return. Return failures; never throw (`docs/development/sop/consistency-patterns.md` §2).
 4. Register it in the feature handler map: the `defineHandlers({...})` object literal (from `@/types/handlers`), keyed by the message type — e.g. `meshHandlers.ts`.
 5. If the wizard dispatches this message, ALSO register it in `src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts`. The wizard command (`createProject.ts`) auto-registers only the keys of that composite map via `getRegisteredTypes(projectCreationHandlers)` — a handler that exists only in the feature map is invisible to the wizard.
-6. Webview side: call `webviewClient.request('<type>', payload)` (`src/core/ui/utils/WebviewClient.ts`) when you need the response; `postMessage` only for true fire-and-forget. Using `postMessage` then immediately reading state races the handler (`.rptc/sop/consistency-patterns.md` §1).
+6. Webview side: call `webviewClient.request('<type>', payload)` (`src/core/ui/utils/WebviewClient.ts`) when you need the response; `postMessage` only for true fire-and-forget. Using `postMessage` then immediately reading state races the handler (`docs/development/sop/consistency-patterns.md` §1).
 7. If the handler runs Adobe CLI commands: use `TIMEOUTS.*` from `@/core/utils/timeoutConfig` (never numeric literals), target the op per-invocation with `withOrgContext`, and in the catch block check `error.stdout` for success indicators before failing — Adobe CLI ops routinely succeed after the timeout fires (`src/commands/CLAUDE.md` "Timeout Handling").
 8. Add a test mirroring the source path, e.g. `tests/features/mesh/handlers/subscribeHandler.test.ts` — assert the response SHAPE for success, validation failure, and service failure.
 
@@ -88,7 +88,7 @@ gates read, and for the fields its JSX renders. Three different lists.
 - The handshake protocol queues messages until both sides are ready — never assume immediate delivery, and never send from the webview before `ready` (`docs/systems/race-conditions.md`).
 - Handler works from the dashboard but the wizard reports an unknown message → it's missing from `ProjectCreationHandlerRegistry.ts` (step 5).
 - Unvalidated payload ids flowing into `aio` commands = command injection. Mirror `subscribeHandler.ts`'s `validateOrgId/validateProjectId/validateWorkspaceId` block verbatim.
-- Throwing instead of returning `{ success: false, error }` breaks every caller that branches on `result.success` (`.rptc/sop/consistency-patterns.md` §2).
+- Throwing instead of returning `{ success: false, error }` breaks every caller that branches on `result.success` (`docs/development/sop/consistency-patterns.md` §2).
 - **A refusal that RETURNS `{ success: false }` does NOT reject on the webview side — it
   arrives looking exactly like a success.** `WebviewCommunicationManager.handleWebviewMessage`
   puts whatever the handler returned into the response `payload`; only its `catch` sets an

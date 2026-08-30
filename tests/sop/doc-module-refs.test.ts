@@ -56,6 +56,8 @@ const ALLOWED: Record<string, string> = {
     'docs/patterns/error-handling.md::@/core/errors':
         'names the deleted module on a "Previous Approach" line — the point is that it is gone',
     'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
+    'docs/development/sop/consistency-patterns.md::@/features/mesh':
+        'a deliberate COUNTER-example — the line is marked ❌ and shows the feature-barrel \n         import ADR-022 forbids. It must not resolve; that is the point of showing it.',
 };
 
 function docs(): string[] {
@@ -96,10 +98,18 @@ function citations(md: string): string[] {
     return [...md.matchAll(/`(@\/[\w@./-]+)`/g)].map((m) => m[1]).filter((s) => !isPlaceholder(s));
 }
 
+/**
+ * `from '...'` also appears inside SHELL examples — a `grep -rn "from '@/features/...'"`
+ * is documentation of a search, not an import. Requiring the line to START with
+ * import/export excludes those; the leading-anchor was already there, but a grep
+ * nested inside a multi-line match could still be captured by the 200-char window.
+ */
 function imports(md: string): string[] {
     return [...md.matchAll(/^\s*(?:import|export)[\s\S]{0,200}?from '(@\/[^']+)'/gm)]
         .map((m) => m[1])
-        .filter((s) => !isPlaceholder(s));
+        .filter((s) => !isPlaceholder(s))
+        // A capture containing a regex metacharacter came from a search pattern.
+        .filter((s) => !/[[\]^*$()|]/.test(s));
 }
 
 function scan(pick: (md: string) => string[], resolve: (s: string) => boolean | null) {

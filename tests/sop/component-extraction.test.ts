@@ -6,7 +6,7 @@
  * - No abstract classes for single implementations
  * - No HOCs or generic wrappers
  *
- * @see .rptc/sop/code-patterns.md - Component Extraction Criteria
+ * @see docs/development/sop/code-patterns.md - Component Extraction Criteria
  */
 
 import * as fs from 'fs';

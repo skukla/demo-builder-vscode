@@ -4,7 +4,7 @@
  * Verifies that UI components use FRONTEND_TIMEOUTS constants
  * instead of hardcoded numeric values for timing.
  *
- * @see .rptc/sop/code-patterns.md - Centralized Timeout Constants
+ * @see docs/development/sop/code-patterns.md - Centralized Timeout Constants
  */
 
 import * as fs from 'fs';

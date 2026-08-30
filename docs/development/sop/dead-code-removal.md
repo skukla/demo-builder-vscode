@@ -480,8 +480,8 @@ const retries = 3;
 const delay = 1000;
 
 // After: Centralized config
-import { API_CONFIG } from '@/core/config';
-const { timeout, retries, delay } = API_CONFIG;
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+const timeout = TIMEOUTS.LONG;
 ```
 
 ---

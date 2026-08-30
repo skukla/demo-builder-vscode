@@ -168,9 +168,9 @@ const ConfigSection = {
 | Component Type | Location | Example |
 |----------------|----------|---------|
 | **Shared UI primitives** | `src/core/ui/components/{category}/` | `src/core/ui/components/feedback/StatusDisplay.tsx` |
-| **Feature-specific** | `src/features/{feature}/ui/components/` | `src/features/dashboard/ui/components/MeshStatus.tsx` |
+| **Feature-specific** | `src/features/{feature}/ui/components/` | `src/features/dashboard/ui/components/ActionGrid.tsx` |
 | **Step components** | `src/features/{feature}/ui/steps/` | `src/features/authentication/ui/steps/AdobeAuthStep.tsx` |
-| **Wizard-specific** | `src/features/project-creation/ui/wizard/` | `src/features/project-creation/ui/wizard/TimelineNav.tsx` |
+| **Wizard-specific** | `src/features/project-creation/ui/wizard/` | `src/features/project-creation/ui/wizard/WizardContainer.tsx` |
 
 ### Core UI Component Categories
 
