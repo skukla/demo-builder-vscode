@@ -1331,7 +1331,19 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/ai/server/mcpProxyReconnect.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/ai/server/mcpProxyRetry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpProxySession.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
@@ -2655,7 +2667,7 @@
   {
    "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "wall+partial"
   },
   {
    "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-orgMismatch.test.tsx",
@@ -2970,7 +2982,7 @@
   {
    "unit": "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "wall+partial"
   },
   {
    "unit": "tests/features/dashboard/ui/integrationsSurface/IntegrationsScreen.test.tsx",
@@ -3510,7 +3522,7 @@
   {
    "unit": "tests/features/eds/services/configJsonFatalFailure.test.ts",
    "flags": [],
-   "doubleStyle": "deps-object-or-pure"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/configJsonTiming.test.ts",
@@ -4710,6 +4722,18 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-collaborators.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-operations.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -5620,6 +5644,11 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/projects-dashboard/services/projectDeletionService.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
    "unit": "tests/features/projects-dashboard/services/projectRenameService.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -5821,6 +5850,11 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/updates/services/templateSyncService-safety.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/updates/services/templateUpdateChecker.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -5952,6 +5986,11 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/sop/every-scan-declares-a-control.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/sop/inline-styles.test.ts",
    "flags": [
     "logicInTests"
@@ -6002,7 +6041,24 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/sop/stylesheet-bundles.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/sop/test-family-setup.test.ts",
+   "flags": [
+    "logicInTests"
+   ],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/tooling-registry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/webview-architecture-rules.test.ts",
    "flags": [
     "logicInTests"
    ],

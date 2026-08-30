@@ -181,6 +181,50 @@ before the work can rationalise it.
 
 Would have failed on the first pass, before anyone had to ask.
 
+### logicInTests is not a defect metric — measured 2026-08-30
+
+Phase 6 lists "the logicInTests 161 -> 164 regression" as work, and its criterion
+is "flags at zero". Measured before touching it, and the criterion is wrong for
+this flag.
+
+**What it detects:** `/^\s*(for|while)\s*\(/m` — a suite containing a loop.
+That is a syntax count, not a defect class.
+
+**What the 167 flagged suites actually contain** (358 loops across the tree):
+
+| Shape | Loops |
+|---|---|
+| iterate a collection (`for..of`) | 229 |
+| counted repetition (`for i = 0; i < N`) | 36 |
+| everything else | 93 |
+
+**230 of the 358 contain an `expect()`** — they are assertion loops. Sampling ten
+of the unclassified suites found: iterating a named case list
+(`INTEGRATION_IDS`, `CONTENT_PATCHES`), walking a mock's recorded calls, asserting
+over rendered tiles, driving six requests at a rate limiter, and a brace-matcher
+in a source-reading contract test. Every one idiomatic. 18 more are SOP scans,
+which walk a file list by nature and cannot not loop.
+
+**So the number moving 161 -> 164 -> 167 is not a quality regression.** It tracks
+how many suites contain a loop, and this repo writes table-driven tests. Driving
+it to zero would mean rewriting 229 collection loops into repetition — worse
+tests, for a number.
+
+**What a real version would measure:** a test that RECOMPUTES its expected value
+rather than stating it — `expect(out).toBe(input.map(f))` reimplementing the
+subject, so the test agrees with the bug. That is the defect "logic in tests"
+names. It is not the same as containing a loop, and it is not cheap to detect
+statically.
+
+**Recommendation:** drop `logicInTests` from phase 6's "flags at zero" criterion
+and from the craft census, or redefine it as above. Left in place for now — the
+census is an owner-facing instrument and retiring one of its columns is a
+decision, not a cleanup. The other three flags (`theater` 2, `nondeterminism` 26,
+`realWaits` 16) are unaffected and remain real.
+
+Same shape as the construction-boundary finding a day earlier: a metric aimed at
+syntax rather than at the property that matters.
+
 ### templateSyncService — stated 2026-08-29, before the work
 
 529 lines, 18% covered, and it PUSHES TO THE USER'S LIVE GITHUB REPO. The reset
