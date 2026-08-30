@@ -68,3 +68,28 @@ describe('ADR-017 §5: custom-hook calls do not take inline []/{} literals', () 
         expectClean('hookRefs', violations);
     });
 });
+
+describe('ADR-017: one message channel per bundle, and it is a singleton', () => {
+    /**
+     * `acquireVsCodeApi()` may be called ONCE per webview — VS Code throws on the
+     * second call — so ADR-017 ratifies the channel as a singleton rather than
+     * treating it as a design choice. There is nothing to vary.
+     *
+     * The check is a ledger rather than "exactly one", because each BUNDLE is its
+     * own webview and so legitimately gets its own call. What must not happen is a
+     * second call reaching the same bundle, and the cheap guard against that is
+     * requiring every call site to be named and justified. A new unlisted one is
+     * the thing to look at.
+     */
+    const callers = FILES.filter((f) => /acquireVsCodeApi\(\)/.test(src.get(f) as string));
+
+    it('CONTROL: the detector finds the call sites that exist', () => {
+        // A detector that finds nothing reports "all clear" in the same words as
+        // one that verified — and this rule's whole value is the count.
+        expect(callers.length).toBeGreaterThan(0);
+    });
+
+    it('every channel-acquiring file is a reasoned ledger entry', () => {
+        expectClean('messageChannelOwners', callers);
+    });
+});

@@ -22,12 +22,13 @@
 
 import {
     ALL_FILES,
-    isWebview,
-    readStripped,
-    loadLedger,
-    expectClean as expectCleanAgainst,
     accumulatesState,
     classBodies,
+    expectCeiling,
+    expectClean as expectCleanAgainst,
+    isWebview,
+    loadLedger,
+    readStripped,
     statefulClosure,
 } from './architectureScan';
 
@@ -182,7 +183,7 @@ describe('ADR-015: a class that ACCUMULATES STATE comes from one place', () => {
      */
     const bodies = classBodies(src);
     const stateful = new Set(
-        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name),
+        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name)
     );
 
     const violations = FILES.filter((f) => {
@@ -297,14 +298,85 @@ describe('ADR-015: handlers return results (push-message ratchet)', () => {
             if (!/\/handlers\//.test(f)) continue;
             count += ((src.get(f) as string).match(/\bsendMessage\(/g) ?? []).length;
         }
-        const ceiling = LEDGER.patternBSendMessageCeiling as number;
         // Grew → a handler started pushing results; return them instead.
-        expect(count).toBeLessThanOrEqual(ceiling);
-        // Shrank → good; lower the pin so the win is locked in.
-        if (count < ceiling) {
-            expect(`lower patternBSendMessageCeiling to ${count}`).toBe(
-                `lower patternBSendMessageCeiling to ${count}`
-            );
+        // Shrank → lower the pin, or it can grow back to the old number unnoticed.
+        expectCeiling(LEDGER, 'patternBSendMessageCeiling', count);
+    });
+});
+
+describe('ADR-015: a handler translates and returns — it never renders', () => {
+    /**
+     * A handler's job is to turn a message into a result. The moment it imports
+     * React it has taken on a second job, and the surface it renders into is one
+     * the extension host does not own.
+     *
+     * Green at the time of writing, so this is a hard rule with no ledger — there
+     * is no debt to grandfather, and adding an empty ledger key would invite one.
+     */
+    const violations = FILES.filter(
+        (f) => /\/handlers\//.test(f) && /\bfrom ['"]react['"]/.test(src.get(f) as string)
+    );
+
+    it('CONTROL: handler files are being read at all', () => {
+        expect(FILES.filter((f) => /\/handlers\//.test(f)).length).toBeGreaterThan(20);
+    });
+
+    it('no handler imports React', () => {
+        expect(violations).toEqual([]);
+    });
+});
+
+describe('ADR-021: one dependency bundle per call, data as ordinary arguments', () => {
+    /**
+     * The envelope rule: a service takes ONE dependency bundle, and everything else
+     * — configuration, identifiers, callbacks — arrives as plain arguments. Two
+     * bundles in one signature is the shape that starts a second envelope, and once
+     * a caller has to know which one carries what, the rule has already gone.
+     *
+     * Detects the narrow, unambiguous case: two parameters whose types both end in
+     * `Deps` in a single parameter list. Green today, so it is a hard rule.
+     */
+    const TWO_DEPS = /\(([^)]*)\)/g;
+    const violations = FILES.filter((f) => {
+        for (const m of (src.get(f) as string).matchAll(TWO_DEPS)) {
+            const deps = (m[1].match(/:\s*\w*Deps\b/g) ?? []).length;
+            if (deps > 1) return true;
         }
+        return false;
+    });
+
+    it('CONTROL: the detector recognises the shape it is looking for', () => {
+        // Proves a zero above means "none found", not "never looked".
+        const sample = 'function f(a: FooDeps, b: BarDeps) {}';
+        const deps = (([...sample.matchAll(TWO_DEPS)][0]?.[1] ?? '').match(/:\s*\w*Deps\b/g) ?? [])
+            .length;
+        expect(deps).toBe(2);
+    });
+
+    it('no function takes two dependency bundles', () => {
+        expect(violations).toEqual([]);
+    });
+});
+
+describe('ADR-022: features get no new barrel', () => {
+    /**
+     * `@/core/*` and `@/types` are imported through their barrels by design — 168
+     * importers for `@/types` alone. Features are the other way round: import the
+     * module that defines the symbol, and do not add a feature-level `index.ts`.
+     *
+     * Five survive with importers between them, so this is a ledger rather than a
+     * ban: the set may only shrink. Deleting one means deleting its row too.
+     */
+    const barrels = FILES.filter((f) => /^src\/features\/[^/]+\/index\.tsx?$/.test(f));
+
+    it('CONTROL: the detector distinguishes feature-level from nested barrels', () => {
+        const re = /^src\/features\/[^/]+\/index\.tsx?$/;
+        expect(re.test('src/features/eds/index.ts')).toBe(true);
+        expect(re.test('src/features/eds/handlers/index.ts')).toBe(false);
+        expect(barrels.length).toBeGreaterThan(0);
+    });
+
+    it('every feature-level barrel is a reasoned ledger entry', () => {
+        expectClean('featureBarrels', barrels);
     });
 });

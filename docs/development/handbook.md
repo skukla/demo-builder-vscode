@@ -70,7 +70,9 @@ orchestrate, so they may use any feature.
 
 > **Convention.** `@/core/*` and `@/types` are imported through their barrel file.
 > Features are imported directly, and get no barrel.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · **Not enforced.**
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `featureBarrels`
+> ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the
+> set may only shrink.
 > *Why:* core is a shared surface worth curating; a feature barrel mostly makes cross-feature imports easy, which is the thing to discourage.
 
 ---
@@ -104,7 +106,8 @@ covers the single exception.
 
 > **Convention.** A service takes one dependency bundle per feature. Plain data —
 > configuration, identifiers, callbacks — arrives as ordinary arguments.
-> [ADR-021](../architecture/adr/021-dependency-envelope.md) · **Not enforced.**
+> [ADR-021](../architecture/adr/021-dependency-envelope.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` — no signature takes two dependency bundles.
 > *Why:* six services once received the same collaborator six different ways, so none could be changed without touching all six.
 
 ### When to write a class
@@ -241,7 +244,8 @@ handler that is not awaited returns a promise to the webview, which will not be 
 meant.
 
 > **Convention.** A handler translates and returns. It never renders.
-> [ADR-015](../architecture/adr/015-dependency-architecture.md) · **Not enforced.**
+> [ADR-015](../architecture/adr/015-dependency-architecture.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` — no handler imports React.
 > *Why:* a handler that renders cannot be called by anything else — including an agent, which needs the same capability.
 
 > **Convention.** Message shapes come from a typed file, never written from memory into a
@@ -274,9 +278,20 @@ declared in one place, with vendor styles below ours.
 > enforced by `tests/sop/webview-architecture-rules.test.ts`.
 > *Why:* it puts the wiring in one readable place per surface, and keeps components testable without a running extension.
 
-> **Convention.** Vendor CSS sits in the lowest layer. `!important` is not how you win a
-> specificity argument. [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced.**
-> *Why:* layers settle specificity by declaration rather than by escalation, so nobody needs `!important` to win.
+> **Convention.** Vendor CSS sits in the lowest cascade layer.
+> *Why:* layers settle specificity by declaration order rather than by escalation, so
+> nothing downstream has to out-shout the vendor.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced — and not yet
+> true.** No `@layer vendor` exists in `src/` today. This is the one rule here the code
+> does not already follow; it waits on the CSS migration (PL-21), which is not authorised.
+
+> **Convention.** `!important` is not how you win a specificity argument. The count may
+> not grow.
+> *Why:* it is the escalation the layers exist to make unnecessary, and each one makes the
+> next harder to avoid. Migrating the existing 1,969 is not authorised yet, so the rule is
+> a ratchet rather than a ban.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `importantCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
 
 > **Read before your first component.** [ui-patterns.md](ui-patterns.md) ·
 > [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
@@ -293,7 +308,8 @@ declared in one place, with vendor styles below ours.
 > **Convention.** One message channel per bundle, and it is a singleton.
 > *Why:* `acquireVsCodeApi()` can only be called once per webview, so there is nothing to
 > vary. A second channel is not a design choice, it is a bug waiting for a race.
-> [ADR-017](../architecture/adr/017-webview-architecture.md) · **Not enforced.**
+> [ADR-017](../architecture/adr/017-webview-architecture.md) · Enforced by the
+> `messageChannelOwners` ledger in `tests/sop/webview-architecture-rules.exemptions.json`.
 
 > **Convention.** A CSS class a component uses is defined somewhere.
 > *Why:* an undefined class fails silently — the element simply renders unstyled, on one
@@ -475,11 +491,24 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 54 conventions. 42 of them are enforced; 12 are not.**
+**This handbook states 55 conventions. 47 of them are enforced; 8 are not.**
 
-Those twelve depend on someone noticing in review, which means they will drift. That is a
-known gap rather than an oversight. Closing one means writing an enforcer, or demoting
-the rule to advice and removing it from the count.
+The eight are not one thing, and treating them as one hid why each was still open:
+
+- **Four cannot have an enforcer.** Which test tier fits, whether a metric measures the
+  defect or only the shape, naming the command that would prove you wrong, and diffing a
+  test's assertions after restructuring it. Each is a judgement about intent, and a check
+  that scored it would be measuring shape — the exact mistake three of them warn about.
+  These are captured for the reader, not pending work.
+- **Three are checkable and not yet checked.** Component style blocks staying local,
+  styling reaching Spectrum through `cn()` rather than style objects, and exit codes
+  outside jest runs. Each needs a detector nobody has written.
+- **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
+  fail the build. It waits on the CSS migration (PL-21).
+
+Twelve were unenforced on 2026-08-30; five were closed that day — feature barrels, the
+dependency envelope, handlers not rendering, the message-channel singleton and the
+`!important` ceiling. What is left is the residue after the mechanical ones ran out.
 
 The numbers above are checked by `tests/sop/handbook-links.test.ts`, because a count
 written in prose is a claim like any other — this document says so two sections up.

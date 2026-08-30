@@ -26,8 +26,9 @@
  */
 
 import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
-import { loadLedger, expectClean } from './architectureScan';
+import { loadLedger, expectClean, expectCeiling } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
@@ -97,6 +98,41 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         //
         // The ceiling only ratchets DOWN, like every other ledger here: more
         // unreadable sites means less of the surface is actually checked.
-        expect(report.dynamicSites).toBeLessThanOrEqual(LEDGER.dynamicClassSiteCeiling as number);
+        // A pin left above an improved count lets the blind spot grow back to it.
+        expectCeiling(LEDGER, 'dynamicClassSiteCeiling', report.dynamicSites);
+    });
+});
+
+describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
+    /**
+     * ADR-018 is **accepted for new code**; migrating the existing CSS is NOT
+     * authorised, and the ADR measured 1,866 removable uses at the time it was
+     * written. So the honest enforcement is a ratchet, not a ban: the count may
+     * not grow, and any fall must be pinned so it cannot grow back.
+     *
+     * The number has already drifted up since the ADR measured it, which is the
+     * argument for pinning it rather than leaving the rule as advice.
+     *
+     * What this cannot do: it counts occurrences, not badness. A file could remove
+     * ten and add one that matters more. That judgement belongs to the migration
+     * work (PL-21), which this only stops from being quietly undone.
+     */
+    const CSS = execSync("git ls-files 'src/**/*.css'", { encoding: 'utf8' })
+        .trim()
+        .split('\n')
+        .filter(Boolean);
+
+    it('CONTROL: the stylesheets are found and read', () => {
+        expect(CSS.length).toBeGreaterThan(3);
+        const total = CSS.reduce((n, f) => n + readFileSync(f, 'utf8').length, 0);
+        expect(total).toBeGreaterThan(10_000);
+    });
+
+    it('the count never grows, and a fall is pinned', () => {
+        const count = CSS.reduce(
+            (n, f) => n + (readFileSync(f, 'utf8').match(/!important/g) ?? []).length,
+            0
+        );
+        expectCeiling(LEDGER, 'importantCeiling', count);
     });
 });

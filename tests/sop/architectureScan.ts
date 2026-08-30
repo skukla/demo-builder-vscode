@@ -32,7 +32,7 @@ export const ALL_FILES = (() => {
     const out = execSync(
         `git ls-files --cached --others --exclude-standard ` +
             `'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`,
-        { encoding: 'utf8', cwd: ROOT },
+        { encoding: 'utf8', cwd: ROOT }
     ).trim();
     return [...new Set(out ? out.split('\n') : [])].sort();
 })();
@@ -87,6 +87,32 @@ export function loadLedger(fileName: string): Ledger {
  * violates also fails, so the list can only shrink. Cleaning a file means fixing
  * it AND deleting its row.
  */
+/**
+ * The same contract for a ledger entry that is a COUNT rather than a list.
+ *
+ * A ceiling exists where a rule is agreed but the existing code cannot be brought
+ * to zero yet, so the number is pinned and may only fall. That needs both
+ * directions to be real: growth fails, and so does a pin left above a count that
+ * has already improved — otherwise the win is not locked in and the number drifts
+ * back up under a ceiling nobody lowered.
+ *
+ * Both directions matter because one of them was missing. `patternBSendMessageCeiling`
+ * carried a shrink branch reading `expect(msg).toBe(msg)` — a string compared to
+ * itself, which cannot fail — under a comment promising to lock the win in. The
+ * sibling ceiling had no shrink branch at all. Found 2026-08-30.
+ */
+export function expectCeiling(ledger: Ledger, check: string, count: number): void {
+    const ceiling = ledger[check] as number;
+    expect(typeof ceiling).toBe('number');
+    expect({
+        check,
+        count,
+        // Above the pin: the thing the rule forbids has grown. Fix the new one.
+        // Below it: good — edit the ledger to `count` so it cannot grow back.
+        verdict: count > ceiling ? 'GREW_ABOVE_CEILING' : count < ceiling ? 'LOWER_THE_PIN' : 'at',
+    }).toEqual({ check, count, verdict: 'at' });
+}
+
 export function expectClean(ledger: Ledger, check: string, violations: string[]): void {
     const rows = (ledger[check] ?? {}) as Record<string, string>;
     const found = new Set(violations);
@@ -148,7 +174,7 @@ export function accumulatesState(classBody: string): boolean {
     if (/this\.\w+\s*=(?!=)/.test(outside)) return true;
     // ...and a container field mutated in place never gets reassigned at all.
     for (const m of classBody.matchAll(
-        /private\s+(?:readonly\s+)?(\w+)\s*[:=][^;\n]*(?:Map|Set|\[\])/g,
+        /private\s+(?:readonly\s+)?(\w+)\s*[:=][^;\n]*(?:Map|Set|\[\])/g
     )) {
         if (new RegExp(`this\\.${m[1]}\\.(set|add|push|delete|clear)\\(`).test(classBody)) {
             return true;
@@ -162,7 +188,7 @@ export function classBodies(sources: Map<string, string>): Map<string, string> {
     const bodies = new Map<string, string>();
     for (const source of sources.values()) {
         for (const m of source.matchAll(
-            /export class ([A-Z][A-Za-z]*(?:Service|Manager|Client))\b/g,
+            /export class ([A-Z][A-Za-z]*(?:Service|Manager|Client))\b/g
         )) {
             bodies.set(m[1], source.slice(m.index));
         }
@@ -186,7 +212,7 @@ export function classBodies(sources: Map<string, string>): Map<string, string> {
  */
 export function statefulClosure(bodies: Map<string, string>): Set<string> {
     const stateful = new Set(
-        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name),
+        [...bodies].filter(([, body]) => accumulatesState(body)).map(([name]) => name)
     );
     // Fixpoint: owning a stateful class makes you stateful, transitively.
     for (let changed = true; changed; ) {
