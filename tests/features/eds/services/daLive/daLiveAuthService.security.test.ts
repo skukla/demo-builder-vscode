@@ -1,3 +1,7 @@
+import {
+    DaLiveAuthService,
+    ExtensionContext,
+} from './daLiveAuthService.testUtils';
 /**
  * DA.live Auth Service Security Tests
  *
@@ -10,36 +14,12 @@
  * no longer used. Tokens are now obtained via bookmarklet/QuickPick flow.
  */
 
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
-
-// Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 // Keep these unit tests off the real ~/.aem/da-token.json (the service now
 // reads it as a fallback and mirrors stored tokens to it).
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),
     writeDaAuthHelperToken: jest.fn(() => false),
 }));
-
-import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import type { ExtensionContext } from 'vscode';
 
 describe('DaLiveAuthService Security Tests', () => {
     let service: DaLiveAuthService;

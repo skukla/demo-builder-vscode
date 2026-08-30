@@ -25,6 +25,13 @@
  * a mock living in another module registers too late.
  */
 
+import {
+    mockEnsureAdobeIOAuth,
+    mockEnsureDaLiveAuth,
+    mockEnsureProjectOrgContext,
+    resetEdsProjectWithUI,
+    vscode,
+} from './edsResetUI.testUtils';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -33,103 +40,6 @@ jest.setTimeout(5000);
 // =============================================================================
 // Mocks - defined before imports
 // =============================================================================
-
-// Mock ensureDaLiveAuth
-const mockEnsureDaLiveAuth = jest.fn();
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    ensureDaLiveAuth: mockEnsureDaLiveAuth,
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
-    }),
-    getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
-    tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
-    showDaLiveAuthQuickPick: jest.fn(),
-    resolveByomOverlayConfig: jest.fn(
-        (fromConfigUrl: string | undefined, org: string, site: string) =>
-            fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
-    ),
-}));
-
-// Mock ensureAdobeIOAuth
-const mockEnsureAdobeIOAuth = jest.fn();
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: mockEnsureAdobeIOAuth,
-}));
-
-// Mock ServiceLocator for checkAdobeAuth
-const mockAuthService = {
-    isAuthenticated: jest.fn(),
-    loginAndRestoreProjectContext: jest.fn(),
-};
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => mockAuthService),
-    },
-}));
-
-// Mock ensureProjectOrgContext — the inline action-time org gate used by
-// checkOrgContext (it owns the "Switch IMS Org" prompt + forced login internally).
-const mockEnsureProjectOrgContext = jest.fn();
-jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
-    ensureProjectOrgContext: (...args: unknown[]) => mockEnsureProjectOrgContext(...args),
-}));
-
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showWarningMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
-                return callback({ report: jest.fn() });
-            }),
-        },
-        ProgressLocation: { Notification: 15 },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-        UI: { MIN_LOADING: 500, NOTIFICATION: 2000 },
-    },
-}));
-
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn((project: any) => {
-        if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find((c: any) => c.subType === 'mesh');
-    }),
-    hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
-    })),
-}));
-
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true, filesReset: 1 }),
@@ -154,16 +64,13 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import * as vscode from 'vscode';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
-
 
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;

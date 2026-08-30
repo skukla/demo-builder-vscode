@@ -9,15 +9,14 @@
  * - HTML generation follows 4-bundle pattern
  */
 
+import {
+    ShowProjectsListCommand,
+} from './showProjectsList.testUtils';
 import * as vscode from 'vscode';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
-
-// Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 
 /**
  * Create mock ExtensionContext

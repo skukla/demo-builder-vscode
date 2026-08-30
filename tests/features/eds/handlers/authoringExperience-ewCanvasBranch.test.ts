@@ -36,27 +36,9 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
-// Service imports required by the authoringExperience module to load.
-jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/github/githubRepoOperations');
-jest.mock('@/features/eds/services/github/githubFileOperations');
-jest.mock('@/features/eds/services/github/githubOAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
-    hasWriteAccess: jest.fn(),
-}));
-
-import { getEwCanvasBranch } from '@/features/eds/handlers/authoringExperience';
+import {
+    getEwCanvasBranch,
+} from './authoringExperience.testUtils';
 import * as vscode from 'vscode';
 
 describe('getEwCanvasBranch', () => {

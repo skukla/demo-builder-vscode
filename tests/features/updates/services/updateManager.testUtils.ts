@@ -1,3 +1,51 @@
+/**
+ * Shared setup for the updateManager suites — THE AGREED PART ONLY.
+ *
+ * This family does NOT agree about how to fake all of its dependencies, and
+ * picking a winner would change what some suites exercise while every one of
+ * them stayed green. So only the mocks that EVERY spec already declared
+ * IDENTICALLY were moved here. Each spec keeps its own disputed mocks inline,
+ * and therefore ends up with exactly the set it started with.
+ *
+ * Moved here (all specs agreed): @/core/logging, @/core/utils/timeoutConfig, @/core/validation, vscode
+ * Left inline (specs disagree):  @/features/updates/services/componentRepositoryResolver, fs/promises
+ *
+ * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
+ * decision, deliberately not taken here.
+ */
+
+import { UpdateManager } from '@/features/updates/services/updateManager';
+
+// Mock vscode
+jest.mock('vscode', () => ({
+    workspace: {
+        getConfiguration: jest.fn(),
+    },
+}), { virtual: true });
+// Mock Logger
+jest.mock('@/core/logging', () => ({
+    Logger: jest.fn().mockImplementation(() => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    })),
+}));
+// Mock timeoutConfig - uses semantic categories
+jest.mock('@/core/utils/timeoutConfig', () => ({
+    TIMEOUTS: {
+        QUICK: 5000, // Fast operations (replaces UPDATE_CHECK)
+    },
+}));
+// Mock security validation
+jest.mock('@/core/validation', () => ({
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
+    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+export { UpdateManager };
+export * as vscode from 'vscode';
+
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 /**

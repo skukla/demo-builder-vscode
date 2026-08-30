@@ -1,3 +1,7 @@
+import {
+    DaLiveAuthService,
+    ExtensionContext,
+} from './daLiveAuthService.testUtils';
 /**
  * DA.live Auth Service Tests
  *
@@ -6,27 +10,6 @@
  * (PKCE OAuth flow has been removed as it was never functional).
  */
 
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
-
-// Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 // Keep these unit tests off the real ~/.aem/da-token.json (the service now
 // reads it as a fallback and mirrors stored tokens to it). The bridge itself
 // is covered by daAuthHelperToken.test and daLiveAuthService-daAuthHelperFallback.test.
@@ -34,9 +17,6 @@ jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),
     writeDaAuthHelperToken: jest.fn(() => false),
 }));
-
-import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import type { ExtensionContext } from 'vscode';
 
 describe('DaLiveAuthService', () => {
     let service: DaLiveAuthService;

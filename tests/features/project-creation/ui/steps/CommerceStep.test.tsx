@@ -21,6 +21,7 @@
  * @jest-environment jsdom
  */
 
+import './CommerceStep.testUtils';
 import React from 'react';
 import { screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -45,22 +46,6 @@ import {
 // consumed by useProjectBuilder are stubbed so the real hook runs; the child
 // stubs surface the props the step wires.
 // ---------------------------------------------------------------------------
-
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getAvailableBlockLibraries: jest.fn(() => []),
-    getNativeBlockLibraries: jest.fn(() => []),
-    getDefaultBlockLibraryIds: jest.fn(() => []),
-    getPackageDefaultBlockLibraryIds: jest.fn(() => []),
-}));
-
-jest.mock('@/features/components/services/demoPackageLoader', () => ({
-    // Default: mesh NOT required (non-mesh package) → optional deps reset to [].
-    getResolvedMeshRequirement: jest.fn(() => false),
-}));
 
 jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', () => ({
     ConnectStoreStepContent: (props: {
@@ -95,16 +80,6 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
                 }
             >
                 choose store view
-            </button>
-        </div>
-    ),
-}));
-
-jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
-    AdobeAuthStep: (props: { setCanProceed: (v: boolean) => void }) => (
-        <div data-testid="adobe-auth-panel">
-            <button type="button" data-testid="auth-noop" onClick={() => props.setCanProceed(true)}>
-                ping setCanProceed
             </button>
         </div>
     ),

@@ -12,10 +12,12 @@
  * pick up `.mcp.json` natively and need no per-tool file.
  */
 
-import * as fsPromises from 'fs/promises';
+import {
+    fsPromises,
+    writeMcpConfigs,
+} from './mcpConfigWriter.testUtils';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
-import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { Project, ComponentInstance } from '@/types/base';
 
@@ -28,26 +30,6 @@ jest.mock('@/core/logging', () => ({
         trace: jest.fn(),
     })),
 }));
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest
-            .fn()
-            .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

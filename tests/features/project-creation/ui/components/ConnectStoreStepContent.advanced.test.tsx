@@ -8,6 +8,9 @@
  * See ConnectStoreStepContent.test.tsx for rendering/disclosure/discovery state tests.
  */
 
+import {
+    mockLookupComponentConfigValue,
+} from './ConnectStoreStepContent.testUtils';
 import React from 'react';
 import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -152,27 +155,8 @@ jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
     ),
 }));
 
-const mockLookupComponentConfigValue = jest.fn();
-jest.mock('@/features/components/services/envVarHelpers', () => ({
-    lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
-    // Derived from the mocked lookup rather than stubbed separately, so this cannot
-    // disagree with it. `useAutoStoreDetect` reads the admin pair through this now;
-    // a mock that omitted it failed with "readPaasAdminPair is not a function".
-    readPaasAdminPair: (configs: any) => {
-        const username = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME');
-        const password = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_PASSWORD');
-        return username && password ? { username, password } : undefined;
-    },
-}));
-
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading-display">{message}</div>,
-}));
-
-jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
-    CenteredFeedbackContainer: ({ children }: any) => (
-        <div data-testid="centered-feedback">{children}</div>
-    ),
 }));
 
 // ---------------------------------------------------------------------------

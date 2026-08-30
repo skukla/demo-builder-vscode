@@ -9,35 +9,11 @@
  * payload the handler would reject.
  */
 
+import {
+    StorefrontSetupStep,
+} from './StorefrontSetupStep.testUtils';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-
-// ---- Spectrum + icon mocks (only what the tree renders) ----
-jest.mock('@adobe/react-spectrum', () => ({
-    Text: ({ children }: any) => <span>{children}</span>,
-    Flex: ({ children }: any) => <div>{children}</div>,
-    Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
-}));
-jest.mock('@spectrum-icons/workflow/AlertCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="icon-alert" />,
-}));
-jest.mock('@spectrum-icons/workflow/CheckmarkCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="icon-check" />,
-}));
-jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
-    LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
-}));
-jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
-    CenteredFeedbackContainer: ({ children }: any) => <div>{children}</div>,
-}));
-jest.mock('@/core/ui/components/layout/SingleColumnLayout', () => ({
-    SingleColumnLayout: ({ children }: any) => <div>{children}</div>,
-}));
-jest.mock('@/features/eds/ui/components', () => ({
-    GitHubAppInstallDialog: () => <div data-testid="github-app-dialog" />,
-}));
 
 // ---- vscode-api mock: record posts ----
 const mockPostMessage = jest.fn();
@@ -48,7 +24,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 import type { WizardState } from '@/types/webview';
 
 const makeState = (edsConfig: WizardState['edsConfig']): WizardState => ({

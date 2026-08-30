@@ -9,13 +9,15 @@
  * - Execution order: fork sync -> template -> components -> add-ons
  */
 
+import {
+    AddonUpdateChecker,
+    CheckUpdatesCommand,
+    ForkSyncService,
+    TemplateSyncService,
+    TemplateUpdateChecker,
+    UpdateManager,
+} from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
-import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { UpdateManager } from '@/features/updates/services/updateManager';
-import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
@@ -41,19 +43,6 @@ jest.mock('vscode', () => ({
         executeCommand: jest.fn(),
     },
 }));
-
-// Mock services
-jest.mock('@/features/updates/services/updateManager');
-jest.mock('@/features/updates/services/componentUpdater');
-jest.mock('@/features/updates/services/extensionUpdater');
-jest.mock('@/features/updates/services/forkSyncService');
-jest.mock('@/features/updates/services/addonUpdateChecker');
-jest.mock('@/features/updates/services/templateSyncService');
-jest.mock('@/features/updates/services/templateUpdateChecker');
-
-// Mock block collection and inspector helpers (for addon application)
-jest.mock('@/features/eds/services/blockCollectionHelpers');
-jest.mock('@/features/eds/services/inspectorHelpers');
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -163,7 +152,6 @@ function setupDefaultMocks(): {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
 
 /**
  * ADR-015 (2026-08-28): this boundary fetches the shell executor from the

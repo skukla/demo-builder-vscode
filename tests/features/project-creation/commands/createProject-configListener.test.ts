@@ -8,13 +8,13 @@
  * not reflected in block library selection modal.
  */
 
+import {
+    CreateProjectWebviewCommand,
+} from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 
-// Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
@@ -30,8 +30,6 @@ jest.mock('@/core/di', () => ({
         })),
     },
 }));
-
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 // Mock WebviewPanelManager to prevent singleton panel reuse between tests
 jest.mock('@/core/base/webviewPanelManager', () => ({

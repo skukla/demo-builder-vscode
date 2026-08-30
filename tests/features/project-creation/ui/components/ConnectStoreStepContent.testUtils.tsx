@@ -1,4 +1,43 @@
 /**
+ * Shared setup for the ConnectStoreStepContent suites — THE AGREED PART ONLY.
+ *
+ * This family does NOT agree about how to fake all of its dependencies, and
+ * picking a winner would change what some suites exercise while every one of
+ * them stayed green. So only the mocks that EVERY spec already declared
+ * IDENTICALLY were moved here. Each spec keeps its own disputed mocks inline,
+ * and therefore ends up with exactly the set it started with.
+ *
+ * Moved here (all specs agreed): @/core/ui/components/layout/CenteredFeedbackContainer, @/features/components/services/envVarHelpers
+ * Left inline (specs disagree):  @/core/ui/components/feedback/LoadingDisplay, @/features/components/ui/components/ConfigFieldRenderer, @/features/components/ui/components/StoreSelectionRow, @/features/components/ui/hooks/useComponentConfig, @/features/components/ui/hooks/useStoreDiscovery
+ *
+ * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
+ * decision, deliberately not taken here.
+ */
+
+jest.mock('@/features/components/services/envVarHelpers', () => ({
+    lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
+    // Derived from the mocked lookup rather than stubbed separately, so this cannot
+    // disagree with it. `useAutoStoreDetect` reads the admin pair through this now;
+    // a mock that omitted it failed with "readPaasAdminPair is not a function".
+    readPaasAdminPair: (configs: any) => {
+        const username = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME');
+        const password = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_PASSWORD');
+        return username && password ? { username, password } : undefined;
+    },
+}));
+jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
+    CenteredFeedbackContainer: ({ children }: any) => (
+        <div data-testid="centered-feedback">{children}</div>
+    ),
+}));
+const mockLookupComponentConfigValue = jest.fn();
+
+
+export {
+    mockLookupComponentConfigValue,
+};
+
+/**
  * ConnectStoreStepContent - Shared Test Fixtures
  *
  * Pure mock field/service-group fixtures and env-var key constants used across

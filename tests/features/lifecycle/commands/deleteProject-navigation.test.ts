@@ -10,26 +10,12 @@
  * Step 5 of Projects Navigation Architecture plan.
  */
 
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
+import {
+    DeleteProjectCommand,
+    vscode,
+} from './deleteProject.testUtils';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
-
-// Mock VS Code API with proper types
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -40,24 +26,7 @@ import * as fs from 'fs/promises';
 const mockRm = fs.rm as jest.Mock;
 const mockAccess = fs.access as jest.Mock;
 
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
-
 // Import vscode after mock
-import * as vscode from 'vscode';
 
 describe('DeleteProjectCommand - Navigation', () => {
     let command: DeleteProjectCommand;
