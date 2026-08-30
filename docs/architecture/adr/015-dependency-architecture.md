@@ -94,6 +94,28 @@ documented patterns:
 | `create...Deps` | Assembles one feature's service bundle; the only construction site outside `extension.ts`. |
 | Accessor | Answers a question from existing data; NEVER writes (the `ensureOAuthCredentialId` lesson). |
 
+### Two rules the enforcer checks that this document did not state
+
+Found 2026-08-29 while asking whether this ADR should be split in two. Five
+checks run under its name; the text mentioned `fetch` 10 times and `construct`
+17, and these two **zero** times. They were enforced under a document that never
+ruled on them — the same law/enforcement gap this ADR's Consequences section
+records, pointing the other way. Written down rather than spun into a second ADR:
+both are about how a dependency edge is allowed to form, which is this document's
+subject.
+
+**Commands extend `BaseCommand` or `BaseWebviewCommand`.** A command class under
+`commands/` gets its context, disposal and panel lifecycle from the base. A class
+that does not extend one has to acquire those itself — which is the implicit
+dependency this ADR exists to remove, and it is how a command ends up reaching
+for things the base would have handed it. Ledger: `commandBase`.
+
+**Files under `src/types/` (and `*.types.ts`) use `import type` only.** A types
+file with a runtime import stops being a leaf: it pulls executable code into
+every module that wanted only a shape, and it can form a cycle a type-only import
+never could. The rule is mechanical — a bare `import` in a types file is a
+violation, `import type` is not. Ledger: `typesPurity`.
+
 ### The "when you want to…" table
 
 The full 11-row placement table lives in
