@@ -181,6 +181,27 @@ before the work can rationalise it.
 
 Would have failed on the first pass, before anyone had to ask.
 
+### templateSyncService — stated 2026-08-29, before the work
+
+529 lines, 18% covered, and it PUSHES TO THE USER'S LIVE GITHUB REPO. The reset
+strategy loses local customisations by design; a small set of files
+(`fstab.yaml`, `config.json`) is meant to survive both strategies via a
+backup/restore pair. That pair is the whole safety net, and nothing asserts it.
+
+1. **The preserved files survive BOTH strategies.** Backed up before, restored
+   after, content identical — on merge and on reset. If this breaks, a reset
+   destroys a site's config and pushes the result.
+2. **A failure at any git step does NOT push.** Clone, fetch, merge, commit and
+   push each have a failure branch; none of them may end with a push of partial
+   state to a live repo.
+3. **Conflicts surface rather than resolve silently** — the merge path detects
+   conflicts and must report them, not commit through them.
+4. Every remaining uncovered line is NAMED in the commit and is shell I/O or a
+   log — not a decision.
+
+Clause 4 is the one that does the work, same as last time: it forbids narrating
+the leftover.
+
 ### projectDeletionService — stated 2026-08-29, before the work
 
 > 1. Cancelling the delete is proven to delete NOTHING, on both confirmation
