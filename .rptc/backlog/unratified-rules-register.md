@@ -70,6 +70,19 @@ Exactly two, and "leave it as prose" is not among them:
 | 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | **no** | **yes** — `responseEnvelope.test.ts`, both at runtime and by source scan | yes | **Pending** — enforced but uncatalogued |
 | 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | **no** | no | unmeasured | **Pending** |
 
+| 6 | Naming: commands `camelCase`, components `PascalCase`, utilities `camelCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | **no** — absent from both the handbook and the generated index | **no** | unmeasured, but visibly followed | **Pending** |
+| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md` | **no** | **no** | unmeasured | **Pending** |
+
+**Row 7 is the one with teeth.** A stale child selection is how an operation targets
+the wrong resource — pick a different Adobe project, keep the old workspace, and the
+next deploy goes somewhere nobody chose. That failure mode is exactly what
+`withOrgContext` and the org-mismatch guard exist for, so the rule is real; it just
+has no home and no check. Worth measuring how many selection handlers actually clear
+their dependents before deciding how to ratify it.
+
+Row 6 is the opposite: low stakes, visibly obeyed, and cheap to ratify or to drop as
+something the codebase enforces socially. Do not spend the same effort on both.
+
 **Rows 3–5 are a different shape from 1 and 2, and the difference matters.** These
 are not one directory's private opinion — they are stated in a document that calls
 them conventions new tools *must* follow, and row 4 already has a build-failing
