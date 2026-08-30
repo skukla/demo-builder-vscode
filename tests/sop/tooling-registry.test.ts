@@ -67,7 +67,9 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
     const CLAUDE_MD = join(__dirname, '..', '..', 'CLAUDE.md');
 
     it('CONTROL: the cadence row is present and states a number', () => {
-        const row = readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/);
+        const row = readFileSync(CLAUDE_MD, 'utf8').match(
+            /\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/
+        );
         expect(row).not.toBeNull();
     });
 
@@ -97,7 +99,9 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
 
     it('the stated count equals the suites in tests/sop/', () => {
         const claimed = Number(
-            readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/)![1]
+            readFileSync(CLAUDE_MD, 'utf8').match(
+                /\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/
+            )![1]
         );
         const onDisk = readdirSync(__dirname).filter((f) => f.endsWith('.test.ts')).length;
         expect({ claimed, onDisk }).toEqual({ claimed: onDisk, onDisk });
@@ -125,6 +129,26 @@ describe('the tooling registry matches what is on disk', () => {
             .filter((s) => !registered.has(s))
             .sort();
         expect(unregistered).toEqual([]);
+    });
+
+    it('names every skill in the root CLAUDE.md, which is what makes it loadable', () => {
+        // Registration and ROUTING are different things, and this is the gap between
+        // them. `mutation-test-pilot` and `test-strategy-scan` were both registered
+        // above — so every assertion here passed — while being absent from CLAUDE.md's
+        // skill list, which is the only place an agent learns a skill exists. A skill
+        // nothing routes to is never loaded, however correct its body is.
+        //
+        // It must match the skill's OWN ENTRY, not merely its name somewhere in the
+        // file. Written first as a bare `includes`, this passed a planted defect: the
+        // routing bullet was deleted and one sibling bullet's cross-reference kept the
+        // name present, so the check read as green over exactly the rot it exists for.
+        // An entry is the name plus its em-dash description, WHEREVER it sits — several
+        // skills legitimately share one bullet (`gate` — … · `cut-release` — …), so
+        // anchoring to the start of a line wrongly flagged three real entries.
+        const claudeMd = readFileSync(join(REPO_ROOT, 'CLAUDE.md'), 'utf-8');
+        const routed = new Set([...claudeMd.matchAll(/`([a-z0-9-]+)` +—/g)].map((m) => m[1]));
+        const unrouted = skillsOnDisk.filter((s) => !routed.has(s));
+        expect(unrouted).toEqual([]);
     });
 
     it('has no entry for a skill that was deleted', () => {

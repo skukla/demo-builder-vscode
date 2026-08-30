@@ -161,6 +161,8 @@ without producing a signal.
 - `ai-bundle-coherence` — do real projects' AI bundles match their shape: delivered skill sets vs composition, bundle sources that exist, .mcp.json/package agreement (live half; the static half runs every commit in `tests/templates/ai-bundle-coherence.test.ts`)
 - `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
+- `mutation-test-pilot` — the only instrument that measures whether a test would CATCH a defect rather than merely execute the line: Stryker changes the source and re-runs the suite, and a surviving mutant is a defect the suite would ship. Carries both measured numbers and the gap between them — 93% on the four-module pilot, 59% on a representative sample — because the score falls almost monotonically as `await` count rises, so async, heavily-mocked code is the hard case, not the careless one
+- `test-strategy-scan` — the census half of the same question: how the suite is BUILT (tier mix, mock density, hollow suites) read across every file at once, where `mutation-test-pilot` measures a few modules empirically. Use the census to pick what to mutate
 
 ## The conventions live in one place
 

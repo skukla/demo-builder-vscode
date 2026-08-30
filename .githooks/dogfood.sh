@@ -58,6 +58,14 @@ Backlog: AI-3a, ZZ-99"
 try blocked "trailer only inside a comment" "feat: x
 
 # Backlog: none"
+try blocked "AI co-author trailer"          "feat: x
+
+Backlog: none
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+try blocked "'Generated with' line"         "feat: x
+
+Backlog: none
+Generated with Claude Code"
 
 echo
 echo "MUST PASS"
@@ -73,6 +81,13 @@ Backlog: AI-3a, PL-1"
 try ok "case-insensitive"                   "feat: x
 
 backlog: none"
+# The AI-trailer rule must not cost us real co-authorship. A human collaborator
+# is exactly what the trailer is FOR, and a rule that blocked those would be
+# worse than the drift it prevents.
+try ok "a HUMAN co-author still passes"     "feat: x
+
+Backlog: none
+Co-Authored-By: Steve Kukla <stevenjkukla@gmail.com>"
 
 echo
 echo "MUST NOT BLOCK — the cases that break unrelated work"

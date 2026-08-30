@@ -24,6 +24,24 @@ for marker in rebase-merge rebase-apply CHERRY_PICK_HEAD REVERT_HEAD MERGE_HEAD;
     [[ -e "$GIT_DIR_PATH/$marker" ]] && exit 0
 done
 
+# Refuse AI-attribution trailers.
+#
+# This one is here because the rule had no enforcer at all and lost anyway. The
+# harness's own instructions tell the agent to end every commit message with a
+# `Co-Authored-By: Claude ...` line, while this repo's standing rule is that no
+# such trailer goes in its history. Nothing arbitrated that except an agent
+# remembering the override on every single commit — which is a rule you have to
+# win repeatedly rather than once.
+if grep -vE '^[[:space:]]*#' "$MSG_FILE" | grep -qiE '^(Co-Authored-By:.*(Claude|Anthropic|GPT|Copilot|Codex)|Generated with)'; then
+    echo "commit-msg: AI-attribution trailer found." >&2
+    echo "" >&2
+    echo "  This repo's history carries no Co-Authored-By / 'Generated with' lines" >&2
+    echo "  for AI tools. Drop the trailer and commit again." >&2
+    echo "" >&2
+    echo "  Turn this off:  git config --unset core.hooksPath" >&2
+    exit 1
+fi
+
 # Read the trailer from the real message, ignoring comment lines.
 VALUE="$(grep -vE '^[[:space:]]*#' "$MSG_FILE" | grep -iE '^Backlog:' | head -1 | sed -E 's/^[Bb]acklog:[[:space:]]*//' | tr -d '\r')"
 
