@@ -35,7 +35,7 @@ This feature provides seamless integration between local mesh configuration and 
 
 **Example Usage**:
 ```typescript
-import { deployMeshComponent } from '@/features/mesh';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 
 const result = await deployMeshComponent(
     '/path/to/eds-commerce-mesh',  // or headless-commerce-mesh
@@ -63,7 +63,7 @@ if (result.success) {
 
 **Example Usage**:
 ```typescript
-import { verifyMeshDeployment, syncMeshStatus } from '@/features/mesh';
+import { verifyMeshDeployment, syncMeshStatus } from '@/features/mesh/services/meshVerifier';
 
 const verification = await verifyMeshDeployment(project);
 
@@ -83,7 +83,7 @@ if (!verification.exists) {
 
 **Example Usage**:
 ```typescript
-import { waitForMeshDeployment } from '@/features/mesh';
+import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
 
 const result = await waitForMeshDeployment({
     onProgress: (attempt, maxRetries, elapsedSeconds) => {
@@ -112,7 +112,7 @@ if (result.deployed) {
 
 **Example Usage**:
 ```typescript
-import { detectMeshChanges, fetchDeployedMeshConfig, updateMeshState } from '@/features/mesh';
+import { detectMeshChanges, fetchDeployedMeshConfig, updateMeshState } from '@/features/mesh/services/stalenessDetector';
 
 // Detect changes
 const changes = await detectMeshChanges(project, project.componentConfigs!);
@@ -144,7 +144,7 @@ if (changes.hasChanges) {
 
 **Example Usage**:
 ```typescript
-import { getEndpoint } from '@/features/mesh';
+import { getEndpoint } from '@/features/mesh/handlers/shared';
 
 const endpoint = getEndpoint(
     project.adobe.workspace,
@@ -227,9 +227,9 @@ If hasChanges: Show "Redeploy Mesh" prompt
 - `@/core/logging` - Logger for mesh operations
 - `@/core/state` - getFrontendEnvVars, updateFrontendState for frontend change detection
 - `@/types/typeGuards` - parseJSON for safe JSON parsing
-- `@/utils/timeoutConfig` - TIMEOUTS.API_MESH_UPDATE constant
-- `@/utils/errorFormatter` - formatAdobeCliError for user-friendly errors
-- `@/services/serviceLocator` - ServiceLocator for CommandExecutor access
+- `@/core/utils/timeoutConfig` - TIMEOUTS.API_MESH_UPDATE constant
+- `@/features/mesh/utils/errorFormatter` - formatAdobeCliError for user-friendly errors
+- `@/core/di` - ServiceLocator for CommandExecutor access
 
 ### Used By
 - `src/features/mesh/commands/deployMesh.ts` - Manual mesh deployment command
@@ -241,7 +241,7 @@ If hasChanges: Show "Redeploy Mesh" prompt
 
 ### Example 1: Deploy Mesh During Project Creation
 ```typescript
-import { deployMeshComponent } from '@/features/mesh';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 
 const result = await deployMeshComponent(
     meshComponentPath,
@@ -267,7 +267,8 @@ if (result.success) {
 
 ### Example 2: Check Mesh Status (Dashboard)
 ```typescript
-import { detectMeshChanges, verifyMeshDeployment } from '@/features/mesh';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+import { verifyMeshDeployment } from '@/features/mesh/services/meshVerifier';
 
 // Check if configuration has changed
 const changes = await detectMeshChanges(project, project.componentConfigs!);
@@ -296,7 +297,7 @@ displayMeshStatus(meshStatus);
 
 ### Example 3: Fetch Deployed Config for Comparison
 ```typescript
-import { fetchDeployedMeshConfig } from '@/features/mesh';
+import { fetchDeployedMeshConfig } from '@/features/mesh/services/stalenessDetector';
 
 // Fetch what's actually deployed in Adobe I/O
 const deployedConfig = await fetchDeployedMeshConfig();
@@ -320,7 +321,7 @@ if (deployedConfig) {
 
 ### Example 4: Update Mesh State After Deployment
 ```typescript
-import { updateMeshState } from '@/features/mesh';
+import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 
 // After successful deployment, capture baseline state
 await updateMeshState(project);
@@ -338,7 +339,7 @@ console.log('Mesh state captured - future changes will be detected');
 
 ### Example 5: Detect Frontend Changes (Restart Prompt)
 ```typescript
-import { detectFrontendChanges } from '@/features/mesh';
+import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 
 // Check if frontend env vars changed while demo is running
 const hasChanges = detectFrontendChanges(project);
@@ -388,7 +389,7 @@ interface MeshState {
 
 ### Deployment Errors
 ```typescript
-import { deployMeshComponent } from '@/features/mesh';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 
 const result = await deployMeshComponent(
     meshComponentPath,
@@ -414,7 +415,7 @@ if (!result.success) {
 
 ### Authentication Errors
 ```typescript
-import { fetchDeployedMeshConfig } from '@/features/mesh';
+import { fetchDeployedMeshConfig } from '@/features/mesh/services/stalenessDetector';
 
 // Pre-flight auth check before fetching
 const authService = new AuthenticationService(/*...*/);
@@ -436,7 +437,7 @@ if (!deployedConfig) {
 
 ### Verification Errors
 ```typescript
-import { verifyMeshDeployment } from '@/features/mesh';
+import { verifyMeshDeployment } from '@/features/mesh/services/meshVerifier';
 
 const verification = await verifyMeshDeployment(project);
 
@@ -571,9 +572,9 @@ return {
 
 - **[Authentication Feature](../authentication/README.md)** - Pre-flight auth checks
 - **[Dashboard Feature](../dashboard/README.md)** - Mesh status display
-- **[Project Creation Feature](../project-creation/README.md)** - Mesh deployment integration
-- **[State Management](../shared/state/CLAUDE.md)** - Mesh state persistence
-- **[Timeout Configuration](../../utils/timeoutConfig.ts)** - TIMEOUTS.API_MESH_UPDATE constant
+- **[Project Creation Feature](../CLAUDE.md)** - Mesh deployment integration
+- **[State Management](../../core/state/README.md)** - Mesh state persistence
+- **[Timeout Configuration](../../core/utils/timeoutConfig.ts)** - TIMEOUTS.API_MESH_UPDATE constant
 
 ---
 

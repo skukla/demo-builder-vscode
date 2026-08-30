@@ -30,12 +30,12 @@ src/
 ├── core/                # Core infrastructure (→ core/CLAUDE.md)
 │   ├── auth/            # Authentication guards (adobeAuthGuard)
 │   ├── base/            # Base classes & types
+│   ├── build/           # Build stamp (which checkout is running)
 │   ├── cache/           # Cache utilities
 │   ├── commands/        # Command infrastructure
 │   ├── communication/   # Webview communication protocol
 │   ├── config/          # Configuration management
 │   ├── di/              # Dependency injection
-│   ├── errors/          # Error types
 │   ├── handlers/        # Handler dispatch & error handling
 │   ├── logging/         # Logging system (StepLogger, ErrorLogger)
 │   ├── shell/           # Command execution (CommandExecutor)

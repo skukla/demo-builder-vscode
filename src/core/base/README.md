@@ -452,7 +452,7 @@ async execute(): Promise<void> {
 - `@/core/state` - StateManager
 - `@/core/logging` - Logger
 - `@/core/communication` - WebviewCommunicationManager
-- `@/utils/loadingHTML` - Webview loading states
+- `@/core/utils/loadingHTML` - Webview loading states
 
 ## Best Practices
 

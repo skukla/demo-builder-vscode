@@ -188,7 +188,7 @@ A: Not currently supported. Projects must be in `~/.demo-builder/projects/<name>
 
 ## Related Documentation
 
-- [Troubleshooting Guide](../troubleshooting.md)
+- [Adobe CLI timeouts](adobe-cli-timeouts.md)
 - [Error Logging System](../systems/error-logging.md)
 - [Project Structure](../architecture/overview.md)
 

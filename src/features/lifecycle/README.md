@@ -38,7 +38,7 @@ This feature ensures clean startup/shutdown, graceful port conflict resolution, 
 
 **Example Usage**:
 ```typescript
-import { StartDemoCommand } from '@/features/lifecycle';
+import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 
 const startCommand = new StartDemoCommand(
     context,
@@ -65,7 +65,7 @@ await startCommand.execute();
 
 **Example Usage**:
 ```typescript
-import { StopDemoCommand } from '@/features/lifecycle';
+import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 
 const stopCommand = new StopDemoCommand(
     context,
@@ -110,14 +110,13 @@ features/lifecycle/
 - `@/core/base` - BaseCommand for command infrastructure
 - `@/core/state` - updateFrontendState for env var capture
 - `@/core/shell` - CommandExecutor for port checking and process management
-- `@/services/serviceLocator` - ServiceLocator for CommandExecutor access
+- `@/core/di` - ServiceLocator for CommandExecutor access
 - `vscode` - Terminal, window, commands APIs
 
 ### Used By
 - `src/extension.ts` - Command registration (demoBuilder.startDemo, demoBuilder.stopDemo)
 - `src/features/dashboard` - Start/Stop buttons
 - `src/commands/configure.ts` - Restart after configuration changes
-- `src/statusBar.ts` - Status bar demo status display
 
 ## Usage Examples
 
@@ -435,9 +434,8 @@ vscode.window.terminals.forEach(terminal => {
 
 - **[Dashboard Feature](../dashboard/README.md)** - Start/Stop UI buttons
 - **[Mesh Feature](../mesh/README.md)** - Mesh deployment after start
-- **[State Management](../shared/state/CLAUDE.md)** - Project state persistence
-- **[Status Bar](../../providers/statusBar.ts)** - Status bar integration
-- **[Command Execution](../shared/command-execution/CLAUDE.md)** - Port checking and process management
+- **[State Management](../../core/state/README.md)** - Project state persistence
+- **[Command Execution](../../core/shell/README.md)** - Port checking and process management
 
 ---
 

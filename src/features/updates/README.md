@@ -34,7 +34,7 @@ The Updates feature manages extension and component updates via GitHub Releases.
 
 **Example Usage**:
 ```typescript
-import { ComponentRepositoryResolver } from '@/features/updates';
+import { ComponentRepositoryResolver } from '@/features/updates/services/componentRepositoryResolver';
 
 const resolver = new ComponentRepositoryResolver(extensionPath, logger);
 
@@ -66,7 +66,7 @@ Both `checkComponentUpdates` and `checkAllProjectsForUpdates` resolve component 
 
 **Example Usage**:
 ```typescript
-import { UpdateManager } from '@/features/updates';
+import { UpdateManager } from '@/features/updates/services/updateManager';
 
 const updateManager = new UpdateManager(context, logger);
 
@@ -106,7 +106,7 @@ for (const [componentId, update] of componentUpdates.entries()) {
 
 **Example Usage**:
 ```typescript
-import { ComponentUpdater } from '@/features/updates';
+import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 
 const updater = new ComponentUpdater(logger, extensionPath, commandManager);
 
@@ -152,7 +152,7 @@ try {
 
 **Example Usage**:
 ```typescript
-import { ExtensionUpdater } from '@/features/updates';
+import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 
 const updater = new ExtensionUpdater(logger);
 
@@ -256,7 +256,7 @@ Return latest version for channel
 
 ### Example 1: Check for Updates
 ```typescript
-import { UpdateManager } from '@/features/updates';
+import { UpdateManager } from '@/features/updates/services/updateManager';
 
 const updateManager = new UpdateManager(context, logger);
 
@@ -306,7 +306,7 @@ for (const [componentId, update] of componentUpdates.entries()) {
 
 ### Example 2: Update Component with Error Handling
 ```typescript
-import { ComponentUpdater } from '@/features/updates';
+import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 
 const updater = new ComponentUpdater(logger, extensionPath, commandManager);
 
@@ -577,8 +577,8 @@ try {
 ## See Also
 
 - **[Components Feature](../components/README.md)** - Component registry and definitions
-- **[State Management](../shared/state/CLAUDE.md)** - Version tracking persistence
-- **[Timeout Configuration](../../utils/timeoutConfig.ts)** - Update timeouts
+- **[State Management](../../core/state/README.md)** - Version tracking persistence
+- **[Timeout Configuration](../../core/utils/timeoutConfig.ts)** - Update timeouts
 - **[GitHub Releases](https://github.com/skukla/demo-builder-vscode/releases)** - Extension releases
 - **[Semantic Versioning](https://semver.org/)** - Version comparison rules
 

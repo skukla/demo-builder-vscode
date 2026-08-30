@@ -327,7 +327,7 @@ await comm.initialize();
 - `uuid` - Message ID generation
 - `@/types/messages` - Message types and payloads
 - `@/core/logging` - Debug logging
-- `@/utils/timeoutConfig` - Timeout configuration
+- `@/core/utils/timeoutConfig` - Timeout configuration
 
 ## Best Practices
 
@@ -490,7 +490,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 - **Related Shared Modules**:
   - `@/core/base` - BaseWebviewCommand uses this module
   - `@/core/logging` - Used for debug logging
-  - `@/utils/timeoutConfig` - Timeout configuration
+  - `@/core/utils/timeoutConfig` - Timeout configuration
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`

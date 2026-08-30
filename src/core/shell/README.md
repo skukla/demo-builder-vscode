@@ -459,7 +459,7 @@ const parallelResults = await executor.executeParallel(parallelCommands);
 ### Dependencies
 - Node.js `child_process` - spawn for command execution
 - `@/core/logging` - Command logging
-- `@/utils/timeoutConfig` - Timeout configuration
+- `@/core/utils/timeoutConfig` - Timeout configuration
 - `@/core/validation` - Command name validation
 
 ## Best Practices
@@ -507,7 +507,7 @@ await executor.execute(`aio console:org:select ${orgId}`, {
 Centralized timeout configuration:
 
 ```typescript
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 await executor.execute('aio console:org:list', {
     timeout: TIMEOUTS.ORG_LIST, // 30000ms
@@ -607,7 +607,7 @@ When you find command execution patterns duplicated:
 - **Related Shared Modules**:
   - `@/core/logging` - Command execution logging
   - `@/core/validation` - Input validation before execution
-  - `@/utils/timeoutConfig` - Timeout configuration
+  - `@/core/utils/timeoutConfig` - Timeout configuration
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`

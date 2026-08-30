@@ -83,3 +83,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(research): how the field structures conventions — and the name for what we built (`e470da602`)
 - 2026-08-30  docs(research): close both gaps — the fitness-function taxonomy, and how big a real one is (`3af4904d3`)
 - 2026-08-30  docs(handbook): separate what you must understand from what the tools will tell you (`b3fd39aba`)
+- 2026-08-30  docs(handbook): capture the frontend and CSS conventions that were missing (`2dcf85a47`)

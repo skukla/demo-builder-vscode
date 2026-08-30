@@ -186,7 +186,7 @@ Access them via: View → Output → Select channel from dropdown
 - **Adobe CLI browser not opening**: Check Debug channel for command execution details
 - **Authentication issues**: Review token parsing in Debug channel
 
-For detailed troubleshooting, see the [Troubleshooting Guide](docs/troubleshooting.md).
+For detailed troubleshooting, see the [Troubleshooting Guide](docs/troubleshooting/).
 
 ## License Key
 

@@ -560,7 +560,7 @@ try {
 
 ## See Also
 
-- **[Adobe Setup Architecture](../../docs/architecture/adobe-setup.md)** - Two-column setup flow design
+- **[Adobe Setup Architecture](../../../docs/architecture/adobe-setup.md)** - Two-column setup flow design
 - **[Mesh Feature](../mesh/README.md)** - Pre-flight auth checks
 - **[Dashboard Feature](../dashboard/README.md)** - Quick auth status
 - **[Core State](../../core/state/README.md)** - StateManager integration

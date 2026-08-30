@@ -16,6 +16,7 @@ core/
 │   ├── baseCommand.ts
 │   ├── baseWebviewCommand.ts
 │   └── webviewPanelManager.ts
+├── build/              # Build stamp (buildInfo.ts, buildStampUi.ts)
 ├── cache/              # Cache utilities (cacheUtils.ts)
 ├── commands/           # Core-owned commands (ResetAllCommand, ResetAiOnboardingCommand)
 ├── communication/      # Webview messaging (→ communication/README.md)
@@ -24,7 +25,6 @@ core/
 │   ├── ConfigurationLoader.ts
 │   └── configFileGenerator.ts
 ├── di/                 # Dependency injection (serviceLocator.ts)
-├── errors/             # Error infrastructure (formatters are feature-specific; see errors/index.ts)
 ├── handlers/           # Handler dispatch utilities
 ├── logging/            # Logging system (→ logging/README.md)
 │   ├── debugLogger.ts
@@ -89,6 +89,18 @@ core/
 **Used By**: Command implementations in `src/commands/` and feature `commands/` directories
 
 **Path Alias**: `@/core/base`
+
+---
+
+### build/
+
+**Purpose**: Build stamp — lets the running extension name the checkout it was built from (`dist/build-info.json`, written by `esbuild.config.js` on every build)
+
+**Key Exports:**
+- `buildInfo.ts` - reads the stamp
+- `buildStampUi.ts` - surfaces it in Diagnostics and the logs
+
+**Path Alias**: `@/core/build`
 
 ---
 
@@ -161,14 +173,6 @@ core/
 - `ServiceLocator` - Service registry and resolution (e.g. `ServiceLocator.getCommandExecutor()`)
 
 **Path Alias**: `@/core/di`
-
----
-
-### errors/
-
-**Purpose**: Error infrastructure. Generic error formatting was removed in favor of domain-specific formatters (mesh: `@/features/mesh/utils/errorFormatter.ts`; auth: `@/features/authentication/services/authenticationErrorFormatter.ts`). See `docs/patterns/error-handling.md`.
-
-**Path Alias**: `@/core/errors`
 
 ---
 

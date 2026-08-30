@@ -38,7 +38,7 @@ This feature ensures users have all necessary tools (Node.js, npm, Adobe CLI, et
 
 **Example Usage**:
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 
 // ADR-015: `commandManager` is the shell executor, supplied by the boundary
 // that builds the manager (a command, a handler context, or the MCP server's
@@ -129,8 +129,8 @@ The feature is driven by `config/prerequisites.json`:
 - `@/core/logging` - Logger for prerequisite checking
 - `@/core/shell` - CommandExecutor for executing checks and installs
 - `@/types/typeGuards` - parseJSON for safe JSON parsing
-- `@/utils/timeoutConfig` - TIMEOUTS.PREREQUISITE_CHECK constant
-- `@/services/serviceLocator` - ServiceLocator for CommandExecutor access
+- `@/core/utils/timeoutConfig` - TIMEOUTS.PREREQUISITE_CHECK constant
+- `@/core/di` - ServiceLocator for CommandExecutor access
 
 ### Used By
 - `src/features/project-creation` - Prerequisite checking during project creation
@@ -141,7 +141,7 @@ The feature is driven by `config/prerequisites.json`:
 
 ### Example 1: Check All Prerequisites
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 
 const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 
@@ -180,8 +180,8 @@ for (const status of statuses) {
 
 ### Example 2: Check Multi-Version Node.js
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
-import { ComponentRegistryManager } from '@/features/components';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 
 const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 const componentRegistry = new ComponentRegistryManager(extensionPath);
@@ -211,8 +211,8 @@ for (const result of results) {
 
 ### Example 3: Install Prerequisites with Progress
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
-import { ServiceLocator } from '@/services/serviceLocator';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { ServiceLocator } from '@/core/di';
 
 const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 const commandManager = ServiceLocator.getCommandExecutor();
@@ -241,7 +241,7 @@ if (installInfo?.steps) {
 
 ### Example 4: Check Per-Node-Version Tools
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 
 const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 
@@ -266,7 +266,7 @@ if (status.installed) {
 
 ### Example 5: Dependency Resolution
 ```typescript
-import { PrerequisitesManager } from '@/features/prerequisites';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 
 const prereqManager = new PrerequisitesManager(extensionPath, logger, commandManager);
 await prereqManager.loadConfig();
@@ -498,11 +498,11 @@ if (!status.installed) {
 
 ## See Also
 
-- **[Prerequisites System Documentation](../../docs/systems/prerequisites-system.md)** - Detailed system design
+- **[Prerequisites System Documentation](../../../docs/systems/prerequisites-system.md)** - Detailed system design
 - **[Components Feature](../components/README.md)** - Component requirements mapping
-- **[Project Creation Feature](../project-creation/README.md)** - Prerequisites integration
+- **[Project Creation Feature](../CLAUDE.md)** - Prerequisites integration
 - **[Prerequisites JSON](config/prerequisites.json)** - Configuration file
-- **[Timeout Configuration](../../utils/timeoutConfig.ts)** - TIMEOUTS.PREREQUISITE_CHECK constant
+- **[Timeout Configuration](../../core/utils/timeoutConfig.ts)** - TIMEOUTS.PREREQUISITE_CHECK constant
 
 ---
 

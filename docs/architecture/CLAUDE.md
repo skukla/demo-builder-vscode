@@ -70,26 +70,17 @@
 
 ## Architecture Decision Records (`adr/`)
 
-| ADR | Title | Status |
-|-----|-------|--------|
-| [001](adr/001-component-naming-standardization.md) | Component naming standardization (`externalSystems` → `integrations`) | Accepted and implemented |
-| [002](adr/002-helix-bulk-api-fallback.md) | Helix bulk API fallback strategy | Accepted and implemented |
-| [003](adr/003-multisite-architecture-seam.md) | Multisite architecture seam | Accepted (implementation deferred) |
-| [004](adr/004-claude-code-harness.md) | Claude Code (CLI) as the AI harness | Accepted |
-| [005](adr/005-byom-pdp-routing.md) | BYOM PDP routing — canonical pattern with multi-tenancy and smart-404 gap-fill | Accepted |
-| [006](adr/006-thin-layer-storefront-customization.md) | Thin-layer storefront customization — retire CitiSignal forks, canonical + code patches | Accepted (implementation in progress) |
-| [007](adr/007-pdp-sku-url-encoding.md) | PDP SKU URL encoding — reversible, lowercase-stable, Helix-safe | Accepted |
-| [008](adr/008-derive-runtime-surface-inventory.md) | Derive the runtime-surface inventory from the boilerplate, not by hand | Accepted (producer built; consumer wiring pending) |
-| [009](adr/009-storefront-config-flag-injection.md) | Storefront `config.json` flag injection — the generator owns config, so template flags must be re-injected | Accepted |
-| [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
-| [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project (shipped as `appBuilderComponents`) | Accepted; D1–D2 implemented, D3 pending |
-| [012](adr/012-diagnostic-surfaces.md) | Diagnostic surfaces — every capability human-reachable first, MCP tools wrap the same core; no remote probe manifest | Accepted; prerequisite landed, surfaces planned (beta.123) |
-| [013](adr/013-generated-file-edit-survival.md) | Generated AI files — hash-and-skip edit survival (refresh overwrites only unmodified files) | Implemented (feature/tiered-ai-refresh, 2026-08-14) |
-| [014](adr/014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service (one pair, never persisted; a declared pair still wins) | Implemented (feature/data-installer-credential-broker, 2026-08-16) |
-| [015](adr/015-dependency-architecture.md) | Dependency architecture (EXTENSION HOST ONLY — the webview side is ADR-017): fetch only at the boundary (extension.ts, commands/, handlers/, tool registrars), inject below, construct in the root or a create...Deps file | Implemented + enforced (tests/sop/architecture-rules.test.ts, 2026-08-28; scoped to the host 2026-08-29); placement rules in [where-code-goes.md](../architecture/where-code-goes.md) |
-| [016](adr/016-test-strategy.md) | Test strategy: three tiers (unit = handed-in deps + argument assertions; contract = fixtures-from-live + drift; live = journeys/verify-after-write), Jest retained, noise-to-zero, Stryker effectiveness pilot | Ratified 2026-08-28; execution under PL-11 |
-| [017](adr/017-webview-architecture.md) | Webview architecture: composition root = the 8 bundle entries, dependencies as props (no context), the message channel a RATIFIED singleton (`acquireVsCodeApi` is once-per-webview), hooks are the service layer, and a stylesheet belongs to its bundle's graph | Accepted + enforced 2026-08-29 (`webview-architecture-rules.test.ts`, `stylesheet-bundles.test.ts`) |
-| [018](adr/018-css-architecture.md) | CSS architecture: vendor CSS in the LOWEST cascade layer (`@layer vendor, reset, theme, overrides`), `!important` is a symptom not a mechanism (1,866 measured removable), shared-component classes live in a globally-loaded sheet, component `<style>` blocks are component-private, utilities live in `@layer overrides` | **Accepted for new code** 2026-08-29; §§3–4 enforced (`stylesheet-bundles.test.ts`). Migration of existing CSS NOT yet authorised — evidence bar in the ADR, work tracked in PL-21 |
+**The index is generated: [`adr/README.md`](adr/README.md).** It is rebuilt by
+`npm run docs:adr-index` and every column in it is measured from the files rather
+than asserted, so it cannot drift from what is on disk.
+
+This section used to carry a second, hand-written copy of that table. It stopped at
+ADR-018 while four more had landed — the same failure the backlog index had, and the
+reason the generator exists. Do not reintroduce a copy here; link to it.
+
+For the decision-vs-convention split — why a rule lives in the handbook and its
+reasoning lives in an ADR — see
+[`../development/handbook.md`](../development/handbook.md).
 
 ## Quick Reference
 

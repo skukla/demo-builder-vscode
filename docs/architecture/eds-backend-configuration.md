@@ -156,28 +156,24 @@ The architecture now supports intelligent service dependency resolution to avoid
 }
 ```
 
-#### Service Resolution Algorithm
+#### What the declarations drive
 
-When building a stack, the system resolves:
-1. **Required Services**: What services does the backend need?
-2. **Provided Services**: What services are already provided by backend/addons?
-3. **Missing Services**: What services still need to be added?
+> **The resolver engine described here was deleted** (`serviceResolver.ts`, removed
+> in `b5c1256cb` as over-engineered). `resolveServices`, `providedServices` and
+> `missingServices` do not exist in the code. See
+> [service-resolution-pattern.md](service-resolution-pattern.md) for the full status.
 
-```typescript
-import { resolveServices } from '@/features/components/services/serviceResolver';
+`providesServices` and `requiredServices` are still declared in `components.json`,
+and two things read them:
 
-// Example: PaaS + ACO
-const result = resolveServices(paasBackend, [acoAddon], []);
-// Result: missingServices = [] (ACO provides all required services)
+- **Review-screen labeling** — a backend that provides a service shows it as
+  "(built-in)" rather than listing it as required
+  (`src/features/project-creation/ui/steps/reviewStepHelpers.tsx`).
+- **Environment resolution** — `requiredServices` drives Configure's field list
+  (`src/features/components/ui/hooks/useComponentConfig.ts`) and `.env` generation
+  (`src/features/project-creation/helpers/envFileGenerator.ts`).
 
-// Example: PaaS alone
-const result = resolveServices(paasBackend, [], []);
-// Result: missingServices = ['catalog-service', 'live-search']
-
-// Example: ACCS (any configuration)
-const result = resolveServices(accsBackend, [], []);
-// Result: missingServices = [] (ACCS provides all built-in)
-```
+Nothing computes a missing-service set.
 
 #### Benefits
 

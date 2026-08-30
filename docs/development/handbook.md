@@ -471,13 +471,13 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — nine rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — nineteen in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — twenty in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 53 conventions. 41 of them are enforced; 12 are not.**
+**This handbook states 54 conventions. 42 of them are enforced; 12 are not.**
 
-Those nine depend on someone noticing in review, which means they will drift. That is a
+Those twelve depend on someone noticing in review, which means they will drift. That is a
 known gap rather than an oversight. Closing one means writing an enforcer, or demoting
 the rule to advice and removing it from the count.
 
@@ -529,6 +529,14 @@ not.
 > *Why:* two scans were once in no list at all, and a validator had been failing silently
 > for months because nothing ran it.
 > Enforced by `tests/sop/tooling-registry.test.ts`.
+
+> **Convention.** A module path named in a document resolves. A citation must reach a
+> file or directory; an `import` in a code example must reach something importable.
+> *Why:* a path inside a markdown file is invisible to the compiler, to lint and to every
+> test, so a rename is silently right in the code and silently wrong in every document
+> that named the old path. An audit found fifty dead ones, thirty-seven of them in example
+> code a reader would copy.
+> Enforced by `tests/sop/doc-module-refs.test.ts`.
 
 > **Convention.** Delete obsolete code. No deprecated stubs, no accepted-but-ignored
 > options. [CLAUDE.md](../../CLAUDE.md) · Enforced by measurement — `.claude/skills/dead-code-scan`.

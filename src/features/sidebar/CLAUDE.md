@@ -288,7 +288,7 @@ tests/features/sidebar/
 ## Dependencies
 
 - `@/core/state/stateManager` - State management
-- `@/core/logging/logger` - Logging
+- `@/core/logging` - Logging
 - `@/types/base` - Project interface
 - VS Code WebviewViewProvider API
 - React Spectrum components

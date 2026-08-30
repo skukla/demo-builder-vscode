@@ -251,4 +251,4 @@ Future settings will allow users to control logging:
 
 - [Debugging System](./debugging.md) - Comprehensive debugging features
 - [Prerequisites System](./prerequisites-system.md) - Logging during installation
-- [Troubleshooting Guide](../troubleshooting.md) - Common issues and solutions
+- [Troubleshooting Guide](../troubleshooting/) - Common issues and solutions

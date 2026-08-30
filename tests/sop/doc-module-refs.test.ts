@@ -1,0 +1,187 @@
+/**
+ * Every module path a current-tense document cites must resolve.
+ *
+ * WHY THIS EXISTS, from a measurement rather than a worry. The 2026-08-30
+ * documentation audit found 50 dead module references across the docs: four
+ * feature READMEs citing `@/services/serviceLocator` (the alias resolves to
+ * `src/services/`, which holds no such file — it is `@/core/di`), five READMEs
+ * whose code examples imported from feature barrels the barrel work had deleted,
+ * and two files documenting a `src/core/errors/` directory that no longer exists.
+ * Thirty-seven of the fifty were `import` lines in examples a reader would copy.
+ *
+ * None of it was anyone's carelessness. A module path inside a markdown file is
+ * invisible to tsc, to eslint and to every test — so a rename is silently correct
+ * in the code and silently wrong in the eight documents that named the old path.
+ * This is the check that makes a rename fail loudly instead.
+ *
+ * WHAT THIS CANNOT DO: it proves the path RESOLVES, not that the prose around it
+ * is still true. A README can cite a live module and describe it wrongly, and this
+ * suite will pass. Judging that is a release-cut job (`.claude/skills/codebase-sweep`).
+ */
+import { existsSync, readFileSync } from 'fs';
+import { execSync } from 'child_process';
+import { dirname, join } from 'path';
+
+const ROOT = join(__dirname, '..', '..');
+
+/** From tsconfig.json `paths`. Kept literal so a change to either fails the pin below. */
+const ALIASES: Record<string, string> = {
+    '@/commands/': 'src/commands/',
+    '@/core/': 'src/core/',
+    '@/features/': 'src/features/',
+    '@/services/': 'src/services/',
+    '@/providers/': 'src/providers/',
+    '@/utils/': 'src/utils/',
+    '@/types/': 'src/types/',
+};
+const EXACT: Record<string, string> = {
+    '@/mcp-server': 'src/mcp-server',
+    '@/types': 'src/types',
+};
+
+/**
+ * Genres excluded, each for a stated reason — a broken reference in a HISTORICAL
+ * document is correct, not rot.
+ *   docs/research  — dated findings; they describe the code as it was that day
+ *   docs/architecture/adr — a superseded ADR legitimately names deleted code
+ *   .rptc          — in-flight work tracking, not documentation
+ */
+const EXCLUDED = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANGELOG'];
+
+/**
+ * Deliberate non-paths, each with the reason it is not a citation. A path that
+ * merely went stale does NOT belong here — fix the document instead.
+ */
+const ALLOWED: Record<string, string> = {
+    'docs/patterns/error-handling.md::@/core/errors':
+        'names the deleted module on a "Previous Approach" line — the point is that it is gone',
+    'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
+};
+
+function docs(): string[] {
+    return execSync("git ls-files '*.md'", { encoding: 'utf8', cwd: ROOT })
+        .trim()
+        .split('\n')
+        .filter((f) => !EXCLUDED.some((x) => f.includes(x)));
+}
+
+function toDisk(spec: string): string | null {
+    if (EXACT[spec]) return EXACT[spec];
+    for (const [alias, real] of Object.entries(ALIASES)) {
+        if (spec.startsWith(alias)) return real + spec.slice(alias.length);
+    }
+    return null; // not an alias this repo owns
+}
+
+/** A cited LOCATION may be a file or a directory. */
+function citationResolves(spec: string): boolean | null {
+    const p = toDisk(spec);
+    if (p === null) return null;
+    return ['', '.ts', '.tsx', '.json'].some((ext) => existsSync(join(ROOT, p + ext)));
+}
+
+/** An IMPORT specifier must reach a file, or a directory carrying an index. */
+function importResolves(spec: string): boolean | null {
+    const p = toDisk(spec);
+    if (p === null) return null;
+    return ['.ts', '.tsx', '.json', '/index.ts', '/index.tsx'].some((ext) =>
+        existsSync(join(ROOT, p + ext))
+    );
+}
+
+/** Ellipses are prose (`@/features/.../Thing`), never a path. */
+const isPlaceholder = (s: string) => s.includes('...');
+
+function citations(md: string): string[] {
+    return [...md.matchAll(/`(@\/[\w@./-]+)`/g)].map((m) => m[1]).filter((s) => !isPlaceholder(s));
+}
+
+function imports(md: string): string[] {
+    return [...md.matchAll(/^\s*(?:import|export)[\s\S]{0,200}?from '(@\/[^']+)'/gm)]
+        .map((m) => m[1])
+        .filter((s) => !isPlaceholder(s));
+}
+
+function scan(pick: (md: string) => string[], resolve: (s: string) => boolean | null) {
+    const bad: string[] = [];
+    for (const f of docs()) {
+        for (const spec of pick(readFileSync(join(ROOT, f), 'utf8'))) {
+            if (resolve(spec) === false && !ALLOWED[`${f}::${spec}`]) bad.push(`${f}  ${spec}`);
+        }
+    }
+    return [...new Set(bad)].sort();
+}
+
+describe('module paths cited by current-tense documents resolve', () => {
+    it('CONTROL: the scan reads real documents and finds real candidates', () => {
+        // Without this, every assertion below passes vacuously on an empty file list.
+        expect(docs().length).toBeGreaterThan(50);
+        const found = docs().flatMap((f) => citations(readFileSync(join(ROOT, f), 'utf8')));
+        expect(found.length).toBeGreaterThan(100);
+    });
+
+    it('every cited module location exists', () => {
+        expect(scan(citations, citationResolves)).toEqual([]);
+    });
+
+    it('every import in a documented code example resolves', () => {
+        // These are the lines a reader copies, so a dead one costs them a compile error.
+        expect(scan(imports, importResolves)).toEqual([]);
+    });
+
+    it('CONTROL: the checks can actually fail', () => {
+        // A detector that has stopped detecting reports "all clear" in the same
+        // words as one that verified. These are the four real shapes it must catch.
+        expect(citationResolves('@/services/serviceLocator')).toBe(false); // moved to @/core/di
+        expect(citationResolves('@/core/errors')).toBe(false); // directory deleted
+        expect(importResolves('@/features/mesh')).toBe(false); // barrel deleted
+        expect(citationResolves('@/core/di')).toBe(true); // and a live one still passes
+    });
+
+    it('CONTROL: a placeholder is not mistaken for a path', () => {
+        expect(citations('see `@/features/.../Thing`')).toEqual([]);
+        expect(imports("import { T } from '@/features/.../Thing';")).toEqual([]);
+    });
+
+    it('the alias table matches tsconfig', () => {
+        // The table above is literal so it reads clearly; this keeps it honest.
+        const raw = readFileSync(join(ROOT, 'tsconfig.json'), 'utf8').replace(/\/\/.*/g, '');
+        const paths: Record<string, string[]> = JSON.parse(raw).compilerOptions.paths;
+        const declared = Object.keys(paths).sort();
+        const ours = [...Object.keys(ALIASES).map((a) => `${a}*`), ...Object.keys(EXACT)].sort();
+        expect(ours).toEqual(declared);
+    });
+
+    it('every relative link points at a file that exists', () => {
+        // Same rot, different syntax. The audit found seventeen of these: four READMEs
+        // linking to `../shared/state/CLAUDE.md` (a directory layout retired long ago),
+        // three to a `project-creation/README.md` that was never written, and three to a
+        // `troubleshooting.md` that is actually a directory.
+        const bad: string[] = [];
+        for (const f of docs()) {
+            const md = readFileSync(join(ROOT, f), 'utf8');
+            for (const m of md.matchAll(/\]\(([^)\s]+?)(?:#[^)]*)?\)/g)) {
+                const target = m[1];
+                if (/^(https?:|mailto:|#)/.test(target)) continue;
+                if (!existsSync(join(ROOT, dirname(f), target))) bad.push(`${f}  ${target}`);
+            }
+        }
+        expect([...new Set(bad)].sort()).toEqual([]);
+    });
+
+    it('CONTROL: the link check can fail', () => {
+        const f = 'docs/development/handbook.md';
+        expect(existsSync(join(ROOT, dirname(f), './nope.md'))).toBe(false);
+        expect(existsSync(join(ROOT, dirname(f), '../architecture/adr/README.md'))).toBe(true);
+    });
+
+    it('every allowlist entry names a reason and still applies', () => {
+        for (const [key, reason] of Object.entries(ALLOWED)) {
+            expect(reason.length).toBeGreaterThan(20);
+            const [file, spec] = key.split('::');
+            expect(existsSync(join(ROOT, file))).toBe(true);
+            // An entry for something no longer cited is dead weight — say so.
+            expect(readFileSync(join(ROOT, file), 'utf8')).toContain(spec);
+        }
+    });
+});

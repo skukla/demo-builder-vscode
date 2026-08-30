@@ -39,7 +39,7 @@ This feature acts as the source of truth for all component information, enabling
 
 **Example Usage**:
 ```typescript
-import { ComponentRegistryManager } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -75,7 +75,7 @@ const nodeVersions = await registry.getRequiredNodeVersions(
 
 **Example Usage**:
 ```typescript
-import { DependencyResolver } from '@/features/components';
+import { DependencyResolver } from '@/features/components/services/DependencyResolver';
 
 const resolver = new DependencyResolver(registryManager);
 
@@ -175,7 +175,7 @@ Available for querying
 
 ### Example 1: Load Registry and Get Components
 ```typescript
-import { ComponentRegistryManager } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -196,7 +196,7 @@ console.log(`  Required services:`, mesh.configuration?.requiredServices);
 
 ### Example 2: Check Compatibility
 ```typescript
-import { ComponentRegistryManager } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -215,7 +215,8 @@ if (compatible) {
 
 ### Example 3: Resolve Dependencies
 ```typescript
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { DependencyResolver } from '@/features/components/services/DependencyResolver';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -246,7 +247,7 @@ for (const dep of result.selected) {
 
 ### Example 4: Check Node Version Requirements
 ```typescript
-import { ComponentRegistryManager } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -280,7 +281,8 @@ for (const [version, componentName] of Object.entries(mapping)) {
 
 ### Example 5: Generate Project Configuration
 ```typescript
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { DependencyResolver } from '@/features/components/services/DependencyResolver';
 
 const registry = new ComponentRegistryManager(extensionPath);
 await registry.loadRegistry();
@@ -317,7 +319,7 @@ console.log(JSON.stringify(config, null, 2));
 
 ### Example 6: Validate Dependency Chain
 ```typescript
-import { DependencyResolver } from '@/features/components';
+import { DependencyResolver } from '@/features/components/services/DependencyResolver';
 
 const resolver = new DependencyResolver(registry);
 
@@ -499,7 +501,7 @@ if (validation.warnings.length > 0) {
 ## See Also
 
 - **[Prerequisites Feature](../prerequisites/README.md)** - Component requirements mapping
-- **[Project Creation Feature](../project-creation/README.md)** - Component installation
+- **[Project Creation Feature](../CLAUDE.md)** - Component installation
 - **[Components JSON](config/components.json)** - Component registry configuration
 - **[Component Types](../../types/index.ts)** - Type definitions
 

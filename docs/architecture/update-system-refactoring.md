@@ -193,7 +193,7 @@ const repo = updateManager.COMPONENT_REPOS['commerce-mesh'];
 
 **After**:
 ```typescript
-import { ComponentRepositoryResolver } from '@/features/updates';
+import { ComponentRepositoryResolver } from '@/features/updates/services/componentRepositoryResolver';
 
 const resolver = new ComponentRepositoryResolver(extensionPath, logger);
 const info = await resolver.getRepositoryInfo('commerce-mesh');

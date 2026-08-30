@@ -229,7 +229,7 @@ Mesh deployed? → YES → checkMeshStatusAsync()
 - `@/features/mesh` - detectMeshChanges, detectFrontendChanges, verifyMeshDeployment
 - `@/core/validation` - validateURL for Dev Console links
 - `@/core/logging` - Logger for dashboard operations
-- `@/services/serviceLocator` - ServiceLocator for CommandExecutor
+- `@/core/di` - ServiceLocator for CommandExecutor
 - `vscode` - Commands, window, env APIs
 
 ### Used By
@@ -512,7 +512,7 @@ if (!verification.exists) {
 - **[Lifecycle Feature](../lifecycle/README.md)** - Start/Stop commands
 - **[Mesh Feature](../mesh/README.md)** - Mesh status checking
 - **[Authentication Feature](../authentication/README.md)** - Auth checks and re-authentication
-- **[Dashboard UI](../../webviews/components/dashboard/ProjectDashboard.tsx)** - React UI component
+- **[Dashboard UI](ui/ProjectDashboardScreen.tsx)** - React UI component
 
 ---
 
