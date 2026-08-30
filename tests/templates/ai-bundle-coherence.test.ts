@@ -27,8 +27,8 @@ import { SKILL_MCP_TOOL_DEPENDENCIES, DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/ty
 const aiDefaults = JSON.parse(
     fs.readFileSync(
         path.join(__dirname, '../../src/features/project-creation/config/ai-defaults.json'),
-        'utf-8',
-    ),
+        'utf-8'
+    )
 ) as { mcpServers: Array<{ id: string }> };
 const AI_DEFAULT_IDS = new Set(aiDefaults.mcpServers.map((e) => e.id));
 
@@ -57,15 +57,19 @@ describe('the writer and the modal agree on bundle prefixes', () => {
     // an unlabeled "Adobe" group, and a modal key no writer produces is a
     // label for nothing.
     const writerSource = fs.readFileSync(
-        path.join(__dirname, '../../src/features/project-creation/services/aiBundle/skillsWriter.ts'),
-        'utf-8',
+        path.join(
+            __dirname,
+            '../../src/features/project-creation/services/aiBundle/skillsWriter.ts'
+        ),
+        'utf-8'
     );
     // The prefix argument always sits on the line immediately before
     // `writer,` in a copyAdobeSkillBundle call — anchoring on that pair
     // survives the nested parens that killed a fancier extraction (the
     // control below is what caught it).
-    const writerPrefixes = [...writerSource.matchAll(/'([a-z-]+)',\s*\n\s*writer,/g)]
-        .map((m) => m[1]);
+    const writerPrefixes = [...writerSource.matchAll(/'([a-z-]+)',\s*\n\s*writer,/g)].map(
+        (m) => m[1]
+    );
 
     it('the writer extraction still finds prefixes (control)', () => {
         expect(writerPrefixes.length).toBeGreaterThanOrEqual(2);
@@ -74,6 +78,48 @@ describe('the writer and the modal agree on bundle prefixes', () => {
     it('every writer prefix has a modal label, and vice versa', () => {
         const modalKeys = Object.keys(BUNDLE_LABELS).sort();
         expect([...new Set(writerPrefixes)].sort()).toEqual(modalKeys);
+    });
+});
+
+describe('no bundle writer writes around the hash-and-skip seam', () => {
+    // CLAUDE.md states as an invariant that a user's own edits are never
+    // overwritten, and ADR-013's GeneratedFileWriter is what makes that true: a
+    // file whose content no longer matches its recorded hash is skipped and
+    // reported. A direct `fsPromises.writeFile` in one of these writers silently
+    // returns THAT file to blind-overwrite behaviour, with nothing else failing.
+    //
+    // Until now the rule was a grep written down in the `ai-context-authoring`
+    // skill — a check someone had to remember to run. This is the same check,
+    // held by the build instead.
+    const WRITERS = ['skillsWriter', 'aiContextWriter', 'mcpConfigWriter'];
+    const BUNDLE_DIR = path.join(
+        __dirname,
+        '../../src/features/project-creation/services/aiBundle'
+    );
+
+    // Comments discuss the rule (aiContextWriter's header explains exactly why a
+    // direct write would be wrong), so strip them or the doc defeats the test.
+    const stripComments = (src: string): string =>
+        src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+    it('CONTROL: each writer exists and still has code after comments are stripped', () => {
+        for (const w of WRITERS) {
+            const src = fs.readFileSync(path.join(BUNDLE_DIR, `${w}.ts`), 'utf-8');
+            expect(stripComments(src).trim().length).toBeGreaterThan(200);
+        }
+    });
+
+    it('CONTROL: the matcher can see a write when one is present', () => {
+        expect(/\bwriteFile\b/.test(stripComments('await fsPromises.writeFile(p, s);'))).toBe(true);
+    });
+
+    it.each(WRITERS)('%s goes through GeneratedFileWriter, never fs directly', (writer) => {
+        const code = stripComments(fs.readFileSync(path.join(BUNDLE_DIR, `${writer}.ts`), 'utf-8'));
+        const offenders = code
+            .split('\n')
+            .map((line, i) => ({ line: line.trim(), no: i + 1 }))
+            .filter(({ line }) => /\bwriteFile\b/.test(line));
+        expect(offenders).toEqual([]);
     });
 });
 

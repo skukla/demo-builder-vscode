@@ -25,6 +25,50 @@ This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
 
 The Adobe Demo Builder is a VS Code extension that streamlines the creation of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with various Adobe technologies integrated (Adobe Commerce / ACO, Edge Delivery Services storefronts, API Mesh, App Builder).
 
+## What this extension never compromises on
+
+Five properties a change must not break. They are not style preferences and they
+are not ranked — a change that trades one away has to be stopped and discussed,
+not balanced. Each names where it is already enforced, so it can be checked
+rather than believed.
+
+**1. Whatever can be done can be undone.** Reversibility is a design principle
+here, not a per-feature nicety: demos get rebuilt, reset and re-run constantly, so
+an SC must be able to return to zero and start again. New capabilities ship with
+their reversal — create↔delete, deploy↔undeploy, install↔uninstall — or they state
+plainly why reversal is impossible. **A thing that cannot be undone is a finding.**
+(Owner, 2026-08-28.)
+
+**2. A user's own edits are never overwritten.** The extension writes files into
+projects people then edit by hand. Every generated-bundle write goes through the
+ADR-013 hash-and-skip seam (`generatedFileWriter.ts`): a file whose content no
+longer matches its recorded hash is skipped and reported, never clobbered, and
+removal requires positive proof of authorship. A writer that calls `writeFile`
+directly has quietly opted out of that.
+
+**3. Existing projects keep working.** Projects live on disk for months across
+many extension versions. This is why `AI_CONTEXT_VERSION` (currently 31) exists
+and why the activation sweep refreshes stale bundles instead of prompting. A
+change that only works for newly created projects is half a change — the
+regenerate path and the creation path must produce the same result.
+
+**4. This repository is public.** No secrets, internal URLs, or PII in code,
+docs, tests, fixtures, or commit messages. Values that must reach the extension
+travel through user-scoped VS Code settings or SecretStorage. Rotation cost is
+high and history rewriting is destructive, so the bar is "never enters", not
+"removed later". Endpoints that are already public — a deployed App Builder action
+URL — are fine.
+
+**5. Cloud operations are real and consequential.** Deploys, teardowns, publishes
+and repository creation touch live Adobe, GitHub and DA.live resources belonging
+to actual people. They are confirmed before they run, never performed
+speculatively to "check" something, and never run unattended.
+
+One more that governs how the above are kept: **nothing is soft-deprecated.** When
+a setting, field, code path or schema element becomes obsolete, it is deleted in
+the same change that obsoletes it — not left accepted-but-ignored or relabelled
+"(Deprecated)". Write "removed", not "deprecated". (Owner, 2026-05-20.)
+
 ## Technology Stack
 
 - **Extension**: TypeScript, VS Code Extension API
