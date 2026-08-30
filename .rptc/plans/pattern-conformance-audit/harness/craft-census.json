@@ -2,9 +2,7 @@
  "rows": [
   {
    "unit": "tests/cleanup/deletedFiles.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -71,9 +69,7 @@
   },
   {
    "unit": "tests/core/auth/adobeAuthGuard.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -93,16 +89,12 @@
   },
   {
    "unit": "tests/core/base/baseWebviewCommand.transition.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/core/build/buildInfo.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -137,9 +129,7 @@
   },
   {
    "unit": "tests/core/communication/responseCorrelationContract.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -159,9 +149,7 @@
   },
   {
    "unit": "tests/core/communication/webviewHandlerCoverage.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -181,9 +169,7 @@
   },
   {
    "unit": "tests/core/handlers/RegistryPatternConsistency.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -198,9 +184,7 @@
   },
   {
    "unit": "tests/core/logging/callTagContext.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -220,9 +204,7 @@
   },
   {
    "unit": "tests/core/logging/debugLogger-logging.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -294,9 +276,7 @@
   },
   {
    "unit": "tests/core/shell/commandExecutor.security.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -360,8 +340,7 @@
   {
    "unit": "tests/core/shell/processCleanup.error.test.ts",
    "flags": [
-    "realWaits",
-    "logicInTests"
+    "realWaits"
    ],
    "doubleStyle": "light-mocks"
   },
@@ -374,23 +353,18 @@
    "unit": "tests/core/shell/processCleanup.test.ts",
    "flags": [
     "nondeterminism",
-    "realWaits",
-    "logicInTests"
+    "realWaits"
    ],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/processCleanup.timeout.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/core/shell/rateLimiter.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -414,9 +388,7 @@
   },
   {
    "unit": "tests/core/state/apiPicksParity.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -518,9 +490,7 @@
   },
   {
    "unit": "tests/core/state/singularStateAccessGuard.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -607,9 +577,7 @@
   },
   {
    "unit": "tests/core/ui/cardMetrics.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -694,9 +662,7 @@
   },
   {
    "unit": "tests/core/ui/components/navigation/StepRail.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -736,9 +702,7 @@
   },
   {
    "unit": "tests/core/ui/destinationRowType.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -788,9 +752,7 @@
   },
   {
    "unit": "tests/core/ui/pageContentAlignment.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1126,16 +1088,12 @@
   },
   {
    "unit": "tests/features/ai/mcpServer-responseSizes.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/actionDescriptors.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1160,9 +1118,7 @@
   },
   {
    "unit": "tests/features/ai/server/agentAlertTargets.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1182,9 +1138,7 @@
   },
   {
    "unit": "tests/features/ai/server/agentTraceSink.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1209,16 +1163,12 @@
   },
   {
    "unit": "tests/features/ai/server/commerceQueryTool.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/componentRequirementsTool.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1233,9 +1183,7 @@
   },
   {
    "unit": "tests/features/ai/server/consentViaChat.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1260,9 +1208,7 @@
   },
   {
    "unit": "tests/features/ai/server/dataInstallerDescriptors.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1304,8 +1250,7 @@
    "unit": "tests/features/ai/server/inExtensionMcpServer.socketOwnership.test.ts",
    "flags": [
     "nondeterminism",
-    "realWaits",
-    "logicInTests"
+    "realWaits"
    ],
    "doubleStyle": "light-mocks"
   },
@@ -1313,20 +1258,22 @@
    "unit": "tests/features/ai/server/inExtensionMcpServer.test.ts",
    "flags": [
     "nondeterminism",
-    "realWaits",
-    "logicInTests"
+    "realWaits"
    ],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/lifecycleTools.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/ai/server/mcpProxyFraming.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/features/ai/server/mcpProxyReconnect.test.ts",
    "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
@@ -1336,10 +1283,14 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/ai/server/mcpProxySession.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
    "unit": "tests/features/ai/server/mcpSocketDiscovery.test.ts",
    "flags": [
-    "nondeterminism",
-    "logicInTests"
+    "nondeterminism"
    ],
    "doubleStyle": "deps-object-or-pure"
   },
@@ -1365,9 +1316,7 @@
   },
   {
    "unit": "tests/features/ai/server/readDescriptors.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1382,9 +1331,7 @@
   },
   {
    "unit": "tests/features/ai/server/responseSize.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1409,16 +1356,12 @@
   },
   {
    "unit": "tests/features/ai/server/strictWriteArgs.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/toolAnnotations.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1428,9 +1371,7 @@
   },
   {
    "unit": "tests/features/ai/server/toolNarration.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1445,16 +1386,12 @@
   },
   {
    "unit": "tests/features/ai/server/toolPromptCoverage.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/ai/server/toolTraceRecorder.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1474,9 +1411,7 @@
   },
   {
    "unit": "tests/features/ai/skillInspector.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -1526,9 +1461,7 @@
   },
   {
    "unit": "tests/features/app-builder/services/appBuilderComponentRunner-runtimeVerify.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -1543,9 +1476,7 @@
   },
   {
    "unit": "tests/features/app-builder/services/appBuilderStructuralInvariant.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -1837,9 +1768,7 @@
   },
   {
    "unit": "tests/features/authentication/services/authCacheManager-ttl-expiry.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -1918,9 +1847,7 @@
   },
   {
    "unit": "tests/features/authentication/services/imsTokenClaims.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -1947,9 +1874,7 @@
   },
   {
    "unit": "tests/features/authentication/services/performanceTracker.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -2036,12 +1961,12 @@
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-authentication.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-errors.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-messages.test.ts",
@@ -2051,12 +1976,12 @@
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-messaging.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-organization.test.tsx",
    "flags": [],
-   "doubleStyle": "light-mocks"
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/authentication/ui/steps/AdobeAuthStep-predicates.test.ts",
@@ -2080,16 +2005,12 @@
   },
   {
    "unit": "tests/features/components/config/credentialSectionSplit.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/components/config/secretEnvKeys.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2099,9 +2020,7 @@
   },
   {
    "unit": "tests/features/components/config/stripManifestSecrets.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2141,9 +2060,7 @@
   },
   {
    "unit": "tests/features/components/services/ComponentRegistryManager-mesh-entries.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2168,9 +2085,7 @@
   },
   {
    "unit": "tests/features/components/services/ComponentRegistryManager-security.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -2180,16 +2095,12 @@
   },
   {
    "unit": "tests/features/components/services/ComponentRegistryManager-validation.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/components/services/appBuilderComponentCatalogLoader.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2199,9 +2110,7 @@
   },
   {
    "unit": "tests/features/components/services/blockLibraryLoader.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2281,16 +2190,12 @@
   },
   {
    "unit": "tests/features/components/services/meshCatalogDerivation.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/components/services/projectAppBuilderPredicate.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2335,9 +2240,7 @@
   },
   {
    "unit": "tests/features/components/ui/hooks/useComponentConfig-packageDefaults.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -2352,9 +2255,7 @@
   },
   {
    "unit": "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -2384,9 +2285,7 @@
   },
   {
    "unit": "tests/features/dashboard/commands/panelHandlerContext.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2426,9 +2325,7 @@
   },
   {
    "unit": "tests/features/dashboard/handlers/aiHandlers-setup.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2473,16 +2370,12 @@
   },
   {
    "unit": "tests/features/dashboard/handlers/configureHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/dashboard/handlers/consoleApiHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "wall+partial"
   },
   {
@@ -2552,9 +2445,7 @@
   },
   {
    "unit": "tests/features/dashboard/handlers/dashboardHandlersMap.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2655,7 +2546,7 @@
   {
    "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-navigation.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "wall+partial"
   },
   {
    "unit": "tests/features/dashboard/ui/ProjectDashboardScreen-orgMismatch.test.tsx",
@@ -2699,9 +2590,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/components/ActionGrid-zoneStatus.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2756,9 +2645,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/components/aiCapabilitiesLayout.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2773,9 +2660,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -2800,9 +2685,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel-mesh.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2812,16 +2695,12 @@
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/integrationCardModel.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/dashboard/ui/components/integrations/integrationsGridLayout.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2838,9 +2717,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/configure/ConfigureScreen-rendering.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -2905,9 +2782,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/hooks/dashboardCheckRouting.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -2957,9 +2832,7 @@
   },
   {
    "unit": "tests/features/dashboard/ui/hooks/useRowStatusOverrides.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -2970,7 +2843,7 @@
   {
    "unit": "tests/features/dashboard/ui/integrationsSurface/EventingSection.test.tsx",
    "flags": [],
-   "doubleStyle": "module-wall"
+   "doubleStyle": "wall+partial"
   },
   {
    "unit": "tests/features/dashboard/ui/integrationsSurface/IntegrationsScreen.test.tsx",
@@ -2979,9 +2852,7 @@
   },
   {
    "unit": "tests/features/data-installer/commands/showDataInstaller.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -2991,9 +2862,7 @@
   },
   {
    "unit": "tests/features/data-installer/handlers/dataInstallerHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3035,9 +2904,7 @@
   },
   {
    "unit": "tests/features/data-installer/integrationPoints.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3072,16 +2939,12 @@
   },
   {
    "unit": "tests/features/data-installer/services/dataInstallerParsers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/data-installer/services/dataInstallerSettingsSchema.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3091,9 +2954,7 @@
   },
   {
    "unit": "tests/features/data-installer/services/datapackCatalog.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3103,9 +2964,7 @@
   },
   {
    "unit": "tests/features/data-installer/services/importJobRunner.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3185,9 +3044,7 @@
   },
   {
    "unit": "tests/features/data-installer/ui/datapackGridLayout.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3202,9 +3059,7 @@
   },
   {
    "unit": "tests/features/data-installer/ui/importDependencies.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3289,9 +3144,7 @@
   },
   {
    "unit": "tests/features/eds/handlers/edsHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3318,9 +3171,7 @@
   },
   {
    "unit": "tests/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3445,9 +3296,7 @@
   },
   {
    "unit": "tests/features/eds/services/brandAssetPublisher.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3467,9 +3316,7 @@
   },
   {
    "unit": "tests/features/eds/services/catalogPrewarmService.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3510,7 +3357,7 @@
   {
    "unit": "tests/features/eds/services/configJsonFatalFailure.test.ts",
    "flags": [],
-   "doubleStyle": "deps-object-or-pure"
+   "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/configJsonTiming.test.ts",
@@ -3529,9 +3376,7 @@
   },
   {
    "unit": "tests/features/eds/services/configService/configServiceProbe.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3571,9 +3416,7 @@
   },
   {
    "unit": "tests/features/eds/services/contentCompleteness.smoke.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3656,9 +3499,7 @@
   },
   {
    "unit": "tests/features/eds/services/daLive/daLiveContentOperations-401.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3773,30 +3614,22 @@
   },
   {
    "unit": "tests/features/eds/services/github/githubFileOperations-branchRef.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/github/githubFileOperations.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/eds/services/github/githubHelpers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/github/githubOAuthService.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3811,9 +3644,7 @@
   },
   {
    "unit": "tests/features/eds/services/helix/helixApiClient.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3823,9 +3654,7 @@
   },
   {
    "unit": "tests/features/eds/services/helix/helixService-auth-keys.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3852,9 +3681,7 @@
   },
   {
    "unit": "tests/features/eds/services/helix/helixService-rate-limiting.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3869,16 +3696,12 @@
   },
   {
    "unit": "tests/features/eds/services/patches/codePatchRegistry.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/patches/contentPatchRegistry.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3898,9 +3721,7 @@
   },
   {
    "unit": "tests/features/eds/services/patches/patchMissTracker.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -3910,9 +3731,7 @@
   },
   {
    "unit": "tests/features/eds/services/patches/patchTargetPolicy.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3947,9 +3766,7 @@
   },
   {
    "unit": "tests/features/eds/services/placeholderStubs.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -3984,9 +3801,7 @@
   },
   {
    "unit": "tests/features/eds/services/reset/edsResetRepoHelper.placeholderStubs.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -4021,9 +3836,7 @@
   },
   {
    "unit": "tests/features/eds/services/reset/edsResetUI-sampleData.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "wall+partial"
   },
   {
@@ -4048,9 +3861,7 @@
   },
   {
    "unit": "tests/features/eds/services/storefront/repoStorefrontReadiness.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -4070,16 +3881,12 @@
   },
   {
    "unit": "tests/features/eds/services/storefront/storefrontProbe.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/eds/services/storefront/storefrontStalenessDetector-generatorCoupling.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4105,8 +3912,7 @@
   {
    "unit": "tests/features/eds/services/toolManager.test.ts",
    "flags": [
-    "nondeterminism",
-    "logicInTests"
+    "nondeterminism"
    ],
    "doubleStyle": "wall+partial"
   },
@@ -4214,9 +4020,7 @@
   },
   {
    "unit": "tests/features/lifecycle/commands/deleteProject.retry.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4261,9 +4065,7 @@
   },
   {
    "unit": "tests/features/lifecycle/commands/startDemo.portConflict.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4313,9 +4115,7 @@
   },
   {
    "unit": "tests/features/mesh/commands/deployMesh-storage.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "wall+partial"
   },
   {
@@ -4385,9 +4185,7 @@
   },
   {
    "unit": "tests/features/mesh/services/meshCheckHelpers-meshExistence.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4617,9 +4415,7 @@
   },
   {
    "unit": "tests/features/prerequisites/handlers/security-validation.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4654,9 +4450,7 @@
   },
   {
    "unit": "tests/features/prerequisites/services/PrerequisitesManager-checking.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4699,13 +4493,22 @@
   {
    "unit": "tests/features/prerequisites/services/cacheManager-security.test.ts",
    "flags": [
-    "nondeterminism",
-    "logicInTests"
+    "nondeterminism"
    ],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/prerequisites/services/parallelExecution.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts",
+   "flags": [],
+   "doubleStyle": "module-wall"
+  },
+  {
+   "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-collaborators.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
   },
@@ -4721,9 +4524,7 @@
   },
   {
    "unit": "tests/features/prerequisites/services/prerequisitesCacheManager-ttl-eviction.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4845,9 +4646,7 @@
   },
   {
    "unit": "tests/features/project-creation/handlers/executor-componentVersions.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -4857,9 +4656,7 @@
   },
   {
    "unit": "tests/features/project-creation/handlers/executor-edsStandardFlow.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -4934,9 +4731,7 @@
   },
   {
    "unit": "tests/features/project-creation/handlers/wizardLifecycleHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -4991,9 +4786,7 @@
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -5023,16 +4816,12 @@
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/aiContextWriter.writeAgentsMd.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/aiDefaultsInstaller.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -5057,9 +4846,7 @@
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/homeAiContextWriter.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -5074,23 +4861,17 @@
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.hashAndSkip.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
    "unit": "tests/features/project-creation/services/aiBundle/skillsWriter.toolGating.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -5120,9 +4901,7 @@
   },
   {
    "unit": "tests/features/project-creation/services/envVarClassifier.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5152,16 +4931,12 @@
   },
   {
    "unit": "tests/features/project-creation/services/sanitization.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/project-creation/services/skillGuidance.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5236,16 +5011,12 @@
   },
   {
    "unit": "tests/features/project-creation/ui/components/integration-flow/instanceId.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/project-creation/ui/components/integration-flow/integrationCards.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5285,9 +5056,7 @@
   },
   {
    "unit": "tests/features/project-creation/ui/components/integration-flow/stages/KindStage.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5382,9 +5151,7 @@
   },
   {
    "unit": "tests/features/project-creation/ui/steps/StorefrontStep.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "module-wall"
   },
   {
@@ -5424,16 +5191,12 @@
   },
   {
    "unit": "tests/features/project-creation/ui/steps/commerceSections.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/project-creation/ui/steps/edsConfigFromStorefront.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5443,9 +5206,7 @@
   },
   {
    "unit": "tests/features/project-creation/ui/steps/storefrontSections.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5515,9 +5276,7 @@
   },
   {
    "unit": "tests/features/project-creation/ui/wizard/WizardContainer-nestedTimeline.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
@@ -5604,9 +5363,7 @@
   },
   {
    "unit": "tests/features/projects-dashboard/handlers/projectsListHandlers.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5620,6 +5377,11 @@
    "doubleStyle": "light-mocks"
   },
   {
+   "unit": "tests/features/projects-dashboard/services/projectDeletionService.test.ts",
+   "flags": [],
+   "doubleStyle": "wall+partial"
+  },
+  {
    "unit": "tests/features/projects-dashboard/services/projectRenameService.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -5631,9 +5393,7 @@
   },
   {
    "unit": "tests/features/projects-dashboard/services/settingsSerializer.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5778,9 +5538,7 @@
   },
   {
    "unit": "tests/features/updates/services/componentRepositoryResolver.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5789,16 +5547,14 @@
    "doubleStyle": "light-mocks"
   },
   {
-   "unit": "tests/features/updates/services/componentUpdater-envMigration.test.ts",
-   "flags": [
-    "theater"
-   ],
-   "doubleStyle": "light-mocks"
-  },
-  {
    "unit": "tests/features/updates/services/componentUpdater-extended.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
+  },
+  {
+   "unit": "tests/features/updates/services/envMerge.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/features/updates/services/extensionUpdater.test.ts",
@@ -5821,6 +5577,11 @@
    "doubleStyle": "deps-object-or-pure"
   },
   {
+   "unit": "tests/features/updates/services/templateSyncService-safety.test.ts",
+   "flags": [],
+   "doubleStyle": "light-mocks"
+  },
+  {
    "unit": "tests/features/updates/services/templateUpdateChecker.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
@@ -5832,9 +5593,7 @@
   },
   {
    "unit": "tests/features/updates/services/updateChannelConfig.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5859,23 +5618,17 @@
   },
   {
    "unit": "tests/hooks/backlogClaimDrift.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/hooks/router.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/integration/features/mesh/meshArchitectureRouting.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5901,8 +5654,7 @@
   {
    "unit": "tests/security/csp-nonce-security.test.ts",
    "flags": [
-    "nondeterminism",
-    "logicInTests"
+    "nondeterminism"
    ],
    "doubleStyle": "light-mocks"
   },
@@ -5913,30 +5665,22 @@
   },
   {
    "unit": "tests/sop/architecture-rules.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/builder-uniqueness.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/complex-expressions.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/component-extraction.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -5946,66 +5690,69 @@
   },
   {
    "unit": "tests/sop/credential-sink-settings-scoped.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/every-scan-declares-a-control.test.ts",
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/inline-styles.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/magic-timeouts.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/mirror-placement.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/modal-hosting.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/no-bare-sleep.test.ts",
    "flags": [
-    "realWaits",
-    "logicInTests"
+    "realWaits"
    ],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/no-config-leaf-mocks.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/no-lowered-test-timeout.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/stylesheet-bundles.test.ts",
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/sop/test-family-setup.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/tooling-registry.test.ts",
+   "flags": [],
+   "doubleStyle": "deps-object-or-pure"
+  },
+  {
+   "unit": "tests/sop/webview-architecture-rules.test.ts",
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6015,16 +5762,12 @@
   },
   {
    "unit": "tests/templates/cast-ratchet.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/templates/config-contracts.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6049,9 +5792,7 @@
   },
   {
    "unit": "tests/templates/manifest-mirrors.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6061,9 +5802,7 @@
   },
   {
    "unit": "tests/templates/spine-chokepoints.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6100,9 +5839,7 @@
   },
   {
    "unit": "tests/types/skillMcpToolDependencies.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6167,9 +5904,7 @@
   },
   {
    "unit": "tests/webview-ui/shared/components/feedback/LoadingDisplay.test.tsx",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6274,16 +6009,12 @@
   },
   {
    "unit": "tests/webview-ui/shared/hooks/useDebouncedLoading.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
    "unit": "tests/webview-ui/shared/hooks/useDebouncedValue.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "deps-object-or-pure"
   },
   {
@@ -6328,9 +6059,7 @@
   },
   {
    "unit": "tests/webview-ui/shared/hooks/useVSCodeMessage.test.ts",
-   "flags": [
-    "logicInTests"
-   ],
+   "flags": [],
    "doubleStyle": "light-mocks"
   },
   {

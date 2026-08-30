@@ -1,3 +1,34 @@
+/**
+ * Shared setup for the continueHandler suites.
+ *
+ * THIS FILE OWNS THE MOCKS AND EVERY IMPORT THEY REPLACE. Specs import those
+ * from HERE and declare no jest.mock of their own — jest.mock hoists above the
+ * imports of the module it appears in, NOT across modules, so an import left
+ * behind in a spec loads the real module before these mocks register.
+ *
+ * Extracted 2026-08-30 (lane C1) from byte-identical copies in:
+ *   continueHandler-edge-cases.test.ts
+ *   continueHandler-errors.test.ts
+ *   continueHandler-operations.test.ts
+ */
+
+// Mock dependencies - but keep handlePrerequisiteCheckError real
+jest.mock('@/features/prerequisites/handlers/shared', () => {
+    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
+    return {
+        ...actual,
+        getNodeVersionMapping: jest.fn(),
+        areDependenciesInstalled: jest.fn(),
+        hasNodeVersions: jest.fn(),
+        getNodeVersionKeys: jest.fn(),
+        // Keep handlePrerequisiteCheckError as the real implementation
+    };
+});
+jest.mock('@/core/di');
+
+export * as shared from '@/features/prerequisites/handlers/shared';
+export { ServiceLocator } from '@/core/di';
+
 import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';

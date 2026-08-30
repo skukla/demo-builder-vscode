@@ -4,12 +4,10 @@
  * Tests for search/filter functionality and error handling.
  */
 
-// Mock dependencies - must be in test file for proper hoisting
-jest.mock('@/core/ui/hooks/useDebouncedLoading', () => ({
-    useDebouncedLoading: jest.fn((value) => value), // Pass through for testing
-}));
-
 // Import mock exports from testUtils
+import {
+    useSelectionStep,
+} from './useSelectionStep.testUtils';
 import {
     mockPostMessage,
     mockOnMessage,
@@ -19,22 +17,7 @@ import {
     resetMocks,
 } from './useSelectionStep.testUtils';
 
-// Mock WebviewClient - must be in test file for proper hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./useSelectionStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./useSelectionStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
-
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { WizardState } from '@/types/webview';
 
 describe('useSelectionStep - Search, Filter, and Error Handling', () => {

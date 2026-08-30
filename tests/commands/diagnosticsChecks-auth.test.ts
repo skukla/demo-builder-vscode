@@ -12,23 +12,9 @@
  * already happened.
  */
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        logCommand: jest.fn(),
-    })),
-}));
-
-const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: () => ({ execute: (...a: unknown[]) => mockExecute(...a) }),
-    },
-}));
-
+import {
+    mockExecute,
+} from './diagnosticsChecks.testUtils';
 import { checkAuthenticationStatus } from '@/commands/diagnosticsChecks';
 import type { AdobeCLIInfo } from '@/commands/diagnosticsReport';
 

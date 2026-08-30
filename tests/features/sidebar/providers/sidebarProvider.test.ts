@@ -46,6 +46,42 @@ jest.mock('vscode', () => ({
     },
 }));
 
+/**
+ * The fake `WebviewView` VS Code hands `resolveWebviewView`.
+ *
+ * PL-9 lane A: this type was declared FIVE times and built FOUR times across the
+ * describe blocks, character for character. One definition, one factory — a
+ * fresh instance per call, because each test mutates it (`visible`, `html`) and
+ * a shared object would leak state between them.
+ */
+type MockWebviewView = {
+    webview: {
+        options: Record<string, unknown>;
+        html: string;
+        onDidReceiveMessage: jest.Mock;
+        postMessage: jest.Mock;
+        asWebviewUri: jest.Mock;
+    };
+    onDidDispose: jest.Mock;
+    onDidChangeVisibility: jest.Mock;
+    visible: boolean;
+};
+
+function createMockWebviewView(): MockWebviewView {
+    return {
+        webview: {
+            options: {},
+            html: '',
+            onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
+            postMessage: jest.fn(),
+            asWebviewUri: jest.fn((uri) => uri),
+        },
+        onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+        onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
+        visible: true,
+    };
+}
+
 describe('SidebarProvider', () => {
     let provider: SidebarProvider;
     let mockContext: vscode.ExtensionContext;
@@ -113,32 +149,10 @@ describe('SidebarProvider', () => {
     });
 
     describe('resolveWebviewView', () => {
-        let mockWebviewView: {
-            webview: {
-                options: Record<string, unknown>;
-                html: string;
-                onDidReceiveMessage: jest.Mock;
-                postMessage: jest.Mock;
-                asWebviewUri: jest.Mock;
-            };
-            onDidDispose: jest.Mock;
-            onDidChangeVisibility: jest.Mock;
-            visible: boolean;
-        };
+        let mockWebviewView: MockWebviewView;
 
         beforeEach(() => {
-            mockWebviewView = {
-                webview: {
-                    options: {},
-                    html: '',
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    postMessage: jest.fn(),
-                    asWebviewUri: jest.fn((uri) => uri),
-                },
-                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
-                visible: true,
-            };
+            mockWebviewView = createMockWebviewView();
         });
 
         it('should set webview options correctly', () => {
@@ -187,18 +201,7 @@ describe('SidebarProvider', () => {
     });
 
     describe('message handling', () => {
-        let mockWebviewView: {
-            webview: {
-                options: Record<string, unknown>;
-                html: string;
-                onDidReceiveMessage: jest.Mock;
-                postMessage: jest.Mock;
-                asWebviewUri: jest.Mock;
-            };
-            onDidDispose: jest.Mock;
-            onDidChangeVisibility: jest.Mock;
-            visible: boolean;
-        };
+        let mockWebviewView: MockWebviewView;
         let messageHandler: (message: unknown) => void;
 
         beforeEach(() => {
@@ -286,32 +289,10 @@ describe('SidebarProvider', () => {
     });
 
     describe('sendMessage', () => {
-        let mockWebviewView: {
-            webview: {
-                options: Record<string, unknown>;
-                html: string;
-                onDidReceiveMessage: jest.Mock;
-                postMessage: jest.Mock;
-                asWebviewUri: jest.Mock;
-            };
-            onDidDispose: jest.Mock;
-            onDidChangeVisibility: jest.Mock;
-            visible: boolean;
-        };
+        let mockWebviewView: MockWebviewView;
 
         beforeEach(() => {
-            mockWebviewView = {
-                webview: {
-                    options: {},
-                    html: '',
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    postMessage: jest.fn(),
-                    asWebviewUri: jest.fn((uri) => uri),
-                },
-                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
-                visible: true,
-            };
+            mockWebviewView = createMockWebviewView();
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
@@ -350,32 +331,10 @@ describe('SidebarProvider', () => {
     });
 
     describe('updateContext', () => {
-        let mockWebviewView: {
-            webview: {
-                options: Record<string, unknown>;
-                html: string;
-                onDidReceiveMessage: jest.Mock;
-                postMessage: jest.Mock;
-                asWebviewUri: jest.Mock;
-            };
-            onDidDispose: jest.Mock;
-            onDidChangeVisibility: jest.Mock;
-            visible: boolean;
-        };
+        let mockWebviewView: MockWebviewView;
 
         beforeEach(() => {
-            mockWebviewView = {
-                webview: {
-                    options: {},
-                    html: '',
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    postMessage: jest.fn(),
-                    asWebviewUri: jest.fn((uri) => uri),
-                },
-                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
-                visible: true,
-            };
+            mockWebviewView = createMockWebviewView();
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
@@ -412,18 +371,7 @@ describe('SidebarProvider', () => {
         const ONE_HOUR_MS = 60 * 60 * 1000;
 
         let globalStateStore: Record<string, unknown>;
-        let mockWebviewView: {
-            webview: {
-                options: Record<string, unknown>;
-                html: string;
-                onDidReceiveMessage: jest.Mock;
-                postMessage: jest.Mock;
-                asWebviewUri: jest.Mock;
-            };
-            onDidDispose: jest.Mock;
-            onDidChangeVisibility: jest.Mock;
-            visible: boolean;
-        };
+        let mockWebviewView: MockWebviewView;
         let executeCommandMock: jest.Mock;
 
         beforeEach(() => {
@@ -451,18 +399,7 @@ describe('SidebarProvider', () => {
                 mockLogger as any,
             );
 
-            mockWebviewView = {
-                webview: {
-                    options: {},
-                    html: '',
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    postMessage: jest.fn(),
-                    asWebviewUri: jest.fn((uri) => uri),
-                },
-                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
-                visible: true,
-            };
+            mockWebviewView = createMockWebviewView();
 
             executeCommandMock = vscode.commands.executeCommand as jest.Mock;
             executeCommandMock.mockClear();

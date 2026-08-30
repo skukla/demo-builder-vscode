@@ -23,10 +23,10 @@ it were the program.
 | 1 | Gates | **DONE** | all four present and running |
 | 2 | Strengthen 7 weak witnesses | **DONE 2026-08-29** | the blind one is closed: `prerequisitesCacheManager-collaborators.test.ts` pins both seams, and BOTH were proven to fire by planting the defect — see below |
 | 3 | Conversion batches | **DONE** | fetch ledger 23 to 0 |
-| 3b | Duplication lanes (PL-9) | **NOT STARTED** | lane A (16 self-repeating suites), lane C (20 family extractions) untouched; clones moved only 160 to 158, as a side effect |
+| 3b | Duplication lanes (PL-9) | **lane A DONE; lane C1 DONE 2026-08-30**; C2 open | lane A: 15 reported self-clones = 12 real (extracted, unique assertion sets unchanged) + 3 FALSE POSITIVES proven by a synthetic control. Lane C1 shipped 14 families: cross-file clone pairs 140 -> 124, duplicated lines 6,739 -> 5,950 (same basis both times). 3 of the 17 turned out not to be single mechanical merges and moved to C2. C2 (26 divergent families + those 3) is open — judgment before merge |
 | 4 | Noise burn-down | **DONE 2026-08-29** | allowlist EMPTY (68 -> 0); act 226 -> 0, real 102 -> 0, prop 82 -> 0. Gate re-proven to fire with a planted `console.error` |
-| 5 | Release-cut instruments | **NOT STARTED** | no test-strategy-scan skill, no Stryker config. (test-divergence-scan was built, but answers a different question) |
-| 6 | Craft + coverage follow-ups | **IN PROGRESS** | mcp-proxy and projectDeletionService closed 2026-08-29; templateSyncService, the hollow suite and throw-style remain |
+| 5 | Release-cut instruments | **DONE 2026-08-30** | `test-strategy-scan` skill (runs the three censuses + the verdict table saying which columns track defects) and the Stryker pilot (`npm run test:mutation`, baseline 93.37% over 166 mutants in 33s). Both registered and both reached by `npm run sweep` / `cut-release` |
+| 6 | Craft + coverage follow-ups | **DONE 2026-08-30** | all three coverage gaps closed (mcp-proxy, projectDeletionService 16→84%, templateSyncService 18→82%); hollow suite fixed (theater 2→1, the remaining 1 is a detector gap not a hollow suite); logicInTests and throw-style MEASURED and found not to be defect metrics — see the three findings below |
 | 7 | Impact snapshot | **DONE** | metrics-2026-08-29.json |
 | 8 | Frontend architecture (PL-17) | **DONE 2026-08-29** | ADR-017 written + enforced (`webview-architecture-rules.test.ts`); ADR-015 scoped to the host; hook rule + ledger rehomed; WebviewClient's row retired by ratifying the singleton. Three positive controls, incl. one on the jurisdiction itself |
 
@@ -59,8 +59,11 @@ ASSERTION caught it. Check which test failed and why.
 Two numbers moved the WRONG way and are recorded rather than omitted:
 light-mocks doubles 532 to 544, and logicInTests 161 to 164. The first is
 expected — a converted suite trades a module wall for light fakes — but it
-means the double count REDISTRIBUTED rather than fell. The second is a small
-regression nobody asked for; phase 6 should look at it.
+means the double count REDISTRIBUTED rather than fell.
+
+The second no longer exists. Phase 6 did look at it, and the answer was that
+`logicInTests` was never measuring a defect; it was RETIRED 2026-08-30 with the
+owner's approval. Reading a "regression" off it was the mistake, not the number.
 
 ### Work done outside this plan
 
@@ -75,10 +78,10 @@ builder-uniqueness ratchet, the placement rule, and PL-17's filing.
 | 1 | **Gates first** — fail-on-console setup gate (allowlist seeded at today's noise = PL-15's ledger), eslint-plugin-jest at warn, family-testUtils check, tests-clone ratchet pinned into the sweep skill | all four run in CI; new drift fails; no existing test newly broken | PL-14 (A) |
 | 2 | **Strengthen the 7 weak witnesses** — 1 blind (prerequisitesCacheManager, 7 suites, no call assertions), 4 untested, 2 indirect (confirm the parent suites watch the seam) | each has a suite that would FAIL if the conversion broke its collaborator calls | PL-11 |
 | 3 | **Conversion batches** — the ~54 queue files, ~5 per batch | ledger rows deleted per batch; exemption total → adjudicated floor | PL-13 + PL-11 |
-| 3b | **Duplication lanes (PL-9)** — lane A (16 self-repeating suites) fixed outright; lane B melts inside the phase-3 conversions; lane C's 20 ranked family extractions | ratchet at its adjudicated floor; the 42 legitimate splits carry written reasons | PL-9 |
+| 3b | **Duplication lanes (PL-9)** — lane A (self-repeating suites) fixed outright; lane B melts inside the phase-3 conversions; lane C is NOT the 20 flat "family extractions" first assumed — see the measured split into C1/C1b/C2 below | ratchet at its adjudicated floor; the 42 legitimate splits carry written reasons; every C1 family carries a planted-control check | PL-9 |
 | 4 | **Noise burn-down** — act() awaits, mock prop-spreading, expected-error absorption; opportunistic in batches + dedicated passes for top emitters | allowlist empty; gate frozen at zero | PL-15 |
 | 5 | **Release-cut instruments** — `test-strategy-scan` skill (censuses promoted from one-off scripts), Stryker pilot config + runner skill | both run at a release cut and produce reconciled output | PL-14 (B) |
-| 6 | **Craft + coverage follow-ups** — hollow suite characterized, throw-style normalized, coverage gaps (mcp-proxy 0%, projectDeletionService 16%, templateSyncService 18%) | flags at zero; named coverage gaps closed or reasoned | PL-11 |
+| 6 | **Craft + coverage follow-ups** — hollow suite characterized, coverage gaps (mcp-proxy 0%, projectDeletionService 16%, templateSyncService 18%) | named coverage gaps closed or reasoned; the REAL flags (`theater`, `nondeterminism`, `realWaits`) at their adjudicated floor | PL-11 |
 | 7 | **Impact snapshot** — re-run `program-metrics.mjs --label <cut>` | the diff is the impact report | PL-11 |
 
 ## The batch recipe (the repeating unit — phases 2–4)
@@ -180,6 +183,258 @@ before the work can rationalise it.
 > named and is genuinely I/O.
 
 Would have failed on the first pass, before anyone had to ask.
+
+### throw-style is not a defect either — measured 2026-08-30
+
+Phase 6 lists "throw-style normalized". Measured before normalising anything.
+
+**116 `throw new Error(...)` occurrences** live in suites that also use
+`expect()`. What they are:
+
+| What it is | Count |
+|---|---|
+| inside a mock implementation — a fake rejecting unexpected input | 74 |
+| a fake THROWING to simulate a failure the SUT must handle | 24 |
+| an assertion or guard after an `if` | 28 |
+| module-scope helper | 11 |
+| other | 3 |
+
+**98 of 116 are SETUP, not assertions.** `onProgress: () => { throw new
+Error('render blew up') }` is an input to the subject, not a claim about it.
+Normalising those to `expect()` is not possible — there is nothing to assert.
+
+The 28 that ARE assertions read like this:
+
+    if (unknown.length > 0) {
+        throw new Error(
+            `stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
+            `Add to StacksConfig (src/types/stacks.ts) or remove from JSON.`
+        );
+    }
+
+That fails the test exactly as `expect` would, and tells the reader which file to
+edit and where the type lives. An `expect(unknown).toEqual([])` would print a
+bare array diff. Normalising these makes the failure messages WORSE.
+
+**What is actually true:** two instruments misread the style, not the tests.
+`theater` greps for `expect(` and so calls a throw-asserting suite empty —
+`type-json-alignment-stacks-components.test.ts` is flagged and is not hollow. That
+is a detector gap, and it is the whole of the finding.
+
+**DONE 2026-08-30, owner-approved:** "throw-style normalized" is struck from phase
+6's scope line above. Still open: teach the
+`theater` detector that a `throw` inside a test body is a verification. One
+genuinely hollow suite existed and has been fixed (`componentUpdater-envMigration`
+→ `envMerge.test.ts`); after it, `theater` should read 0 rather than 1.
+
+Third finding of the same shape in two days — after the construction-boundary
+rule and `logicInTests`. The pattern is worth naming: **a metric that counts
+SYNTAX will keep finding work that is not there.** All three measured what the
+code looks like rather than what it does.
+
+### logicInTests is not a defect metric — measured 2026-08-30
+
+Phase 6 lists "the logicInTests 161 -> 164 regression" as work, and its criterion
+is "flags at zero". Measured before touching it, and the criterion is wrong for
+this flag.
+
+**What it detects:** `/^\s*(for|while)\s*\(/m` — a suite containing a loop.
+That is a syntax count, not a defect class.
+
+**What the 167 flagged suites actually contain** (358 loops across the tree):
+
+| Shape | Loops |
+|---|---|
+| iterate a collection (`for..of`) | 229 |
+| counted repetition (`for i = 0; i < N`) | 36 |
+| everything else | 93 |
+
+**230 of the 358 contain an `expect()`** — they are assertion loops. Sampling ten
+of the unclassified suites found: iterating a named case list
+(`INTEGRATION_IDS`, `CONTENT_PATCHES`), walking a mock's recorded calls, asserting
+over rendered tiles, driving six requests at a rate limiter, and a brace-matcher
+in a source-reading contract test. Every one idiomatic. 18 more are SOP scans,
+which walk a file list by nature and cannot not loop.
+
+**So the number moving 161 -> 164 -> 167 is not a quality regression.** It tracks
+how many suites contain a loop, and this repo writes table-driven tests. Driving
+it to zero would mean rewriting 229 collection loops into repetition — worse
+tests, for a number.
+
+**What a real version would measure:** a test that RECOMPUTES its expected value
+rather than stating it — `expect(out).toBe(input.map(f))` reimplementing the
+subject, so the test agrees with the bug. That is the defect "logic in tests"
+names. It is not the same as containing a loop, and it is not cheap to detect
+statically.
+
+**DONE 2026-08-30, owner-approved:** `logicInTests` is DELETED from
+`craft-census.mjs` — detector, self-test and doc line — and struck from phase 6's
+criterion. The census header now carries the reasoning and the bar any replacement
+must clear (name a clean file it would flag and a buggy one it would miss). It was
+left in place at first because retiring a column of an owner-facing instrument is a
+decision rather than a cleanup; the owner made it. The other three flags (`theater` 2, `nondeterminism` 26,
+`realWaits` 16) are unaffected and remain real.
+
+Same shape as the construction-boundary finding a day earlier: a metric aimed at
+syntax rather than at the property that matters.
+
+### jscpd's self-clone count is not a duplication count — measured 2026-08-30
+
+The fourth instance of the same shape, and the first one caught BEFORE the work
+rather than after.
+
+Lane A began as 15 reported self-clones. Twelve were genuine and were extracted;
+each was verified by locating the block with jscpd, replacing it by exact string
+match, and diffing the UNIQUE assertion set before and after (unchanged in every
+case). Lane A's remaining three were queued as "the large ones, likely whole-test-body
+duplication needing care" — 251, 178 and 344 reported lines.
+
+They are not duplication at all. Three measurements, in order of decisiveness:
+
+1. **The ranges OVERLAP.** ProjectCard's pair is lines 24–274 against 14–171 in one
+   484-line file. A genuine copy-paste pair cannot overlap itself, and cannot have
+   two spans of different length (250 vs 157).
+2. **The fragment appears ONCE**, whitespace normalised away. The positive control —
+   `PrerequisitesStep-installation` before its fix — reports 3.
+3. **A synthetic control reproduces the signature with zero copy-paste present.** A
+   generated file of 30 tests sharing one skeleton, with every name, id and string
+   literal distinct, produces exactly one self-clone with overlapping ranges and
+   mismatched spans. Nothing in that file can be extracted, because nothing repeats.
+
+So the cause is not a jscpd bug and no threshold fixes it: a file of uniform tests has
+a *periodic* token stream, and a long window matches the same stream shifted by about
+one test block. This fires on well-written uniform test files by design.
+
+**Consequence for the metric:** "self-clones in `tests/`" over-reports, and it
+over-reports worst on the biggest files — exactly the ones that look most alarming and
+cost most to investigate. The detection rule and its confirming test are now written
+into `.claude/skills/code-duplication-scan/SKILL.md` so the next sweep skips this class
+in arithmetic instead of in judgment.
+
+**Lane A is therefore DONE at 12 of 15.** The residual 3 are unfixable by design and
+should not be carried as debt.
+
+### Lane C is a DIVERGENCE problem, not an extraction problem — measured 2026-08-30
+
+Lane C was scoped as "20 ranked family extractions": split test families that never
+pulled their shared `jest.mock` preamble into a `.testUtils`, fixed by extracting it.
+That framing is wrong for almost all of them, and working it as planned would have
+silently changed what the tests test.
+
+**The duplication is real.** Unlike lane A, these are genuine cross-file clones: 140
+pairs, ~5,486 duplicated lines, and 119 verified at ≥95% shared text present in BOTH
+files. (The verifier needs that tolerance — jscpd's fragment boundary is token-aligned,
+so the reported text overshoots the true match by a few characters. A strict
+whole-fragment test reported 6 of 140 and was simply wrong; one pair read by hand is
+what caught it.)
+
+**But much of it is not mechanically extractable.** Grouping the clone-linked spec
+files into families and comparing each file's SET of `jest.mock(...)` calls
+(balanced-paren extracted, whitespace-normalised):
+
+- 44 families with ≥2 clone-linked spec files
+- **17** share a real, non-empty mock preamble — safe to extract (lane C1)
+- **26** have DIVERGENT mock sets — need judgment per file (lane C2)
+- **1** (`blockCollectionHelpers`, 6 files) has NO `jest.mock` calls at all — its
+  duplication is shared fixtures and test bodies, not a preamble, so the
+  testUtils-preamble recipe does not apply to it. Counted as "identical" by a
+  set-comparison until the empty case was excluded; a third correction, same class as
+  the two below.
+
+*Measurement note, because the first attempt was wrong and the difference matters.*
+An earlier pass defined "preamble" as everything up to the first `import {` and
+reported 4 safe / 40 divergent. That definition cuts each file at a different place —
+several files import a type before their mocks — so it compared unequal text and
+overstated divergence more than tenfold. The corrected method extracts every
+`jest.mock(...)` call wherever it sits, and carries two controls: the normaliser must
+match a file against itself, and must still separate two `installHandler` files known
+to differ. Both pass. **18/26 is the number to plan against, not 4/40.**
+
+`installHandler` is the worked example: 11 clone-linked spec files, **9 distinct
+preambles**, all naming the same four mocked modules. The differences are semantic,
+not cosmetic:
+
+- 7 files partially mock `handlers/shared` via `requireActual`; 5 fully automock it.
+  Those are different subjects under test — automock replaces every export with a
+  `jest.fn()` returning undefined.
+- three different sets of named function mocks (one group adds `getNodeVersionKeys`)
+- the `debugLogger` module mock carries `trace` in 4 files and not in the other 7
+
+Collapsing them onto one canonical preamble would hand real implementations to files
+that deliberately automocked, or automocks to files that deliberately did not. Every
+suite would still be green, because a mock answers the same whatever it is handed.
+
+**What CAUSED it is written down in the family's own helper.** The docblock at the top
+of `installHandler.testUtils.ts` instructs every consumer to paste the preamble at the
+top of their file. The duplication was not an oversight; it was the documented
+procedure. That instruction has also drifted from what the files actually do — it shows
+a bare `jest.mock('.../shared')` where 7 files use a `requireActual` factory — which is
+the "a comment describing another module is a claim, not documentation" rule, in the
+place best positioned to mislead.
+
+**Not investigated:** whether the `trace` gap is reachable. It is not, for these tests —
+the only `getLogger()` caller in the feature is `prerequisitesCacheManager`, and these
+suites mock `@/core/di`. Checked before claiming a hazard.
+
+**Recommended re-plan.** Lane C splits in two:
+
+- **C1 — DONE 2026-08-30, 14 families shipped.** Identical
+  non-empty mock sets; extract to `.testUtils` using the testUtils-owns-the-SUT-import
+  pattern (§3 of `webview-test-authoring`; 59 precedents in this repo).
+
+  `AdobeAuthStep` is done and is the worked example (`dea9dde05`): the four specs'
+  mock blocks were confirmed byte-identical BEFORE moving anything, the testUtils took
+  both mocks and re-exported the component, and the result was checked three ways —
+  74 tests green, per-file unique assertion sets unchanged (17/12/3/8), and a PLANTED
+  CONTROL proving the mocks still bind (neutering the WebviewClient mock fails exactly
+  the 4 dependent suites; restoring returns all 7 to green). **Run that control on
+  every C1 family.** Silent unmocking is this refactor's failure mode, and a green run
+  on its own does not exclude it.
+
+  **Three of the original 17 were NOT single mechanical merges** and moved to C2:
+  `appBuilderComponentRunner` is two disjoint pairs with different mock sets (one
+  shared file cannot serve both), `skillsWriter`'s specs mock the same module
+  differently, and `daLiveAuthService`'s four specs carry four distinct mock sets.
+  Classifying a family by comparing its specs to EACH OTHER is not enough; the
+  subsets have to be grouped by mock signature first.
+
+  Shipped, ordered as worked: `AdobeAuthStep`, `startDemo`, `envFileWatcherService`,
+  `componentUpdater`, `ResetAllCommand`, `useSelectionStep`, `diagnosticsChecks`,
+  `continueHandler`, `IntegrationDetailPanel`, `daLiveContentOperations` (6 specs),
+  `adobeEntityFetcher`, `contentAuthoringTools`, `webviewCommunicationManager`,
+  `componentHandlers`. Superseded list: `daLiveContentOperations` (4 × 1),
+  `startDemo` and `envFileWatcherService` (3 × 4), `useSelectionStep`,
+  `continueHandler`, `adobeEntityFetcher` (3 × 2), then ten 2-file families of which
+  `contentAuthoringTools`, `componentUpdater` and `ResetAllCommand` carry 5 mocks each.
+  This is the lane that matches the original "family extractions" plan.
+- **C1b (1 family)** — `blockCollectionHelpers`, 6 files, no mocks; its duplication is
+  fixtures and test bodies. Needs its own read before anything is extracted.
+- **C2 (judgment, 26 families)** — decide per file which mocking strategy is correct,
+  THEN extract. This is `test-divergence-scan` work wearing a duplication hat. Worst
+  first: `installHandler` (11 files / 5 mock sets), `dashboardHandlers` (6/6),
+  `edsResetService` (5/5), `ComponentRegistryManager` (8/2), `helixService` (4/2).
+  Do not start C2 without making that decision deliberately, family by family.
+
+### templateSyncService — stated 2026-08-29, before the work
+
+529 lines, 18% covered, and it PUSHES TO THE USER'S LIVE GITHUB REPO. The reset
+strategy loses local customisations by design; a small set of files
+(`fstab.yaml`, `config.json`) is meant to survive both strategies via a
+backup/restore pair. That pair is the whole safety net, and nothing asserts it.
+
+1. **The preserved files survive BOTH strategies.** Backed up before, restored
+   after, content identical — on merge and on reset. If this breaks, a reset
+   destroys a site's config and pushes the result.
+2. **A failure at any git step does NOT push.** Clone, fetch, merge, commit and
+   push each have a failure branch; none of them may end with a push of partial
+   state to a live repo.
+3. **Conflicts surface rather than resolve silently** — the merge path detects
+   conflicts and must report them, not commit through them.
+4. Every remaining uncovered line is NAMED in the commit and is shell I/O or a
+   log — not a decision.
+
+Clause 4 is the one that does the work, same as last time: it forbids narrating
+the leftover.
 
 ### projectDeletionService — stated 2026-08-29, before the work
 

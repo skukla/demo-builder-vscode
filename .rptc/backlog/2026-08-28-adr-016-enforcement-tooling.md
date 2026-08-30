@@ -5,7 +5,7 @@ area: platform
 parent: PL-11
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # ADR-016 enforcement tooling — the seven artifacts
@@ -35,3 +35,5 @@ subsequent fix measurable and irreversible.
 ## Shipped so far
 
 - 2026-08-28  GROUP A COMPLETE (2026-08-28, attended run): (1) console gate — fails any test emitting console.error/warn unless its suite is on the burn-down ledger; ledger seeded from a measured collect-run at 68 of 1,179 suites; planted violation proves it fails; live in CI (both setup files import it). (2) eslint-plugin-jest adopted — 3 rules at ERROR (focused tests, identical titles, malformed expects), 8 at warn; first run found a REAL defect (ProjectCreationStep had two tests sharing a title while the second asserted something else — renamed) plus 3 rule-misreads of the deferred-assertion pattern, annotated with reasons. (3) family-setup check — 89 shared-setup-less families frozen, new ones fail (planted family proved it); ranked worklist written: 20 real targets, 27 small, 42 legitimate splits, ~2,446 removable lines. (4) tests-tree clone ratchet 160/2.44% pinned into codebase-sweep WITH its producing command (verified reproducible). Full suite green throughout: 1,179 suites / 15,242 tests.
+- 2026-08-30  feat(tooling): Stryker mutation pilot — 93% of defects caught, and the 7% named (`c4118338e`)
+- 2026-08-30  feat(tooling): test-strategy-scan — the release-cut read of the SUITE, not the run (`aa0c48b55`)

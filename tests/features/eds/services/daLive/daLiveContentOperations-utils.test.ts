@@ -6,19 +6,12 @@
  * - deleteAllSiteContent (recursive deletion with progress)
  */
 
+import {
+    mockFetch,
+} from './daLiveContentOperations.testUtils';
 import { DaLiveContentOperations, type TokenProvider, filterProductOverlays } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('filterProductOverlays', () => {

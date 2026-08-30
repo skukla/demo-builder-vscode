@@ -9,6 +9,7 @@ import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON } from '@/types/typeGuards';
+import { mergeEnvContent, parseEnvFile } from './envMerge';
 
 /**
  * How much build output to dump on failure.
@@ -503,21 +504,12 @@ export class ComponentUpdater {
                 continue;
             }
       
-            // Parse both files
-            const oldVars = this.parseEnvFile(oldContent);
-            const templateVars = this.parseEnvFile(newTemplate);
+            const mergedContent = mergeEnvContent(oldContent, newTemplate);
+            await fs.writeFile(envPath, mergedContent, 'utf-8');
       
-            // Merge strategy: keep all old values, add new keys with default values
-            const merged = new Map([...templateVars, ...oldVars]);
-      
-            // Write merged content
-            const mergedContent = Array.from(merged.entries())
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-      
-            await fs.writeFile(envPath, mergedContent + '\n', 'utf-8');
-      
-            const addedKeys = Array.from(templateVars.keys()).filter(k => !oldVars.has(k));
+            const addedKeys = Array.from(parseEnvFile(newTemplate).keys()).filter(
+                (k) => !parseEnvFile(oldContent).has(k),
+            );
             if (addedKeys.length > 0) {
                 this.logger.debug(`[Updates] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
             } else {
@@ -529,20 +521,5 @@ export class ComponentUpdater {
     /**
    * Parse .env file content into key-value pairs
    */
-    private parseEnvFile(content: string): Map<string, string> {
-        const vars = new Map<string, string>();
-    
-        content.split('\n').forEach(line => {
-            line = line.trim();
-            if (!line || line.startsWith('#')) return;
-      
-            const [key, ...valueParts] = line.split('=');
-            if (key) {
-                vars.set(key.trim(), valueParts.join('=').trim());
-            }
-        });
-    
-        return vars;
-    }
 }
 

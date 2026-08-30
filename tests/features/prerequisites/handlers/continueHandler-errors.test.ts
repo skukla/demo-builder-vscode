@@ -1,25 +1,13 @@
+import {
+    ServiceLocator,
+    shared,
+} from './continueHandler.testUtils';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
 import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
-import * as shared from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/core/di';
 import {
     createContinueHandlerContext,
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
-
-// Mock dependencies - but keep handlePrerequisiteCheckError real
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getNodeVersionMapping: jest.fn(),
-        areDependenciesInstalled: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-        // Keep handlePrerequisiteCheckError as the real implementation
-    };
-});
-jest.mock('@/core/di');
 
 describe('Prerequisites Continue Handler - Error Handling', () => {
     let mockContext: any;

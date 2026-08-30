@@ -5,13 +5,23 @@
  * DependencyResolver used across the componentHandlers test suites. Not a
  * `*.test.ts` file, so Jest does not run it directly.
  *
- * NOTE: The `jest.mock('@/features/components/services/ComponentRegistryManager')`
- * call and the constructor `mockImplementation` wiring must stay inline in each
- * test file (jest.mock is hoisted and references module-scoped imports).
+ * THIS FILE OWNS THE MOCK AND THE SUT IMPORT. Specs take ComponentRegistryManager
+ * and DependencyResolver from HERE and declare no jest.mock of their own.
+ *
+ * The old note here said the mock "must stay inline in each test file (jest.mock is
+ * hoisted and references module-scoped imports)". Half right, wrong conclusion:
+ * jest.mock does hoist above the imports of the module it appears in, but NOT
+ * across modules — so the fix is for this file to own the import too, not for every
+ * spec to repeat the mock. Corrected 2026-08-30 (lane C1).
  */
 
 import { HandlerContext } from '@/types/handlers';
-import type { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
+jest.mock('@/features/components/services/ComponentRegistryManager');
+
+import {
+    ComponentRegistryManager,
+    DependencyResolver,
+} from '@/features/components/services/ComponentRegistryManager';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 
 /** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
@@ -54,3 +64,6 @@ export function createMockDependencyResolver(): jest.Mocked<DependencyResolver> 
         validateDependencyChain: jest.fn(),
     } as any;
 }
+
+// Re-exported so specs never import the (mocked) module directly.
+export { ComponentRegistryManager, DependencyResolver };

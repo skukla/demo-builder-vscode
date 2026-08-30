@@ -12,8 +12,23 @@
  *   onlySkip       — .only / .skip / xit / xdescribe leftovers
  *   nondeterminism — Math.random / un-mocked Date.now in test code
  *   realWaits      — hand-rolled setTimeout waits (excluding fake-timer use)
- *   logicInTests   — for/while loops inside the suite body
  *   doubleStyle    — module-mock WALL (>5 jest.mock) vs deps-object vs mixed
+ *
+ * RETIRED 2026-08-30 — `logicInTests` (owner-approved). It matched `for`/`while`
+ * at the start of a line, which is a SHAPE, not a defect. The defect that phrase
+ * names is a test re-implementing its subject and therefore agreeing with its
+ * bugs; a loop is neither necessary nor sufficient for that, and detecting it
+ * statically is not cheap.
+ *
+ * What settled it: extracting a duplicated block into a shared helper is
+ * unambiguously an improvement, and it ADDS a function to a test file, which the
+ * detector counted against you. The duplication lane and this column therefore
+ * returned opposite verdicts on the same commit. A metric a good change can move
+ * the wrong way is describing style.
+ *
+ * Do not re-add it without a detector that fires on the DEFECT. The test to apply
+ * to any replacement: name a clean file it would flag, and a buggy one it would
+ * miss. If both exist, it is the same column under a new name.
  */
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -32,7 +47,6 @@ const detectors = {
         (/Date\.now\s*\(/.test(s) && !/useFakeTimers|jest\.mock\(['"].*date/i.test(s)),
     realWaits: (s) => /new Promise\s*\(\s*(\w+|\(\w*\))\s*=>\s*setTimeout/.test(s) &&
         !/useFakeTimers/.test(s),
-    logicInTests: (s) => /^\s*(for|while)\s*\(/m.test(s),
 };
 
 function doubleStyle(s) {
@@ -49,7 +63,6 @@ const SELFTEST = {
     onlySkip: `it.only('x', () => { expect(1).toBe(1); });`,
     nondeterminism: `const n = Math.random();`,
     realWaits: `await new Promise((r) => setTimeout(r, 500));`,
-    logicInTests: `for (const x of xs) {\n  expect(x).toBe(1);\n}`,
 };
 for (const [name, snippet] of Object.entries(SELFTEST)) {
     if (!detectors[name](snippet)) {

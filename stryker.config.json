@@ -1,0 +1,29 @@
+{
+    "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+    "_comment": "PILOT SCOPE \u2014 deliberately four files, not the repo. See .claude/skills/mutation-test-pilot/SKILL.md for why these four and how to read the score. Mutation testing re-runs the related suites once PER MUTANT, so whole-repo Stryker over 1198 suites is hours; the pilot answers 'is our coverage real?' on a representative slice in minutes.",
+    "packageManager": "npm",
+    "testRunner": "jest",
+    "jest": {
+        "configFile": "jest.stryker.config.js",
+        "enableFindRelatedTests": true
+    },
+    "mutate": [
+        "src/features/project-creation/services/sanitization.ts",
+        "src/features/authentication/services/projectOwnership.ts",
+        "src/features/mesh/services/meshStatusResolver.ts",
+        "src/features/updates/services/envMerge.ts"
+    ],
+    "reporters": [
+        "clear-text",
+        "json"
+    ],
+    "jsonReporter": {
+        "fileName": "reports/mutation/mutation.json"
+    },
+    "coverageAnalysis": "perTest",
+    "concurrency": 4,
+    "timeoutMS": 20000,
+    "disableTypeChecks": true,
+    "tempDirName": ".stryker-tmp",
+    "cleanTempDir": true
+}

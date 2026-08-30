@@ -9,6 +9,9 @@
  * ensureBlockDocPages tests live in daLiveContentOperations-blockDocPages.test.ts.
  */
 
+import {
+    mockFetch,
+} from './daLiveContentOperations.testUtils';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 import {
@@ -16,16 +19,6 @@ import {
     createComponentDef,
 } from './daLiveContentOperations-library-creation.testUtils';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('createBlockLibraryFromTemplate', () => {

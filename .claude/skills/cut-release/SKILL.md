@@ -49,6 +49,15 @@ decide what (if anything) to fix before tagging.
   host on the socket (mcp-live-probe has the relaunch recipe) and REAL agent
   sessions — minutes, not seconds. Tier 3 never runs here by design; the named
   floor in `unprompted-baseline.json` documents each exclusion.
+- **`test-strategy-scan`** — the strategy read of the test suite (~1 min, offline): runs
+  the craft / queue / ledger censuses together and interprets them. Invoke the SKILL, not
+  the three scripts — its value is the verdict table saying which columns track defects.
+  Two that did not (`logicInTests`, `throw-style`) were RETIRED 2026-08-30 rather than
+  footnoted, so every flag the census still emits is worth acting on; the surviving
+  caveat is jscpd's overlapping-range self-clones, which are not duplication at all.
+  Working a worklist off a number that measures shape is the failure it exists to
+  prevent. Capture `check-ledger.mjs`'s exit code in a variable; it exits 1 on an
+  unreconciled ledger and a pipe will report the pipe's 0.
 - **`node .claude/skills/test-divergence-scan/scan.mjs tests`** — how many
   DIFFERENT ways the suite builds the same fake (~2s, offline). Not duplication —
   divergence: 26 distinct StateManager fakes across 48 uses is nobody knowing what

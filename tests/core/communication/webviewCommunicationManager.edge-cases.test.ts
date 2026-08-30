@@ -6,22 +6,12 @@
  * Target Coverage: 75%+
  */
 
-import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
-import * as vscode from 'vscode';
+import {
+    WebviewCommunicationManager,
+    createWebviewCommunication,
+    vscode,
+} from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
-
-// Mock VS Code API
-jest.mock('vscode');
-
-// Mock debugLogger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    })
-}));
 
 describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
     let mockPanel: vscode.WebviewPanel;

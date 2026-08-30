@@ -14,19 +14,17 @@
  * `id_integration ?? id`.
  */
 
+import {
+    MESH,
+    MGMT,
+    StepLogger,
+    getLogger,
+} from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
-
-jest.mock('@/core/logging');
-
-import { getLogger } from '@/core/logging';
-
-const MESH = 'GraphQLServiceSDK';
-const MGMT = 'AdobeIOManagementAPISDK';
 
 describe('AdobeEntityFetcher — API-service wrappers', () => {
     let fetcher: AdobeEntityFetcher;

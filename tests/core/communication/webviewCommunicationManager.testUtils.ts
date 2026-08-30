@@ -93,3 +93,12 @@ export async function completeHandshake(testMocks: TestMocks): Promise<void> {
 export function cleanupTimers(): void {
     jest.useRealTimers();
 }
+
+// ── The SUT and vscode, re-exported ─────────────────────────────────────────
+// Specs MUST take these from here rather than importing them directly. jest.mock
+// hoists above the imports of the module it appears in, NOT across modules, so a
+// spec importing the manager directly would load it before the mocks above were
+// registered — which is exactly why all three specs used to re-declare both mocks
+// verbatim. Re-exporting removes the ordering question.
+export { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
+export * as vscode from 'vscode';

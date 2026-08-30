@@ -9,20 +9,13 @@
  * - Preserving empty structural divs
  */
 
+import {
+    mockFetch,
+} from './daLiveContentOperations.testUtils';
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - HTML transformation', () => {
@@ -64,29 +57,41 @@ describe('DaLiveContentOperations - HTML transformation', () => {
         } as unknown as Response;
     }
 
-    it('should fetch .plain.html, wrap in document structure, and preserve images', async () => {
-        const plainHtml = `<div class="nav">
-                <picture>
-                    <source type="image/webp" srcset="./media_abc123.png?width=2000&format=webply">
-                    <source type="image/png" srcset="./media_abc123.png?width=2000&format=png">
-                    <img loading="lazy" alt="Logo" src="./media_abc123.png?width=750&format=png">
-                </picture>
-            </div>`;
-
+    /**
+     * Run one copy and capture what it fetched and what it posted.
+     *
+     * EXTRACTED 2026-08-30 (PL-9 lane A). The six tests below shared 38
+     * identical lines of setup and differed only in the HTML they fed in and the
+     * claim they made about the result — jscpd reported the same 39-line block
+     * three times inside this one file.
+     *
+     * The two variations are real and are parameters, not copies:
+     *   `path`        the content path discovery returns; a directory path
+     *                 ('/citisignal-fr/') resolves to `<path>index.plain.html`
+     *   `spreadsheetProbe`  a leading 404 for the isSpreadsheetPath HEAD. The
+     *                 directory-path case does not issue it, so passing `false`
+     *                 keeps that test exercising the same sequence it did before.
+     */
+    async function copyAndCapture(
+        plainHtml: string,
+        { path, spreadsheetProbe = true }: { path: string; spreadsheetProbe?: boolean },
+    ): Promise<{ fetchedUrl: string | null; postedHtml: string }> {
         let fetchedUrl: string | null = null;
         let postedFormData: FormData | null = null;
 
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/nav']);
+        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue([path]);
 
+        if (spreadsheetProbe) {
+            mockFetch.mockResolvedValueOnce(mockFetchResponse(404)); // isSpreadsheetPath HEAD
+        }
         mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
             .mockImplementationOnce(async (url: string) => {
                 fetchedUrl = url;
                 return {
                     ok: true,
                     status: 200,
                     headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
+                        get: (key: string) => (key === 'content-type' ? 'text/html' : null),
                     },
                     text: async () => plainHtml,
                     blob: async () => new Blob([plainHtml], { type: 'text/html' }),
@@ -107,226 +112,93 @@ describe('DaLiveContentOperations - HTML transformation', () => {
             'dest-site',
         );
 
-        expect(fetchedUrl).toBe('https://main--source-site--source-org.aem.live/nav.plain.html');
-
+        // Each original test opened with `expect(postedFormData).not.toBeNull()`.
+        // Folding that into the helper keeps the guarantee: without it a copy
+        // that never posted would return '' and every toContain below would fail
+        // with a confusing empty-string diff instead of naming the real problem.
         expect(postedFormData).not.toBeNull();
-        const postedBlob = postedFormData!.get('data') as Blob;
-        const postedHtml = await postedBlob.text();
+        const postedHtml = await ((postedFormData as FormData | null)!.get('data') as Blob).text();
+        return { fetchedUrl, postedHtml };
+    }
 
+    const LIVE = 'https://main--source-site--source-org.aem.live';
+
+    it('fetches .plain.html, wraps it in a document structure, and preserves images', async () => {
+        const { fetchedUrl, postedHtml } = await copyAndCapture(
+            `<div class="nav">
+                <picture>
+                    <source type="image/webp" srcset="./media_abc123.png?width=2000&format=webply">
+                    <source type="image/png" srcset="./media_abc123.png?width=2000&format=png">
+                    <img loading="lazy" alt="Logo" src="./media_abc123.png?width=750&format=png">
+                </picture>
+            </div>`,
+            { path: '/nav' },
+        );
+
+        expect(fetchedUrl).toBe(`${LIVE}/nav.plain.html`);
         expect(postedHtml).toMatch(/^<body><header><\/header><main>/);
         expect(postedHtml).toMatch(/<\/main><footer><\/footer><\/body>$/);
         expect(postedHtml).toContain('<picture>');
         expect(postedHtml).toContain('<img');
     });
 
-    it('should convert relative media URLs to absolute URLs for Admin API', async () => {
-        const plainHtml = `<div>
+    it('converts relative media URLs to absolute ones for the Admin API', async () => {
+        const { postedHtml } = await copyAndCapture(
+            `<div>
                 <img src="./media_abc123.png?width=750&format=png&optimize=medium">
-            </div>`;
-
-        let postedFormData: FormData | null = null;
-
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
-
-        mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
-            .mockImplementationOnce(async () => {
-                return {
-                    ok: true,
-                    status: 200,
-                    headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
-                    },
-                    text: async () => plainHtml,
-                    blob: async () => new Blob([plainHtml], { type: 'text/html' }),
-                } as Response;
-            })
-            .mockImplementationOnce(async (_url: string, options?: RequestInit) => {
-                postedFormData = options?.body as FormData;
-                return mockFetchResponse(200);
-            });
-
-        await service.copyContentFromSource(
-            {
-                org: 'source-org',
-                site: 'source-site',
-                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
-            },
-            'dest-org',
-            'dest-site',
+            </div>`,
+            { path: '/page' },
         );
 
-        expect(postedFormData).not.toBeNull();
-        const postedBlob = postedFormData!.get('data') as Blob;
-        const postedHtml = await postedBlob.text();
-
-        expect(postedHtml).toContain('<img src="https://main--source-site--source-org.aem.live/media_abc123.png?width=750&format=png&optimize=medium">');
+        expect(postedHtml).toContain(
+            `<img src="${LIVE}/media_abc123.png?width=750&format=png&optimize=medium">`,
+        );
         expect(postedHtml).toMatch(/^<body><header><\/header><main>/);
     });
 
-    it('should convert relative media URLs with HTML-encoded query parameters', async () => {
-        const plainHtml = `<div>
+    it('converts relative media URLs whose query parameters are HTML-encoded', async () => {
+        const { postedHtml } = await copyAndCapture(
+            `<div>
                 <img src="./media_abc123.png?width=750&#x26;format=png&#x26;optimize=medium">
-            </div>`;
-
-        let postedFormData: FormData | null = null;
-
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
-
-        mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
-            .mockImplementationOnce(async () => {
-                return {
-                    ok: true,
-                    status: 200,
-                    headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
-                    },
-                    text: async () => plainHtml,
-                    blob: async () => new Blob([plainHtml], { type: 'text/html' }),
-                } as Response;
-            })
-            .mockImplementationOnce(async (_url: string, options?: RequestInit) => {
-                postedFormData = options?.body as FormData;
-                return mockFetchResponse(200);
-            });
-
-        await service.copyContentFromSource(
-            {
-                org: 'source-org',
-                site: 'source-site',
-                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
-            },
-            'dest-org',
-            'dest-site',
+            </div>`,
+            { path: '/page' },
         );
 
-        expect(postedFormData).not.toBeNull();
-        const postedBlob = postedFormData!.get('data') as Blob;
-        const postedHtml = await postedBlob.text();
-
-        expect(postedHtml).toContain('<img src="https://main--source-site--source-org.aem.live/media_abc123.png?width=750&#x26;format=png&#x26;optimize=medium">');
-    });
-
-    it('should handle directory paths (ending with /) correctly', async () => {
-        const plainHtml = `<div class="home">Welcome</div>`;
-
-        let fetchedUrl: string | null = null;
-
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/citisignal-fr/']);
-
-        mockFetch
-            .mockImplementationOnce(async (url: string) => {
-                fetchedUrl = url;
-                return {
-                    ok: true,
-                    status: 200,
-                    headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
-                    },
-                    text: async () => plainHtml,
-                    blob: async () => new Blob([plainHtml], { type: 'text/html' }),
-                } as Response;
-            })
-            .mockResolvedValueOnce(mockFetchResponse(200));
-
-        await service.copyContentFromSource(
-            {
-                org: 'source-org',
-                site: 'source-site',
-                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
-            },
-            'dest-org',
-            'dest-site',
+        // The encoded entities are PRESERVED, not decoded — only the path is
+        // made absolute. Copied verbatim from the original assertion.
+        expect(postedHtml).toContain(
+            `<img src="${LIVE}/media_abc123.png?width=750&#x26;format=png&#x26;optimize=medium">`,
         );
-
-        expect(fetchedUrl).toBe('https://main--source-site--source-org.aem.live/citisignal-fr/index.plain.html');
     });
 
-    it('should preserve non-media images without modification', async () => {
-        const plainHtml = `<div>
+    it('resolves a directory path to its index page', async () => {
+        // No spreadsheet probe on this path — preserved from the original test.
+        const { fetchedUrl } = await copyAndCapture(`<div class="home">Welcome</div>`, {
+            path: '/citisignal-fr/',
+            spreadsheetProbe: false,
+        });
+
+        expect(fetchedUrl).toBe(`${LIVE}/citisignal-fr/index.plain.html`);
+    });
+
+    it('leaves non-media images untouched', async () => {
+        const { postedHtml } = await copyAndCapture(
+            `<div>
                 <img src="/images/logo.svg" alt="Logo">
-            </div>`;
-
-        let postedFormData: FormData | null = null;
-
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/page']);
-
-        mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
-            .mockImplementationOnce(async () => {
-                return {
-                    ok: true,
-                    status: 200,
-                    headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
-                    },
-                    text: async () => plainHtml,
-                    blob: async () => new Blob([plainHtml], { type: 'text/html' }),
-                } as Response;
-            })
-            .mockImplementationOnce(async (_url: string, options?: RequestInit) => {
-                postedFormData = options?.body as FormData;
-                return mockFetchResponse(200);
-            });
-
-        await service.copyContentFromSource(
-            {
-                org: 'source-org',
-                site: 'source-site',
-                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
-            },
-            'dest-org',
-            'dest-site',
+            </div>`,
+            { path: '/page' },
         );
-
-        expect(postedFormData).not.toBeNull();
-        const postedBlob = postedFormData!.get('data') as Blob;
-        const postedHtml = await postedBlob.text();
 
         expect(postedHtml).toContain('src="/images/logo.svg"');
     });
 
-    it('should preserve empty structural divs with placeholder content', async () => {
-        const plainHtml = `<div><p><a href="/">Logo</a></p></div>
+    it('preserves empty structural divs by filling them with a placeholder', async () => {
+        const { postedHtml } = await copyAndCapture(
+            `<div><p><a href="/">Logo</a></p></div>
 <div><ul><li>Menu</li></ul></div>
-<div></div>`;
-
-        let postedFormData: FormData | null = null;
-
-        jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(['/nav']);
-
-        mockFetch
-            .mockResolvedValueOnce(mockFetchResponse(404)) // isSpreadsheetPath HEAD
-            .mockImplementationOnce(async () => {
-                return {
-                    ok: true,
-                    status: 200,
-                    headers: {
-                        get: (key: string) => key === 'content-type' ? 'text/html' : null,
-                    },
-                    text: async () => plainHtml,
-                    blob: async () => new Blob([plainHtml], { type: 'text/html' }),
-                } as Response;
-            })
-            .mockImplementationOnce(async (_url: string, options?: RequestInit) => {
-                postedFormData = options?.body as FormData;
-                return mockFetchResponse(200);
-            });
-
-        await service.copyContentFromSource(
-            {
-                org: 'source-org',
-                site: 'source-site',
-                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
-            },
-            'dest-org',
-            'dest-site',
+<div></div>`,
+            { path: '/nav' },
         );
-
-        expect(postedFormData).not.toBeNull();
-        const postedBlob = postedFormData!.get('data') as Blob;
-        const postedHtml = await postedBlob.text();
 
         expect(postedHtml).toContain('<div><p>&nbsp;</p></div>');
         expect((postedHtml.match(/<div>/g) || []).length).toBe(3);
