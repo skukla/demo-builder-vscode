@@ -1,574 +1,164 @@
-# Commands Module
+# Commands
 
-## Overview
+A command is a user-facing action reachable from the palette, a UI button, or
+another command. This file is about changing them; read the source for how any one
+works, because each file carries a substantial header comment.
 
-The commands module contains all VS Code command implementations for the Demo Builder extension. Each command represents a user-facing action that can be triggered via the command palette, UI buttons, or programmatically.
-
-## Command Structure
+## What is here
 
 | File | Purpose |
 |------|---------|
-| `commandManager.ts` | Central registry — instantiates local and feature-owned commands and registers all `demoBuilder.*` command IDs |
-| `claudeCodeFootprint.ts` | On-demand `~/.claude` disk-footprint walk + report lines for Diagnostics (report-only by design — transcripts are how `--continue` resumes, so no cleanup action exists) |
-| `claudeSessionStore.ts` | Probe for Claude Code's per-cwd conversation store (`~/.claude/projects/<encoded-cwd>/`); decides whether `claude --continue` is safe at launch |
-| `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration actions |
-| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe, GitHub↔AEM credential probe, Configuration Service site-config probe incl. the org admin roster — addresses masked, Claude Code `~/.claude` disk footprint) logged to the debug channel |
-| `manageSiteAccess.ts` | `demoBuilder.manageSiteAccess` — QuickPick over who holds the Configuration Service admin role on the project's storefront; add/remove admins. UX only; logic + post-write verification live in `siteAccessManagerHeadless` |
-| `repairSiteConfiguration.ts` | `demoBuilder.repairSiteConfiguration` — on a legacy project whose DA.live site name differs from the repo name, first runs the storefront name migration (renames the DA site — same migration reset runs), then re-runs the Configuration Service write that was refused, then republishes (the same republish a configuration save performs). Step 2 runs only when step 1 reports `repaired`. Logic in `repairSiteConfigForProject` → `repairSiteConfigHeadless` |
-| `migrateStorefrontNames.ts` | One-shot palette command migrating projects whose DA.live site name doesn't match the GitHub repo name (pre-`164fd251` builds) |
+| `commandManager.ts` | The registry — instantiates local and feature-owned commands and registers every `demoBuilder.*` id |
+| `claudeCodeFootprint.ts` | On-demand `~/.claude` disk-footprint walk for Diagnostics. Report-only by design: transcripts are how `--continue` resumes, so there is deliberately no cleanup action |
+| `claudeSessionStore.ts` | Probes Claude Code's per-cwd conversation store; decides whether `claude --continue` is safe at launch |
+| `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration |
+| `diagnostics.ts` | The diagnostics report (see below) |
+| `manageSiteAccess.ts` | QuickPick over who holds the Configuration Service admin role on the project's storefront. UX only — logic and post-write verification live in `siteAccessManagerHeadless` |
+| `repairSiteConfiguration.ts` | For a legacy project whose DA.live site name differs from the repo name: runs the storefront name migration, then re-runs the refused Configuration Service write, then republishes. Step 2 runs only when step 1 reports `repaired` |
+| `migrateStorefrontNames.ts` | One-shot palette command for projects built before `164fd251`, whose DA.live site name does not match the GitHub repo name |
 | `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |
-| `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent web console (`aemcoder.adobe.io`) with a tip about the current project's repo |
-| `refreshBlockLibrary.ts` | Dashboard kebab action (EDS-only) — destructive full re-sync of the DA.live block library from `component-definition.json` |
-| `showPromptsPicker.ts` | `demoBuilder.showPromptsPicker` — prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
+| `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent console with a tip about the current project's repo |
+| `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
+| `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
-Read the source — each file carries a substantial header comment.
+## Registration
 
-## Command Registration Flow
+`CommandManager.registerCommands()` is the single place ids are bound —
+`extension.ts` constructs the manager and calls it, and nothing registers a command
+inline. Ids are `demoBuilder.*` in camelCase; there is no `demo-builder.*` form.
 
-```typescript
-// In extension.ts
-export function activate(context: vscode.ExtensionContext) {
-    // Register all commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demo-builder.createProject', 
-            () => new CreateProjectCommand().execute())
-    );
-}
-```
+Adding one means four edits, and skipping the third is the common mistake:
 
-## Main Commands
+1. The command file here (or in the owning feature).
+2. A `registerCommand` line in `commandManager.ts`.
+3. A `contributes.commands` entry in `package.json` — **unless it is internal**, see
+   below. Without it the command is unreachable from the palette.
+4. Its row in the table above.
 
-### createProjectWebview (Primary Command)
+**Internal commands are deliberately absent from `package.json`.** `navigate`,
+`openAiExperience` and `showPromptsPicker` are invoked programmatically from the
+sidebar, dashboard and other commands, and a palette entry for them would be noise.
+Omission there is a decision, not an oversight — do not "fix" it.
 
-**Purpose**: Launch the full project creation wizard
+## navigate
 
-**Key Components**:
-- `CreateProjectWebviewCommand` class
-- Manages webview lifecycle
-- Handles message passing
-- Orchestrates prerequisite checking
-- Manages project creation flow
-
-**Important Methods**:
-```typescript
-class CreateProjectWebviewCommand {
-    async execute() {
-        // 1. Create webview panel
-        // 2. Load React app
-        // 3. Handle messages
-        // 4. Manage state
-    }
-    
-    async handleMessage(message: any) {
-        switch(message.type) {
-            case 'checkPrerequisites':
-            case 'installPrerequisite':
-            case 'createProject':
-            // ... handle each message type
-        }
-    }
-}
-```
-
-**Message Protocol Evolution**:
-
-Starting with v1.5.0, the message handling was fundamentally improved to fix critical async handler resolution issues.
-
-**Legacy Pattern (Pre v1.5.0)**:
-```typescript
-// ❌ Problematic - handlers not awaited
-panel.webview.onDidReceiveMessage(message => {
-    // This returned Promise objects to UI instead of resolved values
-    return this.handleMessage(message);
-});
-
-// Extension → Webview
-panel.webview.postMessage({
-    type: 'prerequisiteStatus',
-    data: { status: 'checking', progress: 50 }
-});
-
-// Webview → Extension
-vscode.postMessage({
-    type: 'installPrerequisite',
-    prereqId: 'node',
-    version: '20.11.0'
-});
-```
-
-**Modern Pattern (v1.5.0+)**:
-```typescript
-// ✅ Fixed - handlers properly awaited via WebviewCommunicationManager
-class CreateProjectWebviewCommand extends BaseWebviewCommand {
-    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Now properly handles async responses
-        comm.on('get-projects', async (payload) => {
-            return await this.adobeAuth.getProjects(payload.orgId);
-        });
-
-        comm.on('select-project', async (payload) => {
-            // handleSelectProject validates the target org is reachable via
-            // ensureOrgContext and acks the selection; it does NOT mutate the
-            // aio global. Project/workspace context is targeted per operation.
-            return await handleSelectProject(this.context, { projectId: payload.projectId });
-        });
-    }
-}
-```
-
-**Backend Call on Continue Pattern**:
-The major UX change in v1.5.0 implements the "Backend Call on Continue" pattern, where:
-
-1. **Selection UI Updates**: Immediate visual feedback on selection
-2. **Backend Calls Deferred**: Actual backend operations happen when user clicks Continue
-3. **Loading Overlay**: Simple spinner during backend confirmation
-4. **Error Recovery**: Clear error handling at the commitment point
-
-```typescript
-// UI-only selection handlers
-comm.on('project-selected', (payload) => {
-    // Immediate UI update - no backend call
-    this.updateUIState({
-        selectedProject: payload.project
-    });
-});
-
-// Backend calls during Continue action
-comm.on('continue-step', async (payload) => {
-    if (payload.step === 'adobe-project' && payload.selectedProject) {
-        // Validate the selection's org is reachable (no aio global mutation).
-        // The project/workspace are targeted per-operation via withOrgContext
-        // when a dependent op (e.g. mesh deploy) actually runs.
-        const result = await handleSelectProject(this.context, {
-            projectId: payload.selectedProject.id,
-        });
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to select project');
-        }
-    }
-});
-```
-
-### navigate (Internal)
-
-**Purpose**: Routes sidebar navigation clicks to the appropriate webview command
-
-**Command ID**: `demoBuilder.navigate`
-
-**Accepted targets** (via `payload.target`):
+Routes sidebar clicks to the right webview command, by `payload.target`:
 
 | Target | Routes to |
 |--------|-----------|
 | `overview` | `projectDashboard.execute()` |
 | `configure` | `configureProject.execute()` |
-| `ai` | `demoBuilder.openAiExperience` (chat-first: opens the Claude Code terminal tab) |
+| `ai` | `demoBuilder.openAiExperience` — opens the Claude Code terminal tab |
 | `updates` | `checkUpdates.execute()` |
 
-**Note**: This command is intentionally omitted from `package.json` contributions. It is an internal sidebar-routing command, not a user-facing command palette entry. The sidebar sends `demoBuilder.navigate` messages; the command dispatches to the appropriate webview.
-
-### AI experience (chat-first)
-
-Two single-purpose internal commands back the AI surface (omitted from `package.json` — invoked programmatically from sidebar / dashboard / navigation):
-
-- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand.execute()` with no prompt: opens/reveals the Claude Code terminal as a tab in the active editor group (`ViewColumn.Active`, next to Project Dashboard). Routed from: the sidebar `AiZone` Chat button, `navigate('ai')`, and the dashboard AI action.
-- **`demoBuilder.showPromptsPicker`** (`src/commands/showPromptsPicker.ts`) — "Show Prompts". Always shows the prompt QuickPick (no state-aware branching). Built via the shared `showWebviewQuickPick`: the merged prompt list (pinned first) and a "Manage prompts…" row. Selecting a prompt dispatches `demoBuilder.openInClaude` with `{ prompt }` — which opens or focuses the Claude terminal and bracketed-paste-injects the prompt. "Manage prompts…" dispatches `demoBuilder.openAi` (the prompt library). Routed from the sidebar `AiZone` Prompts button.
-
-The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prompt Library", command-palette entry "Demo Builder: Manage AI Prompts") is the single home for prompt CRUD — reached on demand via the picker's "Manage prompts…" or the palette. It is not the default AI surface; the chat is. The footer "Close" button posts `cancel`, which `ShowAiCommand` handles by disposing the panel.
-
-The previous `demoBuilder.aiMenu` command (state-aware wand-icon dispatcher) was retired in favor of the two single-purpose commands above. The two-button `AiZone` in the sidebar makes the prompt library discoverable from the first click rather than requiring a hidden second click on a state-aware wand.
-
----
-
-### createProject (Legacy)
-
-**Purpose**: Quick project creation without wizard
-- Simplified flow for experienced users
-- Command-line style interaction
-- Minimal UI involvement
-
-### openInClaude
-
-**Purpose**: Launch the single "home" Claude Code (CLI) Chat.
-
-**Command ID**: `demoBuilder.openInClaude`
-
-**Behavior**: Find-or-spawn the "Claude Code" terminal at the **projects root** (`resolveProjectsRoot()` — `DEMO_BUILDER_PROJECTS_DIR` or `~/.demo-builder/projects`), placed as a tab in the active editor group (`{ viewColumn: ViewColumn.Active }`, next to Project Dashboard). Reuses an existing live terminal (matched by name + `exitStatus === undefined`) instead of duplicating.
-
-Always-root home model: the Chat launches at the projects root, never a project subdir, and **nothing anchors the VS Code workspace**. The window stays homed at the root, so the home `.mcp.json` there reaches the root MCP socket and one home Chat addresses any project by name via the in-extension MCP tools. Any `project` arg passed to `execute` is ignored (only the `prompt` is used); callers that still pass a project are harmless. To resolve "the active project," the launch itself reads the current-project pointer and writes the name into the home `AGENTS.md` (`refreshHomeAgentsMd`), so a cold Chat knows the project without spending a round trip on `get_current_project`. Launch is the only safe moment to state it: activation runs once and the pointer changes freely afterwards, so the activation-time write deliberately carries no name and keeps the original "call the tool first" directive. A resumed conversation never re-reads `AGENTS.md` — and since `hasConversation()` is true as soon as the projects root holds one transcript, **after a user's first ever chat every launch resumes**, so the `AGENTS.md` statement reaches only cold starts and headless `claude -p` runs. The path real users take is the re-home preamble (`buildRehomePrefix`), which is rebuilt from the pointer on every launch and therefore states the project name rather than ordering a call to discover it. With no resolvable project both fall back to the original "call `get_current_project` first" wording.
-
-**Prompt delivery**:
-- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'` (race-free — claude runs it on startup; `--` keeps a dash-leading prompt from being read as a flag). `--continue` is only added when a prior conversation exists for the root cwd.
-- **Reuse**: claude is already running, so the prompt is injected into the live REPL via bracketed paste (pre-fills the input for the user to send).
-- The prompt is always copied to the clipboard as a silent fallback. A once-ever tip toast explains the contract the first time a prompt is sent.
-
-With no prompt, spawn runs a bare `claude` (or `claude --continue` if a prior root conversation exists).
-
-**Setting**: `demoBuilder.ai.engine` — which AI tool. Currently `'claude-code'` only; reserved for future engines (e.g. Codex).
-
-**Why no extension surface**: An earlier version routed launches through the Claude Code VS Code extension's URI handler (`vscode://anthropic.claude-code/open`). That surface was retired because the extension's URI handler opens a new chat on every launch — there is no public API to inject a prompt into the live chat — so the wand's "pick a prompt, drop it into the conversation" model can't work there.
-
-**No more anchoring / pending-launch**: The prior anchor-on-demand model (pending `globalState` record + `vscode.openFolder` reload + `replayPendingClaudeLaunch` on activation) was retired with the always-root model. Home-grid prompt clicks just set the current-project pointer and launch the home Chat at the root; no window reload. If a window ever opens anchored to a project subdir, activation's `shouldReHomeToRoot` re-homes it to the projects root.
-
-**Dispatched from**:
-- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })` → `handleOpenAiForProject` sets the pointer, then dispatches `openInClaude` with no arg)
-- The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
-- The sidebar `AiZone` Prompts button → `showPromptsPicker.ts` → `openInClaude` with the selected prompt
-
-**File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
-
-### diagnostics
-
-**Purpose**: Comprehensive system diagnostics
-- Collects system and tool information
-- Tests Adobe CLI authentication
-- Probes the in-extension MCP server socket and tools
-- Triangulates the GitHub credential (see below)
-- Logs the full report to the debug channel, shows a summary in user logs
-
-**GitHub↔AEM credential triangulation**: asks three questions in one pass —
-who we're signed in as plus the scopes GitHub actually *granted* (`x-oauth-scopes`,
-not the set we requested), whether GitHub reports `permissions.push` on the
-project's repo, and what `admin.hlx.page` returns for the same credential (HTTP
-status + `x-error`). It prints a one-line verdict, because no single answer is
-decisive: `push: true` alongside an AEM 401 rules out scope and permission
-problems and leaves the credential itself, which is the branch that previously
-could not be distinguished from a missing AEM Code Sync install.
-
-Probe logic lives in `@/features/eds/services/github/githubCredentialProbe` (mirroring
-the `checkMcp` → `probeInExtensionMcpTools` split) so it stays testable outside
-the command shell; `diagnostics.ts` only calls and renders it. The command takes
-`vscode.SecretStorage` in its constructor for this — `CommandManager` supplies it.
-
-Never printed: the credential. The output is designed to be pasted into tickets,
-so only the login, granted scopes, `push` boolean, status codes, `x-error`, and
-the credential *type prefix* (`gho_`, `ghu_`, …) appear. A test enforces this.
-
-This is the command's only outbound network call; every other check is local.
-Each leg has its own timeout and degrades independently.
-
-## Command Patterns
-
-### BaseWebviewCommand Pattern (Recommended)
-
-The new BaseWebviewCommand provides standardized webview handling with robust communication:
-
-```typescript
-import { BaseWebviewCommand } from './baseWebviewCommand';
-import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
-
-class MyWebviewCommand extends BaseWebviewCommand {
-    protected getWebviewId(): string {
-        return 'myWebview';
-    }
-    
-    protected getWebviewTitle(): string {
-        return 'My Webview';
-    }
-    
-    protected async getWebviewContent(): Promise<string> {
-        // Return HTML with React app
-        return getHtmlContent(this.panel!, this.context);
-    }
-    
-    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // Register message handlers
-        comm.on('action', async (data) => {
-            // Handle action
-            return { success: true };
-        });
-        
-        comm.on('getData', async () => {
-            return await this.fetchData();
-        });
-    }
-    
-    protected async getInitialData(): Promise<any> {
-        return {
-            config: await this.loadConfig(),
-            state: await this.stateManager.getState()
-        };
-    }
-    
-    async execute(): Promise<void> {
-        // Create panel
-        await this.createOrRevealPanel();
-        
-        // Initialize communication with handshake
-        await this.initializeCommunication();
-        
-        // Webview is ready for interaction
-    }
-}
-```
-
-**Key Benefits**:
-- Automatic handshake protocol
-- Message queuing until ready
-- Built-in retry logic
-- Standardized error handling
-- Consistent logging
-
-### Legacy Webview Pattern
-
-For existing commands not yet migrated:
-
-```typescript
-class WebviewCommand {
-    private panel: vscode.WebviewPanel | undefined;
-    
-    async execute() {
-        // Create or reveal panel
-        this.panel = vscode.window.createWebviewPanel(...);
-        
-        // Set content
-        this.panel.webview.html = this.getWebviewContent();
-        
-        // Handle messages
-        this.panel.webview.onDidReceiveMessage(
-            message => this.handleMessage(message)
-        );
-    }
-    
-    private getWebviewContent(): string {
-        // Return HTML with React app
-    }
-    
-    private async handleMessage(message: any) {
-        // Process messages from webview
-    }
-}
-```
-
-### Simple Command Pattern
-
-```typescript
-class SimpleCommand {
-    async execute(context: vscode.ExtensionContext) {
-        try {
-            // Perform action
-            const result = await this.doWork();
-            
-            // Show success
-            vscode.window.showInformationMessage('Success!');
-        } catch (error) {
-            // Handle error
-            vscode.window.showErrorMessage('Failed: ' + error.message);
-        }
-    }
-}
-```
-
-### Authentication Pre-flight Pattern
-
-**Purpose**: Prevent unexpected browser auth launches during Adobe I/O operations
-
-**Problem**: Operations like mesh deployment or fetching org data would silently trigger browser authentication, confusing users who didn't expect it.
-
-**Solution**: Check authentication status before expensive operations and explicitly ask for permission.
-
-**Implementation**:
-
-```typescript
-class AdobeIOCommand extends BaseCommand {
-    async execute() {
-        // 1. Token-only auth check (2-3s, no org validation)
-        const isAuthenticated = await this.authManager.isAuthenticated();
-
-        if (!isAuthenticated) {
-            // 2. Show explicit warning with user choice
-            const action = await vscode.window.showWarningMessage(
-                'Authentication required to [action]. Sign in to Adobe?',
-                'Sign In',
-                'Cancel'
-            );
-            
-            if (action !== 'Sign In') {
-                return; // User declined
-            }
-            
-            // 3. User confirmed → Browser-based login
-            await this.authManager.login();
-        }
-        
-        // 4. Proceed with Adobe I/O operation
-        await this.performAdobeIOOperation();
-    }
-}
-```
-
-**Used In**:
-- `deployMesh` command
-- Dashboard mesh status check (skips fetch if not authenticated)
-- `configure` command (when fetching Adobe data)
-
-**Key Benefits**:
-- No surprise browser windows
-- User remains in control
-- Clear context for why auth is needed
-- Graceful degradation (operation cancelled if user declines)
-
-**Performance Note**: `isAuthenticated()` only checks token validity (2-3s) vs full org validation (3-10s with `isFullyAuthenticated()`).
-
-## Key Responsibilities
-
-### Prerequisite Management
-- Check for required tools
-- Trigger installations
-- Track progress
-- Report status to UI
-
-### Project Creation
-- Gather user inputs
-- Validate selections
-- Execute creation scripts
-- Monitor progress
-- Handle errors
-
-### State Management
-- Persist wizard state
-- Resume interrupted flows
-- Cache user preferences
-
-## Integration Points
-
-### With Utils
-- Uses PrerequisitesManager for tool checking
-- Uses ProgressUnifier for progress tracking
-- Uses StateManager for persistence
-- Uses ErrorLogger for error handling
-
-### With Webviews
-- Provides data to React components
-- Receives user actions
-- Manages webview lifecycle
-- Handles resource loading
-
-### With Templates
-- Loads component definitions
-- Reads prerequisite configurations
-- Applies project templates
-
-## Error Handling Strategy
-
-```typescript
-try {
-    // Risky operation
-    await this.createProject(config);
-} catch (error) {
-    // Log for debugging
-    this.logger.error('Project creation failed', error);
-    
-    // User-friendly message
-    const message = this.getUserFriendlyError(error);
-    
-    // Show to user with action
-    const action = await vscode.window.showErrorMessage(
-        message,
-        'Retry',
-        'View Logs'
-    );
-    
-    if (action === 'Retry') {
-        return this.execute();
-    } else if (action === 'View Logs') {
-        vscode.commands.executeCommand('demo-builder.showLogs');
-    }
-}
-```
-
-## Timeout Handling in Commands
-
-**Critical Issue**: Adobe CLI commands often succeed but timeout due to restrictive timeout values.
-
-**Solution Pattern**:
-Note: project/workspace selection no longer runs an `aio` CLI mutation, so it
-no longer carries a CLI timeout. The pattern below applies to the Adobe CLI
-operations that DO run (e.g. workspace download, api-mesh get/deploy), which are
-targeted per-invocation via `withOrgContext`.
-
-```typescript
-import { TIMEOUT_CONFIG } from '../utils/timeoutConfig';
-
-class CreateProjectWebviewCommand extends BaseWebviewCommand {
-    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        comm.on('check-mesh', async (payload) => {
-            try {
-                // Run the CLI op under the per-invocation org/project/workspace
-                // target; use an appropriate timeout for the slow CLI call.
-                return await withOrgContext(target, () =>
-                    this.commandExecutor.execute('aio api-mesh get', {
-                        timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // 10 seconds
-                    }),
-                );
-            } catch (error) {
-                // Check for success despite timeout (CLI is slow, not failing).
-                if (error.stdout && error.stdout.includes('Successfully')) {
-                    return { success: true, message: 'Completed despite timeout' };
-                }
-                throw error;
-            }
-        });
-    }
-}
-```
-
-**Key Patterns**:
-1. **Use TIMEOUT_CONFIG**: Centralized timeout management
-2. **Success Detection**: Check stdout for success indicators in catch blocks
-3. **Graceful Degradation**: Continue operation even if timeout occurred but command succeeded
-4. **User Feedback**: Clear loading states during potentially slow operations
-
-## Testing Commands
-
-### Manual Testing Checklist
-- [ ] Command appears in palette
-- [ ] Keyboard shortcuts work
-- [ ] UI buttons trigger command
-- [ ] Error cases handled gracefully
-- [ ] Progress shown correctly
-- [ ] Cancellation works
-- [ ] State persisted properly
-- [ ] Timeout scenarios handled (Adobe CLI commands)
-
-### Common Issues
-
-1. **Webview Not Loading**
-   - Check the esbuild build
-   - Verify resource paths
-   - Check CSP settings
-
-2. **Messages Not Received**
-   - Verify message types match
-   - Check panel.webview reference
-   - Ensure listener registered
-
-3. **State Not Persisting**
-   - Verify StateManager usage
-   - Check context.globalState
-   - Handle migration cases
-
-## Adding New Commands
-
-1. Create command file in `commands/`
-2. Implement Command interface
-3. Register in extension.ts
-4. Add to package.json contributions
-5. Document in this file
-6. Add tests
-
-## Performance Considerations
-
-- Lazy load heavy dependencies
-- Cache webview content
-- Debounce rapid messages
-- Use progress indicators
-- Cancel long-running operations
-
----
-
-For the extension↔webview message round trip, invoke the `webview-command-handler`
-skill; for shared infrastructure a command reaches for, see `../core/CLAUDE.md`.
-
-(This used to point at a webviews and a utils CLAUDE.md. Neither exists: there is
-no src/webviews directory at all, and `src/utils/` is the legacy location holding
-only `autoUpdater.ts`.)
+## The AI surface is chat-first
+
+Two single-purpose internal commands back it:
+
+- **`demoBuilder.openAiExperience`** — "Open Chat". Calls `OpenInClaudeCommand`
+  with no prompt, opening or revealing the Claude Code terminal beside the Project
+  Dashboard. Reached from the sidebar's Chat button, `navigate('ai')`, and the
+  dashboard AI action.
+- **`demoBuilder.showPromptsPicker`** — "Show Prompts". Always shows the QuickPick,
+  with no state-aware branching: the merged prompt list, pinned first, plus a
+  "Manage prompts…" row. Picking a prompt dispatches `openInClaude` with it;
+  "Manage prompts…" opens the prompt library.
+
+The prompt library (`demoBuilder.openAi`, "Prompt Library") is the single home for
+prompt CRUD, reached on demand rather than being the default AI surface. The chat
+is the default.
+
+An earlier state-aware wand-icon dispatcher was retired for these two: a two-button
+sidebar makes the library discoverable on the first click instead of hiding it
+behind a second click on a control whose behaviour changed underneath you.
+
+## openInClaude
+
+Find-or-spawn the "Claude Code" terminal at the **projects root**
+(`resolveProjectsRoot()`), placed in the active editor group beside the Project
+Dashboard. An existing live terminal is reused, matched by name plus
+`exitStatus === undefined`.
+
+**Always-root home model.** The chat launches at the projects root, never a project
+subdirectory, and nothing anchors the VS Code workspace. One home chat addresses any
+project by name through the MCP tools, because the root `.mcp.json` reaches the root
+socket. Any `project` argument to `execute` is ignored; only `prompt` is used.
+
+To resolve "the active project", the launch reads the current-project pointer and
+writes the name into the home `AGENTS.md`. Launch is the only safe moment: activation
+runs once and the pointer changes freely afterwards, so the activation-time write
+deliberately carries no name.
+
+**But that statement reaches almost nobody, and it matters to know why.** A resumed
+conversation never re-reads `AGENTS.md`, and a conversation exists as soon as the
+projects root holds one transcript — so after a user's first ever chat, every launch
+resumes. The path real users take is the re-home preamble, rebuilt from the pointer on
+every launch, which states the project name rather than ordering a call to discover it.
+With no resolvable project both fall back to asking for `get_current_project`.
+
+**Prompt delivery** — the two paths differ, and the difference is load-bearing:
+
+- **Spawn**: the prompt rides the launch command as `claude --continue -- '<prompt>'`.
+  Race-free, because claude runs it at startup; `--` stops a dash-leading prompt being
+  read as a flag. `--continue` is added only when a prior conversation exists.
+- **Reuse**: claude is already running, so the prompt is injected into the live REPL
+  by bracketed paste, pre-filling the input for the user to send.
+
+Either way the prompt is also copied to the clipboard as a silent fallback. **Do not
+reintroduce a timed or delayed paste on spawn** — it was tried twice and always raced
+cold start, because no "TUI ready" signal exists.
+
+`demoBuilder.ai.engine` selects the tool; `'claude-code'` is currently the only value.
+
+**Why there is no extension surface.** Launches once routed through the Claude Code
+VS Code extension's URI handler. That was retired because the handler opens a new
+chat every time and offers no way to inject a prompt into the live one, which makes
+"pick a prompt, drop it into the conversation" impossible to build there.
+
+Decision rationale: [ADR-004](../../docs/architecture/adr/004-claude-code-harness.md).
+
+## diagnostics
+
+Collects system and tool information, tests Adobe CLI authentication, probes the
+in-extension MCP socket and tools, and logs the full report to the debug channel.
+
+**The GitHub↔AEM triangulation is the part worth understanding.** It asks three
+questions in one pass: who we are signed in as plus the scopes GitHub actually
+*granted* (`x-oauth-scopes`, not the set requested); whether GitHub reports
+`permissions.push` on the project's repo; and what `admin.hlx.page` returns for the
+same credential. It prints a one-line verdict because no single answer is decisive —
+`push: true` alongside an AEM 401 rules out both scope and permission problems and
+leaves the credential itself, a branch that previously could not be told apart from
+a missing AEM Code Sync install.
+
+Probe logic lives in `@/features/eds/services/github/githubCredentialProbe` so it
+stays testable outside the command shell; `diagnostics.ts` only calls and renders it.
+
+**The credential is never printed.** Output is designed to be pasted into tickets, so
+it carries the login, granted scopes, the `push` boolean, status codes, `x-error`,
+and the credential's *type prefix* only. A test enforces this.
+
+This is the command's only outbound network call. Every other check is local, and
+each leg has its own timeout and degrades independently.
+
+## Two behaviours worth knowing before you change a command
+
+**Authentication is checked before expensive Adobe work, never triggered by
+surprise.** A command that needs Adobe I/O calls `isAuthenticated()` first — a
+token-only check — and on failure asks the user before starting a browser login.
+`isFullyAuthenticated()` also validates the org and is materially slower, so it is
+used only where org validity is the actual question. Silent browser launches are the
+failure this prevents.
+
+**An Adobe CLI timeout is not proof of failure.** The CLI is often slow rather than
+broken, so a catch block that sees success text in `error.stdout` should treat the
+operation as having succeeded. Timeouts come from `TIMEOUTS` in
+`@/core/utils/timeoutConfig` — never a literal. Project and workspace selection no
+longer runs a CLI mutation and so carries no CLI timeout; the operations that do run
+(workspace download, `api-mesh get`/`deploy`) are targeted per invocation through
+`withOrgContext`.
+
+## Related
+
+- `webview-command-handler` skill — the extension↔webview message round trip
+- [`../core/CLAUDE.md`](../core/CLAUDE.md) — shared infrastructure commands reach for
