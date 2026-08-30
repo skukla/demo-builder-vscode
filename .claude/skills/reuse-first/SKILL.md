@@ -54,7 +54,11 @@ hand-copied to the other within a single day before being extracted.)
 
 ## Vocabulary you will otherwise rebuild
 
-The ones that actually got rebuilt, so check these first:
+**This is not the index — it is the repeat-offender list.** The full job→component
+table lives in `src/core/ui/components/CLAUDE.md` and is the canonical one; this is
+the shorter set that history says gets rebuilt anyway, so check these first. A new
+component goes in the table, and only joins this list once somebody has actually
+rebuilt it.
 
 - **Feedback** — `LoadingDisplay` (+ `useElapsedStage` for long waits), `StatusDisplay`
   (error/info/success + `actions[]`), `EmptyState`, `StatusCard`, `StatusDot`,
