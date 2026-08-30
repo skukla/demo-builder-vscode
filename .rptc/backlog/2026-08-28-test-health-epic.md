@@ -69,3 +69,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  chore(metrics): closing snapshot for the convergence programme (`414da452e`)
 - 2026-08-30  fix(census): a deliberate throw IS a verification — suites-asserting-nothing to 0 (`d9135af81`)
 - 2026-08-30  docs(adr-015): state the two conventions the code had been inventing per-file (`50f3a8405`)
+- 2026-08-30  refactor(architecture): two of three registry constructions use the session accessor (`4204789fd`)

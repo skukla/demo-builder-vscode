@@ -490,7 +490,8 @@
     "data-installer:drift": "node scripts/dataInstallerDrift.js",
     "eds:drift": "node scripts/edsDrift.js",
     "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "docs:adr-index": "node scripts/generate-adr-index.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

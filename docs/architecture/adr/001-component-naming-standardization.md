@@ -1,6 +1,12 @@
 # ADR-001: Component Naming Standardization (externalSystems → integrations)
 
-**Status**: Accepted and Implemented
+**Status**: Historical
+
+> Relabelled 2026-08-30 by the ADR audit. Nothing here is wrong — the rename is
+> completely and durably implemented (`externalSystems` appears 0 times in `src/`
+> or `tests/`; `integrations` is the registry type and config group). It is
+> `Historical` because the decision is finished and nothing cites it: kept for
+> provenance — why the name is `integrations` — not for guidance.
 **Date**: 2025-11-04
 **Decision Maker**: Project Team
 **Implementer**: RPTC Workflow
