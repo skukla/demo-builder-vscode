@@ -20,7 +20,7 @@ restart path waits for the port to clear.
 
 ## Where it is triggered from
 
-The dashboard Start/Stop tiles, `commands/configure.ts` after a configuration change,
+The dashboard Start/Stop tiles, `src/features/dashboard/commands/configure.ts` after a configuration change,
 and the extension's own shutdown. All three land on the same services; there is no
 second stop path.
 

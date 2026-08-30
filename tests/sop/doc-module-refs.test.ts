@@ -54,6 +54,8 @@ const EXCLUDED = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANGEL
  */
 const ALLOWED: Record<string, string> = {
     'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
+    'CLAUDE.md::.rptc/prompt.md':
+        'gitignored by design, and the sentence citing it says so — it is named as the one exception to .rptc being tracked, so it must not resolve',
     '.claude/skills/spectrum-webview-ui/SKILL.md::docs/development/ui-patterns.md':
         'names the document this skill ABSORBED on 2026-08-30, so the reader knows where 585 lines went. It must not resolve — that is the fact being recorded.',
     '.claude/skills/gate/SKILL.md::tests/oversized.test.ts':
@@ -115,11 +117,13 @@ function citations(md: string): string[] {
  * nested inside a multi-line match could still be captured by the 200-char window.
  */
 function imports(md: string): string[] {
-    return [...md.matchAll(/^\s*(?:import|export)[\s\S]{0,200}?from '(@\/[^']+)'/gm)]
-        .map((m) => m[1])
-        .filter((s) => !isPlaceholder(s))
-        // A capture containing a regex metacharacter came from a search pattern.
-        .filter((s) => !/[[\]^*$()|]/.test(s));
+    return (
+        [...md.matchAll(/^\s*(?:import|export)[\s\S]{0,200}?from '(@\/[^']+)'/gm)]
+            .map((m) => m[1])
+            .filter((s) => !isPlaceholder(s))
+            // A capture containing a regex metacharacter came from a search pattern.
+            .filter((s) => !/[[\]^*$()|]/.test(s))
+    );
 }
 
 /**
@@ -155,6 +159,78 @@ function scan(pick: (md: string) => string[], resolve: (s: string) => boolean | 
     }
     return [...new Set(bad)].sort();
 }
+
+/**
+ * References resolved against the CITING file's own directory.
+ *
+ * The checks above are scoped to paths beginning `src/`, `docs/` or `tests/`, so
+ * a relative reference is invisible to all of them — and a relative reference is
+ * the form a per-directory CLAUDE.md reaches for most. Three dead ones survived in
+ * `src/commands/CLAUDE.md` with this whole suite green: `../webviews/CLAUDE.md`
+ * (there is no `src/webviews/` at all), `../utils/CLAUDE.md`, and
+ * `handlers/HandlerContext.ts` in a directory that is empty.
+ *
+ * Two forms, deliberately treated differently:
+ *
+ *   ./x, ../x   always checked. An explicit relative path is unambiguously about
+ *               THIS repo, so a miss is always rot.
+ *   dir/file    checked only when the resolved PARENT directory exists here. This
+ *               preserves the exclusion the suite already states: the extension
+ *               generates projects, and documentation legitimately cites paths
+ *               inside them (`.claude/mcp.json`) that must not be flagged. No
+ *               `.claude/` sits beside `src/features/`, so those stay quiet, while
+ *               `handlers/` does sit beside `src/commands/`, so that one is caught.
+ */
+function relativeRefs(md: string): string[] {
+    const out = [
+        ...[...md.matchAll(/`([\w.@-]+(?:\/[\w.@-]+)+\.\w+)`/g)].map((m) => m[1]),
+        ...[...md.matchAll(/\]\(((?:\.\.?\/)[^)#\s]+)\)/g)].map((m) => m[1]),
+    ].filter(
+        (s) =>
+            s.includes('/') &&
+            !s.startsWith('src/') &&
+            !s.startsWith('docs/') &&
+            !s.startsWith('tests/') &&
+            !s.includes('://') &&
+            !s.includes('{') &&
+            !s.includes('*') &&
+            !s.includes('...')
+    );
+    return [...new Set(out)];
+}
+
+describe('relative references resolve against the file that makes them', () => {
+    const findings = (): string[] => {
+        const bad: string[] = [];
+        for (const f of docs()) {
+            const dir = dirname(f);
+            for (const spec of relativeRefs(readFileSync(join(ROOT, f), 'utf8'))) {
+                const target = join(ROOT, dir, spec);
+                const explicit = spec.startsWith('./') || spec.startsWith('../');
+                if (!explicit && !existsSync(dirname(target))) continue;
+                if (!existsSync(target) && !ALLOWED[`${f}::${spec}`]) bad.push(`${f}  ${spec}`);
+            }
+        }
+        return [...new Set(bad)].sort();
+    };
+
+    it('CONTROL: the extractor finds relative references to check', () => {
+        const n = docs().reduce(
+            (acc, f) => acc + relativeRefs(readFileSync(join(ROOT, f), 'utf8')).length,
+            0
+        );
+        expect(n).toBeGreaterThan(20);
+    });
+
+    it('CONTROL: a path known to be absent is reported', () => {
+        // Proves the resolver actually tests the filesystem rather than passing blind.
+        expect(existsSync(join(ROOT, 'src/commands/handlers/HandlerContext.ts'))).toBe(false);
+    });
+
+    it('every relative reference names a file that exists', () => {
+        expect(findings()).toEqual([]);
+    });
+});
 
 describe('module paths cited by current-tense documents resolve', () => {
     it('CONTROL: the scan reads real documents and finds real candidates', () => {
@@ -231,8 +307,9 @@ describe('module paths cited by current-tense documents resolve', () => {
     });
 
     it('CONTROL: the backticked-path extractor finds paths and skips prose', () => {
-        expect(backtickedPaths('see `src/core/validation/README.md` for detail'))
-            .toEqual(['src/core/validation/README.md']);
+        expect(backtickedPaths('see `src/core/validation/README.md` for detail')).toEqual([
+            'src/core/validation/README.md',
+        ]);
         expect(backtickedPaths('everything under `src/features/` is a feature')).toEqual([]);
         expect(backtickedPaths('a `src/features/{name}/index.ts` barrel')).toEqual([]);
     });
