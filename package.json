@@ -491,6 +491,8 @@
     "eds:drift": "node scripts/edsDrift.js",
     "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
     "docs:conventions": "node scripts/generate-convention-index.mjs",
+    "docs:tools": "node scripts/generate-tool-catalog.mjs",
+    "docs:tools:check": "node scripts/generate-tool-catalog.mjs --check",
     "docs:conventions:check": "node scripts/generate-convention-index.mjs --check",
     "test:mutation": "stryker run",
     "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",

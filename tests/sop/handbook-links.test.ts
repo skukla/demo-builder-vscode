@@ -116,3 +116,22 @@ describe('the convention index is current', () => {
         expect({ code: r.status, stderr: r.stderr.trim() }).toEqual({ code: 0, stderr: '' });
     });
 });
+
+/**
+ * The MCP tool catalog is generated, and a stale one misleads an AGENT rather than a
+ * person. A phantom tool sends it hunting for a capability that does not exist; a
+ * missing one hides one it has.
+ *
+ * The hand-written version was wrong in both directions — 12 undocumented, 6 deleted
+ * tools still listed — which is what every hand-maintained list of enumerable things
+ * in this repo has become.
+ */
+describe('the MCP tool catalog is current', () => {
+    it('regenerating it would produce no change', () => {
+        const r = spawnSync('node', ['scripts/generate-tool-catalog.mjs', '--check'], {
+            cwd: join(__dirname, '..', '..'),
+            encoding: 'utf8',
+        });
+        expect({ code: r.status, stderr: r.stderr.trim() }).toEqual({ code: 0, stderr: '' });
+    });
+});
