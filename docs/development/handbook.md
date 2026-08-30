@@ -18,6 +18,9 @@ This file describes how things are today. When something changes, change it here
 
 ## 1. This is two programs
 
+**Position.** One repository, two programs, two sets of rules. Code does not cross between
+them; anything shared has to be written to run in both.
+
 Start here, because everything else depends on it.
 
 The extension runs in two places. **The host** is Node: it talks to VS Code, the file
@@ -43,6 +46,9 @@ because a rule written for one is usually meaningless for the other.
 ---
 
 ## 2. Code is grouped by what it does for the user
+
+**Position.** Grouped by feature, not by kind. A feature owns its whole vertical slice and
+does not reach into its neighbours; anything two features need moves to `core/`.
 
 Within each half, code is arranged by feature, not by kind. Everything about Edge
 Delivery storefronts lives in one folder: its services, its message handlers, its UI.
@@ -70,6 +76,9 @@ orchestrate, so they may use any feature.
 ---
 
 ## 3. Code gets what it needs handed to it
+
+**Position.** Functional by default — roughly nine functions for every class. Dependencies
+are handed in rather than fetched, except at the four edges the platform calls into.
 
 That is the arrangement. This is the rule that keeps it working, and it is the one most
 often broken.
@@ -136,6 +145,9 @@ should be functions.
 
 ## 4. Much of the behaviour is data, not code
 
+**Position.** Prefer a row in a registry to a new class. Twelve schema-backed JSON files
+describe what the extension supports, and most additions are edits to them.
+
 Before writing a class, check whether the thing you want is a row in a file.
 
 Twelve JSON registries define components, prerequisites, stacks, demo packages, block
@@ -165,6 +177,9 @@ not new code. The mechanism generally exists already and takes another entry.
 ---
 
 ## 5. What survives between calls
+
+**Position.** Anything cached exists once per session, is built on first use, and can be
+reset. Nothing stateful is built by code that runs repeatedly.
 
 Some things must outlive a single operation, and that is where this architecture has a
 specific rule — because it was got wrong first.
@@ -201,6 +216,9 @@ every time" and nothing tells you.
 
 ## 6. The two halves talk by message
 
+**Position.** The webview asks, the host answers. Handlers translate a message into service
+calls and return a result — they hold no logic and render nothing.
+
 A webview sends a message; the host answers.
 
 On the host side each feature keeps a **handler map** — message type to a function
@@ -225,6 +243,9 @@ meant.
 ---
 
 ## 7. The user interface
+
+**Position.** One composition root per surface. Logic lives in hooks, rendering in
+components, and styling in cascade layers rather than in specificity fights.
 
 Each of the eight webviews has one entry file. That entry mounts the app, reads the
 initial data, and decides which stylesheets load — it is the only place that does. Below
@@ -278,6 +299,9 @@ declared in one place, with vendor styles below ours.
 
 ## 8. Agents are a second door, never the only one
 
+**Position.** Agents call the same functions the buttons call. Every capability has a human
+surface; the agent path is additional.
+
 An AI agent reaches the extension through MCP tools, which call the same functions the
 buttons call.
 
@@ -298,6 +322,10 @@ fixes on their own.
 ---
 
 ## 9. Tests
+
+**Position.** Unit tests by default, with dependencies handed in as fakes and assertions on
+how they were called. Contract tests only where something crosses a network boundary.
+Effectiveness is measured by mutation testing, not coverage.
 
 Around 15,400 tests across 1,200 files, mirroring the source layout.
 
@@ -368,6 +396,9 @@ breaks the code on purpose and reports what nothing noticed.
 ---
 
 ## 10. What stops this drifting
+
+**Position.** A convention without an enforcer will drift. Each one below says which kind
+it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
