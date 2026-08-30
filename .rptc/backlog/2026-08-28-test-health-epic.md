@@ -80,3 +80,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(handbook): rewrite as an orientation document a person can read (`2aa80ef68`)
 - 2026-08-30  docs(handbook): capture every convention this programme exposed, one rule each (`4bab5b4a1`)
 - 2026-08-30  docs(handbook): state each section's POSITION above its conventions (`b879ae9f1`)
+- 2026-08-30  docs(research): how the field structures conventions — and the name for what we built (`e470da602`)

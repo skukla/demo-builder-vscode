@@ -105,7 +105,13 @@ the vocabulary does not exempt a new enforcer from proving it can fail.
 - [ThoughtWorks Radar — architectural fitness function](https://www.thoughtworks.com/radar/techniques/architectural-fitness-function) — Trial, May 2018; definition and origin
 - *Building Evolutionary Architectures*, Ford, Parsons & Kua — the source of the term (not read directly; cited via the Radar entry)
 
-## Gaps
+## Gaps (both closed below; the third stands)
+
+- ~~No real-world engineering handbook was examined.~~ Closed — two arc42 examples measured.
+- ~~Building Evolutionary Architectures was not read.~~ Partly closed — taxonomy obtained second-hand.
+- **No source addresses the AI-agent reader**, the same gap the ADR research found.
+
+### As originally stated
 
 - **No real-world engineering handbook was examined.** Comparing against a published
   example — GitLab's handbook, Google's engineering practices — would test whether ten
@@ -116,3 +122,88 @@ the vocabulary does not exempt a new enforcer from proving it can fail.
   classify our own enforcers, and that classification is not reflected above.
 - **No source addresses the AI-agent reader**, which is the same gap the ADR research
   found.
+
+---
+
+# Both gaps closed (2026-08-30)
+
+## Gap 1 — the fitness-function taxonomy
+
+*Building Evolutionary Architectures* classifies fitness functions on four axes. Taken
+from [Will Larson's notes](https://lethain.com/building-evolutionary-architectures/),
+which quote the book's phrasing; the O'Reilly chapter itself is paywalled (403).
+
+| Axis | One side | The other |
+|---|---|---|
+| **Atomic vs holistic** | "run against a singular context and exercise one particular aspect" | "run against a shared context and exercise a combination of architectural aspects" |
+| **Triggered vs continual** | "run based on a particular event, such as a developer executing a unit test" | "constant verification" with no schedule — latency alerts, cost tracking |
+| **Static vs dynamic** | "a fixed result, such as the binary pass/fail of a unit test" | "rely on a shifting definition based on extra context" |
+| **Automated vs manual** | — | — |
+
+### Ours, classified
+
+| What | Atomic/holistic | Triggered/continual | Static/dynamic | Auto/manual |
+|---|---|---|---|---|
+| 19 `tests/sop/` suites | atomic | triggered (jest run) | static | automated |
+| 10 hook rules | atomic | triggered (tool call) | static | automated |
+| Duplication / dead-code / cycle scans | holistic | triggered (release cut) | static | automated |
+| Mutation testing | holistic | triggered | static | automated |
+| The ratchets — ledger only shrinks, clone floor | atomic | triggered | **dynamic** (measured against a baseline) | automated |
+| Guided reviews — architecture duplication, call-path audit | holistic | triggered | dynamic | **manual** |
+
+**What the classification exposes: we have no continual fitness functions.** Everything
+fires on an event — a commit, a test run, a release cut. Nothing watches the running
+extension.
+
+Whether that matters is a judgement rather than a finding. Continual functions in the
+book's examples are service-shaped: latency alerts, cost tracking. A VS Code extension
+running on someone's laptop has no equivalent surface, and inventing one would be
+cargo-culting the taxonomy. Recorded as an observation, not a gap to fill.
+
+The second observation is more actionable: **almost everything we have is static.** A
+static function answers pass/fail against a fixed rule. The ratchets are the exception
+and they are the ones that let a number improve without needing the rule rewritten. That
+is a shape worth using more often.
+
+## Gap 2 — how big is a real one?
+
+Two public arc42 documents, both developer tools, measured from source:
+
+| System | Section 8 | Size |
+|---|---|---|
+| [HtmlSanityCheck](https://github.com/aim42/htmlSanityCheck) | 6 concept files | ~407 lines |
+| [DokChess](https://github.com/p-goetz/DokChess-arc42-gradle) | 1 file | 160 lines |
+| **Our handbook** | 10 topics | ~420 lines, 45 conventions |
+
+**So the size is normal.** We are at the upper end of a two-sample comparison, not
+outside it. The "be selective" warning does not appear to be indicting us on length.
+
+**But the genre is not the same, and that is the real finding.** HtmlSanityCheck's
+crosscutting concepts are *design* concepts — Flexible Reporting, Checking Algorithms,
+Checking Domain, the Gradle and Maven plugin architectures. None of them is a coding
+rule.
+
+Our handbook mixes two genres:
+
+1. **Architectural concepts** — how caching works, how the two halves talk, where logic
+   lives. This is arc42 §8 material.
+2. **Fine-grained coding rules** — no inline styles, no magic timeouts, no bare sleeps,
+   test file size. This is style-guide and lint material.
+
+Both belong somewhere, and the owner has asked for every convention to be captured. But a
+reader who opens the handbook to learn the architecture should not have to wade through
+"no magic numbers" to find it, and today they partly do.
+
+**Recommendation, not yet applied:** keep both in the one document, but separate them
+within each section — the concept and its positions first, then the enforced rules as a
+clearly marked list beneath. A reader can then stop at the concept and get what they
+came for. This costs nothing and needs no new file.
+
+## What is still not established
+
+- **n=2.** Two examples is a weak basis for "normal size". Both are developer tools,
+  which is the right genre, but neither is a VS Code extension and neither documents
+  coding conventions at all.
+- **The book was still not read directly.** The taxonomy above is quoted second-hand
+  through Larson's notes. The axes are unlikely to be misreported, but any nuance about
+  when to prefer one shape over another is missing.
