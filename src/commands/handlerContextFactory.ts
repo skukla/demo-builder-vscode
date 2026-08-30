@@ -28,9 +28,9 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, getStepLogger } from '@/core/logging';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 /** The panel-specific half — everything the factory cannot know. */
 export interface PanelContextParts {
@@ -58,7 +58,7 @@ export function createPanelHandlerContext(parts: PanelContextParts): HandlerCont
             logger,
             ServiceLocator.getCommandExecutor(),
         ),
-        componentRegistry: new ComponentRegistryManager(parts.context.extensionPath),
+        componentRegistry: getComponentRegistryManager(parts.context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: new ErrorLogger(parts.context),
         progressUnifier: new ProgressUnifier(logger),

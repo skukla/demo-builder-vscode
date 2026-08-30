@@ -49,11 +49,9 @@ jest.mock('@/core/di', () => ({
 }));
 jest.mock('@/core/logging/errorLogger', () => ({ ErrorLogger: class {} }));
 jest.mock('@/core/utils/progressUnifier', () => ({ ProgressUnifier: class {} }));
-jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
-    ComponentRegistryManager: class {},
-}));
 
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { resetPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext } from '@/types/handlers';
@@ -72,6 +70,7 @@ function panelParts() {
 beforeEach(() => {
     jest.clearAllMocks();
     resetPrerequisitesManager(); // a shared instance must not leak between tests
+    resetComponentRegistryManager();
     mockGetLogger.mockReturnValue({
         trace: jest.fn(),
         debug: jest.fn(),
@@ -161,5 +160,27 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         const [after] = twoMessages();
 
         expect(after).not.toBe(first);
+    });
+});
+
+/**
+ * The registry manager got the same treatment for the same reason, so it gets
+ * the same proof. Its memo (`transformedRegistry`) was recomputed per message.
+ */
+describe('the component registry and the handler context it lives in', () => {
+    it('hands every message the SAME ComponentRegistryManager', () => {
+        const first = createPanelHandlerContext(panelParts()).componentRegistry;
+        const second = createPanelHandlerContext(panelParts()).componentRegistry;
+
+        expect(first).toBe(second);
+        expect(first).toBeDefined();
+    });
+
+    it('resetComponentRegistryManager drops it', () => {
+        const before = createPanelHandlerContext(panelParts()).componentRegistry;
+        resetComponentRegistryManager();
+        const after = createPanelHandlerContext(panelParts()).componentRegistry;
+
+        expect(after).not.toBe(before);
     });
 });

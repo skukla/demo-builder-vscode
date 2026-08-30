@@ -28,8 +28,5 @@
         "src/types/webview.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)"
     },
     "patternBSendMessageCeiling": 147,
-    "compositionPointLifetime": {
-        "src/commands/handlerContextFactory.ts:ComponentRegistryManager": "Memoises transformToGroupedStructure in transformedRegistry, and is rebuilt per message. Moved HERE on 2026-08-29 from three call sites \u2014 that removed three dynamic imports and an 18-suite mock wall and did nothing for caching: three-per-call became one-per-message, and neither shares. Named plainly because the commit that moved it did not say so.",
-        "src/features/ai/server/headlessHandlerContext.ts:ComponentRegistryManager": "Same class, MCP side, same reasoning."
-    }
+    "compositionPointLifetime": {}
 }

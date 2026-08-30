@@ -20,10 +20,10 @@
 import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 export function createHeadlessHandlerContext(
     context: vscode.ExtensionContext,
@@ -46,7 +46,7 @@ export function createHeadlessHandlerContext(
             logger,
             ServiceLocator.getCommandExecutor(),
         ),
-        componentRegistry: new ComponentRegistryManager(context.extensionPath),
+        componentRegistry: getComponentRegistryManager(context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         // Deliberately absent on the agent surface. These are OPTIONAL on
         // HandlerContext, and every reader in the handler tree uses `?.`
