@@ -71,6 +71,17 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
         expect(row).not.toBeNull();
     });
 
+    it('the stated hook-rule count equals the rules on disk', () => {
+        // Added 2026-08-30 with the tenth rule, when CLAUDE.md still said nine.
+        // The suite count below was pinned; this one was not, so the same class of
+        // unchecked prose count had gone stale in the row directly above it.
+        const claimed = Number(
+            readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-tool-call\s*\|\s*(\d+) hook rules/)![1]
+        );
+        const onDisk = readdirSync(HOOK_RULES_DIR).filter((f) => f.endsWith('.rule')).length;
+        expect({ claimed, onDisk }).toEqual({ claimed: onDisk, onDisk });
+    });
+
     it('the stated count equals the suites in tests/sop/', () => {
         const claimed = Number(
             readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*per-jest-run\s*\|\s*(\d+) enforcer suites/)![1]

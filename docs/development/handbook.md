@@ -354,8 +354,11 @@ check says so and names the file.
 > create the file.
 
 > **Convention.** A component's own style block styles that component only.
-> *Why:* a component that reaches out to style its neighbours makes both un-moveable.
-> [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced.**
+> *Why:* a component that reaches out to style its neighbours makes both un-moveable, and
+> the styling then depends on where the definer happens to be mounted.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `styleBlockLeaks` ledger in `tests/sop/webview-architecture-rules.exemptions.json` —
+> thirteen predate the rule and the set may only shrink.
 
 > **Convention.** Utility classes live in the overrides layer, not scattered through
 > component sheets.
@@ -367,8 +370,9 @@ check says so and names the file.
 > **Convention.** Styling reaches Spectrum through `UNSAFE_className` and the `cn()`
 > helper, not through style objects.
 > *Why:* it keeps styling in the cascade layers where it can be themed and overridden.
-> [styling-guide.md](styling-guide.md) · **Not enforced** directly — the inline-styles
-> check is the closest proxy.
+> [styling-guide.md](styling-guide.md) · Enforced by the `staticInlineStyleCeiling` and
+> `dynamicInlineStyleCeiling` pins in `tests/sop/inline-styles.test.ts`. The per-file cap
+> of five bounds any one file; the pins stop the total growing.
 
 > **Convention.** Class names are not assembled dynamically beyond a small ceiling.
 > *Why:* a class built from a variable cannot be traced to a definition, so the check that
@@ -486,29 +490,27 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — nine rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — ten rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — twenty in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 55 conventions. 47 of them are enforced; 8 are not.**
+**This handbook states 55 conventions. 50 of them are enforced; 5 are not.**
 
-The eight are not one thing, and treating them as one hid why each was still open:
+The five that remain are not one thing, and treating them as one is what kept them open:
 
 - **Four cannot have an enforcer.** Which test tier fits, whether a metric measures the
-  defect or only the shape, naming the command that would prove you wrong, and diffing a
+  defect or only its shape, naming the command that would prove you wrong, and diffing a
   test's assertions after restructuring it. Each is a judgement about intent, and a check
-  that scored it would be measuring shape — the exact mistake three of them warn about.
-  These are captured for the reader, not pending work.
-- **Three are checkable and not yet checked.** Component style blocks staying local,
-  styling reaching Spectrum through `cn()` rather than style objects, and exit codes
-  outside jest runs. Each needs a detector nobody has written.
+  that scored it would be measuring shape — the exact mistake two of them warn about.
+  These are written down for the reader, not pending work.
 - **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
-  fail the build. It waits on the CSS migration (PL-21).
+  fail the build rather than protect anything. It waits on the CSS migration (PL-21).
 
-Twelve were unenforced on 2026-08-30; five were closed that day — feature barrels, the
-dependency envelope, handlers not rendering, the message-channel singleton and the
-`!important` ceiling. What is left is the residue after the mechanical ones ran out.
+Twelve were unenforced on the morning of 2026-08-30 and seven closed that day: feature
+barrels, the dependency envelope, handlers not rendering, the message-channel singleton,
+the `!important` ceiling, inline-style totals, and component style blocks staying local.
+An eighth — exit codes read through a pipe — became the tenth hook rule.
 
 The numbers above are checked by `tests/sop/handbook-links.test.ts`, because a count
 written in prose is a claim like any other — this document says so two sections up.
@@ -531,7 +533,10 @@ not.
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
 > own success and hides the failure underneath.
-> **Not enforced** outside jest — the two hook rules above cover jest runs only.
+> Enforced by `.claude/hooks/rules/13-piped-exit-code.rule`, which blocks branching on
+> a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
+> and an empty result are indistinguishable. `grep` is deliberately not blocked:
+> `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
 
 > **Convention.** A count that measures what code *looks like* is not a count of what is
 > wrong with it. Before working a scan's list, ask what defect it would catch and whether

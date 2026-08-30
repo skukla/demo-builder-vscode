@@ -49,6 +49,10 @@ case "$payload" in
     # call. Caught by a test; it looked exactly like a rule that simply never
     # matched.
     *"--include="*|*"--exclude"*|*"-name "*|*"-iname "*|*"-path "*|*"-ipath "*) ;;
+    # 13-piped-exit-code. The rule requires a pipe INTO head/tail/wc, so the pipe
+    # must be part of the token — a bare *head* would admit every path containing
+    # the word. Both spacings, because `|wc` and `| wc` are equally common.
+    *"| head"*|*"|head"*|*"| tail"*|*"|tail"*|*"| wc"*|*"|wc"*) ;;
     *) exit 0 ;;
 esac
 

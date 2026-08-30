@@ -12,6 +12,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
+import { loadLedger, expectCeiling } from './architectureScan';
 
 describe('SOP: Inline Styles', () => {
     const srcDir = path.resolve(__dirname, '../../src');
@@ -312,5 +314,60 @@ describe('SOP: Inline Styles', () => {
 
             expect(invalidExceptions).toEqual([]);
         });
+    });
+});
+
+describe('ADR-017: styling reaches Spectrum through cn(), not style objects', () => {
+    /**
+     * The suite above caps STATIC inline styles at five per FILE. That bounds how
+     * bad any one file gets, and says nothing about the total — twenty files could
+     * each add four and every check would stay green.
+     *
+     * This pins the aggregate. It is what makes the convention enforced rather than
+     * merely bounded: the direction of travel is one way, and a fall gets locked in
+     * so it cannot be spent again.
+     *
+     * Measured 2026-08-30: 23 `style={{` occurrences, of which 20 are dynamic
+     * (spread, ternary or call) and 3 are static. Dynamic ones are legitimate — a
+     * value computed from props cannot live in a stylesheet — so both numbers are
+     * pinned separately rather than lumped together, or removing a static one could
+     * be paid for by adding a dynamic one.
+     */
+    const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
+    const DYNAMIC = [
+        /style=\{\{[^}]*\.\.\./g,
+        /style=\{\{[^}]*\?[^}]*:/g,
+        /style=\{\{[^}]*\([^)]+\)/g,
+    ];
+
+    const TSX = execSync("git ls-files 'src/**/*.tsx'", { encoding: 'utf8' })
+        .trim()
+        .split('\n')
+        .filter(Boolean);
+
+    function counts(): { total: number; dynamic: number } {
+        let total = 0;
+        let dynamic = 0;
+        for (const f of TSX) {
+            const c = fs.readFileSync(f, 'utf-8');
+            total += (c.match(/style=\{\{/g) ?? []).length;
+            for (const p of DYNAMIC) dynamic += (c.match(p) ?? []).length;
+        }
+        return { total, dynamic };
+    }
+
+    it('CONTROL: the counter reads a real corpus', () => {
+        expect(TSX.length).toBeGreaterThan(50);
+        expect(counts().total).toBeGreaterThan(0);
+    });
+
+    it('the static count never grows, and a fall is pinned', () => {
+        const { total, dynamic } = counts();
+        expectCeiling(LEDGER, 'staticInlineStyleCeiling', total - dynamic);
+    });
+
+    it('the dynamic count never grows, and a fall is pinned', () => {
+        // Legitimate, but not unlimited — an unpinned escape hatch becomes the path.
+        expectCeiling(LEDGER, 'dynamicInlineStyleCeiling', counts().dynamic);
     });
 });

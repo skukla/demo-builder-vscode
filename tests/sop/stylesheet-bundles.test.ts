@@ -136,3 +136,59 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
         expectCeiling(LEDGER, 'importantCeiling', count);
     });
 });
+
+describe('ADR-018 §3: a component style block styles that component only', () => {
+    /**
+     * A `<style>` block inside a component may define classes that component uses.
+     * The moment another file uses one, the styling depends on where the definer
+     * happens to be mounted — and the two go out of sync silently, because nothing
+     * connects them.
+     *
+     * Measured 2026-08-30: thirteen classes are defined in three components'
+     * style blocks AND used elsewhere. **None is broken today**, because every one
+     * is also defined in `custom-spectrum.css`, which all eight bundle entries
+     * import. So these are redundant copies shadowing a global sheet, not missing
+     * styles — a real duplication to remove, but not a live defect.
+     *
+     * Deleting them is NOT free and is deliberately not done here: the global copies
+     * carry `!important` in places and the inline ones do not, so removing a block
+     * can move which declaration wins. That needs the computed-style comparison in
+     * `.claude/skills/webview-visual-baseline`, which is what PL-21 is gated on.
+     * This ledger stops the set growing while that is decided.
+     */
+    const TSX = execSync("git ls-files 'src/**/*.tsx'", { encoding: 'utf8' })
+        .trim()
+        .split('\n')
+        .filter(Boolean);
+    const STYLE_BLOCK = /<style[^>]*>([\s\S]*?)<\/style>/g;
+    const CLASS_DEF = /\.([a-zA-Z_][\w-]*)/g;
+
+    const owner = new Map<string, string>();
+    for (const f of TSX) {
+        for (const b of readFileSync(f, 'utf8').matchAll(STYLE_BLOCK)) {
+            const body = b[1].replace(/\{[^{}]*\}/g, '{}');
+            for (const m of body.matchAll(CLASS_DEF)) if (!owner.has(m[1])) owner.set(m[1], f);
+        }
+    }
+    const escaped = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const violations = [...owner]
+        .filter(([cls, own]) =>
+            TSX.some(
+                (f) =>
+                    f !== own &&
+                    new RegExp(`['"\`\\s]${escaped(cls)}['"\`\\s]`).test(readFileSync(f, 'utf8'))
+            )
+        )
+        .map(([cls, own]) => `${own}::${cls}`)
+        .sort();
+
+    it('CONTROL: style blocks are found and their classes read', () => {
+        // A zero here would make the check below pass while looking at nothing.
+        expect(TSX.length).toBeGreaterThan(50);
+        expect(owner.size).toBeGreaterThan(5);
+    });
+
+    it('every class shared out of a style block is a reasoned ledger entry', () => {
+        expectClean(LEDGER, 'styleBlockLeaks', violations);
+    });
+});

@@ -1,0 +1,45 @@
+# Blocks branching on the exit code of a pipe that ends in head/tail/wc.
+#
+# NOT once-per-session: like the jest rules, this is a hard stop on a mechanical
+# mistake rather than a nudge toward a skill.
+#
+# Why: head, tail and wc exit 0 whatever they were fed — including nothing at all.
+# So `cmd | wc -l || echo none` reports success when `cmd` failed AND when it
+# printed nothing, and the two are indistinguishable. The repo has been bitten by
+# exactly this: `|| echo "none"` printed "none" over a command that never ran,
+# and a `grep -c ... | head` reported three skills as lacking coverage they had.
+#
+# DELIBERATELY NARROW. `cmd | grep -q x && ...` is idiomatic and correct — grep's
+# exit code IS the answer there — so grep is not matched. Only head/tail/wc are,
+# because branching on them is wrong every time, with no legitimate case to weigh.
+# A rule that fires on good code gets disabled, and then it protects nothing.
+#
+# The fix is always the same shape: capture into a variable, then test that.
+#   n=$(cmd | wc -l | tr -d ' '); [ "$n" -gt 0 ] && ...
+#
+# Rule lives in the architecture handbook, section "Checking things".
+rule_id=piped-exit-code
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    # A pipe into head/tail/wc, then || or && consuming its status.
+    printf '%s' "$2" | grep -qE '\|[[:space:]]*(head|tail|wc)([[:space:]][^|]*)?[[:space:]]*(\|\||&&)'
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: head, tail and wc exit 0 whatever they were fed — including nothing.
+
+So `|| echo none` and `&& ...` after one of them report the PIPE's success, not
+the command's. A failure and an empty result look identical, and both look like
+a pass.
+
+Capture the value, then test it:
+  n=$(cmd | wc -l | tr -d ' ')
+  [ "$n" -gt 0 ] || echo "really none"
+
+grep is deliberately not blocked here — `cmd | grep -q x && ...` is correct,
+because there grep's exit code is the answer you actually want.
+MSG
+}
