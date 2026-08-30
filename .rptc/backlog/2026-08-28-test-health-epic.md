@@ -65,3 +65,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  refactor(census): retire logicInTests and throw-style — owner-approved (`5a12b9f16`)
 - 2026-08-30  Merge loop/2026-08-29-convergence-phases into develop (`02e730c8d`)
 - 2026-08-30  docs(handoff): bring the loop report current — it had gone stale mid-run (`d2226926a`)
+- 2026-08-30  docs(handoff): correct the report header — the branch is merged, not 15 ahead (`293500f93`)
