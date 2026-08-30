@@ -38,6 +38,9 @@ The mesh endpoint was once written to both `meshState` and the component instanc
 Deploy updated one; the dashboard read the other. A deployed mesh displayed "Not
 Deployed", and the bug looked like a status problem rather than a storage one.
 
+**The duplicate storage was removed.** The endpoint is no longer held on the
+component instance; `appBuilderComponents` is the only place it lives.
+
 That is also why `getMeshComponentInstance` and `getMeshAppBuilderComponent` are two
 accessors and not one — they answer different questions, and collapsing them
 reproduces the same class of bug.
