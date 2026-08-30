@@ -18,7 +18,7 @@
  * is still true. A README can cite a live module and describe it wrongly, and this
  * suite will pass. Judging that is a release-cut job (`.claude/skills/codebase-sweep`).
  */
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { dirname, join } from 'path';
 
@@ -193,6 +193,48 @@ function relativeRefs(md: string): string[] {
     );
     return [...new Set(out)];
 }
+
+describe('the inventories that claim to be complete, are', () => {
+    // Found in Phase B by testing my OWN rewrites in the direction I had skipped.
+    // Every entry resolving proves nothing about a thing that was never listed:
+    // `src/features/CLAUDE.md` named 13 features against 14 on disk, omitting
+    // data-installer — 43 files, its own webview bundle and its own palette
+    // command — and `src/commands/CLAUDE.md` listed 12 of 16 modules.
+    //
+    // DELIBERATELY NOT COVERED: `src/core/ui/components/CLAUDE.md`. That table is
+    // organised by JOB, not by file, and says so — "a map, not the territory",
+    // with instructions to `ls` for the full vocabulary. 20 of 53 components are
+    // absent from it ON PURPOSE. Adding it here would force an index nobody wants
+    // and would defeat the point of picking by job.
+    const dirsIn = (p: string): string[] =>
+        readdirSync(join(ROOT, p), { withFileTypes: true })
+            .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+            .map((e) => e.name);
+
+    it('CONTROL: both walks find entries', () => {
+        expect(dirsIn('src/features').length).toBeGreaterThan(5);
+        expect(dirsIn('src/core').length).toBeGreaterThan(5);
+    });
+
+    it('src/features/CLAUDE.md names every feature directory', () => {
+        const body = readFileSync(join(ROOT, 'src/features/CLAUDE.md'), 'utf8');
+        expect(dirsIn('src/features').filter((d) => !body.includes(d))).toEqual([]);
+    });
+
+    it('src/core/CLAUDE.md names every core directory', () => {
+        const body = readFileSync(join(ROOT, 'src/core/CLAUDE.md'), 'utf8');
+        expect(dirsIn('src/core').filter((d) => !body.includes(d))).toEqual([]);
+    });
+
+    it('src/commands/CLAUDE.md names every module in that directory', () => {
+        const body = readFileSync(join(ROOT, 'src/commands/CLAUDE.md'), 'utf8');
+        const files = execSync("git ls-files 'src/commands/*.ts'", { encoding: 'utf8', cwd: ROOT })
+            .split('\n')
+            .filter(Boolean)
+            .map((f) => f.split('/').pop() as string);
+        expect(files.filter((f) => !body.includes(f))).toEqual([]);
+    });
+});
 
 describe('the architecture index lists every architecture document', () => {
     // The other direction from a link check. Links resolving proves nothing about

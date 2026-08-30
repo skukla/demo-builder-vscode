@@ -21,19 +21,32 @@ works, because each file carries a substantial header comment.
 | `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
 | `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
+Four modules here are not commands but support them:
+
+| File | Purpose |
+|------|---------|
+| `diagnosticsChecks.ts` | The collection half of Diagnostics — environment, tools, Adobe CLI, capability probes. Free functions, because none needs the command's state |
+| `diagnosticsReport.ts` | The rendering half. Split from collection deliberately: the two change for different reasons |
+| `handlerContextFactory.ts` | Builds a COMPLETE `HandlerContext` for a webview panel. Every panel command used to hand-roll one, and most filled it in partially |
+| `orphanedSettings.ts` | Finds settings a user has set that the extension no longer reads — renaming a contributed setting does not migrate the value, so it strands silently |
+
 ## Registration
 
 `CommandManager.registerCommands()` is the single place ids are bound —
 `extension.ts` constructs the manager and calls it, and nothing registers a command
 inline. Ids are `demoBuilder.*` in camelCase; there is no `demo-builder.*` form.
 
-Adding one means four edits, and skipping the third is the common mistake:
+Adding one means four edits:
 
 1. The command file here (or in the owning feature).
 2. A `registerCommand` line in `commandManager.ts`.
 3. A `contributes.commands` entry in `package.json` — **unless it is internal**, see
-   below. Without it the command is unreachable from the palette.
+   below.
 4. Its row in the table above.
+
+**Step 3 is the one that fails quietly.** Miss step 2 and the command throws when
+something dispatches it; miss step 3 and everything works except that nobody can
+find it in the palette, which no test and no build catches.
 
 **Internal commands are deliberately absent from `package.json`.** `navigate`,
 `openAiExperience` and `showPromptsPicker` are invoked programmatically from the

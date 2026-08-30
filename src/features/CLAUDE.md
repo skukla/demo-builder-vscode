@@ -10,6 +10,8 @@ app-builder/         attach, deploy, remove N App Builder integrations (→ READ
 authentication/      Adobe auth, Console SDK, token management
 components/          component registry and lifecycle
 dashboard/           project dashboard (detail view) and Configure
+data-installer/      browse the Data Installer service's datapack catalog and
+                     install packs into a project's Commerce backend
 eds/                 Edge Delivery Services (→ README.md)
 lifecycle/           start, stop, restart a demo
 mesh/                API Mesh deployment and verification
