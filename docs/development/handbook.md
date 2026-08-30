@@ -107,18 +107,6 @@ covers the single exception.
 > [ADR-021](../architecture/adr/021-dependency-envelope.md) · **Not enforced.**
 > *Why:* six services once received the same collaborator six different ways, so none could be changed without touching all six.
 
-> **Convention.** Time values come from the shared `TIMEOUTS` constants, never a literal.
-> *Why:* a bare `5000` says nothing about which timeout it is or why that length.
-> Enforced by `tests/sop/magic-timeouts.test.ts`.
-
-> **Convention.** Sleeps route through the shared `sleep()`.
-> *Why:* a hand-rolled sleep cannot be faked, so it makes tests slow and flaky.
-> Enforced by `tests/sop/no-bare-sleep.test.ts`.
-
-> **Convention.** A complex inline expression becomes a named function.
-> *Why:* the name is the explanation. Without it every reader re-derives the intent.
-> Enforced by `tests/sop/complex-expressions.test.ts`.
-
 ### When to write a class
 
 Rarely. There are around 1,350 exported functions here and 150 exported classes, and the
@@ -143,6 +131,23 @@ should be functions.
 
 ---
 
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
+> **Convention.** Time values come from the shared `TIMEOUTS` constants, never a literal.
+> *Why:* a bare `5000` says nothing about which timeout it is or why that length.
+> Enforced by `tests/sop/magic-timeouts.test.ts`.
+
+> **Convention.** Sleeps route through the shared `sleep()`.
+> *Why:* a hand-rolled sleep cannot be faked, so it makes tests slow and flaky.
+> Enforced by `tests/sop/no-bare-sleep.test.ts`.
+
+> **Convention.** A complex inline expression becomes a named function.
+> *Why:* the name is the explanation. Without it every reader re-derives the intent.
+> Enforced by `tests/sop/complex-expressions.test.ts`.
+
 ## 4. Much of the behaviour is data, not code
 
 **Position.** Prefer a row in a registry to a new class. Twelve schema-backed JSON files
@@ -161,6 +166,16 @@ not new code. The mechanism generally exists already and takes another entry.
 > template suites under `tests/templates/`.
 > *Why:* the registries are user-facing behaviour. A malformed entry fails at runtime, in someone's demo.
 
+> **Where to start.** [component-system.md](../architecture/component-system.md) ·
+> [prerequisites-system.md](../systems/prerequisites-system.md)
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
 > **Convention.** A credential environment variable is registered as a secret.
 > *Why:* an unregistered one is written in the clear and read back by anything.
 > Enforced by `tests/sop/credential-env-vars-registered.test.ts`.
@@ -170,11 +185,6 @@ not new code. The mechanism generally exists already and takes another entry.
 > *Why:* a workspace-scoped credential setting gets committed by someone eventually, and
 > this repository is public.
 > Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
-
-> **Where to start.** [component-system.md](../architecture/component-system.md) ·
-> [prerequisites-system.md](../systems/prerequisites-system.md)
-
----
 
 ## 5. What survives between calls
 
@@ -268,6 +278,16 @@ declared in one place, with vendor styles below ours.
 > specificity argument. [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced.**
 > *Why:* layers settle specificity by declaration rather than by escalation, so nobody needs `!important` to win.
 
+> **Read before your first component.** [ui-patterns.md](ui-patterns.md) ·
+> [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
 > **Convention.** No inline styles.
 > *Why:* they escape the cascade layers, so they cannot be themed or overridden.
 > Enforced by `tests/sop/inline-styles.test.ts`.
@@ -291,11 +311,6 @@ declared in one place, with vendor styles below ours.
 > existed.
 > Enforced by `.claude/hooks/rules/30-reuse-first.rule`, which interrupts at the moment you
 > create the file.
-
-> **Read before your first component.** [ui-patterns.md](ui-patterns.md) ·
-> [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
-
----
 
 ## 8. Agents are a second door, never the only one
 
@@ -352,6 +367,20 @@ breaks the code on purpose and reports what nothing noticed.
 > enforced by `tests/sop/test-family-setup.test.ts`.
 > *Why:* the copies drift otherwise, and a spec that keeps its own copy can silently stop mocking anything.
 
+> **Convention.** When you change a test's structure, diff the set of things it asserts
+> before and after — and prove shared setup is load-bearing by breaking it on purpose and
+> checking the right suites fail.
+> *Why:* the failure mode of a test refactor is a suite that still passes while checking
+> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
+> is doing it.
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
 > **Convention.** No test file over 750 lines.
 > [test-file-splitting-playbook.md](../testing/test-file-splitting-playbook.md) · enforced by
 > `npm run validate:test-file-sizes`.
@@ -373,13 +402,6 @@ breaks the code on purpose and reports what nothing noticed.
 > *Why:* it hides a slow path instead of fixing it, and fails on a busier machine.
 > Enforced by `tests/sop/no-lowered-test-timeout.test.ts`.
 
-> **Convention.** When you change a test's structure, diff the set of things it asserts
-> before and after — and prove shared setup is load-bearing by breaking it on purpose and
-> checking the right suites fail.
-> *Why:* the failure mode of a test refactor is a suite that still passes while checking
-> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
-> is doing it.
-
 > **Convention.** Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with
 > `> file 2>&1` and read that.
 > *Why:* buffering makes a finished run look hung, and the redirect order matters — the
@@ -392,8 +414,6 @@ breaks the code on purpose and reports what nothing noticed.
 > to six suites every time, in different suites each run. A concurrent result is noise.
 > Enforced by `.claude/hooks/rules/15-jest-concurrent.rule`.
 > *Why:* both mistakes report success. A pipe hides the exit code; two concurrent runs fail suites at random.
-
----
 
 ## 10. What stops this drifting
 
