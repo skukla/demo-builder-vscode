@@ -206,6 +206,14 @@ const JUDGEMENT: readonly Instrument[] = [
         unwiredReason: 'guided review over a generated census',
     },
     {
+        id: 'mutation-test-pilot',
+        kind: 'skill',
+        cadence: 'periodic',
+        what: 'Stryker mutation testing over a 4-module pilot scope — the only instrument that measures whether the tests would CATCH a defect rather than whether they executed a line',
+        runs: 'npm run test:mutation',
+        resultKind: 'report',
+    },
+    {
         id: 'test-strategy-scan',
         kind: 'skill',
         cadence: 'periodic',

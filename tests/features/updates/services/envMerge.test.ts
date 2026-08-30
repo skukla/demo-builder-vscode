@@ -41,6 +41,46 @@ describe('parsing an env file', () => {
     });
 });
 
+describe('malformed and whitespace-padded lines', () => {
+    /**
+     * Every test in this block was written on 2026-08-30 to kill a mutant that
+     * SURVIVED the Stryker pilot. The suite above had high line coverage and still
+     * did not notice when `trim()` was deleted, when the `if (key)` guard was
+     * forced true, or when the trailing newline was dropped — five mutations, five
+     * green runs. Coverage said 100%; the tests were checking less than that.
+     *
+     * These are not hypothetical inputs. A hand-edited `.env` is exactly where a
+     * padded key or a stray `=` line comes from.
+     */
+    it('ignores a whitespace-only line rather than storing an empty key', () => {
+        const vars = parseEnvFile('   \nA=1');
+
+        expect(vars.has('')).toBe(false);
+        expect(vars.size).toBe(1);
+    });
+
+    it('ignores a line with no key at all (`=orphan`)', () => {
+        const vars = parseEnvFile('=orphan\nA=1');
+
+        expect(vars.has('')).toBe(false);
+        expect(vars.size).toBe(1);
+    });
+
+    it('trims padding around the KEY — ` A =1` is A', () => {
+        expect(parseEnvFile(' A =1').get('A')).toBe('1');
+    });
+
+    it('trims padding around the VALUE — `A= 1 ` is 1', () => {
+        expect(parseEnvFile('A= 1 ').get('A')).toBe('1');
+    });
+
+    it('terminates the merged file with a newline', () => {
+        // A file that does not end in a newline concatenates with whatever is
+        // appended next, silently corrupting the last variable.
+        expect(mergeEnvContent('A=1', 'A=')).toMatch(/\n$/);
+    });
+});
+
 describe('merging .env with a new .env.example', () => {
     it("keeps the user's value when the template ships a default", () => {
         const merged = mergeEnvContent('API_KEY=secret-123', 'API_KEY=');

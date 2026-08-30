@@ -17,11 +17,15 @@ import type { Project } from '@/types';
 jest.mock('@/core/logging');
 jest.mock('@/core/validation');
 jest.mock('fs/promises');
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn()
-    }
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        commands: {
+            executeCommand: jest.fn(),
+        },
+    }),
+    { virtual: true }
+);
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getComponentById: jest.fn().mockResolvedValue({
@@ -29,9 +33,9 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
             name: 'Test Component',
             configuration: {
                 // No buildScript means build step will be skipped
-            }
-        })
-    }))
+            },
+        }),
+    })),
 }));
 
 import * as fs from 'fs/promises';
@@ -61,8 +65,8 @@ describe('ComponentUpdater - Core Workflow', () => {
                 stdout: '',
                 stderr: '',
                 code: 0,
-                duration: 100
-            })
+                duration: 100,
+            }),
         };
 
         // Mock ServiceLocator
@@ -89,10 +93,14 @@ describe('ComponentUpdater - Core Workflow', () => {
         // Mock global fetch
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024))
+            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
         }) as unknown as typeof fetch;
 
-        updater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+        updater = new ComponentUpdater(
+            mockLogger,
+            '/mock/extension/path',
+            mockExecutor as unknown as CommandExecutor
+        );
 
         // Mock project
         mockProject = {
@@ -102,10 +110,10 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'test-component': {
                     id: 'test-component',
                     path: '/path/to/project/components/test-component',
-                    port: 3000
-                }
+                    port: 3000,
+                },
             },
-            componentVersions: {}
+            componentVersions: {},
         } as unknown as Project;
     });
 
@@ -120,7 +128,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             expect(mockExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('unzip'),
                 expect.objectContaining({
-                    shell: DEFAULT_SHELL
+                    shell: DEFAULT_SHELL,
                 })
             );
         });
@@ -135,7 +143,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             expect(mockExecutor.execute).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
-                    timeout: expect.any(Number)
+                    timeout: expect.any(Number),
                 })
             );
         });
@@ -150,7 +158,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             expect(mockExecutor.execute).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
-                    enhancePath: true
+                    enhancePath: true,
                 })
             );
         });
@@ -169,7 +177,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 expect.stringContaining('snapshot'),
                 expect.objectContaining({
                     recursive: true,
-                    filter: expect.any(Function)
+                    filter: expect.any(Function),
                 })
             );
         });
@@ -197,14 +205,30 @@ describe('ComponentUpdater - Core Workflow', () => {
             const newVersion = '1.0.0';
 
             // Start first update
-            const update1 = updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            const update1 = updater.updateComponent(
+                mockProject,
+                'test-component',
+                downloadUrl,
+                newVersion
+            );
 
             // Attempt concurrent update
-            const update2 = updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            const update2 = updater.updateComponent(
+                mockProject,
+                'test-component',
+                downloadUrl,
+                newVersion
+            );
+
+            // Attach BOTH assertions before awaiting EITHER. update2 rejects on the next
+            // tick, so awaiting update1 first leaves it momentarily unhandled — jest
+            // tolerates that, but a bare node process exits 1 on an unhandled rejection,
+            // which is how Stryker's child test runner died here on 2026-08-30.
+            const firstSucceeds = await expect(update1).resolves.not.toThrow();
+            const secondIsRefused = await expect(update2).rejects.toThrow('Update already in progress');
 
             // First should succeed, second should fail
-            await expect(update1).resolves.not.toThrow();
-            await expect(update2).rejects.toThrow('Update already in progress');
+            await Promise.all([firstSucceeds, secondIsRefused]);
         });
     });
 
@@ -244,18 +268,24 @@ describe('ComponentUpdater - Core Workflow', () => {
             const newVersion = '1.0.0';
 
             // Override mock to return component with skipNpmInstall (like eds-storefront)
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
                     id: 'eds-storefront',
                     name: 'EDS Storefront',
                     configuration: {
                         skipNpmInstall: true,
-                    }
-                })
+                    },
+                }),
             }));
 
-            const skipUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const skipUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             const edsProject = {
                 ...mockProject,
@@ -263,17 +293,24 @@ describe('ComponentUpdater - Core Workflow', () => {
                     'eds-storefront': {
                         id: 'eds-storefront',
                         path: '/path/to/project/components/eds-storefront',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
-            await skipUpdater.updateComponent(edsProject, 'eds-storefront', downloadUrl, newVersion);
+            await skipUpdater.updateComponent(
+                edsProject,
+                'eds-storefront',
+                downloadUrl,
+                newVersion
+            );
 
             // Neither npm install nor npm run should be called
             const executeCalls = mockExecutor.execute.mock.calls;
-            const npmCalls = executeCalls.filter((call: unknown[]) =>
-                (call[0] as string).includes('npm install') || (call[0] as string).includes('npm run')
+            const npmCalls = executeCalls.filter(
+                (call: unknown[]) =>
+                    (call[0] as string).includes('npm install') ||
+                    (call[0] as string).includes('npm run')
             );
             expect(npmCalls).toHaveLength(0);
         });
@@ -283,20 +320,26 @@ describe('ComponentUpdater - Core Workflow', () => {
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
                     id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
+                        nodeVersion: '20',
+                    },
+                }),
             }));
 
             // Create new updater with fresh mock
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const buildUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             // Add commerce-mesh to project
             const meshProject = {
@@ -305,19 +348,24 @@ describe('ComponentUpdater - Core Workflow', () => {
                     'eds-commerce-mesh': {
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
-            await buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
+            await buildUpdater.updateComponent(
+                meshProject,
+                'eds-commerce-mesh',
+                downloadUrl,
+                newVersion
+            );
 
             // Verify npm install was called
             expect(mockExecutor.execute).toHaveBeenCalledWith(
                 'npm install --no-fund',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20'
+                    useNodeVersion: '20',
                 })
             );
 
@@ -326,7 +374,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'npm run build -- --force',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20'
+                    useNodeVersion: '20',
                 })
             );
         });
@@ -374,19 +422,25 @@ describe('ComponentUpdater - Core Workflow', () => {
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
                     id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
+                        nodeVersion: '20',
+                    },
+                }),
             }));
 
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const buildUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             const meshProject = {
                 ...mockProject,
@@ -394,18 +448,28 @@ describe('ComponentUpdater - Core Workflow', () => {
                     'eds-commerce-mesh': {
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
             // Make npm install fail
             mockExecutor.execute
                 .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
-                .mockResolvedValueOnce({ stdout: '', stderr: 'npm ERR! install failed', code: 1, duration: 100 }); // npm install fails
+                .mockResolvedValueOnce({
+                    stdout: '',
+                    stderr: 'npm ERR! install failed',
+                    code: 1,
+                    duration: 100,
+                }); // npm install fails
 
             await expect(
-                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
+                buildUpdater.updateComponent(
+                    meshProject,
+                    'eds-commerce-mesh',
+                    downloadUrl,
+                    newVersion
+                )
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -419,19 +483,25 @@ describe('ComponentUpdater - Core Workflow', () => {
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
                     id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20'
-                    }
-                })
+                        nodeVersion: '20',
+                    },
+                }),
             }));
 
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const buildUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             const meshProject = {
                 ...mockProject,
@@ -439,19 +509,29 @@ describe('ComponentUpdater - Core Workflow', () => {
                     'eds-commerce-mesh': {
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
             // npm install succeeds, build fails
             mockExecutor.execute
                 .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
                 .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // npm install
-                .mockResolvedValueOnce({ stdout: '', stderr: 'Build failed: esbuild error', code: 1, duration: 100 }); // npm run build fails
+                .mockResolvedValueOnce({
+                    stdout: '',
+                    stderr: 'Build failed: esbuild error',
+                    code: 1,
+                    duration: 100,
+                }); // npm run build fails
 
             await expect(
-                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
+                buildUpdater.updateComponent(
+                    meshProject,
+                    'eds-commerce-mesh',
+                    downloadUrl,
+                    newVersion
+                )
             ).rejects.toThrow();
 
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -471,16 +551,20 @@ describe('ComponentUpdater - Core Workflow', () => {
         it('dumps the post-update build output so the cause survives the message pipeline', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
-            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const buildUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
             const meshProject = {
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
             const nodeCrash = [
@@ -494,11 +578,16 @@ describe('ComponentUpdater - Core Workflow', () => {
                 .mockResolvedValueOnce({ stdout: '', stderr: nodeCrash, code: 1, duration: 100 }); // build
 
             await expect(
-                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
+                buildUpdater.updateComponent(
+                    meshProject,
+                    'eds-commerce-mesh',
+                    downloadUrl,
+                    newVersion
+                )
             ).rejects.toThrow();
 
             const dump = mockLogger.debug.mock.calls.find(
-                (call: unknown[]) => typeof call[1] === 'object' && call[1] !== null,
+                (call: unknown[]) => typeof call[1] === 'object' && call[1] !== null
             );
             expect(dump).toBeDefined();
             expect(JSON.stringify(dump?.[1])).toContain("Cannot find module 'dotenv'");
@@ -513,10 +602,10 @@ describe('ComponentUpdater - Core Workflow', () => {
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
             // Verify snapshot cleanup - fs.rm called with snapshot path
-            expect(fs.rm).toHaveBeenCalledWith(
-                expect.stringContaining('.snapshot-'),
-                { recursive: true, force: true }
-            );
+            expect(fs.rm).toHaveBeenCalledWith(expect.stringContaining('.snapshot-'), {
+                recursive: true,
+                force: true,
+            });
         });
     });
 });
