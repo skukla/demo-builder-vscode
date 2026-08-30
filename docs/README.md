@@ -43,8 +43,7 @@ Reusable design patterns extracted from the codebase.
 
 - **[Selection Pattern](./patterns/selection-pattern.md)** - Backend Call on Continue pattern for selection steps
 - **[State Management](./patterns/state-management.md)** - State handling strategies
-- **[Error Handling](./patterns/error-handling.md)** - Error handling patterns
-- **[Resource Disposal](./patterns/resource-disposal.md)** - Cleanup and disposal patterns
+- **- **[Resource Disposal](./patterns/resource-disposal.md)** - Cleanup and disposal patterns
 
 ## 🎯 Quick Navigation
 

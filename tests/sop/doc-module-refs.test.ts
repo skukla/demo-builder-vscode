@@ -53,8 +53,6 @@ const EXCLUDED = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANGEL
  * merely went stale does NOT belong here — fix the document instead.
  */
 const ALLOWED: Record<string, string> = {
-    'docs/patterns/error-handling.md::@/core/errors':
-        'names the deleted module on a "Previous Approach" line — the point is that it is gone',
     'tests/README.md::@/core/utils/someUtility': 'placeholder name in a worked example',
     '.claude/skills/gate/SKILL.md::tests/oversized.test.ts':
         'invented filename in a worked example of the file-size check — the point is that it is over the limit, so it must not exist',

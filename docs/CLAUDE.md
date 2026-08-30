@@ -58,8 +58,7 @@ await setLoadingState(panel, getContent, message, logger);
   debugging, never expose sensitive information
 - Development: TypeScript strict mode, runtime validation for external data,
   React error boundaries
-- Details: `docs/patterns/error-handling.md`,
-  `docs/architecture/error-handling.md`, `docs/systems/error-logging.md`
+- Details: `docs/architecture/error-handling.md`, `docs/systems/error-logging.md`
 
 ### Concurrency and Logging
 
