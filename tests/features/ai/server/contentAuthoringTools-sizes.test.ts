@@ -6,40 +6,18 @@
  * and cannot be shared; the fixtures and harness are identical on purpose.
  */
 
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn(),
-    getDaLiveAuthService: jest.fn(),
-}));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(),
-    createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: async () => 'da-token' })),
-}));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn(),
-}));
-jest.mock('@/types/typeGuards', () => ({
-    ...jest.requireActual('@/types/typeGuards'),
-    isEdsProject: jest.fn(),
-}));
-jest.mock('@/features/ai/server/adobeTargetStore', () => ({
-    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
-    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-}));
-
-import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import {
+    DaLiveContentOperationsMock,
+    HelixServiceMock,
+    getCurrentProject,
+    getDaLiveAuthServiceMock,
+    getGitHubServicesMock,
+    isEdsProjectMock,
+    registerContentAuthoringTools,
+} from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helix/helixService';
-import { isEdsProject } from '@/types/typeGuards';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
-
-const getGitHubServicesMock = getGitHubServices as jest.Mock;
-const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
-const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
-const DaLiveContentOperationsMock = DaLiveContentOperations as unknown as jest.Mock;
-const HelixServiceMock = HelixService as unknown as jest.Mock;
 
 /** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
 function fakeServer() {
@@ -75,7 +53,6 @@ const EDS_PROJECT = {
     },
 };
 
-const getCurrentProject = jest.fn();
 const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },

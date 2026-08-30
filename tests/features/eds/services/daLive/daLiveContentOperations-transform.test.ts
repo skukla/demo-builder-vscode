@@ -9,20 +9,13 @@
  * - Preserving empty structural divs
  */
 
+import {
+    mockFetch,
+} from './daLiveContentOperations.testUtils';
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - HTML transformation', () => {
@@ -63,7 +56,6 @@ describe('DaLiveContentOperations - HTML transformation', () => {
             text: jest.fn().mockResolvedValue(typeof body === 'string' ? body : ''),
         } as unknown as Response;
     }
-
 
     /**
      * Run one copy and capture what it fetched and what it posted.
