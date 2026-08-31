@@ -116,6 +116,18 @@ afterEach(() => {
  *
  * Measured before adopting: with this in place, 976 of 978 node suites passed
  * untouched.
+ *
+ * IT TARGETS THE BARREL, AND THE BARREL IS SCHEDULED FOR DELETION. `@/core/logging`
+ * is a row in the reExportIndex ledger (ADR-022, amended 2026-08-31). When PL-31
+ * retires it, all 53 importers move to `@/core/logging/debugLogger` and this mock
+ * stops intercepting anything — getLogger() would throw suite-wide. That conversion
+ * has to move this mock in the SAME commit.
+ *
+ * Not speculative: prerequisitesCacheManager.ts already imports the deep module, its
+ * tests therefore cannot use this mock, and they carry their own — removing it fails
+ * 14 tests with 'Logger not initialized'. Expect the ten suites under
+ * tests/core/logging to need jest.unmock when the move happens; that was measured on
+ * 2026-08-31, not guessed.
  */
 jest.mock('@/core/logging', () => {
     const actual = jest.requireActual('@/core/logging');
