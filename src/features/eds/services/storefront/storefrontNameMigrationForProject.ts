@@ -36,10 +36,7 @@
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesConfig from '@/features/components/config/demo-packages.json';
-import {
-    getDaLiveAuthService,
-    resolveByomOverlayConfig,
-} from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import {
     createDaLiveServiceTokenProvider,
@@ -52,6 +49,8 @@ import {
 } from '@/features/eds/services/reset/edsResetParams';
 import {
     migrateStorefrontNamingIfNeeded,
+    type MigrationConfigService,
+    type MigrationContentOps,
     type StorefrontMigrationContext,
     type StorefrontMigrationResult,
 } from '@/features/eds/services/storefront/storefrontNameMigration';
@@ -127,6 +126,22 @@ function resolveOverlayForNewName(
     }
 }
 
+/**
+ * Service seam. Defaults to the two services this function builds from the
+ * DA.live credential above; production never passes it.
+ *
+ * Both are STATELESS — credentials arrive at construction and are never mutated —
+ * so ADR-015 leaves the construction here. What it cost was test design: a suite
+ * that cannot hand them in has to `jest.mock` the service modules, which is the
+ * wall ADR-016 lists for this file. The types are the NARROW ones the migration
+ * declares (three methods between them), so a test hands in three functions
+ * rather than a cast-shaped stand-in for two whole classes.
+ */
+export interface MigrationServices {
+    daLiveContentOps?: MigrationContentOps;
+    configService?: MigrationConfigService;
+}
+
 /** What a migration did, beyond what the underlying service reports. */
 export interface StorefrontNameMigrationOutcome extends StorefrontMigrationResult {
     /**
@@ -152,10 +167,13 @@ export async function migrateStorefrontNameForProject(
     logger: Logger,
     persist: (project: Project) => Promise<unknown>,
     onProgress?: (message: string) => void | Promise<void>,
+    services?: MigrationServices,
 ): Promise<StorefrontNameMigrationOutcome> {
     const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(context));
-    const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
-    const configService = new ConfigurationService(tokenProvider, logger);
+    const daLiveContentOps =
+        services?.daLiveContentOps ?? new DaLiveContentOperations(tokenProvider, logger);
+    const configService =
+        services?.configService ?? new ConfigurationService(tokenProvider, logger);
 
     const ctx: StorefrontMigrationContext = {
         repoOwner: candidate.repoOwner,
@@ -165,7 +183,9 @@ export async function migrateStorefrontNameForProject(
         byomOverlayUrl: candidate.byomOverlayUrl,
     };
 
-    await onProgress?.(`Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}...`);
+    await onProgress?.(
+        `Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}...`,
+    );
     const result = await migrateStorefrontNamingIfNeeded(
         ctx,
         candidate.project,

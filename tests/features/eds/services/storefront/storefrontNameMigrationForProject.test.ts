@@ -26,13 +26,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...a: unknown[]) => mockResolveByomOverlayConfig(...a),
 }));
 
+// Only the token-provider FACTORY is mocked here. The two services this module
+// used to `jest.mock` — DaLiveContentOperations and ConfigurationService — now
+// arrive through the `services` seam below, so the suite hands them in and can
+// assert on what reached the migration.
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
     DaLiveContentOperations: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn(),
 }));
 
 jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
@@ -52,6 +52,10 @@ import {
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 import type * as vscode from 'vscode';
+import type {
+    MigrationConfigService,
+    MigrationContentOps,
+} from '@/features/eds/services/storefront/storefrontNameMigration';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -63,6 +67,22 @@ const logger = {
 } as unknown as Logger;
 
 const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionContext;
+
+/**
+ * The three calls the migration makes, handed in through the seam.
+ *
+ * Typed to the migration's OWN interfaces rather than cast, so `tsc` rejects a
+ * shape that drifts from what the code will call — which is the check a
+ * `jest.mock` factory structurally cannot perform.
+ */
+const daLiveContentOps: MigrationContentOps = {
+    copyDaLiveSite: jest.fn(async () => ({ success: true as const })),
+    deleteSiteRoot: jest.fn(async () => undefined),
+};
+const configService: MigrationConfigService = {
+    updateSiteConfig: jest.fn(async () => ({ success: true })),
+};
+const services = { daLiveContentOps, configService };
 
 /**
  * Mirrors a real `.demo-builder.json`: the EDS storefront's identity lives on
@@ -107,8 +127,8 @@ describe('findStorefrontNameMismatch', () => {
     it('returns null when the names already match', () => {
         expect(
             findStorefrontNameMismatch(
-                projectWith({ ...MISMATCHED, daLiveSite: 'demo-builder-test' }),
-            ),
+                projectWith({ ...MISMATCHED, daLiveSite: 'demo-builder-test' })
+            )
         ).toBeNull();
     });
 
@@ -118,7 +138,9 @@ describe('findStorefrontNameMismatch', () => {
         ['no daLiveSite', { githubRepo: 'someone/repo', daLiveOrg: 'someone' }],
         ['a githubRepo with no owner half', { ...MISMATCHED, githubRepo: 'demo-builder-test' }],
     ])('returns null for %s', (_label, metadata) => {
-        expect(findStorefrontNameMismatch(projectWith(metadata as Record<string, string>))).toBeNull();
+        expect(
+            findStorefrontNameMismatch(projectWith(metadata as Record<string, string>))
+        ).toBeNull();
     });
 
     it('returns null for a project with no EDS storefront', () => {
@@ -133,7 +155,7 @@ describe('findStorefrontNameMismatch', () => {
             'someone',
             // repoName — the name it migrates TO. The old `citisignal-one` root
             // is deleted by the migration, so an overlay pointing at it is dead.
-            'demo-builder-test',
+            'demo-builder-test'
         );
     });
 
@@ -157,13 +179,30 @@ describe('migrateStorefrontNameForProject', () => {
     it('persists the manifest and re-mints the publish key on success', async () => {
         const persist = jest.fn().mockResolvedValue(undefined);
 
-        const out = await migrateStorefrontNameForProject(candidate(), context, logger, persist);
+        const out = await migrateStorefrontNameForProject(
+            candidate(),
+            context,
+            logger,
+            persist,
+            undefined,
+            services
+        );
 
+        // The ARGUMENT assertion the module mock could not make. Both services
+        // are forwarded, in order, and the migration gets the same logger this
+        // call was given — not one built from a different credential.
+        expect(mockMigrate).toHaveBeenCalledWith(
+            expect.objectContaining({ repoName: 'demo-builder-test' }),
+            expect.anything(),
+            daLiveContentOps,
+            configService,
+            logger
+        );
         expect(persist).toHaveBeenCalledTimes(1);
         expect(mockRegisterPublishKey).toHaveBeenCalledWith(
             expect.anything(),
             { owner: 'someone', repo: 'demo-builder-test' },
-            logger,
+            logger
         );
         expect(out.publishKeyRenewed).toBe(true);
     });
@@ -178,7 +217,14 @@ describe('migrateStorefrontNameForProject', () => {
             return { registered: true };
         });
 
-        await migrateStorefrontNameForProject(candidate(), context, logger, persist);
+        await migrateStorefrontNameForProject(
+            candidate(),
+            context,
+            logger,
+            persist,
+            undefined,
+            services
+        );
 
         expect(order).toEqual(['persist', 'mint']);
     });
@@ -191,7 +237,14 @@ describe('migrateStorefrontNameForProject', () => {
         });
         const persist = jest.fn();
 
-        const out = await migrateStorefrontNameForProject(candidate(), context, logger, persist);
+        const out = await migrateStorefrontNameForProject(
+            candidate(),
+            context,
+            logger,
+            persist,
+            undefined,
+            services
+        );
 
         expect(persist).not.toHaveBeenCalled();
         expect(mockRegisterPublishKey).not.toHaveBeenCalled();
@@ -203,7 +256,14 @@ describe('migrateStorefrontNameForProject', () => {
         mockMigrate.mockResolvedValue({ skipped: true, migrated: false });
         const persist = jest.fn();
 
-        const out = await migrateStorefrontNameForProject(candidate(), context, logger, persist);
+        const out = await migrateStorefrontNameForProject(
+            candidate(),
+            context,
+            logger,
+            persist,
+            undefined,
+            services
+        );
 
         // A skip means the registration was never rewritten, so the existing key
         // is intact. Re-minting would be a live write repairing nothing.
@@ -224,6 +284,8 @@ describe('migrateStorefrontNameForProject', () => {
             context,
             logger,
             jest.fn().mockResolvedValue(undefined),
+            undefined,
+            services
         );
 
         expect(out.lostGrants).toEqual(['o***r@example.test']);
@@ -238,6 +300,7 @@ describe('migrateStorefrontNameForProject', () => {
             logger,
             jest.fn().mockResolvedValue(undefined),
             onProgress,
+            services
         );
 
         expect(onProgress).toHaveBeenCalledWith(expect.stringContaining('citisignal-one'));
