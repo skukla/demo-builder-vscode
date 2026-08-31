@@ -78,11 +78,6 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: () => async () => 'token',
     DaLiveContentOperations: class {},
 }));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: class {
-        unpublishAllContent = jest.fn().mockResolvedValue({ success: true, count: 0 });
-    },
-}));
 
 // Real timers would make the exponential backoff take seconds of wall clock.
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
@@ -91,6 +86,7 @@ import {
     deleteProject,
     deleteProjectFiles,
 } from '@/features/projects-dashboard/services/projectDeletionService';
+import type { DeletionServices } from '@/features/projects-dashboard/services/projectDeletionService';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import type { HandlerContext } from '@/types/handlers';
@@ -135,6 +131,29 @@ function edsProject(over: Partial<Project> = {}): Project {
 function context(): HandlerContext {
     return createMockHandlerContext();
 }
+
+/**
+ * The CDN-unpublish services, handed in through the seam.
+ *
+ * There used to be a `jest.mock` here instead, supplying an `unpublishAllContent`
+ * the source had stopped calling and NO `initKeyStore` static. The key-store init is
+ * the first statement inside the step's try block, so it threw a TypeError, the catch
+ * logged it as a warning, and every Helix call below was unreachable — with 23 tests
+ * green. Measured 2026-08-31 by planting a throw inside that try: the suite did not
+ * notice.
+ */
+const mockInitKeyStore = jest.fn();
+const mockListAllPages = jest.fn();
+const mockUnpublishPages = jest.fn();
+const mockDeleteAdminApiKey = jest.fn();
+const SERVICES: DeletionServices = {
+    initKeyStore: mockInitKeyStore,
+    makeHelix: () => ({
+        listAllPages: mockListAllPages,
+        unpublishPages: mockUnpublishPages,
+        deleteAdminApiKey: mockDeleteAdminApiKey,
+    }),
+};
 
 /** The three ways a user leaves the cleanup dialog. Two of them are cancels. */
 type Gesture = 'escape' | 'cancelButton' | 'accept';
@@ -185,6 +204,16 @@ function armQuickPick(
 beforeEach(() => {
     jest.clearAllMocks();
     mockRm.mockResolvedValue(undefined);
+    mockInitKeyStore.mockResolvedValue(undefined);
+    mockListAllPages.mockResolvedValue(['/index', '/products']);
+    mockUnpublishPages.mockResolvedValue({
+        success: true,
+        count: 2,
+        total: 2,
+        liveFailed: 0,
+        previewFailed: 0,
+    });
+    mockDeleteAdminApiKey.mockResolvedValue({ success: true });
     // 'ask' is the shipped default and the only value that reaches the dialog;
     // 'deleteAll' skips the prompt entirely.
     mockGetConfiguration.mockReturnValue({ get: () => 'ask' });
@@ -196,7 +225,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // looks like — the user pressed Escape rather than "Delete".
         mockShowWarningMessage.mockResolvedValue(undefined);
 
-        return deleteProject(context(), plainProject()).then((result) => {
+        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
             expect(mockRm).not.toHaveBeenCalled();
             expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
         });
@@ -205,7 +234,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
     it('deletes nothing when the user answers anything other than Delete', () => {
         mockShowWarningMessage.mockResolvedValue('Cancel');
 
-        return deleteProject(context(), plainProject()).then((result) => {
+        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
             expect(mockRm).not.toHaveBeenCalled();
             expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
         });
@@ -217,7 +246,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // exactly what the first draft of this file did.
         armQuickPick('escape');
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockCreateQuickPick).toHaveBeenCalled();
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
@@ -230,7 +259,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // and the DA.live content.
         armQuickPick('escape');
 
-        const result = await deleteProject(context(), edsProject());
+        const result = await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockRm).not.toHaveBeenCalled();
         expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
@@ -241,7 +270,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // different handler. Escape passing says nothing about this one.
         armQuickPick('cancelButton');
 
-        const result = await deleteProject(context(), edsProject());
+        const result = await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockRm).not.toHaveBeenCalled();
         expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
@@ -254,7 +283,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         mockGetConfiguration.mockReturnValue({ get: () => 'localOnly' });
         mockShowWarningMessage.mockResolvedValue(undefined);
 
-        return deleteProject(context(), edsProject()).then((result) => {
+        return deleteProject(context(), edsProject(), SERVICES).then((result) => {
             expect(mockRm).not.toHaveBeenCalled();
             expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
         });
@@ -268,7 +297,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // default 'ask' by accident.
         mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockCreateQuickPick).not.toHaveBeenCalled();
         // No CONFIRMATION. Downstream prompts (GitHub sign-in) are a different
@@ -285,7 +314,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // conclude the project is gone.
         mockShowWarningMessage.mockResolvedValue(undefined);
 
-        return deleteProject(context(), plainProject()).then((result) => {
+        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
             expect(result.success).toBe(true);
             expect(result.data).toMatchObject({ success: false });
         });
@@ -309,7 +338,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
     it('deletes both remote resources when both stay ticked', async () => {
         armQuickPick('accept', ['github', 'daLive']);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteRepository).toHaveBeenCalledWith('skukla', 'demo-storefront');
         expect(mockDeleteDaLiveSite).toHaveBeenCalled();
@@ -318,7 +347,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
     it('spares the GitHub repo when its row is unticked', async () => {
         armQuickPick('accept', ['daLive']);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteDaLiveSite).toHaveBeenCalled(); // the other one still runs
@@ -327,7 +356,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
     it('spares the DA.live site when its row is unticked', async () => {
         armQuickPick('accept', ['github']);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
         expect(mockDeleteRepository).toHaveBeenCalled();
@@ -337,7 +366,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
         // Confirming with nothing ticked means "remove the local project only".
         armQuickPick('accept', []);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
@@ -350,7 +379,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
         mockGetToken.mockResolvedValue(undefined);
         armQuickPick('accept', ['github']);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
     });
@@ -361,7 +390,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false, error: 'expired' });
         armQuickPick('accept', ['daLive']);
 
-        await deleteProject(context(), edsProject());
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
     });
@@ -462,5 +491,68 @@ describe('the surrounding cleanup that a delete must not skip', () => {
         await deleteProjectFiles(ctx, plainProject({ path: '/projects/demo' }));
 
         expect(ctx.stateManager.clearProject).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The CDN unpublish, which had NO coverage until the seam made it reachable.
+ *
+ * Deleting a storefront without unpublishing leaves its pages served by the CDN
+ * after the DA.live site and the GitHub repo are gone — a demo URL that keeps
+ * answering with content nobody can edit or take down. The Admin API key is the
+ * same problem in miniature: a live credential outliving the site it was minted for.
+ */
+describe('CDN unpublish before the site is deleted', () => {
+    beforeEach(() => {
+        // The step sits behind the DA.live auth gate in performDaLiveCleanup — a
+        // signed-out user reaches none of it.
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+        mockDeleteDaLiveSite.mockResolvedValue({ success: true });
+        mockGetToken.mockResolvedValue('gh-token');
+        mockDeleteRepository.mockResolvedValue(undefined);
+    });
+
+    it('lists the site pages and unpublishes exactly those', async () => {
+        armQuickPick('accept');
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockListAllPages).toHaveBeenCalledWith('skukla', 'demo-storefront');
+        // The GitHub pair addresses the CDN, the DA pair addresses the content —
+        // they are different names here and swapping them unpublishes nothing.
+        expect(mockUnpublishPages).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', [
+            '/index',
+            '/products',
+        ]);
+    });
+
+    it('initialises the key store BEFORE minting or deleting a key', async () => {
+        armQuickPick('accept');
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockInitKeyStore.mock.invocationCallOrder[0]).toBeLessThan(
+            mockDeleteAdminApiKey.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('deletes the site Admin API key — a live credential must not outlive the site', async () => {
+        armQuickPick('accept');
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockDeleteAdminApiKey).toHaveBeenCalledWith('skukla', 'demo-storefront');
+    });
+
+    it('a failed unpublish never stops the deletion', async () => {
+        armQuickPick('accept');
+        mockUnpublishPages.mockRejectedValue(new Error('helix 500'));
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        // Non-fatal by design: a CDN that will not answer must not strand the user
+        // with a project they cannot remove.
+        expect(result.success).toBe(true);
+        expect(mockRm).toHaveBeenCalled();
     });
 });
