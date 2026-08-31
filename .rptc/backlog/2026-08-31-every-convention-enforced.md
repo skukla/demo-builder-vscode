@@ -103,3 +103,7 @@ is the current reference for the four-control pattern.
 - The 16 were read individually on 2026-08-31 to produce the lane split above;
   `naming-convention`'s availability and `builder-uniqueness`'s actual scope were
   both verified rather than assumed.
+
+## Shipped so far
+
+- 2026-08-31  docs(backlog): PL-33 — every convention is enforced, or it stops being one (`078fe1074`)

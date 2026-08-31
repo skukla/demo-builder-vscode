@@ -9,47 +9,36 @@
  * these mocks register. Specs import EVERYTHING from here, `vscode` included.
  */
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    initializeLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('./helpers/loggerFake');
+    // initializeLogger hands back a DebugLogger, which is a Logger plus three
+    // methods the canonical builder deliberately excludes (nothing else in the
+    // corpus fakes them). The builder supplies the Logger surface; the extras
+    // stay explicit so it is visible that they are NOT part of Logger.
+    return {
+        initializeLogger: jest.fn(() => ({
+            ...createMockLogger(),
         replayLogsFromFile: jest.fn().mockResolvedValue(undefined),
         show: jest.fn(),
         showDebug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
+        })),
+        getLogger: jest.fn(() => createMockLogger()),
+    };
+});
 
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-    initializeLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+jest.mock('@/core/logging', () => {
+    const { createMockLogger } = require('./helpers/loggerFake');
+    return {
+        Logger: jest.fn().mockImplementation(() => createMockLogger()),
+        initializeLogger: jest.fn(() => ({
+            ...createMockLogger(),
         replayLogsFromFile: jest.fn().mockResolvedValue(undefined),
         show: jest.fn(),
         showDebug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
+        })),
+        getLogger: jest.fn(() => createMockLogger()),
+    };
+});
 
 // StateManager knobs the specs steer per test.
 export const mockHasProject = jest.fn();

@@ -51,6 +51,15 @@ jest.mock('vscode', () => {
     };
 });
 
+/**
+ * This suite tests the real singleton — that `getLogger` throws before
+ * initialisation and returns the initialised instance after. The shared node
+ * setup mocks BOTH `@/core/logging` and `@/core/logging/debugLogger` so no other
+ * suite has to, which would otherwise hand this one a fake and make both
+ * assertions meaningless. It is the one suite that wants the real accessor.
+ */
+jest.unmock('@/core/logging/debugLogger');
+
 import * as vscode from 'vscode';
 import {
     DebugLogger,

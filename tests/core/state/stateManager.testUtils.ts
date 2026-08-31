@@ -17,16 +17,11 @@ jest.mock('os');
 // Mock Logger - StateManager uses getLogger() internally
 // Note: jest.mock() is hoisted, so we define the logger mock object inline
 jest.mock('@/core/logging', () => {
-    // NOT the shared builder: a jest.mock factory is hoisted above the imports, so
-    // it cannot reference one. The lazy-require idiom works here and is proven,
-    // but it belongs to the factory-shaped batch, not this one.
-    const mockLogger = {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
+    // A jest.mock factory is hoisted above the imports, so it cannot reference an
+    // imported builder — but the factory BODY runs lazily, so a require() inside
+    // it can. That is how the shared builder is reached from in here.
+    const { createMockLogger } = require('../../helpers/loggerFake');
+    const mockLogger = createMockLogger();
     return {
         getLogger: jest.fn(() => mockLogger),
         __mockLoggerInstance: mockLogger, // Export for tests to access

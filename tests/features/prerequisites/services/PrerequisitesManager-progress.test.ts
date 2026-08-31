@@ -4,15 +4,6 @@
  */
 
 // Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
 jest.mock('@/core/config/ConfigurationLoader');
 
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';

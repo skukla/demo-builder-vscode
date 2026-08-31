@@ -178,14 +178,56 @@ table above is the baseline a later run is compared against.
 Every item here was a decision, not an omission. Recorded because a deferral that
 lives only in a commit message is a deferral nobody finds again.
 
-### 1. Twenty-six logger literals inside `jest.mock` factories (22 files)
-A hoisted factory cannot reference an import, so the shared builder is unreachable
-from inside one. The lazy-require idiom works and was proven on a real suite (8
-tests green) then reverted to keep the batch one shape.
-**They are load-bearing, re-probed 2026-08-31**: removing them fails 27 suites and
-185 tests. Only ONE of the 22 asserts on a logger, so that is not the reason —
-see the landmine note below for what is actually holding them up, and expect this
-group to shrink to near zero when [[PL-31]] retires the logging barrel.
+**Items 1, 2 and 3 are now CLOSED (2026-08-31).** Their entries are kept rather
+than deleted, because in all three cases the recorded reason for deferring turned
+out to be wrong, and how it was wrong is the useful part. What remains open is
+items 4-6, and 4 is a measured decision to build nothing.
+
+### 1. Logger literals inside `jest.mock` factories — CLOSED 2026-08-31
+
+Filed as "twenty-six, load-bearing, expect them to collapse when [[PL-31]] retires
+the logging barrel". The count was 23 across 21 files, and waiting for PL-31 turned
+out to be unnecessary — but the reason they survived is the part worth keeping.
+
+**Nothing was measuring them.** Both ratchets in `canonical-fakes.test.ts` walk
+object literals in ordinary test code; neither looks inside a `jest.mock` factory.
+So this group sat in a blind spot and outlived every other one — not because it was
+hard, but because it was invisible. A check now covers it, control-tested by
+planting a violation and confirming it is named.
+
+The stated blocker was also only half true. A factory is hoisted above the imports
+and cannot reference an imported builder — but the factory BODY runs lazily, so a
+`require()` inside it reaches the builder fine. That idiom had been proven on a real
+suite in August and then reverted "to keep the batch one shape", which is how a
+solved problem stayed filed as a blocked one for three days.
+
+What it actually split into, once probed rather than reasoned about:
+
+| | |
+|---|---|
+| Deleted — the global setup mock now covers them | 14 |
+| Converted to the builder via lazy `require` | 8 |
+| Deleted — dead, its suites pass without it | 1 |
+
+**Thirteen of the fourteen deletions came from one source line.**
+`prerequisitesCacheManager.ts` is the only file in `src/` that imports
+`@/core/logging/debugLogger` rather than the barrel, and the shared node setup
+mocked the barrel ALONE — so its whole suite family could not use the shared mock
+and each file re-implemented it. Covering the deep path in `tests/setup/node.ts`
+deleted all thirteen at once. That change also had to happen for PL-31 regardless:
+the old single-path mock would have stopped intercepting anything the moment the
+barrel was retired.
+
+Two mistakes, both caught by the suite:
+
+- The removal pattern `'@/core/logging[^']*'` also matched
+  `@/core/logging/errorLogger`, which stubs a CLASS rather than the accessor.
+  Restored.
+- A converted factory read its captured `mockDebug` at factory-run time instead of
+  on the first `getLogger()` call. The factory is hoisted above
+  `const mockDebug = jest.fn()`, so two suites failed to LOAD with "cannot access
+  before initialization" — and because they never ran, the summary read
+  "0 tests failed". Fixed by memoising inside `getLogger`.
 
 ### 2 and 3. The `{ execute }` fakes — CLOSED 2026-08-31 (`10d77eb3b`)
 
@@ -276,3 +318,12 @@ never filed anywhere until now.
 - 2026-08-31  test(helpers): 121 logger fakes become calls to the builder that already existed (`9942fb1c6`)
 - 2026-08-31  test: 138 logging mocks were dead — probed as a set, then module by module (`5439928d1`)
 - 2026-08-31  test(setup): every suite gets a working getLogger, so none has to mock one to survive (`42e643835`)
+- 2026-08-31  test: 68 `as never` casts deleted outright, 10 more now name what they pretend to be (`b8c3d9a95`)
+- 2026-08-31  docs(backlog): capture what was deliberately left, and rule that four shapes need no builder (`4466bafaa`)
+- 2026-08-31  test(helpers): 29 command-executor fakes adopt the builder, and the typing found four invented shapes (`25a0a84b7`)
+- 2026-08-31  test(helpers): the canonical Project fixture was copied from the wrong artifact (`db07d4eb9`)
+- 2026-08-31  docs(tests): the global logger mock is aimed at a barrel we have scheduled for deletion (`f704df787`)
+- 2026-08-31  test(shell): three logging mocks my probe never looked at, and they were dead (`7bd437597`)
+- 2026-08-31  test: the 243 deferred loggers were 217 convertible and 26 real — 466 down to 30 (`d29a94838`)
+- 2026-08-31  feat(tests): the cast is the smell — nine ratcheting ceilings, target zero (`1b214a9ad`)
+- 2026-08-31  test(helpers): the StateManager fake covers the interface, and the typing caught four defects (`76190bd73`)

@@ -39,14 +39,10 @@ jest.mock('vscode', () => {
 }, { virtual: true });
 
 jest.mock('@/core/logging', () => {
+    const { createMockLogger } = require('../../../helpers/loggerFake');
     mockWarn = jest.fn();
     return {
-        getLogger: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: mockWarn,
-        }),
+        getLogger: jest.fn().mockReturnValue(createMockLogger({ warn: mockWarn })),
         initializeLogger: jest.fn(),
     };
 });

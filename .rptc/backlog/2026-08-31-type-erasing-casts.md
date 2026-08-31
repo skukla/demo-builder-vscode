@@ -105,3 +105,4 @@ is currently `off` for `tests/` in `eslint.config.mjs`; that line goes too.
   unenforced beside it
 - 2026-08-31  First conversion: the CommandExecutor fake family, 42 casts to zero
   across 37 files, `as never` 880 → 803 (`10d77eb3b`)
+- 2026-08-31  test(sop): a test never erases a type — as any and as never become a rule (`0c934462e`)

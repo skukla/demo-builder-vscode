@@ -292,3 +292,107 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
         }).toEqual({ type, count, verdict: 'at' });
     });
 });
+
+describe('a jest.mock factory reaches the builder too', () => {
+    /**
+     * THE BLIND SPOT THIS CLOSES. The two checks above walk object literals in
+     * ordinary test code. Neither looks inside a `jest.mock` factory — so 23
+     * hand-rolled loggers sat in factories across 21 files and NOTHING counted
+     * them, which is exactly why they outlived every other group and became the
+     * last open item on PL-16. They were not hard; they were unmeasured.
+     *
+     * The excuse for them was real but only half true: a factory is hoisted above
+     * the imports, so it cannot reference an imported builder. The factory BODY,
+     * however, runs lazily — so `require()` inside it reaches the builder fine:
+     *
+     *     jest.mock('@/core/logging', () => {
+     *         const { createMockLogger } = require('../../helpers/loggerFake');
+     *         return { getLogger: () => createMockLogger() };
+     *     });
+     *
+     * One trap, which cost a suite-load failure on 2026-08-31: if the factory
+     * captures a `mockX` from module scope, read it LAZILY (inside `getLogger`,
+     * memoised), never at factory-run time — the factory is hoisted above
+     * `const mockX = jest.fn()`, so an eager read throws "cannot access before
+     * initialization".
+     */
+    const LOGGER_METHODS = new Set([
+        'debug',
+        'error',
+        'info',
+        'warn',
+        'trace',
+        'show',
+        'clear',
+        'log',
+    ]);
+
+    /**
+     * The one legitimate hand-rolled logger in a factory: the shared node setup
+     * IS the canonical global mock, and it cannot import the builder to build
+     * itself. Every other factory has somewhere to import from.
+     */
+    const EXEMPT_FACTORIES = new Set(['tests/setup/node.ts']);
+
+    function factoryLoggerLiterals(body: string): number {
+        let found = 0;
+        const stripped = body.replace(/\/\*[\s\S]*?\*\//g, '');
+        for (const m of stripped.matchAll(/jest\.mock\(/g)) {
+            let depth = 0;
+            let j = m.index! + 'jest.mock'.length;
+            for (; j < stripped.length; j++) {
+                if (stripped[j] === '(') depth += 1;
+                else if (stripped[j] === ')') {
+                    depth -= 1;
+                    if (depth === 0) {
+                        j += 1;
+                        break;
+                    }
+                }
+            }
+            const call = stripped.slice(m.index!, j);
+            for (const lit of call.matchAll(/\{[^{}]*\}/g)) {
+                const keys = new Set([...lit[0].matchAll(/(\w+)\s*:/g)].map((k) => k[1]));
+                const loggerish = [...keys].filter((k) => LOGGER_METHODS.has(k)).length;
+                const onlyLoggerish = [...keys].every(
+                    (k) =>
+                        LOGGER_METHODS.has(k) || k === 'getLogger' || k === 'initializeLogger'
+                );
+                if (keys.size > 0 && loggerish >= 3 && onlyLoggerish) {
+                    found += 1;
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    it('CONTROL: the detector sees a factory logger, and not other factories', () => {
+        expect(
+            factoryLoggerLiterals(
+                "jest.mock('m', () => ({ getLogger: () => ({ debug: 1, info: 2, warn: 3 }) }));"
+            )
+        ).toBe(1);
+        // A factory that reaches the builder is not a hand-roll.
+        expect(
+            factoryLoggerLiterals(
+                "jest.mock('m', () => { const { createMockLogger } = require('x');" +
+                    ' return { getLogger: () => createMockLogger() }; });'
+            )
+        ).toBe(0);
+        // An unrelated factory is not a logger.
+        expect(
+            factoryLoggerLiterals("jest.mock('m', () => ({ read: 1, write: 2, seek: 3 }));")
+        ).toBe(0);
+        // A logger literal OUTSIDE a factory belongs to the checks above, not this one.
+        expect(factoryLoggerLiterals('const l = { debug: 1, info: 2, warn: 3 };')).toBe(0);
+    });
+
+    it('no jest.mock factory hand-rolls a logger', () => {
+        const offenders = collectTestFiles(testsDir)
+            .filter((f) => f !== path.relative(repoRoot, __filename).replace(/\\/g, '/'))
+            .filter((f) => !EXEMPT_FACTORIES.has(f))
+            .filter((f) => factoryLoggerLiterals(fs.readFileSync(path.join(repoRoot, f), 'utf8')) > 0);
+        expect(offenders).toEqual([]);
+    });
+});
