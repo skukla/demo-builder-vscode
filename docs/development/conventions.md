@@ -12,8 +12,8 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **72** conventions, **60** enforced
-- **19** name the decision record behind them
+- **75** conventions, **60** enforced
+- **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
 
@@ -123,6 +123,9 @@ it means the rule rests on somebody noticing.
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
+| A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
+| A builder returns the REAL type. Never `as never`, never `as any` on the builder itself. Where the structural fake is partial, cast the object literal INTO the return type at the builder's boundary — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
+| A fixture's shape is READ, not remembered. A builder's method list comes from the real interface plus what callers actually use; a data fixture is copied from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape, never a re-implementation of one the suite already has a builder for. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | Do not lower one test's timeout below the file's budget. |  |  | `no-lowered-test-timeout.test.ts` |
 | Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with `> file 2>&1` and read that. |  |  | `10-jest-pipe.rule`<br>`11-jest-redirect.rule` |
