@@ -18,6 +18,7 @@ import {
     fs,
     vscode,
 } from './componentUpdater.testUtils';
+import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
@@ -27,6 +28,11 @@ describe('ComponentUpdater - Core Workflow', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // The registry manager is a session singleton memoised in module scope, and
+        // jest.clearAllMocks() cannot see module state. Without this, the first
+        // test's instance — built with that test's extension path — answers every
+        // later test.
+        resetComponentRegistryManager();
 
         // Mock logger
         mockLogger = {

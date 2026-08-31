@@ -151,8 +151,10 @@ export class ComponentUpdater {
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-                        const registryManager = new ComponentRegistryManager(this.extensionPath);
+                        const { getComponentRegistryManager } = await import(
+                '@/features/components/services/componentRegistryInstance'
+            );
+                        const registryManager = getComponentRegistryManager(this.extensionPath);
                         const registry = await registryManager.loadRegistry();
                         // Search for component across all categories
                         const allComponents = [
@@ -287,8 +289,10 @@ export class ComponentUpdater {
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
         // Get component configuration from registry
-        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-        const registryManager = new ComponentRegistryManager(this.extensionPath);
+        const { getComponentRegistryManager } = await import(
+                '@/features/components/services/componentRegistryInstance'
+            );
+        const registryManager = getComponentRegistryManager(this.extensionPath);
         const componentDef = await registryManager.getComponentById(componentId);
 
         const nodeVersion = componentDef?.configuration?.nodeVersion || null;

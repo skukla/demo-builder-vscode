@@ -26,7 +26,6 @@ import {
     migrateDeclaredSecrets,
     reKeyProjectSecrets,
 } from '@/features/components/services/commerceSecretMigration';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
 import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
@@ -49,6 +48,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
@@ -176,7 +176,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         }
 
         // Load and transform components data using ComponentRegistryManager
-        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+        const registryManager = getComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
 
         // Send both the categorized components structure AND the top-level envVars
@@ -625,7 +625,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * on saveProject.
      */
     private async regenerateEnvFiles(project: Project): Promise<void> {
-        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+        const registryManager = getComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
         await regenerateProjectEnvFiles(project, registry, this.logger, this.context.secrets);
     }
