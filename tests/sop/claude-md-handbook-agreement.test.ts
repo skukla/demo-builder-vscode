@@ -23,7 +23,7 @@
  * still a release-cut job.
  */
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
@@ -116,6 +116,58 @@ describe('the counts CLAUDE.md states match the registries they count', () => {
 
     it('states the right number of demo packages', () => {
         expect(CLAUDE_MD).toContain(`(${registry('demo-packages.json', 'packages')} of them,`);
+    });
+});
+
+describe('the skill counts ai-context-authoring states match the writer it documents', () => {
+    // Found stale 2026-08-30 while reading every document: the skill said the writer
+    // ships "13 always-on" skills and that an EDS project pins "14 as of v7: 13
+    // always-on + extend-app-builder-app". The array holds FOURTEEN, so both halves of
+    // that arithmetic were wrong. The skillsWriter suites had pinned the true numbers
+    // (14 gated-in, 11 gated-out) the entire time — nothing connected them to the prose
+    // that tells an author what to expect, which is the same gap as the stacks count
+    // above and the ADR index's routing table.
+    const AI_TS = readFileSync(join(ROOT, 'src/types/ai.ts'), 'utf8');
+    const SKILL = readFileSync(join(ROOT, '.claude/skills/ai-context-authoring/SKILL.md'), 'utf8');
+
+    /** Names inside an `export const NAME = [ ... ] as const` array literal. */
+    const arrayNames = (constName: string): string[] => {
+        const block = AI_TS.split(`${constName} = [`)[1]?.split(']')[0] ?? '';
+        return [...block.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    };
+    /** Keys inside the `SKILL_MCP_TOOL_DEPENDENCIES` object literal. */
+    const gatedNames = (): string[] => {
+        const block = AI_TS.split('SKILL_MCP_TOOL_DEPENDENCIES = {')[1]?.split('}')[0] ?? '';
+        return [...block.matchAll(/'([^']+)':/g)].map((m) => m[1]);
+    };
+
+    const alwaysOn = arrayNames('DEMO_BUILDER_ALWAYS_ON_SKILLS');
+    const gated = gatedNames();
+
+    it('CONTROL: both registries parse and are non-empty', () => {
+        expect(alwaysOn.length).toBeGreaterThan(0);
+        expect(gated.length).toBeGreaterThan(0);
+        // Every gated skill must BE an always-on skill, or the subtraction below is
+        // arithmetic over two unrelated sets.
+        expect(alwaysOn).toEqual(expect.arrayContaining(gated));
+    });
+
+    it('states the gated-in and gated-out counts the writer actually produces', () => {
+        expect(SKILL).toContain(`**${alwaysOn.length}** always-on`);
+        expect(SKILL).toContain(`**${alwaysOn.length - gated.length}** without`);
+    });
+
+    it('states how many of them are delivery-gated', () => {
+        expect(SKILL).toContain(`${gated.length} of the ${alwaysOn.length} are delivery-gated`);
+    });
+
+    it('ships a template file for every skill the writer can deliver', () => {
+        const templates = readdirSync(join(ROOT, 'src/features/project-creation/templates/skills'))
+            .filter((f) => f.endsWith('.md'))
+            .map((f) => f.replace(/\.md$/, ''))
+            .sort();
+        const declared = [...alwaysOn, ...arrayNames('DEMO_BUILDER_CONDITIONAL_SKILLS')].sort();
+        expect(templates).toEqual(declared);
     });
 });
 

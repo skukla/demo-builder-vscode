@@ -66,9 +66,16 @@ Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update
 
 ## Test pins that move
 
-- `skillsWriter.test.ts` — EDS projects pin an exact skill-file COUNT (14 as of v7:
-  13 always-on + `extend-app-builder-app`); a new conditional skill bumps it and needs
-  positive + negative (bare-project) cases.
+- `skillsWriter.hashAndSkip.test.ts` / `skillsWriter.toolGating.test.ts` — these pin the
+  exact skill-file COUNT, and the count depends on gating: **14** always-on with the
+  Playwright tools present, **11** without them (3 of the 14 are delivery-gated via
+  `SKILL_MCP_TOOL_DEPENDENCIES`), plus `extend-app-builder-app` when its predicate holds.
+  A new conditional skill bumps these and needs positive + negative (bare-project) cases.
+
+  *Corrected 2026-08-30 — this bullet read "14 as of v7: 13 always-on + extend-app-builder-app".
+  `DEMO_BUILDER_ALWAYS_ON_SKILLS` holds 14, not 13, so the arithmetic was wrong in both
+  halves. Count the array rather than copying a number from here; the tests are the
+  authority and they were right the whole time.*
 - `aiContextWriter.writeAgentsMd.test.ts` — add section presence/absence tests.
 - `aiHandlers-setup.test.ts` / `aiHandlers-toolingGate.test.ts` — regenerate gating;
   NOTE its `testUtils` mocks the services barrel: a new export used by `aiHandlers`
