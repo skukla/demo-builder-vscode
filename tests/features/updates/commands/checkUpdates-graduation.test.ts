@@ -11,6 +11,7 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('vscode', () => ({
     window: {
@@ -77,9 +78,7 @@ describe('CheckUpdatesCommand - Graduation Off-Ramp', () => {
             getAllProjects: jest.fn().mockResolvedValue([]),
             loadProjectFromPath: jest.fn().mockResolvedValue(null),
         } as any;
-        mockLogger = {
-            info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         (vscode.window.withProgress as jest.Mock).mockImplementation((_o, cb) => cb({ report: jest.fn() }));
 

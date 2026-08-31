@@ -19,6 +19,7 @@ import {
 import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -103,12 +104,7 @@ function createMockHandlerContext(overrides?: Partial<HandlerContext>): HandlerC
 
     return {
         context: mockExtensionContext,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         authManager: {
             isAuthenticated: jest.fn(),

@@ -19,6 +19,7 @@ import type { Logger } from '@/types/logger';
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     let fetcher: AdobeEntityFetcher;
@@ -26,13 +27,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     let editProject: jest.Mock;
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         editProject = jest.fn().mockResolvedValue({ body: {} });
         mockSDKClient = {
@@ -45,12 +40,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
             { execute: jest.fn() } as unknown as CommandExecutor,
             mockSDKClient,
             {} as unknown as AuthCacheManager,
-            {
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            } as unknown as jest.Mocked<Logger>,
+            createMockLogger() as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
             {}
         );

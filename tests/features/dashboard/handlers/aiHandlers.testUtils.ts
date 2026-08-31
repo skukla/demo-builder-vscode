@@ -133,6 +133,7 @@ export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // ==========================================================
 // Test Helpers
@@ -160,18 +161,8 @@ export function createAiHandlerContext(overrides?: Partial<HandlerContext>): Han
             globalState: memento,
             subscriptions: [],
         },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',

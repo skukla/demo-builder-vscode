@@ -40,6 +40,7 @@ import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandler
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
@@ -75,12 +76,7 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
 
     return {
         context: mockExtensionContext,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {},
         stateManager: createMockStateManager({

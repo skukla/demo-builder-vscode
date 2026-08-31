@@ -20,6 +20,7 @@ import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -165,13 +166,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         });
 
         // Setup mock Logger
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         // Setup mock AuthManager — org-123 is reachable, matching the project's
         // org, so the canonical detectProjectOrgMismatch check passes.

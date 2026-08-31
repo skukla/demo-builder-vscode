@@ -6,6 +6,7 @@
 
 import { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code
 export const mockVSCode = {
@@ -57,12 +58,7 @@ export function createWizardLifecycleContext() {
         stateManager: mockStateManager,
         communicationManager: mockCommunicationManager,
         extensionPath: '/mock/extension/path',
-        logger: {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn()
-        } as any,
+        logger: createMockLogger() as any,
         debugLogger: {
             debug: jest.fn()
         } as any,

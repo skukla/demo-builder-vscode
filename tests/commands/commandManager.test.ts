@@ -13,6 +13,7 @@ import type { Logger } from '@/types/logger';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import { createMockLogger } from '../helpers/loggerFake';
 
 // Mock VS Code API
 
@@ -125,13 +126,7 @@ describe('CommandManager', () => {
 
         // Create mock dependencies
         mockStateManager = new StateManager(mockContext);
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as Logger;
+        mockLogger = createMockLogger() as Logger;
 
         // Mock disposable
         mockDisposable = {

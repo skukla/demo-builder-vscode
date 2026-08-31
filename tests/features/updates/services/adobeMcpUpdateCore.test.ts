@@ -11,6 +11,7 @@
 
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { generateAIContextFiles } from '@/features/project-creation/services';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const executeMock = jest.fn();
 
@@ -37,13 +38,7 @@ function makeCtx() {
         extensionPath: '/ext',
         stateManager: { saveProjectConfigOnly: jest.fn(async () => undefined) },
         commandManager: executor,
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
     };
 }
 type Ctx = ReturnType<typeof makeCtx>;

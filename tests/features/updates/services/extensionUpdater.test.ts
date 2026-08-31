@@ -7,6 +7,7 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock modules
 jest.mock('fs/promises');
@@ -39,12 +40,7 @@ describe('ExtensionUpdater', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         updater = new ExtensionUpdater(mockLogger);
 

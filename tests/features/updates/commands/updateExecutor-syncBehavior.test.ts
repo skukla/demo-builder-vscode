@@ -12,6 +12,7 @@ import { installBlockCollections } from '@/features/eds/services/blockCollection
 import type { BlockLibraryUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
@@ -104,25 +105,13 @@ function makeCtx(saveImpl?: () => Promise<void>): {
     secrets: vscode.SecretStorage;
     extensionPath: string;
     stateManager: { saveProject: jest.Mock };
-    logger: {
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-        debug: jest.Mock;
-        trace: jest.Mock;
-    };
+    logger: ReturnType<typeof createMockLogger>;
 } {
     return {
         secrets: {} as vscode.SecretStorage,
         extensionPath: '/ext',
         stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
     };
 }
 

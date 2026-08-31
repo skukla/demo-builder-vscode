@@ -17,6 +17,7 @@ import {
     updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const syncForkMock = jest.fn();
 const syncWithTemplateMock = jest.fn();
@@ -90,13 +91,7 @@ const ctx = {
     extensionPath: '/ext',
     stateManager: { saveProject: jest.fn(async () => undefined) },
     commandManager: executor,
-    logger: {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    },
+    logger: createMockLogger(),
 } as never;
 
 const project = {

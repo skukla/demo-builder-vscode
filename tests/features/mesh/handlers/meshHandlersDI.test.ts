@@ -17,6 +17,7 @@ import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/core/di');
@@ -46,13 +47,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         jest.clearAllMocks();
 
         // Create mock logger to verify context-based injection
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         // Mock authentication service
         mockAuthService = {

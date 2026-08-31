@@ -18,6 +18,7 @@ import {
     fs,
     vscode,
 } from './componentUpdater.testUtils';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -28,12 +29,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         mockExecutor = {
             execute: jest.fn().mockResolvedValue({

@@ -20,6 +20,7 @@ import {
 } from '@/features/app-builder/services/appManagementInstaller';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const NS_BASE = 'https://285361-kuklabodeamesh5ngv-stage.adobeioruntime.net/api/v1/web';
 
@@ -73,7 +74,7 @@ function makeDeps(
             accessToken: 'fake-test-pw-not-a-secret',
             imsOrgId: 'ABC@AdobeOrg',
         }),
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+        logger: createMockLogger() as never,
         clientFactory: () => client,
         wait: async () => undefined,
         ...overrides,

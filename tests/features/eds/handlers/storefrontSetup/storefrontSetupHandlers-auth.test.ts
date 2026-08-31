@@ -91,6 +91,7 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Get mock references
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
@@ -112,19 +113,8 @@ function createMockContext(overrides: Partial<HandlerContext> = {}): HandlerCont
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             secrets: {},

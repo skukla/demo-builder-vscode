@@ -12,6 +12,7 @@ import {
 } from '@/features/authentication/handlers/workspaceHandlers';
 import { HandlerContext } from '@/types/handlers';
 import * as securityValidation from '@/core/validation';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/core/validation');
@@ -32,12 +33,7 @@ describe('workspaceHandlers', () => {
         // Create mock context
         mockContext = {
             authManager: mockAuthManager,
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn()
-            } as any,
+            logger: createMockLogger() as any,
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn()

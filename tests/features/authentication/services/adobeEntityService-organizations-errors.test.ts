@@ -13,19 +13,14 @@ jest.mock('@/types/typeGuards');
 import { getLogger } from '@/core/logging';
 import { validateOrgId } from '@/core/validation';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityService - Organizations - Error Handling', () => {
     let testMocks: TestMocks;
 
     beforeEach(() => {
         // Setup mocked module functions
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Mock validation functions (they should not throw by default)
         (validateOrgId as jest.Mock).mockImplementation(() => {});

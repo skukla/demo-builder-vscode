@@ -10,19 +10,14 @@ import { setupMocks, mockOrgs, mockProjects, type TestMocks } from './adobeEntit
 // Mock external dependencies only
 
 import { getLogger } from '@/core/logging';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityService - Shared Operations', () => {
     let testMocks: TestMocks;
 
     beforeEach(() => {
         // Setup mocked module functions
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         testMocks = setupMocks();
     });

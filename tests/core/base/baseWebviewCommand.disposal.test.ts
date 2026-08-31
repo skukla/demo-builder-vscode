@@ -17,6 +17,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock panel state for disposal testing
 let mockPanel: any;
@@ -161,12 +162,7 @@ describe('BaseWebviewCommand Disposal', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         };
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
     });
 
     describe('Inherited DisposableStore', () => {

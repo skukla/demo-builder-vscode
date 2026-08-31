@@ -36,6 +36,7 @@ jest.mock('@/features/project-creation/services', () => ({
 }));
 
 import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function createMockProject(overrides?: Partial<Project>): Project {
     return {
@@ -61,12 +62,7 @@ function createMockContext(): HandlerContext {
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
     } as unknown as HandlerContext;
 }

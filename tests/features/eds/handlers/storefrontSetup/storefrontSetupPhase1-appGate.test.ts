@@ -41,6 +41,7 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
     resolveAppInstallation: jest.fn(),
 }));
 import { resolveAppInstallation } from '@/features/eds/services/appInstallationResolver';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockPin = pinRepoToLkg as jest.Mock;
 const mockResolve = resolveAppInstallation as jest.Mock;
@@ -50,7 +51,7 @@ let callOrder: string[];
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
     } as unknown as HandlerContext;

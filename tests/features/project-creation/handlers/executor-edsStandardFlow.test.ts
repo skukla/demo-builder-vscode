@@ -10,6 +10,7 @@
 
 import { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
@@ -146,12 +147,7 @@ describe('Executor - EDS Standard Flow', () => {
     const createMockContext = (): Partial<HandlerContext> => {
         return {
             context: { extensionPath: '/test/extension' } as any,
-            logger: {
-                info: jest.fn(),
-                debug: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            } as any,
+            logger: createMockLogger() as any,
             stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),

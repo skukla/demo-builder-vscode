@@ -5,6 +5,7 @@
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -151,12 +152,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             markDirty: jest.fn(),
         } as any,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         sendMessage: jest.fn(),
     } as any;
 

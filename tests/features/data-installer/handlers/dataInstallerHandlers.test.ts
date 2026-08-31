@@ -18,6 +18,7 @@ import { DataInstallerApiError } from '@/features/data-installer/services/dataIn
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -44,8 +45,8 @@ function setupSettings(values: { apiBaseUrl?: unknown; enabled?: unknown } = {})
 function makeImportHarness(overrides: Partial<HandlerContext> = {}): HandlerContext {
     const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 55, token: 'tok' }) };
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue(tokenManager),

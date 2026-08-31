@@ -29,6 +29,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -64,8 +65,8 @@ const PAAS_PROJECT: Partial<Project> = {
 
 function makeImportHarness(project: unknown) {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         panel: {} as vscode.WebviewPanel,
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),

@@ -1,4 +1,5 @@
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * AdobeSDKClient Test Suite
@@ -40,12 +41,7 @@ describe('AdobeSDKClient', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         mockTokenManager = {
             inspectToken: jest.fn(),

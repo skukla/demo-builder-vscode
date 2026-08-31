@@ -21,6 +21,7 @@ import { handleDiscoverStoreStructureAndPersist } from '@/features/dashboard/han
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -41,7 +42,7 @@ function makeContext(project: Project | null) {
     const sendMessage = jest.fn().mockResolvedValue(undefined);
     const context = {
         sendMessage,
-        logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,

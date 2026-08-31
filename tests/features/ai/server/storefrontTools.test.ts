@@ -33,6 +33,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const republishMock = republishStorefrontConfig as jest.Mock;
 const republishContentMock = republishStorefrontContent as jest.Mock;
@@ -59,7 +60,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: { secrets: {} },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 const EDS_PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };

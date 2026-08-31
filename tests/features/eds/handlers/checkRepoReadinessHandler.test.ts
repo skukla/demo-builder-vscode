@@ -7,6 +7,7 @@
  */
 
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const classify = jest.fn();
 jest.mock('@/features/eds/services/storefront/repoStorefrontReadiness', () => ({
@@ -20,7 +21,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 function ctx() {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         context: { secrets: {} },
         sendMessage: jest.fn(),
     };

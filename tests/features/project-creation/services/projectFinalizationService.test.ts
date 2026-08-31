@@ -20,6 +20,7 @@ jest.mock('@/features/project-creation/helpers', () => ({
 
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('projectFinalizationService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -58,18 +59,8 @@ describe('projectFinalizationService', () => {
         };
 
         mockHandlerContext = {
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
-            debugLogger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
+            logger: createMockLogger(),
+            debugLogger: createMockLogger(),
             context: {
                 extensionPath: '/test/extension',
             },

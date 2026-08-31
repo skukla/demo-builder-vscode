@@ -20,6 +20,7 @@
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -29,13 +30,7 @@ let service: HelixService;
 
 beforeEach(() => {
     mockFetch.mockReset();
-    logger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    logger = createMockLogger() as unknown as Logger;
     service = new HelixService(
         logger,
         { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) } as unknown as GitHubTokenService,

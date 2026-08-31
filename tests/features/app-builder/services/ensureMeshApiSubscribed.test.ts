@@ -31,6 +31,7 @@ jest.mock('@/core/shell', () => {
     };
 });
 import { withOrgContext } from '@/core/shell';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
@@ -85,13 +86,7 @@ describe('ensureMeshApiSubscribed', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as jest.Mocked<Logger>;
+        logger = createMockLogger() as jest.Mocked<Logger>;
         (withOrgContext as jest.Mock).mockImplementation(
             (_t: unknown, fn: () => Promise<unknown>) => fn()
         );

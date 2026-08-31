@@ -6,6 +6,7 @@
  */
 
 import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 interface MockCacheManager {
     clearSessionCaches: jest.Mock;
@@ -34,7 +35,7 @@ const createMockContext = (cacheManager: MockCacheManager) => {
     };
     return {
         authManager,
-        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         debugLogger: { debug: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: { isAuthenticating: false },

@@ -47,6 +47,7 @@ import { resetComponentRegistryManager } from '@/features/components/services/co
 import { resetPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** The parts a webview surface hands the factory, identical between messages. */
 function panelParts() {
@@ -63,13 +64,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     resetPrerequisitesManager(); // a shared instance must not leak between tests
     resetComponentRegistryManager();
-    mockGetLogger.mockReturnValue({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    });
+    mockGetLogger.mockReturnValue(createMockLogger());
 });
 
 /** Two contexts, built exactly as two consecutive messages build them. */

@@ -18,6 +18,7 @@ import {
 } from '@/features/updates/commands/updateExecutor';
 import type { AdobeMcpUpdateItem } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock(
     'vscode',
@@ -53,13 +54,7 @@ function makeCtx(): UpdateContext {
         secrets: {} as vscode.SecretStorage,
         extensionPath: '/ext',
         stateManager: { saveProjectConfigOnly: jest.fn(async () => undefined) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
     } as never;
 }
 

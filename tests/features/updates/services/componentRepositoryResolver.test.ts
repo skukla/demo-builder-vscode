@@ -6,19 +6,14 @@
 
 import { ComponentRepositoryResolver } from '@/features/updates/services/componentRepositoryResolver';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ComponentRepositoryResolver', () => {
     let resolver: ComponentRepositoryResolver;
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockLogger = {
-            debug: jest.fn(),
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         // Use actual extension path for real components.json
         const extensionPath = process.cwd();

@@ -28,6 +28,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 global.fetch = jest.fn() as jest.Mock;
 
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ForkSyncService', () => {
     let service: ForkSyncService;
@@ -45,12 +46,7 @@ describe('ForkSyncService', () => {
             onDidChange: jest.fn(),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         service = new ForkSyncService(mockSecrets, mockLogger);
     });

@@ -20,6 +20,7 @@ import { provisionAccsCredentials } from '@/features/data-installer/services/acc
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -73,8 +74,8 @@ function accsProject(): Partial<Project> {
 function makeImportHarness(project: unknown = accsProject()) {
     const saved: unknown[] = [];
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({

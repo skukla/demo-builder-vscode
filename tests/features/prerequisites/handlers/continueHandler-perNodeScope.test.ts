@@ -34,6 +34,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => ({
 
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** aio-cli's real shape: per-node tool whose plugins serve the mesh only. */
 const MESH_SCOPED_PREREQ = {
@@ -60,7 +61,7 @@ function makeContext(): HandlerContext {
             checkMultipleNodeVersions: jest.fn().mockResolvedValue([]),
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
         debugLogger: { debug: jest.fn() },
         sharedState: {
             currentPrerequisites: [MESH_SCOPED_PREREQ],

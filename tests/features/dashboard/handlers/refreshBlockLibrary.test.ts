@@ -45,6 +45,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return {
@@ -55,12 +56,7 @@ function makeContext(project: Project | undefined): HandlerContext {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

@@ -13,6 +13,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock logger
 
@@ -58,12 +59,7 @@ describe('BaseCommand Disposal Support', () => {
             setState: jest.fn(),
         };
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
     });
 
     describe('DisposableStore Initialization', () => {

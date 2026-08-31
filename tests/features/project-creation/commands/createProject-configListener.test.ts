@@ -14,6 +14,7 @@ import {
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
@@ -229,12 +230,7 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
             getState: jest.fn(),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         command = new CreateProjectWebviewCommand(
             mockContext,

@@ -14,11 +14,12 @@
 
 import { detectProjectOrgMismatch } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const makeProject = (organization?: string): Project =>
     ({ name: 'p', path: '/p', adobe: organization ? { organization } : undefined } as unknown as Project);
 
-const mockLogger = () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any);
+const mockLogger = () => (createMockLogger() as any);
 
 describe('detectProjectOrgMismatch', () => {
     it('returns undefined when the project has no Adobe org (fresh/non-Adobe)', async () => {

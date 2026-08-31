@@ -20,6 +20,7 @@ import {
     mockValidatePathSafety,
     vscode,
 } from './ResetAllCommand.testUtils';
+import { createMockLogger } from '../helpers/loggerFake';
 
 describe('ResetAllCommand - Security Tests', () => {
     let command: ResetAllCommand;
@@ -53,12 +54,7 @@ describe('ResetAllCommand - Security Tests', () => {
         };
 
         // Mock Logger (must match Logger interface: info, warn, error, debug)
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock VS Code window methods
         (vscode.window.showWarningMessage as jest.Mock) = jest

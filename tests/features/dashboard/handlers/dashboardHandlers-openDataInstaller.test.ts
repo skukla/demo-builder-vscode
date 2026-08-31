@@ -19,11 +19,12 @@ import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandle
 import { BaseWebviewCommand } from '@/core/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function makeContext() {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
         panel: {},
         stateManager: createMockStateManager({ getCurrentProject: jest.fn() }),

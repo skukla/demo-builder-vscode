@@ -11,6 +11,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { ComponentRegistry } from '@/types/components';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ProjectSetupContext', () => {
     let mockHandlerContext: jest.Mocked<HandlerContext>;
@@ -20,13 +21,7 @@ describe('ProjectSetupContext', () => {
     let mockConfig: ProjectCreationConfig;
 
     beforeEach(() => {
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         mockHandlerContext = {
             logger: mockLogger as any,

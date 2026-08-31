@@ -32,6 +32,7 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 // registered rule here, so this needs no disable comment.
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 export { importHandlers };
 
@@ -93,8 +94,8 @@ export function makeImportHarness(project: unknown = PAAS_PROJECT) {
     const stores = makeStores();
     const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }) };
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue(tokenManager),

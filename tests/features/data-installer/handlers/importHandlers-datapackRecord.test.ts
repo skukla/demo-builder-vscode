@@ -19,6 +19,7 @@ import { DataInstallerWriteClient } from '@/features/data-installer/services/dat
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -50,8 +51,8 @@ const PAAS_PROJECT = (): Partial<Project> => ({
 function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
     const mem = new Map<string, unknown>();
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest

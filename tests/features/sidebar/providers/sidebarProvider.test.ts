@@ -9,6 +9,7 @@ import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
 // be asserted without touching the real VS Code panel/session state.
@@ -88,12 +89,7 @@ describe('SidebarProvider', () => {
     let provider: SidebarProvider;
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: ReturnType<typeof createMockStateManager>;
-    let mockLogger: {
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-        debug: jest.Mock;
-    };
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         // Create mock extension context. globalState backs the persistent
@@ -123,12 +119,7 @@ describe('SidebarProvider', () => {
         });
 
         // Create mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         provider = new SidebarProvider(
             mockContext,

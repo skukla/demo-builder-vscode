@@ -11,6 +11,7 @@ import { BaseWebviewCommand } from '@/core/base';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code API
 
@@ -76,12 +77,7 @@ describe('ShowAiCommand', () => {
             } as Project),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         command = new ShowAiCommand(
             mockContext,

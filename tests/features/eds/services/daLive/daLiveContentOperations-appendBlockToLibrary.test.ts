@@ -23,6 +23,7 @@ import {
     type TokenProvider,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
@@ -54,13 +55,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
             getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
         };
 
-        mockLogger = {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
     });

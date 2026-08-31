@@ -24,6 +24,7 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
@@ -72,8 +73,8 @@ function paasProject(): Partial<Project> {
 
 function makeImportHarness(project: unknown = paasProject()) {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),

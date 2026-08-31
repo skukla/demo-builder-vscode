@@ -59,6 +59,7 @@ import {
     PLACEHOLDER_STUB_PATHS,
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const PARAMS = {
     repoOwner: 'me',
@@ -73,7 +74,7 @@ const PARAMS = {
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
+        logger: createMockLogger(),
     } as unknown as HandlerContext;
 }
 

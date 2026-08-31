@@ -15,6 +15,7 @@ jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityFetcher.createWorkspace()', () => {
     let fetcher: AdobeEntityFetcher;
@@ -30,13 +31,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
     const PROJECT = { id: 'proj-456', name: 'Test Project', title: 'Test Project' };
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
         (parseJSON as jest.Mock).mockImplementation((str) => {
             try {
                 return JSON.parse(str);
@@ -60,12 +55,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
             getCachedProject: jest.fn().mockReturnValue(PROJECT),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
         fetcher = new AdobeEntityFetcher(

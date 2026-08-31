@@ -43,6 +43,7 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Fixtures — N integrations
@@ -90,13 +91,7 @@ function createDeps() {
         commandManager: {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         saveProject: jest.fn().mockResolvedValue(undefined),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
         deployMesh: jest.fn().mockResolvedValue({ success: true, data: {} }),

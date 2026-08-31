@@ -33,6 +33,7 @@ jest.mock('@/core/shell/pollingService', () => ({
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
@@ -47,7 +48,7 @@ const PROJECT = {
 
 function makeImportHarness(): HandlerContext {
     return {
-        debugLogger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        debugLogger: createMockLogger(),
         authManager: { getTokenManager: () => ({ inspectToken: jest.fn() }) },
     } as unknown as HandlerContext;
 }

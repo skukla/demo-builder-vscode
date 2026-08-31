@@ -21,6 +21,7 @@ import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
     let fetcher: AdobeEntityFetcher;
@@ -32,9 +33,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
     };
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         sdk = {
             getCredentials: jest.fn(),
@@ -60,7 +59,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
             { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
             mockSDKClient,
             mockCacheManager,
-            { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as jest.Mocked<Logger>,
+            createMockLogger() as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
         );
     });

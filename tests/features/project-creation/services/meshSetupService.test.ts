@@ -30,6 +30,7 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('meshSetupService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -81,18 +82,8 @@ describe('meshSetupService', () => {
 
         // Create a real ProjectSetupContext with mock dependencies
         mockHandlerContext = {
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
-            debugLogger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
+            logger: createMockLogger(),
+            debugLogger: createMockLogger(),
             context: {
                 extensionPath: '/test/extension',
             },

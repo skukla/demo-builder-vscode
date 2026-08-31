@@ -53,6 +53,7 @@ import {
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // ==========================================================
 // Test Helpers
@@ -71,18 +72,8 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
             globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
             subscriptions: [],
         },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',

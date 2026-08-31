@@ -19,6 +19,7 @@ import {
     vscode,
 } from './componentUpdater.testUtils';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
@@ -35,12 +36,7 @@ describe('ComponentUpdater - Core Workflow', () => {
         resetComponentRegistryManager();
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         // Mock executor with execute method
         mockExecutor = {

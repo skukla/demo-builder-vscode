@@ -14,6 +14,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 // Mock external dependencies
 
 import { getLogger } from '@/core/logging';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntitySelector', () => {
     let selector: AdobeEntitySelector;
@@ -22,13 +23,7 @@ describe('AdobeEntitySelector', () => {
 
     beforeEach(() => {
         // Setup logger mock
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Create mocks
         mockCommandExecutor = {

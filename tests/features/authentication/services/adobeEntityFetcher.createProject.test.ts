@@ -15,6 +15,7 @@ jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityFetcher.createProject()', () => {
     let fetcher: AdobeEntityFetcher;
@@ -31,13 +32,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
     const ORG = { id: 'org-123', code: 'ORG@AdobeOrg', name: 'Test Org' };
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
         (parseJSON as jest.Mock).mockImplementation((str) => {
             try {
                 return JSON.parse(str);
@@ -76,12 +71,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
             getCachedProject: jest.fn().mockReturnValue(undefined),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
         fetcher = new AdobeEntityFetcher(

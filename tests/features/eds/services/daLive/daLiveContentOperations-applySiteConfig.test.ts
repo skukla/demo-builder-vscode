@@ -21,6 +21,7 @@
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
@@ -55,12 +56,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             getAccessToken: jest.fn().mockResolvedValue('test-token'),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
     });

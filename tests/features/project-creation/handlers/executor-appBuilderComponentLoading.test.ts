@@ -135,19 +135,14 @@ const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as
 
 // Import executor AFTER mocks are set up
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('Executor - App Builder Component Loading', () => {
     let mockContext: Partial<HandlerContext>;
 
     const createMockContext = (): Partial<HandlerContext> => ({
         context: { extensionPath: '/test/extension' } as any,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),

@@ -14,6 +14,7 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock vscode module
 jest.mock('vscode', () => ({
@@ -48,12 +49,7 @@ jest.mock('vscode', () => ({
 describe('SidebarProvider Registration', () => {
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: ReturnType<typeof createMockStateManager>;
-    let mockLogger: {
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-        debug: jest.Mock;
-    };
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -74,12 +70,7 @@ describe('SidebarProvider Registration', () => {
         });
 
         // Create mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
     });
 
     describe('SidebarProvider Instantiation', () => {

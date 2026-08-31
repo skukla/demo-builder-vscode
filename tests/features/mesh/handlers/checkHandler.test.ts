@@ -8,6 +8,7 @@ import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
@@ -66,12 +67,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     fsPath: '/tmp/test-storage',
                 },
             } as any,
-            logger: {
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                debug: jest.fn(),
-            } as any,
+            logger: createMockLogger() as any,
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),

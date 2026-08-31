@@ -66,6 +66,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 import { redeployApiMesh } from '@/features/eds/services/reset/edsResetMeshHelper';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -94,7 +95,7 @@ function makeProject(): Project {
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
     } as unknown as HandlerContext;
 }

@@ -23,6 +23,7 @@ jest.mock('fs/promises', () => ({
     access: jest.fn().mockRejectedValue({ code: 'ENOENT' }),
 }));
 import * as fs from 'fs/promises';
+import { createMockLogger } from '../../../helpers/loggerFake';
 const mockRm = fs.rm as jest.Mock;
 const mockAccess = fs.access as jest.Mock;
 
@@ -66,12 +67,7 @@ describe('DeleteProjectCommand - Navigation', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');

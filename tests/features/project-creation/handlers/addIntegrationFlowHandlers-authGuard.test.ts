@@ -23,6 +23,7 @@ import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -61,13 +62,7 @@ const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
 function createContext(): HandlerContext & { sendMessage: jest.Mock } {
     return {
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         authManager: {
             // If a guard is missing, the handler reaches these — the fetch that

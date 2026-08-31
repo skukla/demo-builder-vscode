@@ -21,6 +21,7 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'old-ws' };
 
@@ -54,7 +55,7 @@ const mockRepublish = jest.fn(async () => undefined);
 function makeDeps(calls: string[]) {
     return {
         catalog: [],
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         subscribeRequiredApis: jest.fn(async () => {
             calls.push('subscribe');
         }),

@@ -44,6 +44,7 @@ import { executeEdsReset, extractResetParams } from '@/features/eds/services/res
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const executeEdsResetMock = executeEdsReset as jest.Mock;
 const extractResetParamsMock = extractResetParams as jest.Mock;
@@ -73,13 +74,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: {},
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 const PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };

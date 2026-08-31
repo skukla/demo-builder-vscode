@@ -74,6 +74,7 @@ import {
     handleRenameProject,
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { exportProjectSettings } from '@/features/projects-dashboard/services';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Test Utilities
@@ -99,12 +100,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
             saveProject: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
     } as unknown as HandlerContext;

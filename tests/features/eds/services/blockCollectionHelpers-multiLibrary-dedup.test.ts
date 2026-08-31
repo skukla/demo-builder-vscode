@@ -13,6 +13,7 @@ import { delegateCommitTreeToBranch } from './blockCollectionHelpers.testUtils';
 import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // --- Shared test helpers ---
 
@@ -36,12 +37,7 @@ describe('installBlockCollections', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         mockGithubFileOps = {
             listRepoFiles: jest.fn(),

@@ -19,6 +19,7 @@ jest.mock('fs/promises', () => ({
     rm: jest.fn().mockResolvedValue(undefined),
 }));
 import * as fs from 'fs/promises';
+import { createMockLogger } from '../../../helpers/loggerFake';
 const mockRm = fs.rm as jest.Mock;
 
 // Import vscode after mock
@@ -62,12 +63,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');

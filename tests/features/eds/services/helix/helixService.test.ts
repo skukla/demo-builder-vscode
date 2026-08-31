@@ -34,12 +34,7 @@ describe('HelixService.previewCode — 400 retry-with-backoff', () => {
     beforeEach(() => {
         mockFetch.mockReset();
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         const githubTokenService = {
             getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),

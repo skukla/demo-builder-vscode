@@ -70,6 +70,7 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -127,8 +128,8 @@ function createProject(datapack?: { name: string; version: string }): Project {
 
 function createContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         stateManager: createMockStateManager({ saveProject: jest.fn(), getCurrentProject: jest.fn() }),
         sendMessage: jest.fn(),
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },

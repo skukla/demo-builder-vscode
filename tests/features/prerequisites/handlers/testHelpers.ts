@@ -31,13 +31,7 @@ export function createPrereqHandlerContext(overrides?: Partial<HandlerContext>):
         progressUnifier: {} as HandlerContext['progressUnifier'],
         stepLogger: {} as HandlerContext['stepLogger'],
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as HandlerContext['debugLogger'],
+        debugLogger: createMockLogger() as HandlerContext['debugLogger'],
         context: {
             extensionPath: '/test/extension/path',
         } as HandlerContext['context'],

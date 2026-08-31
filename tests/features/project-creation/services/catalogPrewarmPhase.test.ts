@@ -43,13 +43,14 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PROJECT = { name: 'bodea', path: '/projects/bodea' } as unknown as Project;
 const SECRETS = { get: jest.fn() };
 
 function makeContext(): HandlerContext {
     return {
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: createMockLogger(),
         context: { secrets: SECRETS },
     } as unknown as HandlerContext;
 }

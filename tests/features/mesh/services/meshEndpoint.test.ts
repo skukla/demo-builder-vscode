@@ -6,6 +6,7 @@
 import { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock validation
 jest.mock('@/core/validation', () => ({
@@ -32,21 +33,9 @@ describe('meshEndpoint', () => {
             execute: jest.fn(),
         } as any;
 
-        mockLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
-        mockDebugLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockDebugLogger = createMockLogger();
     });
 
     describe('getEndpoint', () => {

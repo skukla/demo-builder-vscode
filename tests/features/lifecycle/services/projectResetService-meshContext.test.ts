@@ -73,6 +73,7 @@ jest.mock('@/types/typeGuards', () => ({
 // =============================================================================
 
 import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Helpers
@@ -91,7 +92,7 @@ function createProject(): Project {
 
 function createContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
     } as unknown as HandlerContext;
 }

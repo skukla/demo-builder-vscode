@@ -23,6 +23,7 @@ import {
     DependencyResolver,
 } from '@/features/components/services/ComponentRegistryManager';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
 export function createComponentHandlerContext(): HandlerContext {
@@ -30,12 +31,7 @@ export function createComponentHandlerContext(): HandlerContext {
         context: {
             extensionPath: '/mock/extension/path',
         } as any,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         sharedState: {
             isAuthenticating: false,
         } as any,

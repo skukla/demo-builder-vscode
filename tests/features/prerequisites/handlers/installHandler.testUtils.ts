@@ -29,6 +29,7 @@ import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { ServiceLocator } from '@/core/di';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock prerequisite definitions
 export const mockNodePrereq: PrerequisiteDefinition = {
@@ -218,12 +219,7 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
             }),
         } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         debugLogger: {
             debug: jest.fn(),
             trace: jest.fn(),

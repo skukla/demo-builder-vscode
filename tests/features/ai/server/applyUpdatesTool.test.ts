@@ -18,6 +18,7 @@ import {
 } from '@/features/updates/services/updateApplyService';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
@@ -45,7 +46,7 @@ const ctxFactory = () =>
         stateManager: { getCurrentProject },
         commandManager: { execute: jest.fn() } as never,
         context: { secrets: {}, extensionPath: '/ext' },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 

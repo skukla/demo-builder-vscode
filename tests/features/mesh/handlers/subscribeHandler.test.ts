@@ -14,6 +14,7 @@ import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/va
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ErrorCode } from '@/types/errorCodes';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/di');
 jest.mock('@/core/validation', () => ({
@@ -64,12 +65,7 @@ describe('handleEnsureMeshApiSubscribed', () => {
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
 
         mockContext = {
-            logger: {
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                debug: jest.fn(),
-            },
+            logger: createMockLogger(),
             sendMessage: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext;
     });

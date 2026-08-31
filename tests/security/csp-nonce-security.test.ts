@@ -12,6 +12,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/core/communication/webviewCommunicationManager');
@@ -61,12 +62,7 @@ describe('Security: CSP Nonce Generation', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockStateManager = {} as StateManager;
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         command = new TestWebviewCommand(
             mockContext,

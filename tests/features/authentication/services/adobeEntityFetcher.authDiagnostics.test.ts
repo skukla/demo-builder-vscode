@@ -57,13 +57,7 @@ function build(config: Record<string, unknown> = {}) {
         getClient: jest.fn(),
         ensureInitialized: jest.fn().mockResolvedValue(true),
     } as unknown as jest.Mocked<AdobeSDKClient>;
-    mockLogger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
+    mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
     fetcher = new AdobeEntityFetcher(
         mockCommandExecutor,

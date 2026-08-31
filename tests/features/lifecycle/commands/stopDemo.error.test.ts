@@ -18,6 +18,7 @@ import {
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
 
@@ -84,12 +85,7 @@ describe('StopDemoCommand - Error Handling', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.withProgress to execute task immediately
         (vscode.window as any).withProgress = jest.fn().mockImplementation(
