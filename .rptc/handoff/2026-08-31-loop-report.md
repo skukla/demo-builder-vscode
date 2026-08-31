@@ -1,118 +1,109 @@
-# Loop report — 2026-08-31, Track 4
+# Loop report — 2026-08-31
 
-Branch `loop/2026-08-31-track4`, pushed. Gated at every commit: 1199 suites,
-15525 tests.
+Branch `loop/2026-08-31-track4`, pushed. Every commit gated: 1199 suites, 15,519
+tests, zero lint errors.
 
 ## The short version
 
-Track 4 was the last open track of the four-track programme. Its work is the
-architecture exemption ledger — every file that breaks a rule the codebase now
-enforces, each with a written reason.
+Three pieces of work finished, in order.
 
-**It went from 30 rows to 6, and every one of the 6 that remains is either
-already ratified or a decision only you can make.** There is no mechanical work
-left in it.
+**A shared test builder programme (PL-16) is done.** Tests used to write their own
+throwaway stand-ins for the same few objects, hundreds of times, all slightly
+different. That's now one shared builder per object, and the last stubborn group
+closed today.
 
-Two whole categories are now empty. `constructionBoundary` held 39 rows when the
-bucket was first measured; `featureBarrels` held five. The barrel rule changes
-character with that: it was a shrink-only ledger, and with nothing left to record
-it is now a ban — a new feature barrel fails the build with nowhere to write it
-down.
+**Two new rules got teeth.** Tests may no longer switch off type checking with
+`as any` or `as never` — a habit that had hidden four real production bugs in
+August, and which nothing was checking, because the linter rule for it is
+explicitly turned off for tests. And the rule that a module is imported by the
+file that defines it is now absolute.
 
-## What was fixed, and what it turned out to be
+**Every re-export file in the codebase is gone — all 43 of them.** These are files
+whose only job is to forward other files' contents, so a thing could be reached by
+two different paths. That's finished, and the build now rejects a new one.
 
-Very little of this was the tidy-up the rows described. In most cases the rule
-pointed at a file and the actual defect was somewhere adjacent.
+## What actually happened, and why it mattered
 
-| The row said | What it was |
-|---|---|
-| `ProgressUnifier` constructs across a layer | Core's progress engine named a feature's type; the type belonged in shared vocabulary |
-| Two commands live in `core/` | They were never core code — filed in the wrong directory for years |
-| Five feature barrels | ADR-022 already ruled; `eds` had 41 export lines and five were ever used |
-| Six types-purity rows | Three only needed type-only imports. The other three are RUNTIME CODE living in `src/types/` — a different problem than the row described |
-| `DiagnosticsCommand` doesn't extend the base | It had no state manager handed in, so it fetched one from the global locator **four times** |
-| Five files build their own GitHub token service | The shared accessor demanded a whole context to read a secrets store, so four of them *could not call it* |
-| Handler builds a data-installer client | Its "warn once per endpoint" contract was silently broken — the dedupe lived on an object rebuilt every call |
-| Manager builds its own cache | True, and the command above it was building a whole second manager with a second empty cache |
-| Three `core/state` files reach into a feature | Two were modules misfiled in a feature directory; one is a real modelling question |
-| Authentication barrel | **13 of its 14 test mocks were dead** |
+### The last of the shared builders
 
-## Your decisions — 6 open
+The remaining group was 23 fake loggers written inside test setup blocks. They had
+survived every previous sweep, and the reason turned out to be that **nothing was
+measuring them** — the two checks that count hand-written fakes do not look inside
+those blocks. They were not hard; they were invisible. A check now covers them.
 
-Nothing here is blocked on effort. Each needs a call.
+Thirteen of the 23 vanished for a single reason: one source file imported the
+logger by a slightly different path than everything else, so the shared test setup
+could not reach its tests, and each of those files had re-implemented the setup
+itself. Covering that one path deleted all thirteen at once.
 
-### 1. AB-7 — live proof of the integration-removal fix
-Code shipped 2026-08-28 (`2b5be4ce0`) with its own suite. Proving it undeploys
-touches live Adobe resources. Blocked once by a Console outage that only appeared
-from inside the extension host.
-**Do:** retry on your next real add/remove. If it fails only from the host, log
-the request the SDK sends and diff it against a working call from outside.
+### The rule about switching off type checking
 
-### 2. `serviceLocator` names two classes it stores
-Type-only imports of `AuthenticationService` and `SidebarProvider`. The ledger
-said to extract interfaces — they are classes, and one has 44 public methods
-across 855 lines, so the copy would be worse than the import. Converting callers
-is not it either: all 48 are files the rule explicitly lets fetch.
-**Recommend: ratify.** A locator has to name what it locates. The alternative is
-typed tokens, which removes the naming but rewrites the DI shape and 50+ sites.
+`as any` and `as never` tell the compiler to stop checking — and unlike a normal
+cast, they leave everything downstream unchecked too. There were **1,916 across
+341 test files**, and the linter rule that would catch half of them is switched off
+for tests.
 
-### 3. `errors.ts` is not a types file
-Measured: converting every import to type-only produces 17 "cannot be used as a
-value" errors. It declares error classes and the functions that build them.
-**Recommend: move it** to `@/core/errors`.
+It is now a rule with a ceiling that can only fall. Not an outright ban yet: a ban
+that fires 1,916 errors gets switched off by Friday. The rule is not invented — our
+own shared builders already contain zero of either, and they are the hardest cases.
+The right way was already in use; it had just never been written down.
 
-### 4. `shell.ts` is not either
-Same measurement, 1 error: it uses `os`.
-**Recommend: decide on sight** — it may be one function away from being pure.
+The older, weaker version of that rule was deleted rather than left sitting there
+unenforced, and its evidence folded into the enforced one.
 
-### 5. `typeGuards.ts`
-Genuinely runtime: needs six values including `COMPONENT_IDS`.
-**Recommend: ratify.** A type guard is the one kind of runtime code that belongs
-beside the types it narrows.
+### Removing every re-export file
 
-### 6. `apiOwners` calls a feature's catalog loader
-`core/state` resolves an App Builder catalog entry by calling into
-`features/components`. Unlike its two siblings this is NOT a misfiled module: the
-loader reads a catalog JSON shipped inside the feature and four features use it.
-**The question is whether core/state should resolve a catalog entry at all, or be
-handed the answer.** A modelling decision, not a move.
+This was the bulk of the day: 43 files, some reaching 190 others.
 
-`CommandManager` is the seventh row and needs nothing: it is the registrar that
-builds all 25 commands, so it cannot be one of them. Ratified in place.
+The mechanical part was easy. **The cost was somewhere else entirely, and it was
+the same every time:** production stops importing the forwarding file, the compiler
+is perfectly happy, and the only thing that notices is a test's stand-in — which
+nothing but running the tests can find. Every slice broke tests this way.
 
-## Found and not fixed
+Three things it exposed that had been hiding behind those files:
 
-- **A flaky test.** `inExtensionMcpServer` → "reports the build label" timed out
-  once under full-suite load, passed 3/3 alone, and passed with my changes
-  stashed. A socket-binding race the suite's own comment says it makes visible
-  rather than fixes.
-- **`PR-1`'s status.** Its research and your direction shipped, but whether that
-  makes it `planned` is a judgement about intent, not a fact on disk.
+- **A test mocking the same class twice**, once per path, where the two copies had
+  drifted apart — one was missing a method the code calls. Which one won depended
+  on the order of two blocks in one file. Nothing was failing. It only surfaced
+  when collapsing the two paths made them collide. That is precisely the argument
+  the rule rests on.
+- **Five test files whose entire subject was a forwarding file** — asserting things
+  like "this name is exported" and "the export list is exactly these seven names".
+  They measured nothing about behaviour. One of them even asserted that a
+  forwarding file *must exist*, contradicting the ratified rule outright.
+- **A phantom export**: four tests faked a `Logger` that the module has never
+  exported. A forwarding file accepts any name, so nothing ever said so.
 
-## Things worth keeping from how this went
+## Retracted / corrected
 
-**Two no-op edits.** Twice an edit was built on indentation reconstructed from
-memory rather than read. The match failed, the file was never written — and the
-checks then passed, on unchanged code. A green check after a no-op edit is
-indistinguishable from a green check after a real one.
+- **The plan's central split was wrong.** It said most of the remaining work was
+  "mixed" files needing a careful two-step split each. Re-measured: 22 of 23 were
+  simple and exactly one was genuinely mixed. One sloppy pattern, in two places,
+  was counting a forwarding line as a declaration.
+- **My own counts were wrong twice more** — 26 command-executor casts were really
+  42, and 15 "ambiguous" ones were not ambiguous at all; one search of the type
+  declarations said so, and it was available before the claim was filed.
+- **Three tooling bugs silently deleted test setup**, each in a different disguise —
+  a dropped spread, a mangled comment, and a factory shape the tool mishandled. All
+  three fixed at source, and every touched file audited for losses rather than the
+  fix being trusted. The audit caught them; reading the diffs did not.
+- **A wrong repoint was caught by a checker, not by review.** A greedy pattern
+  silently pointed one function at the wrong module. Nothing would have complained,
+  because that style of import is untyped.
 
-**A control that depended on a violation.** Retiring the last feature barrel
-broke the rule's own positive control, which ended with "at least one barrel
-exists". Cleaning the codebase broke the check that proved the rule worked. It
-now asserts against literals plus a corpus-size floor.
+## Environment facts
 
-**A test that went hollow.** Moving a dedupe to module scope made a
-"the warning never contains a token value" assertion pass against an EMPTY call
-list. It now asserts the callback fired before asserting what it did not contain.
+- The `inExtensionMcpServer` socket tests fail roughly one run in five under full
+  load and pass 23/23 alone. Known, pre-existing, unrelated to this work.
+- Whole-repo lint warnings fell from 458 to 205, because the auto-fixer could
+  finally order imports that a single forwarding path had hidden.
 
-**Two fixtures that were lying.** `{} as unknown as HandlerContext` and
-`ctx as never` — both typechecked, both passed, because everything touching the
-context was mocked. Narrowing one accessor exposed both.
+## Your decisions
 
-## Record corrections
-
-- `AB-7` backlog → built (its fix had shipped three days earlier; I recommended
-  it as work off its title without reading its body)
-- `AB-2` backlog → spiked · `EDS-6` backlog → gated, with `waiting-on` named
-- `PL-13`'s prose claimed 75 ledger rows and 23 fetch-boundary files; the disk
-  said 30 and 0
+1. **Merge `loop/2026-08-31-track4`?** Fourteen commits, all gated.
+2. **PL-33 — every convention enforced, or it stops being a convention.** Filed
+   from the directive. The finding: it is not 16 units of debt, it is 5. Five
+   describe the code and have a buildable check nobody built; eleven are rules
+   about how the work is done, and belong in a section that does not claim to be
+   enforced — some as hooks. Needs a call on which.
+3. **PL-32 — the 1,916 type-erasing casts.** Ceiling set, conversion not started.

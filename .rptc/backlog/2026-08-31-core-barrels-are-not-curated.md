@@ -130,3 +130,5 @@ filename.
 - 2026-08-31  refactor(barrels): core/shell across 95 importers — 3 to 2 (`4cf21e74a`)
 - 2026-08-31  refactor(barrels): retire the helpers index (PL-31 step 2 of 2) — 2 to 1 (`a56b42a30`)
 - 2026-08-31  refactor(helpers): move validateField out of the re-export index (PL-31 step 1 of 2) (`814268b57`)
+- 2026-08-31  refactor(barrels): src/types retired — the reExportIndex ledger is CLOSED (`b0910f79f`)
+- 2026-08-31  Loop 2026-08-31: all 43 re-export indexes retired; ledger closed
