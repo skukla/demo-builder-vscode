@@ -10,6 +10,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -17,12 +18,7 @@ jest.mock('fs/promises');
 const mockFs = fs as jest.Mocked<typeof fs>;
 
 // Create a minimal mock logger
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {

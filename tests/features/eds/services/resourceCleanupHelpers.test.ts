@@ -5,7 +5,6 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project, ComponentInstance } from '@/types';
 import type { StateManager } from '@/types/state';
-import type { Logger } from '@/types/logger';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     isEdsProject,
@@ -16,6 +15,7 @@ import {
     summarizeCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // ==========================================================
 // Test Helpers
@@ -38,16 +38,6 @@ function createEdsComponentInstance(metadata?: Record<string, unknown>): Compone
         name: 'EDS Storefront',
         status: 'ready',
         metadata,
-    };
-}
-
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
     };
 }
 

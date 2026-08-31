@@ -26,14 +26,9 @@ import { _clearCodePatchCacheForTests } from '@/features/eds/services/patches/co
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const SOURCE: CodePatchSource = {
     owner: 'skukla',

@@ -30,6 +30,7 @@ import {
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /** Real `fnm list` output, captured 2026-08-28. */
 const FNM_LIST = [
@@ -45,12 +46,7 @@ const FNM_LIST = [
 const FNM_REMOTE = ['v20.19.4', 'v20.19.5', 'v20.19.6', 'v22.21.1'].join('\n');
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 beforeEach(() => {

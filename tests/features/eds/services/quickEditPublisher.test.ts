@@ -32,13 +32,9 @@ import {
     buildQuickEditScriptsJs,
     installQuickEdit,
 } from '@/features/eds/services/quickEditPublisher';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Minimal canonical-shaped scripts.js: the loadLazy + loadPage declarations
 // plus the standalone `loadPage();` call. Mirrors the pinned boilerplate's

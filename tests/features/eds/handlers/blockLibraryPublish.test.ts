@@ -29,14 +29,9 @@ import {
 } from '@/features/eds/handlers/blockLibraryPublish';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 function makeHelix() {
     return {

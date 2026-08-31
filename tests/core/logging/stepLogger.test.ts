@@ -9,6 +9,7 @@
 import * as fs from 'fs';
 import type { Logger } from '@/types/logger';
 import { StepLogger, StepLoggerContext } from '@/core/logging/stepLogger';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock fs module
 jest.mock('fs', () => ({
@@ -17,13 +18,7 @@ jest.mock('fs', () => ({
 }));
 
 // Mock Logger
-const mockLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Mock the parseJSON function from typeGuards
 jest.mock('@/types/typeGuards', () => ({

@@ -30,6 +30,7 @@ jest.mock('fs', () => ({
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 export interface TestMocks {
     logger: jest.Mocked<Logger>;
@@ -86,12 +87,7 @@ export const mockConfig = {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    const mockLogger = {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    } as any;
+    const mockLogger = createMockLogger() as any;
 
     const mockExecutor = {
         execute: jest.fn(),

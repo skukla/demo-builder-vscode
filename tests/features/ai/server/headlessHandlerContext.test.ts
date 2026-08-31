@@ -21,15 +21,10 @@ import { PrerequisitesManager } from '@/features/prerequisites/services/Prerequi
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 describe('createHeadlessHandlerContext', () => {

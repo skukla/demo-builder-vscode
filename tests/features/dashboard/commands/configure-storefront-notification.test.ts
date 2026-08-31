@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 
 const mockRepublishStorefrontConfig = jest.fn();
@@ -60,9 +61,7 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
         const mockStateManager = {
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as StateManager;
-        const mockLogger = {
-            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        } as unknown as Logger;
+        const mockLogger = createMockLogger() as unknown as Logger;
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });
 

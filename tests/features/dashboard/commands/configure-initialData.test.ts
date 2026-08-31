@@ -15,6 +15,7 @@ import { StateManager } from '@/core/state';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 
 
@@ -78,12 +79,7 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
             getAllProjects: jest.fn().mockResolvedValue([]),
         } as unknown as jest.Mocked<StateManager>;
 
-        const mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        const mockLogger = createMockLogger() as unknown as Logger;
 
         (
             ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>

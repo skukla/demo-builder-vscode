@@ -14,6 +14,7 @@ import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { importHandlers } from '@/features/data-installer/handlers';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
@@ -32,13 +33,7 @@ function makeStateManager(): { getCurrentProject: jest.Mock } {
     return { getCurrentProject: jest.fn().mockResolvedValue(null) };
 }
 
-const logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
+const logger = createMockLogger();
 
 /** Reach the protected members the way a subclass test must. */
 type Internals = {

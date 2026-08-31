@@ -45,17 +45,12 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { ComponentInstance, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PROJECT = '/projects/demo';
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeDef(overrides: Record<string, unknown> = {}): TransformedComponentDefinition {

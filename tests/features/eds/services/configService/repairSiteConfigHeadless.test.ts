@@ -16,6 +16,7 @@ import { repairSiteConfig } from '@/features/eds/services/configService/repairSi
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockRegisterSiteConfig = jest.fn();
 const mockPinSiteAdmin = jest.fn();
@@ -27,12 +28,7 @@ jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
     pinSiteAdmin: (...args: unknown[]) => mockPinSiteAdmin(...args),
 }));
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 /** Mirrors the real shape: `extractRepublishParams` reads the EDS component instance. */
 const project = {

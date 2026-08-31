@@ -37,6 +37,7 @@ import {
     deployAppComponent,
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockFs = fs.promises as jest.Mocked<typeof fs.promises>;
 
@@ -58,7 +59,7 @@ const WORKSPACE_JSON = JSON.stringify({
 const GET_URL_JSON = JSON.stringify({ runtime: { 'web/action': 'https://ns-1.example/api' } });
 
 function makeLogger() {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    return createMockLogger();
 }
 
 /**

@@ -19,6 +19,7 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ensureProjectOrgContext } from '@/features/authentication/services/ensureProjectOrgContext';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({ ensureAdobeIOAuth: jest.fn() }));
 jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
@@ -29,7 +30,7 @@ const mockAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAu
 const mockOrg = ensureProjectOrgContext as jest.MockedFunction<typeof ensureProjectOrgContext>;
 
 function createLogger(): Logger {
-    return { trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function createProject(): Project {

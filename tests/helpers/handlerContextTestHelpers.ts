@@ -6,6 +6,7 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from './loggerFake';
 
 /**
  * Create a mock HandlerContext with type-safe empty objects
@@ -26,13 +27,7 @@ import type { HandlerContext } from '@/types/handlers';
 export function createMockHandlerContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
-    const mockLogger = {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
+    const mockLogger = createMockLogger();
 
     return {
         prereqManager: {} as jest.Mocked<HandlerContext['prereqManager']>,

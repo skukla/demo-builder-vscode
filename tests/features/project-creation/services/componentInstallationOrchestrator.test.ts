@@ -15,6 +15,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockInstallNpmDependencies = jest.fn();
 jest.mock('@/features/components/services/componentManager', () => ({
@@ -30,12 +31,7 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
 }));
 
 function makeContext(componentInstances: Record<string, { path: string }>): InstallationContext {
-    const logger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    const logger = createMockLogger() as unknown as Logger;
     // Only the definition MAP is narrowed — the context itself is built to its
     // real shape. A whole-object cast here used to hide missing fields (it was
     // short `saveProject`, and silently absorbed `commandManager` when ADR-015

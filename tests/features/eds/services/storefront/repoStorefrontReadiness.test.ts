@@ -23,8 +23,9 @@
  */
 
 import { classifyRepoForStorefront } from '@/features/eds/services/storefront/repoStorefrontReadiness';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const logger = createMockLogger();
 
 /** Stub GitHubFileOperations: `present` lists the paths that exist. */
 function fileOps(present: string[], opts: { emptyRepo?: boolean; throwOn?: string } = {}) {

@@ -26,6 +26,7 @@ import * as path from 'path';
 import { createGeneratedFileWriter } from '@/features/project-creation/services/aiBundle/generatedFileWriter';
 import { enoentError, makeMockLogger, makeTestWriter } from './generatedFileWriter.testUtils';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('fs/promises', () => {
     const writeFile = jest.fn().mockResolvedValue(undefined);
@@ -54,13 +55,7 @@ function sha256(content: string): string {
 }
 
 function makeLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
+    return createMockLogger();
 }
 
 function enoent(): NodeJS.ErrnoException {

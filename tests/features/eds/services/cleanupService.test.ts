@@ -10,13 +10,7 @@
 // Mock vscode module
 
 // Mock logging
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger = createMockLogger();
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => mockLogger),
     Logger: jest.fn(() => mockLogger),
@@ -38,6 +32,7 @@ import type {
     EdsMetadata,
     EdsCleanupOptions,
 } from '@/features/eds/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Type for the service we'll import dynamically
 type CleanupServiceType = import('@/features/eds/services/cleanupService').CleanupService;

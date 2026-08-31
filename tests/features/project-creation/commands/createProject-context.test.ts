@@ -12,7 +12,7 @@ import {
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
@@ -194,14 +194,6 @@ function createMockStateManager(): StateManager {
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create wizard command instance

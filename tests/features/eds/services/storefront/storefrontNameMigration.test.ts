@@ -18,13 +18,9 @@ import type {
     StorefrontMigrationContext,
 } from '@/features/eds/services/storefront/storefrontNameMigration';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 function makeProject(daLiveSite: string): Project {
     return {

@@ -33,17 +33,13 @@ import {
 } from '@/core/config/envVarKeys';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MESH_URL = 'https://edge-sandbox-graph.adobe.io/api/abc-123-def/graphql';
 const LAST_DEPLOYED = '2026-07-10T12:00:00.000Z';
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 /** The same mesh expressed as a keyed appBuilderComponents entry. */

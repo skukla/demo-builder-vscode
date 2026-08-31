@@ -11,18 +11,14 @@
 import * as fs from 'fs/promises';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 jest.mock('fs/promises');
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function primeFsWithManifest(manifest: Record<string, unknown>): void {

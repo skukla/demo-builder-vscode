@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock logger FIRST (before any imports that might use it)
 jest.mock('@/core/logging/debugLogger', () => ({
@@ -130,13 +131,7 @@ export const mockStateManager = {
 };
 
 // Mock logger
-export const mockLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    trace: jest.fn(),
-};
+export const mockLogger = createMockLogger();
 
 /**
  * Reset all mocks and state

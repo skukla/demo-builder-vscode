@@ -14,6 +14,7 @@
  */
 
 import { ensureMeshPreflightAuth } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('Executor - Mesh Pre-flight Authentication', () => {
     // Minimal mock for authManager
@@ -37,15 +38,6 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
                 return postLoginAuthenticated;
             }),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(loginSuccess),
-        };
-    }
-
-    function createMockLogger() {
-        return {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
         };
     }
 

@@ -16,6 +16,7 @@ import {
     MOCK_DEPLOYED_CONFIG,
     meshDeps,
 } from './stalenessDetector.testUtils';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * StalenessDetector - File Comparison Tests
@@ -36,9 +37,7 @@ import {
  * collaborators now — and it IS the exported function, replacing a no-argument
  * wrapper that had zero production callers. The suite passes both explicitly.
  */
-const meshLogger = {
-    debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
-} as never;
+const meshLogger = createMockLogger() as never;
 
 describe('StalenessDetector - File Comparison', () => {
     beforeEach(() => {

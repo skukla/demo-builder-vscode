@@ -34,9 +34,10 @@ jest.mock('@/features/project-creation/services', () => ({
 }));
 
 import { deployFreshMesh } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function createLogger() {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    return createMockLogger();
 }
 
 function createContext(authOverrides: Record<string, unknown> = {}) {

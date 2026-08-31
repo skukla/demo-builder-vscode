@@ -17,6 +17,7 @@ import {
 import { secretKey } from '@/features/app-builder/services/secretKey';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ComponentConfigs } from '@/types/webview';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const FAKE_SECRET = 'fake-test-pw-not-a-secret';
 
@@ -120,7 +121,7 @@ describe('persistAppBuilderComponentSecrets', () => {
 
     it('never logs the secret value', async () => {
         const { api } = makeSecretStorage();
-        const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+        const logger = createMockLogger();
 
         await persistAppBuilderComponentSecrets(
             [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],

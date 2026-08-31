@@ -17,6 +17,7 @@ import {
 } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // =============================================================================
 // Test Utilities
@@ -28,16 +29,6 @@ function createMockAuthManager(overrides: Partial<AdobeAuthManager> = {}): Adobe
         loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         ...overrides,
     };
-}
-
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
 }
 
 // =============================================================================

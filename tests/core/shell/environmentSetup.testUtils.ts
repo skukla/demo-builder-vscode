@@ -5,16 +5,12 @@ import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 /**
  * Mock logger instance
  */
-export const mockLogger = {
-    error: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-};
+export const mockLogger = createMockLogger();
 
 /**
  * Setup all Jest mocks for EnvironmentSetup tests

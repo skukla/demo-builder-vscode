@@ -20,14 +20,9 @@ import {
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const project = { path: '/tmp/proj' } as Project;
 

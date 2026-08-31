@@ -26,17 +26,12 @@ import {
     probeConfigWriteAccess,
     readOrgAdmins,
 } from '@/features/eds/services/configService/configServiceAccess';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockProbe = probeConfigWriteAccess as jest.Mock;
 const mockReadOrgAdmins = readOrgAdmins as jest.Mock;
 
-const logger: Logger = {
-    trace: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const logger: Logger = createMockLogger();
 
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
 

@@ -10,6 +10,7 @@ import type { OrganizationValidator } from '@/features/authentication/services/o
 import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 export const mockOrgs: AdobeOrg[] = [
     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
@@ -91,12 +92,7 @@ export function setupMocks(): TestMocks {
         }),
     } as unknown as jest.Mocked<OrganizationValidator>;
 
-    const mockLogger: jest.Mocked<Logger> = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
+    const mockLogger: jest.Mocked<Logger> = createMockLogger() as unknown as jest.Mocked<Logger>;
 
     const mockStepLogger: jest.Mocked<StepLogger> = {
         logTemplate: jest.fn(),

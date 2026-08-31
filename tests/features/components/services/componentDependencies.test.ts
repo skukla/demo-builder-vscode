@@ -15,6 +15,7 @@ import { ComponentDependencies } from '@/features/components/services/componentD
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('fs/promises');
 
@@ -29,13 +30,7 @@ const executor = { execute: mockExecute } as never;
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function logger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function componentDef(

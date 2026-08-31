@@ -14,8 +14,9 @@ import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const mockLogger: Logger = createMockLogger();
 
 function makeCtx(): { ctx: OnOpenCheckContext; post: jest.Mock } {
     const post = jest.fn();

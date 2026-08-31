@@ -25,6 +25,7 @@ import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -123,12 +124,7 @@ function setupDefaultMocks(): {
         loadProjectFromPath: jest.fn().mockResolvedValue(null),
     } as any;
 
-    const mockLogger = {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
+    const mockLogger = createMockLogger() as any;
 
     (vscode.window.withProgress as jest.Mock).mockImplementation((_opts, cb) => cb(mockProgress));
 

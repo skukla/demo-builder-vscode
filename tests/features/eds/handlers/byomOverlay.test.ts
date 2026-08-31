@@ -72,6 +72,7 @@ import {
 } from '@/features/eds/handlers/byomOverlay';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('resolveByomOverlayUrl', () => {
     beforeEach(() => {
@@ -355,9 +356,7 @@ describe('resolveByomOverlayConfig', () => {
 
 describe('surfaceOverlayRegistrationFailure', () => {
     function createLogger(): Logger {
-        return {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn(),
-        } as unknown as Logger;
+        return createMockLogger() as unknown as Logger;
     }
 
     beforeEach(() => {

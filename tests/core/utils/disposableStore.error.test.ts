@@ -7,14 +7,10 @@
 
 import { DisposableStore } from '@/core/utils/disposableStore';
 import type * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Create a mock logger instance that persists across calls
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Mock logger to return the same instance
 jest.mock('@/core/logging/debugLogger', () => ({

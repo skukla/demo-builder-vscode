@@ -10,6 +10,7 @@
 import * as vscode from 'vscode';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock vscode API
 jest.mock('vscode', () => ({
@@ -59,13 +60,7 @@ const mockStateManager = {
 };
 
 // Mock logger
-const mockLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 describe('EnvFileWatcherService', () => {
     let mockContext: vscode.ExtensionContext;

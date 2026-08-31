@@ -28,6 +28,7 @@ import {
     type PublishKeyHelix,
 } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const makeHelix = (): PublishKeyHelix => ({
     forgetApiKey: (owner, repo) => mockForgetApiKey(owner, repo),
@@ -45,13 +46,7 @@ const SITE = { owner: 'skukla', repo: 'demo-site' };
  * the typechecker doing the job the eleven `as never` casts used to suppress.
  */
 function makeLogger(): jest.Mocked<Logger> {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    };
+    return createMockLogger();
 }
 function makeTokenProvider(token: string | null = 'da-live-bearer') {
     return { getAccessToken: jest.fn().mockResolvedValue(token) };

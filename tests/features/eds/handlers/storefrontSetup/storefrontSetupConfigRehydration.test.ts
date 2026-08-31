@@ -15,6 +15,7 @@
 
 import { rehydratePackageDerivedConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration';
 import { getStorefrontForStack } from '@/features/components/services/demoPackageLoader';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getStorefrontForStack: jest.fn(),
@@ -22,7 +23,7 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
 
 const mockLookup = getStorefrontForStack as jest.Mock;
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const logger = createMockLogger();
 
 const STOREFRONT = {
     codePatches: ['product-link-sku-encoding', 'aem-assets-sku-sanitization'],

@@ -20,6 +20,7 @@ import {
 import { detectProjectOrgMismatch } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
     detectProjectOrgMismatch: jest.fn(),
@@ -35,16 +36,6 @@ function createMockAuthManager(
         loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         ...overrides,
     };
-}
-
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
 }
 
 function createProject(): Project {

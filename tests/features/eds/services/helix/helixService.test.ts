@@ -17,6 +17,7 @@ import type { DaLiveTokenProvider } from '@/features/eds/services/helix/helixSer
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -144,12 +145,7 @@ describe('HelixService.previewCode — 400 retry-with-backoff', () => {
  * runs against a protected site.
  */
 describe('HelixService — admin-API authorization', () => {
-    const mockLogger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    const mockLogger = createMockLogger() as unknown as Logger;
 
     const githubTokenService = {
         getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),

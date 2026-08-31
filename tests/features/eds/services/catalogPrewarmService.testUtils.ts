@@ -10,13 +10,9 @@
  */
 
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-export const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+export const mockLogger = createMockLogger();
 
 /**
  * A `PdpPublisher` double that succeeds. Pre-warming publishes through the

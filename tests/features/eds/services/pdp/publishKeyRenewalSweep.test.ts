@@ -26,18 +26,14 @@ import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegist
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const registerMock = registerPublishKey as jest.Mock;
 
 const NOW = Date.parse('2026-08-15T12:00:00.000Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 function edsProject(name: string, registeredAt?: string, githubRepo = 'skukla/a-store'): Project {
     return {

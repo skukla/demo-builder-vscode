@@ -22,18 +22,14 @@ import { checkVersionSatisfaction } from '@/features/prerequisites/services/vers
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const FNM_LIST = ['* v18.20.8', '* v20.19.6 default', '* v22.21.1', '* v24.20.0', '* system'].join(
     '\n'
 );
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 beforeEach(() => {

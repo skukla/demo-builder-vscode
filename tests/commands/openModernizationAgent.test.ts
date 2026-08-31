@@ -24,11 +24,10 @@ import { openUrl } from '@/core/utils/browserUtils';
 import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../helpers/loggerFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeStateManager(project: Project | null): StateManager {

@@ -26,18 +26,13 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockResolveOverlayUrl = resolveByomOverlayUrl as jest.MockedFunction<
     typeof resolveByomOverlayUrl
 >;
 
-const logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
+const logger = createMockLogger();
 const TOKEN = 'ims-token-value-never-logged';
 
 function tokenProvider() {

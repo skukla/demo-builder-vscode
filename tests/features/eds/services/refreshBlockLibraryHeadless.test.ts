@@ -57,6 +57,7 @@ import { extractResetParams } from '@/features/eds/services/reset/edsResetParams
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -64,13 +65,7 @@ const extractParamsMock = extractResetParams as jest.Mock;
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 const PROJECT = { name: 'Demo', path: '/p' } as unknown as Project;

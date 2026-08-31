@@ -23,15 +23,10 @@ import { z } from 'zod';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { callToolOverSocket } from './inExtensionMcpServer.testUtils';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 /** Records what each probe tool's handler actually received. */

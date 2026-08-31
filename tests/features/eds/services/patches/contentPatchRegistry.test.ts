@@ -13,15 +13,10 @@ import {
 } from '@/features/eds/services/patches/contentPatchRegistry';
 import type { Logger } from '@/types';
 import type { ContentPatchSource } from '@/types/demoPackages';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Mock logger
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -40,13 +40,9 @@ import {
     republishStorefrontConfig,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 /** A project the extractor accepts: repo, DA.live pair and a component path. */
 function edsProject(metadata: Record<string, unknown> = {}) {

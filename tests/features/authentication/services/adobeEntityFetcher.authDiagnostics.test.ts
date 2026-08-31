@@ -30,13 +30,7 @@
 // The fetcher logs through the module-level `getLogger()`, NOT its injected
 // logger — so that is the object these tests have to watch. (Name must start with
 // `mock` for jest to allow the reference inside a hoisted factory.)
-const mockDebugLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
+const mockDebugLogger = createMockLogger();
 
 jest.mock('@/core/logging', () => ({ getLogger: () => mockDebugLogger }));
 
@@ -46,6 +40,7 @@ import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDK
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 let fetcher: AdobeEntityFetcher;
 let mockCommandExecutor: jest.Mocked<CommandExecutor>;

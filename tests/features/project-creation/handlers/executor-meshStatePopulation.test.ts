@@ -13,6 +13,7 @@
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the stalenessDetector module
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -23,9 +24,7 @@ jest.mock('@/features/mesh/services/stalenessDetector');
  * collaborators now. The spy below still intercepts it, so these fakes only
  * satisfy the signature.
  */
-const meshLogger = {
-    debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
-} as never;
+const meshLogger = createMockLogger() as never;
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
 

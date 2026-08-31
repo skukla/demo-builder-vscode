@@ -30,17 +30,13 @@ import {
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockRegisterPublishKey = registerPublishKey as jest.MockedFunction<typeof registerPublishKey>;
 
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') } as never;
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 const siteParams = {
     org: 'owner',

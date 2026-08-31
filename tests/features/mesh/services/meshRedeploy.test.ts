@@ -30,16 +30,12 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MESH_PATH = '/projects/demo/components/commerce-mesh';
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 beforeEach(() => {

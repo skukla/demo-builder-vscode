@@ -14,6 +14,7 @@
 
 import { probeGitHubCredential } from '@/features/eds/services/github/githubCredentialProbe';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -26,13 +27,7 @@ const REPO = 'acme-demos/aircraft-demo';
 const TOKEN = 'gho_SUPERSECRETVALUE';
 
 function makeLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function loggedText(logger: Logger): string {

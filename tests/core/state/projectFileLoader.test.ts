@@ -15,18 +15,14 @@ import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentStat
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 jest.mock('fs/promises');
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 const PROJECT_PATH = '/tmp/legacy-demo';

@@ -26,6 +26,7 @@ import {
     clearCollaboratorCache,
 } from '@/features/updates/services/collaboratorGate';
 import { fetchWithTimeout } from '@/features/updates/services/githubApiClient';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockFetch = fetchWithTimeout as jest.Mock;
 
@@ -36,7 +37,7 @@ function makeSecrets(stored?: string): any {
 }
 
 function makeLogger(): any {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    return createMockLogger();
 }
 
 /** A valid EDS token blob (matches GitHubToken shape: { token, tokenType, scopes }). */

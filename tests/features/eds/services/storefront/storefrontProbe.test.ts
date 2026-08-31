@@ -29,8 +29,9 @@ import {
     SMART_404_MARKER_START,
     SMART_404_HEAD_MARKER_START,
 } from '@/features/eds/services/pdp/pdp404Snippet';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const logger = createMockLogger();
 
 /**
  * Route each probed URL to a canned response, matched on the exact PATHNAME.

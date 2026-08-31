@@ -10,6 +10,7 @@ import type { GitHubFileOperations } from '@/features/eds/services/github/github
 import type { BrandAssetsConfig } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 import type { MockGithub } from '../../../helpers/githubFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 export type { MockGithub } from '../../../helpers/githubFake';
 
 export const repoOwner = 'test-owner';
@@ -73,13 +74,7 @@ export function mockSourceFetch(files: Record<string, string> = {
     return mock;
 }
 
-export const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-} as unknown as Logger;
+export const logger = createMockLogger() as unknown as Logger;
 
 export function asOps(mock: MockGithub): GitHubFileOperations {
     return mock as unknown as GitHubFileOperations;

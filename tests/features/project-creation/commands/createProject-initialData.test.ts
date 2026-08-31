@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
 // auth service import chain) destructure fs.promises at load time, so a bare
@@ -63,15 +64,6 @@ function createMockStateManager(): StateManager {
         clearState: jest.fn(),
         getCurrentProject: jest.fn(),
         getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
-
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
     } as any;
 }
 

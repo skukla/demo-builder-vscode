@@ -14,8 +14,9 @@ import {
     type RuntimeSurfaceSource,
 } from '@/features/eds/services/runtimeSurfaceResolver';
 import { RUNTIME_SURFACES } from '@/features/eds/services/runtimeSurfaceInventory';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() } as never;
+const logger = createMockLogger() as never;
 const source: RuntimeSurfaceSource = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' };
 
 beforeEach(() => _clearRuntimeSurfaceCacheForTests());
