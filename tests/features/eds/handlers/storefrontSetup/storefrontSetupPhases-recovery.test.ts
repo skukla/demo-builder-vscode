@@ -133,6 +133,7 @@ import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/stor
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -152,19 +153,8 @@ function createMockContext(): HandlerContext {
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as Logger,
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             secrets: {},

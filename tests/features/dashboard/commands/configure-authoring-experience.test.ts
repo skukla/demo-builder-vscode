@@ -14,6 +14,7 @@ import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('vscode');
 jest.mock('@/core/state');
@@ -196,12 +197,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             globalState: { get: jest.fn(), update: jest.fn() },
         } as unknown as vscode.ExtensionContext;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         mockStateManager = {
             getCurrentProject: jest.fn(),

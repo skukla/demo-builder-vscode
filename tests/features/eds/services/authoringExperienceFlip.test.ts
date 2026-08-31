@@ -14,6 +14,7 @@ import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('vscode');
 
@@ -91,12 +92,7 @@ describe('applyAuthoringExperienceFlip', () => {
         mockContext = {
             secrets: { get: jest.fn(), store: jest.fn() },
         } as unknown as vscode.ExtensionContext;
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     function flip(project: Project, experience: AuthoringExperience) {

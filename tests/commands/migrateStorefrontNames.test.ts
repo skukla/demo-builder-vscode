@@ -75,19 +75,14 @@ import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';
+import { createMockLogger } from '../helpers/loggerFake';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
 const registerPublishKeyMock = registerPublishKey as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeProject(

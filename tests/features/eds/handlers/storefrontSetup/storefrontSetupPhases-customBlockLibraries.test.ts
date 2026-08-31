@@ -126,6 +126,7 @@ import { getBlockLibrarySource, getBlockLibraryName } from '@/features/component
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Cast imported mocks for type-safe access
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
@@ -143,12 +144,8 @@ function createMockContext(): HandlerContext {
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
         sharedState: {},

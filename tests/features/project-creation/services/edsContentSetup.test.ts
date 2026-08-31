@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
@@ -106,13 +107,7 @@ function makeConfig(overrides = {}) {
 
 function makeDeps() {
     return {
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         secrets: {} as any,
         extensionContext: {} as any,
         makeHelix: () => helixSeam,

@@ -24,6 +24,7 @@ import {
     ConfigSyncParams,
 } from '@/features/eds/services/configSyncService';
 import { promises as fsPromises } from 'fs';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the dependencies
 jest.mock('fs', () => ({
@@ -55,12 +56,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('syncConfigToRemote', () => {
-    let mockLogger: {
-        debug: jest.Mock;
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-    };
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     let mockSecrets: {
         get: jest.Mock;
@@ -78,12 +74,7 @@ describe('syncConfigToRemote', () => {
         jest.clearAllMocks();
         mockPreviewCode.mockResolvedValue(undefined);
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         mockSecrets = {
             get: jest.fn(),

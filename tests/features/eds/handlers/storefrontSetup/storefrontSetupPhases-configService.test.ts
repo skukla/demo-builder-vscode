@@ -164,6 +164,7 @@ import {
     surfaceOverlayRegistrationFailure,
 } from '@/features/eds/handlers/edsHelpers';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
@@ -183,19 +184,8 @@ function createMockContext(): HandlerContext {
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as Logger,
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             secrets: {},

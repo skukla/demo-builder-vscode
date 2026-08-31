@@ -163,6 +163,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -218,12 +219,8 @@ function createMockContext(): HandlerContext {
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
         sharedState: {},

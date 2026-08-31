@@ -52,6 +52,7 @@ import { publishConfigAndRegisterSite } from '@/features/eds/services/reset/edsR
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const PARAMS = {
     repoOwner: 'skukla',
@@ -64,12 +65,7 @@ const TOKEN_PROVIDER = { getToken: jest.fn() } as never;
 const GITHUB_TOKENS = { validateToken: jest.fn() } as never;
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 /**

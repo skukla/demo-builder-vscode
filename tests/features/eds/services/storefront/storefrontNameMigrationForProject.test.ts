@@ -58,13 +58,9 @@ import type {
 } from '@/features/eds/services/storefront/storefrontNameMigration';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionContext;
 

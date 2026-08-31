@@ -133,6 +133,7 @@ jest.mock('@/core/utils/oneTimeTip', () => ({
 import * as vscode from 'vscode';
 import { ensureDaLiveAuth, type DaLiveGuardResult } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
 import { clearServiceCache } from '@/features/eds/handlers/edsServiceCache';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // =============================================================================
 // Test Utilities
@@ -147,20 +148,8 @@ function createMockContext(): HandlerContext {
             loadProjectFromPath: jest.fn(),
             getCurrentProject: jest.fn(),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             globalState: {

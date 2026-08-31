@@ -17,6 +17,7 @@ import { checkGitHubApp } from '@/features/project-creation/handlers/checkGitHub
 import type { CheckGitHubAppServices } from '@/features/project-creation/handlers/checkGitHubAppHandler';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockIsAppInstalled = jest.fn();
 const mockPreviewCode = jest.fn();
@@ -46,13 +47,7 @@ const SERVICES: CheckGitHubAppServices = {
 
 function makeContext(): HandlerContext {
     return {
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
+        logger: createMockLogger() as unknown as Logger,
         context: { secrets: {} },
     } as unknown as HandlerContext;
 }
