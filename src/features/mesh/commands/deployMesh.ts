@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
 import { ExecutionLock } from '@/core/utils';

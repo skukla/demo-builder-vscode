@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { Project } from '@/types';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 

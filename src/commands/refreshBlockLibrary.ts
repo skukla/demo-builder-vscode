@@ -15,7 +15,7 @@
  * Runs in the extension host (uses vscode-coupled services), NOT the MCP server.
  */
 
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import {
     refreshBlockLibraryHeadless,
     type RefreshBlockLibraryHeadlessDeps,

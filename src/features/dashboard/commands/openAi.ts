@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { aiHandlers } from '../handlers/aiHandlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';

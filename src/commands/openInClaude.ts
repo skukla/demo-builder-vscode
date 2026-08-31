@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';

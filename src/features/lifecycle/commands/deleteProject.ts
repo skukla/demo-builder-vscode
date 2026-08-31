@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { toError } from '@/types/typeGuards';

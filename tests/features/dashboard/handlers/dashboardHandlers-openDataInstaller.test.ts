@@ -16,7 +16,7 @@
 
 import * as vscode from 'vscode';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';

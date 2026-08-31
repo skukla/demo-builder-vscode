@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { readMergedAiPrompts } from '@/features/dashboard/handlers/aiHandlers';
 import type { AiPrompt } from '@/types/base';

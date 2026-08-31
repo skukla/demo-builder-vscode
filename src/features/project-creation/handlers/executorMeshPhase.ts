@@ -243,7 +243,7 @@ export function buildDeployOrgTarget(
 export async function deployFreshMesh(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
-    meshContext: import('../services').MeshSetupContext,
+    meshContext: import('../services/meshSetupService').MeshSetupContext,
 ): Promise<void> {
     if (
         typedConfig.importedWorkspaceId &&

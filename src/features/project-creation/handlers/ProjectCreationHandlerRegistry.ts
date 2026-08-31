@@ -30,7 +30,9 @@ import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, ha
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
-import * as prerequisites from '@/features/prerequisites/handlers';
+import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
+import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
+import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { defineHandlers } from '@/types/handlers';
 
 /**
@@ -55,9 +57,9 @@ export const projectCreationHandlers = defineHandlers({
     openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers
-    'check-prerequisites': prerequisites.handleCheckPrerequisites,
-    'continue-prerequisites': prerequisites.handleContinuePrerequisites,
-    'install-prerequisite': prerequisites.handleInstallPrerequisite,
+    'check-prerequisites': handleCheckPrerequisites,
+    'continue-prerequisites': handleContinuePrerequisites,
+    'install-prerequisite': handleInstallPrerequisite,
 
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,

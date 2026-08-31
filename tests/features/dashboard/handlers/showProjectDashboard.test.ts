@@ -36,7 +36,7 @@ jest.mock('@/core/validation', () => ({
     validateURL: jest.fn(),
 }));
 
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
         endWebviewTransition: jest.fn(),
@@ -45,7 +45,7 @@ jest.mock('@/core/base', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { handleShowProjectDashboard } from '@/features/dashboard/handlers/dashboardHandlers';
 
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;

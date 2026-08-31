@@ -178,7 +178,9 @@ describe('Executor - EDS Standard Flow', () => {
         definitions: Map<string, any> | null;
     }> {
         const capture: { definitions: Map<string, any> | null } = { definitions: null };
-        const { cloneAllComponents } = await import('@/features/project-creation/services');
+        const { cloneAllComponents } = await import(
+            '@/features/project-creation/services/componentInstallationOrchestrator'
+        );
         // `project` is the cloner's OWN argument, not an outer binding — taking it
         // as a parameter is what broke the first version of this extraction.
         (cloneAllComponents as jest.Mock).mockImplementation(

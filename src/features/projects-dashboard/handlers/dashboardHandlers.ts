@@ -18,7 +18,7 @@ import {
     deleteProject,
     renameProjectCore,
 } from '../services';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';

@@ -10,7 +10,7 @@ import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';

@@ -14,7 +14,8 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';

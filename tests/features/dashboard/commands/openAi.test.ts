@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';

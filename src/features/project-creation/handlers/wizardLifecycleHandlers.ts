@@ -11,7 +11,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation';
 import { ErrorCode } from '@/types/errorCodes';

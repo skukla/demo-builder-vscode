@@ -27,8 +27,11 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock BaseWebviewCommand to avoid pulling the whole webview infrastructure
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseCommand', () => ({
     BaseCommand: class {},
+}));
+
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
     },
@@ -130,10 +133,8 @@ export {
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 export { clearMcpCache, inspectAllServers } from '@/features/ai/mcpInspector';
-export {
-    generateAIContextFiles,
-    installAiDefaultsMcpTools,
-} from '@/features/project-creation/services';
+export { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+export { installAiDefaultsMcpTools } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';

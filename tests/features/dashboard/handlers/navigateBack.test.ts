@@ -42,7 +42,7 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock BaseWebviewCommand (used by handleNavigateBack for panel transition)
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
         endWebviewTransition: jest.fn(),

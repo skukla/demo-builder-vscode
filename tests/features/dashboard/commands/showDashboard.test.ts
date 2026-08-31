@@ -8,7 +8,7 @@
 
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { StateManager } from '@/core/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

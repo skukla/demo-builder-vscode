@@ -12,7 +12,7 @@ import { RepairSiteConfigurationCommand } from './repairSiteConfiguration';
 import { ResetAiOnboardingCommand } from './ResetAiOnboardingCommand';
 import { ResetAllCommand } from './ResetAllCommand';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { formatMinutes } from '@/core/utils';

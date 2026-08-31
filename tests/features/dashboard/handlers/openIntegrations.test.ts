@@ -54,7 +54,7 @@ jest.mock('@/core/shell', () => ({
     }),
 }));
 
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
         endWebviewTransition: jest.fn(),
@@ -63,7 +63,7 @@ jest.mock('@/core/base', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di';
 import { handleOpenIntegrations } from '@/features/dashboard/handlers/dashboardHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
