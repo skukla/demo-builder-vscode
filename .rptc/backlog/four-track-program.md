@@ -41,12 +41,27 @@ into one. Order is part of the design: a later track changes what an earlier one
 should have said, which is why some documents are marked provisional rather than
 finished (see [[PL-29]]'s second-pass table).
 
-| # | Track | State |
-|---|---|---|
-| 1 | Claims from three t3.gg videos, applied where they fit this repo | **Done**, and enforced |
-| 2 | Documentation synthesis — a canonical set that is useful and enforced | **Active** — [[PL-29]]. Phases A and B done; C is two files and five numbers |
-| 3 | Test strategy — de-duplicate and clean up | **Not started.** Groundwork exists: ADR-016 ratified, [[PL-11]], [[PL-16]], [[PL-22]] |
-| 4 | Architecture programme and standards | **Not started.** Groundwork exists: six ratified ADRs with enforcers; [[PL-19]], [[PL-20]], [[PL-21]] |
+| # | Track | State | What is left |
+|---|---|---|---|
+| 1 | Claims from three t3.gg videos, applied where they fit | **Done**, enforced | — |
+| 2 | Documentation synthesis — canonical, useful, enforced | **Active** — [[PL-29]]. Phases A and B done | Phase C: two files, five numbers |
+| 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 8 enforcer suites; ~24 completed test plans | 13 mock-wall suites, shared fixture builders ([[PL-16]]), the mutation follow-through ([[PL-22]]) |
+| 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — 66 conventions; `where-code-goes.md`; 5 enforcer suites | 30 shrink-only ledger rows ([[PL-13]]), the CSS decision ADR-018 parked ([[PL-21]]), [[PL-19]], [[PL-20]] |
+
+**Tracks 3 and 4 are NOT pending — they are the tracks that produced the handbook**,
+and they ran FIRST. The program's earliest commits, 2026-08-28, are test-builder
+refactors; ADR-015 and ADR-016 were owner-ratified that same day. Architecture and
+test conventions came first, the handbook came out of them, and track 2 began after —
+the owner paused that work to do the documentation, which is why this file existing at
+all matters: nothing else recorded that they were paused rather than unstarted.
+
+> **This table was wrong when first written on 2026-08-30**, and wrong in a way worth
+> keeping. It said tracks 3 and 4 were "not started" — because no backlog item was
+> TITLED "Track 3" or "Track 4". That measured the presence of a label instead of the
+> presence of the work, which is the exact failure this whole program keeps finding in
+> the documents it audits. Seven ratified ADRs, a 709-line handbook and 24 shipped test
+> plans were sitting on disk while the summary of them said "not started". Corrected
+> the same day, on the owner's challenge.
 
 ### What track 1 covered, since nothing else records it
 
@@ -58,18 +73,23 @@ re-litigate the same claims from scratch.
 
 ### Track 3 and 4 are NOT "set the standards"
 
-Both read as greenfield and neither is. Measured 2026-08-30:
+Both read as greenfield and neither is — they are the most advanced tracks here, and
+what remains in each is finishing an application, not writing a rule.
 
-- **Track 3** has its strategy ratified already (ADR-016 — three tiers, chosen on a
-  15-defect escape analysis). What remains is convergence: the mock-wall conversions,
-  the fixture builders, and deciding what the 59% mutation score means.
-- **Track 4** has SIX ratified ADRs with build-failing enforcers (015, 016, 017, 018,
-  020, 021, 022). The frontend alone carries 16 conventions with 14 enforced. What
-  remains is running the programme against them — [[PL-21]]'s CSS decision above all,
-  which ADR-018 deliberately parked rather than authorised.
+- **Track 3**: the strategy is ratified (ADR-016 — three tiers, chosen on a 15-defect
+  escape analysis, not on taste). The convergence plan has SHIPPED and is archived in
+  `.rptc/complete/architecture-test-convergence/`. Eight enforcer suites hold it:
+  mirror placement, builder uniqueness, split-family setup, no bare sleep, no lowered
+  timeout, no config-leaf mocks, magic timeouts, mutation-config pairing. What remains
+  is convergence debt — 13 suites that module-mock a stateless collaborator, the shared
+  fixture builders, and deciding what the 59% mutation score means.
+- **Track 4**: seven ratified ADRs with build-failing enforcers, plus the handbook
+  itself — 66 conventions, 59 of them enforced. What remains is the exemption ledger
+  (30 shrink-only rows across five rules) and [[PL-21]]'s CSS decision, which ADR-018
+  deliberately parked rather than authorised.
 
 Reading either as "write the rules" would restate rules that exist. That is the
-mistake this entry is here to prevent.
+mistake this entry is here to prevent, and the reason it is stated twice.
 
 ## Why an epic
 
