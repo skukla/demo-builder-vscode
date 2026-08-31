@@ -73,3 +73,4 @@ direction rather than the comprehension one.
   --amend` then replaced that commit — so the record named an object no longer in
   branch history. Log, then commit the log as its OWN commit; never amend after
   logging.
+- 2026-08-30  chore(backlog): point PL-26's log line at a commit that exists (`cacb8ce6d`)

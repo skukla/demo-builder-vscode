@@ -110,3 +110,21 @@ be checked.
 It has children in all but name and outlives any one sitting. It closes when every
 document has been through all three phases — not when the rewrites are done, which is
 the point of Phase C existing.
+
+## Shipped so far
+
+- 2026-08-30  docs(adr): read all 23 records; fix what the index asserted but never checked (`b77362435`)
+- 2026-08-30  docs(build): the build guide described webpack; this repo has none (`b3ebeb10f`)
+- 2026-08-30  docs: state the nine kinds of document, and retire evaluation-mode from develop (`7ede5be6c`)
+- 2026-08-30  docs(handbook): catalogue Pattern B -- an enforced convention defined nowhere (`8bb2041fe`)
+- 2026-08-30  docs: Phase B finds three defects in my OWN rewrites, and enforces two lists (`1ee791e2b`)
+- 2026-08-30  docs(rptc): one home for the artifact-location table (`cacc8ea8e`)
+- 2026-08-30  docs(rptc): point the pre-push line at `npm run gate` (`339978d68`)
+- 2026-08-30  docs(architecture): list where-code-goes.md, and enforce index completeness (`af95f5af8`)
+- 2026-08-30  docs(src): rewrite src/CLAUDE.md, 244 -> 77 lines (`50caa56bb`)
+- 2026-08-30  docs(backlog): correct the record -- Phase A missed four files (`7315c6de5`)
+- 2026-08-30  docs(troubleshooting): rewrite both guides; one was giving harmful advice (`7d6f697c5`)
+- 2026-08-30  docs(testing): rewrite the splitting playbook, 462 -> 84 lines (`83c93c0f2`)
+- 2026-08-30  fix(tests): repair the two reference failures my own rewrite introduced (`5f7972519`)
+- 2026-08-30  docs(tests): rewrite tests/README.md, 461 -> 154 lines (`188fe9061`)
+- 2026-08-30  docs(backlog): open PL-29 -- track 2, with enforcement as its closing phase (`46705d171`)

@@ -110,3 +110,7 @@ From auditing our agent-facing files against three t3.gg videos (2026-08-30).
 The ordering is credited there to Lauren ("Potato"); its content matches what
 this repo arrived at independently through the conventions programme, which is
 part of why the expected answer is "we already do this".
+
+## Shipped so far
+
+- 2026-08-30  feat(gate): make the six-step pre-push sequence a script, not a memory test (`77a781bd4`)

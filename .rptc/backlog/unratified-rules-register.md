@@ -119,3 +119,17 @@ Do not spend equal effort on them.
 It closes when every document has been through the synthesis and every row has an
 outcome. The count is not knowable in advance — which is the point of keeping the
 register rather than estimating.
+
+## Shipped so far
+
+- 2026-08-30  docs(adr): fix a false handbook claim, and check anchors at all (`0bbd56a16`)
+- 2026-08-30  docs(architecture): two enforcer claims were wrong; correct both, register one (`e036ac0cb`)
+- 2026-08-30  docs(docs): shrink docs/CLAUDE.md to what it alone owns, 124 -> 62 lines (`78b376129`)
+- 2026-08-30  docs(mcp): point §13 at the skill that supersedes it; register §10's conventions (`915a989ef`)
+- 2026-08-30  docs(reuse-first): name the component list what it is, and close its drift vector (`692cf5576`)
+- 2026-08-30  docs(backlog): register row 2 -- the Rule of Three override (`1e14e26d2`)
+- 2026-08-30  docs(ui): verify the two shared-vocabulary docs; one dedupe, no rewrites (`eb490236c`)
+- 2026-08-30  docs(projects-dashboard): rewrite CLAUDE.md, 239 -> 96 lines (`678a08cf9`)
+- 2026-08-30  docs(sidebar): rewrite src/features/sidebar/CLAUDE.md, 334 -> 136 lines (`f662a358b`)
+- 2026-08-30  docs(features): rewrite src/features/CLAUDE.md, 485 -> 173 lines (`c33ec1d26`)
+- 2026-08-30  docs(backlog): open PL-28, the register for unratified rules (`7923bcba1`)
