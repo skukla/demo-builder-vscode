@@ -256,8 +256,10 @@ export class CommandManager {
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
-        // Open in Claude Code (CLI) — URI launch when the Claude Code extension is
-        // installed; terminal launch otherwise. Pathway driven by `demoBuilder.ai.harness`.
+        // Open in Claude Code (CLI) — terminal launch, always. The URI-handler surface
+        // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment
+        // named as the pathway for months after the setting stopped existing.
+        // `demoBuilder.ai.engine` selects the tool; `'claude-code'` is its only value.
         const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
             const project = args[0] as Project | undefined;

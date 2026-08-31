@@ -153,7 +153,7 @@ const PERIODIC: readonly Instrument[] = [
         kind: 'npm-script',
         cadence: 'periodic',
         resultKind: 'gate',
-        what: 'every path and identifier an ADR names either resolves, or is DECLARED under its `## Reference notes` with a reason',
+        what: "every path and identifier an ADR names either resolves, or is DECLARED under its `## Reference notes` with a reason; every row of the index's routing table points at an ADR section that still exists; and every ADR's status starts with one of the four vocabulary words",
         runs: 'npm run docs:adr-check',
     },
     {

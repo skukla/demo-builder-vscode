@@ -198,9 +198,12 @@ That is roughly a day of work, and it is phase 4's step 0 in PL-21 either way.
 - §1 is a **prerequisite** for §2, not a companion. Removing an `!important`
   while our rules are still layered leaves a rule that loses. An earlier version
   of the PL-21 plan had this backwards.
-- `docs/development/ui-patterns.md` currently teaches `!important` as the
-  technique for overriding Spectrum. It is flagged in place and should be
-  rewritten when §§1–2 land.
+- **Resolved 2026-08-30.** `docs/development/ui-patterns.md` taught `!important` as
+  the technique for overriding Spectrum — a document actively teaching the practice
+  this ADR calls a symptom. It was dissolved into the `spectrum-webview-ui` skill
+  (`7c6835b2c`), and the guidance did not survive the move: the skill mentions
+  `!important` zero times. Nothing now teaches it, so §§1–2 no longer have a
+  contradicting document to land against.
 
 ## How this was established
 
@@ -232,3 +235,10 @@ rendered, and against a property list that cannot see 108 of the `!important`
 declarations the sweep would delete.
 
 Roughly a day of work closes it, and that work is phase 4's step 0 regardless.
+
+## Reference notes
+
+- `docs/development/ui-patterns.md` — deliberately named, and deliberately gone. It was
+  dissolved into the `spectrum-webview-ui` skill on 2026-08-30 (`7c6835b2c`). The record
+  of what it taught is the point of the Consequences entry above; rewriting that entry to
+  stop naming the file would erase the reason the entry exists.

@@ -91,8 +91,11 @@ shared hook into the sidebar — every one of them reaches the client — the bu
 acquires twice and throws. It is a latent crash sitting behind an ordinary
 refactor.
 
-The sidebar converges on the shared client. Tracked separately, because it is a
-behaviour change rather than a documentation one.
+The sidebar converges on the shared client. Tracked as **PL-19**
+([`.rptc/backlog/2026-08-29-sidebar-converge-on-webview-client.md`](../../../.rptc/backlog/2026-08-29-sidebar-converge-on-webview-client.md)),
+because it is a behaviour change rather than a documentation one. Still true as of
+2026-08-30: `src/features/sidebar/ui/index.tsx:22` acquires its own API, and the
+sidebar tree imports nothing from `WebviewClient`.
 
 ### 5. Hooks are the webview's service layer
 

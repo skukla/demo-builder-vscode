@@ -110,12 +110,22 @@ ${rows.map(line).join('\n')}
 
 ## Status vocabulary
 
+Four words, and only four. Every status line STARTS with one of them; anything after a
+dash is detail — when it shipped, what is still pending, which branch carried it.
+
 | Status | Means |
 |---|---|
+| \`Proposed\` | Written, not yet ratified. Do not build on it. |
 | \`Accepted\` | Current law. Cite it, follow it. |
+| \`Deprecated\` | No longer followed, with nothing replacing it. |
 | \`Superseded by ADR-NNN\` | Replaced; must name its successor. |
-| \`Historical\` | Decision landed and is stable. Kept for provenance, not guidance. |
-| \`Deferred\` | A seam documented, no implementation yet. |
+
+This table listed \`Historical\` and \`Deferred\` until 2026-08-30. Both were invented
+here, neither was ever used by an ADR, and ADR-001 and ADR-003 had each already been
+mislabelled with one and corrected back — each recording, in its own header, that the
+vocabulary is the four above. The index that indexes them still disagreed. A decision
+that landed and holds is \`Accepted\`; a seam with no implementation is \`Accepted\` too,
+and says "implementation deferred" after the dash. Checked now, not asserted.
 
 ## Conventions and where each one lives
 
@@ -125,24 +135,92 @@ The question this index exists to answer — *where is the rule for X?*
 |---|---|
 | Where a service may be fetched, injected, constructed | ADR-015 § Decision |
 | What each kind of file IS (command / handler / service / accessor) | ADR-015 § Responsibility contracts |
-| Session accessors — \`getX()\` singletons, and when they are warranted | ADR-015 § Session accessors |
-| Cache lifetime — a repeated composition point builds nothing stateful | ADR-015 § A cache is only as useful as… |
-| Commands extend \`BaseCommand\`; \`src/types/\` is \`import type\` only | ADR-015 § Two rules the enforcer checks |
-| How a service RECEIVES its dependencies (one bundle per feature) | ADR-015 § The dependency ENVELOPE |
-| Barrel files — core/types export through them, features are deep-imported | ADR-015 § Barrel files |
+| Session accessors — \`getX()\` singletons, and when they are warranted | ADR-020 § Session accessors |
+| Cache lifetime — a repeated composition point builds nothing stateful | ADR-020 § A cache is only as useful as |
+| Commands extend \`BaseCommand\`; \`src/types/\` is \`import type\` only | [the handbook](../../development/handbook.md) |
+| How a service RECEIVES its dependencies (one bundle per feature) | ADR-021 § The dependency ENVELOPE |
+| Barrel files — core/types export through them, features are deep-imported | ADR-022 § Barrel files |
 | Where a given kind of code goes | \`docs/architecture/where-code-goes.md\` |
 | Test tiers, doubles, and how effectiveness is measured | ADR-016 |
 | Webview composition, message channel, hooks-as-services | ADR-017 |
 | CSS layering and vendoring | ADR-018 |
 `;
+
+/**
+ * The routing table above is the one part of this file that is WRITTEN rather than
+ * measured, and on 2026-08-30 it rotted the same day it was written: the ADR-015 split
+ * moved five of its targets to ADR-020/021/022 and the handbook, and the table still
+ * pointed at ADR-015 sections that no longer existed. Nothing noticed, because every
+ * OTHER column here is derived from the files and this one was prose.
+ *
+ * So it is checked. Each `ADR-NNN § Section` must name a file that exists and a heading
+ * (any level) that starts with that text.
+ */
+function checkRouting(table) {
+    const problems = [];
+    const rowRe = /^\| .+ \| (?:\[.*\]\(.*\)|`.*`|ADR-(\d{3})(?: § (.+?))?) \|$/gm;
+    let seen = 0;
+    for (const m of table.matchAll(rowRe)) {
+        const [, num, section] = m;
+        if (!num) continue;
+        seen++;
+        const file = files.find((f) => f.startsWith(num));
+        if (!file) {
+            problems.push(`ADR-${num} is routed to but no such ADR file exists`);
+            continue;
+        }
+        if (!section) continue;
+        const headings = [...readFileSync(`${DIR}/${file}`, 'utf8').matchAll(/^#{2,4} (.+)$/gm)].map(
+            (h) => h[1].trim()
+        );
+        if (!headings.some((h) => h.startsWith(section.trim()))) {
+            problems.push(`ADR-${num} has no heading starting "${section.trim()}"`);
+        }
+    }
+    // CONTROL: a table whose rows stopped matching reports zero problems identically to a
+    // correct one. Seven ADR-routed rows is the floor; below it, the parser broke.
+    if (seen < 7) problems.push(`routing check parsed only ${seen} ADR rows — the regex is broken`);
+    return problems;
+}
+
+/**
+ * Every status line must START with one of the four vocabulary words. Detail after a
+ * dash is encouraged — "Accepted — implementation deferred" is the shape ADR-003 uses.
+ *
+ * Two ADRs had been mislabelled with statuses invented on the spot (`Historical`,
+ * `Deferred`), caught and reverted by hand both times; two more read `Implemented`,
+ * which is not a status at all. Nothing checked, so the index's own vocabulary table
+ * drifted to list terms no ADR used.
+ */
+const STATUS_WORDS = ['Proposed', 'Accepted', 'Deprecated', 'Superseded'];
+const statusProblems = rows
+    .filter((r) => !STATUS_WORDS.some((w) => r.status.toLowerCase().startsWith(w.toLowerCase())))
+    .map((r) => `ADR-${r.num} status starts "${r.status.split(/[\s—-]/)[0]}" — not one of ${STATUS_WORDS.join('/')}`);
+// CONTROL: the four words must actually appear in the vocabulary table this file emits,
+// or the check and the documentation have drifted apart in the other direction.
+for (const w of STATUS_WORDS) {
+    if (!out.includes(`\`${w}`)) statusProblems.push(`vocabulary table does not document \`${w}\``);
+}
+
+const routingProblems = checkRouting(out);
 if (!CHECK_ONLY) writeFileSync(`${DIR}/README.md`, out);
 const stale = rows.reduce((a, r) => a + r.broken, 0);
 const declared = rows.reduce((a, r) => a + r.declaredCount, 0);
 console.log(
-    `ADR index: ${rows.length} decisions, ${stale} unexplained reference(s), ${declared} declared`
+    `ADR index: ${rows.length} decisions, ${stale} unexplained reference(s), ` +
+        `${declared} declared, ${routingProblems.length} routing problem(s), ` +
+        `${statusProblems.length} status problem(s)`
 );
+for (const p of statusProblems) {
+    console.log(`  status: ${p}`);
+    console.log('    -> use one of the four words, and put the detail after a dash');
+}
 for (const r of rows.filter((x) => x.broken)) {
     console.log(`  ADR-${r.num}: ${[...r.brokenPaths, ...r.brokenSyms].join(', ')}`);
     console.log('    -> fix it, or declare it under `## Reference notes` with the reason');
 }
-if (CHECK_ONLY && stale > 0) process.exit(1);
+for (const p of routingProblems) {
+    console.log(`  routing table: ${p}`);
+    console.log('    -> the section moved; point the row at the ADR that holds it now');
+}
+if (CHECK_ONLY && stale + routingProblems.length + statusProblems.length > 0) process.exit(1);

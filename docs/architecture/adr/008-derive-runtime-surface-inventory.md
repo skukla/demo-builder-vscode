@@ -1,9 +1,16 @@
 # ADR-008: Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand
 
-**Status**: Accepted (2026-06-18) — producer half built and in review; consumer wiring pending
+**Status**: Accepted (2026-06-18) — consumer LANDED; producer (drift gate) in review; retiring the hand list deferred
 **Date**: 2026-06-18
 **Decision Maker**: Project Owner (confirmed 2026-06-18)
-**Implementer**: Feasibility prototype landed (`scripts/runtime-surfaces/`); producer (drift gate) built in `skukla/eds-demo-patches#1` (B2B ledger); consumer wiring pending.
+**Implementer**: Feasibility prototype landed (`scripts/runtime-surfaces/`); producer (drift gate) built in `skukla/eds-demo-patches#1` (B2B ledger); consumer landed in `runtimeSurfaceResolver.ts`.
+
+> **Status corrected 2026-08-30.** This line said "consumer wiring pending" while the
+> implementation table below said the consumer had **Landed** — the document
+> contradicted itself, and the pending half was the wrong one. Verified:
+> `runtimeSurfaceResolver.ts` exists, `getRuntimeSurfaces` is called from
+> `daLiveContentCopy.ts:679`, and `runtimeSurfaceResolver.test.ts` covers it. What
+> genuinely remains is the producer gate (another repo) and retiring the hand list.
 
 Related: [ADR-006](006-thin-layer-storefront-customization.md) — the last-known-good (LKG) gate this ADR proposes to extend. Originating bug: the 2026-06 `/customer/nav` silently-dropped-fragment incident.
 
@@ -210,7 +217,7 @@ This does not replace either existing mechanism — it strengthens the backstop:
 | Stop-gap: add the missing orphans to the hand list | **Landed** | `runtimeSurfaceInventory.ts` (+ `.plain.html` probe fix for `/customer/*`) — keeps demos correct until the consumer half flips to the generated file |
 | Owner acceptance | **Confirmed** | 2026-06-18 |
 | Producer: surface drift gate in the ADR-006 LKG gate | **In review** | `skukla/eds-demo-patches#1` — `derive-surfaces.mjs` + per-ledger check + `lkg/surface-drift` PR flow; B2B ledger seeded (`b2b/runtime-surfaces.json`). Other ledgers (citisignal/custom) pending their own seed |
-| Consumer: extension fetches + merges the generated inventory | **Landed** | `runtimeSurfaceResolver.ts` fetches `<ledger>/runtime-surfaces.json` (best-effort, cached) and merges `derived ∪ residual` **onto the static hand list as a floor**; wired into `backfillEssentialPaths` (content copy) + `fetchPlaceholderFiles` (reset), sourced from `codePatchSource`. A merged surface-drift PR now reaches storefronts on next create/reset. 1170 EDS tests green |
+| Consumer: extension fetches + merges the generated inventory | **Landed** | `runtimeSurfaceResolver.ts` fetches `<ledger>/runtime-surfaces.json` (best-effort, cached) and merges `derived ∪ residual` **onto the static hand list as a floor**; wired into `backfillEssentialPaths` (content copy), sourced from `codePatchSource`. A merged surface-drift PR now reaches storefronts on next create/reset. The second seam, `fetchPlaceholderFiles` (reset), was DELETED by the 2026-08-23 amendment along with the placeholder-sheet category. Covered by `runtimeSurfaceResolver.test.ts` |
 | Retire the hand-maintained bulk in `runtimeSurfaceInventory.ts` | **Deferred** | the static list stays the safety floor (zero-regression). Trimming it to just the residual waits until all ledgers are seeded + the gate has soaked |
 | `authPages` drift auto-consumed (needs a `blockClass`) | **Out of scope** | a new `/customer/*` page surfaces via the gate PR for a human to add with its block class; the merge never auto-stubs auth pages |
 | Optional: runtime-observation pass to shrink the static residual | **Not started** | future enhancement |
@@ -222,7 +229,7 @@ This does not replace either existing mechanism — it strengthens the backstop:
 - **Empirical basis**: `.rptc/research/runtime-surface-derivation/findings.md` (+ `prototype-run-b2b.txt`)
 - **Prototype**: `scripts/runtime-surfaces/` (`deriveRuntimeSurfaces.mjs`, `deriveRuntimeSurfaces.test.mjs`, `README.md`)
 - **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
-- **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), wired into `daLiveContentOperations.backfillEssentialPaths` + `edsResetRepoHelper.fetchPlaceholderFiles`
+- **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), called from `src/features/eds/services/daLive/daLiveContentCopy.ts` (`backfillEssentialPaths`)
 - **Static hand list (floor)**: `src/features/eds/services/runtimeSurfaceInventory.ts`
 - **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006
@@ -230,7 +237,11 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 ## Reference notes
 
-- `scripts/lkg-gate.sh` — the last-known-good drift gate this ADR proposed. It was never
-  built; the producer half (`scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`) exists
-  and the consumer wiring remains pending, which the Status line already says. Kept so
-  the unbuilt half stays visible instead of quietly vanishing from the plan.
+- `scripts/lkg-gate.sh` — deliberately does not resolve here. It lives in the
+  `skukla/eds-demo-patches` repository, which is where ADR-006 puts the last-known-good
+  gate; this repo is the consumer, not its host. Naming it is the point — the producer
+  half is still in review there, and dropping the path would hide the one part of this
+  decision that has not shipped.
+- `fetchPlaceholderFiles` — a mechanism this ADR wired to and the 2026-08-23 amendment
+  then deleted. Named so the retirement stays legible; only a historical comment in
+  `placeholderStubs.ts` survives.

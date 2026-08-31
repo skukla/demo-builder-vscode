@@ -1,6 +1,6 @@
 # ADR-014: The ACCS datapack credential is served from the shared discovery service
 
-**Status**: Implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives
+**Status**: Accepted — implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives
 **Date**: 2026-08-16
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/data-installer-credential-broker` (steps 01-03, TDD)

@@ -20,35 +20,45 @@ Every column is measured, not asserted:
 |---|---|---|---|---|---|---|
 | [001](001-component-naming-standardization.md) | Component Naming Standardization (externalSystems → integrations) | Accepted | 3 | — | — | 9 |
 | [002](002-helix-bulk-api-fallback.md) | Helix Bulk API Fallback Strategy | Accepted and Implemented | 8 | — | — | 2 |
-| [003](003-multisite-architecture-seam.md) | Multisite Architecture Seam | Accepted — implementation deferred | 2 | — | — | 2 |
-| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted — original decision (Claude Code CLI is the harness) STILL STANDS. | 10 | — | — | 24 |
+| [003](003-multisite-architecture-seam.md) | Multisite Architecture Seam | Accepted — implementation deferred | 5 | `doc-module-refs.test.ts` | — | 2 |
+| [004](004-claude-code-harness.md) | Claude Code (CLI) as the AI Harness | Accepted — original decision (Claude Code CLI is the harness) STILL STANDS. | 11 | — | — | 24 |
 | [005](005-byom-pdp-routing.md) | BYOM PDP Routing — Canonical Pattern with Multi-Tenancy and Smart-404 Gap-Fill | Accepted | 12 | — | — | 1 |
 | [006](006-thin-layer-storefront-customization.md) | Thin-Layer Storefront Customization — Retire the CitiSignal Forks, Point at Canonical + Code Patches | Accepted | 53 | — | — | 1 |
 | [007](007-pdp-sku-url-encoding.md) | PDP SKU URL Encoding — Reversible, Lowercase-Stable, Helix-Safe | Accepted | 21 | — | — | 2 |
-| [008](008-derive-runtime-surface-inventory.md) | Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand | Accepted (2026-06-18) — producer half built and in review; consumer wiring pending | 12 | — | — | 1 |
+| [008](008-derive-runtime-surface-inventory.md) | Derive the Runtime-Surface Inventory from the Boilerplate, Not by Hand | Accepted (2026-06-18) — consumer LANDED; producer (drift gate) in review; retiring the hand list deferred | 12 | — | — | 1 |
 | [009](009-storefront-config-flag-injection.md) | Storefront config.json Flag Injection — the Generator Owns Config, So Template Flags Must Be Re-Injected | Accepted | 3 | — | — | 1 |
 | [010](010-content-copy-completeness.md) | Content-Copy Completeness — Follow Document References So Unindexed Fragments Aren't Silently Dropped | Accepted | 3 | — | — | — |
 | [011](011-app-builder-deployables.md) | App Builder Deployables — A Keyed Set of Deployable Components in One App Builder Project (Mesh Is One Kind) | Accepted — implemented (D1–D3; D3 merged to develop `5d6f4956`, 2026-07-16); plan at [`.rptc/backlog/appbuilder-deployable-model/`](../../../.rptc/backlog/appbuilder-deployable-model/overview.md) | 80 | — | — | 1 |
-| [012](012-diagnostic-surfaces.md) | Diagnostic Surfaces — Human-First, Agent-Reachable | Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123 | 5 | — | — | — |
-| [013](013-generated-file-edit-survival.md) | Generated AI Files — Hash-and-Skip Edit Survival | Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver | 66 | — | — | 1 |
-| [014](014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service | Implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives | 5 | — | — | 1 |
-| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 127 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — | — |
-| [016](016-test-strategy.md) | Test strategy — three tiers, chosen on the escape record | Accepted (owner-ratified 2026-08-28) | 64 | `architecture-rules.test.ts`, `architectureScan.ts`, `mirror-placement.test.ts`, `test-family-setup.ledger.json`, `test-family-setup.test.ts`, `toolingRegistry.ts` | — | — |
-| [017](017-webview-architecture.md) | Webview architecture — one channel per bundle, props below, styles inside the bundle | Accepted (owner-ratified 2026-08-29) | 26 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `inline-styles.test.ts`, `stylesheet-bundles.test.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts`, `webviewBundleClasses.ts` | — | — |
-| [018](018-css-architecture.md) | CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism | ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of | 11 | `stylesheet-bundles.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json` | 1 | — |
-| [019](019-claude-code-delivery-terminal-only.md) | Claude Code delivery is terminal-only, and the MCP server runs in-extension | Accepted (2026-08-30). Supersedes the amendment chain of | 1 | — | — | — |
-| [020](020-session-accessors.md) | Session accessors — the one place other than the root that may construct | Accepted (2026-08-29, owner-ratified; split from ADR-015 on 2026-08-30) | 2 | `architecture-rules.exemptions.json` | — | — |
-| [021](021-dependency-envelope.md) | The dependency envelope — one bundle per feature, and only two kinds | Accepted (2026-08-30; split from ADR-015 the same day) | 2 | `architecture-rules.test.ts` | — | — |
-| [022](022-barrel-files.md) | Barrel files — core and types export through them, features do not | Accepted (2026-08-30; split from ADR-015 the same day) | 6 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts` | — | — |
+| [012](012-diagnostic-surfaces.md) | Diagnostic Surfaces — Human-First, Agent-Reachable | Accepted — prerequisite landed (`fix/mcp-workspace-independence`); surfaces planned for beta.123 | 6 | `doc-module-refs.test.ts` | — | — |
+| [013](013-generated-file-edit-survival.md) | Generated AI Files — Hash-and-Skip Edit Survival | Accepted — implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver | 68 | — | — | 1 |
+| [014](014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service | Accepted — implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives | 5 | — | — | 1 |
+| [015](015-dependency-architecture.md) | Dependency architecture — fetch at the boundary, inject below, wire in the root | Accepted (owner-ratified 2026-08-28, after the PL-12 pattern-conformance audit) | 131 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `builder-uniqueness.test.ts`, `doc-module-refs.test.ts`, `tooling-registry.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts` | — | — |
+| [016](016-test-strategy.md) | Test strategy — three tiers, chosen on the escape record | Accepted (owner-ratified 2026-08-28) | 66 | `architecture-rules.test.ts`, `architectureScan.ts`, `mirror-placement.test.ts`, `test-family-setup.ledger.json`, `test-family-setup.test.ts`, `toolingRegistry.ts` | — | — |
+| [017](017-webview-architecture.md) | Webview architecture — one channel per bundle, props below, styles inside the bundle | Accepted (owner-ratified 2026-08-29) | 30 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts`, `architectureScan.ts`, `inline-styles.test.ts`, `stylesheet-bundles.test.ts`, `webview-architecture-rules.exemptions.json`, `webview-architecture-rules.test.ts`, `webviewBundleClasses.ts` | — | — |
+| [018](018-css-architecture.md) | CSS architecture — vendor in the lowest layer, and `!important` is not a mechanism | ACCEPTED for NEW code (owner-ratified 2026-08-29). The MIGRATION of | 14 | `doc-module-refs.test.ts`, `stylesheet-bundles.test.ts`, `toolingRegistry.ts`, `webview-architecture-rules.exemptions.json` | — | 1 |
+| [019](019-claude-code-delivery-terminal-only.md) | Claude Code delivery is terminal-only, and the MCP server runs in-extension | Accepted (2026-08-30). Supersedes the amendment chain of | 2 | — | — | — |
+| [020](020-session-accessors.md) | Session accessors — the one place other than the root that may construct | Accepted (2026-08-29, owner-ratified; split from ADR-015 on 2026-08-30) | 3 | `architecture-rules.exemptions.json` | — | — |
+| [021](021-dependency-envelope.md) | The dependency envelope — one bundle per feature, and only two kinds | Accepted (2026-08-30; split from ADR-015 the same day) | 3 | `architecture-rules.test.ts` | — | — |
+| [022](022-barrel-files.md) | Barrel files — core and types export through them, features do not | Accepted (2026-08-30; split from ADR-015 the same day) | 8 | `architecture-rules.exemptions.json`, `architecture-rules.test.ts` | — | — |
 
 ## Status vocabulary
 
+Four words, and only four. Every status line STARTS with one of them; anything after a
+dash is detail — when it shipped, what is still pending, which branch carried it.
+
 | Status | Means |
 |---|---|
+| `Proposed` | Written, not yet ratified. Do not build on it. |
 | `Accepted` | Current law. Cite it, follow it. |
+| `Deprecated` | No longer followed, with nothing replacing it. |
 | `Superseded by ADR-NNN` | Replaced; must name its successor. |
-| `Historical` | Decision landed and is stable. Kept for provenance, not guidance. |
-| `Deferred` | A seam documented, no implementation yet. |
+
+This table listed `Historical` and `Deferred` until 2026-08-30. Both were invented
+here, neither was ever used by an ADR, and ADR-001 and ADR-003 had each already been
+mislabelled with one and corrected back — each recording, in its own header, that the
+vocabulary is the four above. The index that indexes them still disagreed. A decision
+that landed and holds is `Accepted`; a seam with no implementation is `Accepted` too,
+and says "implementation deferred" after the dash. Checked now, not asserted.
 
 ## Conventions and where each one lives
 
@@ -58,11 +68,11 @@ The question this index exists to answer — *where is the rule for X?*
 |---|---|
 | Where a service may be fetched, injected, constructed | ADR-015 § Decision |
 | What each kind of file IS (command / handler / service / accessor) | ADR-015 § Responsibility contracts |
-| Session accessors — `getX()` singletons, and when they are warranted | ADR-015 § Session accessors |
-| Cache lifetime — a repeated composition point builds nothing stateful | ADR-015 § A cache is only as useful as… |
-| Commands extend `BaseCommand`; `src/types/` is `import type` only | ADR-015 § Two rules the enforcer checks |
-| How a service RECEIVES its dependencies (one bundle per feature) | ADR-015 § The dependency ENVELOPE |
-| Barrel files — core/types export through them, features are deep-imported | ADR-015 § Barrel files |
+| Session accessors — `getX()` singletons, and when they are warranted | ADR-020 § Session accessors |
+| Cache lifetime — a repeated composition point builds nothing stateful | ADR-020 § A cache is only as useful as |
+| Commands extend `BaseCommand`; `src/types/` is `import type` only | [the handbook](../../development/handbook.md) |
+| How a service RECEIVES its dependencies (one bundle per feature) | ADR-021 § The dependency ENVELOPE |
+| Barrel files — core/types export through them, features are deep-imported | ADR-022 § Barrel files |
 | Where a given kind of code goes | `docs/architecture/where-code-goes.md` |
 | Test tiers, doubles, and how effectiveness is measured | ADR-016 |
 | Webview composition, message channel, hooks-as-services | ADR-017 |
