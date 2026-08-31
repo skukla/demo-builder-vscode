@@ -162,7 +162,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
-        cmd.helixServiceForTests = fakeHelix;
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 
@@ -184,7 +184,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
-        cmd.helixServiceForTests = fakeHelix;
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 
@@ -219,7 +219,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
-        cmd.helixServiceForTests = fakeHelix;
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 

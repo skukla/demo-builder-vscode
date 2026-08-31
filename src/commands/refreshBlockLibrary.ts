@@ -32,7 +32,7 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
      * `jest.mock` the Helix module purely so a construction it never asserts on would
      * not run (ADR-016's wall).
      */
-    public helixServiceForTests?: RefreshBlockLibraryHeadlessDeps['helixService'];
+    public helixService?: RefreshBlockLibraryHeadlessDeps['helixService'];
 
     public async execute(): Promise<void> {
         const project = await this.stateManager.getCurrentProject();
@@ -50,7 +50,7 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
                 project,
                 context: this.context,
                 logger: this.logger,
-                helixService: this.helixServiceForTests,
+                helixService: this.helixService,
                 onProgress: (message) => progress.report({ message }),
             });
         });

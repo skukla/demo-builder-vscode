@@ -33,7 +33,10 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
+import {
+    applyAuthoringExperienceFlip,
+    type AuthoringExperienceFlipDeps,
+} from '@/features/eds/services/authoringExperienceFlip';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
@@ -60,6 +63,17 @@ interface SaveConfigurationData {
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<ConfigureInitialData> {
+    /**
+     * Helix seam, forwarded to the shared authoring-experience flip. Production
+     * leaves it undefined and the flip builds the real service.
+     *
+     * It lives on the COMMAND because the command is this path's composition root —
+     * the flip takes no other collaborator from here. Without it the suite had to
+     * `jest.mock` the Helix module purely so a construction it never asserts on would
+     * not run (ADR-016's wall).
+     */
+    public helixService?: AuthoringExperienceFlipDeps['helixService'];
+
     /**
      * Static method to dispose any active Configure panel
      * Useful for cleanup during navigation
@@ -297,9 +311,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 buildOrgTargetFromProjectAdobe(project.adobe),
                 () =>
                     detectMeshChanges(project, sanitizedConfigs, {
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                    authManager: ServiceLocator.getAuthenticationService(),
-                }),
+                        commandManager: ServiceLocator.getCommandExecutor(),
+                        authManager: ServiceLocator.getAuthenticationService(),
+                    }),
             );
 
             // Detect if storefront configuration changed (EDS projects only)
@@ -495,6 +509,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                     context: this.context,
                     logger: this.logger,
                     saveProject: (p) => this.stateManager.saveProject(p),
+                    helixService: this.helixService,
                 });
             },
         );
