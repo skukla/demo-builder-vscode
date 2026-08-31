@@ -14,23 +14,19 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
+import { DeployMeshCommand } from './deployMesh.testUtils';
 import { StateManager } from '@/core/state';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 
-// Mock all external dependencies
-jest.mock('vscode');
+// MUST stay in this file: this spec imports fs/promises directly, and a
+// jest.mock only hoists above the imports of the module it appears in. Moved to
+// the shared harness it applied too late and every test failed on
+// `access.mockResolvedValue is not a function`.
 jest.mock('fs/promises');
-jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/mesh/utils/errorFormatter', () => ({
-    formatAdobeCliError: jest.fn((s: string) => s),
-    extractMeshErrorSummary: jest.fn((s: string) => s),
-}));
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: jest.fn(() => '18'),
-}));
+
+// Mock all external dependencies
 
 // The DeployMeshCommand gates App Builder operations on
 // projectRequiresAppBuilder + testDeveloperPermissions. These tests focus on
@@ -81,13 +77,6 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
         // authoritative and a leftover meshState resurfaces through the legacy
         // read fallbacks.
         project.meshState = undefined;
-    }),
-}));
-jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
-    waitForMeshDeployment: jest.fn().mockResolvedValue({
-        deployed: true,
-        meshId: 'mesh-test-123',
-        endpoint: 'https://test-mesh.adobe.io/graphql',
     }),
 }));
 // The command delegates build+deploy+verify to deployMeshComponent; mock it so the

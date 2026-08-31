@@ -41,7 +41,6 @@
         "tests/features/eds/ui/steps/repoSelectionInline",
         "tests/features/lifecycle/commands/openInClaude",
         "tests/features/lifecycle/services/projectResetService",
-        "tests/features/mesh/commands/deployMesh",
         "tests/features/mesh/services/meshCheckHelpers",
         "tests/features/prerequisites/handlers/shared",
         "tests/features/project-creation/handlers/addIntegrationFlowHandlers",

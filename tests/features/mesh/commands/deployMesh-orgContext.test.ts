@@ -10,22 +10,12 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
+import { DeployMeshCommand } from './deployMesh.testUtils';
 import { StateManager } from '@/core/state';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 
-jest.mock('vscode');
-jest.mock('fs/promises');
-jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/mesh/utils/errorFormatter', () => ({
-    formatAdobeCliError: jest.fn((s: string) => s),
-    extractMeshErrorSummary: jest.fn((s: string) => s),
-}));
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: jest.fn(() => '18'),
-}));
 
 // Auth always passes — isolate the org-context gate.
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
@@ -48,15 +38,14 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
-    waitForMeshDeployment: jest.fn().mockResolvedValue({
-        deployed: true,
-        meshId: 'mesh-test-123',
-        endpoint: 'https://test-mesh.adobe.io/graphql',
-    }),
-}));
 
 import { ensureProjectOrgContext } from '@/features/authentication/services/ensureProjectOrgContext';
+
+// MUST stay in this file: this spec imports fs/promises directly, and a
+// jest.mock only hoists above the imports of the module it appears in. Moved to
+// the shared harness it applied too late and every test failed on
+// `access.mockResolvedValue is not a function`.
+jest.mock('fs/promises');
 const mockEnsureOrg = ensureProjectOrgContext as jest.MockedFunction<typeof ensureProjectOrgContext>;
 
 function createTestProject(): Project {
