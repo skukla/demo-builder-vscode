@@ -153,6 +153,35 @@ the real services still satisfy the narrower descriptions.
   lines it was meant to change. Three tests failed and named the wrong thing, which is
   how it was caught. Fixed by hand and re-read.
 
+## Then: stopping the fakes from multiplying (PL-16)
+
+**In one paragraph:** the next item asked for shared test fixtures. Half of it was
+already done and nobody had noticed. The half that was not done is 420 test files each
+writing their own copy of the same throwaway logger — and the copies were still
+multiplying, because every service converted in the work above needs one and typing a
+fresh copy is faster than finding the shared one. I added a check that lets the 420
+existing copies stand but refuses any NEW one, so the pile stops growing today and
+drains at whatever pace people touch those files.
+
+The item itself said not to sweep all 420 in one go, and that is right — a 420-file
+change is not reviewable. So the check grandfathers them in a list that may only get
+shorter. I then converted the 22 files this session had already touched, which took the
+list from 420 to 408. Ten of those 22 keep their copy for a real reason: their copy sits
+inside a block that runs before any import exists, so it cannot use the shared one.
+
+**I broke this once and reverted it.** My first attempt rewrote all 22 files
+automatically and got two things wrong — it edited the ten blocks that cannot use the
+shared version, and a second pass meant to tidy up mangled a line rather than cleaning
+it. I threw the whole batch away and redid it with those cases excluded. That is the
+third automated edit in this run that landed somewhere it was not meant to, which is a
+pattern rather than bad luck; the lesson is to bound the edit and then check where it
+actually landed, not to trust that it went where intended.
+
+Two small things fell out. A suite had hand-copied the shared fixture's SHAPE into a type
+declaration, free to drift from the real one — now derived from it instead. And the new
+check immediately caught me leaving twelve entries on the list after they had been paid
+off, which is exactly how a shrink-only list quietly stops shrinking.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?

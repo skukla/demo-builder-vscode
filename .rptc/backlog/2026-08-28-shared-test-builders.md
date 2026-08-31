@@ -204,3 +204,4 @@ table above is the baseline a later run is compared against.
 - 2026-08-31  refactor(eds): seams for storefrontSetupPhases and edsResetConfigStep (`7eb7002ce`)
 - 2026-08-31  refactor(tests): refreshBlockLibraryHeadless takes Helix through its deps (`32e955959`)
 - 2026-08-30  refactor(tests): publishKeyRegistrar takes Helix through the front door (`fe15fc6db`)
+- 2026-08-31  Rule 1 (one home per builder) verified done — zero duplicate builder names, enforcer green. Added tests/sop/canonical-fakes.test.ts: a shrink-only ledger that stops NEW hand-rolled logger fakes (420 grandfathered). Converted the 22 files this session touched; ledger 420 -> 408.
