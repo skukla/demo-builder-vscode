@@ -7,7 +7,7 @@
 
 import * as fs from 'fs/promises';
 import { setupMocks, mockRecentProjectsFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 // Re-declare mocks to ensure proper typing and hoisting
 jest.mock('fs/promises');

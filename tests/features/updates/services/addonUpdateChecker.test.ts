@@ -8,7 +8,7 @@ import {
     BlockLibraryUpdateResult,
     InspectorSdkUpdateResult,
 } from '@/features/updates/services/addonUpdateChecker';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';

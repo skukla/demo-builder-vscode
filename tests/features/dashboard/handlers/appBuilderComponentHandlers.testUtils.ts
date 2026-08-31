@@ -17,7 +17,7 @@
 
 import { setupMocks } from './dashboardHandlers.testUtils';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 // ---- D1 runner (the live engine — fully mocked) ----------------------------
 export const mockAddAppBuilderComponent = jest.fn();

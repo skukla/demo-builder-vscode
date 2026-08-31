@@ -30,7 +30,7 @@ import type {
     OrgContextResult,
     OrgMismatchInfo,
 } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { CHECK_IDS } from '@/types/messages';
 

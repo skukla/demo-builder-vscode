@@ -18,14 +18,14 @@ import {
     type CommerceSectionValidity,
     type ConnectStoreSection,
 } from './commerceSectionValidity';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import {
     ACCS_OAUTH_CLIENT_ID,
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';

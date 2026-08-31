@@ -175,7 +175,7 @@ describe('BaseCommand Disposal Support', () => {
             command.testCreateTerminal('Test Terminal');
 
             // Should NOT add to context.subscriptions (legacy pattern removed)
-            expect(mockContext.subscriptions.length).toBe(initialLength);
+            expect(mockContext.subscriptions).toHaveLength(initialLength);
         });
 
         it('should dispose terminal when command disposed', () => {

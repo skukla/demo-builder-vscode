@@ -6,9 +6,9 @@
 
 import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 export interface NodeVersionStatus {
     version: string;

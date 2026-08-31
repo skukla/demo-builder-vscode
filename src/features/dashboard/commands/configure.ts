@@ -26,29 +26,28 @@ import {
     migrateDeclaredSecrets,
     reKeyProjectSecrets,
 } from '@/features/components/services/commerceSecretMigration';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
-import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     applyAuthoringExperienceFlip,
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
+import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { Project } from '@/types';
-import type { AuthoringExperience } from '@/types/base';
+import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',

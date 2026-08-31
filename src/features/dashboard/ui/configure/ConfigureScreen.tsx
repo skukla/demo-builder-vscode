@@ -28,6 +28,7 @@ import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
 import { withStoredSecretsPreserved } from './storedSecretPayload';
+import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
@@ -40,7 +41,6 @@ import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
-import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';

@@ -5,7 +5,7 @@
  * componentManager test files.
  */
 
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 

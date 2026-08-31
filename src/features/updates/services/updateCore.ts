@@ -14,12 +14,12 @@ import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { StateManager } from '@/core/state/stateManager';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 /**
  * Context passed from the Check Updates command (or the headless apply

@@ -27,8 +27,8 @@
 
 import { asRawText, asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { StateManager } from '@/core/state/stateManager';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
+import type { StateManager } from '@/core/state/stateManager';
 import {
     buildStatusPayload,
     deriveMeshStatus,

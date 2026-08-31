@@ -10,7 +10,7 @@ import {
     PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_CUSTOMER_GROUP,
     CATALOG_API_KEY,
 } from '@/core/config/envVarKeys';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
 /**

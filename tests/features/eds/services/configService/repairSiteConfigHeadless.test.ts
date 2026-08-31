@@ -14,7 +14,7 @@
 
 import { repairSiteConfig } from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';

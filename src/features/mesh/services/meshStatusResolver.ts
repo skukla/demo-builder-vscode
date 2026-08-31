@@ -10,9 +10,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { isMeshUpdateDeclined } from './meshUpdateDecline';
-import { COMPONENT_IDS } from '@/core/constants';
-import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { parseEnvFile } from '@/core/utils/envParser';
 import {
     PAAS_URL,
     PAAS_GRAPHQL_ENDPOINT,
@@ -27,7 +24,10 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
-import { Project, ComponentInstance } from '@/types';
+import { COMPONENT_IDS } from '@/core/constants';
+import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
+import { parseEnvFile } from '@/core/utils/envParser';
+import { ComponentInstance, Project } from '@/types/base';
 
 /**
  * Required environment variables for mesh deployment (INPUT variables)

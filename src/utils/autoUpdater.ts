@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { selectLatestForChannel } from '@/features/updates/services/releaseTrack';
 import type { UpdateChannel, GitHubRelease } from '@/features/updates/services/types';
-import { UpdateInfo } from '@/types';
+import { UpdateInfo } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 export class AutoUpdater {

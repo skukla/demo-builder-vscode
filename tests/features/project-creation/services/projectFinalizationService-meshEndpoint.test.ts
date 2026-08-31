@@ -16,7 +16,8 @@ import {
 } from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
-import type { Project, EnvVarDefinition } from '@/types';
+import type { Project } from '@/types/base';
+import type { EnvVarDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';

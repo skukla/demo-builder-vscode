@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
     'da-live-classic',

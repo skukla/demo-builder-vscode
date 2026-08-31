@@ -90,7 +90,7 @@ import type { DeletionServices } from '@/features/projects-dashboard/services/pr
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /** A plain, non-EDS project — takes the simple warning-modal path. */
 function plainProject(over: Partial<Project> = {}): Project {

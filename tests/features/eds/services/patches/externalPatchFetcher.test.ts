@@ -20,7 +20,7 @@ import {
     fetchExternalPatches,
     _clearExternalPatchCacheForTests,
 } from '@/features/eds/services/patches/externalPatchFetcher';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({

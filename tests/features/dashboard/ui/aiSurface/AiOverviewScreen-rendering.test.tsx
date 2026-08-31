@@ -67,7 +67,7 @@ describe('AiOverviewScreen — rendering', () => {
             expect(within(body).queryByText(/suggested prompts/i)).not.toBeInTheDocument();
             // With no user prompts, only the "+ New prompt" tile renders.
             expect(within(body).getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
-            expect(within(body).queryAllByTestId('ai-prompt-card').length).toBe(0);
+            expect(within(body).queryAllByTestId('ai-prompt-card')).toHaveLength(0);
         });
 
         it('does NOT render AI-health controls in the body (those live on the dashboard)', async () => {
@@ -93,7 +93,7 @@ describe('AiOverviewScreen — rendering', () => {
             const verifyCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
                 (c) => c[0] === 'verify-ai-setup'
             );
-            expect(verifyCalls.length).toBe(0);
+            expect(verifyCalls).toHaveLength(0);
         });
 
         it('does NOT open the edit dialog on mount', async () => {

@@ -10,9 +10,9 @@
  * @module core/shell/commandExecutorDeps
  */
 
+import type { CommandExecutorDeps } from './commandExecutor';
 import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
-import type { CommandExecutorDeps } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
 import { PollingService } from './pollingService';

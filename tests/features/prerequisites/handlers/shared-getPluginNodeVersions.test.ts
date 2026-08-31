@@ -156,7 +156,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
 
             // Then: Should return the version only once
             expect(result).toEqual(['20']);
-            expect(result.length).toBe(1);
+            expect(result).toHaveLength(1);
         });
     });
 });

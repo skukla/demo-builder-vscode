@@ -1,15 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { isMeshComponentId } from '@/core/constants';
-import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types';
-import { toAppError, isTimeout, isNetwork } from '@/core/errors';
-import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { parseJSON } from '@/types/typeGuards';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
+import { isMeshComponentId } from '@/core/constants';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * How much build output to dump on failure.

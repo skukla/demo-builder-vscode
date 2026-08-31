@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state/stateManager';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 

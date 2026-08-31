@@ -19,7 +19,7 @@
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';

@@ -34,6 +34,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
+import { cn } from '@/core/ui/utils/classNames';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     groupDatapacks,
@@ -46,7 +47,6 @@ import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataIns
 import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
 import type { BaseStepProps } from '@/types/wizard';
 
-import { cn } from '@/core/ui/utils/classNames';
 /**
  * What a query is matched against — the id and the label, nothing else.
  *

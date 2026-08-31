@@ -221,13 +221,13 @@ describe('HelixService - Preview/Publish', () => {
             expect(previewBody.paths).toContain('/about');
             expect(previewBody.paths).toContain('/nav');
             expect(previewBody.paths).toContain('/products');
-            expect(previewBody.paths.length).toBe(4);
+            expect(previewBody.paths).toHaveLength(4);
 
             const bulkPublishCall = calls[2];
             expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main/*');
             const publishBody = JSON.parse((bulkPublishCall[1] as { body: string }).body);
             expect(publishBody.forceUpdate).toBe(true);
-            expect(publishBody.paths.length).toBe(4);
+            expect(publishBody.paths).toHaveLength(4);
         });
 
         it('should fall back to GitHub org/site if DA.live org/site not provided', async () => {

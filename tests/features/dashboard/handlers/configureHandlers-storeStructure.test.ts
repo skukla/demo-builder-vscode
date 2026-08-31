@@ -19,7 +19,7 @@ jest.mock('@/features/eds/handlers/edsHandlers', () => ({
 
 import { handleDiscoverStoreStructureAndPersist } from '@/features/dashboard/handlers/configureHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';

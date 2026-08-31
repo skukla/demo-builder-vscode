@@ -24,13 +24,13 @@
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { StateManager } from '@/core/state/stateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /** The slice of the callers' UpdateContext the core actually needs. */
 export interface AdobeMcpUpdateCoreContext {

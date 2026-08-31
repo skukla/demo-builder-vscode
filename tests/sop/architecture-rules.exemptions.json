@@ -16,7 +16,5 @@
         "src/core/di/serviceLocator.ts": "RATIFIED by the owner 2026-08-31. A service locator has to name what it locates. Type-only imports of AuthenticationService and SidebarProvider, so no runtime coupling and no cycle. Measured before ratifying: extracting interfaces does not work (both are CLASSES, and AuthenticationService has 44 public methods across 855 lines, so the copy would drift), and converting callers does not either (all 48 are handlers, commands or MCP tools, which the rule explicitly permits to fetch). The alternative considered and rejected was a typed-token registry, which removes the naming but rewrites the DI shape and 50+ call sites. PERMANENT EXCEPTION, not debt."
     },
     "_layerDirection_note": "Direction rule: nothing under src/core/ imports @/features or @/commands. Ratified 2026-08-30 after the rule was found stated as law in src/core/CLAUDE.md, present in NO handbook/ADR/convention, enforced by nothing, and violated seven times. Webview files are out of scope (isWebview), so core/ui/ is excluded. The set may only shrink: clearing a file means fixing it AND deleting its row.",
-    "reExportIndex": {
-        "src/types/index.ts": "PURE: 11 re-export line(s); ~190 importer(s). Repoint them at the modules that declare the symbols, then delete the file."
-    }
+    "reExportIndex": {}
 }

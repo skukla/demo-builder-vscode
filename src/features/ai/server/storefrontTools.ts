@@ -28,7 +28,7 @@ import {
     republishStorefrontConfig,
     republishStorefrontContent,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Pull the GitHub repo + DA.live target from an EDS project's storefront metadata. */

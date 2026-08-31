@@ -15,9 +15,6 @@
  */
 
 import * as vscode from 'vscode';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
@@ -26,6 +23,9 @@ import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';

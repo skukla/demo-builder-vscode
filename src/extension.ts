@@ -9,8 +9,9 @@ import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { StateManager } from '@/core/state/stateManager';
+import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
+import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
@@ -86,7 +87,6 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
-import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 
 /**
  * Whether this window should re-home to the projects root on activation.

@@ -19,7 +19,7 @@
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 

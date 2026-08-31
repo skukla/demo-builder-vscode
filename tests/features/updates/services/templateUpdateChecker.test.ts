@@ -14,7 +14,7 @@
 
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 // Mock the GitHub API client used for the forked path

@@ -15,8 +15,8 @@
 
 import contentPatchesConfig from '../../config/content-patches.json';
 import { fetchExternalPatches } from './externalPatchFetcher';
-import type { Logger } from '@/types';
 import type { ContentPatchSource } from '@/types/demoPackages';
+import type { Logger } from '@/types/logger';
 
 
 /**

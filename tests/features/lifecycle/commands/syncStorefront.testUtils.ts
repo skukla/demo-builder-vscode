@@ -97,7 +97,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Safe: the mocks above hoist over these imports (same module).
 import { createMockProject } from '../../../helpers/projectFake';
 import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di/serviceLocator';

@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ExecutionLock } from '@/core/utils/executionLock';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toError } from '@/types/typeGuards';
 
 export class DeleteProjectCommand extends BaseCommand {

@@ -55,7 +55,7 @@ jest.mock('fs/promises', () => ({
 
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { createMockProject } from '../../../helpers/projectFake';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

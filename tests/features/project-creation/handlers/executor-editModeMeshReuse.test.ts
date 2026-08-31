@@ -14,7 +14,7 @@
  * keyed-first accessor (ADR-011 D3 Steps 07+09).
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 describe('Executor - Edit Mode Mesh Reuse', () => {

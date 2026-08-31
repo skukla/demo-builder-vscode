@@ -17,7 +17,6 @@
  */
 
 import * as vscode from 'vscode';
-import type { HelixCodePreview } from './helix/helixCapabilities';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
 import {
     DaLiveContentOperations,
@@ -25,11 +24,12 @@ import {
 } from './daLive/daLiveContentOperations';
 import { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTokenService } from './github/githubTokenService';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
 import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**

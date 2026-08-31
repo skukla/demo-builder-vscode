@@ -2,7 +2,7 @@
 
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { createStalenessProject, setupMockFileSystemWithHash, meshDeps } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * The mesh staleness detector is the THIRD resolver over `componentConfigs`, and

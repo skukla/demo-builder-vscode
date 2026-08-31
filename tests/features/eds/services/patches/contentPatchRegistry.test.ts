@@ -11,7 +11,7 @@ import {
     applyContentPatches,
     getContentPatches,
 } from '@/features/eds/services/patches/contentPatchRegistry';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -24,7 +24,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(5);
+        expect(CONTENT_PATCHES).toHaveLength(5);
     });
 
     it('each patch has required fields', () => {

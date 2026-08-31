@@ -22,7 +22,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => {
 });
 
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 async function run(context: unknown) {
     const { handleGetProjectUrls } = await import(
@@ -85,7 +85,7 @@ describe('handleGetProjectUrls', () => {
 
         expect(result.success).toBe(true);
         expect(vscode.env.openExternal).not.toHaveBeenCalled();
-        expect(vscode.window.showInformationMessage ?? (() => {})).not.toBeUndefined();
+        expect(vscode.window.showInformationMessage ?? (() => {})).toBeDefined();
         // No admin-panel prompt path — showInformationMessage is not even called.
         if (vscode.window.showInformationMessage) {
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();

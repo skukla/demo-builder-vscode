@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state/stateManager';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

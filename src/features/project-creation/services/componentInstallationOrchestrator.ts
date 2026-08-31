@@ -13,7 +13,8 @@ import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ComponentManager } from '@/features/components/services/componentManager';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 
 export interface ComponentDefinitionEntry {

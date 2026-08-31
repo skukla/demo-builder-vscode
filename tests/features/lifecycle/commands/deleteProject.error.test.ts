@@ -156,7 +156,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             const retryCalls = debugCalls.filter((call: any[]) =>
                 call[0] && call[0].includes('Waiting')
             );
-            expect(retryCalls.length).toBe(4);
+            expect(retryCalls).toHaveLength(4);
         });
 
         it('should show clear error message with attempt count', async () => {

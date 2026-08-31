@@ -13,7 +13,8 @@ import {
     type MeshApiConfig,
 } from '@/features/project-creation/services/meshSetupService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({

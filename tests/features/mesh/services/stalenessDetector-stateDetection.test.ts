@@ -10,7 +10,7 @@ import {
     setupMockFileSystemWithHash,
     meshDeps,
 } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * StalenessDetector - State Detection Tests

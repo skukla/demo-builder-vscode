@@ -20,7 +20,7 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 }));
 
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'old-ws' };

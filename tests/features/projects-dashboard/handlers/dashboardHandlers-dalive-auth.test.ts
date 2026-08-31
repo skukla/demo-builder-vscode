@@ -9,7 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
 jest.setTimeout(5000);

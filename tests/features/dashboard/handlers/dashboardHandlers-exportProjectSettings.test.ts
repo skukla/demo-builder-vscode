@@ -39,7 +39,7 @@ jest.mock('@/features/projects-dashboard/services/settingsTransferService', () =
 import { handleExportProjectSettings } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';

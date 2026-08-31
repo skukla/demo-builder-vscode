@@ -10,7 +10,7 @@
  */
 
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 import {
     CommandExecutor,

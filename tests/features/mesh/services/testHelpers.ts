@@ -4,7 +4,7 @@
  * Shared mocks, factories, and utilities for mesh deployer test suite.
  */
 
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 import { createMockLogger } from '../../../helpers/loggerFake';

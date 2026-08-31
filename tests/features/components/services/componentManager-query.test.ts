@@ -10,7 +10,7 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { setupComponentManager } from './componentManager.testUtils';
 
 

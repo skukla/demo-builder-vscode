@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Retire the 43 re-export index files, module by module
@@ -90,6 +90,23 @@ stale row, so this is not optional — it is how the ratchet stays honest.
 `index.tsx` files left in `src/`, and the handbook's "43 that predate the rule"
 sentence has been updated to say the ledger is closed.
 
+## DONE — 2026-08-31
+
+All three conditions met, and each was verified rather than assumed:
+
+- `reExportIndex` holds **0 rows**. Control-tested both ways: planting a new
+  re-export index fails the build and names the file; removing it passes.
+- **Seven** `index.tsx` files remain in `src/`, all webview bundle entries. The
+  eighth entry is `main.tsx` — and the comment explaining why was STALE, because
+  the `index.ts` barrel it was avoiding is one of the 43 now gone. Corrected in
+  `esbuild.config.js` and in the handbook, which also said "eight".
+- The handbook now states the ledger is closed.
+
+One `index.ts` survives in `src/`: `core/errors/index.ts`. It is not a barrel —
+it DECLARES fourteen error classes and helpers, so `@/core/errors` already is the
+path that defines the symbol. The rule bans re-export-only indexes, not the
+filename.
+
 ## Shipped so far
 
 - 2026-08-31  Rule ratified by the owner, documented in the handbook and ADR-022,
@@ -111,3 +128,5 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): core/logging retired, and the landmine it was carrying — 5 to 4 (`a7f5e6605`)
 - 2026-08-31  refactor(barrels): core/state, and a doc that stated the old rule — 4 to 3 (`f3bd0fe2b`)
 - 2026-08-31  refactor(barrels): core/shell across 95 importers — 3 to 2 (`4cf21e74a`)
+- 2026-08-31  refactor(barrels): retire the helpers index (PL-31 step 2 of 2) — 2 to 1 (`a56b42a30`)
+- 2026-08-31  refactor(helpers): move validateField out of the re-export index (PL-31 step 1 of 2) (`814268b57`)

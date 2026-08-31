@@ -13,7 +13,7 @@
  * This file contains only shared test data and helper functions.
  */
 
-import type { RawComponentRegistry } from '@/types';
+import type { RawComponentRegistry } from '@/types/components';
 
 /**
  * Sample raw registry data for testing (current structure)

@@ -64,7 +64,7 @@ import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
 

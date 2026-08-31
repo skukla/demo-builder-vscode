@@ -96,7 +96,7 @@ describe('DebugLogger - Core', () => {
         it('should add both channels to subscriptions for cleanup', () => {
             logger = new DebugLogger(mockContext);
 
-            expect(mockContext.subscriptions.length).toBe(2);
+            expect(mockContext.subscriptions).toHaveLength(2);
         });
 
         it('should always output debug messages via info() with [debug] prefix', () => {

@@ -11,11 +11,11 @@
  */
 
 import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
-import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';

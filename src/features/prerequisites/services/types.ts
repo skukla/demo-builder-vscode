@@ -2,7 +2,7 @@
  * Shared types for prerequisites module
  */
 
-import type { InstallStep } from '@/types';
+import type { InstallStep } from '@/types/prerequisites';
 
 /**
  * Prerequisite version check configuration

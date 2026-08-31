@@ -20,14 +20,7 @@
  */
 
 import configTemplate from '../config/config-template.json';
-import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
-import {
-    getProvidedEnvVars,
-    getMeshAppBuilderComponent,
-} from '@/core/state/appBuilderComponentState';
 import { applyBackendOwnedScope } from '@/core/config/backendOwnedScope';
-import componentsConfig from '@/features/components/config/components.json';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_ENVIRONMENT_ID,
@@ -43,7 +36,15 @@ import {
     ACCS_WEBSITE_CODE,
     ACCS_CUSTOMER_GROUP,
 } from '@/core/config/envVarKeys';
-import type { Logger, Project } from '@/types';
+import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
+import {
+    getProvidedEnvVars,
+    getMeshAppBuilderComponent,
+} from '@/core/state/appBuilderComponentState';
+import componentsConfig from '@/features/components/config/components.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
+import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 
 // Bundled template - single source of truth
 

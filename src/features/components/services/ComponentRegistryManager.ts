@@ -15,15 +15,7 @@
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
-import {
-    ComponentRegistry,
-    TransformedComponentDefinition,
-    RawComponentRegistry,
-    RawComponentDefinition,
-    EnvVarDefinition,
-    ServiceDefinition,
-    PresetDefinition,
-} from '@/types';
+import { ComponentRegistry, EnvVarDefinition, PresetDefinition, RawComponentDefinition, RawComponentRegistry, ServiceDefinition, TransformedComponentDefinition } from '@/types/components';
 
 // Re-export DependencyResolver for backward compatibility
 export { DependencyResolver } from './DependencyResolver';

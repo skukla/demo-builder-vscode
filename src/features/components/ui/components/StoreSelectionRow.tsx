@@ -12,6 +12,10 @@
 
 import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
+import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
+import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
+import type { StoreListItem } from '../hooks/useStoreDiscovery';
+import { StoreStructureSelector } from './StoreStructureSelector';
 import {
     PAAS_WEBSITE_CODE,
     PAAS_STORE_CODE,
@@ -20,10 +24,6 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
-import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
-import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
-import type { StoreListItem } from '../hooks/useStoreDiscovery';
-import { StoreStructureSelector } from './StoreStructureSelector';
 
 // ==========================================================
 // Types

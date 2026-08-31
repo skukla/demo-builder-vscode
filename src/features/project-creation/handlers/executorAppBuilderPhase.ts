@@ -96,7 +96,7 @@ export async function ensureWorkspaceRuntimeReady(
  */
 export async function executeAppBuilderIntegrationsPhase(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     typedConfig: ProjectCreationConfig,
     progressTracker: ProgressTracker,
 ): Promise<void> {

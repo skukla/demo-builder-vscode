@@ -10,7 +10,7 @@ import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 

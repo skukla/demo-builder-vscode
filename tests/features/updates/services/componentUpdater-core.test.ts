@@ -10,7 +10,7 @@
 
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 import {
     CommandExecutor,

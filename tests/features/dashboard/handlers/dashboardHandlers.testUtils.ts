@@ -3,7 +3,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

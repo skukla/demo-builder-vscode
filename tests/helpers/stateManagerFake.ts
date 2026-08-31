@@ -30,7 +30,7 @@
  * @see tests/sop/canonical-fakes.test.ts — the ratchet that stops new hand-rolls
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 
 /**

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
 export class ConfigureCommand extends BaseCommand {

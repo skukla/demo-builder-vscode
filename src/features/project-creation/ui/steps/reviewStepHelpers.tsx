@@ -8,12 +8,12 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 import { meshComponentForStack } from './tileStatus';
 import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { cn } from '@/core/ui/utils/classNames';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';

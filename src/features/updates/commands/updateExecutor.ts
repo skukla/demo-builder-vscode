@@ -16,8 +16,8 @@ import {
     type ProjectUpdateItem,
     type TemplateUpdateItem,
 } from './updateTypes';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';

@@ -30,10 +30,10 @@ import type {
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
+import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import type { Logger } from '@/types/logger';
 
 /** The slice of the fetcher config the reads consult. */

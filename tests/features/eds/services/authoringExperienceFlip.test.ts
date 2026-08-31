@@ -13,7 +13,7 @@ import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringE
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 

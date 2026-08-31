@@ -11,18 +11,18 @@
  */
 
 import { promises as fsPromises } from 'fs';
-import type { HelixCodePreview } from './helix/helixCapabilities';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { GitHubFileOperations } from './github/githubFileOperations';
+import type { GitHubTokenService } from './github/githubTokenService';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { HelixService } from './helix/helixService';
 import type { PhaseProgressCallback } from './types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { Logger } from '@/types';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import type { GitHubTokenService } from './github/githubTokenService';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types

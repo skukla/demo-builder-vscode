@@ -12,16 +12,15 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
-import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { Project, ComponentInstance } from '@/types';
-import type { AppBuilderComponentState } from '@/types/base';
+import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';

@@ -86,17 +86,21 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
 
-> **Convention.** A module is imported by the path that DEFINES the symbol. No new
-> re-export-only `index.ts` — not in `core/`, not in a feature. The 43 that predate the
-> rule are a ledger that may only shrink.
+> **Convention.** A module is imported by the path that DEFINES the symbol. No
+> re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
+> CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now
+> a ban with nowhere to write an exception down.
 > [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `reExportIndex`
 > ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels`
 > ledger — now empty — banning feature-level barrels outright.
 > *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
 > also the rule this codebase already follows: **1,935 imports reach into a module from
 > outside it, against 162 from within**, so the barrels were the minority report, not the
-> convention. The eight webview bundle entries are `index.tsx` by necessity and are read
-> from `WEBVIEW_ENTRIES` so the check cannot drift from the build.
+> convention. Seven of the eight webview bundle entries are `index.tsx` by necessity
+> and are read from `WEBVIEW_ENTRIES`, so the check cannot drift from the build. The
+> eighth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
+> beside it and tsc keeps only one file per basename. That barrel is gone, so the
+> constraint is too; the rename is simply not worth an entry-point change.
 >
 > **This replaced an earlier convention that said the opposite for `core/`, and the
 > correction is worth keeping.** The old rule — core is "a shared surface worth curating",

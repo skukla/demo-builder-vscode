@@ -5,8 +5,8 @@
  */
 
 import type { PrerequisiteDefinition } from '../types';
-import type { InstallStep } from '@/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { InstallStep } from '@/types/prerequisites';
 
 export interface InstallStepsResult {
     steps: InstallStep[];

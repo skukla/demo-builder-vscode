@@ -363,7 +363,7 @@ describe('PageLayout', () => {
             const children = Array.from(layoutContainer!.children);
 
             // Should have 3 direct children (header, content area, footer)
-            expect(children.length).toBe(3);
+            expect(children).toHaveLength(3);
         });
 
         it('should render typical wizard page pattern', () => {

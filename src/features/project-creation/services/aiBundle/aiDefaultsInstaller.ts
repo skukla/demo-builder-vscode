@@ -32,10 +32,10 @@ import * as path from 'path';
 import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 

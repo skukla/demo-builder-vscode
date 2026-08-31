@@ -7,7 +7,6 @@
  * @module features/eds/services/storefront/storefrontStalenessDetector
  */
 
-import { getLogger } from '@/core/logging/debugLogger';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_CATALOG_SERVICE_ENDPOINT,
@@ -23,7 +22,8 @@ import {
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
 } from '@/core/config/envVarKeys';
-import type { Project } from '@/types';
+import { getLogger } from '@/core/logging/debugLogger';
+import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
 // ==========================================================

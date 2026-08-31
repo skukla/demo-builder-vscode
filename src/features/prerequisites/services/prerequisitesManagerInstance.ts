@@ -23,10 +23,10 @@
  * @module features/prerequisites/services/prerequisitesManagerInstance
  */
 
+import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import { PrerequisitesManager } from './PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
-import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 
 let instance: PrerequisitesManager | undefined;
 

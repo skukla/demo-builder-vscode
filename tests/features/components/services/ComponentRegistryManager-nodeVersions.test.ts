@@ -80,7 +80,7 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
             // Then: No Node version mappings
-            expect(Object.keys(mapping).length).toBe(0);
+            expect(Object.keys(mapping)).toHaveLength(0);
         });
 
         it('should aggregate component names when multiple components share same version', async () => {

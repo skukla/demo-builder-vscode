@@ -7,10 +7,6 @@ import {
     buildStackChangeStateReset,
 } from '../helpers/stackHelpers';
 import { buildAreaWalk } from './buildAreaWalk';
-import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
-import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
-import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
-import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import {
     getCompletedStepIndices,
     getNextButtonText,
@@ -30,6 +26,10 @@ import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
+import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
+import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
+import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

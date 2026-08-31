@@ -1,7 +1,5 @@
 import * as path from 'path';
-import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
-import type { InstallStep, ProgressMilestone } from '@/types';
 import type {
     PrerequisiteCheck,
     PrerequisiteInstall,
@@ -11,16 +9,18 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { isTimeout, toAppError } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
 import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
 import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
-import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { formatDuration } from '@/core/utils/timeFormatting';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { isTimeout, toAppError } from '@/core/errors';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import type { InstallStep, ProgressMilestone } from '@/types/prerequisites';
 import { toError } from '@/types/typeGuards';
 
 // Extracted modules

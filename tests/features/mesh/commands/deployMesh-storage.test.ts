@@ -308,7 +308,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             );
             // And: componentConfigs should not have any MESH_ENDPOINT entries
             const componentConfigs = capturedProject!.componentConfigs || {};
-            expect(Object.keys(componentConfigs).length).toBe(0);
+            expect(Object.keys(componentConfigs)).toHaveLength(0);
         });
     });
 

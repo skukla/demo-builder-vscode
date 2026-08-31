@@ -13,7 +13,7 @@
  */
 
 import { detectProjectOrgMismatch } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const makeProject = (organization?: string): Project =>

@@ -33,7 +33,7 @@ import {
 } from './appBuilderComponentRunner';
 import type { ProjectAdobeRef } from '@/core/shell/orgContextEnv';
 import { cardInFlightLabel } from '@/core/vscode/progressRegister';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * What a card is told during a move. A narrow local union rather than the

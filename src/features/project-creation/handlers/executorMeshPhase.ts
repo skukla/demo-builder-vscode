@@ -32,7 +32,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
  * A project's deployed mesh endpoint, if any — keyed-first via the shared
  * accessor (legacy meshState fallback inside, ADR-011 D3 Steps 07+09).
  */
-function getMeshEndpoint(project?: import('@/types').Project): string | undefined {
+function getMeshEndpoint(project?: import('@/types/base').Project): string | undefined {
     return getMeshEndpointUrl(project);
 }
 
@@ -95,12 +95,12 @@ export async function ensureMeshPreflightAuth(
 export async function executeMeshPhase(
     context: HandlerContext,
     setupContext: import('@/features/project-creation/services/ProjectSetupContext').ProjectSetupContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     typedConfig: ProjectCreationConfig,
     componentDefinitions: Map<string, ComponentDefinitionEntry>,
     progressTracker: ProgressTracker,
     isEditMode: string | boolean | undefined,
-    existingProject: import('@/types').Project | undefined,
+    existingProject: import('@/types/base').Project | undefined,
 ): Promise<void> {
     // App Builder permission gate. Mesh deployment is an App Builder operation:
     // it creates a workspace credential and deploys an action package, both of
@@ -195,12 +195,12 @@ export async function executeMeshPhase(
 function logMeshDecisionContext(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
-    project: import('@/types').Project,
-    meshComponent: import('@/types').ComponentInstance | undefined,
+    project: import('@/types/base').Project,
+    meshComponent: import('@/types/base').ComponentInstance | undefined,
     meshId: string | undefined,
-    meshDefinition: import('@/types').TransformedComponentDefinition | undefined,
+    meshDefinition: import('@/types/components').TransformedComponentDefinition | undefined,
     isEditMode: string | boolean | undefined,
-    existingProject: import('@/types').Project | undefined,
+    existingProject: import('@/types/base').Project | undefined,
 ): void {
     context.logger.debug(`[Mesh Setup] Decision context:`);
     context.logger.debug(`  - isEditMode: ${isEditMode}`);
@@ -270,7 +270,7 @@ export async function deployFreshMesh(
  */
 export async function populateMeshComponentConfigs(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
 ): Promise<void> {
     const meshInstance = getMeshComponentInstance(project);
     const meshId = getMeshComponentId(project);

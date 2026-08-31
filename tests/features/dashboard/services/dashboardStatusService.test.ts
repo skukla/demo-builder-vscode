@@ -5,7 +5,7 @@
  * These functions handle status payload building and mesh deployment checks.
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 // We'll import from the new service location
 import type { MeshStatusInfo } from '@/types/webviewPayloads';

@@ -19,12 +19,12 @@
 import * as vscode from 'vscode';
 import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
+import type { GitHubTokenService } from './github/githubTokenService';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { isEdsProject } from '@/types/typeGuards';
-import type { GitHubTokenService } from './github/githubTokenService';
 
 /** Coalesce rapid settings edits (e.g. multi-keystroke value changes). */
 const EW_SETTING_DEBOUNCE_MS = 300;

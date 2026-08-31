@@ -23,7 +23,7 @@ import {
     _clearCodePatchCacheForTests,
     type CodePatch,
 } from '@/features/eds/services/patches/codePatchRegistry';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import type { CodePatchSource } from '@/types/demoPackages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 

@@ -15,8 +15,8 @@ import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state/stateManager';
-import { formatMinutes } from '@/core/utils/timeFormatting';
 import { openUrl } from '@/core/utils/browserUtils';
+import { formatMinutes } from '@/core/utils/timeFormatting';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -34,7 +34,7 @@ import { CreateProjectWebviewCommand } from '@/features/project-creation/command
 import { registerGlobalMcp } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 export class CommandManager {

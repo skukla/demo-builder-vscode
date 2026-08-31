@@ -197,6 +197,6 @@ describe('DaLiveContentOperations - HTML transformation', () => {
         );
 
         expect(postedHtml).toContain('<div><p>&nbsp;</p></div>');
-        expect((postedHtml.match(/<div>/g) || []).length).toBe(3);
+        expect((postedHtml.match(/<div>/g) || [])).toHaveLength(3);
     });
 });

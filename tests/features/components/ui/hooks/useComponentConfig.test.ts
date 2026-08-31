@@ -411,7 +411,7 @@ describe('useComponentConfig — narrow interface', () => {
             first.unmount();
             renderHook(() => useComponentConfig(props));
 
-            expect(mockRequest.mock.calls.length).toBe(callsAfterFirst);
+            expect(mockRequest.mock.calls).toHaveLength(callsAfterFirst);
 
             // The registry load is still open — settle so its response commits
             // inside act() rather than at this test's return boundary.

@@ -14,13 +14,6 @@
 import * as crypto from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { COMPONENT_IDS } from '@/core/constants';
-import { getLogger } from '@/core/logging/debugLogger';
-import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getFrontendEnvVars } from '@/core/state/projectStateSync';
-import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { applyBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import {
     PAAS_URL,
@@ -37,8 +30,15 @@ import {
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
 } from '@/core/config/envVarKeys';
+import { COMPONENT_IDS } from '@/core/constants';
+import { getLogger } from '@/core/logging/debugLogger';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getFrontendEnvVars } from '@/core/state/projectStateSync';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import {
     getMeshComponentInstance,

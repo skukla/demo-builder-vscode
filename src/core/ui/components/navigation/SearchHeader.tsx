@@ -36,7 +36,6 @@ import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
-
 import { cn } from '@/core/ui/utils/classNames';
 /** Available view modes */
 export type ViewMode = 'cards' | 'rows';

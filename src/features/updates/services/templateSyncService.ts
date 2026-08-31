@@ -15,12 +15,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
-import type { Project } from '@/types';
-import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
+import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 
 /**
  * Options for template sync operation

@@ -166,7 +166,7 @@ describe('AppBuilderComponentFieldsSection', () => {
         // No section, no inputs at all for an App Builder component whose only var is derived.
         expect(screen.queryByText('Commerce PaaS API Mesh')).not.toBeInTheDocument();
         const inputs = document.querySelectorAll('input');
-        expect(inputs.length).toBe(0);
+        expect(inputs).toHaveLength(0);
         expect(onTextChange).not.toHaveBeenCalled();
         expect(onSecretChange).not.toHaveBeenCalled();
     });

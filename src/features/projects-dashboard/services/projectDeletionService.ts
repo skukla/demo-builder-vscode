@@ -12,8 +12,8 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
@@ -27,8 +27,8 @@ import {
 } from '@/features/eds/services/resourceCleanupHelpers';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { toError } from '@/types/typeGuards';
 import type { Logger } from '@/types/logger';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Retryable error codes for filesystem operations:

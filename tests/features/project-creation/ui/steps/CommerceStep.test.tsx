@@ -319,7 +319,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             const callsBefore = setCanProceed.mock.calls.length;
             fireEvent.click(screen.getByTestId('auth-noop'));
             // The auth body's setCanProceed is a NOOP — it must not reach the gate.
-            expect(setCanProceed.mock.calls.length).toBe(callsBefore);
+            expect(setCanProceed.mock.calls).toHaveLength(callsBefore);
         });
 
         it('should STAY on the pinned signin step when the user signs in (no skip)', () => {

@@ -23,7 +23,7 @@ jest.mock('@/features/updates/services/githubApiClient', () => ({
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { getLatestRelease } from '@/features/updates/services/githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

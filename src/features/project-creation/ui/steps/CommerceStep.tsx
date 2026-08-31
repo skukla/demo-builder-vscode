@@ -53,13 +53,13 @@ import {
 import { sectionBody } from './commerceStepBodies';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
-import { StepRail, type StepTab } from '@/core/ui/components/navigation/StepRail';
-import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
+import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
+import { StepRail, type StepTab } from '@/core/ui/components/navigation/StepRail';
+import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

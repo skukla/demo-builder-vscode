@@ -6,7 +6,7 @@
  * the dashboard-side status push that stayed behind.
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

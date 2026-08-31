@@ -1,11 +1,11 @@
 import { View, Flex, Text, Button, ProgressBar } from '@adobe/react-spectrum';
 import React, { useRef, useCallback, useMemo } from 'react';
+import { isMeshComponentId } from '@/core/constants';
+import { cn } from '@/core/ui/utils/classNames';
 import { getProgressValue, getStatusIcon, renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
 import { usePrerequisiteAutoScroll } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll';
 import { usePrerequisiteNavigation } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation';
 import { usePrerequisiteState } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteState';
-import { isMeshComponentId } from '@/core/constants';
-import { cn } from '@/core/ui/utils/classNames';
 import { WizardState } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
 

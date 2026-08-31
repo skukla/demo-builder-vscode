@@ -17,14 +17,14 @@
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
-import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
+import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 interface EdsContentConfig {
     repoUrl: string;

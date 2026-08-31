@@ -46,7 +46,7 @@ import * as vscode from 'vscode';
 import { handleRefreshBlockLibrary } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

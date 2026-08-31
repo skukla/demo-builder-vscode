@@ -41,7 +41,7 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
 }));
 
 import { readStoreStructure } from '@/features/eds/services/storeStructureReader';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 const STRUCTURE = {
     websites: [

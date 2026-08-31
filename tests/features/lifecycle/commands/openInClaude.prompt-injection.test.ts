@@ -279,7 +279,7 @@ describe('OpenInClaudeCommand', () => {
             const firstTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
                 /sent to claude/i.test(String(c[0]))
             );
-            expect(firstTipCalls.length).toBe(1);
+            expect(firstTipCalls).toHaveLength(1);
             expect(globalState.update).toHaveBeenCalledWith(CLIPBOARD_TIP_KEY, true);
 
             // Second click — flag already set, tip should NOT fire again
@@ -292,7 +292,7 @@ describe('OpenInClaudeCommand', () => {
             const secondTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
                 /sent to claude/i.test(String(c[0]))
             );
-            expect(secondTipCalls.length).toBe(0);
+            expect(secondTipCalls).toHaveLength(0);
         });
 
         it('does NOT inject anything when no prompt is provided', async () => {

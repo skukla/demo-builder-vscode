@@ -131,7 +131,7 @@ describe('GitHub OAuth Service', () => {
             const state = service.generateState();
 
             // Then: Should be valid hex string of correct length
-            expect(state.length).toBe(32);
+            expect(state).toHaveLength(32);
             expect(/^[0-9a-f]+$/i.test(state)).toBe(true);
         });
 

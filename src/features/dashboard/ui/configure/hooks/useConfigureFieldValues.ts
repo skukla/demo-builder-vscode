@@ -17,8 +17,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { UniqueField } from '../configureTypes';
-import { normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { normalizeUrl } from '@/core/validation/Validator';
 import {
     findFieldValue,
     resolveWriteTargets,

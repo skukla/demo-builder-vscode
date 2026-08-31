@@ -16,6 +16,7 @@
  * @module features/eds/services/reset/edsResetUI
  */
 
+import type { GitHubAppService } from '../github/githubAppService';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     executeEdsReset,
@@ -27,7 +28,6 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { GitHubAppService } from '../github/githubAppService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 

@@ -9,7 +9,7 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
 import type { ComponentRegistry } from '@/types/components';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';

@@ -8,7 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 

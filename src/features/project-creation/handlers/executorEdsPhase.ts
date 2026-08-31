@@ -12,7 +12,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
@@ -20,6 +19,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -28,7 +28,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
  */
 export async function populateEdsMetadata(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
 ): Promise<void> {
@@ -168,7 +168,7 @@ async function fetchTemplateCommitSha(
  */
 export async function syncEdsConfigToRemote(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
     edsComponentPath: string,

@@ -23,7 +23,7 @@ import {
 import { ProjectConfigWriter, MANIFEST_FORMAT_VERSION } from '@/core/state/projectConfigWriter';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../helpers/loggerFake';
 
 const silentLogger = createMockLogger() as unknown as Logger;

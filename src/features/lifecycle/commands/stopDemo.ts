@@ -17,11 +17,11 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ExecutionLock } from '@/core/utils/executionLock';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 

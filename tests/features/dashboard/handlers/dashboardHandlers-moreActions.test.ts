@@ -9,7 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 jest.setTimeout(5000);
 

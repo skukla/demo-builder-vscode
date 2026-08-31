@@ -136,7 +136,7 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
             // EDS and PaaS don't have Node requirements
-            expect(Object.keys(mapping).length).toBe(0);
+            expect(Object.keys(mapping)).toHaveLength(0);
         });
 
         it('should return node version mapping for headless frontend', async () => {

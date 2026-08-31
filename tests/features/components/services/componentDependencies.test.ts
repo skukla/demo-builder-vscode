@@ -13,7 +13,7 @@
 import * as fs from 'fs/promises';
 import { ComponentDependencies } from '@/features/components/services/componentDependencies';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { TransformedComponentDefinition } from '@/types';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

@@ -5,7 +5,7 @@
 import { EnvVarDefinition, ComponentRegistry } from '@/types/components';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */

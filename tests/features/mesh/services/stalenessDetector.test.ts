@@ -9,7 +9,7 @@
  */
 
 import { detectMeshChanges, calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
 
 // Mock dependencies

@@ -2,7 +2,7 @@
  * Shared test utilities for StalenessDetector tests
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';

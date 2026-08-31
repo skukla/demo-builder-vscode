@@ -29,8 +29,8 @@
  * ```
  */
 
-import { ErrorCode, getErrorTitle, getErrorCategory } from '@/types/errorCodes';
 import { toAppError } from '@/core/errors';
+import { ErrorCode, getErrorTitle, getErrorCategory } from '@/types/errorCodes';
 
 export class AuthenticationErrorFormatter {
     /**

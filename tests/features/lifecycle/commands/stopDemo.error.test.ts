@@ -161,7 +161,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
     });
 
@@ -181,7 +181,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
 
         it('should allow retry after error', async () => {

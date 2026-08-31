@@ -14,11 +14,11 @@
  * @module features/authentication/services/adobeCliFallback
  */
 
+import { AuthError } from '@/core/errors';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/core/errors';
 import { parseJSON } from '@/types/typeGuards';
 
 /** The slice of the fetcher config the CLI fallback consults. */

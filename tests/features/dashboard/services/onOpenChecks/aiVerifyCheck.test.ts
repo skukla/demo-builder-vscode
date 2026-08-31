@@ -12,7 +12,7 @@
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';

@@ -59,7 +59,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             expect(updatesAfterWait - updatesBeforeWait).toBeLessThan(5);
 
             // Verify no active timers
-            expect(getActiveTimers().length).toBe(0);
+            expect(getActiveTimers()).toHaveLength(0);
         });
     });
 
@@ -110,7 +110,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             expect(updatesAfterWait - updatesBeforeWait).toBeLessThan(5);
 
             // Verify no active timers
-            expect(getActiveTimers().length).toBe(0);
+            expect(getActiveTimers()).toHaveLength(0);
         });
     });
 });

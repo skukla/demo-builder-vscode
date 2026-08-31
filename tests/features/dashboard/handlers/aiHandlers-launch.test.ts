@@ -70,7 +70,7 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({ success: true });
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
             const call = vscode.commands.executeCommand.mock.calls[0];
-            expect(call.length).toBe(1);
+            expect(call).toHaveLength(1);
         });
 
         it('calls demoBuilder.openInClaude with no second argument when payload omits prompt', async () => {
@@ -84,7 +84,7 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({ success: true });
             const call = vscode.commands.executeCommand.mock.calls[0];
             expect(call[0]).toBe('demoBuilder.openInClaude');
-            expect(call.length).toBe(1);
+            expect(call).toHaveLength(1);
         });
 
         // ----- No anchoring in the handler (moved to the command) -----
@@ -180,7 +180,7 @@ describe('aiHandlers — launch & save', () => {
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
             expect(result.success).toBe(true);
-            expect((result.aiPrompts as unknown[]).length).toBe(2);
+            expect((result.aiPrompts as unknown[])).toHaveLength(2);
         });
 
         it('returns success: false when prompt payload is missing', async () => {

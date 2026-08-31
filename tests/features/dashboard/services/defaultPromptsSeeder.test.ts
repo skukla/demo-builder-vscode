@@ -64,7 +64,7 @@ describe('seedDefaultAiPrompts', () => {
         await seedDefaultAiPrompts(gs);
 
         expect(gs.update).not.toHaveBeenCalled();
-        expect((gs._store.get(GLOBAL_AI_PROMPTS_KEY) as AiPrompt[]).length).toBe(DEFAULT_AI_PROMPTS.length);
+        expect((gs._store.get(GLOBAL_AI_PROMPTS_KEY) as AiPrompt[])).toHaveLength(DEFAULT_AI_PROMPTS.length);
     });
 
     it('does NOT resurrect a starter prompt the user deleted (ledger blocks re-seed)', async () => {

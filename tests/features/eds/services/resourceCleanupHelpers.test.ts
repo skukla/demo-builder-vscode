@@ -3,7 +3,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project, ComponentInstance } from '@/types';
+import type { ComponentInstance, Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {

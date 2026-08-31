@@ -34,7 +34,7 @@
  * rather than adding what seems reasonable.
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * A ready EDS-storefront instance, shaped as the real manifest stores it.

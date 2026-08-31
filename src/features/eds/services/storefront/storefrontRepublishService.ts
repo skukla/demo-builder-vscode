@@ -29,7 +29,7 @@ import { HelixService } from '../helix/helixService';
 import type { PhaseProgressCallback } from '../types';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================

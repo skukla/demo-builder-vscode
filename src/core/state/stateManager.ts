@@ -19,7 +19,7 @@ import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
 import { getLogger } from '@/core/logging/debugLogger';
 import { ExecutionLock } from '@/core/utils/executionLock';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import { Project, StateData, ProcessInfo } from '@/types';
+import { ProcessInfo, Project, StateData } from '@/types/base';
 import { parseJSON } from '@/types/typeGuards';
 
 export class StateManager {

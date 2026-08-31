@@ -21,8 +21,8 @@
  * @module features/project-creation/services/catalogPrewarmPhase
  */
 
-import type { Project } from '@/types';
 import type { PdpPublisher } from '@/features/eds/services/catalogPrewarmService';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Progress reporter shared with the executor's other phases. */

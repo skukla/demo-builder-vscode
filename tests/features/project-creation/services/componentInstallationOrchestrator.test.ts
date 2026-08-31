@@ -16,7 +16,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import type { ComponentInstance } from '@/types';
+import type { ComponentInstance } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockInstallNpmDependencies = jest.fn();

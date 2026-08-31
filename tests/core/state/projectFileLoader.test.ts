@@ -13,7 +13,7 @@ import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../helpers/loggerFake';
 

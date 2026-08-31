@@ -16,7 +16,7 @@ import {
     getLatestBranchCommit,
 } from './githubApiClient';
 import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 

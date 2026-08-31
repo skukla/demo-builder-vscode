@@ -24,7 +24,7 @@ import {
 } from '@/features/eds/services/patches/codePatchPipelineHelpers';
 import { _clearCodePatchCacheForTests } from '@/features/eds/services/patches/codePatchRegistry';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import type { CodePatchSource } from '@/types/demoPackages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 

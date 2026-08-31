@@ -37,8 +37,8 @@ import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDispla
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
-import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';

@@ -39,7 +39,7 @@
  */
 
 import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { CHECK_IDS } from '@/types/messages';
 
 /** Badge text when the project outgrew its bundle (composition axis). */

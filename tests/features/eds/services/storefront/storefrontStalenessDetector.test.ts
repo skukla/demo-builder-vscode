@@ -22,7 +22,7 @@ import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /** An EDS/ACCS project with a published storefront state to diff against. */
 function makeAccsProject(publishedEnvVars: Record<string, string>): Project {

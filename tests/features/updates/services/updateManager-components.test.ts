@@ -110,10 +110,10 @@ describe('UpdateManager - Component Updates', () => {
             const results = await updateManager.checkAllProjectsForUpdates([project1, project2] as any);
 
             // Then: should detect update for the repoUrl-only component
-            expect(results.length).toBe(1);
+            expect(results).toHaveLength(1);
             expect(results[0].componentId).toBe('eds-storefront');
             expect(results[0].latestVersion).toBe('1.1.0');
-            expect(results[0].outdatedProjects.length).toBe(2);
+            expect(results[0].outdatedProjects).toHaveLength(2);
         });
 
         it('should skip repoUrl-only components without paths in multi-project check', async () => {
@@ -128,7 +128,7 @@ describe('UpdateManager - Component Updates', () => {
             const results = await updateManager.checkAllProjectsForUpdates([project] as any);
 
             // Then: should skip (no path registered)
-            expect(results.length).toBe(0);
+            expect(results).toHaveLength(0);
         });
 
         it('should handle mix of resolver-known and repoUrl-only in multi-project', async () => {
@@ -156,7 +156,7 @@ describe('UpdateManager - Component Updates', () => {
             const results = await updateManager.checkAllProjectsForUpdates([project] as any);
 
             // Then: both components should have updates detected
-            expect(results.length).toBe(2);
+            expect(results).toHaveLength(2);
             const componentIds = results.map(r => r.componentId);
             expect(componentIds).toContain('commerce-mesh');
             expect(componentIds).toContain('eds-storefront');

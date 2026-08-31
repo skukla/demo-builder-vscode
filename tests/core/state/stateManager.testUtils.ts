@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 // Mock VS Code API

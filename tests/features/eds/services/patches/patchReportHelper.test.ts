@@ -37,7 +37,7 @@ import {
     logUnapplied,
     reportUnapplied,
 } from '@/features/eds/services/patches/patchReportHelper';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockLogger: Logger = createMockLogger();

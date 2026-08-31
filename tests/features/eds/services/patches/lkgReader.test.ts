@@ -11,7 +11,7 @@
 
 import { _clearExternalPatchCacheForTests } from '@/features/eds/services/patches/externalPatchFetcher';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockLogger: Logger = createMockLogger();

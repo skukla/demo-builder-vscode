@@ -195,8 +195,12 @@ function runMcpProxyBuild() {
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
     wizard:       'src/features/project-creation/ui/wizard/index.tsx',
-    // main.tsx, not index.tsx: an index.ts barrel sits beside it, and tsc keeps
-    // only one file per basename — an index.tsx entry here is never typechecked.
+    // main.tsx, not index.tsx. The reason was that an index.ts barrel sat beside
+    // it and tsc keeps only one file per basename, so an index.tsx entry here
+    // would never have been typechecked. THAT BARREL IS GONE (PL-31, 2026-08-31)
+    // and the constraint with it — renaming this to index.tsx would now be safe,
+    // and is deliberately not done here because it is an entry-point rename with
+    // its own blast radius, not part of retiring a barrel.
     dashboard:    'src/features/dashboard/ui/main.tsx',
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',
