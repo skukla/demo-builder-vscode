@@ -27,7 +27,7 @@ jest.mock('@/core/validation', () => ({
 }));
 
 export * as fs from 'fs/promises';
-export { ResetAllCommand } from '@/core/commands/ResetAllCommand';
+export { ResetAllCommand } from '@/commands/ResetAllCommand';
 export { ServiceLocator } from '@/core/di';
 export * as vscode from 'vscode';
 

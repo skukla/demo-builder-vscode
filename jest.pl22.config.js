@@ -27,7 +27,7 @@ module.exports = {
     rootDir: __dirname,
     testMatch: [
         '**/tests/commands/claudeCodeFootprint.test.ts',
-        '**/tests/core/commands/commandManager.test.ts',
+        '**/tests/commands/commandManager.test.ts',
         '**/tests/core/utils/mcpSocketPath.test.ts',
         '**/tests/features/ai/server/mcpSocketDiscovery.test.ts',
         '**/tests/features/ai/server/realSdkRegistration.test.ts',

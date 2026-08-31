@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { resetAiOnboardingState } from '@/commands/openInClaude';
+import { resetAiOnboardingState } from './openInClaude';
 import { BaseCommand } from '@/core/base/baseCommand';
 
 /**

@@ -36,8 +36,6 @@
     },
     "_featureBarrels_note": "ADR-022 forbids NEW feature barrels; these five predate it. The ledger only shrinks, so retiring one means deleting its row in the same commit. Counts are importers of the bare `@/features/<name>` specifier, measured 2026-08-30.",
     "layerDirection": {
-        "src/core/commands/ResetAllCommand.ts": "MISPLACED, not miswritten: a command that orchestrates features is doing exactly what commands are for \u2014 it is in the wrong DIRECTORY. Fix by moving it to src/commands/, not by changing what it does.",
-        "src/core/commands/ResetAiOnboardingCommand.ts": "same as ResetAllCommand \u2014 a command living under core/. Moves with it.",
         "src/core/di/serviceLocator.ts": "`import type` only (AuthenticationService, SidebarProvider): no runtime coupling and no cycle, so this is the benign one. Fix by moving both interfaces to @/types, or ratify it as permanent \u2014 a locator has to name what it locates.",
         "src/core/state/apiOwners.ts": "runtime: reaches into a feature's catalog loader (getAppBuilderComponentEntry) from core/state.",
         "src/core/state/projectFileLoader.ts": "runtime: stripDuplicateBackendOwnedScope from features/components/config.",

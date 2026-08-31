@@ -83,7 +83,7 @@ jest.mock('@/commands/openInClaude', () => {
 });
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
-jest.mock('@/core/commands/ResetAllCommand');
+jest.mock('@/commands/ResetAllCommand');
 jest.mock('@/features/lifecycle/commands/deleteProject');
 jest.mock('@/features/lifecycle/commands/viewStatus');
 jest.mock('@/features/lifecycle/commands/startDemo');
