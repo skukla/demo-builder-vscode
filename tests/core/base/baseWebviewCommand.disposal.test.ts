@@ -23,14 +23,6 @@ let mockPanel: any;
 let mockDisposeCallback: (() => void) | undefined;
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock VS Code API with comprehensive webview support
 jest.mock('vscode', () => ({

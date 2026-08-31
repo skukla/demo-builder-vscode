@@ -13,14 +13,6 @@ jest.mock('tree-kill', () => mockTreeKill);
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 describe('ProcessCleanup - Mocked Tests', () => {
     let originalKill: typeof process.kill;

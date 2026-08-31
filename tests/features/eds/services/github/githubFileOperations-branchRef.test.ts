@@ -46,17 +46,6 @@ jest.mock('@octokit/core', () => ({
     },
 }));
 
-
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
-
 const tokenService = {
     getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
 } as unknown as GitHubTokenService;

@@ -15,7 +15,6 @@ import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';

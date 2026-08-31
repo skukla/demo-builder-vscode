@@ -62,10 +62,6 @@ jest.mock('vscode', () => ({
 // Mock logging
 const mockLogger = createMockLogger();
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => mockLogger),
-}));
-
 // Create mock handler context
 function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return {

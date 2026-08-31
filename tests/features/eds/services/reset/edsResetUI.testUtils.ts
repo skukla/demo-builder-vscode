@@ -58,15 +58,6 @@ jest.mock(
     }),
     { virtual: true }
 );
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         NORMAL: 30000,

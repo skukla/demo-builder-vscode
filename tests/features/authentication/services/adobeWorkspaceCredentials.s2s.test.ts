@@ -9,10 +9,6 @@
  * read the same day (created/detail/secrets keys).
  */
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-}));
-
 import { AdobeWorkspaceCredentials } from '@/features/authentication/services/adobeWorkspaceCredentials';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';

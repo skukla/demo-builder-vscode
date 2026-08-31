@@ -46,20 +46,6 @@ jest.mock('@/core/di', () => ({
 }));
 
 // Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
 
 // The SUT, re-exported so specs never import it directly — see the header.
 export { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';

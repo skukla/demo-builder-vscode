@@ -22,14 +22,6 @@ jest.mock('vscode', () => ({
         parse: jest.fn((url: string) => ({ url })),
     },
 }));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';

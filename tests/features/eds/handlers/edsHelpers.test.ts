@@ -79,14 +79,6 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 });
 
 // Mock logging
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 /**
  * Creates a mock HandlerContext for testing

@@ -27,20 +27,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 // Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
 // Mock ServiceLocator for CommandExecutor (lsof commands)
 const mockCommandExecutor = {
     execute: jest.fn(),

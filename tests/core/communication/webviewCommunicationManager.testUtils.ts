@@ -9,14 +9,6 @@ import type { Message } from '@/types/messages';
 // Mock VS Code API
 
 // Mock debugLogger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    })
-}));
 
 export interface TestMocks {
     mockPanel: vscode.WebviewPanel;

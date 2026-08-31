@@ -13,7 +13,6 @@
  */
 
 // Mock dependencies - MUST be before imports
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';

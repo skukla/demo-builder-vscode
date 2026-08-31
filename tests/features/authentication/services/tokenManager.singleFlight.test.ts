@@ -16,16 +16,6 @@
 
 import { TokenManager, type StoredTokenConfig } from '@/features/authentication/services/tokenManager';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 /** A valid entry: >100 chars and an expiry comfortably in the future. */
 function tokenPayload(): StoredTokenConfig {
     return { token: 'x'.repeat(150), expiry: Date.now() + 3_600_000 };

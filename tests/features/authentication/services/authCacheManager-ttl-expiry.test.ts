@@ -20,14 +20,6 @@ import {
  */
 
 // Mock getLogger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('AuthCacheManager - TTL & Expiry', () => {
     let cacheManager: AuthCacheManager;

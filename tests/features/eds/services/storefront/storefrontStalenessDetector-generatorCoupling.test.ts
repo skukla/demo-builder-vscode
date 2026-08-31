@@ -24,16 +24,6 @@ import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGe
 import { getStorefrontEnvVars } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import * as ENV from '@/core/config/envVarKeys';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
-
 /**
  * Every env key in the schema, each holding a distinct sentinel — passed through
  * `getStorefrontEnvVars`, which keeps ONLY the watched subset. Whatever survives

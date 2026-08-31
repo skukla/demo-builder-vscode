@@ -28,14 +28,6 @@ jest.mock('vscode', () => ({
     EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
 }));
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 export { DaLiveAuthService };
 export { ExtensionContext };

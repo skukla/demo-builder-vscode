@@ -23,14 +23,6 @@ jest.mock('vscode', () => ({
     },
 }), { virtual: true });
 // Mock Logger
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 // Mock timeoutConfig - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {

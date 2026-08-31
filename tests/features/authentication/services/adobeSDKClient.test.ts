@@ -20,15 +20,6 @@ jest.mock('@adobe/aio-lib-console', () => ({
     init: jest.fn(),
 }));
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 jest.mock('@/core/validation', () => ({
     validateAccessToken: jest.fn(),
 }));

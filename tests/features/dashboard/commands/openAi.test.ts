@@ -18,20 +18,6 @@ import type { Project } from '@/types';
 jest.mock('@/core/state');
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Mock the AI handler map so we can verify wiring
 jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({

@@ -12,7 +12,6 @@ import type { CommandExecutor } from '@/core/shell';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
 
 import { getLogger } from '@/core/logging';
 

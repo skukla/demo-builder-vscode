@@ -14,8 +14,6 @@
  */
 
 import { StepLogger, getLogger } from '@/core/logging';
-
-jest.mock('@/core/logging');
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 

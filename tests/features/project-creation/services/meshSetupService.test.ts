@@ -16,7 +16,6 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 import type { Project, TransformedComponentDefinition } from '@/types';
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));

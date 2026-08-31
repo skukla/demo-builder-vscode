@@ -33,14 +33,6 @@ const mockGetLogger = jest.fn();
 jest.mock('vscode', () => ({ window: {}, workspace: {} }), { virtual: true });
 // The cache manager imports getLogger from the MODULE, not the barrel
 // (`@/core/logging/debugLogger`), so both need stubbing.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: (...a: unknown[]) => mockGetLogger(...a),
-}));
-jest.mock('@/core/logging', () => ({
-    getLogger: (...a: unknown[]) => mockGetLogger(...a),
-    getStepLogger: jest.fn().mockReturnValue({}),
-    ErrorLogger: class {},
-}));
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({}),

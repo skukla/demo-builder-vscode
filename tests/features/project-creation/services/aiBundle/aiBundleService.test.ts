@@ -69,15 +69,6 @@ jest.mock('child_process', () => ({
 
 // The orchestrator builds its writer via getLogger(); jest never calls
 // initializeLogger.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

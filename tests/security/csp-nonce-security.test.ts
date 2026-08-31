@@ -16,7 +16,6 @@ import type { Logger } from '@/types/logger';
 // Mock dependencies
 jest.mock('@/core/communication/webviewCommunicationManager');
 jest.mock('@/core/utils/loadingHTML');
-jest.mock('@/core/logging/debugLogger');
 
 // Concrete test implementation of BaseWebviewCommand
 class TestWebviewCommand extends BaseWebviewCommand {

@@ -31,16 +31,6 @@
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 // SIX AUTOMOCKS USED TO SIT HERE, and both suites carried them:
 //
 //   githubTokenService · githubRepoOperations · githubFileOperations

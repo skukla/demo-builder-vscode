@@ -8,7 +8,6 @@
 import { setupMocks, mockOrgs, mockProjects, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
-jest.mock('@/core/logging');
 
 import { getLogger } from '@/core/logging';
 

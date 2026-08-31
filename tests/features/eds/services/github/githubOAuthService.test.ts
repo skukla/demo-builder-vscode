@@ -27,14 +27,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('GitHub OAuth Service', () => {
     // Import after mocks are set up

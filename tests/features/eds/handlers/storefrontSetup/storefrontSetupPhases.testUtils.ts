@@ -34,17 +34,6 @@
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn().mockResolvedValue(null),

@@ -22,15 +22,6 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
 }));
 
-
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 jest.mock('@/core/validation', () => ({
     validateProjectPath: jest.fn(),
 }));

@@ -9,14 +9,6 @@ import { InstallStep } from '@/features/prerequisites/services/PrerequisitesMana
 import { UnifiedProgress } from '@/core/utils/progressUnifier';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 /**
  * Create a mock InstallStep for testing

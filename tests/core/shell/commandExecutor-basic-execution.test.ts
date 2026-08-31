@@ -5,15 +5,6 @@ import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessCom
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
 
 describe('CommandExecutor - Basic Execution', () => {
     let commandExecutor: CommandExecutor;

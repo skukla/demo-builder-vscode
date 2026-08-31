@@ -11,14 +11,6 @@
 
 // The orchestrator writes step-level debug lines (AI-5); no logger singleton
 // exists under jest, so the module-level getLogger is stubbed.
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import {
     teardownConsoleProject,

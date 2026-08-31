@@ -44,16 +44,6 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 // Service imports required by the daLiveSiteConfig module to load.
 jest.mock('@/features/eds/services/github/githubTokenService');
 jest.mock('@/features/eds/services/github/githubRepoOperations');

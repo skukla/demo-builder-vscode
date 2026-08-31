@@ -24,10 +24,6 @@ import {
 } from '@/core/config/envVarKeys';
 import type { Project } from '@/types';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-}));
-
 /** An EDS/ACCS project with a published storefront state to diff against. */
 function makeAccsProject(publishedEnvVars: Record<string, string>): Project {
     return {

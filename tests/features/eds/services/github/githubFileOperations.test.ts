@@ -20,14 +20,6 @@ jest.mock('@octokit/core', () => ({
 
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('buildArchiveUrl', () => {
     // Test the SHA-vs-branch URL routing directly. The wider

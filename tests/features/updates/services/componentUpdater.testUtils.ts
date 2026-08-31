@@ -12,7 +12,6 @@
  */
 
 // Mock dependencies
-jest.mock('@/core/logging');
 jest.mock('@/core/validation');
 jest.mock('fs/promises');
 jest.mock(

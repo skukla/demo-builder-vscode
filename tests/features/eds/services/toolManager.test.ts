@@ -44,11 +44,6 @@ jest.mock('os', () => ({
 }));
 
 // Mock logging
-const mockLogger = createMockLogger();
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => mockLogger),
-    Logger: jest.fn(() => mockLogger),
-}));
 
 // Mock ServiceLocator
 const mockCommandExecutor = {
@@ -73,7 +68,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ToolManager', () => {
     let toolManager: ToolManager;

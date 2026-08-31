@@ -11,7 +11,6 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 import type { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';

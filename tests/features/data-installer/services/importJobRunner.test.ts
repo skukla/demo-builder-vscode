@@ -31,9 +31,6 @@ jest.mock('@/core/utils/sleep');
 // `PollingService` reaches for the global logger at construction
 // (`private logger = getLogger()`), which throws in a bare node test. Same stub
 // shape `fileWatcher`'s suite uses.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-}));
 
 import { watchImportJob, IMPORT_POLL } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';

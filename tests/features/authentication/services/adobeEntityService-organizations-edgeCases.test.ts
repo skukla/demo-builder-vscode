@@ -7,7 +7,6 @@
 import { setupMocks, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
-jest.mock('@/core/logging');
 jest.mock('@/core/validation');
 jest.mock('@/types/typeGuards');
 

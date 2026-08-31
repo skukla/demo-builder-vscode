@@ -36,10 +36,6 @@ const mockGetCacheTTLWithJitter = jest.fn((ttl: number) => ttl);
  * rather than on the assertion — a pass for the wrong reason. Stubbing it makes
  * the fallback succeed, so only the assertion below can tell the two apart.
  */
-const fallbackLogger = createMockLogger();
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => fallbackLogger,
-}));
 
 jest.mock('@/core/cache/cacheUtils', () => ({
     getCacheTTLWithJitter: (ttl: number) => mockGetCacheTTLWithJitter(ttl),

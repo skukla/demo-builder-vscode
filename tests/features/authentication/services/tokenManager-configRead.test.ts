@@ -35,16 +35,6 @@ jest.mock('@adobe/aio-lib-core-config', () => ({
     reload: () => mockReload(),
 }));
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 import { readStoredTokenConfig } from '@/features/authentication/services/tokenManager';
 
 beforeEach(() => {

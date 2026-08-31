@@ -102,7 +102,6 @@ jest.mock('@/features/eds/utils/daLiveTokenBookmarklet', () => ({
 
 // Mock StateManager, Logger
 jest.mock('@/core/state');
-jest.mock('@/core/logging');
 
 describe('CommandManager', () => {
     let commandManager: CommandManager;

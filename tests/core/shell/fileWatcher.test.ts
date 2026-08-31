@@ -6,14 +6,6 @@ import { EventEmitter } from 'events';
 // CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is
 // handed in. The module mock stays only because this suite builds its fake via
 // `new PollingService()` and relies on the automock for the method surface.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
 
 describe('FileWatcher', () => {
     let fileWatcher: FileWatcher;

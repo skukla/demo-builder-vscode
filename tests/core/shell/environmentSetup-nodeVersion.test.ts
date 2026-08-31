@@ -12,7 +12,6 @@ import {
     createEnvironmentSetup,
     mockVSCodeExtension,
     resetAllMocks,
-    mockLogger
 } from './environmentSetup.testUtils';
 
 jest.mock('fs');
@@ -22,9 +21,6 @@ jest.mock('os', () => ({
 }));
 jest.mock('child_process', () => ({
     execSync: jest.fn()
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => mockLogger
 }));
 
 describe('EnvironmentSetup - Node Version Management', () => {

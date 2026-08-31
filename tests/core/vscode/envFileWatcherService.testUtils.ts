@@ -9,14 +9,6 @@ import * as vscode from 'vscode';
 import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock file system watchers
 export const mockWatchers: any[] = [];

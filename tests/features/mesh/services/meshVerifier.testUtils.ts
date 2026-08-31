@@ -35,16 +35,6 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 // `getLogger()` throws when the logger is uninitialised, and the non-DI entry
 // points call it. The DI suite exists precisely to prove the service takes its
 // logger by injection instead; this mock is what lets the OTHER suite run at all.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Below the factories on purpose: they hoist above it, so the subject binds to
 // the mocked modules. `import/first` is not a registered eslint rule here.

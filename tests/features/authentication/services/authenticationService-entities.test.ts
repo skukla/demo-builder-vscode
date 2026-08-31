@@ -25,7 +25,6 @@ import {
  */
 
 // Only mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 

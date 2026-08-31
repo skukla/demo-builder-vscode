@@ -14,14 +14,6 @@
  */
 
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import { AdobeOrgServices } from '@/features/authentication/services/adobeOrgServices';
 import { sleep } from '@/core/utils/sleep';

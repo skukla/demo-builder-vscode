@@ -32,14 +32,6 @@ import { EventEmitter } from 'events';
 // `new PollingService()` and relies on the automock for the method surface.
 
 // Mock logging - must match the import path in fileWatcher.ts: '@/core/logging'
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
 
 /**
  * Helper to create a mock VS Code FileSystemWatcher

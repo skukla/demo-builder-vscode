@@ -16,8 +16,6 @@ import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDK
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
-
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';

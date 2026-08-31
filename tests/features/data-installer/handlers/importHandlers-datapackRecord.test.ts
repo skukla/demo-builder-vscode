@@ -22,10 +22,6 @@ import type { HandlerContext } from '@/types/handlers';
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-}));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),

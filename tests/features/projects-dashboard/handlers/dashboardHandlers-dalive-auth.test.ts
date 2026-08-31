@@ -112,16 +112,6 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 }));
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        show: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock validation
 jest.mock('@/core/validation', () => ({

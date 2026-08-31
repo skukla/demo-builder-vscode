@@ -20,8 +20,6 @@ import {
  * deleteConsoleProject) plus clearConsoleContext, which forwards to the
  * SELECTOR (not the fetcher).
  */
-
-jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 

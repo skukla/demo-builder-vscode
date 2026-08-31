@@ -10,12 +10,6 @@ jest.mock('vscode', () => ({
     workspace: { getConfiguration: jest.fn() },
 }), { virtual: true });
 
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-    })),
-}));
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));

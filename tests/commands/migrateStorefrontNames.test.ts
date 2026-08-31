@@ -11,17 +11,6 @@ import * as vscode from 'vscode';
 // Mocks — must precede imports.
 // ---------------------------------------------------------------------------
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    })),
-    initializeLogger: jest.fn(),
-}));
-
 jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: jest.fn(),
 }));

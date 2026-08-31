@@ -13,7 +13,6 @@ import { StateManager } from '@/core/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 
 /**
  * Create mock ExtensionContext

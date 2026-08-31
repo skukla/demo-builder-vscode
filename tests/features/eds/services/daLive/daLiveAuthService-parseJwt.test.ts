@@ -11,15 +11,6 @@ jest.mock('vscode', () => ({
     Uri: { parse: jest.fn((s: string) => s) },
 }));
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 import { parseJwtPayload } from '@/features/eds/services/daLive/daLiveAuthService';
 
 // Helper to create test JWT tokens

@@ -19,15 +19,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 jest.mock('@/core/state', () => ({
     getFrontendEnvVars: jest.fn((config) => ({
         MESH_ENDPOINT: config.MESH_ENDPOINT || '',

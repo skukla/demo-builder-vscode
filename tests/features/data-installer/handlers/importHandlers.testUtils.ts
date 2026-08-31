@@ -22,10 +22,6 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing
 // up as "watchImportJob was not called" rather than as a logger error.
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-}));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
