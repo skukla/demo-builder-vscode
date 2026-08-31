@@ -25,9 +25,6 @@ export {};
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { NORMAL: 30000, POLL: { INTERVAL: 5000 } },
-}));
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => ({

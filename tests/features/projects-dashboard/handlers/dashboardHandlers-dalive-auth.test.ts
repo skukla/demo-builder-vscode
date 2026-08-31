@@ -33,32 +33,6 @@ const mockQuickPick = {
 };
 
 // Mock vscode
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    window: {
-        activeColorTheme: { kind: 1 },
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showInformationMessage: jest.fn().mockResolvedValue(undefined),
-        withProgress: jest.fn(),
-        createQuickPick: jest.fn(() => mockQuickPick),
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    env: {
-        openExternal: jest.fn(),
-        clipboard: {
-            readText: jest.fn(),
-        },
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
 
 // Mock DaLiveAuthService
 const mockIsAuthenticated = jest.fn();

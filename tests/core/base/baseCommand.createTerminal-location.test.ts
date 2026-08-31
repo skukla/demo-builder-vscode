@@ -9,39 +9,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
-jest.mock('vscode', () => ({
-    window: {
-        createTerminal: jest.fn(() => ({
-            name: 'test',
-            processId: Promise.resolve(1234),
-            dispose: jest.fn(),
-            sendText: jest.fn(),
-            show: jest.fn(),
-        })),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn((options, task) => task({ report: jest.fn() })),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-    },
-    ProgressLocation: { Notification: 15 },
-    Uri: { file: (p: string) => ({ fsPath: p }) },
-    ViewColumn: {
-        Active: -1,
-        Beside: -2,
-        One: 1,
-        Two: 2,
-    },
-}));
 
 class TestCommand extends BaseCommand {
     public async execute(): Promise<void> {

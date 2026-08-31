@@ -15,38 +15,8 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        createTerminal: jest.fn(() => ({
-            name: 'test',
-            processId: Promise.resolve(1234),
-            dispose: jest.fn(),
-            sendText: jest.fn(),
-            show: jest.fn(),
-        })),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn((options, task) => task({ report: jest.fn() })),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    Uri: {
-        file: (path: string) => ({ fsPath: path }),
-    },
-}));
 
 // Concrete test command (BaseCommand is abstract)
 class TestCommand extends BaseCommand {
