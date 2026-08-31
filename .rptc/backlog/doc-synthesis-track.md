@@ -190,3 +190,5 @@ the point of Phase C existing.
 - 2026-08-30  fix(skills): the shipped mesh command does not exist; bump AI_CONTEXT_VERSION (`d1316e832`)
 - 2026-08-30  docs: read every module README + product template; pin the skill counts (`53d6505fd`)
 - 2026-08-30  docs(skills): read all 37; fix a skill that defended a deleted mechanism (`1532f4805`)
+- 2026-08-30  docs: finish Phase B — the catalog was telling agents a delete was safe (`5ad2eb24b`)
+- 2026-08-30  docs(backlog): re-measure the Phase C gap; its own list had gone stale (`40c025706`)
