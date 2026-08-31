@@ -39,3 +39,5 @@ subsequent fix measurable and irreversible.
 - 2026-08-30  feat(tooling): test-strategy-scan — the release-cut read of the SUITE, not the run (`aa0c48b55`)
 - 2026-08-31  docs(skills): webview-test-authoring gains its ADR-016 pointers — PL-14 item 7 (`697422ff7`)
 - 2026-08-31  Item 7 (webview-test-authoring ADR-016 pointers) shipped — all seven artifacts now landed. Left at 'built', not 'shipped': the instruments run, but nobody has yet authored a webview test against the new sections.
+- 2026-08-31  test(eds): the daLiveAuthPrompt family, where most of the shared setup was dead (`a2637e4c2`)
+- 2026-08-31  test(ai): the mcpInspector family shares its harness — and the comment that stopped it (`5bbedff38`)

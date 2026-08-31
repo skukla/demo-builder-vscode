@@ -182,6 +182,54 @@ declaration, free to drift from the real one — now derived from it instead. An
 check immediately caught me leaving twelve entries on the list after they had been paid
 off, which is exactly how a shrink-only list quietly stops shrinking.
 
+## The last tooling gap, and two test families tidied
+
+**In one paragraph:** the skill that tells someone how to write a webview test had no
+reference at all to the document that governs how tests are written here — so anyone
+following it wrote to a house style nobody had told them about. Fixed, which completes a
+seven-item list that had been open since 28 August. Then I started on the list of test
+files that duplicate each other's setup, did two of them, and in both cases the
+interesting part was discovering that some of what looked shared was not worth sharing.
+
+### The skill (the seven-item list is now done)
+
+Two new sections. One says where a test's stand-in objects should come from and names
+the one thing that looks like an exception and is not. The other is the part that changes
+behaviour today: warnings about React rendering used to be tolerated in their hundreds,
+and are now a hard failure. That was already true; nobody had written it down where a
+person writing a test would see it. I proved the check still works before saying so —
+an empty exception list and a broken check look identical.
+
+That verification also caught the skill citing a line number that had since moved. I
+dropped the line number rather than updating it, because a citation that needs
+maintaining will not get it.
+
+### Two families of duplicated test setup
+
+**mcpInspector.** Two suites carried an identical 60-line block of setup, and one of them
+explained why in a comment: the setup supposedly *has* to be repeated, for a technical
+reason. That reason is not true, and believing it is what produced the duplication. Moved
+to a shared file; 37 tests identical before and after, diffed name by name.
+
+Then I checked the shared reset actually holds something up, by deleting each of its five
+lines and re-running. Four are load-bearing. One is not — and my first draft of that
+file's comment had asserted it prevents a specific failure. Nothing shows that. Corrected
+the comment to say it is a reasoned precaution with no test behind it, which is what I
+can actually support.
+
+**daLiveAuthPrompt.** Looked like the same job and was not. Seven of the nine shared
+setup lines turned out to be DEAD — the code under test never touches those modules, and
+all 51 tests pass without them. Extracting them would have preserved dead weight
+somewhere tidier. Deleted instead. What did get shared is a helper both suites had
+written their own copy of, now built on the standard one.
+
+**And it found a mistake in the check I added earlier tonight.** That check was failing
+files for something the test runner forbids — using the shared helper in a place where it
+cannot be used. It was demanding the impossible, and the only way to satisfy it was to
+put the copy back. Fixed, with tests proving it in both directions. That correction also
+re-counts the debt honestly: of 408 files flagged, 107 could never have been fixed. The
+real number is 301.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?
