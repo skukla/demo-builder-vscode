@@ -215,3 +215,7 @@ the point of Phase C existing.
 - 2026-08-30  docs(skills): read all 37; fix a skill that defended a deleted mechanism (`1532f4805`)
 - 2026-08-30  docs: finish Phase B — the catalog was telling agents a delete was safe (`5ad2eb24b`)
 - 2026-08-30  docs(backlog): re-measure the Phase C gap; its own list had gone stale (`40c025706`)
+- 2026-08-30  docs: finish Phase C — pin the five numbers, and two pins that could not fail (`bef763f88`)
+- 2026-08-30  docs(handbook): pair the three verification rules that lived only in CLAUDE.md (`b95db0807`)
+- 2026-08-30  docs: standardize the front door — one per area, and the frontend had none (`e5fe59592`)
+- 2026-08-30  docs(backlog): the second-pass table still listed Phase B as pending (`87b7456a6`)

@@ -44,7 +44,7 @@ finished (see [[PL-29]]'s second-pass table).
 | # | Track | State | What is left |
 |---|---|---|---|
 | 1 | Claims from three t3.gg videos, applied where they fit | **Done**, enforced | — |
-| 2 | Documentation synthesis — canonical, useful, enforced | **Active** — [[PL-29]]. Phases A and B done | Phase C: two files, five numbers |
+| 2 | Documentation synthesis — canonical, useful, enforced | **Phases A, B and C all DONE** — [[PL-29]] | Nothing this track owns. Two documents stay provisional until track 3 settles the strategy they describe |
 | 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 8 enforcer suites; ~24 completed test plans | 13 mock-wall suites, shared fixture builders ([[PL-16]]), the mutation follow-through ([[PL-22]]) |
 | 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — 66 conventions; `where-code-goes.md`; 5 enforcer suites | 30 shrink-only ledger rows ([[PL-13]]), the CSS decision ADR-018 parked ([[PL-21]]), [[PL-19]], [[PL-20]] |
 
@@ -104,4 +104,13 @@ the state table above is the record until there is real work to hold.
 ## Shipped so far
 
 - 2026-08-30  Track 1 complete and enforced
-- 2026-08-30  Track 2 phases A and B complete ([[PL-29]] carries the detail)
+- 2026-08-30  Track 2 phases A, B and C complete ([[PL-29]] carries the detail).
+  [[PL-28]] closed with it — all ten rules adjudicated, six ratified, two deleted,
+  one deferred, one resolved as judgement rather than law
+- 2026-08-30  Pre-loop reconciliation for track 3: record validates (88 items, all six
+  hygiene sections clean with controls), 8 unlogged commits recorded, and ADR-016's
+  mock-wall claim RE-VERIFIED before the loop picks it up — 25 suites still mock
+  `HelixService` against the 26 measured in August, 12 for `ConfigurationService`, and
+  all 13 named files still on disk. The item is live, not stale.
+- 2026-08-30  docs(backlog): tracks 3 and 4 were never "not started" — they built the handbook (`baf02741e`)
+- 2026-08-30  docs(backlog): the four-track program existed nowhere (`acc687f94`)
