@@ -15,26 +15,18 @@
 import { ComponentManager } from '@/features/components/services/componentManager';
 import { Project } from '@/types';
 import { TransformedComponentDefinition } from '@/types/components';
-import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { CommandExecutor } from '@/core/shell';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createComponentServiceProject,
-    mockSuccessfulExecution,
     mockFileExists,
 } from './testHelpers';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
 
 describe('ComponentManager - Installation (Git Clone)', () => {
     let componentManager: ComponentManager;
-    let mockLogger: Logger;
     let mockProject: Project;
     let mockCommandExecutor: CommandExecutor;
 
@@ -51,19 +43,8 @@ describe('ComponentManager - Installation (Git Clone)', () => {
             status: 404,
         } as never);
 
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createComponentServiceProject();
-        mockCommandExecutor = createMockCommandExecutor();
+        ({ componentManager, mockProject, mockCommandExecutor } = setupComponentManager());
 
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger, mockCommandExecutor);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
     });
 
     describe('Git clone operations', () => {

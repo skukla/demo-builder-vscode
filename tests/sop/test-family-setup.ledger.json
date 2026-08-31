@@ -18,7 +18,6 @@
         "tests/features/authentication/handlers/workspaceHandlers",
         "tests/features/authentication/services/ioEventsClient",
         "tests/features/authentication/services/tokenManager",
-        "tests/features/components/services/componentManager",
         "tests/features/components/ui/hooks/useComponentConfig",
         "tests/features/dashboard/commands/showDashboard",
         "tests/features/dashboard/handlers/configureHandlers",

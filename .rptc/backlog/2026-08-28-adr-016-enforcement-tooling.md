@@ -45,3 +45,5 @@ subsequent fix measurable and irreversible.
 - 2026-08-31  test(eds): the edsPipeline family, and the casts it makes countable (`d3b602fe0`)
 - 2026-08-31  test(eds): daLiveConfigService — the whole mock preamble was dead (`c67429452`)
 - 2026-08-31  test(mesh): the meshVerifier family, where six lines existed to serve each other (`2fafe61bb`)
+- 2026-08-31  test(mesh): the deployMesh family, and a hoisting rule worth stating once (`0c159b082`)
+- 2026-08-31  test(ai-bundle): aiContextWriter shares its fixtures — and this one was real duplication (`4ead244ef`)
