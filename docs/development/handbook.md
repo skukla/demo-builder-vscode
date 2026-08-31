@@ -464,6 +464,21 @@ fixes on their own.
 > `.claude/skills/ai-coverage-scan` reports the gap at release cuts.
 > *Why:* not everyone uses an agent, and the agent channel is the one that silently disappears.
 
+Every tool answers in one shape, and that shape is built for you. `mcpToolResult.ts`
+exports two builders — `asText(value)` serializes, `asRawText(text)` wraps a string that is
+already final — and a tool that hand-rolls `{content:[{type:'text',…}]}` fails the build.
+The helper was extracted once to kill exactly this duplication and had grown back into ten
+registrar modules within a month, one of them a byte-identical copy under the same name.
+Note that the surface is not all JSON: refusals answer prose, so never write guidance
+promising an agent that every response parses.
+
+> **Convention.** A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`,
+> never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which
+> checks descriptor rows at runtime and every registrar module at the source, in both
+> halves of the server.
+> *Why:* one envelope is what lets an agent parse any tool's answer the same way — and the
+> helper has already been re-duplicated once after being extracted.
+
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
 
@@ -560,7 +575,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 64 conventions. 58 of them are enforced; 6 are not.**
+**This handbook states 65 conventions. 59 of them are enforced; 6 are not.**
 
 The six that remain are not one thing, and treating them as one is what kept them open:
 

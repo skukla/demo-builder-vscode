@@ -58,13 +58,13 @@ Exactly two. "Leave it as prose" is the state this register exists to end.
 | 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | now **yes** | now **yes** | no — 7 crossings | **Ratified** 2026-08-30 · `layerDirection` ledger, shrink-only |
 | 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | no | no | unmeasured | Pending |
 | 3 | A destructive tool requires `confirm: true` — deletes, or pushes to a live site. Merely mutating is deliberately not the bar | `docs/systems/mcp-server.md` §10 | no | partly — the registrar checks the flag, nothing checks the right tools carry it | unmeasured | Pending |
-| 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | no | **yes** — `responseEnvelope.test.ts` | yes | Pending — enforced but uncatalogued |
-| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | no | no | unmeasured | Pending |
-| 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | Pending |
-| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | no | no | unmeasured | Pending |
-| 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | unmeasured | Pending |
-| 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 11 sites do | Pending |
-| 10 | A new function depending on `daLiveOrg`/`daLiveSite`/workspace takes them as PARAMETERS, not from project state | ADR-003 | no | no | unmeasured | Pending |
+| 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | no | **yes** — `responseEnvelope.test.ts` | yes | **RATIFY** — measured: catalogue only, no rule changes force |
+| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | no | no | **yes** — 39 sites in `src/`, 11 test files assert it | **Owner call** |
+| 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | **Owner call** — low stakes either way |
+| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | no | no | **yes where it applies** — 7 sites clear `adobeWorkspace` on a project change | **Owner call** — real, but see below: not enforceable as stated |
+| 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | **no — the rule was wrong** | **DELETED** 2026-08-30 · the claim was false; row 9 now states the real split |
+| 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 19 sites do | **Owner call** |
+| 10 | A new function depending on `daLiveOrg`/`daLiveSite`/workspace takes them as PARAMETERS, not from project state | ADR-003 | no | no | unmeasured | **Owner call** |
 
 ### Which of these are cheap, and which need a measurement
 
@@ -103,6 +103,55 @@ followed. Until that is measured, ratify and delete are both guesses.
 
 **Row 6 is the opposite of row 7** — low stakes, visibly obeyed, cheap either way.
 Do not spend equal effort on them.
+
+## The adjudication pass — 2026-08-30, after every document had been read
+
+The register said to adjudicate in one pass at the end. The reading finished, so
+this is that pass. Every "unmeasured" cell above now carries a number.
+
+**Row 8 is the only one I settled myself, because it was not a rule — it was a
+false claim.** Measured: `ConfigurationLoader` reads a file from DISK AT RUNTIME
+(`fs.readFileSync` on a constructor path) and has three consumers. Feature config
+is read by **27 static JSON imports** that esbuild inlines, and that pattern is
+*ratified* — `tests/README.md` and ADR-016 prescribe the injection seam over it,
+and `no-config-leaf-mocks.test.ts` enforces it. So the rule as written forbade the
+dominant, ratified pattern, and named an enforcer that had never existed. Two jobs
+had been collapsed into one sentence. `where-code-goes.md` row 9 now states both.
+
+Correcting a false claim is not the same act as weakening a rule, which is what
+this register exists to prevent. The test I applied: does the code disagree with
+the document because the code drifted, or because the document was never true? Row
+8 is the second, and its own enforcer column had said so since the register opened.
+
+**Row 4 is a catalogue, not a decision.** The rule is already build-failing via
+`responseEnvelope.test.ts` and already obeyed. It is simply absent from the place
+that lists conventions — so writing it down changes nothing about its force. That
+is the same shape as `Pattern B` below.
+
+**Row 7 is real, obeyed, and NOT mechanically enforceable as written** — which is
+the useful thing the measurement produced. Seven sites clear `adobeWorkspace` when
+the Adobe project changes, so the discipline is being followed. But a detector for
+"a parent selection changed" cannot be written from the field name alone: 14 sites
+assign `adobeProject`, and reading them shows most are not selections at all —
+`prev.adobeProject` preserves a value, `dashboardStatusService` builds a display
+DTO, `createProjectTool` assembles a payload from already-resolved context. A naive
+enforcer would report 8 violations of which roughly zero are real, and this repo
+has already established what a check that cries wolf does to the habit of reading
+it. Enforcing this needs a way to identify SELECTION HANDLERS specifically; until
+someone has that, ratifying it into the handbook would put a rule there with no
+teeth and no path to any.
+
+**Rows 5, 6, 9, 10 are measured and waiting on the owner**, because ratifying a
+rule is the owner's call — that is the whole lesson this register was opened to
+record. Row 5 is obeyed at 39 sites with 11 test files asserting it. Row 9 is
+obeyed at 19 sites (ADR-003 estimated 11). Row 6 is visibly followed and cheap
+either way. Row 10 stays unmeasured: it is a rule about what FUTURE functions do,
+so "obeyed" has no population to count today.
+
+**Row 2 stays open, and honestly so.** Adjudicating it means finding cases where
+one behaviour was fixed twice on two surfaces and checking whether extraction
+followed. That is a search through history, not a grep, and nothing in this pass
+produced it.
 
 ## Resolved without a row
 

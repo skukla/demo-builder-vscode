@@ -58,8 +58,13 @@ function parse() {
             (skillName ? `../../.claude/skills/${skillName}/SKILL.md` : '');
 
         // What decides whether it holds.
+        // Enforcers are not all in `tests/sop/`. Several build-failing suites live beside
+        // the code they guard — `responseEnvelope.test.ts` and `realSdkRegistration.test.ts`
+        // are both under `tests/features/ai/server/` — and matching only the sop directory
+        // rendered those conventions as "*named in prose*", which reads as unenforced when
+        // the build fails on them exactly like the others. Any test path counts.
         const enforcers = [
-            ...raw.matchAll(/`(tests\/sop\/[\w.-]+\.ts|\.claude\/hooks\/rules\/[\w.-]+)`/g),
+            ...raw.matchAll(/`(tests\/[\w./-]+\.test\.tsx?|\.claude\/hooks\/rules\/[\w.-]+)`/g),
         ].map((e) => e[1]);
         const ledger = /`(\w+)` ledger/.exec(raw)?.[1];
         const other = /eslint/i.test(raw)
@@ -87,11 +92,22 @@ function parse() {
 
 const rows = parse();
 
-/** Every enforcer on disk, so the check can run in both directions. */
+/**
+ * Every enforcer on disk, so the check can run in both directions.
+ *
+ * `tests/sop/` is listed separately because it is the set the gap report reasons about
+ * — a suite there with no convention naming it is a finding. Enforcers elsewhere are
+ * only ever RESOLVED (does the path a convention names exist?), never gap-reported,
+ * since `tests/` at large is 1,200 files of ordinary coverage.
+ */
+const sopSuites = readdirSync(join(ROOT, 'tests/sop'))
+    .filter((f) => f.endsWith('.test.ts'))
+    .map((f) => `tests/sop/${f}`);
+
 const onDisk = new Set([
-    ...readdirSync(join(ROOT, 'tests/sop')).filter((f) => f.endsWith('.test.ts'))
-        .map((f) => `tests/sop/${f}`),
-    ...readdirSync(join(ROOT, '.claude/hooks/rules')).filter((f) => f.endsWith('.rule'))
+    ...sopSuites,
+    ...readdirSync(join(ROOT, '.claude/hooks/rules'))
+        .filter((f) => f.endsWith('.rule'))
         .map((f) => `.claude/hooks/rules/${f}`),
 ]);
 
@@ -109,9 +125,13 @@ const META = new Set([
 ]);
 
 const enforcerWithNoConvention = [...onDisk].filter((e) => !named.has(e) && !META.has(e)).sort();
+// Resolve against the FILESYSTEM, not against the sop listing: a convention may name a
+// build-failing suite that lives beside the code it guards. Checking membership of the
+// sop set instead reported `tests/features/ai/server/responseEnvelope.test.ts` as
+// nonexistent while it sat on disk enforcing the rule that named it.
 const conventionNamingMissingEnforcer = rows
     .flatMap((r) => r.enforcers)
-    .filter((e) => !onDisk.has(e));
+    .filter((e) => !onDisk.has(e) && !existsSync(join(ROOT, e)));
 
 const stats = {
     total: rows.length,

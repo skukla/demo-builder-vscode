@@ -117,6 +117,26 @@ describe('the counts CLAUDE.md states match the registries they count', () => {
     it('states the right number of demo packages', () => {
         expect(CLAUDE_MD).toContain(`(${registry('demo-packages.json', 'packages')} of them,`);
     });
+
+    // CLAUDE.md tells every agent session how many conventions exist and how many are
+    // enforced. Those two numbers sat beside a GENERATED index that recomputes them on
+    // every run, with nothing connecting the pair — so cataloguing one convention on
+    // 2026-08-30 left the hand-written copy stale the same minute. Read from the
+    // generated file, which derives them from the handbook's own callouts.
+    const CONVENTIONS = readFileSync(join(ROOT, 'docs/development/conventions.md'), 'utf8');
+    const stated = (label: string): string =>
+        new RegExp(`\\*\\*(\\d+)\\*\\* ${label}`).exec(CONVENTIONS)?.[1] ?? '';
+
+    it('CONTROL: the generated index states both figures', () => {
+        expect(stated('conventions')).toMatch(/^\d+$/);
+        expect(stated('enforced')).toMatch(/^\d+$/);
+    });
+
+    it('states the convention counts the generated index computed', () => {
+        expect(CLAUDE_MD).toContain(
+            `${stated('conventions')} of them, ${stated('enforced')} with an enforcer`
+        );
+    });
 });
 
 describe('the skill counts ai-context-authoring states match the writer it documents', () => {
