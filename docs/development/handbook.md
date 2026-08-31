@@ -756,23 +756,40 @@ check says so and names the file.
 > [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — where a
 > builder belongs is a judgement about who needs it.
 
-> **Convention.** A builder returns the REAL type. Never `as never`, never `as any` on
-> the builder itself. Where the structural fake is partial, cast the object literal INTO
-> the return type at the builder's boundary — once, where it is visible.
-> *Why:* a builder typed `(): Logger` stops compiling the day `Logger` gains a method —
-> one failure, one fix, at the one place that needs changing. A fake cast to `never`
-> fails nothing and silently ceases to resemble what it stands for. This is the repo's
-> standing "a cast at a call boundary is a silenced type error", applied to test code
-> where it had been ignored.
+> **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
+> `tests/`. A builder is declared as the REAL type it stands for; where the structural
+> fake cannot satisfy that type honestly, cast the object literal INTO it at the
+> builder's boundary as `as unknown as X` — once, where it is visible.
+> *Why:* `as any` and `as never` are not casts, they are the absence of one. Both leave
+> every DOWNSTREAM use unchecked as well, because what comes out has no type left to
+> check against. `as unknown as X` still names X, so the lie stays local to the
+> construction site and callers stay honest. `as never` is the worse of the pair:
+> `never` is assignable to every type, so it is a skeleton key that reads like a locked
+> door.
 >
-> Watched pay off on 2026-08-31: converting `publishKeyRegistrar`'s suite off its module
-> mock let it pass a typed logger, and typing it FAILED THE BUILD on `logger.debug.mock`
-> — a real `Logger` has no `.mock`. Eleven `as never` casts had been hiding that. The
-> answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at the call, with
-> the mock still reachable.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced directly** —
-> `npm run typecheck:tests` catches it the moment a builder is honestly typed, which is
-> the point.
+> A builder typed `(): Logger` also stops compiling the day `Logger` gains a method —
+> one failure, one fix, at the one place that needs changing. A fake cast to `never`
+> fails nothing and silently ceases to resemble what it stands for.
+>
+> **Watched pay off on 2026-08-31.** Converting `publishKeyRegistrar`'s suite off its
+> module mock let it pass a typed logger, and typing it FAILED THE BUILD on
+> `logger.debug.mock` — a real `Logger` has no `.mock`. Eleven `as never` casts had been
+> hiding that. The answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at
+> the call, with the mock still reachable.
+>
+> The line is not a theory — the canonical builders already fake types no object literal
+> can satisfy (`CommandExecutor` and `StateManager` are CLASSES with private fields) and,
+> measured the same day, `tests/helpers/` contains ZERO of either banned form. The right
+> way was already in use; it had just never been written down, while
+> `@typescript-eslint/no-explicit-any` sat switched OFF for `tests/`.
+>
+> Enforced by `tests/sop/type-erasing-casts.test.ts` — a shrink-only ceiling, because
+> there were 1,916 across 341 files when the rule was adopted and a ban that emits 1,916
+> errors gets switched off within a week. `npm run typecheck:tests` catches the builder
+> half the moment a builder is honestly typed. When both counts reach zero, that suite is
+> deleted and replaced by a `no-restricted-syntax` ban, exactly as the feature-barrel
+> ledger became a ban when it emptied.
+> [ADR-016](../architecture/adr/016-test-strategy.md)
 
 > **Convention.** A fixture's shape is READ, not remembered. A builder's method list
 > comes from the real interface plus what callers actually use; a data fixture is copied
@@ -815,11 +832,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 25 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 26 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 63 of them are enforced; 17 are not.**
+**This handbook states 80 conventions. 64 of them are enforced; 16 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

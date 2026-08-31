@@ -187,16 +187,32 @@ tests green) then reverted to keep the batch one shape.
 see the landmine note below for what is actually holding them up, and expect this
 group to shrink to near zero when [[PL-31]] retires the logging barrel.
 
-### 2. Eleven `{ execute }` fakes cast `as never`
-`as never` on an argument is the cast this repo has a written rule against — it
-hid four production defects in August. Unpicking them means finding what each call
-actually wants, which is its own piece of work rather than a tail on a conversion
-batch.
+### 2 and 3. The `{ execute }` fakes — CLOSED 2026-08-31 (`10d77eb3b`)
 
-### 3. Fifteen ambiguous `{ execute }` uses
-`{ execute }` is a generic shape and these are not clearly a CommandExecutor. Left
-rather than guessed at; converting one that is a different collaborator would put
-ten wrong methods on it.
+These were filed as two separate deferrals, "eleven cast `as never`" and "fifteen
+ambiguous". **Both descriptions were wrong, and reading the declared types is what
+showed it.**
+
+There were **42**, not 26. The counts came from a line-based scan that missed every
+multi-line literal.
+
+And none of them were ambiguous. Every consumer — `ServiceLocator.setCommandExecutor`,
+every `commandManager:` field, every constructor argument — declares `CommandExecutor`,
+and one `grep` of the signatures said so. "Not clearly a CommandExecutor" was a
+guess presented as a finding; the falsifying command took one call and was
+available before the deferral was written.
+
+The resolution, once the types were read:
+
+| | |
+|---|---|
+| A builder call with a redundant cast bolted on — the builder already returns the right type | 11 |
+| A bare `{ execute }` literal, which cannot satisfy a CLASS with private fields | 30 |
+| A pair of `as any` on a helper whose own interface declares what the builders return | 1 |
+
+All 42 gone, adopters 32 → 67, `as never` across tests 880 → 803. The general rule
+this exposed — that `as any` and `as never` are banned outright in tests — is now a
+convention with its own ratchet, tracked as [[PL-32]].
 
 ### 4. Four one-method shapes NEED NO BUILDER — measured, not skipped
 `{ dispose }` (78), `{ getAccessToken }` (65), `{ report }` (41),
