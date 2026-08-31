@@ -271,7 +271,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-23` | feature | [Graph-based dependency system](2026-08-30-graph-based-dependencies.md) | — | low | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (30)
+### platform  (31)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -305,6 +305,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | — | high | active |
 | `PL-31` | chore | [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | active |
 | `PL-32` | chore | [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | active |
+| `PL-33` | chore | [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -452,7 +453,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*54 item(s) sit outside the A–G chain.*
+*55 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
