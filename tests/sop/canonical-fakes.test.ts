@@ -68,10 +68,36 @@ const COVERED: readonly CanonicalFake[] = [
     },
 ];
 
+/**
+ * Character ranges covered by a `jest.mock(...)` call.
+ *
+ * A literal inside one is EXEMPT, and not as a convenience. Babel hoists a
+ * `jest.mock` factory above the imports of its module, so the factory runs before
+ * any import exists — referencing `createMockLogger` from inside one throws
+ * "The module factory of jest.mock() is not allowed to reference any out-of-scope
+ * variables". Failing a file for that would demand something the runtime forbids.
+ */
+function jestMockSpans(source: string): Array<[number, number]> {
+    const spans: Array<[number, number]> = [];
+    for (const match of source.matchAll(/jest\.mock\(/g)) {
+        let depth = 0;
+        let k = source.indexOf('(', match.index ?? 0);
+        for (; k < source.length; k++) {
+            if (source[k] === '(') depth++;
+            else if (source[k] === ')' && --depth === 0) break;
+        }
+        spans.push([match.index ?? 0, k]);
+    }
+    return spans;
+}
+
 /** Every `{ … }` literal in `source` whose values include at least one `jest.fn()`. */
 function jestFnLiterals(source: string): Set<string>[] {
+    const spans = jestMockSpans(source);
     const shapes: Set<string>[] = [];
     for (const match of source.matchAll(/\{([^{}]*jest\.fn\(\)[^{}]*)\}/g)) {
+        const at = match.index ?? 0;
+        if (spans.some(([a, b]) => a <= at && at < b)) continue;
         const keys = new Set([...match[1].matchAll(/(\w+)\s*:\s*jest\.fn\(\)/g)].map((k) => k[1]));
         if (keys.size > 0) shapes.push(keys);
     }
@@ -143,6 +169,23 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
 
     // The bound matters as much as the match: `execute`/`dispose` fakes that
     // happen to carry a couple of the same names must not be swept up.
+    // The exemption is as load-bearing as the match: without it this guard fails a
+    // file for something the jest runtime forbids, and the only way to satisfy it
+    // would be to put the copy back.
+    it('CONTROL: exempts a logger literal inside a jest.mock factory', () => {
+        expect(
+            handRolledFakes(
+                `jest.mock('@/core/logging', () => ({ getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }));`
+            )
+        ).toEqual([]);
+        // ...but a literal AFTER the factory closes is still caught.
+        expect(
+            handRolledFakes(
+                `jest.mock('x', () => ({ a: jest.fn() }));\nconst l = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };`
+            )
+        ).toEqual(['logger']);
+    });
+
     it('CONTROL: does not mistake an unrelated fake for a logger', () => {
         expect(
             handRolledFakes('const s = { info: jest.fn(), error: jest.fn(), deploy: jest.fn() };')
