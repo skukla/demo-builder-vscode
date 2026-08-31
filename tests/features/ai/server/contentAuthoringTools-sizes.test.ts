@@ -6,6 +6,7 @@
  * and cannot be shared; the fixtures and harness are identical on purpose.
  */
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import {
     DaLiveContentOperationsMock,
     HelixServiceMock,
@@ -83,7 +84,7 @@ const okResponse = (body: string, status = 200) => ({
 
 function register() {
     const s = fakeServer();
-    registerContentAuthoringTools(s, ctxFactory);
+    registerContentAuthoringTools(s, ctxFactory, HelixServiceMock);
     return s;
 }
 
@@ -117,7 +118,9 @@ beforeEach(() => {
         previewAndPublishPage: jest.fn(async () => undefined),
         unpublishPage: jest.fn(async () => true),
     };
-    HelixServiceMock.mockImplementation(() => helix);
+    // The fake is partial by design — these two methods are all these tools call.
+    // Cast at the boundary, once, per ADR-016: the builder still answers the real type.
+    HelixServiceMock.mockImplementation(() => helix as unknown as HelixService);
 
     fetchMock = jest.fn(async () => okResponse('<body><main>hi</main></body>'));
     global.fetch = fetchMock as unknown as typeof fetch;

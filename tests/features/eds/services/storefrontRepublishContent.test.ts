@@ -10,13 +10,6 @@ const mockPreviewCode = jest.fn(async () => undefined);
 const mockPurgeCacheAll = jest.fn(async () => undefined);
 const mockPublishAllSiteContent = jest.fn(async () => undefined);
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn(() => ({
-        previewCode: mockPreviewCode,
-        purgeCacheAll: mockPurgeCacheAll,
-        publishAllSiteContent: mockPublishAllSiteContent,
-    })),
-}));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({})),
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
@@ -42,6 +35,19 @@ import { verifyConfigOnCdn } from '@/features/eds/services/configSyncService';
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Logger } from '@/types/logger';
+import type { HelixService } from '@/features/eds/services/helix/helixService';
+
+/**
+ * Helix arrives through `republishStorefrontContent`'s own params rather than by
+ * mocking the module (ADR-016's mock-wall conversion). The three methods below are
+ * everything this pipeline calls on it, so the fake states the real surface instead
+ * of intercepting the constructor.
+ */
+const fakeHelix = {
+    previewCode: mockPreviewCode,
+    purgeCacheAll: mockPurgeCacheAll,
+    publishAllSiteContent: mockPublishAllSiteContent,
+} as unknown as HelixService;
 
 const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
 
@@ -57,6 +63,7 @@ function params(overrides: Record<string, unknown> = {}) {
         logger,
         daLiveAuthService: { getUserEmail: jest.fn(async () => 'u@example.com') },
         githubTokenService: {},
+        helixService: fakeHelix,
         ...overrides,
     } as unknown as Parameters<typeof republishStorefrontContent>[0];
 }
@@ -99,7 +106,7 @@ describe('republishStorefrontContent', () => {
                 'https://overlay.example/render-pdp?org=acme&site=shop',
                 'acme',
                 'shop',
-                expect.anything(), // the HelixService instance
+                fakeHelix, // the very instance we handed in — no longer opaque
                 logger,
                 expect.any(Function),
             );

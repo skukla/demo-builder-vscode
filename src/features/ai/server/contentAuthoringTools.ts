@@ -324,6 +324,16 @@ export function registerContentAuthoringTools(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     ctxFactory: () => HandlerContext,
+    /**
+     * Helix factory seam. Defaults to `helixFor`, which builds a service carrying
+     * both credentials a preview/publish request needs. Production never passes it.
+     *
+     * A FACTORY rather than an instance, because each tool call builds its Helix from
+     * that call's context — a single instance would outlive the context it was made
+     * from. This is the seam that lets the suites stop mocking the module: they were
+     * intercepting the constructor purely to reach the instance.
+     */
+    helixFactory: (ctx: HandlerContext) => HelixService = helixFor,
 ): void {
     // ─── read_page ───────────────────────────────────────────────────────────
     server.registerTool(
@@ -426,7 +436,7 @@ export function registerContentAuthoringTools(
             // in DA.live and a later publish_page will pick it up.
             try {
                 await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).previewAndPublishPage(daLiveOrg, daLiveSite, webPath),
+                    helixFactory(r.ctx).previewAndPublishPage(daLiveOrg, daLiveSite, webPath),
                 );
                 return asText({ written: true, published: true, path: webPath, sourcePath });
             } catch (err) {
@@ -457,7 +467,7 @@ export function registerContentAuthoringTools(
 
             try {
                 await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).previewAndPublishPage(
+                    helixFactory(r.ctx).previewAndPublishPage(
                         r.target.daLiveOrg,
                         r.target.daLiveSite,
                         webPath,
@@ -581,7 +591,7 @@ export function registerContentAuthoringTools(
             let unpublishError: string | undefined;
             try {
                 unpublished = await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).unpublishPage(daLiveOrg, daLiveSite, webPath),
+                    helixFactory(r.ctx).unpublishPage(daLiveOrg, daLiveSite, webPath),
                 );
             } catch (err) {
                 unpublishError = message(err);
