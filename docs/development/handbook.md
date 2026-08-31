@@ -619,6 +619,15 @@ check says so and names the file.
 > *Why:* twenty-six different fakes of one object means nobody knows what the fake should be.
 > Enforced by `tests/sop/builder-uniqueness.test.ts`.
 
+> **Convention.** A fake that has a builder in `tests/helpers/` is imported, not written
+> again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger
+> grandfathers the files that already do, so it stops new copies rather than demanding a
+> sweep.
+> *Why:* 420 files hand-roll a logger, and the count was still climbing — about twenty new
+> hand-rolled fakes appeared in one day of dependency-injection work, because each newly
+> converted service needs a fake and typing one is faster than finding the builder. The
+> pool is a chore; the rate is the problem.
+
 > **Convention.** A fake that a SECOND feature directory needs lives in `tests/helpers/`.
 > A `*.testUtils.ts` beside a suite is for setup specific to that subject.
 > *Why:* the test is mechanical — does another feature need it? The suite already holds
@@ -687,11 +696,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 23 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 24 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 76 conventions. 60 of them are enforced; 16 are not.**
+**This handbook states 77 conventions. 61 of them are enforced; 16 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:
