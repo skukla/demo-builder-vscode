@@ -308,6 +308,42 @@ and pointing its eighteen uses at the standard fixture.
 Counts: families with unshared setup are down from 74 to 65. Every target on the list is
 now done except the two hardest, which share a root I have not fixed.
 
+## The last two families — and the reason I twice put them off was wrong
+
+**In one paragraph:** the two remaining sets of test files are done, which finishes the
+whole list. I had set them aside twice, both times believing they depended on a bigger
+piece of work I had not done. They did not. The check that would have shown me that takes
+one test run, and I had already used it on nine other families. The running total is now
+**79 mocks deleted across eleven families that no test needed** — deleted, not moved.
+
+**What "dead" looks like at this scale.** From one family I removed eleven different mocks
+from five files — forty-four declarations in total — and all 28 tests still passed. That
+is the clearest form this finding has taken all night.
+
+**What could genuinely be shared turned out to be small**, and I have said so in the files
+rather than padding them out. One of the two harnesses contains no mocks at all: of what
+survived the deletion check, some cannot be moved for a technical reason, and the rest
+exist in several different versions because each test file needs a different answer from
+them. What moved instead was test data — including, for the third and fourth time
+tonight, a helper that builds a fake context, which different parts of this codebase have
+now written from scratch at least six times.
+
+**One thing I got wrong and fixed.** My first shared context broke two tests. That test
+file needs a current project to exist — its subject saves data onto one — and with none
+the code path never ran, so the tests quietly saw nothing happen. The shared version now
+takes that as an argument, with a note saying why, so nobody removes it again.
+
+**Where the finding is now written down.** Two places a person reads before touching the
+next family: the automated check that governs these files, and the conventions handbook.
+Both now say the first move is to delete each shared mock and re-run — not to design a
+shared file — and both name the counter-example, because one family's duplication was
+entirely real and a reader who takes only the first lesson will delete something they
+need.
+
+**Counts.** Families with unshared setup: 74 at the start of the night, 63 now. Every
+target on the worklist is done; what remains on that list are the small ones its own
+author marked as probably-legitimate splits.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?

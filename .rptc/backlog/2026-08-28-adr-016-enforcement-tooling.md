@@ -48,3 +48,5 @@ subsequent fix measurable and irreversible.
 - 2026-08-31  test(mesh): the deployMesh family, and a hoisting rule worth stating once (`0c159b082`)
 - 2026-08-31  test(ai-bundle): aiContextWriter shares its fixtures — and this one was real duplication (`4ead244ef`)
 - 2026-08-31  test(components): componentManager — seven mocks and one line, serving each other (`51048f373`)
+- 2026-08-31  docs(tests): 79 dead mocks across eleven families, recorded where it will be found (`2eafc0682`)
+- 2026-08-31  test(eds): the last two families — and the root I parked them on was never the blocker (`6ed8cd592`)
