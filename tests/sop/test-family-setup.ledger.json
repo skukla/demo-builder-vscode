@@ -30,7 +30,6 @@
         "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases",
         "tests/features/eds/services/configGenerator",
         "tests/features/eds/services/configService/configurationService",
-        "tests/features/eds/services/daLive/daLiveConfigService",
         "tests/features/eds/services/edsPipeline",
         "tests/features/eds/services/errorFormatters",
         "tests/features/eds/services/github/githubAppService",

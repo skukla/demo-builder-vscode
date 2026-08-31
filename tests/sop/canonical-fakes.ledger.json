@@ -155,8 +155,6 @@
         "tests/features/eds/services/contentCompleteness.smoke.test.ts",
         "tests/features/eds/services/daLive/daLiveApiClient.test.ts",
         "tests/features/eds/services/daLive/daLiveConfigOperations.test.ts",
-        "tests/features/eds/services/daLive/daLiveConfigService-mutations.test.ts",
-        "tests/features/eds/services/daLive/daLiveConfigService-queries.test.ts",
         "tests/features/eds/services/daLive/daLiveContentCopy-retry.test.ts",
         "tests/features/eds/services/daLive/daLiveContentOperations-401.test.ts",
         "tests/features/eds/services/daLive/daLiveContentOperations-accountOverlay.test.ts",
