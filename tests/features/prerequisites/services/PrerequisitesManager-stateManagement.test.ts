@@ -22,6 +22,7 @@ import {
     mockConfig,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - State Management', () => {
     let manager: PrerequisitesManager;
@@ -30,7 +31,7 @@ describe('PrerequisitesManager - State Management', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor, new PrerequisitesCacheManager());
     });
 
     describe('loadConfig', () => {
@@ -47,7 +48,7 @@ describe('PrerequisitesManager - State Management', () => {
                 load: jest.fn().mockRejectedValue(new Error('Config not found')),
             }));
 
-            manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
+            manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor, new PrerequisitesCacheManager());
 
             await expect(manager.loadConfig()).rejects.toThrow('Config not found');
         });

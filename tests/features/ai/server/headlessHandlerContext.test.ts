@@ -71,7 +71,10 @@ describe('createHeadlessHandlerContext', () => {
             fakeContext.extensionPath,
             expect.anything(),
             // ADR-015: the shell executor, resolved here at the boundary.
-            expect.objectContaining({ execute: expect.any(Function) })
+            expect.objectContaining({ execute: expect.any(Function) }),
+            // And its cache, likewise handed in rather than built inside the manager
+            // — it is stateful, so the manager may not construct it.
+            expect.objectContaining({ getCachedResult: expect.any(Function) })
         );
     });
 

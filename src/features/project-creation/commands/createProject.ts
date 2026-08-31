@@ -13,7 +13,8 @@ import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers';
 import {
@@ -95,7 +96,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
 
         // PrerequisitesManager is initialized with proper path
-        this.prereqManager = new PrerequisitesManager(context.extensionPath, logger, ServiceLocator.getCommandExecutor());
+        // The SESSION's manager, not a second one. Its cache is per-instance, so a
+        // command building its own gets an empty cache and re-checks every
+        // prerequisite the shared instance had already answered.
+        this.prereqManager = getPrerequisitesManager(
+            context.extensionPath,
+            logger,
+            ServiceLocator.getCommandExecutor(),
+        );
         this.authManager = ServiceLocator.getAuthenticationService();
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);

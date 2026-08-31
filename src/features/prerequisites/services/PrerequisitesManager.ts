@@ -54,7 +54,15 @@ export type {
 export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
-    private cacheManager = new PrerequisitesCacheManager();
+    /**
+     * The result cache, handed in rather than built here.
+     *
+     * It is STATEFUL — a bounded Map plus hit/miss stats — and this class is a
+     * session singleton, so the instance it gets is the one the whole session
+     * shares. Building it in a field initialiser put a stateful construction in a
+     * service, which is the thing ADR-015 keeps out of the middle of the graph.
+     */
+    private readonly cacheManager: PrerequisitesCacheManager;
 
     /**
      * ADR-015: the shell executor arrives here rather than being fetched at
@@ -64,7 +72,9 @@ export class PrerequisitesManager {
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
+        cacheManager: PrerequisitesCacheManager,
     ) {
+        this.cacheManager = cacheManager;
         const configPath = path.join(
             extensionPath,
             'src',

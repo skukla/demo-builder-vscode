@@ -22,6 +22,7 @@ import {
     createDynamicInstallPrerequisite,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - Installation Orchestration', () => {
     let manager: PrerequisitesManager;
@@ -30,7 +31,7 @@ describe('PrerequisitesManager - Installation Orchestration', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor, new PrerequisitesCacheManager());
     });
 
     describe('infrastructure version removal', () => {

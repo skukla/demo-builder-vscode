@@ -26,6 +26,7 @@
 import { PrerequisitesManager } from './PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
+import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 
 let instance: PrerequisitesManager | undefined;
 
@@ -49,7 +50,16 @@ export function getPrerequisitesManager(
     commandExecutor: CommandExecutor,
 ): PrerequisitesManager {
     if (!instance) {
-        instance = new PrerequisitesManager(extensionPath, logger, commandExecutor);
+        instance = new PrerequisitesManager(
+            extensionPath,
+            logger,
+            commandExecutor,
+            // Hand it the logger we already hold. Its constructor falls back to the
+            // global getLogger(), which THROWS when none is initialised — and that
+            // reached a suite the moment the cache stopped being built inside the
+            // manager, where a module mock had been hiding it.
+            new PrerequisitesCacheManager(logger),
+        );
     }
     return instance;
 }

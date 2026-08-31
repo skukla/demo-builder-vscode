@@ -1,9 +1,7 @@
 {
     "_what": "Enforcement ledger for the EXTENSION HOST dependency rules (webview files are enforced by webview-architecture-rules.test.ts under ADR-017). The keys map to rules that live in different records since the 2026-08-30 split: fetchBoundary and constructionBoundary -> ADR-015; compositionPointLifetime -> ADR-020; commandBase and typesPurity -> the development handbook (no ADR \u2014 neither has a rejected alternative worth recording). Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
     "fetchBoundary": {},
-    "constructionBoundary": {
-        "src/features/prerequisites/services/PrerequisitesManager.ts": "D-4 (measured 2026-08-28): constructs PrerequisitesCacheManager itself. ADR-015 allows construction only in extension.ts and create...Deps files, so this violates the rule as written \u2014 but it forces NO module mock in any suite today, so the cost is currently zero. Lowest priority; convert when the file is touched."
-    },
+    "constructionBoundary": {},
     "commandBase": {
         "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command \u2014 exempt by role. RATIFIED as permanent: it builds and registers the 25 commands, so it cannot itself be one of them. Reviewed 2026-08-31 when the other row in this category was cleared; this is the only member left and it is not debt."
     },
