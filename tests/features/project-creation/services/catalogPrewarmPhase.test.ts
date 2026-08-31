@@ -14,8 +14,17 @@ const mockResolveByomOverlayConfig = jest.fn((..._args: unknown[]) => undefined 
 const mockPrewarmCatalog = jest.fn();
 const mockCreateTokenProvider = jest.fn((..._args: unknown[]) => 'token-provider');
 const mockGetDaLiveAuthService = jest.fn((..._args: unknown[]) => 'dalive-auth');
-const MockHelixService = jest.fn();
-const MockGitHubTokenService = jest.fn();
+/**
+ * The Helix FACTORY handed to the phase, replacing two module mocks.
+ *
+ * A factory keeps every assertion this suite was written to make. It calls itself the
+ * witness for this conversion in its own header, and the things it witnesses are (a)
+ * what the collaborators are built FROM and (b) that nothing is built at all on the
+ * two skip paths. An injected INSTANCE would have destroyed (b) — the caller builds it
+ * whether or not the phase runs — so the laziness contract would stop being
+ * observable. The factory answers both.
+ */
+const makeHelix = jest.fn(() => ({ previewAndPublishPage: jest.fn() }) as never);
 
 jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     extractRepublishParams: (...a: unknown[]) => mockExtractRepublishParams(...a),
@@ -26,20 +35,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: (...a: unknown[]) => mockCreateTokenProvider(...a),
-}));
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: class {
-        constructor(...args: unknown[]) {
-            MockGitHubTokenService(...args);
-        }
-    },
-}));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: class {
-        constructor(...args: unknown[]) {
-            MockHelixService(...args);
-        }
-    },
 }));
 jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
     prewarmCatalog: (...a: unknown[]) => mockPrewarmCatalog(...a),
@@ -72,19 +67,18 @@ describe('executeCatalogPrewarmPhase', () => {
     it('builds its collaborators with the right inputs (the construction the conversion moves)', async () => {
         const context = makeContext();
 
-        await executeCatalogPrewarmPhase(context, PROJECT, jest.fn());
+        await executeCatalogPrewarmPhase(context, PROJECT, jest.fn(), makeHelix);
 
-        expect(MockGitHubTokenService).toHaveBeenCalledWith(SECRETS, context.logger);
-        expect(MockHelixService).toHaveBeenCalledWith(
-            context.logger,
-            expect.anything(),
-            'token-provider'
-        );
+        // Same three facts the constructor mocks used to witness: the phase supplies
+        // its logger, the SECRETS the token service is built from, and the DA.live
+        // token provider it resolved. Asserted on what the phase PASSES rather than on
+        // what a constructor received, which is strictly closer to the contract.
+        expect(makeHelix).toHaveBeenCalledWith(context.logger, SECRETS, 'token-provider');
         expect(mockCreateTokenProvider).toHaveBeenCalledWith('dalive-auth');
     });
 
     it('pre-warms against the resolved overlay, for THIS project and site', async () => {
-        await executeCatalogPrewarmPhase(makeContext(), PROJECT, jest.fn());
+        await executeCatalogPrewarmPhase(makeContext(), PROJECT, jest.fn(), makeHelix);
 
         expect(mockPrewarmCatalog).toHaveBeenCalledWith(
             PROJECT,
@@ -99,7 +93,7 @@ describe('executeCatalogPrewarmPhase', () => {
     it('reports progress before the slow work, not after', async () => {
         const progress = jest.fn();
 
-        await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress);
+        await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress, makeHelix);
 
         expect(progress).toHaveBeenCalledWith(
             'Pre-warming Catalog',
@@ -115,20 +109,20 @@ describe('executeCatalogPrewarmPhase', () => {
         mockExtractRepublishParams.mockReturnValue({ success: false, error: 'no storefront' });
         const progress = jest.fn();
 
-        await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress);
+        await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress, makeHelix);
 
         expect(mockPrewarmCatalog).not.toHaveBeenCalled();
-        expect(MockHelixService).not.toHaveBeenCalled();
+        expect(makeHelix).not.toHaveBeenCalled();
         expect(progress).not.toHaveBeenCalled();
     });
 
     it('SKIPS when no overlay is configured — nothing is constructed', async () => {
         mockResolveByomOverlayConfig.mockReturnValue(undefined);
 
-        await executeCatalogPrewarmPhase(makeContext(), PROJECT, jest.fn());
+        await executeCatalogPrewarmPhase(makeContext(), PROJECT, jest.fn(), makeHelix);
 
         expect(mockPrewarmCatalog).not.toHaveBeenCalled();
-        expect(MockHelixService).not.toHaveBeenCalled();
+        expect(makeHelix).not.toHaveBeenCalled();
     });
 
     it('is NON-FATAL: a failing pre-warm warns and resolves, never rejects', async () => {
@@ -136,7 +130,7 @@ describe('executeCatalogPrewarmPhase', () => {
         const context = makeContext();
 
         await expect(
-            executeCatalogPrewarmPhase(context, PROJECT, jest.fn())
+            executeCatalogPrewarmPhase(context, PROJECT, jest.fn(), makeHelix)
         ).resolves.toBeUndefined();
         expect(context.logger.warn).toHaveBeenCalledWith(expect.stringContaining('helix exploded'));
     });
