@@ -379,6 +379,40 @@ it against an empty folder makes it say so rather than reporting "all clean".
 The scan now reports zero — which matters as much as the finding did, because a tool that
 cannot show its own result resolved is hard to trust the next time it reports something.
 
+## The sweep is finished, and the answer is mostly "there was nothing there"
+
+**In one paragraph:** I pointed the new tool at the 63 remaining groups of test files —
+the ones the earlier work had set aside as probably fine — and swept all of them. It
+found 37 more dead fakes across 19 groups. The other 45 groups share no setup at all, so
+there was never anything for a tool to find in them. That is a finished state rather than
+a shortened backlog.
+
+**How it broke down.** Nine groups had enough shared setup to probe in bulk and gave up
+29 dead lines. Ten had exactly one shared item each and gave up eight more. Forty-five
+had none.
+
+**The zero-yield results matter as much as the finds.** Seven of the ten single-item
+groups turned out to genuinely need what they share — one of them fails all 45 of its
+tests without it. A sweep that only reports successes looks like one that always
+succeeds, so those are named in the record too.
+
+**One group came out completely clean.** Both of its shared items were dead, so it now
+shares nothing — a legitimately separate pair of files with no duplication left in them.
+That is a better outcome than a shared file would have been, and only visible by
+deleting and re-running rather than by counting matching lines.
+
+**The night's total, in one place.** 79 dead fakes in the eleven big groups, 43 more the
+new tool found instantly by a static rule, and 37 in this sweep — 159 lines of test setup
+that claimed the code touches something it does not. Each batch was verified by a full
+run of the whole suite rather than a narrow one, and every "dead" verdict was
+re-confirmed with the whole set removed before I deleted anything.
+
+**What I would say about the earlier judgement.** Whoever marked these 63 as
+probably-legitimate splits was right about the thing they were judging — none of them
+wanted a shared file. What they could not have known is that a fifth of them were
+carrying dead weight instead. Those are different questions and only the second one has a
+cheap test.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?

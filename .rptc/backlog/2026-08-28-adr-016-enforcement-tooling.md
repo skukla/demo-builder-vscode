@@ -51,3 +51,7 @@ subsequent fix measurable and irreversible.
 - 2026-08-31  docs(tests): 79 dead mocks across eleven families, recorded where it will be found (`2eafc0682`)
 - 2026-08-31  test(eds): the last two families — and the root I parked them on was never the blocker (`6ed8cd592`)
 - 2026-08-31  feat(tooling): dead-mock-scan — the probe that found 79 dead mocks, made repeatable (`0073ebf88`)
+- 2026-08-31  test: the ledgered families are swept — 37 dead mocks, and 45 with nothing to find (`7eb23721a`)
+- 2026-08-31  test: 7 more dead mocks, and one family whose entire shared set was dead (`56dc6c09b`)
+- 2026-08-31  test: 22 more dead mocks, found by pointing the new scan at four ledgered families (`adc0013f6`)
+- 2026-08-31  test: delete the 43 redundant automocks the new scan found (`2b6fea5c1`)
