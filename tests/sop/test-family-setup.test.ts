@@ -12,6 +12,30 @@
  * split for size with genuinely different setup, and mass extraction would
  * codify a guess. The rule that matters is the ratchet — the list may only
  * shrink, and a NEW family without shared setup fails immediately.
+ *
+ * WHAT THE FIRST ELEVEN EXTRACTIONS ACTUALLY FOUND (2026-08-31), because it
+ * changes how you should approach the twelfth:
+ *
+ * **79 of the shared mocks were DEAD.** Not duplicated — dead. Deleted from every
+ * suite that carried them, with all tests still passing. Ten of the eleven
+ * families had some; three consisted of almost nothing else.
+ *
+ * So the first move on a family is NOT to design a shared harness. It is to
+ * delete each shared mock and re-run. Three things that only that shows:
+ *
+ *   1. `jest.mock('vscode')` is a no-op — jest.config.js already maps `^vscode$`
+ *      to `tests/__mocks__/vscode.ts`. Copies of it were found in four families.
+ *   2. Mocks that serve only each other. Twice — meshVerifier and componentManager
+ *      — a ServiceLocator mock plus a line wiring a fake into it were BOTH dead,
+ *      because the subject takes that fake by constructor. Probed one at a time
+ *      the mock looks essential; probe the SET.
+ *   3. A mock the SPEC imports cannot move to a shared file at all. A `jest.mock`
+ *      only hoists above the imports of the module it appears in, so moving one
+ *      registers it too late — 23 tests failed on that in the deployMesh family.
+ *
+ * And the counter-example, because "shared setup is usually dead" is a common
+ * case and not a rule: aiContextWriter's four suites shared 74 lines of FIXTURES,
+ * byte-identical and all load-bearing. That is what extraction is for.
  */
 
 import { execSync } from 'child_process';

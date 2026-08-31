@@ -577,14 +577,24 @@ breaks the code on purpose and reports what nothing noticed.
 > nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
 > is doing it.
 
-> **Convention.** Before designing a way to hand a mocked collaborator in, delete the mock
-> and run the suite. If it still passes, the mock was the whole problem.
-> *Why:* 28 suites here mocked a service module. Twenty-two of them needed no injection at
-> all — the collaborator was constructed once and never called, because something further
-> down was already faked. Two working sessions went into designing seams for files that
-> only needed a deletion, because the question asked was "how would this suite hand the
-> service in?" rather than "does this mock change anything?". The check costs one suite run.
+> **Convention.** Before designing a way to hand a mocked collaborator in — or to share
+> one between suites — delete the mock and run the suite. If it still passes, the mock was
+> the whole problem.
+> *Why:* asked twice and answered the same way both times. 28 suites mocked a service
+> module and 22 needed no injection at all. Then eleven split-suite families were merged
+> and **79 of their shared mocks were dead** — deleted from every suite that carried them
+> with nothing failing. Two working sessions went into designing seams for files that only
+> needed a deletion, because the question asked was "how would this suite hand the service
+> in?" rather than "does this mock change anything?". The check costs one suite run.
 > **Not enforced** — it is a question to ask, not a state to hold.
+>
+> Three things only that check shows. `jest.mock('vscode')` is a no-op here — `jest.config.js`
+> already maps it — and four families carried copies. Mocks can serve only each other: twice,
+> a service-locator mock plus the line wiring a fake into it were both dead, because the
+> subject takes that fake by constructor; probed one at a time the mock looks essential, so
+> probe the SET. And a mock the SPEC imports cannot move to a shared file at all — a
+> `jest.mock` only hoists above the imports of the module it appears in, which cost 23
+> failing tests to learn.
 
 A mocked service module turns out to be four different things wearing one shape, and the
 remedy differs for each:
