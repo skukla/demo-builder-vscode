@@ -178,9 +178,9 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 10 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 23 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 24 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
-| periodic | 8 scripted checks + 9 guided reviews | **`npm run sweep`** |
+| periodic | 9 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
@@ -221,6 +221,12 @@ without producing a signal.
 - `agent-gap-scan` — the same gap read from the other end: what agents ACTUALLY did in real session transcripts — tools nobody calls, jobs done with Bash because no tool existed, tools that failed. No instrumentation; it reads Claude Code's own transcripts
 - `test-divergence-scan` — how many DIFFERENT ways the suite builds the same fake. The sibling of the duplication scans aimed at TESTS: not copy-paste, but divergence nobody agreed to (26 StateManager fakes across 48 uses; 32 Project shapes across 38). HandlerContext is its control — 165 suites share a builder and 4 hand-roll, which is what happens when the builder exists
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
+- `dead-mock-scan` — jest.mock calls that do NOTHING. Two halves: a static, exact one (a bare
+  automock of a module `moduleNameMapper` already redirects — the line is a no-op) and a scoped
+  probe that deletes a mock and re-runs. Exists because the question was asked twice and answered
+  the same way: of 28 module-mock walls, 22 needed the mock deleted rather than injected; of the
+  shared setup in 11 split-suite families, **79 mocks were dead**. Probe the SET — twice, a mock
+  and the line using it were both dead while each kept the other alive
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
 - `backlog-item` — READ and WRITE the backlog through one CLI (`backlog.mjs`): `list`/`next`/`show` (all take `--json`, the agent-facing form), `new`/`set`/`log` for mutations that validate BEFORE touching disk, `check`, and `sync` to regenerate the README's spans. Carries the frontmatter contract (kind/area/layer/parent/needs/value/status), the five kinds and why a `question` is not an epic. Everything hand-maintained here has rotted: the index (three items invisible for months, a reverted correction, an epic with no file) and then the second, prose copy of the list that survived it and drifted to 25 items against 32. Test any change with `dogfood.sh`, which runs the real content through the real CLI inside a temp copy
 - `tool-verdicts` — per-tool verdict on the agent surface (keep/fix/investigate/find-out), from real transcript usage AND battery outcomes together. Exists because "85 tools are unused so nobody needs them" was measured and found unsupportable: 78 of 107 had been judged by nothing at all. Refuses to conclude anything about a tool no prompt has ever asked for
@@ -237,7 +243,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 75 of them, 60 with an enforcer that fails the build — and
+this codebase holds itself to — 77 of them, 61 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

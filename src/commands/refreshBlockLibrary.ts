@@ -18,10 +18,22 @@
 import { BaseCommand } from '@/core/base';
 import {
     refreshBlockLibraryHeadless,
+    type RefreshBlockLibraryHeadlessDeps,
     type RefreshBlockLibraryHeadlessResult,
 } from '@/features/eds/services/refreshBlockLibraryHeadless';
 
 export class RefreshBlockLibraryCommand extends BaseCommand {
+    /**
+     * Helix seam, forwarded to the headless core. Production leaves it undefined and
+     * the core builds the real service.
+     *
+     * It lives on the COMMAND because the command is this path's composition root —
+     * the core takes no other collaborator from here. Without it the suite had to
+     * `jest.mock` the Helix module purely so a construction it never asserts on would
+     * not run (ADR-016's wall).
+     */
+    public helixService?: RefreshBlockLibraryHeadlessDeps['helixService'];
+
     public async execute(): Promise<void> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
@@ -38,6 +50,7 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
                 project,
                 context: this.context,
                 logger: this.logger,
+                helixService: this.helixService,
                 onProgress: (message) => progress.report({ message }),
             });
         });

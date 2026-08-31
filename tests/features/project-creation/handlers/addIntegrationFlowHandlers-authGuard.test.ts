@@ -23,7 +23,6 @@ import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 
-jest.mock('vscode');
 
 const mockEnsureAdobeIOAuth = jest.fn();
 jest.mock('@/core/auth/adobeAuthGuard', () => ({

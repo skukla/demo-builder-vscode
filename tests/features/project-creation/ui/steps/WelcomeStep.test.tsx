@@ -7,9 +7,6 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
 // Mock useSelectableDefault hook
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: () => ({}),
-}));
 
 describe('WelcomeStep', () => {
     const mockUpdateState = jest.fn();

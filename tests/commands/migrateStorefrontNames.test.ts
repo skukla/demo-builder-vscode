@@ -44,9 +44,10 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({})),
-}));
+// ConfigurationService is NOT mocked, and does not need to be. Its constructor is
+// two field assignments, the migration function this command calls is mocked, so the
+// instance is never touched — the mock silenced nothing and cost the suite its ability
+// to see what was constructed.
 
 jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     resolveStorefrontConfig: jest.fn(() => ({
@@ -74,19 +75,14 @@ import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';
+import { createMockLogger } from '../helpers/loggerFake';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
 const registerPublishKeyMock = registerPublishKey as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeProject(

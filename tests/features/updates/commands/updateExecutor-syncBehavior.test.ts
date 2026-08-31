@@ -19,13 +19,7 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn(),
-}));
 
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn(),
-}));
 
 jest.mock(
     'vscode',

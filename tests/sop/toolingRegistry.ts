@@ -125,6 +125,14 @@ export interface Instrument {
  */
 const PERIODIC: readonly Instrument[] = [
     {
+        id: 'dead-mock-scan',
+        kind: 'skill',
+        cadence: 'periodic',
+        resultKind: 'report',
+        what: 'jest.mock calls that do nothing — redundant automocks (static) and mocks no test needs (scoped probe)',
+        runs: 'bash .claude/skills/dead-mock-scan/scan.sh tests',
+    },
+    {
         id: 'dead-code-scan',
         kind: 'skill',
         cadence: 'periodic',

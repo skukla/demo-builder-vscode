@@ -7,7 +7,6 @@ import * as vscode from 'vscode';
 import type { Message } from '@/types/messages';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 // Mock debugLogger
 jest.mock('@/core/logging/debugLogger', () => ({

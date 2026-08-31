@@ -3,11 +3,9 @@ import { PollingService } from '@/core/shell/pollingService';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-jest.mock('vscode');
 // CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is
 // handed in. The module mock stays only because this suite builds its fake via
 // `new PollingService()` and relies on the automock for the method surface.
-jest.mock('@/core/shell/pollingService');
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),

@@ -7,34 +7,17 @@
  * Target Coverage: 90%+
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 // Mock dependencies
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
 // Mock logger used by WebviewCommunicationManager and other modules
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    }))
-}));
 
 describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
     let command: ConfigureProjectWebviewCommand;

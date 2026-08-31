@@ -5,7 +5,6 @@
 import * as vscode from 'vscode';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 /**
  * Creates a mock ExtensionContext with globalState for testing

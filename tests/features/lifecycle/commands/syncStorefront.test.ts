@@ -21,7 +21,7 @@ import {
     execFileMock,
     readFileMock,
     makeSyncStorefrontContext,
-    makeEdsProject,
+    makeSyncTargetProject,
     makeLogger,
     makeStateManager,
     mockGetAccessToken,
@@ -51,7 +51,7 @@ describe('SyncStorefrontCommand', () => {
     });
 
     it('errors when the project has no EDS storefront component', async () => {
-        const project = { ...makeEdsProject(), componentInstances: {} };
+        const project = { ...makeSyncTargetProject(), componentInstances: {} };
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(project) as never,
@@ -71,7 +71,7 @@ describe('SyncStorefrontCommand', () => {
         statMock.mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -88,7 +88,7 @@ describe('SyncStorefrontCommand', () => {
         (vscode.window.showInputBox as jest.Mock).mockResolvedValueOnce(undefined);
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -108,7 +108,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -142,7 +142,7 @@ describe('SyncStorefrontCommand', () => {
         const context = makeSyncStorefrontContext();
         const command = new SyncStorefrontCommand(
             context,
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -167,7 +167,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -189,7 +189,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -217,7 +217,7 @@ describe('SyncStorefrontCommand', () => {
         const runCommand = (): Promise<void> =>
             new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             ).execute();
 
@@ -309,7 +309,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -340,7 +340,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -390,7 +390,7 @@ describe('SyncStorefrontCommand', () => {
 
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(makeEdsProject()) as never,
+            makeStateManager(makeSyncTargetProject()) as never,
             makeLogger() as never
         );
 
@@ -486,7 +486,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 
@@ -518,7 +518,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 
@@ -545,7 +545,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 
@@ -570,7 +570,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 
@@ -596,7 +596,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 
@@ -612,7 +612,7 @@ describe('SyncStorefrontCommand', () => {
 
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
-                makeStateManager(makeEdsProject()) as never,
+                makeStateManager(makeSyncTargetProject()) as never,
                 makeLogger() as never
             );
 

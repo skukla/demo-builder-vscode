@@ -17,6 +17,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
 import {
     DaLiveContentOperations,
@@ -57,6 +58,16 @@ export interface AuthoringExperienceFlipDeps {
      * why the save cannot be left to the caller's discretion.
      */
     saveProject: (project: Project) => Promise<void>;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and the
+     * credentials resolved beside it; production never passes it.
+     *
+     * HelixService is stateless, so ADR-015 leaves the construction where it is — the
+     * cost was test design. This suite could only reach `previewCode` by mocking the
+     * module (ADR-016's wall), which also meant it could not say WHICH service the
+     * publish went through.
+     */
+    helixService?: HelixCodePreview;
 }
 
 /**
@@ -130,7 +141,7 @@ async function reapplyEditorPath(
  */
 async function ensureQuickEditVendored(
     project: Project,
-    { context, logger }: AuthoringExperienceFlipDeps,
+    { context, logger, helixService: injectedHelix }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     try {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
@@ -152,7 +163,8 @@ async function ensureQuickEditVendored(
         // Push the committed Quick Edit code live so the Experience Workspace
         // Layout (WYSIWYG) view works immediately, without a full reset.
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(context));
-        const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
+        const helixService =
+            injectedHelix ?? new HelixService(logger, githubTokenService, daLiveTokenProvider);
         await helixService.previewCode(repoOwner, repoName, '/*');
         return 'ok';
     } catch (error) {

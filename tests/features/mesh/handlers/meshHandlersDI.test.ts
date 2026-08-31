@@ -20,7 +20,6 @@ import * as _vscode from 'vscode';
 
 // Mock dependencies
 jest.mock('@/core/di');
-jest.mock('vscode');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
 // mock here would omit keys (e.g. UI.MIN_LOADING) that the @/core/shell import graph
 // reads at module load, and violates the no-config-leaf-mocks SOP.

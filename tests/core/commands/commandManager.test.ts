@@ -15,7 +15,6 @@ import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/co
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 // The sign-in commands (PL-5 / EDS-9). The locator hands back a controllable
 // auth service; the DA.live QuickPick is a spy so the command's delegation —

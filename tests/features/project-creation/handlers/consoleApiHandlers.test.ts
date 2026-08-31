@@ -14,7 +14,6 @@ import { createApiSubscriberClient } from '@/features/app-builder/services/apiSu
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { HandlerContext } from '@/types/handlers';
 
-jest.mock('vscode');
 
 const mockGetServicesForOrg = jest.fn();
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({

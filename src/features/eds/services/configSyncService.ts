@@ -11,6 +11,7 @@
  */
 
 import { promises as fsPromises } from 'fs';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { GitHubFileOperations } from './github/githubFileOperations';
@@ -46,6 +47,18 @@ export interface ConfigSyncParams {
     onProgress?: PhaseProgressCallback;
     /** Whether to verify block library CDN availability in parallel */
     verifyBlockLibrary?: boolean;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and the
+     * GitHub token it derives from `secrets`; production never passes it.
+     *
+     * `HelixService` is STATELESS — credentials arrive at construction and are
+     * never mutated — so ADR-015 leaves the construction here. What it cost was
+     * test design: a suite that cannot hand it in has to `jest.mock` the module,
+     * which is the wall ADR-016 lists for this file. Typed to the one method this
+     * function calls, so a test hands in one function rather than a stand-in for
+     * the whole class.
+     */
+    makeHelix?: (logger: Logger, githubTokenService: GitHubTokenService) => HelixCodePreview;
 }
 
 /**
@@ -96,6 +109,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         secrets,
         authManager: _authManager,
         onProgress,
+        makeHelix = (l: Logger, gh: GitHubTokenService) => new HelixService(l, gh),
     } = params;
 
     const result: ConfigSyncResult = {
@@ -167,7 +181,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             // No provider passed: HelixService falls back to the one registered at
             // activation. The DA.live session is a per-host singleton, so threading
             // it through every caller would model a plurality that does not exist.
-            const helixService = new HelixService(logger, githubTokenService);
+            const helixService = makeHelix(logger, githubTokenService);
 
             await helixService.previewCode(repoOwner, repoName, '/config.json');
 

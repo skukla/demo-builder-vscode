@@ -19,6 +19,10 @@ import { parseGitHubUrl } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
+import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
 import type { Logger } from '@/types/logger';
 
 interface EdsContentConfig {
@@ -47,10 +51,39 @@ interface EdsContentConfig {
     templateRepo?: string;
 }
 
+/**
+ * The four Helix calls this function makes — two directly, two through the block
+ * library helpers it forwards the service to.
+ */
+export interface EdsContentHelix extends LibraryPublishHelix {
+    purgeCacheAll(org: string, site: string, branch?: string): Promise<void>;
+    publishAllSiteContent(
+        repoFullName: string,
+        branch?: string,
+        daLiveOrg?: string,
+        daLiveSite?: string,
+        onProgress?: (info: SitePublishProgress) => void,
+    ): Promise<void>;
+}
+
 interface EdsContentDeps {
     logger: Logger;
     secrets: import('vscode').SecretStorage;
     extensionContext: import('vscode').ExtensionContext;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and the
+     * GitHub/DA.live credentials it derives; production never passes it.
+     *
+     * `HelixService` is STATELESS — credentials arrive at construction and are
+     * never mutated — so ADR-015 leaves the construction here. What it cost was
+     * test design: a suite that cannot hand it in has to `jest.mock` the module,
+     * which is the wall ADR-016 lists for this file.
+     */
+    makeHelix?: (
+        logger: Logger,
+        githubTokenService: GitHubTokenService,
+        daLiveTokenProvider: TokenProvider,
+    ) => EdsContentHelix;
 }
 
 /**
@@ -166,7 +199,10 @@ export async function ensureEdsContent(
         await import('@/features/eds/handlers/edsHelpers');
 
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
-    const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
+    const makeHelix =
+        deps.makeHelix ??
+        ((l: Logger, gh: GitHubTokenService, tp: TokenProvider) => new HelixService(l, gh, tp));
+    const helixService = makeHelix(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)
     onProgress?.('Configuring site permissions...', 'Granting DA.live access');

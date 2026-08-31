@@ -18,9 +18,6 @@ jest.mock('@octokit/core', () => ({
     },
 }));
 
-jest.mock('@octokit/plugin-retry', () => ({
-    retry: jest.fn(() => ({})),
-}));
 
 // Mock logger
 jest.mock('@/core/logging', () => ({

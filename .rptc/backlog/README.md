@@ -286,7 +286,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-11` | epic | [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
 | `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | active |
 | `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
-| `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | active |
+| `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | active |
 | `PL-22` | question | └ [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) | — | med | open |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |

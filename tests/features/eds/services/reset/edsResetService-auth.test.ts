@@ -8,7 +8,6 @@
  */
 
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
 
@@ -16,9 +15,6 @@ jest.setTimeout(5000);
 // Mocks — defined before imports
 // =============================================================================
 
-const mockLoginAndRestoreProjectContext = jest.fn();
-const mockLogin = jest.fn();
-const mockIsAuthenticated = jest.fn();
 
 // Mock ensureAdobeIOAuth (used by refactored checkAdobeAuth)
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -26,27 +22,7 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-    },
-    ProgressLocation: { Notification: 15 },
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            isAuthenticated: mockIsAuthenticated,
-            login: mockLogin,
-            loginAndRestoreProjectContext: mockLoginAndRestoreProjectContext,
-        })),
-    },
-}));
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn().mockReturnValue({
@@ -67,31 +43,9 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: {
-        EDS_STOREFRONT: 'eds-storefront',
-        EDS_COMMERCE_MESH: 'eds-commerce-mesh',
-        EDS_ACCS_MESH: 'eds-accs-mesh',
-    },
-}));
 
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn((project: any) => {
-        if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find(
-            (c: any) => c.subType === 'mesh'
-        );
-    }),
-    hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
-}));
 
 // DA.live auth — always authenticated (we're testing Adobe I/O path)
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
-    })),
-}));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
@@ -102,11 +56,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 // =============================================================================
 // Imports (after mocks)
@@ -114,10 +66,11 @@ jest.mock('@/features/eds/services/github/githubAppService', () => ({
 
 import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
-import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import {
+    createResetContext,
+    meshDeps,
+} from './edsResetService.testUtils';
 
-/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
-const meshDeps = createMeshDepsFake();
 
 
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
@@ -173,26 +126,6 @@ function createProjectWithMesh(adobeContext?: {
     } as unknown as Project;
 }
 
-function createMockContext(project: Project): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
@@ -214,7 +147,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             projectId: 'proj-456',
             workspace: 'workspace-789',
         });
-        const context = createMockContext(project);
+        const context = createResetContext(project);
 
         // And: ensureAdobeIOAuth returns failed (causes early return)
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
@@ -246,7 +179,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         // Given: an Adobe-context project (a mesh IS an Adobe I/O project) whose
         // projectId/workspace happen to be undefined. The org alone arms the gate.
         const project = createProjectWithMesh({ organization: 'org-123' });
-        const context = createMockContext(project);
+        const context = createResetContext(project);
 
         // And: ensureAdobeIOAuth returns failed (early return, before any reset work)
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
@@ -272,7 +205,7 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
     it('should return ADOBE_AUTH_REQUIRED when ensureAdobeIOAuth returns cancelled', async () => {
         // Given: Project with mesh
         const project = createProjectWithMesh({ organization: 'org-1' });
-        const context = createMockContext(project);
+        const context = createResetContext(project);
 
         // And: ensureAdobeIOAuth returns cancelled
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });

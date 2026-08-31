@@ -71,12 +71,30 @@ the laziness stops being observable and the test silently goes vacuous.
 
 ## When the 28 are done
 
-Then, in order: PL-16's shared fixture builders (StateManager 27 shapes / Project 32,
-both unmoved), the family-extraction worklist (~20 targets), and PL-14's last artifact
-(`webview-test-authoring` carries zero ADR-016 pointers).
+Then, in order:
 
-Leave for the owner: PL-22's mutation-score judgement, and the rewrite of
-`tests/README.md` + the splitting playbook.
+1. **PL-16** — shared fixture builders. StateManager: 49 suites hand-roll, 27 distinct
+   shapes, 18 used once. Project: 38 / 32 / 25. Both UNMOVED since the August baseline.
+   HandlerContext is the proof the cure works — 83 import the shared builder, 4
+   hand-roll, because one exists and is findable.
+2. **The family-extraction worklist** — ~20 real targets, ~2,446 removable lines,
+   ranked in `.rptc/complete/architecture-test-convergence/family-worklist.json`.
+3. **PL-14's last artifact** — `webview-test-authoring` carries zero ADR-016 pointers.
+4. **PL-22** — the owner asked for this AFTER the loop (2026-08-31). Run
+   `npm run test:mutation:sample` and read the result against the pilot: 93% on four
+   easy modules, 59% on a representative sample, and the score falls almost
+   monotonically as `await` count rises. The QUESTION is what that means for policy,
+   and the honest headline is the 59%. Produce the evidence and a recommendation;
+   the ruling itself is the owner's.
+
+Still the owner's, not the loop's: the rewrite of `tests/README.md` and the splitting
+playbook, which stay provisional until the test strategy settles.
+
+## Merging
+
+The owner merged the first 8 conversions into develop on 2026-08-31 and asked for the
+work to continue. Keep committing to the loop branch — the unattended rail stands — and
+say in the report when a batch is ready to merge.
 
 ## The report
 

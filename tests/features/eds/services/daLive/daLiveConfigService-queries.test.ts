@@ -4,64 +4,29 @@
  * Tests for getConfig, updateConfig, hasUserAccess, and getPermissionsStatus.
  */
 
-// Mock global fetch before imports
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Mock timeoutConfig
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
 
 import {
     DaLiveConfigService,
-    MultiSheetConfig,
-} from '@/features/eds/services/daLive/daLiveConfigService';
+    mockFetch,
+    setupConfigService,
+    testEmail,
+    testOrg,
+    testSite,
+    testToken,
+    type MultiSheetConfig,
+} from './daLiveConfigService.testUtils';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
-import type { Logger } from '@/types/logger';
 
 describe('DaLiveConfigService - queries & access', () => {
     let service: DaLiveConfigService;
     let mockTokenProvider: TokenProvider;
-    let mockLogger: Logger;
-
-    const testOrg = 'test-org';
-    const testSite = 'test-site';
-    const testEmail = 'user@example.com';
-    const testToken = 'test-da-live-token';
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        mockFetch.mockReset();
-
-        // Mock token provider
-        mockTokenProvider = {
-            getAccessToken: jest.fn().mockResolvedValue(testToken),
-        };
-
-        // Mock logger
-        mockLogger = {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
-
-        service = new DaLiveConfigService(mockTokenProvider, mockLogger);
+        ({ service, mockTokenProvider } = setupConfigService());
     });
 
     describe('getConfig', () => {

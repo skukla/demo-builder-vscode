@@ -65,15 +65,16 @@ jest.mock('@/features/eds/services/github/githubFileOperations');
 jest.mock('@/features/eds/services/github/githubOAuthService');
 jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: { initKeyStore: jest.fn() },
-}));
+// HelixService is NOT mocked. Its only use on this path is the STATIC `initKeyStore`,
+// which returns early unless the fake Memento hands back legacy keys — so the real one
+// runs harmlessly and the mock was silencing nothing. Measured 2026-08-31.
 
 // =============================================================================
 // Module under test
 // =============================================================================
 
 import { handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveAuthHandlers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // =============================================================================
 // Utilities
@@ -94,12 +95,7 @@ const goodToken = makeToken({
 
 function createMockContext(): HandlerContext {
     return {
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn().mockResolvedValue(undefined),
         context: {
             globalState: { get: jest.fn(), update: jest.fn().mockResolvedValue(undefined) },

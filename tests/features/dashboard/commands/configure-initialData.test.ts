@@ -9,31 +9,14 @@
  * payload read undefined.
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),

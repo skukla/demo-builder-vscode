@@ -8,13 +8,14 @@
  * Configure authoring-experience test's mocking style.
  */
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode');
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -33,9 +34,13 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 }));
 
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
+
+/**
+ * Helix arrives through `AuthoringExperienceFlipDeps` rather than by mocking the
+ * module (ADR-016 wall). `previewCode` is the only method this flow calls, so the
+ * partial fake is cast into the real type once, here — ADR-016 rule 2.
+ */
+const fakeHelix = { previewCode: mockPreviewCode } as unknown as HelixService;
 
 const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
@@ -86,16 +91,12 @@ describe('applyAuthoringExperienceFlip', () => {
         mockContext = {
             secrets: { get: jest.fn(), store: jest.fn() },
         } as unknown as vscode.ExtensionContext;
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     function flip(project: Project, experience: AuthoringExperience) {
         return applyAuthoringExperienceFlip(project, experience, {
+            helixService: fakeHelix,
             context: mockContext,
             logger: mockLogger,
             saveProject: jest.fn().mockResolvedValue(undefined),

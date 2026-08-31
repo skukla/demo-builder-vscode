@@ -17,19 +17,13 @@ import { ComponentManager } from '@/features/components/services/componentManage
 import { Project } from '@/types';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { CommandExecutor } from '@/core/shell';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createComponentServiceProject,
-    mockSuccessfulExecution,
     mockFileNotFound,
-    mockFileExists
+    mockFileExists,
 } from './testHelpers';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -42,21 +36,8 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
     let mockCommandExecutor: CommandExecutor;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createComponentServiceProject();
-        mockCommandExecutor = createMockCommandExecutor();
-
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger, mockCommandExecutor);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
+        ({ componentManager, mockLogger, mockProject, mockCommandExecutor } =
+            setupComponentManager());
     });
 
     describe('Node version management', () => {

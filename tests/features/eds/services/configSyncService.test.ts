@@ -24,6 +24,7 @@ import {
     ConfigSyncParams,
 } from '@/features/eds/services/configSyncService';
 import { promises as fsPromises } from 'fs';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the dependencies
 jest.mock('fs', () => ({
@@ -45,23 +46,17 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn(),
-    })),
-}));
+// HelixService is NOT module-mocked. It arrives through the `makeHelix` seam on
+// ConfigSyncParams, so the suite hands in the one method this service calls.
+/** The one Helix call syncConfigToRemote makes, handed in through the seam. */
+const mockPreviewCode = jest.fn();
 
 // Mock global fetch for CDN verification
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('syncConfigToRemote', () => {
-    let mockLogger: {
-        debug: jest.Mock;
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-    };
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     let mockSecrets: {
         get: jest.Mock;
@@ -77,13 +72,9 @@ describe('syncConfigToRemote', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockPreviewCode.mockResolvedValue(undefined);
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         mockSecrets = {
             get: jest.fn(),
@@ -104,6 +95,7 @@ describe('syncConfigToRemote', () => {
             logger: mockLogger as any,
             secrets: mockSecrets as any,
             authManager: mockAuthManager as any,
+            makeHelix: () => ({ previewCode: mockPreviewCode }),
         };
 
         // Mock successful CDN verification response by default
@@ -135,13 +127,6 @@ describe('syncConfigToRemote', () => {
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             };
             GitHubFileOperations.mockImplementation(() => mockGitHubFileOps);
-
-            // Mock Helix service
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            const mockHelixService = HelixService.mock.results[0]?.value || {
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            };
-            HelixService.mockImplementation(() => mockHelixService);
         });
 
         it('reads local config.json and pushes to GitHub', async () => {
@@ -227,10 +212,7 @@ describe('syncConfigToRemote', () => {
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             }));
 
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockRejectedValue(new Error('CDN API error')),
-            }));
+            mockPreviewCode.mockRejectedValue(new Error('CDN API error'));
 
             // Act
             const result = await syncConfigToRemote(baseParams);
@@ -255,11 +237,6 @@ describe('syncConfigToRemote', () => {
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-            }));
-
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
             }));
 
             // Act
@@ -302,11 +279,6 @@ describe('syncConfigToRemote', () => {
 
         it('sets cdnVerified to true when config.json is accessible with valid commerce-endpoint', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            }));
-
             // CDN returns valid config immediately
             mockFetch.mockResolvedValue({
                 ok: true,
@@ -330,11 +302,6 @@ describe('syncConfigToRemote', () => {
 
         it('builds correct CDN URL from repo owner and name', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            }));
-
             mockFetch.mockResolvedValue({
                 ok: true,
                 text: jest.fn().mockResolvedValue(

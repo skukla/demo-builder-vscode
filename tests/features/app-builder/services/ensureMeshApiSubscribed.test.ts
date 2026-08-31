@@ -15,7 +15,6 @@ import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureM
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-jest.mock('vscode');
 
 // Catalog loader — control the rows returned per project selection.
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({

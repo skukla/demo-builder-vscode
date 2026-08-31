@@ -79,15 +79,6 @@ jest.mock(
 );
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock DaLiveAuthService - used by both ensureDaLiveAuth (isAuthenticated)
 // and showDaLiveAuthQuickPick (getOrgName, storeToken)
@@ -113,15 +104,9 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 });
 
 // Mock remaining service imports required by daLiveAuthPrompt to load
-jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/github/githubRepoOperations');
-jest.mock('@/features/eds/services/github/githubFileOperations');
-jest.mock('@/features/eds/services/github/githubOAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: { initKeyStore: jest.fn() },
-}));
+// HelixService is NOT mocked. Its only use on this path is the STATIC `initKeyStore`,
+// which returns early unless the fake Memento hands back legacy keys — so the real one
+// runs harmlessly and the mock was silencing nothing. Measured 2026-08-31.
 jest.mock('@/core/utils/oneTimeTip', () => ({
     showOneTimeTip: jest.fn(),
 }));
@@ -131,48 +116,17 @@ jest.mock('@/core/utils/oneTimeTip', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { ensureDaLiveAuth, type DaLiveGuardResult } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
-import { clearServiceCache } from '@/features/eds/handlers/edsServiceCache';
+import {
+    clearServiceCache,
+    createAuthPromptContext,
+    ensureDaLiveAuth,
+    type DaLiveGuardResult,
+} from './daLiveAuthPrompt.testUtils';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            loadProjectFromPath: jest.fn(),
-            getCurrentProject: jest.fn(),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as unknown as HandlerContext['context'],
-        sharedState: {
-            isAuthenticating: false,
-        },
-    } as unknown as HandlerContext;
-}
 
 function resetMockState(): void {
     showInputBoxResponses = [];
@@ -194,7 +148,7 @@ describe('ensureDaLiveAuth', () => {
         jest.clearAllMocks();
         clearServiceCache();
         resetMockState();
-        mockContext = createMockContext();
+        mockContext = createAuthPromptContext();
     });
 
     // =========================================================================
@@ -400,7 +354,7 @@ describe('ensureDaLiveAuth — server probe', () => {
         jest.clearAllMocks();
         clearServiceCache();
         resetMockState();
-        mockContext = createMockContext();
+        mockContext = createAuthPromptContext();
         mockIsAuthenticated.mockResolvedValue(true);
     });
 

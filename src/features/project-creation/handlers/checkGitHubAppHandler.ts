@@ -18,9 +18,12 @@
  */
 
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
+import type { HelixCodePreview } from '@/features/eds/services/helix/helixCapabilities';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
 import { HelixService } from '@/features/eds/services/helix/helixService';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 interface CheckGitHubAppRequest {
     owner: string;
@@ -99,16 +102,55 @@ interface CheckGitHubAppResponse {
  * @param logger - Logger instance
  * @returns True if Helix accepted the request
  */
+/** The two GitHubAppService calls this handler makes. */
+export interface CheckGitHubAppService {
+    isAppInstalled(
+        owner: string,
+        repo: string,
+        options?: { lenient?: boolean },
+    ): Promise<{
+        isInstalled: boolean;
+        codeStatus?: number;
+        transient?: boolean;
+        httpNotFound?: boolean;
+        httpStatus?: number;
+        helixError?: string;
+        noCredential?: boolean;
+    }>;
+    getInstallUrl(owner: string, repo: string): string;
+}
+
+/**
+ * Service seam. Defaults to the two services this handler builds from the context's
+ * credentials; production never passes it.
+ *
+ * Both are STATELESS — credentials arrive at construction and are never mutated — so
+ * ADR-015 leaves the construction here. What it cost was test design: a suite that
+ * cannot hand them in has to `jest.mock` both modules, which is the wall ADR-016
+ * lists for this file. Handlers take (context, payload), so this rides as a third
+ * optional parameter — extra optional parameters stay assignable to `MessageHandler`.
+ */
+export interface CheckGitHubAppServices {
+    makeHelix?: (logger: Logger, tokenService: GitHubTokenService) => HelixCodePreview;
+    makeGitHubAppService?: (
+        tokenService: GitHubTokenService,
+        logger: Logger,
+        daLiveTokenProvider: ReturnType<typeof tryCreateDaLiveTokenProvider>,
+    ) => CheckGitHubAppService;
+}
+
 async function triggerCodeSync(
     owner: string,
     repo: string,
-    tokenService: import('@/features/eds/services/github/githubTokenService').GitHubTokenService,
-    logger: import('@/types/logger').Logger,
+    tokenService: GitHubTokenService,
+    logger: Logger,
+    makeHelix: (l: Logger, gh: GitHubTokenService) => HelixCodePreview = (l, gh) =>
+        new HelixService(l, gh),
 ): Promise<boolean> {
     logger.info(`[GitHub App Check] Triggering code sync for ${owner}/${repo}`);
 
     // Create HelixService with only GitHub token (no DA.live token needed for code sync)
-    const helixService = new HelixService(logger, tokenService);
+    const helixService = makeHelix(logger, tokenService);
 
     try {
         await helixService.previewCode(owner, repo, '/*');
@@ -141,6 +183,7 @@ function describeAdminResponse(result: {
 export async function checkGitHubApp(
     context: HandlerContext,
     data: unknown,
+    services?: CheckGitHubAppServices,
 ): Promise<HandlerResponse> {
     const request = data as CheckGitHubAppRequest;
 
@@ -156,7 +199,10 @@ export async function checkGitHubApp(
         // carrying an `access.admin` role — which storefront setup now pins on
         // every project — and reports "installed=false, codeStatus=none", which
         // the wizard renders as a permanent "Registering...".
-        const githubAppService = new GitHubAppService(
+        const makeGitHubAppService =
+            services?.makeGitHubAppService ??
+            ((ts, l, tp) => new GitHubAppService(ts, l, tp));
+        const githubAppService = makeGitHubAppService(
             tokenService,
             context.logger,
             tryCreateDaLiveTokenProvider(context.context),
@@ -205,6 +251,7 @@ export async function checkGitHubApp(
                 request.repo,
                 tokenService,
                 context.logger,
+                services?.makeHelix,
             );
             codeSyncTriggered = true;
 

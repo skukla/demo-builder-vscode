@@ -21,7 +21,6 @@ import { createApiSubscriberClient } from '@/features/app-builder/services/apiSu
 import { withOrgContext } from '@/core/shell';
 import type { HandlerContext } from '@/types/handlers';
 
-jest.mock('vscode');
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
 }));

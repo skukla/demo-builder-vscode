@@ -25,9 +25,6 @@ import type { WizardState } from '@/types/webview';
 // The picker fetch (list-org-console-apis) is issued by ApiPickerStage, not the
 // hook — the hook never calls webviewClient in api-edit — but the module is
 // imported transitively, so stub it to a no-op.
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn(), onMessage: () => () => {} },
-}));
 
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 

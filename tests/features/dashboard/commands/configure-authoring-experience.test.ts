@@ -7,27 +7,16 @@
  * via applyDaLiveOrgConfigSettings (non-fatal).
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Mesh / storefront staleness — return "no changes" so the save path stays simple.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
@@ -77,9 +66,9 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 // HelixService — after vendoring, the flip previews the code ('/*') so the
 // committed Quick Edit change goes live (the EW Layout view). Non-fatal.
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
+// HelixService is NOT module-mocked. It arrives through the command's `helixService`
+// seam, which the flip forwards — so the suite hands in the one method the Quick Edit
+// vendoring calls.
 
 // GitHub services constructed by ensureQuickEditVendored. Constructors are
 // stubbed so no real Octokit/secrets access occurs; installQuickEdit is mocked
@@ -196,12 +185,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             globalState: { get: jest.fn(), update: jest.fn() },
         } as unknown as vscode.ExtensionContext;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         mockStateManager = {
             getCurrentProject: jest.fn(),
@@ -216,6 +200,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             mockStateManager as unknown as StateManager,
             mockLogger
         );
+        command.helixService = { previewCode: mockPreviewCode };
 
         // Stub side-effecting private methods so the save path doesn't touch disk.
         (command as any).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);

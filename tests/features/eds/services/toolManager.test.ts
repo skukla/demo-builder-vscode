@@ -19,7 +19,6 @@ import * as _os from 'os';
 import * as _path from 'path';
 
 // Mock vscode module
-jest.mock('vscode');
 
 // Mock fs/promises
 const mockFsAccess = jest.fn();

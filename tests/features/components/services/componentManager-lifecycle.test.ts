@@ -13,17 +13,8 @@
 import { ComponentManager } from '@/features/components/services/componentManager';
 import { Project } from '@/types';
 import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { CommandExecutor } from '@/core/shell';
-import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createComponentServiceProject,
-    mockSuccessfulExecution
-} from './testHelpers';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -32,24 +23,9 @@ describe('ComponentManager - Lifecycle', () => {
     let componentManager: ComponentManager;
     let mockLogger: Logger;
     let mockProject: Project;
-    let mockCommandExecutor: CommandExecutor;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createComponentServiceProject();
-        mockCommandExecutor = createMockCommandExecutor();
-
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger, mockCommandExecutor);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
+        ({ componentManager, mockLogger, mockProject } = setupComponentManager());
     });
 
     describe('updateComponentStatus', () => {

@@ -7,7 +7,9 @@
 
 import * as vscode from 'vscode';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
+import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
@@ -27,12 +29,18 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 const mockPublishAllSiteContent = jest.fn();
 const mockPurgeCacheAll = jest.fn();
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        publishAllSiteContent: mockPublishAllSiteContent,
-        purgeCacheAll: mockPurgeCacheAll,
-    })),
-}));
+const mockPreviewAndPublishPage = jest.fn();
+const mockGetResourceStatus = jest.fn();
+
+// HelixService is NOT module-mocked. It arrives through the `makeHelix` seam on
+// EdsContentDeps, typed to the four calls this function makes — two of its own and
+// two it forwards to the block-library helpers.
+const helixSeam: EdsContentHelix = {
+    publishAllSiteContent: mockPublishAllSiteContent,
+    purgeCacheAll: mockPurgeCacheAll,
+    previewAndPublishPage: mockPreviewAndPublishPage,
+    getResourceStatus: mockGetResourceStatus,
+};
 
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
@@ -99,15 +107,10 @@ function makeConfig(overrides = {}) {
 
 function makeDeps() {
     return {
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         secrets: {} as any,
         extensionContext: {} as any,
+        makeHelix: () => helixSeam,
     };
 }
 
@@ -119,6 +122,8 @@ function setupDefaultMocks() {
     mockCreateBlockLibraryFromTemplate.mockResolvedValue({ blocksCount: 3, paths: ['/library'] });
     mockApplyDaLiveOrgConfigSettings.mockResolvedValue(undefined);
     mockPurgeCacheAll.mockResolvedValue(undefined);
+    mockPreviewAndPublishPage.mockResolvedValue(undefined);
+    mockGetResourceStatus.mockResolvedValue({ httpStatus: 200 });
     mockPublishAllSiteContent.mockResolvedValue(undefined);
     mockPublishLibraryPaths.mockResolvedValue(undefined);
     mockGetAccessToken.mockResolvedValue('da-live-token');

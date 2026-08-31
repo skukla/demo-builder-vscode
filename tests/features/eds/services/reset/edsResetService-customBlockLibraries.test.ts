@@ -8,26 +8,17 @@
  */
 
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // =============================================================================
 // Mocks - jest.mock calls are hoisted
 // =============================================================================
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -37,15 +28,7 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 }));
 
 // Mock dynamic imports used by resetRepoToTemplate
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
 
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
@@ -68,34 +51,15 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        registerSite: jest.fn().mockResolvedValue({ success: true }),
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
@@ -103,13 +67,7 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
 
 // Mock fetch for placeholder files
 global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
@@ -119,12 +77,13 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import {
+    createResetContext,
+    meshDeps,
+} from './edsResetService.testUtils';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
-import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 
-/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
-const meshDeps = createMeshDepsFake();
 
 
 // Cast imported mocks
@@ -163,28 +122,6 @@ function createProject(overrides?: Partial<Project>): Project {
     } as unknown as Project;
 }
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(null),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-        sharedState: {},
-        authManager: {
-            getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        },
-    } as unknown as HandlerContext;
-}
-
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
 
 // =============================================================================
@@ -216,7 +153,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             selectedBlockLibraries: ['isle5'],
             customBlockLibraries: CUSTOM_LIBS,
         });
-        const context = createMockContext();
+        const context = createResetContext();
 
         // When: Executing reset
         await executeEdsReset(
@@ -255,7 +192,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             selectedBlockLibraries: ['isle5'],
             customBlockLibraries: undefined,
         });
-        const context = createMockContext();
+        const context = createResetContext();
 
         // When: Executing reset
         await executeEdsReset(

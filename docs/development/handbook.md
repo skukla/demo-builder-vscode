@@ -577,6 +577,38 @@ breaks the code on purpose and reports what nothing noticed.
 > nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
 > is doing it.
 
+> **Convention.** Before designing a way to hand a mocked collaborator in — or to share
+> one between suites — delete the mock and run the suite. If it still passes, the mock was
+> the whole problem.
+> *Why:* asked twice and answered the same way both times. 28 suites mocked a service
+> module and 22 needed no injection at all. Then eleven split-suite families were merged
+> and **79 of their shared mocks were dead** — deleted from every suite that carried them
+> with nothing failing. Two working sessions went into designing seams for files that only
+> needed a deletion, because the question asked was "how would this suite hand the service
+> in?" rather than "does this mock change anything?". The check costs one suite run.
+> **Not enforced** — it is a question to ask, not a state to hold.
+>
+> Three things only that check shows. `jest.mock('vscode')` is a no-op here — `jest.config.js`
+> already maps it — and four families carried copies. Mocks can serve only each other: twice,
+> a service-locator mock plus the line wiring a fake into it were both dead, because the
+> subject takes that fake by constructor; probed one at a time the mock looks essential, so
+> probe the SET. And a mock the SPEC imports cannot move to a shared file at all — a
+> `jest.mock` only hoists above the imports of the module it appears in, which cost 23
+> failing tests to learn.
+
+A mocked service module turns out to be four different things wearing one shape, and the
+remedy differs for each:
+
+| What it is | What it needs |
+|---|---|
+| The mock changes nothing | Delete it. Most common by far |
+| The suite genuinely needs the collaborator and cannot hand it in | A seam — an optional parameter defaulting to the real construction |
+| The suite asserts the service was BUILT with the right credentials | A *factory* seam. An instance seam skips construction and deletes the property being tested |
+| The suite re-mocks mid-test via `require()` | A seam, which removes the ability entirely |
+
+Where a seam is the answer, type it to the methods the code actually calls rather than to
+the class. A parameter wider than the need is usually why the mock existed.
+
 ---
 
 #### Also checked here
@@ -596,6 +628,15 @@ check says so and names the file.
 > **Convention.** A fixture builder name has exactly one definition.
 > *Why:* twenty-six different fakes of one object means nobody knows what the fake should be.
 > Enforced by `tests/sop/builder-uniqueness.test.ts`.
+
+> **Convention.** A fake that has a builder in `tests/helpers/` is imported, not written
+> again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger
+> grandfathers the files that already do, so it stops new copies rather than demanding a
+> sweep.
+> *Why:* 420 files hand-roll a logger, and the count was still climbing — about twenty new
+> hand-rolled fakes appeared in one day of dependency-injection work, because each newly
+> converted service needs a fake and typing one is faster than finding the builder. The
+> pool is a chore; the rate is the problem.
 
 > **Convention.** A fake that a SECOND feature directory needs lives in `tests/helpers/`.
 > A `*.testUtils.ts` beside a suite is for setup specific to that subject.
@@ -665,11 +706,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 23 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 24 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 75 conventions. 60 of them are enforced; 15 are not.**
+**This handbook states 77 conventions. 61 of them are enforced; 16 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

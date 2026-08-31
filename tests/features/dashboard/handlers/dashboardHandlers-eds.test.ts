@@ -122,12 +122,8 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-        getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
-    })),
-}));
+// GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
+// nothing this suite observes — it was silencing a construction with no side effects.
 
 // Mock configGenerator (dynamically imported for config.json generation)
 jest.mock('@/features/eds/services/configGenerator', () => ({
@@ -164,6 +160,7 @@ import { handleResetProject } from '@/features/dashboard/handlers/dashboardHandl
 import { ServiceLocator } from '@/core/di';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Test Utilities
@@ -217,18 +214,8 @@ function createMockContext(project: Project | undefined): HandlerContext {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             secrets: {},

@@ -27,6 +27,18 @@ doing verification's job.
    passed through the front door, assertions on HOW collaborators are called
    (interaction testing, Freeman & Pryce). Rides ADR-015: converted code
    sheds its module-mock walls; suites migrate to plain deps-object fakes.
+   **Done, 2026-08-31 — and it was mostly not the work this predicted.** All 28
+   suites that module-mocked a stateless service are converted; the count is
+   now zero. Six needed a seam. Twenty-two needed the mock deleted: the
+   collaborator was constructed once and never called, because something
+   further down was already faked. The cheap question — strip the mock, run
+   the suite — answers that in one run, and asking it late cost two sessions
+   of designing seams for files that needed none. The handbook carries the
+   four shapes and their remedies. Where a seam WAS the answer it improved the
+   source as often as the suite: five parameters that declared a whole service
+   class were narrowed to the two or three methods their code calls, and one
+   conversion found a path — the CDN unpublish in project deletion — that a
+   stale mock had made unreachable while 23 tests passed.
 2. **CONTRACT** — any fixture standing for an external system is CAPTURED
    from a live response, never composed from memory (characterization,
    Feathers; integration-contract testing, Fowler/Pact); drift scripts

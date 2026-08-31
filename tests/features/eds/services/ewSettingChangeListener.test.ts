@@ -16,7 +16,6 @@ import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 
-jest.mock('vscode');
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
     editorPath: 'ok',

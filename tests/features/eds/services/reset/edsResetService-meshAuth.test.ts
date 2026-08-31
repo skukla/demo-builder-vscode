@@ -13,7 +13,6 @@
  */
 
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
 
@@ -37,40 +36,13 @@ jest.mock('@/core/shell', () => ({
 }));
 
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        })),
-        getCommandExecutor: jest.fn(() => ({})),
-    },
-}));
 
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn((project: Project) => {
-        if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find(
-            (c) => (c as { subType?: string }).subType === 'mesh',
-        );
-    }),
-    hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -79,15 +51,7 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
 
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
@@ -109,27 +73,12 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
@@ -137,19 +86,10 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: jest.fn().mockResolvedValue({
@@ -158,9 +98,6 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({
     }),
 }));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
 
 // Mock fetch for placeholder files
 global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
@@ -170,10 +107,11 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import {
+    createResetContext,
+    meshDeps,
+} from './edsResetService.testUtils';
 
-/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
-const meshDeps = createMeshDepsFake();
 
 
 // =============================================================================
@@ -219,28 +157,6 @@ function createProjectWithMesh(): Project {
     } as unknown as Project;
 }
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(null),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-        sharedState: {},
-        authManager: {
-            getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        },
-    } as unknown as HandlerContext;
-}
-
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
 
 // =============================================================================
@@ -257,7 +173,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should call ensureAdobeIOAuth before wrapping the mesh redeploy in withOrgContext', async () => {
         // Given: Project with mesh component and redeployMesh enabled
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
         const callOrder: string[] = [];
 
         mockEnsureAdobeIOAuth.mockImplementation(async () => {
@@ -290,7 +206,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should target the project org/project/workspace via withOrgContext', async () => {
         // Given: Project with Adobe org/project/workspace
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
 
@@ -320,7 +236,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should pass project adobe context to ensureAdobeIOAuth', async () => {
         // Given: Project with Adobe org/project/workspace
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
 
@@ -352,7 +268,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should return partial success when auth fails during mesh redeployment', async () => {
         // Given: Auth fails (user cancelled or token expired)
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
 
@@ -378,7 +294,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should not call ensureAdobeIOAuth when redeployMesh is false', async () => {
         // Given: Project with mesh but redeployMesh disabled
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         // When
         await executeEdsReset(
