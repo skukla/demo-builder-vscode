@@ -102,11 +102,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 // =============================================================================
 // Imports (after mocks)

@@ -119,11 +119,9 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({

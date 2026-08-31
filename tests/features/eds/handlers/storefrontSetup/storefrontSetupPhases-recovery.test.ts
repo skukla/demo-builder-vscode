@@ -100,23 +100,13 @@ jest.mock('@/features/eds/services/github/githubAppService', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        registerSite: jest.fn().mockResolvedValue({ success: true }),
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/eds/services/fstabGenerator', () => ({
     generateFstabContent: jest.fn().mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
