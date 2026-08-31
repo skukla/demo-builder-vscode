@@ -31,7 +31,6 @@ jest.mock('@/core/di', () => ({
 }));
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 
 jest.mock('@/core/validation', () => ({
     validateOrgId: jest.fn(),

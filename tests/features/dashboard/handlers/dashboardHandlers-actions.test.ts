@@ -44,7 +44,6 @@ jest.mock(
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock ServiceLocator
 jest.mock('@/core/di', () => ({

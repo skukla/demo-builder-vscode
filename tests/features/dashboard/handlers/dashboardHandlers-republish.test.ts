@@ -32,7 +32,6 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/core/di', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));

@@ -16,7 +16,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
@@ -46,10 +45,14 @@ import { handleSwitchOrg } from '@/features/dashboard/handlers/dashboardHandlers
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
+// The barrel this suite used to automock was retired (ADR-022), so the mock now
+// names the module that declares the handler.
+jest.mock('@/features/authentication/handlers/orgSwitchHandler');
+
 describe('dashboardHandlers - handleSwitchOrg', () => {
     /** The authentication-owned forced sign-in this handler composes around. */
     function forcedSwitch(): jest.Mock {
-        const { handleForcedOrgSwitch } = require('@/features/authentication');
+        const { handleForcedOrgSwitch } = require('@/features/authentication/handlers/orgSwitchHandler');
         return handleForcedOrgSwitch as jest.Mock;
     }
 

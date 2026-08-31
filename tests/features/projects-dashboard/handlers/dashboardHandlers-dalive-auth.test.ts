@@ -64,7 +64,6 @@ jest.mock('@/features/eds/services/helix/helixService');
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock showDaLiveAuthQuickPick result holder
 const mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };

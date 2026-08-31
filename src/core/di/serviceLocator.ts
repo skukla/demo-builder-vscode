@@ -18,7 +18,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell';
-import type { AuthenticationService } from '@/features/authentication';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { StateManager as IStateManager } from '@/types/state';
 

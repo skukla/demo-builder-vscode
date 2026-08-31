@@ -87,7 +87,7 @@ jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
     })),
 }));
 
-jest.mock('@/features/authentication', () => ({
+jest.mock('@/features/authentication/services/authenticationService', () => ({
     AuthenticationService: jest.fn().mockImplementation(() => ({})),
 }));
 

@@ -17,7 +17,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),

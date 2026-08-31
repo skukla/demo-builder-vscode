@@ -55,7 +55,6 @@ jest.mock('@/features/eds/services/helix/helixService');
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock edsHelpers - getGitHubServices
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

@@ -59,7 +59,7 @@ import { narrationFor } from '@/features/ai/server/toolNarration';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
-import { AuthenticationService } from '@/features/authentication';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';

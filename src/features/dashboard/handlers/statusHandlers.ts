@@ -17,7 +17,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
-import { handleForcedOrgSwitch } from '@/features/authentication';
+import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import {
     handleRegenerateAiFiles,
     logAiVerification,

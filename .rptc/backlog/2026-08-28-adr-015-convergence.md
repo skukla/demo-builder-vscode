@@ -84,3 +84,5 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(eds): the GitHub services accessor asks for the secret store it actually reads (`53e66091e`)
 - 2026-08-31  refactor(core): env var keys move to core, where their 18 importers already live (`93b558ea0`)
 - 2026-08-31  fix(data-installer): the shape-drift warning fires once again, as its contract says (`9405366f4`)
+- 2026-08-31  refactor(prerequisites): the manager stops building its own cache, and the command stops building its own manager (`155183f98`)
+- 2026-08-31  refactor(core): the backend-owned-scope helper follows its only caller into core (`1bb896c9d`)

@@ -13,7 +13,7 @@ import type { StateManager } from './state';
 import type { WebviewCommunicationManager } from '@/core/communication';
 import type { ErrorLogger, StepLogger } from '@/core/logging';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier';
-import type { AuthenticationService } from '@/features/authentication';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type {
     PrerequisitesManager,

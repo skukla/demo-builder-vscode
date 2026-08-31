@@ -8,7 +8,6 @@ import { createMockProject as createMockProjectBase } from '../../../helpers/pro
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         // ADR-015 (2026-08-28): handlers resolve these when assembling runner

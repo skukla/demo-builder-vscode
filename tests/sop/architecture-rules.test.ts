@@ -394,16 +394,24 @@ describe('ADR-022: features get no new barrel', () => {
      * importers for `@/types` alone. Features are the other way round: import the
      * module that defines the symbol, and do not add a feature-level `index.ts`.
      *
-     * Five survive with importers between them, so this is a ledger rather than a
-     * ban: the set may only shrink. Deleting one means deleting its row too.
+     * Five predated the ruling and sat in the ledger; ALL FIVE were retired on
+     * 2026-08-31, so the ledger is empty and this is now a ban rather than a
+     * ratchet. A new feature barrel fails the build with nowhere to record it.
      */
     const barrels = FILES.filter((f) => /^src\/features\/[^/]+\/index\.tsx?$/.test(f));
 
     it('CONTROL: the detector distinguishes feature-level from nested barrels', () => {
+        // Asserted against LITERALS, not against the tree. This control used to end
+        // with `expect(barrels.length).toBeGreaterThan(0)` — a positive control that
+        // depended on a violation existing, so retiring the last barrel broke the
+        // check that was supposed to prove the rule was working. A control must
+        // survive the codebase becoming clean.
         const re = /^src\/features\/[^/]+\/index\.tsx?$/;
         expect(re.test('src/features/eds/index.ts')).toBe(true);
         expect(re.test('src/features/eds/handlers/index.ts')).toBe(false);
-        expect(barrels.length).toBeGreaterThan(0);
+        expect(re.test('src/core/ui/index.ts')).toBe(false);
+        // And the corpus is real, so an empty result means "none", not "never read".
+        expect(FILES.length).toBeGreaterThan(500);
     });
 
     it('every feature-level barrel is a reasoned ledger entry', () => {

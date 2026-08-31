@@ -10,7 +10,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { AuthenticationService } from '@/features/authentication';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
