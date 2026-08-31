@@ -75,7 +75,7 @@ silenced type error, and it has hidden four real defects here: each produced a s
 no-op in production that every test agreed with.
 
 Where code goes, and the conventions the build enforces, are in
-[the handbook](docs/development/handbook.md) — 78 of them, 61 with an enforcer.
+[the handbook](docs/development/handbook.md) — 79 of them, 62 with an enforcer.
 Read it once.
 
 ## Tests

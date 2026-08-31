@@ -1,3 +1,18 @@
+/**
+ * ComponentRegistryManager - Retrieval Tests
+ *
+ * Tests component retrieval by category and ID lookup operations.
+ *
+ * These nine tests existed TWICE, byte-identical, in this file and in
+ * `ComponentRegistryManager-registration.test.ts`, from the 2025-11-18 file split
+ * that copied rather than moved them. The twin was deleted on 2026-08-31.
+ *
+ * The twin's name was wrong from the day it was created: `ComponentRegistryManager`
+ * has no registration method — every public member is a getter or `loadRegistry` —
+ * and the twin's own docblock described retrieval. So nothing was lost with it, and
+ * there is no missing registration suite to write.
+ */
+
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
 

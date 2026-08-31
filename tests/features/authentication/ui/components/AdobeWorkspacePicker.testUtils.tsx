@@ -1,3 +1,5 @@
+import { createSelectionStepFake } from '../../../../helpers/selectionStepFake';
+import type { UseSelectionStepResult } from '@/core/ui/hooks';
 import { WizardState, Workspace } from '@/types/webview';
 
 // Test data
@@ -34,23 +36,25 @@ export const baseState: Partial<WizardState> = {
     currentStep: 'adobe-workspace',
 };
 
-// Factory functions
-export function createMockUseSelectionStepReturn(overrides = {}) {
-    return {
+/**
+ * The workspace picker's `useSelectionStep` fake — a LOADED list by default,
+ * unlike the project picker's, because these suites exercise selection rather
+ * than loading.
+ *
+ * Delegates to the canonical typed fake; it used to take a bare `overrides = {}`
+ * and returned an object missing `errorCode`.
+ *
+ * @see tests/helpers/selectionStepFake.ts
+ */
+export function createMockUseSelectionStepReturn(
+    overrides: Partial<UseSelectionStepResult<Workspace>> = {},
+): UseSelectionStepResult<Workspace> {
+    return createSelectionStepFake<Workspace>({
         items: mockWorkspaces,
         filteredItems: mockWorkspaces,
-        isLoading: false,
-        showLoading: false,
-        isRefreshing: false,
         hasLoadedOnce: true,
-        error: null,
-        searchQuery: '',
-        setSearchQuery: jest.fn(),
-        load: jest.fn(),
-        refresh: jest.fn(),
-        selectItem: jest.fn(),
         ...overrides,
-    };
+    });
 }
 
 export function createStateWithWorkspace(workspace: Workspace): Partial<WizardState> {

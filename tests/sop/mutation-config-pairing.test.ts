@@ -22,6 +22,7 @@
  * that the test meaningfully exercises it. A file can be selected and still assert
  * nothing about the mutated code.
  */
+import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { basename, join } from 'path';
 
@@ -88,6 +89,49 @@ describe('every mutated module has a test selected to cover it', () => {
         const uncovered = p.mutate.filter((m) => !covered(p, m));
         // A module here would report 0% and read as a coverage catastrophe.
         expect(uncovered).toEqual([]);
+    });
+
+    it.each(CONFIGS)('%s: EVERY suite for a mutated module is selected, not just one', (c) => {
+        // The check above asks whether a module has AT LEAST ONE test selected. That is
+        // not enough, and the gap is not theoretical: on 2026-08-31 installHandler had 12
+        // of its 13 suites wired and integrationCardModel had 1 of its 5. Both passed the
+        // at-least-one check and both reported a score built on a fraction of their tests
+        // — installHandler at 49.17% with 112 "uncovered" mutants, integrationCardModel at
+        // 42.96%. Neither number described the tests that exist; they described the tests
+        // the runner happened to load, and both were read as findings about test quality.
+        const p = load(c);
+        const onDisk = execSync('git ls-files "tests/**/*.test.ts" "tests/**/*.test.tsx"', {
+            cwd: ROOT,
+            encoding: 'utf8',
+        })
+            .trim()
+            .split('\n');
+
+        const gaps: string[] = [];
+        for (const m of p.mutate) {
+            const subject = basename(m).replace(/\.tsx?$/, '');
+            // A suite belongs to a module when its filename before `.test.` matches the
+            // module, allowing the `-slice` split this repo uses for large families.
+            const siblings = onDisk.filter(
+                (t) => basename(t).split('.test.')[0].split('-')[0] === subject,
+            );
+            const absent = siblings.filter((t) => !p.testFiles.some((sel) => sel.endsWith(t)));
+            for (const a of absent) gaps.push(`${m}  <-  ${a}`);
+        }
+        expect(gaps).toEqual([]);
+    });
+
+    it('CONTROL: the every-suite check can actually fail', () => {
+        // Same reasoning as the control below: a check that cannot fail reports a clean
+        // config and a broken one identically. A module with a real suite on disk and an
+        // empty selection must come back uncovered.
+        const nothingSelected: Pairing = {
+            strykerConfig: 'x',
+            jestConfig: 'y',
+            mutate: ['src/features/updates/services/envMerge.ts'],
+            testFiles: [],
+        };
+        expect(covered(nothingSelected, nothingSelected.mutate[0])).toBe(false);
     });
 
     it('CONTROL: the coverage check can actually fail', () => {

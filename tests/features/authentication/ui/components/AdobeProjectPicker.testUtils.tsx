@@ -1,3 +1,5 @@
+import { createSelectionStepFake } from '../../../../helpers/selectionStepFake';
+import type { UseSelectionStepResult } from '@/core/ui/hooks';
 import { AdobeProject, WizardState } from '@/types/webview';
 
 // Mock data — deletable:true because most delete-affordance tests exercise
@@ -36,37 +38,20 @@ export const baseState: Partial<WizardState> = {
     currentStep: 'adobe-project',
 };
 
-// Factory for creating useSelectionStep return values
-export interface MockSelectionStepConfig {
-    items?: AdobeProject[];
-    filteredItems?: AdobeProject[];
-    isLoading?: boolean;
-    showLoading?: boolean;
-    isRefreshing?: boolean;
-    hasLoadedOnce?: boolean;
-    error?: string | null;
-    searchQuery?: string;
-    setSearchQuery?: jest.Mock;
-    load?: jest.Mock;
-    refresh?: jest.Mock;
-    selectItem?: jest.Mock;
-}
-
-export function createMockSelectionStep(config: MockSelectionStepConfig = {}) {
-    return {
-        items: config.items ?? [],
-        filteredItems: config.filteredItems ?? [],
-        isLoading: config.isLoading ?? false,
-        showLoading: config.showLoading ?? false,
-        isRefreshing: config.isRefreshing ?? false,
-        hasLoadedOnce: config.hasLoadedOnce ?? false,
-        error: config.error ?? null,
-        searchQuery: config.searchQuery ?? '',
-        setSearchQuery: config.setSearchQuery ?? jest.fn(),
-        load: config.load ?? jest.fn(),
-        refresh: config.refresh ?? jest.fn(),
-        selectItem: config.selectItem ?? jest.fn(),
-    };
+/**
+ * The project picker's `useSelectionStep` fake — an empty, idle list by default.
+ *
+ * Delegates to the canonical typed fake. It previously declared its own
+ * `MockSelectionStepConfig` interface listing all twelve fields by hand, which is
+ * how it came to be missing `errorCode`: a hand-listed shape has nothing checking
+ * it against the hook it stands in for.
+ *
+ * @see tests/helpers/selectionStepFake.ts
+ */
+export function createMockSelectionStep(
+    config: Partial<UseSelectionStepResult<AdobeProject>> = {},
+): UseSelectionStepResult<AdobeProject> {
+    return createSelectionStepFake<AdobeProject>(config);
 }
 
 // Helper to create many projects for testing pagination/search

@@ -638,6 +638,20 @@ check says so and names the file.
 > `npm run validate:test-file-sizes`.
 > *Why:* past that nobody reads the whole file, so tests get duplicated rather than found.
 
+> **Convention.** No test file repeats another file's tests wholesale.
+> *Why:* the rule above predicted this and it happened anyway. One 2025-11-18 commit split
+> four oversized suites by COPYING tests into the new files instead of moving them, and four
+> whole files sat as byte-identical duplicates for nine months —
+> `installHandler-shellOptions`, `-adobeCLI`, `-sharedUtilities` and
+> `ComponentRegistryManager-registration`, the last of which never tested registration at all
+> because the class has no such method. They cost time on every run and quietly inflated
+> coverage and mutation scores by killing the same mutants twice. The clone scan could not
+> say so: jscpd counts duplicated line RANGES, so a wholly redundant file reads as an
+> ordinary mid-table clone pair — the census had recorded one of these as "4 clones", which
+> looks like an extraction job rather than a deletion. Enforced by
+> `tests/sop/duplicate-test-files.test.ts`, which compares whole test sets within a
+> directory.
+
 > **Convention.** A test file lives at the path mirroring the source file it covers.
 > *Why:* it is how you find the tests for a file without searching, and how a missing suite
 > becomes visible. Enforced by `tests/sop/mirror-placement.test.ts`.
@@ -723,11 +737,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 24 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 25 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 78 conventions. 61 of them are enforced; 17 are not.**
+**This handbook states 79 conventions. 62 of them are enforced; 17 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:
