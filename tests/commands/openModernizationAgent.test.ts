@@ -21,7 +21,7 @@ jest.mock('@/core/utils/browserUtils', () => ({
 
 import { OpenModernizationAgentCommand } from '@/commands/openModernizationAgent';
 import { openUrl } from '@/core/utils/browserUtils';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';

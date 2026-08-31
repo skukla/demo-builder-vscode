@@ -60,7 +60,7 @@ import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames
 import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';

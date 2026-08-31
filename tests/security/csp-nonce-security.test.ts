@@ -10,7 +10,7 @@
 
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../helpers/loggerFake';
 

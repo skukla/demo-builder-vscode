@@ -108,3 +108,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): five more retired, and the fifth barrel-shaped test — 15 to 10 (`22ad6ed56`)
 - 2026-08-31  refactor(barrels): the UI hooks and integrations barrels go — 10 to 7 (`350c6f900`)
 - 2026-08-31  refactor(barrels): core/utils and its nested progressUnifier index — 7 to 5 (`23ae25fb6`)
+- 2026-08-31  refactor(barrels): core/logging retired, and the landmine it was carrying — 5 to 4 (`a7f5e6605`)

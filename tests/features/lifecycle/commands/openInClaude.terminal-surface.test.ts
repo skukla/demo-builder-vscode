@@ -12,7 +12,7 @@ import type { Project } from '@/types/base';
 import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeOpenInClaudeProject,
 } from './openInClaude.testkit';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 // The home Chat always launches at the projects root. Pin the root to a known
 // path via DEMO_BUILDER_PROJECTS_DIR so cwd / session-probe assertions are

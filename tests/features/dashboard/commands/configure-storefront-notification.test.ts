@@ -14,7 +14,7 @@
 import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

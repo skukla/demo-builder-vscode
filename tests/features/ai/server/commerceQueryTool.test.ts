@@ -37,7 +37,7 @@
  */
 
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 function fakeServer() {
      

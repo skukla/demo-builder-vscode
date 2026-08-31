@@ -11,7 +11,7 @@ import {
     DeleteProjectCommand,
     vscode,
 } from './deleteProject.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 
 // Mock fs/promises with explicit exports

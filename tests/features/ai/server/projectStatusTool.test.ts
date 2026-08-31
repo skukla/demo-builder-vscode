@@ -6,7 +6,7 @@
  */
 
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { expectWithinCeiling } from './responseCeilings';
 
 const isAuthenticated = jest.fn();

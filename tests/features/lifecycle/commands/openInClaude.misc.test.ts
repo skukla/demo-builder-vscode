@@ -16,7 +16,7 @@ import {
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 // The home Chat always launches at the projects root. Pin the root so the
 // cwd-in-log assertion is deterministic.

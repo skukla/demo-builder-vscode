@@ -13,7 +13,7 @@
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Project } from '@/types/base';

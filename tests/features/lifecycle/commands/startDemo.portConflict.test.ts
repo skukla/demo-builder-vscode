@@ -17,7 +17,7 @@ import {
     mockCommandExecutor,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';

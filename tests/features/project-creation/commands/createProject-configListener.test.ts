@@ -12,7 +12,7 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

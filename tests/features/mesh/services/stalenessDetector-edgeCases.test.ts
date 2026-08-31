@@ -8,7 +8,7 @@ jest.mock('crypto', () => ({
     createHash: jest.fn(),
 }));
 
-jest.mock('@/core/state', () => ({
+jest.mock('@/core/state/projectStateSync', () => ({
     getFrontendEnvVars: jest.fn(),
 }));
 
@@ -451,12 +451,12 @@ describe('StalenessDetector - Edge Cases', () => {
 
     describe('detectFrontendChanges', () => {
         beforeEach(() => {
-            const { getFrontendEnvVars } = require('@/core/state');
+            const { getFrontendEnvVars } = require('@/core/state/projectStateSync');
             getFrontendEnvVars.mockClear();
         });
 
         it('should detect frontend env var changes', () => {
-            const { getFrontendEnvVars } = require('@/core/state');
+            const { getFrontendEnvVars } = require('@/core/state/projectStateSync');
 
             getFrontendEnvVars.mockReturnValue({
                 MESH_ENDPOINT: 'https://new.com',
@@ -485,7 +485,7 @@ describe('StalenessDetector - Edge Cases', () => {
         });
 
         it('should return false when no changes', () => {
-            const { getFrontendEnvVars } = require('@/core/state');
+            const { getFrontendEnvVars } = require('@/core/state/projectStateSync');
 
             getFrontendEnvVars.mockReturnValue({
                 MESH_ENDPOINT: 'https://example.com',

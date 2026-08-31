@@ -29,7 +29,7 @@ import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitial
 export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInitialData> {
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/core/state').StateManager,
+        stateManager: import('@/core/state/stateManager').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);

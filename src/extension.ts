@@ -9,7 +9,7 @@ import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';

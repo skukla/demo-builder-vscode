@@ -10,7 +10,7 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/di/serviceLocator', () => ({

@@ -19,7 +19,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-jest.mock('@/core/state', () => ({
+jest.mock('@/core/state/projectStateSync', () => ({
     getFrontendEnvVars: jest.fn((config) => ({
         MESH_ENDPOINT: config.MESH_ENDPOINT || '',
         OTHER_VAR: config.OTHER_VAR || '',

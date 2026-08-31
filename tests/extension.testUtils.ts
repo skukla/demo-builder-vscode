@@ -36,7 +36,7 @@ export const mockOnProjectChanged = {
     event: jest.fn(() => ({ dispose: jest.fn() })),
 };
 
-jest.mock('@/core/state', () => ({
+jest.mock('@/core/state/stateManager', () => ({
     StateManager: jest.fn().mockImplementation(() => ({
         initialize: mockInitialize.mockResolvedValue(undefined),
         hasProject: mockHasProject,

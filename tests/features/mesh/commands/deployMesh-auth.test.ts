@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import { DeployMeshCommand } from './deployMesh.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';

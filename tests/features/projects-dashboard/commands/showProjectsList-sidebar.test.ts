@@ -11,7 +11,7 @@ import {
     ShowProjectsListCommand,
 } from './showProjectsList.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 
 // Track sidebar provider method calls
 const mockSetShowingProjectsList = jest.fn().mockResolvedValue(undefined);

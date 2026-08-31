@@ -5,7 +5,7 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { updateFrontendState } from '@/core/state';
+import { updateFrontendState } from '@/core/state/projectStateSync';
 import { ExecutionLock } from '@/core/utils/executionLock';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';

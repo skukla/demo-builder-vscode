@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies

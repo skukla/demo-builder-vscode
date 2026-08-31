@@ -31,7 +31,7 @@ import {
     syncAndPublishMock,
     SyncStorefrontCommand,
 } from './syncStorefront.testUtils';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 beforeEach(() => {
     resetSyncStorefrontMocks();

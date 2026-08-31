@@ -19,7 +19,7 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code API

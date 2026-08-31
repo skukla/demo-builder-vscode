@@ -36,7 +36,7 @@
 import { z } from 'zod';
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
 import { asRawText, asText } from './mcpToolResult';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 /**
  * The response ceiling.

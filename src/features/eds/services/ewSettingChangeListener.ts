@@ -20,7 +20,7 @@ import * as vscode from 'vscode';
 import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { AuthoringExperience, Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { isEdsProject } from '@/types/typeGuards';

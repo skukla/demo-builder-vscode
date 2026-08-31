@@ -8,7 +8,7 @@
 
 import { CommandManager } from '@/commands/commandManager';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
@@ -102,7 +102,6 @@ jest.mock('@/features/eds/utils/daLiveTokenBookmarklet', () => ({
 }));
 
 // Mock StateManager, Logger
-jest.mock('@/core/state');
 
 describe('CommandManager', () => {
     let commandManager: CommandManager;

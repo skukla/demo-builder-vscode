@@ -64,7 +64,7 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import {
     buildConfigGeneratorParams,

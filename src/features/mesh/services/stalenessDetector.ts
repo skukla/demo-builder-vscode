@@ -17,7 +17,7 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell';
-import { getFrontendEnvVars } from '@/core/state';
+import { getFrontendEnvVars } from '@/core/state/projectStateSync';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';

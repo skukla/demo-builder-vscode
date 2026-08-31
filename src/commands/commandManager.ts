@@ -14,7 +14,7 @@ import { ResetAllCommand } from './ResetAllCommand';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { formatMinutes } from '@/core/utils/timeFormatting';
 import { openUrl } from '@/core/utils/browserUtils';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';

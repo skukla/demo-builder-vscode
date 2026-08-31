@@ -16,7 +16,7 @@ import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 

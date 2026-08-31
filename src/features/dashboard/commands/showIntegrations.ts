@@ -30,7 +30,7 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';

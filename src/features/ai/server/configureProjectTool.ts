@@ -50,7 +50,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types';
 import { getMeshComponentInstance } from '@/types/typeGuards';

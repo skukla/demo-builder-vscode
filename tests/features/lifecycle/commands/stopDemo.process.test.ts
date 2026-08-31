@@ -20,7 +20,7 @@ import {
     StopDemoCommand,
     mockCommandExecutor,
 } from './stopDemo.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';

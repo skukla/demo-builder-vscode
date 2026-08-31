@@ -10,7 +10,7 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

@@ -77,7 +77,7 @@ import { RefreshBlockLibraryCommand } from '@/commands/refreshBlockLibrary';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';

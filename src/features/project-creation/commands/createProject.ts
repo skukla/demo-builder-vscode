@@ -89,7 +89,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/core/state').StateManager,
+        stateManager: import('@/core/state/stateManager').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);

@@ -19,7 +19,7 @@
 
 import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';

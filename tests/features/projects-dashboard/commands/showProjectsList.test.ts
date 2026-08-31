@@ -15,7 +15,7 @@ import {
 import * as vscode from 'vscode';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
