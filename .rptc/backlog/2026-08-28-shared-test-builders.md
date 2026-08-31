@@ -173,6 +173,54 @@ numbers are the whole measure; nothing here needs a subjective judgement.
 `node .claude/skills/test-divergence-scan/scan.mjs tests`, at release cuts. The
 table above is the baseline a later run is compared against.
 
+## Deliberately left — the standing list
+
+Every item here was a decision, not an omission. Recorded because a deferral that
+lives only in a commit message is a deferral nobody finds again.
+
+### 1. Twenty-six logger literals inside `jest.mock` factories (22 files)
+A hoisted factory cannot reference an import, so the shared builder is unreachable
+from inside one. The lazy-require idiom works and was proven on a real suite (8
+tests green) then reverted to keep the batch one shape.
+**They are load-bearing, re-probed 2026-08-31**: removing them fails 27 suites and
+185 tests. Only ONE of the 22 asserts on a logger, so that is not the reason —
+see the landmine note below for what is actually holding them up, and expect this
+group to shrink to near zero when [[PL-31]] retires the logging barrel.
+
+### 2. Eleven `{ execute }` fakes cast `as never`
+`as never` on an argument is the cast this repo has a written rule against — it
+hid four production defects in August. Unpicking them means finding what each call
+actually wants, which is its own piece of work rather than a tail on a conversion
+batch.
+
+### 3. Fifteen ambiguous `{ execute }` uses
+`{ execute }` is a generic shape and these are not clearly a CommandExecutor. Left
+rather than guessed at; converting one that is a different collaborator would put
+ten wrong methods on it.
+
+### 4. Four one-method shapes NEED NO BUILDER — measured, not skipped
+`{ dispose }` (78), `{ getAccessToken }` (65), `{ report }` (41),
+`{ executeCommand }` (38). Each stands in for a ONE-METHOD interface —
+`vscode.Disposable`, `TokenProvider`, `vscode.Progress`, and the vscode commands
+bridge. A literal `{ dispose: jest.fn() }` is a COMPLETE fake of `Disposable`;
+there is nothing for a builder to supply and nothing to drift.
+
+This sharpens the convention rather than dodging it: the smell was never
+"hand-rolled", it is **incomplete relative to the real type**, and a one-method
+interface cannot be incomplete. The 222 literals in this group are correct as they
+stand. Do not build these four builders.
+
+### 5. The flaky socket test
+`inExtensionMcpServer.test.ts` → "reports the build label when one is supplied"
+timed out once under full-suite load, passed 3/3 alone, and passed with unrelated
+changes stashed. A binding race the suite's own comment says it makes visible
+rather than fixes. Not this item's, but nobody else has it.
+
+### 6. Component mutation coverage
+Needs a react-only Stryker config; blocked on the `@jest-environment` pragma vs
+sandbox interaction and on `user-event`'s clipboard teardown. Raised 2026-08-30 and
+never filed anywhere until now.
+
 ## Shipped so far
 
 - 2026-08-28  refactor(tests): type the builders that stand for real interfaces (`969e91786`)

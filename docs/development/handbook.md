@@ -719,6 +719,16 @@ check says so and names the file.
 > is too many rows to keep honest, while nine numbers maintain themselves. The pin
 > demands EXACT equality: lowering a count means lowering the pin in the same commit,
 > so the ratchet cannot slacken and a regression cannot hide beneath a stale number.
+>
+> **And the inverse, so this is not read as "literals are bad".** A fake of a
+> ONE-METHOD interface is complete by construction and needs no builder. Measured
+> 2026-08-31: `{ dispose }` (78 uses), `{ getAccessToken }` (65), `{ report }` (41)
+> and `{ executeCommand }` (38) each stand in for an interface with exactly one
+> member — `vscode.Disposable`, `TokenProvider`, `vscode.Progress`, the vscode
+> commands bridge. 222 literals, all correct as written. The smell is
+> INCOMPLETENESS relative to the real type, not hand-writing; a one-method
+> interface cannot be incomplete, and building those four builders would add
+> indirection with nothing behind it.
 
 > **Convention.** A test file lives at the path mirroring the source file it covers.
 > *Why:* it is how you find the tests for a file without searching, and how a missing suite
