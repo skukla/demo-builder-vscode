@@ -95,10 +95,22 @@ a keyword:
 | `tooling-registry.test.ts` | every skill is registered AND routed in CLAUDE.md; the gate script's step count matches its documented table |
 | `architecture-rules.test.ts` | the ledgered architecture rules, including `layerDirection` |
 
-**The gap to close in this phase:** the seven rewritten per-directory files state
-counts and lists that nothing pins — the sidebar's six tiles and its derived 640px
-breakpoint, the 21 projects-list handlers, the 24 hooks, the 33 components. Each is
-exactly the kind of number that rotted in the originals.
+**The gap to close in this phase**, re-measured 2026-08-30 rather than carried
+forward — the earlier version of this paragraph named "the 24 hooks, the 33
+components", and neither file states a count any more. The list had gone stale
+inside the item whose whole subject is stale counts, which is worth recording.
+
+What the four files actually claim today, and none of it is pinned:
+
+| File | Unpinned counted claim |
+|---|---|
+| `src/features/sidebar/CLAUDE.md` | `6 tiles` / `7 tiles`, the derived `640px` breakpoint, `four pixels` |
+| `src/features/projects-dashboard/CLAUDE.md` | `21 keys`, `5 items` |
+| `src/core/ui/hooks/CLAUDE.md` | none — its counts are prose ("two steps") |
+| `src/core/ui/components/CLAUDE.md` | none — same |
+
+So the phase is smaller than it looked: two files, five numbers. Each is exactly the
+kind that rotted in the originals.
 
 Do not pin a number that churns. `AI_CONTEXT_VERSION` was removed from CLAUDE.md
 rather than pinned, because it bumps on every bundle change and a pin would buy churn
