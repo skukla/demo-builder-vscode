@@ -236,7 +236,6 @@
         "tests/features/mesh/services/deployMeshWithFeedback.test.ts",
         "tests/features/mesh/services/meshEndpoint.test.ts",
         "tests/features/mesh/services/meshRedeploy.test.ts",
-        "tests/features/mesh/services/meshVerifier-di.test.ts",
         "tests/features/mesh/services/stalenessDetector-fileComparison.test.ts",
         "tests/features/mesh/services/stalenessDetector.test.ts",
         "tests/features/mesh/services/testHelpers.ts",

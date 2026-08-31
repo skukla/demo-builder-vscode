@@ -46,7 +46,6 @@
         "tests/features/lifecycle/services/projectResetService",
         "tests/features/mesh/commands/deployMesh",
         "tests/features/mesh/services/meshCheckHelpers",
-        "tests/features/mesh/services/meshVerifier",
         "tests/features/prerequisites/handlers/shared",
         "tests/features/project-creation/handlers/addIntegrationFlowHandlers",
         "tests/features/project-creation/handlers/executor",

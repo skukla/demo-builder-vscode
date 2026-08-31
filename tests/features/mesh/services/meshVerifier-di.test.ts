@@ -10,61 +10,25 @@
  * - Use the injected logger for all logging operations
  */
 
-import { MeshVerifierService } from '@/features/mesh/services/meshVerifier';
-import type { Project } from '@/types';
+import {
+    createMockProject,
+    MeshVerifierService,
+    setupMeshVerifier,
+    type MeshCommandExecutorFake,
+} from './meshVerifier.testUtils';
+import { createSuccessResult, createFailureResult } from '../../../helpers/commandResultFake';
 
-// Mock dependencies
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(),
-    },
-}));
 
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: () => '20',
-}));
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000, // Standard operations (replaces MESH_DESCRIBE)
-    },
-}));
 
 describe('MeshVerifierService - DI Pattern', () => {
-    let mockLogger: any;
+    let mockLogger: ReturnType<typeof setupMeshVerifier>['mockLogger'];
     let service: MeshVerifierService;
-    let mockCommandManager: any;
-
-    // Helper to create complete Project objects
-    const createMockProject = (overrides: Partial<Project> = {}): Project => ({
-        name: 'Test Project',
-        path: '/test',
-        created: new Date('2024-01-01'),
-        lastModified: new Date('2024-01-01'),
-        status: 'ready' as const,
-        ...overrides,
-    });
+    let mockCommandManager: MeshCommandExecutorFake;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mock logger to verify injection works
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        };
-
-        mockCommandManager = {
-            execute: jest.fn(),
-        };
-
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
-
-        // Create service with injected logger
+        ({ mockLogger, mockCommandManager } = setupMeshVerifier());
+        // The whole point of this suite: the logger arrives by constructor, and
+        // every assertion below reads the one handed in here.
         service = new MeshVerifierService(mockLogger, mockCommandManager);
     });
 
@@ -90,10 +54,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'Mesh ID: mesh123\nEndpoint: https://example.com/graphql',
-            });
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult('Mesh ID: mesh123\nEndpoint: https://example.com/graphql'));
 
             await service.verifyMeshDeployment(project);
 
@@ -115,13 +76,10 @@ describe('MeshVerifierService - DI Pattern', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult(JSON.stringify({
                     meshId: 'recovered-mesh-123',
                     endpoint: 'https://example.com/graphql',
-                }),
-            });
+                })));
 
             await service.verifyMeshDeployment(project);
 
@@ -132,13 +90,10 @@ describe('MeshVerifierService - DI Pattern', () => {
         });
 
         it('should use injected logger when fetching mesh info', async () => {
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult(JSON.stringify({
                     meshId: 'mesh123',
                     endpoint: 'https://example.com/graphql',
-                }),
-            });
+                })));
 
             const project = createMockProject({
                 componentInstances: {
@@ -177,10 +132,7 @@ describe('MeshVerifierService - DI Pattern', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 1,
-                stderr: 'Command failed',
-            });
+            mockCommandManager.execute.mockResolvedValue(createFailureResult('Command failed'));
 
             await service.verifyMeshDeployment(project);
 
