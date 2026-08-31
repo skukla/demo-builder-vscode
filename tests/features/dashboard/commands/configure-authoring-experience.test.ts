@@ -7,7 +7,7 @@
  * via applyDaLiveOrgConfigSettings (non-fatal).
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
@@ -16,19 +16,7 @@ import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Mesh / storefront staleness — return "no changes" so the save path stays simple.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({

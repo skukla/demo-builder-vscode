@@ -11,20 +11,12 @@
  * to "Main Website" prompted + republished, but switching back to CitiSignal did not).
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-    })),
-}));
 
 const mockRepublishStorefrontConfig = jest.fn();
 jest.mock('@/features/eds', () => ({
