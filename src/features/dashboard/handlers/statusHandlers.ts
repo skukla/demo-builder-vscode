@@ -22,14 +22,12 @@ import {
     handleRegenerateAiFiles,
     logAiVerification,
 } from '@/features/dashboard/handlers/aiHandlers';
-import {
-    runOnOpenChecks,
-    createOrgContextCheck,
-    createMcpHealthCheck,
-    createMeshVerifyCheck,
-    createAiVerifyCheck,
-    createAiContextFreshnessCheck,
-} from '@/features/dashboard/services/onOpenChecks';
+import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
+import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
+import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
+import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
+import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     applicableMcpPackages,

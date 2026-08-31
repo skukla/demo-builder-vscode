@@ -21,7 +21,7 @@ import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';

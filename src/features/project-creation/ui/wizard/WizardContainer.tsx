@@ -21,7 +21,7 @@ import {
 } from './wizardHelpers';
 import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-import { LoadingOverlay } from '@/core/ui/components/feedback';
+import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';

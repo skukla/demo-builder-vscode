@@ -19,10 +19,8 @@ import * as lifecycle from './wizardLifecycleHandlers';
 import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
 import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/authentication/handlers/projectHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
-import {
-    dataInstallerHandlers,
-    handleOpenDataInstallerSettings,
-} from '@/features/data-installer/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';

@@ -10,14 +10,10 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    extractSettingsFromProject,
-    importSettingsFromFile,
-    copySettingsFromProject,
-    exportProjectSettings,
-    deleteProject,
-    renameProjectCore,
-} from '../services';
+import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
+import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
+import { copySettingsFromProject, exportProjectSettings, importSettingsFromFile } from '@/features/projects-dashboard/services/settingsTransferService';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';

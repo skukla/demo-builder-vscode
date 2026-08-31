@@ -36,11 +36,8 @@ import {
 } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type {
-    CheckOutcome,
-    CheckStatus,
-    OrgContextCheckData,
-} from '@/features/dashboard/services/onOpenChecks';
+import type { OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import type { CheckOutcome, CheckStatus } from '@/features/dashboard/services/onOpenChecks/types';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';

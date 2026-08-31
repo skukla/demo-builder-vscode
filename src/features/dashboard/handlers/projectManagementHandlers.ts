@@ -117,7 +117,9 @@ export const handleExportProject: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { exportProjectSettings } = await import('@/features/projects-dashboard/services');
+    const { exportProjectSettings } = await import(
+        '@/features/projects-dashboard/services/settingsTransferService'
+    );
     return exportProjectSettings(context, project);
 };
 
@@ -140,7 +142,9 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { renameProjectCore } = await import('@/features/projects-dashboard/services');
+    const { renameProjectCore } = await import(
+        '@/features/projects-dashboard/services/projectRenameService'
+    );
     const result = await renameProjectCore(context, project, newName);
 
     // Refresh the dashboard title after a successful rename (folder/name changed).

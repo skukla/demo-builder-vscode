@@ -18,8 +18,6 @@
     "_layerDirection_note": "Direction rule: nothing under src/core/ imports @/features or @/commands. Ratified 2026-08-30 after the rule was found stated as law in src/core/CLAUDE.md, present in NO handbook/ADR/convention, enforced by nothing, and violated seven times. Webview files are out of scope (isWebview), so core/ui/ is excluded. The set may only shrink: clearing a file means fixing it AND deleting its row.",
     "reExportIndex": {
         "src/types/index.ts": "PURE: 11 re-export line(s); ~190 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/core/ui/components/forms/index.ts": "PURE: 8 re-export line(s); ~9 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/core/ui/components/feedback/index.ts": "PURE: 15 re-export line(s); ~7 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/core/ui/components/integrations/index.ts": "PURE: 3 re-export line(s); ~6 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/core/ui/hooks/index.ts": "PURE: 31 re-export line(s); ~15 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/core/shell/index.ts": "PURE: 12 re-export line(s); ~95 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
@@ -27,9 +25,6 @@
         "src/core/utils/progressUnifier/index.ts": "PURE: 2 re-export line(s); ~2 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/core/state/index.ts": "PURE: 12 re-export line(s); ~66 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/core/logging/index.ts": "PURE: 5 re-export line(s); ~90 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/features/data-installer/handlers/index.ts": "PURE: 4 re-export line(s); ~7 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/features/dashboard/services/onOpenChecks/index.ts": "PURE: 7 re-export line(s); ~11 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/features/project-creation/ui/components/integration-flow/index.ts": "PURE: 9 re-export line(s); ~6 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
         "src/features/project-creation/helpers/index.ts": "MIXED: 5 re-export line(s), 1 own declaration(s); ~9 importer(s). Move the declarations to a named module FIRST, then treat as PURE.",
         "src/features/projects-dashboard/services/index.ts": "PURE: 5 re-export line(s); ~6 importer(s). Repoint them at the modules that declare the symbols, then delete the file."
     }

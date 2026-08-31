@@ -11,7 +11,7 @@
  */
 
 import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
-import { resolveIntegrationRows } from '../components/integration-flow';
+import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';

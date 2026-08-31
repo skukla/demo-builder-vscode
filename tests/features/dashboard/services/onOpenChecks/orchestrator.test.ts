@@ -10,13 +10,8 @@
  *   - concurrency (all checks post)
  */
 
-import {
-    runOnOpenChecks,
-    _resetOnOpenChecksGuardForTests,
-    armOnOpenChecks,
-    type OnOpenCheck,
-    type CheckOutcome,
-} from '@/features/dashboard/services/onOpenChecks';
+import { _resetOnOpenChecksGuardForTests, armOnOpenChecks, runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import type { CheckOutcome, OnOpenCheck } from '@/features/dashboard/services/onOpenChecks/types';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';

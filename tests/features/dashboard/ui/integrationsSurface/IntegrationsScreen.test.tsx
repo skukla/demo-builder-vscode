@@ -76,8 +76,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
     ),
 }));
 
-jest.mock('@/core/ui/components/feedback', () => ({
-    LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
+jest.mock('@/core/ui/components/feedback/CtaEmptyState', () => ({
     // The empty state moved from StatusDisplay to the shared CtaEmptyState
     // (2026-08-22, matching the Projects first-run look); same testid so the
     // suite keeps asserting behaviour, not markup.
@@ -91,6 +90,10 @@ jest.mock('@/core/ui/components/feedback', () => ({
             ))}
         </div>
     ),
+}));
+
+jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
+    LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
 }));
 
 jest.mock('@adobe/react-spectrum', () => ({

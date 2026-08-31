@@ -28,7 +28,7 @@ import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';

@@ -15,11 +15,9 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    dataInstallerHandlers,
-    handleOpenDataInstallerSettings,
-    importHandlers,
-} from '../handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';

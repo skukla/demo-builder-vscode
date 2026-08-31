@@ -9,9 +9,9 @@
  */
 
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { importHandlers } from '@/features/data-installer/handlers';
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';

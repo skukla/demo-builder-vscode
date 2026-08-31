@@ -8,7 +8,7 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { resolveIntegrationRows } from '../components/integration-flow';
+import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 import { meshComponentForStack } from './tileStatus';
 import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';

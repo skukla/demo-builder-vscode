@@ -18,7 +18,7 @@ import {
     buildCodeSyncInstallSteps,
     buildCodeSyncInstallSummary,
 } from '../helpers/codeSyncInstallContent';
-import { InlineNotice } from '@/core/ui/components/feedback';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';

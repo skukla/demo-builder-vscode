@@ -104,3 +104,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): core/base and the last of the small PURE rows — 30 to 26 (`606dc86e5`)
 - 2026-08-31  refactor(barrels): core/di retired across 89 importers, and it proved the rule (`49f13f1dd`)
 - 2026-08-31  refactor(barrels): core/validation and its nested validators index — 25 to 23 (`7c88295eb`)
+- 2026-08-31  refactor(barrels): eight UI/service barrels, and the classification was wrong — 23 to 15 (`3fc45e929`)

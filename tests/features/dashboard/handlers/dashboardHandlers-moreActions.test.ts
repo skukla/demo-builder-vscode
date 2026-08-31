@@ -58,11 +58,15 @@ jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: jest.fn(),
 }));
 
-// Mock the shared services barrel (reused, not duplicated). Both the export and
-// rename handlers dynamically import from this barrel.
+// The export and rename handlers each dynamically import the module that
+// DECLARES what they need. These were one mock of a shared barrel until
+// 2026-08-31 (PL-31) — which is why the two unrelated services were fused here.
 const mockRenameProjectCore = jest.fn();
-jest.mock('@/features/projects-dashboard/services', () => ({
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
 }));
 
@@ -79,7 +83,7 @@ import {
     handleExportProject,
     handleRenameProject,
 } from '@/features/dashboard/handlers/dashboardHandlers';
-import { exportProjectSettings } from '@/features/projects-dashboard/services';
+import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================

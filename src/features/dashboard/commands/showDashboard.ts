@@ -14,7 +14,7 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
+import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,

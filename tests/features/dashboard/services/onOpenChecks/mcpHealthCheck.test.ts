@@ -11,7 +11,7 @@
 
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';

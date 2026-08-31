@@ -10,7 +10,7 @@
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
 import React from 'react';
-import { CtaEmptyState, type CtaEmptyStateAction } from '@/core/ui/components/feedback';
+import { CtaEmptyState, type CtaEmptyStateAction } from '@/core/ui/components/feedback/CtaEmptyState';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */

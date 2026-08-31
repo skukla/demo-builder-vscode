@@ -18,7 +18,7 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
-import { LoadingDisplay } from '@/core/ui/components/feedback';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';

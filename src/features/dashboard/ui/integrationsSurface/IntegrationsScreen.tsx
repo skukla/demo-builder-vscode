@@ -38,7 +38,8 @@ import {
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/core/state/appBuilderComponentState';
-import { CtaEmptyState, LoadingDisplay } from '@/core/ui/components/feedback';
+import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';

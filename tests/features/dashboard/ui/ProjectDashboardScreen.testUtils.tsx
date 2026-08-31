@@ -60,7 +60,7 @@ jest.mock('@/core/ui/components/layout/PageLayout', () => ({
 }));
 
 // Mock feedback components
-jest.mock('@/core/ui/components/feedback', () => ({
+jest.mock('@/core/ui/components/feedback/InlineNotice', () => ({
     // OrgContextNotice now renders through the shared InlineNotice (extracted
     // 2026-08-20). Stubbed to its structure — title, body, optional hint and
     // action — so the suite keeps asserting on CONTENT rather than on the
@@ -73,6 +73,9 @@ jest.mock('@/core/ui/components/feedback', () => ({
             {action}
         </div>
     ),
+}));
+
+jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
     StatusCard: ({ label, status, color, action }: any) => (
         <div data-testid={`status-card-${label}`} data-color={color}>
             {label}: {status}

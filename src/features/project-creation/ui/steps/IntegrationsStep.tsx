@@ -44,17 +44,12 @@ import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,
 } from '../../services/appBuilderComponentSelection';
-import {
-    AddIntegrationFlowModal,
-    buildReservedIds,
-    isApiEditable,
-    resolveIntegrationRows,
-    sublineFor,
-    toIntegrationCards,
-    type ApiEditTarget,
-    type FlowMode,
-    type IntegrationRow,
-} from '../components/integration-flow';
+import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
+import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
+import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
+import { isApiEditable, sublineFor, toIntegrationCards } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
+import { resolveIntegrationRows, type IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import type { ApiEditTarget } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';

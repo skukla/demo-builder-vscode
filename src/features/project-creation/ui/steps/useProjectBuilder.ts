@@ -29,7 +29,7 @@ import {
     getPackageDefaultBlockLibraryIds,
 } from '@/features/components/services/blockLibraryLoader';
 import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
-import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow';
+import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
