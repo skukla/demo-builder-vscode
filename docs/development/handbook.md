@@ -575,18 +575,25 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 65 conventions. 59 of them are enforced; 6 are not.**
+**This handbook states 68 conventions. 59 of them are enforced; 9 are not.**
 
-The six that remain are not one thing, and treating them as one is what kept them open:
+The nine that remain are not one thing, and treating them as one is what kept them open:
 
-- **Five cannot have an enforcer.** Which test tier fits, whether a metric measures the
-  defect or only its shape, naming the command that would prove you wrong, and diffing a
-  test's assertions after restructuring it, and whether a comment about another module is
-  actually true. Each is a judgement about intent, and a check
-  that scored it would be measuring shape — the exact mistake two of them warn about.
-  These are written down for the reader, not pending work.
+- **Eight cannot have an enforcer.** Which test tier fits, whether a metric measures the
+  defect or only its shape, naming the command that would prove you wrong, diffing a
+  test's assertions after restructuring it, whether a comment about another module is
+  actually true, whether you aimed a check at the right question, whether a matching
+  string has been read back to its source, and whether an identifier in prose was copied
+  or remembered. Each is a judgement about intent, and a check that scored it would be
+  measuring shape — the exact mistake two of them warn about. These are written down for
+  the reader, not pending work.
 - **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
   fail the build rather than protect anything. It waits on the CSS migration (PL-21).
+
+The last three joined on 2026-08-30 and had lived only in `CLAUDE.md` until then — seen by
+every agent session, never explained to a human reader. One of them was violated the same
+day it was written down here, which is the honest measure of what a handbook entry does:
+it explains a rule and pins it against drift. It does not make anyone follow it.
 
 Twelve were unenforced on the morning of 2026-08-30 and seven closed that day: feature
 barrels, the dependency envelope, handlers not rendering, the message-channel singleton,
@@ -610,6 +617,31 @@ not.
 > words as one that verified.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
 > Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
+
+> **Convention.** A control proves the tool works, not that you aimed it right. Before
+> trusting a result of nothing, say where the answer would be if it existed, and confirm
+> the command actually reads there.
+> *Why:* a correct command pointed at the wrong place passes every control it has, because
+> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
+> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
+> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
+> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
+> question it answered was not the question asked. **Not enforced** — no check can ask
+> whether you aimed at the right thing.
+
+> **Convention.** A named field in a response, a matching string, or a green check is a
+> LEAD. Read the source before it becomes a finding.
+> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
+> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
+> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
+> is a habit, and the cost of skipping it is a confident wrong answer.
+
+> **Convention.** Never publish an identifier you have not read from the source. Setting
+> keys, env vars, command ids, file paths and function names are cheap to grep and
+> expensive to get wrong in something a user reads.
+> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory. The real
+> key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing `package.json` against the
+> previous tag. **Not enforced** for prose; `tests/sop/doc-module-refs.test.ts` covers paths.
 
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its

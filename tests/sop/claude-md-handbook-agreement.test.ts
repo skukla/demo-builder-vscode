@@ -52,6 +52,28 @@ const HANDBOOK = flatten('docs/development/handbook.md');
  * the other.
  */
 const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }> = [
+    // Added 2026-08-30. These three verification rules lived ONLY in CLAUDE.md, so an
+    // agent saw them every session and a human reader never met them explained. The
+    // first of them was violated the same day it was paired: a status summary reported
+    // two tracks of shipped work as "not started" because it grepped for a label rather
+    // than for the work. Pairing does not prevent that — the rule was in context and was
+    // not applied — but a rule that steers the work belongs in both documents, and
+    // unpaired it was also unpinned.
+    {
+        rule: 'a control proves the tool works, not that you aimed it right',
+        claudeMd: 'not that you aimed it right',
+        handbook: 'say where the answer would be if it existed',
+    },
+    {
+        rule: 'a named field is a lead, not a finding',
+        claudeMd: 'is a lead, not a finding',
+        handbook: 'read the source before it becomes a finding',
+    },
+    {
+        rule: 'never publish an identifier you have not read from the source',
+        claudeMd: 'never publish an identifier you have not read',
+        handbook: 'never publish an identifier you have not read from the source',
+    },
     {
         rule: 'a cast in argument position is a silenced type error',
         claudeMd: 'a cast at a call boundary is a silenced type error',
