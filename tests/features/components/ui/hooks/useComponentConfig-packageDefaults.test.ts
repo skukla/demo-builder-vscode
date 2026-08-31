@@ -33,11 +33,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
-jest.mock('@/core/validation/Validator', () => ({
-    url: () => () => ({ valid: true }),
-    pattern: () => () => ({ valid: true }),
-    normalizeUrl: (v: string) => v.replace(/\/+$/, ''),
-}));
 
 jest.mock('@/features/components/services/envVarHelpers', () => ({
     deriveGraphqlEndpoint: jest.fn((v: string) => v + '/graphql'),
@@ -45,27 +40,8 @@ jest.mock('@/features/components/services/envVarHelpers', () => ({
 
 // One real-shaped group so the defaults effect actually runs (the base suite
 // mocks SERVICE_GROUP_DEFINITIONS empty and never reaches applyFieldDefaults).
-jest.mock('@/features/components/services/serviceGroupTransforms', () => ({
-    toServiceGroupWithSortedFields: jest.fn((def: { id: string }, groups: Record<string, unknown[]>) => ({
-        ...def,
-        fields: groups[def.id] || [],
-    })),
-    SERVICE_GROUP_DEFINITIONS: [{ id: 'accs', title: 'Commerce Store', order: 1 }],
-}));
 
-jest.mock('@/features/project-creation/ui/hooks/useSelectedStack', () => ({
-    getStackById: jest.fn((id: string) =>
-        id === 'eds-accs'
-            ? { id: 'eds-accs', frontend: 'eds-storefront', backend: 'adobe-commerce-accs' }
-            : undefined,
-    ),
-}));
 
-jest.mock('@/core/ui/utils/componentDataHelpers', () => ({
-    findComponentById: jest.fn((data: { frontends?: { id: string }[]; backends?: { id: string }[] }, id: string) =>
-        [...(data?.frontends ?? []), ...(data?.backends ?? [])].find((c) => c.id === id),
-    ),
-}));
 
 // Import below the mocks so the SUT binds to the stubs (babel-jest hoists the
 // jest.mock calls above this import within this module).

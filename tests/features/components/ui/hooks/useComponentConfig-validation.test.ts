@@ -26,20 +26,8 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 }));
 
 // Real validators are irrelevant here — every field under test is `text`.
-jest.mock('@/core/validation/Validator', () => ({
-    url: () => () => ({ valid: true }),
-    pattern: () => () => ({ valid: true }),
-    normalizeUrl: (v: string) => v,
-}));
 
 // One group so the fields land somewhere.
-jest.mock('@/features/components/services/serviceGroupTransforms', () => ({
-    toServiceGroupWithSortedFields: (def: any, groups: any) => ({
-        ...def,
-        fields: groups[def.id] || [],
-    }),
-    SERVICE_GROUP_DEFINITIONS: [{ id: 'adobe-commerce', label: 'Adobe Commerce', order: 1 }],
-}));
 
 // One selected component declaring the field under test.
 jest.mock('@/features/components/services/stackComponentCollector', () => ({
@@ -55,13 +43,7 @@ jest.mock('@/features/components/services/stackComponentCollector', () => ({
     ],
 }));
 
-jest.mock('@/features/project-creation/ui/hooks/useSelectedStack', () => ({
-    getStackById: () => ({ id: 'stack', frontend: 'headless' }),
-}));
 
-jest.mock('@/core/ui/utils/componentDataHelpers', () => ({
-    findComponentById: jest.fn(),
-}));
 
 let useComponentConfig: any;
 beforeAll(async () => {

@@ -15,14 +15,6 @@ import * as securityValidation from '@/core/validation';
 
 // Mock dependencies
 jest.mock('@/core/validation');
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000 // Standard API calls (replaces WORKSPACE_LIST)
-    }
-}));
-jest.mock('@/core/utils/promiseUtils', () => ({
-    withTimeout: jest.fn((promise) => promise)
-}));
 
 describe('workspaceHandlers', () => {
     let mockContext: jest.Mocked<HandlerContext>;

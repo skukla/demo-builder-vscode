@@ -28,11 +28,6 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 }));
 
 // Mock Validator
-jest.mock('@/core/validation/Validator', () => ({
-    url: () => () => ({ valid: true }),
-    pattern: () => () => ({ valid: true }),
-    normalizeUrl: (v: string) => v.replace(/\/+$/, ''),
-}));
 
 // Mock envVarHelpers
 jest.mock('@/features/components/services/envVarHelpers', () => ({
@@ -40,23 +35,10 @@ jest.mock('@/features/components/services/envVarHelpers', () => ({
 }));
 
 // Mock serviceGroupTransforms
-jest.mock('@/features/components/services/serviceGroupTransforms', () => ({
-    toServiceGroupWithSortedFields: jest.fn((def: any, groups: any) => ({
-        ...def,
-        fields: groups[def.id] || [],
-    })),
-    SERVICE_GROUP_DEFINITIONS: [],
-}));
 
 // Mock useSelectedStack helper
-jest.mock('@/features/project-creation/ui/hooks/useSelectedStack', () => ({
-    getStackById: jest.fn(),
-}));
 
 // Mock componentDataHelpers
-jest.mock('@/core/ui/utils/componentDataHelpers', () => ({
-    findComponentById: jest.fn(),
-}));
 
 // Lazy-import so mocks are registered first
 let useComponentConfig: any;

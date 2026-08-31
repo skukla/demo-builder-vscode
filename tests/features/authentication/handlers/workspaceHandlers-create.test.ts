@@ -10,8 +10,6 @@ import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/w
 import { ErrorCode } from '@/types/errorCodes';
 
 jest.mock('@/core/validation');
-jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000 } }));
-jest.mock('@/core/utils/promiseUtils', () => ({ withTimeout: jest.fn((promise) => promise) }));
 
 const WS = { id: 'ws-new', name: 'Stage', title: 'Stage' };
 
