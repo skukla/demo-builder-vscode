@@ -10,7 +10,7 @@ import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/w
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 
 const WS = { id: 'ws-new', name: 'Stage', title: 'Stage' };
 

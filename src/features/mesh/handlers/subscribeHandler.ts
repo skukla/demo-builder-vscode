@@ -12,7 +12,7 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import type { SubscribedApi } from '@/features/app-builder/services/apiSubscriber';
 import {
     ensureMeshApiSubscribed,

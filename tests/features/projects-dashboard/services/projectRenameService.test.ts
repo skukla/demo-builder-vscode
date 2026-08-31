@@ -23,7 +23,7 @@ jest.mock('fs/promises', () => ({
 
 // validation - validateProjectNameSecurity throws on invalid
 const mockValidateName = jest.fn();
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: (...args: unknown[]) => mockValidateName(...args),
 }));
 

@@ -8,7 +8,7 @@ import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
-import { validateNodeVersion } from '@/core/validation';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';

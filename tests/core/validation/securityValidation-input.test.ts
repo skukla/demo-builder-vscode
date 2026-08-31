@@ -20,15 +20,9 @@ jest.mock('fs', () => ({
     realpathSync: jest.fn((p: string) => p),
 }));
 
-import {
-    validateAdobeResourceId,
-    validateProjectNameSecurity,
-    validateProjectPath,
-    validateOrgId,
-    validateProjectId,
-    validateWorkspaceId,
-    validateMeshId
-} from '@/core/validation';
+import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
+import { validateAdobeResourceId, validateMeshId, validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 
 describe('securityValidation - Input Validation', () => {
 

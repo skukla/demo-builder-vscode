@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { validateProjectId } from '@/core/validation';
+import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     handleDeleteAdobeProject,
     createTeardownDeps,
@@ -31,7 +31,7 @@ import {
 import { createMockContext } from './projectHandlers.testUtils';
 
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards', () => ({
     toError: jest.fn((error: any) => (error instanceof Error ? error : new Error(String(error)))),
     parseJSON: jest.fn((str: string) => JSON.parse(str)),

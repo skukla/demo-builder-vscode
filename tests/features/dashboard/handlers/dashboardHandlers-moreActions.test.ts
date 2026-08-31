@@ -44,11 +44,17 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: jest.fn(),
 }));
 

@@ -13,7 +13,7 @@ import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandConfig, PollOptions } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateNodeVersion } from '@/core/validation';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */

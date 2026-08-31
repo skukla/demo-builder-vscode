@@ -17,7 +17,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 import * as fsPromises from 'fs/promises';
-import { validatePathSafety } from '@/core/validation';
+import { validatePathSafety } from '@/core/validation/PathSafetyValidator';
 
 const mockLstat = fsPromises.lstat as jest.MockedFunction<typeof fsPromises.lstat>;
 

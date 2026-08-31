@@ -11,12 +11,8 @@
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
 import { openInIncognito } from '@/core/utils';
-import {
-    validateURL,
-    validateOrgId,
-    validateProjectId,
-    validateWorkspaceId,
-} from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,

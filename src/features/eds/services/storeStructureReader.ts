@@ -19,7 +19,7 @@
 import { selectDiscoveryService } from './accsDiscoveryConfig';
 import { discoverStoreStructure } from './commerceStoreDiscovery';
 import { extractConfigParams } from './configGenerator';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_URL,

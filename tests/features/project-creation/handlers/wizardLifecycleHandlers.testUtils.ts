@@ -77,7 +77,7 @@ export function createWizardLifecycleContext() {
  */
 export function setupMocks() {
     jest.mock('vscode', () => mockVSCode, { virtual: true });
-    jest.mock('@/core/validation');
+    jest.mock('@/core/validation/validators/NodeVersionValidator');
     jest.mock('@/features/components/handlers/componentHandlers', () => ({
         handleLoadComponents: jest.fn().mockResolvedValue({
             success: true,

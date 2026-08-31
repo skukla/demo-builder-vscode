@@ -19,7 +19,7 @@ import {
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 import { clearMcpCache } from '@/features/ai/mcpInspector';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';

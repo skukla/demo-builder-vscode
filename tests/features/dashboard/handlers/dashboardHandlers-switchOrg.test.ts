@@ -20,11 +20,14 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 jest.mock('vscode', () => ({
     window: {

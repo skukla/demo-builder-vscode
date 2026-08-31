@@ -1,5 +1,5 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as _validation from '@/core/validation';
+
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
 import * as _vscode from 'vscode';
@@ -11,7 +11,7 @@ import {
 } from './createHandler.testUtils';
 
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
 jest.mock('@/core/di/serviceLocator');

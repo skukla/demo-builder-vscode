@@ -13,7 +13,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { validateProjectNameSecurity } from '@/core/validation';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

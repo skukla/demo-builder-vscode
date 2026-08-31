@@ -18,7 +18,7 @@ import {
 } from './updateTypes';
 import { TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';

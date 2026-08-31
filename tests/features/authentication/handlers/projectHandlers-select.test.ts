@@ -9,11 +9,11 @@
 
 import { handleSelectProject } from '@/features/authentication/handlers/projectHandlers';
 import { createMockContext } from './projectHandlers.testUtils';
-import * as securityValidation from '@/core/validation';
+import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards', () => ({
     toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
     parseJSON: jest.fn((str: string) => JSON.parse(str))
@@ -35,7 +35,7 @@ describe('projectHandlers - Selection', () => {
         mockContext = createMockContext();
 
         // Reset security validation to valid by default
-        (securityValidation.validateProjectId as jest.Mock).mockImplementation(() => {
+        (validateProjectId as jest.Mock).mockImplementation(() => {
             // Valid by default
         });
     });
@@ -71,7 +71,7 @@ describe('projectHandlers - Selection', () => {
 
             await handleSelectProject(mockContext, { projectId });
 
-            expect(securityValidation.validateProjectId).toHaveBeenCalledWith(projectId);
+            expect(validateProjectId).toHaveBeenCalledWith(projectId);
         });
 
         it('should fail if no organization is selected', async () => {
@@ -86,7 +86,7 @@ describe('projectHandlers - Selection', () => {
         it('should reject invalid project ID', async () => {
             const projectId = '../../../etc/passwd';
             const validationError = new Error('Invalid project ID');
-            (securityValidation.validateProjectId as jest.Mock).mockImplementation(() => {
+            (validateProjectId as jest.Mock).mockImplementation(() => {
                 throw validationError;
             });
 

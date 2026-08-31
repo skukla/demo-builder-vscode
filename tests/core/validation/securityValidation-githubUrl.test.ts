@@ -11,7 +11,7 @@
  * Target Coverage: 100% for validateGitHubDownloadURL
  */
 
-import { validateGitHubDownloadURL } from '@/core/validation';
+import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 
 describe('validateGitHubDownloadURL', () => {
 

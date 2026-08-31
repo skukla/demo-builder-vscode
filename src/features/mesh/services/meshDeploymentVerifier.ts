@@ -6,7 +6,7 @@
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateMeshId } from '@/core/validation';
+import { validateMeshId } from '@/core/validation/validators/AdobeResourceValidator';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 import type { CommandExecutor } from '@/core/shell';

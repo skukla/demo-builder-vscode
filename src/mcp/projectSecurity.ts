@@ -16,7 +16,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import { assertPathInside, assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 
 /** Regex for safe project directory names — no path separators, traversal, or null bytes */
 const SAFE_PROJECT_NAME = /^[^/\\.\0][^/\\\0]*$/;

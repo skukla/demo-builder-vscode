@@ -17,7 +17,7 @@ import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
+import { validateProjectNameSecurity as validateProjectName } from '@/core/validation/validators/ProjectNameValidator';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/core/errors';

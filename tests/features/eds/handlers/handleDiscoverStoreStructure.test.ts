@@ -32,7 +32,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock validateURL
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
     validateURL: jest.fn(),
 }));
 

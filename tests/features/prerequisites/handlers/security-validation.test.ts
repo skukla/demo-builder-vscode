@@ -32,14 +32,17 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-// Mock validateNodeVersion to track calls
-jest.mock('@/core/validation', () => {
-    const actual = jest.requireActual('@/core/validation');
+// Mock validateNodeVersion to track calls. `...actual` is deliberate: the suite
+// asserts on CALLS while still running the real validator, so only that one
+// export is wrapped.
+jest.mock('@/core/validation/validators/NodeVersionValidator', () => {
+    const actual = jest.requireActual('@/core/validation/validators/NodeVersionValidator');
     return {
         ...actual,
         validateNodeVersion: jest.fn(actual.validateNodeVersion),
     };
 });
+
 
 describe('Prerequisites Security - Command Injection Prevention', () => {
     let mockCommandExecutor: jest.Mocked<Pick<CommandExecutor, 'execute'>>;
@@ -50,7 +53,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Import mocked function
-        validateNodeVersion = require('@/core/validation').validateNodeVersion;
+        validateNodeVersion = require('@/core/validation/validators/NodeVersionValidator').validateNodeVersion;
         validateNodeVersion.mockClear();
     });
 
@@ -107,9 +110,9 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
             for (const maliciousVersion of maliciousVersions) {
                 // The validateNodeVersion function should reject malicious input
                 expect(() => {
-                    const { validateNodeVersion: _realValidate } = require('@/core/validation');
+                    const { validateNodeVersion: _realValidate } = require('@/core/validation/validators/NodeVersionValidator');
                     // Get the actual implementation
-                    const actualValidate = jest.requireActual('@/core/validation').validateNodeVersion;
+                    const actualValidate = jest.requireActual('@/core/validation/validators/NodeVersionValidator').validateNodeVersion;
                     actualValidate(maliciousVersion);
                 }).toThrow();
             }

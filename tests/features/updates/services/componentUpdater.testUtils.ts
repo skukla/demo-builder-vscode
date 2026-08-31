@@ -12,7 +12,13 @@
  */
 
 // Mock dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/PathSafetyValidator');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/URLValidator');
+jest.mock('@/core/validation/Validator');
+jest.mock('@/core/validation/fieldValidation');
+jest.mock('@/core/validation/normalizers');
+jest.mock('@/core/validation/validators/NodeVersionValidator');
 jest.mock('fs/promises');
 jest.mock(
     'vscode',

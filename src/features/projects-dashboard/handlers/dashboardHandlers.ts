@@ -25,7 +25,8 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils';
-import { validateProjectPath, validateURL } from '@/core/validation';
+import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,

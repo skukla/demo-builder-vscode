@@ -19,7 +19,7 @@ import { showWebviewQuickPick } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import { assertPathInsideSync } from '@/core/validation';
+import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

@@ -21,8 +21,8 @@ jest.mock('@/features/eds/handlers/edsHelpers');
 
 // Mock validatePathSafety since it uses dynamic import
 const mockValidatePathSafety = jest.fn();
-jest.mock('@/core/validation', () => ({
-    ...jest.requireActual('@/core/validation'),
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    ...jest.requireActual('@/core/validation/PathSafetyValidator'),
     validatePathSafety: (...args: any[]) => mockValidatePathSafety(...args),
 }));
 

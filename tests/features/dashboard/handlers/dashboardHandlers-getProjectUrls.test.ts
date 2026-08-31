@@ -63,7 +63,7 @@ describe('handleGetProjectUrls', () => {
             validateOrgId,
             validateProjectId,
             validateWorkspaceId,
-        } = require('@/core/validation');
+        } = require('@/core/validation/validators/AdobeResourceValidator');
         validateOrgId.mockImplementation(() => undefined);
         validateProjectId.mockImplementation(() => undefined);
         validateWorkspaceId.mockImplementation(() => undefined);

@@ -21,7 +21,7 @@ jest.mock('@adobe/aio-lib-console', () => ({
     init: jest.fn(),
 }));
 
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/AccessTokenValidator', () => ({
     validateAccessToken: jest.fn(),
 }));
 
@@ -66,7 +66,7 @@ describe('AdobeSDKClient', () => {
         it('should initialize SDK with valid token', async () => {
             const sdk = require('@adobe/aio-lib-console');
             const { TokenManager: _TokenManager } = require('@/features/authentication/services/tokenManager');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -98,7 +98,7 @@ describe('AdobeSDKClient', () => {
         });
 
         it('should validate token before using it', async () => {
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -117,7 +117,7 @@ describe('AdobeSDKClient', () => {
 
         it('should handle SDK init failure gracefully', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -135,7 +135,7 @@ describe('AdobeSDKClient', () => {
 
         it('should not initialize twice', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -154,7 +154,7 @@ describe('AdobeSDKClient', () => {
 
         it('should prevent concurrent initializations', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -191,7 +191,7 @@ describe('AdobeSDKClient', () => {
     describe('ensureInitialized', () => {
         it('should return true if already initialized', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -212,7 +212,7 @@ describe('AdobeSDKClient', () => {
 
         it('should initialize if not yet initialized', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -231,7 +231,7 @@ describe('AdobeSDKClient', () => {
 
         it('should wait for in-flight initialization', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -278,7 +278,7 @@ describe('AdobeSDKClient', () => {
     describe('client management', () => {
         it('should return client after initialization', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             const mockClient = { api: 'mock' };
 
@@ -302,7 +302,7 @@ describe('AdobeSDKClient', () => {
 
         it('should clear client on clear()', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -325,7 +325,7 @@ describe('AdobeSDKClient', () => {
 
         it('should clear in-flight promise on clear()', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -355,7 +355,7 @@ describe('AdobeSDKClient', () => {
     describe('token inspection', () => {
         it('should read token from inspectToken', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,
@@ -373,7 +373,7 @@ describe('AdobeSDKClient', () => {
 
         it('should use token from inspectToken when valid=true', async () => {
             const sdk = require('@adobe/aio-lib-console');
-            const { validateAccessToken } = require('@/core/validation');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
                 valid: true,

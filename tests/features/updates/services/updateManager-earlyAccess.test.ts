@@ -14,9 +14,12 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));
 
-jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
 }));
 
 // Mock the gate so we control collaborator verification

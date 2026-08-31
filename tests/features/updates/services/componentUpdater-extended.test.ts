@@ -19,6 +19,8 @@ import {
     vscode,
 } from './componentUpdater.testUtils';
 import { createMockLogger } from '../../../helpers/loggerFake';
+jest.mock('@/core/validation/URLValidator');
+import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -43,8 +45,12 @@ describe('ComponentUpdater - Extended Coverage', () => {
         // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor
         // dependency now — the same fake is handed straight in.
 
-        const securityValidation = require('@/core/validation');
-        securityValidation.validateGitHubDownloadURL = jest.fn();
+        // Security validation is automocked at module scope. This used to
+        // `require('@/core/validation')` and ASSIGN a fresh jest.fn onto the
+        // module — which only worked because the barrel handed back a plain
+        // object. The declaring module is a real ES namespace whose exports are
+        // getters and cannot be assigned; the automock supplies the mock.
+        jest.mocked(validateGitHubDownloadURL).mockReset();
 
         jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
         jest.spyOn(fs, 'rm').mockResolvedValue(undefined);

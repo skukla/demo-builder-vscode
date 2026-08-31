@@ -14,7 +14,7 @@
 
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { validateNodeVersion } from '@/core/validation';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import {
     ComponentRegistry,
     TransformedComponentDefinition,

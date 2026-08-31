@@ -103,12 +103,18 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
 // Mock core logging (prevents "Logger not initialized" error)
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    validateProjectPath: jest.fn(),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-    validateProjectPath: jest.fn(), // Allow all paths in tests
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)

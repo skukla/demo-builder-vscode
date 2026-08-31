@@ -7,11 +7,12 @@
 import { setupMocks, mockOrgs, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';
-import { validateOrgId } from '@/core/validation';
+import { validateOrgId } from '@/core/validation/validators/AdobeResourceValidator';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

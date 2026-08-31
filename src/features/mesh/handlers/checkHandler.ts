@@ -20,7 +20,7 @@ import {
     withOrgContext,
     type OrgContextTarget,
 } from '@/core/shell';
-import { validateWorkspaceId } from '@/core/validation';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';

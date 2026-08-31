@@ -54,11 +54,14 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 
 // Mock projectDeletionService to avoid deep dependency chain
@@ -235,7 +238,7 @@ describe('Dashboard Action Handlers', () => {
     describe('handleOpenAdminPanel', () => {
         const mockShowInformationMessage = (vscode.window as any)
             .showInformationMessage as jest.Mock;
-        const { validateURL } = require('@/core/validation');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         /** Flush the fire-and-forget notification .then chain. */
         const flushPromises = () => new Promise((resolve) => setImmediate(resolve));

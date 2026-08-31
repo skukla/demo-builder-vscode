@@ -18,7 +18,7 @@ jest.mock(
 jest.mock('@/core/utils/writeFileAtomic', () => ({ writeFileAtomic: jest.fn() }));
 
 const mockAssertInside = jest.fn((p: string, _base: string) => p);
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
     assertPathInsideSync: (target: string, base: string) => mockAssertInside(target, base),
 }));
 

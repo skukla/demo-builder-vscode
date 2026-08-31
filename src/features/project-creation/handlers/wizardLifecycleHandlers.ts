@@ -13,7 +13,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { openUrl } from '@/core/utils/browserUtils';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';

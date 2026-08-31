@@ -32,11 +32,14 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 
 import * as vscode from 'vscode';

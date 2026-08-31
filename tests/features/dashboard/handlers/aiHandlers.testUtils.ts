@@ -38,10 +38,13 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
 }));
 
 // Mock validateURL (transitive dependency)
-jest.mock('@/core/validation', () => ({
-    validateURL: jest.fn(),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     // Real redactor — logAiVerification sanitizes the MCP stderr tail through it.
-    sanitizeErrorForLogging: jest.requireActual('@/core/validation').sanitizeErrorForLogging,
+    sanitizeErrorForLogging: jest.requireActual('@/core/validation/SensitiveDataRedactor').sanitizeErrorForLogging,
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
 }));
 
 // Mock AI feature barrel

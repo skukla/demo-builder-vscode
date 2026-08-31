@@ -30,9 +30,12 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 // Mock security validation
-jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
 }));
 
 export { UpdateManager };
@@ -214,7 +217,7 @@ export function mockFetchNetworkError(message: string = 'Network timeout'): void
  * Sets up security validation mock to allow all URLs
  */
 export function mockSecurityValidationPass(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
     validateGitHubDownloadURL.mockReturnValue(true);
 }
 
@@ -222,6 +225,6 @@ export function mockSecurityValidationPass(): void {
  * Sets up security validation mock to reject URLs
  */
 export function mockSecurityValidationFail(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
     validateGitHubDownloadURL.mockReturnValue(false);
 }

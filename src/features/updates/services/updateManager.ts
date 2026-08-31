@@ -10,7 +10,7 @@ import {
 } from './githubApiClient';
 import { selectLatestForChannel } from './releaseTrack';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
-import { validateGitHubDownloadURL } from '@/core/validation';
+import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { getComponentIds, getComponentVersion } from '@/types/typeGuards';

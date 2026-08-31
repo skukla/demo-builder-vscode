@@ -8,7 +8,8 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
+import { validatePathSafety } from '@/core/validation/PathSafetyValidator';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 
 export class ResetAllCommand extends BaseCommand {

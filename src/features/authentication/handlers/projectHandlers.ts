@@ -12,7 +12,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateProjectId } from '@/core/validation';
+import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     ensureOrgContext,
     type EnsureOrgContextResult,

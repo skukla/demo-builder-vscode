@@ -12,7 +12,8 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
         // Reset mocks and set default implementations
         jest.clearAllMocks();
 
-        const { validateOrgId, validateProjectId, validateWorkspaceId, validateURL } = require('@/core/validation');
+        const { validateOrgId, validateProjectId, validateWorkspaceId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         // Reset to default no-op implementations (valid by default)
         validateOrgId.mockImplementation(() => undefined);
@@ -33,7 +34,8 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
             },
         } as any);
 
-        const { validateOrgId, validateProjectId, validateWorkspaceId, validateURL } = require('@/core/validation');
+        const { validateOrgId, validateProjectId, validateWorkspaceId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
         const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
@@ -58,7 +60,7 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
             },
         } as any);
 
-        const { validateOrgId } = require('@/core/validation');
+        const { validateOrgId } = require('@/core/validation/validators/AdobeResourceValidator');
         validateOrgId.mockImplementation(() => {
             throw new Error('Invalid organization ID: contains illegal characters');
         });
@@ -86,7 +88,8 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
             },
         } as any);
 
-        const { validateOrgId, validateProjectId, validateURL } = require('@/core/validation');
+        const { validateOrgId, validateProjectId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
         const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
@@ -104,7 +107,7 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
             adobe: undefined,
         } as any);
 
-        const { validateURL } = require('@/core/validation');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
         const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);

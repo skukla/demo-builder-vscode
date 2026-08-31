@@ -21,7 +21,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock validateURL (used by handleOpenExternal and transitive imports)
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
     validateURL: jest.fn(),
 }));
 

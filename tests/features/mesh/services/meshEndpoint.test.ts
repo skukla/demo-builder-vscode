@@ -10,7 +10,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
 
@@ -57,7 +57,7 @@ describe('meshEndpoint', () => {
         });
 
         it('should validate meshId before using it', async () => {
-            const { validateMeshId } = require('@/core/validation');
+            const { validateMeshId } = require('@/core/validation/validators/AdobeResourceValidator');
 
             await getEndpoint(
                 meshId,
