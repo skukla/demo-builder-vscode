@@ -15,6 +15,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -85,6 +86,7 @@ function makeEdsProject(
 describe('applyAuthoringExperienceFlip', () => {
     let mockContext: vscode.ExtensionContext;
     let mockLogger: Logger;
+    let fakeTokenService: GitHubTokenService;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -92,6 +94,9 @@ describe('applyAuthoringExperienceFlip', () => {
             secrets: { get: jest.fn(), store: jest.fn() },
         } as unknown as vscode.ExtensionContext;
         mockLogger = createMockLogger() as unknown as Logger;
+        fakeTokenService = {
+            getToken: jest.fn().mockResolvedValue('gh-token'),
+        } as unknown as GitHubTokenService;
     });
 
     function flip(project: Project, experience: AuthoringExperience) {
@@ -100,6 +105,10 @@ describe('applyAuthoringExperienceFlip', () => {
             context: mockContext,
             logger: mockLogger,
             saveProject: jest.fn().mockResolvedValue(undefined),
+            // Handed in now rather than constructed inside the service. The suite
+            // never drives it directly — GitHubFileOperations and HelixService are
+            // what receive it — so a bare object is the honest fake.
+            githubTokenService: fakeTokenService,
         });
     }
 

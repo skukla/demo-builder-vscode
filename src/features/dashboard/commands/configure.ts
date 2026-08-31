@@ -48,6 +48,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
@@ -74,6 +75,16 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * not run (ADR-016's wall).
      */
     public helixService?: AuthoringExperienceFlipDeps['helixService'];
+    /**
+     * GitHub token-service seam, same shape as `helixService` above.
+     *
+     * Production leaves it unset and the shared instance is resolved lazily at the
+     * call site. It exists because `getGitHubServices` calls `getLogger()`, which
+     * throws when no logger has been initialised — so resolving it eagerly here
+     * would make every test of this command depend on logger setup it does not
+     * otherwise need.
+     */
+    public githubTokenService?: AuthoringExperienceFlipDeps['githubTokenService'];
 
     /**
      * Static method to dispose any active Configure panel
@@ -511,6 +522,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                     logger: this.logger,
                     saveProject: (p) => this.stateManager.saveProject(p),
                     helixService: this.helixService,
+                    // The SHARED instance — a fresh one would re-validate against GitHub.
+                    githubTokenService:
+                        this.githubTokenService ??
+                        getGitHubServices({ context: this.context }).tokenService,
                 });
             },
         );

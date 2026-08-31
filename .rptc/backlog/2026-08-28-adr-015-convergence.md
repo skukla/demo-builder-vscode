@@ -74,3 +74,6 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(commands): two commands stop living in core/ (`1078859a1`)
 - 2026-08-31  refactor(types): core's progress engine stops naming a feature (`e0360093e`)
 - 2026-08-31  2026-08-31  Loop: ledger 30 -> 19. Cleared: ProgressUnifier (InstallStep + ProgressMilestone moved to @/types), the two misplaced Reset commands moved to src/commands/, four feature barrels retired (data-installer, sidebar, eds, ai), three types files converted to type-only imports, and DiagnosticsCommand converged to BaseCommand (removing 4 ServiceLocator fetches). commandBase's survivor RATIFIED. Item prose had claimed 75 rows / 23 fetch-boundary files against a disk of 30 / 0.
+- 2026-08-31  refactor(sidebar): delete a handler module production never called (`e4f6a0cf8`)
+- 2026-08-31  refactor(commands): diagnostics joins the other 24, and stops fetching state four times (`7ee3f71ba`)
+- 2026-08-31  refactor(types): three of the six types files were only importing wrong; three are not types files at all (`29d3da47c`)

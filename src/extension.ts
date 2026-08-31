@@ -428,7 +428,14 @@ export async function activate(context: vscode.ExtensionContext) {
         // Republish affected EDS projects when an EW-URL-affecting daLive setting
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
         context.subscriptions.push(
-            registerEwSettingChangeListener({ context, stateManager, logger }),
+            registerEwSettingChangeListener({
+            context,
+            stateManager,
+            logger,
+            // The SHARED token service: its validation cache is per-instance, so
+            // building a fresh one downstream would cost a GitHub round trip.
+            githubTokenService: getGitHubServices({ context }).tokenService,
+        }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
             registerThirdPartyToolingSettingListener(
                 ServiceLocator.getCommandExecutor(),

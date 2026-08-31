@@ -209,6 +209,12 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             mockLogger
         );
         command.helixService = { previewCode: mockPreviewCode };
+        // Same seam, same reason: unset, the command resolves the shared GitHub
+        // services, and that path calls getLogger() — which throws in a suite that
+        // initialises no logger.
+        command.githubTokenService = {} as NonNullable<
+            typeof command.githubTokenService
+        >;
 
         // Stub side-effecting private methods so the save path doesn't touch disk.
         (command as any).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);

@@ -15,6 +15,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
@@ -128,6 +129,9 @@ describe('registerEwSettingChangeListener', () => {
             context: mockContext,
             stateManager,
             logger: mockLogger,
+            // Passed straight through to the flip, which this suite mocks — so
+            // nothing here ever calls a method on it.
+            githubTokenService: {} as GitHubTokenService,
         });
     }
 
