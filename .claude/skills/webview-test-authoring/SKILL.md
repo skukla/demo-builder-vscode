@@ -1,6 +1,6 @@
 ---
 name: webview-test-authoring
-description: Write or fix a React/Spectrum webview component test in this stack — the mock preamble, the fake-timer userEvent contract, hoist-safe testUtils extraction, querying div-role cards, and the mocked-vs-bundled-JSON trap. Use when adding a test for any component under src/**/ui/, when a webview test fails confusingly (real Spectrum rendering, timers hanging, "unable to find role"), or when splitting an oversized component suite.
+description: Write or fix a React/Spectrum webview component test in this stack — ADR-016's double style applied to webviews, the zero-tolerance console gate that now FAILS on an act() warning, the mock preamble, the fake-timer userEvent contract, hoist-safe testUtils extraction, querying div-role cards, and the mocked-vs-bundled-JSON trap. Use when adding a test for any component under src/**/ui/, when a webview test fails confusingly (real Spectrum rendering, timers hanging, an act() warning failing the run, "unable to find role"), or when splitting an oversized component suite.
 ---
 
 # Webview Test Authoring
@@ -23,8 +23,70 @@ for the traps.
 
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung.
   Redirect to a file and read that. A PreToolUse hook blocks it (`.claude/hooks/rules/10-jest-pipe.rule`).
-- The react project is jsdom + `tests/setup/react.ts`, which calls `jest.useFakeTimers()`
-  (line 49). Everything below follows from that.
+- The react project is jsdom + `tests/setup/react.ts`, which calls `jest.useFakeTimers()`.
+  Everything below follows from that. (This line used to cite line 49; it is line 50 as of
+  2026-08-31, which is the argument for not citing a line number at all — grep the call.)
+- **An `act()` warning FAILS your suite.** Not a warning any more — see §0b.
+
+## 0. The double style: what a webview test hands in
+
+[ADR-016](../../../docs/architecture/adr/016-test-strategy.md) is the law for all tests
+here; this section is only what it means on the webview side. Read it once for the three
+tiers and the four fixture rules.
+
+**Deps-object fakes are the target double style** (ADR-016 § Decision, tier 1). A webview
+component gets its dependencies as PROPS — that is ADR-017's rule, and it is also what
+makes this possible. So the double is a plain object you pass in, not a `jest.mock` of the
+module the component imports.
+
+The per-suite `jest.mock` of `@adobe/react-spectrum` in §2 is NOT an exception to this. You
+are not faking a collaborator there; you are replacing a rendering library that does not
+work in jsdom. The distinction is whether the thing being mocked is something the component
+could have been HANDED. Spectrum could not be.
+
+**Where the fake comes from, in priority order** (ADR-016 § Fixtures and fakes):
+
+1. **A builder in `tests/helpers/`** if one exists. `createMockLogger` is the one you will
+   reach for most; `projectFake`, `handlerContextTestHelpers`, `webviewFixtures` and a dozen
+   others are there too. **Look before you write** — `tests/sop/canonical-fakes.test.ts`
+   fails a NEW suite that hand-rolls a covered fake, and names the import you wanted.
+2. **The suite's `.testUtils`** for setup specific to this subject (§3).
+3. **A literal**, only when neither fits. Then: type it to the real interface, never
+   `as never` or `as any` (ADR-016 rule 2), and read the shape rather than remembering it
+   (rule 3 — and §5 below is the webview-specific version of that trap).
+
+**Message payloads are the shape most often invented here.** `tests/helpers/webviewFixtures.ts`
+is the worked example ADR-016 rule 3 points at: it lives in a file `npm run typecheck:tests`
+reads, so a payload that does not match the real interface fails to compile instead of
+failing a screen at run time. Five invented shapes shipped in one afternoon before it
+existed. If a shape crosses the extension↔webview boundary, build it there.
+
+## 0b. Run noise is zero, and the gate keeps it there
+
+`tests/setup/consoleGate.ts` fails any suite that emits `console.error` or `console.warn`
+during a passing run, unless the suite is listed in `tests/setup/console-allowlist.json`.
+
+**That allowlist is now EMPTY.** It was seeded at 68 offending suites on 2026-08-28 and has
+been burned down to nothing (verified 2026-08-31 by planting a `console.error` in an
+unledgered suite — it fails, and the failure names the gate). The list may only shrink, so
+there is nowhere to put a new one.
+
+This changes what an `act()` warning costs you. ADR-016 measured **355 of them per green
+run**; they were noise you could scroll past. Now one fails your suite, which is the point —
+an act() warning means React state settled outside the assertion window, so the test was
+checking a render that had not finished. It was always a real signal and is now an
+enforced one.
+
+The three that produce them here, all avoidable:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Warning after a click | `userEvent.setup()` without `advanceTimers` | §1 |
+| Warning after an async prop/message update | asserting straight after the act | `await screen.findBy…` or `await waitFor(...)`, not `getBy…` |
+| Warning at teardown | a timer or promise still resolving | flush it in the test, or clear it in the component's cleanup |
+
+Reach for `findBy*` over `waitFor` where both work — it retries the query itself and its
+failure message names the element you wanted.
 
 ## 1. userEvent must be told about the fake timers
 
@@ -35,6 +97,9 @@ const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 Omit `advanceTimers` and `await user.click(...)` hangs or resolves before React flushes —
 it presents as a timeout or a phantom "element not found", never as a timer error. Wrap a
 repeated `setupUser()` helper in the suite's testUtils.
+
+Since §0b, it also presents as an `act()` warning that FAILS the suite — which is a better
+diagnosis than either of the other two, so read the warning before assuming a query bug.
 
 ## 2. The Spectrum mock preamble
 
