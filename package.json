@@ -1,574 +1,576 @@
 {
-  "name": "adobe-demo-builder",
-  "displayName": "Adobe Demo Builder",
-  "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.145",
-  "publisher": "skukla",
-  "engines": {
-    "vscode": "^1.84.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "keywords": [
-    "adobe",
-    "commerce",
-    "demo",
-    "builder"
-  ],
-  "icon": "media/icon.png",
-  "galleryBanner": {
-    "color": "#FF0000",
-    "theme": "dark"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/skukla/demo-builder-vscode"
-  },
-  "author": "Steve Kukla",
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./dist/extension.js",
-  "capabilities": {
-    "untrustedWorkspaces": {
-      "supported": "limited",
-      "description": "Demo Builder requires workspace trust to execute external commands (git, npm, Adobe CLI). In untrusted workspaces, project creation and management features are disabled for security.",
-      "restrictedConfigurations": [
-        "demoBuilder.defaultPort",
-        "demoBuilder.autoUpdate"
-      ]
-    }
-  },
-  "contributes": {
-    "commands": [
-      {
-        "command": "demoBuilder.createProject",
-        "title": "Create Project",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.checkForUpdates",
-        "title": "Check for Updates",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.diagnostics",
-        "title": "Diagnostics",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.showDataInstaller",
-        "title": "Open Data Installer",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.manageSiteAccess",
-        "title": "Manage Site Access",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.repairSiteConfiguration",
-        "title": "Repair Site Configuration",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.registerGlobalMcp",
-        "title": "Register Global MCP",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.migrateStorefrontNames",
-        "title": "Migrate Storefront Names",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.syncStorefront",
-        "title": "Sync Storefront",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.openInClaude",
-        "title": "Open in Claude Code",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.openAi",
-        "title": "Manage AI Prompts",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.newAiChat",
-        "title": "New AI Chat",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.openModernizationAgent",
-        "title": "Open AEM Modernization Agent",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.resetAll",
-        "title": "Reset All (Dev Only)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.resetAiOnboarding",
-        "title": "Reset AI Onboarding (Dev Only)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.setRecommendedZoom",
-        "title": "Set Recommended Zoom (120%)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.resetZoom",
-        "title": "Reset Zoom (100%)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.openDaLiveBookmarkletSetup",
-        "title": "DA.live Bookmarklet Setup",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.cleanupDaLiveSites",
-        "title": "Manage DA.live Sites",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.manageGitHubRepos",
-        "title": "Manage GitHub Repositories",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.signInAdobe",
-        "title": "Sign in to Adobe",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.signInDaLive",
-        "title": "Sign in to DA.live",
-        "category": "Demo Builder"
-      }
-    ],
-    "configuration": [
-      {
-        "title": "General",
-        "properties": {
-          "demoBuilder.defaultPort": {
-            "type": "number",
-            "default": 3000,
-            "description": "Default port for the frontend application"
-          },
-          "demoBuilder.autoUpdate": {
-            "type": "boolean",
-            "default": true,
-            "description": "Automatically check for updates on startup"
-          },
-          "demoBuilder.autoZoom": {
-            "type": "boolean",
-            "default": false,
-            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default — zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
-          },
-          "demoBuilder.updateChannel": {
-            "type": "string",
-            "enum": [
-              "stable",
-              "beta",
-              "early-access"
-            ],
-            "enumDescriptions": [
-              "Production releases only",
-              "Beta prereleases (testing)",
-              "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
-            ],
-            "default": "stable",
-            "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
-          },
-          "demoBuilder.logLevel": {
-            "type": "string",
-            "enum": [
-              "error",
-              "warn",
-              "info",
-              "debug",
-              "trace"
-            ],
-            "default": "debug",
-            "description": "Log level for Demo Builder Debug Logs channel: debug (normal) or trace (verbose with stack traces)"
-          },
-          "demoBuilder.projectsViewMode": {
-            "type": "string",
-            "enum": [
-              "cards",
-              "rows"
-            ],
-            "default": "cards",
-            "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
-          },
-          "demoBuilder.cleanupBehavior": {
-            "type": "string",
-            "enum": [
-              "ask",
-              "deleteAll",
-              "localOnly"
-            ],
-            "enumDescriptions": [
-              "Show selection dialog for each deletion",
-              "Automatically delete all external resources",
-              "Only delete local project, skip external resources"
-            ],
-            "default": "ask",
-            "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project."
-          }
-        }
-      },
-      {
-        "title": "Block Libraries",
-        "properties": {
-          "demoBuilder.blockLibraries.defaults": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "demo-team-blocks"
-              ],
-              "enumDescriptions": [
-                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
-              ]
-            },
-            "uniqueItems": true,
-            "default": [],
-            "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
-          },
-          "demoBuilder.blockLibraries.custom": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
-            },
-            "default": [],
-            "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
-          },
-          "demoBuilder.blockLibraries.syncBehavior": {
-            "type": "string",
-            "enum": [
-              "ask",
-              "enabled",
-              "disabled"
-            ],
-            "enumDescriptions": [
-              "Prompt before applying upstream library updates or promoting local changes to a library",
-              "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
-              "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
-            ],
-            "default": "ask",
-            "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
-          }
-        }
-      },
-      {
-        "title": "App Builder Components",
-        "properties": {
-          "demoBuilder.appBuilderComponents.custom": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
-            },
-            "default": [],
-            "description": "Custom App Builder components (meshes or integrations) to include in the App Builder component catalog. Each entry is a public GitHub repository URL."
-          }
-        }
-      },
-      {
-        "title": "DA.live",
-        "properties": {
-          "demoBuilder.daLive.aemAuthorUrl": {
-            "type": "string",
-            "default": "",
-            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required — set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
-          },
-          "demoBuilder.daLive.IMSOrgId": {
-            "type": "string",
-            "default": "demosystem",
-            "description": "Adobe IMS organization ID for Universal Editor access. Used to generate editor.path for DA.live sites."
-          },
-          "demoBuilder.daLive.authoringExperience": {
-            "type": "string",
-            "enum": [
-              "da-live-classic",
-              "experience-workspace"
-            ],
-            "enumItemLabels": [
-              "DA.live Classic",
-              "Experience Workspace"
-            ],
-            "default": "da-live-classic",
-            "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
-          },
-          "demoBuilder.daLive.ewCanvasBranch": {
-            "type": "string",
-            "default": "",
-            "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Leave empty to use the current param-less production canvas; set a branch only to pin a specific pre-release build."
-          }
-        }
-      },
-      {
-        "title": "ACCS Discovery",
-        "properties": {
-          "demoBuilder.accsDiscovery.services": {
-            "scope": "machine",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "orgName": {
-                  "type": "string",
-                  "description": "Display name for the Commerce org"
-                },
-                "orgId": {
-                  "type": "string",
-                  "description": "Adobe IMS org ID (e.g., ABC123@AdobeOrg)"
-                },
-                "serviceUrl": {
-                  "type": "string",
-                  "description": "Discovery service App Builder action URL"
-                }
-              },
-              "required": [
-                "orgName",
-                "serviceUrl"
-              ]
-            },
-            "default": [
-              {
-                "orgName": "Adobe Demo System",
-                "orgId": "8EBB33FE5E43BA110A495EF8@AdobeOrg",
-                "serviceUrl": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores"
-              }
-            ],
-            "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
-          }
-        }
-      },
-      {
-        "title": "BYOM Overlay",
-        "properties": {
-          "demoBuilder.byom.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
-          },
-          "demoBuilder.byom.overlayUrl": {
-            "scope": "machine",
-            "type": "string",
-            "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
-            "format": "uri",
-            "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev)."
-          }
-        }
-      },
-      {
-        "title": "AI",
-        "properties": {
-          "demoBuilder.ai.engine": {
-            "type": "string",
-            "enum": [
-              "claude-code"
-            ],
-            "enumItemLabels": [
-              "Claude Code"
-            ],
-            "enumDescriptions": [
-              "Anthropic's Claude Code (CLI)."
-            ],
-            "default": "claude-code",
-            "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
-          },
-          "demoBuilder.ai.requireAgentConsent": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
-          },
-          "demoBuilder.ai.enableThirdPartyTools": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it — atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
-          }
-        }
-      },
-      {
-        "title": "Data Installer",
-        "properties": {
-          "demoBuilder.dataInstaller.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
-          },
-          "demoBuilder.dataInstaller.apiBaseUrl": {
-            "scope": "machine",
-            "type": "string",
-            "default": "",
-            "format": "uri",
-            "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
-          }
-        }
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "demoBuilder",
-          "title": "Demo Builder",
-          "icon": "media/adobe-icon-dark.svg"
-        }
-      ]
+    "name": "adobe-demo-builder",
+    "displayName": "Adobe Demo Builder",
+    "description": "Create and manage Adobe Commerce demos with ease",
+    "version": "1.0.0-beta.145",
+    "publisher": "skukla",
+    "engines": {
+        "vscode": "^1.84.0"
     },
-    "views": {
-      "demoBuilder": [
-        {
-          "id": "demoBuilder.sidebar",
-          "name": "Demo Builder",
-          "type": "webview"
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "adobe",
+        "commerce",
+        "demo",
+        "builder"
+    ],
+    "icon": "media/icon.png",
+    "galleryBanner": {
+        "color": "#FF0000",
+        "theme": "dark"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/skukla/demo-builder-vscode"
+    },
+    "author": "Steve Kukla",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./dist/extension.js",
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "Demo Builder requires workspace trust to execute external commands (git, npm, Adobe CLI). In untrusted workspaces, project creation and management features are disabled for security.",
+            "restrictedConfigurations": [
+                "demoBuilder.defaultPort",
+                "demoBuilder.autoUpdate"
+            ]
         }
-      ]
+    },
+    "contributes": {
+        "commands": [
+            {
+                "command": "demoBuilder.createProject",
+                "title": "Create Project",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.checkForUpdates",
+                "title": "Check for Updates",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.diagnostics",
+                "title": "Diagnostics",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.showDataInstaller",
+                "title": "Open Data Installer",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.manageSiteAccess",
+                "title": "Manage Site Access",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.repairSiteConfiguration",
+                "title": "Repair Site Configuration",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.registerGlobalMcp",
+                "title": "Register Global MCP",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.migrateStorefrontNames",
+                "title": "Migrate Storefront Names",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.syncStorefront",
+                "title": "Sync Storefront",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.openInClaude",
+                "title": "Open in Claude Code",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.openAi",
+                "title": "Manage AI Prompts",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.newAiChat",
+                "title": "New AI Chat",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.openModernizationAgent",
+                "title": "Open AEM Modernization Agent",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.resetAll",
+                "title": "Reset All (Dev Only)",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.resetAiOnboarding",
+                "title": "Reset AI Onboarding (Dev Only)",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.setRecommendedZoom",
+                "title": "Set Recommended Zoom (120%)",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.resetZoom",
+                "title": "Reset Zoom (100%)",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.openDaLiveBookmarkletSetup",
+                "title": "DA.live Bookmarklet Setup",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.cleanupDaLiveSites",
+                "title": "Manage DA.live Sites",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.manageGitHubRepos",
+                "title": "Manage GitHub Repositories",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signInAdobe",
+                "title": "Sign in to Adobe",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signInDaLive",
+                "title": "Sign in to DA.live",
+                "category": "Demo Builder"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "General",
+                "properties": {
+                    "demoBuilder.defaultPort": {
+                        "type": "number",
+                        "default": 3000,
+                        "description": "Default port for the frontend application"
+                    },
+                    "demoBuilder.autoUpdate": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Automatically check for updates on startup"
+                    },
+                    "demoBuilder.autoZoom": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default \u2014 zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
+                    },
+                    "demoBuilder.updateChannel": {
+                        "type": "string",
+                        "enum": [
+                            "stable",
+                            "beta",
+                            "early-access"
+                        ],
+                        "enumDescriptions": [
+                            "Production releases only",
+                            "Beta prereleases (testing)",
+                            "Alpha preview builds \u2014 honored only for repository collaborators; others fall back to beta"
+                        ],
+                        "default": "stable",
+                        "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
+                    },
+                    "demoBuilder.logLevel": {
+                        "type": "string",
+                        "enum": [
+                            "error",
+                            "warn",
+                            "info",
+                            "debug",
+                            "trace"
+                        ],
+                        "default": "debug",
+                        "description": "Log level for Demo Builder Debug Logs channel: debug (normal) or trace (verbose with stack traces)"
+                    },
+                    "demoBuilder.projectsViewMode": {
+                        "type": "string",
+                        "enum": [
+                            "cards",
+                            "rows"
+                        ],
+                        "default": "cards",
+                        "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
+                    },
+                    "demoBuilder.cleanupBehavior": {
+                        "type": "string",
+                        "enum": [
+                            "ask",
+                            "deleteAll",
+                            "localOnly"
+                        ],
+                        "enumDescriptions": [
+                            "Show selection dialog for each deletion",
+                            "Automatically delete all external resources",
+                            "Only delete local project, skip external resources"
+                        ],
+                        "default": "ask",
+                        "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project."
+                    }
+                }
+            },
+            {
+                "title": "Block Libraries",
+                "properties": {
+                    "demoBuilder.blockLibraries.defaults": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "demo-team-blocks"
+                            ],
+                            "enumDescriptions": [
+                                "Demo Team Block Collection \u2014 general-purpose blocks built by the Demo Team, usable in any EDS storefront"
+                            ]
+                        },
+                        "uniqueItems": true,
+                        "default": [],
+                        "description": "Block libraries to pre-select by default for new EDS projects. Empty by default \u2014 package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
+                    },
+                    "demoBuilder.blockLibraries.custom": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
+                        },
+                        "default": [],
+                        "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
+                    },
+                    "demoBuilder.blockLibraries.syncBehavior": {
+                        "type": "string",
+                        "enum": [
+                            "ask",
+                            "enabled",
+                            "disabled"
+                        ],
+                        "enumDescriptions": [
+                            "Prompt before applying upstream library updates or promoting local changes to a library",
+                            "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
+                            "Never touch block library remotes \u2014 promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+                        ],
+                        "default": "ask",
+                        "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
+                    }
+                }
+            },
+            {
+                "title": "App Builder Components",
+                "properties": {
+                    "demoBuilder.appBuilderComponents.custom": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
+                        },
+                        "default": [],
+                        "description": "Custom App Builder components (meshes or integrations) to include in the App Builder component catalog. Each entry is a public GitHub repository URL."
+                    }
+                }
+            },
+            {
+                "title": "DA.live",
+                "properties": {
+                    "demoBuilder.daLive.aemAuthorUrl": {
+                        "type": "string",
+                        "default": "",
+                        "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required \u2014 set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+                    },
+                    "demoBuilder.daLive.IMSOrgId": {
+                        "type": "string",
+                        "default": "demosystem",
+                        "description": "Adobe IMS organization ID for Universal Editor access. Used to generate editor.path for DA.live sites."
+                    },
+                    "demoBuilder.daLive.authoringExperience": {
+                        "type": "string",
+                        "enum": [
+                            "da-live-classic",
+                            "experience-workspace"
+                        ],
+                        "enumItemLabels": [
+                            "DA.live Classic",
+                            "Experience Workspace"
+                        ],
+                        "default": "da-live-classic",
+                        "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
+                    },
+                    "demoBuilder.daLive.ewCanvasBranch": {
+                        "type": "string",
+                        "default": "",
+                        "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Leave empty to use the current param-less production canvas; set a branch only to pin a specific pre-release build."
+                    }
+                }
+            },
+            {
+                "title": "ACCS Discovery",
+                "properties": {
+                    "demoBuilder.accsDiscovery.services": {
+                        "scope": "machine",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "orgName": {
+                                    "type": "string",
+                                    "description": "Display name for the Commerce org"
+                                },
+                                "orgId": {
+                                    "type": "string",
+                                    "description": "Adobe IMS org ID (e.g., ABC123@AdobeOrg)"
+                                },
+                                "serviceUrl": {
+                                    "type": "string",
+                                    "description": "Discovery service App Builder action URL"
+                                }
+                            },
+                            "required": [
+                                "orgName",
+                                "serviceUrl"
+                            ]
+                        },
+                        "default": [
+                            {
+                                "orgName": "Adobe Demo System",
+                                "orgId": "8EBB33FE5E43BA110A495EF8@AdobeOrg",
+                                "serviceUrl": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores"
+                            }
+                        ],
+                        "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
+                    }
+                }
+            },
+            {
+                "title": "BYOM Overlay",
+                "properties": {
+                    "demoBuilder.byom.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
+                    },
+                    "demoBuilder.byom.overlayUrl": {
+                        "scope": "machine",
+                        "type": "string",
+                        "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
+                        "format": "uri",
+                        "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev)."
+                    }
+                }
+            },
+            {
+                "title": "AI",
+                "properties": {
+                    "demoBuilder.ai.engine": {
+                        "type": "string",
+                        "enum": [
+                            "claude-code"
+                        ],
+                        "enumItemLabels": [
+                            "Claude Code"
+                        ],
+                        "enumDescriptions": [
+                            "Anthropic's Claude Code (CLI)."
+                        ],
+                        "default": "claude-code",
+                        "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+                    },
+                    "demoBuilder.ai.requireAgentConsent": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` \u2014 publish, delete, reset, \u2026). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use \u2014 the agent-side `confirm` convention then remains the only gate."
+                    },
+                    "demoBuilder.ai.enableThirdPartyTools": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it \u2014 atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
+                    }
+                }
+            },
+            {
+                "title": "Data Installer",
+                "properties": {
+                    "demoBuilder.dataInstaller.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
+                    },
+                    "demoBuilder.dataInstaller.apiBaseUrl": {
+                        "scope": "machine",
+                        "type": "string",
+                        "default": "",
+                        "format": "uri",
+                        "description": "Data Installer API base URL, without a trailing action segment. Required \u2014 set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                    }
+                }
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "demoBuilder",
+                    "title": "Demo Builder",
+                    "icon": "media/adobe-icon-dark.svg"
+                }
+            ]
+        },
+        "views": {
+            "demoBuilder": [
+                {
+                    "id": "demoBuilder.sidebar",
+                    "name": "Demo Builder",
+                    "type": "webview"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "clean": "rm -rf dist",
+        "clean:webview": "rm -rf dist/webview",
+        "compile": "npm run clean:webview && npm run copy:media && node esbuild.config.js --production",
+        "compile:extension": "node esbuild.config.js --extension-only --production",
+        "compile:extension:dev": "node esbuild.config.js --extension-only",
+        "compile:typescript": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+        "compile:webview": "npm run clean:webview && node esbuild.config.js --webview-only --production",
+        "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
+        "watch": "node esbuild.config.js --extension-only --watch",
+        "watch:webview": "node esbuild.config.js --webview-only --watch",
+        "watch:all": "node esbuild.config.js --watch",
+        "vscode:prepublish": "npm run compile",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+        "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+        "test": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
+        "test:fast": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=75% --forceExit",
+        "test:changed": "node --max-old-space-size=4096 node_modules/.bin/jest --onlyChanged",
+        "test:file": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=1",
+        "test:safe": "node --max-old-space-size=1024 node_modules/.bin/jest --maxWorkers=1 --forceExit",
+        "test:no-compile": "node --max-old-space-size=4096 node_modules/.bin/jest",
+        "test:watch": "node --max-old-space-size=4096 node_modules/.bin/jest --watch",
+        "test:coverage": "node --max-old-space-size=4096 node_modules/.bin/jest --coverage",
+        "test:force": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
+        "test:unit": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects node --testPathIgnorePatterns='integration'",
+        "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
+        "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
+        "test:typecheck": "tsc --noEmit",
+        "typecheck:tests": "tsc -p tsconfig.test.json",
+        "metrics:baseline": "node scripts/capture-baseline-metrics.js",
+        "sweep": "node scripts/sweep.mjs",
+        "validate:jest-config": "node scripts/validate-jest-config.js",
+        "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
+        "validate:test-guidelines": "node scripts/validate-test-guidelines.js",
+        "validate:test-file-sizes": "node scripts/check-test-file-sizes.js",
+        "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
+        "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npx jest --no-coverage && bash .claude/skills/dead-code-scan/scan.sh src",
+        "analyze": "ANALYZE=true npm run compile:webview",
+        "package": "vsce package",
+        "publish": "vsce publish",
+        "encrypt-keys": "node scripts/encrypt-keys.js",
+        "manage-keys": "node scripts/manage-keys.js",
+        "setup": "npm install && npm run compile",
+        "postinstall": "npm run compile",
+        "mesh:delete": "aio api-mesh delete --autoConfirmAction",
+        "mesh:status": "aio api-mesh get --active",
+        "hooks": "node scripts/hooks.js",
+        "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) \u2014 turn off: git config --unset core.hooksPath\"",
+        "docs:check": "node scripts/hooks.js coverage",
+        "data-installer:drift": "node scripts/dataInstallerDrift.js",
+        "eds:drift": "node scripts/edsDrift.js",
+        "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
+        "docs:conventions": "node scripts/generate-convention-index.mjs",
+        "docs:tools": "node scripts/generate-tool-catalog.mjs",
+        "docs:tools:check": "node scripts/generate-tool-catalog.mjs --check",
+        "docs:conventions:check": "node scripts/generate-convention-index.mjs --check",
+        "test:mutation": "stryker run",
+        "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",
+        "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --write",
+        "test:mutation:selftest": "node scripts/mutationBaseline.selftest.mjs",
+        "docs:adr-index": "node scripts/generate-adr-index.mjs",
+        "docs:adr-check": "node scripts/generate-adr-index.mjs --check",
+        "health": "node scripts/healthSnapshot.mjs",
+        "health:write": "node scripts/healthSnapshot.mjs --write"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.15.0",
+        "@stryker-mutator/core": "^9.6.1",
+        "@stryker-mutator/jest-runner": "^9.6.1",
+        "@swc/core": "^1.15.3",
+        "@swc/jest": "^0.2.39",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.0",
+        "@testing-library/user-event": "^14.6.1",
+        "@types/adm-zip": "^0.5.7",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^24.3.1",
+        "@types/react": "^19.1.12",
+        "@types/react-dom": "^19.1.9",
+        "@types/sanitize-html": "^2.16.1",
+        "@types/semver": "^7.5.8",
+        "@types/vscode": "^1.74.0",
+        "@vscode/test-electron": "^2.5.2",
+        "@vscode/vsce": "^3.7.1",
+        "chokidar": "^3.6.0",
+        "cloc": "^2.6.0-cloc",
+        "concurrently": "^9.2.1",
+        "css-loader": "^7.1.2",
+        "esbuild": "^0.27.2",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-jest": "^29.16.5",
+        "eslint-plugin-jsx-a11y": "^6.10.2",
+        "eslint-plugin-react": "^7.37.5",
+        "eslint-plugin-react-hooks": "^7.0.0",
+        "jest": "^30.2.0",
+        "jest-environment-jsdom": "^30.2.0",
+        "jscpd": "^4.0.5",
+        "madge": "^8.0.0",
+        "prettier": "^3.6.2",
+        "process": "^0.11.10",
+        "style-loader": "^4.0.0",
+        "ts-jest": "^29.4.5",
+        "ts-json-schema-generator": "^2.4.0",
+        "ts-loader": "^9.5.4",
+        "ts-prune": "^0.10.3",
+        "tsc-alias": "^1.8.16",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.16.0"
+    },
+    "dependencies": {
+        "@adobe/aio-lib-console": "^5.4.2",
+        "@adobe/aio-lib-core-config": "^5.0.1",
+        "@adobe/aio-lib-ims": "^7.0.2",
+        "@adobe/react-spectrum": "^3.46.0",
+        "@modelcontextprotocol/sdk": "1.29.0",
+        "@octokit/core": "^6.1.6",
+        "@octokit/plugin-retry": "^7.2.1",
+        "@types/uuid": "^10.0.0",
+        "adm-zip": "^0.5.16",
+        "ajv": "^8.20.0",
+        "async-mutex": "^0.5.0",
+        "axios": "^1.6.0",
+        "crypto-js": "^4.2.0",
+        "execa": "^5.1.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "sanitize-html": "^2.17.4",
+        "semver": "^7.5.4",
+        "uuid": "^13.0.0",
+        "yaml": "^2.3.4",
+        "zod": "^3.23.0"
     }
-  },
-  "scripts": {
-    "clean": "rm -rf dist",
-    "clean:webview": "rm -rf dist/webview",
-    "compile": "npm run clean:webview && npm run copy:media && node esbuild.config.js --production",
-    "compile:extension": "node esbuild.config.js --extension-only --production",
-    "compile:extension:dev": "node esbuild.config.js --extension-only",
-    "compile:typescript": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "compile:webview": "npm run clean:webview && node esbuild.config.js --webview-only --production",
-    "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
-    "watch": "node esbuild.config.js --extension-only --watch",
-    "watch:webview": "node esbuild.config.js --webview-only --watch",
-    "watch:all": "node esbuild.config.js --watch",
-    "vscode:prepublish": "npm run compile",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
-    "test": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
-    "test:fast": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=75% --forceExit",
-    "test:changed": "node --max-old-space-size=4096 node_modules/.bin/jest --onlyChanged",
-    "test:file": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=1",
-    "test:safe": "node --max-old-space-size=1024 node_modules/.bin/jest --maxWorkers=1 --forceExit",
-    "test:no-compile": "node --max-old-space-size=4096 node_modules/.bin/jest",
-    "test:watch": "node --max-old-space-size=4096 node_modules/.bin/jest --watch",
-    "test:coverage": "node --max-old-space-size=4096 node_modules/.bin/jest --coverage",
-    "test:force": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
-    "test:unit": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects node --testPathIgnorePatterns='integration'",
-    "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
-    "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
-    "test:typecheck": "tsc --noEmit",
-    "typecheck:tests": "tsc -p tsconfig.test.json",
-    "metrics:baseline": "node scripts/capture-baseline-metrics.js",
-    "sweep": "node scripts/sweep.mjs",
-    "validate:jest-config": "node scripts/validate-jest-config.js",
-    "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
-    "validate:test-guidelines": "node scripts/validate-test-guidelines.js",
-    "validate:test-file-sizes": "node scripts/check-test-file-sizes.js",
-    "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
-    "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npx jest --no-coverage && bash .claude/skills/dead-code-scan/scan.sh src",
-    "analyze": "ANALYZE=true npm run compile:webview",
-    "package": "vsce package",
-    "publish": "vsce publish",
-    "encrypt-keys": "node scripts/encrypt-keys.js",
-    "manage-keys": "node scripts/manage-keys.js",
-    "setup": "npm install && npm run compile",
-    "postinstall": "npm run compile",
-    "mesh:delete": "aio api-mesh delete --autoConfirmAction",
-    "mesh:status": "aio api-mesh get --active",
-    "hooks": "node scripts/hooks.js",
-    "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"",
-    "docs:check": "node scripts/hooks.js coverage",
-    "data-installer:drift": "node scripts/dataInstallerDrift.js",
-    "eds:drift": "node scripts/edsDrift.js",
-    "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
-    "docs:conventions": "node scripts/generate-convention-index.mjs",
-    "docs:tools": "node scripts/generate-tool-catalog.mjs",
-    "docs:tools:check": "node scripts/generate-tool-catalog.mjs --check",
-    "docs:conventions:check": "node scripts/generate-convention-index.mjs --check",
-    "test:mutation": "stryker run",
-    "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",
-    "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --write",
-    "test:mutation:selftest": "node scripts/mutationBaseline.selftest.mjs",
-    "docs:adr-index": "node scripts/generate-adr-index.mjs",
-    "docs:adr-check": "node scripts/generate-adr-index.mjs --check"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.15.0",
-    "@stryker-mutator/core": "^9.6.1",
-    "@stryker-mutator/jest-runner": "^9.6.1",
-    "@swc/core": "^1.15.3",
-    "@swc/jest": "^0.2.39",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/adm-zip": "^0.5.7",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.3.1",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9",
-    "@types/sanitize-html": "^2.16.1",
-    "@types/semver": "^7.5.8",
-    "@types/vscode": "^1.74.0",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.1",
-    "chokidar": "^3.6.0",
-    "cloc": "^2.6.0-cloc",
-    "concurrently": "^9.2.1",
-    "css-loader": "^7.1.2",
-    "esbuild": "^0.27.2",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-jest": "^29.16.5",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.0",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
-    "jscpd": "^4.0.5",
-    "madge": "^8.0.0",
-    "prettier": "^3.6.2",
-    "process": "^0.11.10",
-    "style-loader": "^4.0.0",
-    "ts-jest": "^29.4.5",
-    "ts-json-schema-generator": "^2.4.0",
-    "ts-loader": "^9.5.4",
-    "ts-prune": "^0.10.3",
-    "tsc-alias": "^1.8.16",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.16.0"
-  },
-  "dependencies": {
-    "@adobe/aio-lib-console": "^5.4.2",
-    "@adobe/aio-lib-core-config": "^5.0.1",
-    "@adobe/aio-lib-ims": "^7.0.2",
-    "@adobe/react-spectrum": "^3.46.0",
-    "@modelcontextprotocol/sdk": "1.29.0",
-    "@octokit/core": "^6.1.6",
-    "@octokit/plugin-retry": "^7.2.1",
-    "@types/uuid": "^10.0.0",
-    "adm-zip": "^0.5.16",
-    "ajv": "^8.20.0",
-    "async-mutex": "^0.5.0",
-    "axios": "^1.6.0",
-    "crypto-js": "^4.2.0",
-    "execa": "^5.1.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "sanitize-html": "^2.17.4",
-    "semver": "^7.5.4",
-    "uuid": "^13.0.0",
-    "yaml": "^2.3.4",
-    "zod": "^3.23.0"
-  }
 }

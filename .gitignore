@@ -104,3 +104,9 @@ tests/setup/console-gate-offenders.txt
 # exclusion cannot be undone by a negation inside it, hence the /* form.
 reports/mutation/*
 !reports/mutation/baseline.json
+
+# jscpd working output for the health snapshot — the numbers are kept in
+# reports/health/history.json; the raw report is regenerated each run.
+reports/health/.jscpd-tests/
+reports/mutation/mutation.json
+reports/mutation/pl22.json

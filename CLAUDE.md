@@ -180,7 +180,7 @@ red, and so is a registry entry for something deleted.
 | per-tool-call | 10 hook rules in `.claude/hooks/rules/` | automatic |
 | per-jest-run | 24 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
-| periodic | 9 scripted checks + 9 guided reviews | **`npm run sweep`** |
+| periodic | 10 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT

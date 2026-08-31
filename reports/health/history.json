@@ -1,0 +1,38 @@
+{
+    "_what": "Derived time series of codebase health. Each metric is READ from its real source (the ledgers, the mutation baseline, the handbook); this file is never authoritative. Append-only \u2014 a snapshot is a reading, not a target.",
+    "snapshots": [
+        {
+            "at": "2026-08-31",
+            "commit": "b5b610003",
+            "note": "first snapshot \u2014 develop, immediately after the Track 3 merge. The floor everything after this is measured against.",
+            "metrics": {
+                "dup.src.clones": 67,
+                "dup.tests.clones": 91,
+                "dup.tests.duplicatedLines": 5068,
+                "dup.tests.pct": 1.54,
+                "dup.tests.pairsWebview": 13,
+                "dup.tests.pairsService": 78,
+                "mutation.scoreWeighted": 62.3,
+                "mutation.modulesPinned": 8,
+                "mutation.highValueSurvivors": 129,
+                "mutation.noCoverage": 159,
+                "debt.testFamilies": 63,
+                "debt.loggerFakes": 296,
+                "debt.consoleNoise": 0,
+                "debt.archExemptions": 30,
+                "conventions.total": 77,
+                "conventions.enforced": 61,
+                "suite.testFiles": 1204
+            }
+        }
+    ],
+    "_definitions": {
+        "dup.src.clones": "bash .claude/skills/code-duplication-scan/scan.sh src  (min-lines 8, min-tokens 60, tests ignored) \u2014 ratchet 66",
+        "dup.tests.*": "npx jscpd tests --min-lines 20 --min-tokens 140 \u2014 ratchet 160 / 2.44%. Jitter is +/-1 between identical runs",
+        "dup.tests.pairsWebview|pairsService": "the same run, split by whether either side of the pair is a .tsx suite",
+        "mutation.*": "READ from reports/mutation/baseline.json, never re-measured here. scoreWeighted is killed/total mutants across pinned modules \u2014 NOT a mean of per-module percentages, which would weigh a 40-mutant module equally with a 400-mutant one",
+        "debt.*": "the length of each shrink-only ledger, read from the file that owns it",
+        "conventions.*": "the sentence in docs/development/handbook.md that tests/sop pins",
+        "suite.testFiles": "git ls-files over tests/**/*.test.ts(x)"
+    }
+}

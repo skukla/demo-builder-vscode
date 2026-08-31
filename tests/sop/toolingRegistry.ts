@@ -125,6 +125,14 @@ export interface Instrument {
  */
 const PERIODIC: readonly Instrument[] = [
     {
+        id: 'health',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'report',
+        what: 'one reading of codebase health across duplication, mutation, debt ledgers and enforcement — appended to a time series so runs can be compared',
+        runs: 'npm run health',
+    },
+    {
         id: 'dead-mock-scan',
         kind: 'skill',
         cadence: 'periodic',
