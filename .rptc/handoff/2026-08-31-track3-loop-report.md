@@ -58,6 +58,47 @@ ADR-016 is about:
 The count of walls is therefore an upper bound on the work, not a target to drive to
 zero — the same lesson the coverage scan already carries about its own number.
 
+## What converting a wall keeps turning up (2026-08-31, walls 11-14)
+
+Four more suites came off their module mocks, and in **three of the four** the fix was
+in the source, not the test. The shape repeats exactly:
+
+> A function declares a whole service CLASS as a parameter and calls two or three
+> methods on it. A test cannot supply that without a cast, so it mocks the module
+> instead. Narrowing the parameter to the methods actually used fixes both — the
+> signature gets honest, and the mock becomes unnecessary.
+
+Three parameters were narrowed this way. `migrateStorefrontNamingIfNeeded` took two
+classes and calls three methods. `registerSiteConfig` took the Config Service and calls
+two. The two block-library publish helpers took Helix and call two. Every real service
+still satisfies its new interface, so no production caller changed.
+
+`registerSiteConfig` is worth singling out: narrowing it unblocked the config-service
+half of two OTHER suites at once. Some of these walls share a root, and finding the root
+is cheaper than converting the leaves one at a time.
+
+**A fourth defect class, beyond the three above: a suite that re-mocks mid-test.**
+`configSyncService` called `require('.../helixService')` inside five test bodies and
+installed a fresh implementation each time, one of them reading
+`HelixService.mock.results[0]` — so what a test received depended on whether an earlier
+test had constructed one. That is not a mock wall so much as a test suite reaching into
+Jest's module registry at runtime, and the seam removes the ability entirely.
+
+**A construction assertion does not have to be traded away.** `edsResetConfigStep`
+looked unconvertible: its whole point is that the DA.live token reaches the Helix
+CONSTRUCTOR, and handing in an instance skips construction. A FACTORY seam keeps the
+property assertable with no module mock. That is now the rule — instance seam by
+default, factory seam when the suite asserts about construction.
+
+Every one of the four was verified by planting the defect the test exists to catch and
+confirming the converted suite still fails. Two of those plants would have passed
+silently under the old module mock.
+
+**Parked, with a reason.** The five `storefrontSetupPhases-*` and `edsResetService-*`
+suites share one root: `executeEdsPipeline` takes three whole service classes with 25
+methods between them. Narrowing that is a real piece of work rather than a step, and it
+should be decided rather than slipped into an overnight batch.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?
