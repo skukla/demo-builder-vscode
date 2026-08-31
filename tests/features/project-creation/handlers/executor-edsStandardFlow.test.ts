@@ -9,6 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
@@ -151,10 +152,10 @@ describe('Executor - EDS Standard Flow', () => {
                 warn: jest.fn(),
                 error: jest.fn(),
             } as any,
-            stateManager: {
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-            } as any,
+            }) as any,
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
             panel: { visible: false, dispose: jest.fn() } as any,

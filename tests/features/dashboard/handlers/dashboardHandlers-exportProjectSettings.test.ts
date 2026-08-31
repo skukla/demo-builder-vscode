@@ -37,12 +37,13 @@ import { handleExportProjectSettings } from '@/features/dashboard/handlers/dashb
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return {
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: {
             info: jest.fn(),
             debug: jest.fn(),

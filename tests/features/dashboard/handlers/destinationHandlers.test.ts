@@ -54,6 +54,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const EXISTING_ADOBE = {
     organization: '285361',
@@ -76,10 +77,10 @@ function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
     } as unknown as HandlerContext;
     return { context, project, saveProject };
 }
@@ -156,7 +157,7 @@ describe('handleSetProjectDestination', () => {
     it('fails when there is no current project', async () => {
         const context = {
             logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
+            stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
         } as unknown as HandlerContext;
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
@@ -192,10 +193,10 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         const saveProject = jest.fn().mockResolvedValue(undefined);
         const context = {
             logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: {
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject,
-            },
+            }),
         } as unknown as HandlerContext;
         return { context, saveProject };
     }
@@ -251,10 +252,10 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         };
         const context = {
             logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: {
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-            },
+            }),
         } as unknown as HandlerContext;
 
         await handleSetProjectDestination(context, NEW_DESTINATION);

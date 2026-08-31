@@ -37,6 +37,7 @@ import { createMockHandlerContext } from '../../../../helpers/handlerContextTest
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 export { createMeshDepsFake };
 
@@ -68,10 +69,10 @@ export function createResetContext(currentProject?: Project | null): HandlerCont
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(currentProject),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         context: {
             secrets: {},
             globalState: { get: jest.fn(), update: jest.fn() },

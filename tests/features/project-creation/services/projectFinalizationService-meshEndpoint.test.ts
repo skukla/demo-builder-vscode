@@ -20,6 +20,7 @@ import type { Project, EnvVarDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 import type { HandlerContext } from '@/types/handlers';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock fs promises
 jest.mock('fs', () => ({
@@ -81,10 +82,10 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
     const createMockHandlerContext = (): Partial<HandlerContext> => ({
         context: { extensionPath: '/test/extension' } as any,
         logger: createMockLogger(),
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as any,
+        }) as any,
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
         panel: { visible: false, dispose: jest.fn() } as any,

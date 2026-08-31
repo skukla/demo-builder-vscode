@@ -37,6 +37,7 @@ jest.mock(
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /**
  * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
@@ -50,7 +51,7 @@ function seedRegistry(): void {
 
 function ctx(project: unknown): HandlerContext {
     return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         context: { extensionPath: '/ext' },
     } as unknown as HandlerContext;

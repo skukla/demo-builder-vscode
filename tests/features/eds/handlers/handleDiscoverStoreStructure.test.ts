@@ -39,6 +39,7 @@ jest.mock('@/core/validation', () => ({
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
@@ -82,9 +83,9 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {},
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         authManager: {
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 3600, token: 'mock-ims-token' }),

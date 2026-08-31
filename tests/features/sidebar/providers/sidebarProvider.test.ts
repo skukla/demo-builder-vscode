@@ -7,6 +7,8 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
 // be asserted without touching the real VS Code panel/session state.
@@ -85,9 +87,7 @@ function createMockWebviewView(): MockWebviewView {
 describe('SidebarProvider', () => {
     let provider: SidebarProvider;
     let mockContext: vscode.ExtensionContext;
-    let mockStateManager: {
-        getCurrentProject: jest.Mock;
-    };
+    let mockStateManager: ReturnType<typeof createMockStateManager>;
     let mockLogger: {
         info: jest.Mock;
         warn: jest.Mock;
@@ -118,9 +118,9 @@ describe('SidebarProvider', () => {
         } as unknown as vscode.ExtensionContext;
 
         // Create mock state manager
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(undefined),
-        };
+        });
 
         // Create mock logger
         mockLogger = {
@@ -244,7 +244,7 @@ describe('SidebarProvider', () => {
         });
 
         it('should handle getContext with current project', async () => {
-            const mockProject = { name: 'Test Project', path: '/test' };
+            const mockProject = createMockProject({ name: 'Test Project', path: '/test' });
             mockStateManager.getCurrentProject.mockResolvedValue(mockProject);
 
             await messageHandler({ type: 'getContext' });

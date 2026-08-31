@@ -18,6 +18,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -67,10 +68,10 @@ function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
             },
             secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
         } as unknown as vscode.ExtensionContext,
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
     return { context, saveProject };

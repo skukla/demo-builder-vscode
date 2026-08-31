@@ -66,6 +66,7 @@ jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () =>
 
 import * as vscode from 'vscode';
 import { handleRepublishContent } from '@/features/dashboard/handlers/dashboardHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // =============================================================================
 // Utilities
@@ -98,10 +99,10 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
 function createMockContext(project: Project | undefined): HandlerContext {
     return {
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: {
             info: jest.fn(),
             debug: jest.fn(),

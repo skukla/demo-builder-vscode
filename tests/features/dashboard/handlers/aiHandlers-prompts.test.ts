@@ -13,6 +13,7 @@ import {
     makeScopedContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('aiHandlers — prompt CRUD & scope', () => {
     beforeEach(() => {
@@ -31,10 +32,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 ],
             };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager(createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                })) as unknown as HandlerContext['stateManager'],
             });
 
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
@@ -56,10 +57,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns project-not-found when no current project is loaded', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager(createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                })) as unknown as HandlerContext['stateManager'],
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(false);

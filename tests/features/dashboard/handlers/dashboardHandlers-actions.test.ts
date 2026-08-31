@@ -17,6 +17,7 @@ import {
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock vscode
 jest.mock(
@@ -141,9 +142,9 @@ describe('Dashboard Action Handlers', () => {
                 },
             });
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithoutPort),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },
@@ -157,9 +158,9 @@ describe('Dashboard Action Handlers', () => {
 
         it('should not open browser when no project', async () => {
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },
@@ -185,9 +186,9 @@ describe('Dashboard Action Handlers', () => {
                 },
             });
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithCustomPort),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },

@@ -7,6 +7,7 @@
  */
 
 import type { Project } from '@/types';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('meshStatusHelpers', () => {
     const mockMeshPath = '/projects/demo/components/commerce-mesh';
@@ -44,7 +45,7 @@ describe('meshStatusHelpers', () => {
             const postMessage = jest.fn();
             const context = {
                 panel: { webview: { postMessage } },
-                stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+                stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
                 logger: {
                     debug: jest.fn(),
                     info: jest.fn(),

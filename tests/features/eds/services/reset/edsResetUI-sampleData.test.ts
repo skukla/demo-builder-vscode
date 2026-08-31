@@ -69,6 +69,7 @@ import { removeSampleData } from '@/features/data-installer/services/sampleDataI
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -128,7 +129,7 @@ function createContext(): HandlerContext {
     return {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        stateManager: { saveProject: jest.fn(), getCurrentProject: jest.fn() },
+        stateManager: createMockStateManager({ saveProject: jest.fn(), getCurrentProject: jest.fn() }),
         sendMessage: jest.fn(),
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
     } as unknown as HandlerContext;

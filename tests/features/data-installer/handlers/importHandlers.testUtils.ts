@@ -31,6 +31,7 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 // Below the mocks on purpose — see the module docstring. `import/first` is not a
 // registered rule here, so this needs no disable comment.
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 export { importHandlers };
 
@@ -100,7 +101,7 @@ export function makeImportHarness(project: unknown = PAAS_PROJECT) {
         },
         panel: {} as vscode.WebviewPanel,
         context: stores as unknown as vscode.ExtensionContext,
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
     return { context, stores };

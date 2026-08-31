@@ -22,6 +22,7 @@
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -80,7 +81,7 @@ function createContext(): HandlerContext & { sendMessage: jest.Mock } {
             getWorkspaces: jest.fn().mockResolvedValue([]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
         },
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
     } as unknown as HandlerContext & { sendMessage: jest.Mock };
 }
 

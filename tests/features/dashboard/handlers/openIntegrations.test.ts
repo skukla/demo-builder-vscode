@@ -66,6 +66,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { handleOpenIntegrations } from '@/features/dashboard/handlers/dashboardHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 const mockTransition = BaseWebviewCommand as unknown as {
@@ -85,7 +86,7 @@ function createMockContext(project: unknown = PROJECT) {
     return {
         logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn() },
         sendMessage: jest.fn(),
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
     };
 }
 

@@ -20,6 +20,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -84,10 +85,10 @@ function makeImportHarness(project: unknown): HandlerContext {
         },
         panel: {} as vscode.WebviewPanel,
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn(),
-        },
+        }),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

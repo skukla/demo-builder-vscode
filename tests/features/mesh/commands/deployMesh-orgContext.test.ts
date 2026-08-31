@@ -40,6 +40,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 }));
 
 import { ensureProjectOrgContext } from '@/features/authentication/services/ensureProjectOrgContext';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -87,7 +88,7 @@ describe('DeployMeshCommand - Org-Context Gate (ensureProjectOrgContext)', () =>
         jest.clearAllMocks();
 
         mockContext = { subscriptions: [], extensionPath: '/test/extension' } as unknown as vscode.ExtensionContext;
-        mockStateManager = { getCurrentProject: jest.fn(), saveProject: jest.fn() } as unknown as jest.Mocked<StateManager>;
+        mockStateManager = createMockStateManager({ getCurrentProject: jest.fn(), saveProject: jest.fn() }) as unknown as jest.Mocked<StateManager>;
         mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as jest.Mocked<Logger>;
         mockAuthManager = {
             getOrganizations: jest.fn().mockResolvedValue([{ id: 'org-123', code: 'ORG@AdobeOrg', name: 'Org 123' }]),

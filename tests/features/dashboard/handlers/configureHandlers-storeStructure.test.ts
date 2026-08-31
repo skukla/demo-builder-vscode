@@ -20,6 +20,7 @@ jest.mock('@/features/eds/handlers', () => ({
 import { handleDiscoverStoreStructureAndPersist } from '@/features/dashboard/handlers/configureHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -41,10 +42,10 @@ function makeContext(project: Project | null) {
     const context = {
         sendMessage,
         logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
     } as unknown as HandlerContext;
     return { context, saveProject, sendMessage };
 }

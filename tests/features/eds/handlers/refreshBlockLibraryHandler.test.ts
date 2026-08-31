@@ -18,10 +18,11 @@ jest.mock('@/types/typeGuards', () => ({
 import { handleRefreshBlockLibraryHeadless } from '@/features/eds/handlers/refreshBlockLibraryHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function ctx(project: unknown): HandlerContext {
     return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         context: { extensionPath: '/ext' },
     } as unknown as HandlerContext;

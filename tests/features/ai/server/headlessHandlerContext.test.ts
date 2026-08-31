@@ -22,6 +22,7 @@ import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandl
 import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
@@ -36,7 +37,7 @@ describe('createHeadlessHandlerContext', () => {
         extensionPath: '/ext',
         globalState: { get: jest.fn(), update: jest.fn() },
     } as any;
-    const fakeStateManager = { getCurrentProject: jest.fn() } as unknown as StateManager;
+    const fakeStateManager = createMockStateManager({ getCurrentProject: jest.fn() }) as unknown as StateManager;
 
     beforeEach(() => {
         ServiceLocator.reset();

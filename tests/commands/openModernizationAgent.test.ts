@@ -25,15 +25,16 @@ import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
 }
 
 function makeStateManager(project: Project | null): StateManager {
-    return {
+    return createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(project),
-    } as unknown as StateManager;
+    }) as unknown as StateManager;
 }
 
 function makeContext(): vscode.ExtensionContext {

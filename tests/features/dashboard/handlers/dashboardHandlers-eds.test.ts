@@ -151,6 +151,7 @@ import { ServiceLocator } from '@/core/di';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // =============================================================================
 // Test Utilities
@@ -200,10 +201,10 @@ function createMockContext(project: Project | undefined): HandlerContext {
                 postMessage: jest.fn(),
             },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),

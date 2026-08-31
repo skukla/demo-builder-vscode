@@ -31,6 +31,7 @@ jest.mock(
 
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const PROJECT_ADOBE = {
     organization: 'org123',
@@ -40,7 +41,7 @@ const PROJECT_ADOBE = {
 
 function makeContext(project: unknown = { adobe: PROJECT_ADOBE }): HandlerContext {
     return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         debugLogger: { debug: jest.fn(), trace: jest.fn() },
     } as unknown as HandlerContext;

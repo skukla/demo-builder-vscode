@@ -36,6 +36,7 @@ import {
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const PROJECTS_ROOT = '/projects';
 
@@ -216,9 +217,9 @@ describe('OpenInClaudeCommand — home AGENTS.md active project', () => {
 
     it('still launches when the pointer cannot be read', async () => {
         const mocks = setupVscodeMocks();
-        const stateManager = {
+        const stateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockRejectedValue(new Error('state.json unreadable')),
-        };
+        });
         const command = new OpenInClaudeCommand(
             makeOpenInClaudeContext(makeGlobalState()),
             stateManager as never,

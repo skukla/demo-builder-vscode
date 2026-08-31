@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 // Mock vscode API
 jest.mock('vscode', () => ({
@@ -47,9 +48,9 @@ jest.mock('vscode', () => ({
 jest.mock('@/core/vscode/workspaceWatcherManager');
 
 // Mock StateManager
-const mockStateManager = {
+const mockStateManager = createMockStateManager({
     getCurrentProject: jest.fn(),
-};
+});
 
 // Mock logger
 const mockLogger = createMockLogger();

@@ -20,6 +20,7 @@ import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscr
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { withOrgContext } from '@/core/shell';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
@@ -77,10 +78,10 @@ function makeProject(overrides: Record<string, unknown> = {}): Record<string, un
 
 function makeContext(project: Record<string, unknown> | null): HandlerContext {
     return {
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        },
+        }),
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;

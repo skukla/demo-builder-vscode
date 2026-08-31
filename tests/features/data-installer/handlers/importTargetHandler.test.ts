@@ -28,6 +28,7 @@ import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -67,7 +68,7 @@ function makeImportHarness(project: unknown) {
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         panel: {} as vscode.WebviewPanel,
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

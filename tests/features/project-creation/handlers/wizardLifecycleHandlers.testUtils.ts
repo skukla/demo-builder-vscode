@@ -5,6 +5,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock VS Code
 export const mockVSCode = {
@@ -41,9 +42,9 @@ export function createWizardLifecycleContext() {
     };
 
     // Mock state manager - with proper jest mock types
-    const mockStateManager = {
+    const mockStateManager = createMockStateManager({
         getCurrentProject: jest.fn() as jest.MockedFunction<() => Promise<any>>
-    };
+    });
 
     // Mock communication manager
     const mockCommunicationManager = {

@@ -87,3 +87,5 @@ sentence has been updated to say the ledger is closed.
   and enforced by the `reExportIndex` ledger seeded at 43 with per-file conversion
   cost. Both directions control-tested; webview bundle entries excluded by reading
   `WEBVIEW_ENTRIES` from esbuild.config.js rather than by a hand-list (`cd13b1e09`)
+- 2026-08-31  docs(backlog): PL-31 becomes the conversion phase, ordered smallest-first (`5610ea01a`)
+- 2026-08-31  docs(backlog): PL-31 — core barrels are not curated, and ADR-022 says they are (`35447098e`)

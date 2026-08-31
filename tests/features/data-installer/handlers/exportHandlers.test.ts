@@ -20,6 +20,7 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
@@ -57,7 +58,7 @@ function makeImportHarness(project: unknown = accsProject()) {
         },
         panel: {},
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

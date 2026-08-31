@@ -19,6 +19,7 @@ import { StateManager } from '@/core/state';
 import { ServiceLocator } from '@/core/di';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -153,10 +154,10 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         } as unknown as vscode.ExtensionContext;
 
         // Setup mock StateManager
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn(),
-        } as unknown as jest.Mocked<StateManager>;
+        }) as unknown as jest.Mocked<StateManager>;
 
         // Capture project state on saveProject call
         mockStateManager.saveProject.mockImplementation(async (project: Project) => {

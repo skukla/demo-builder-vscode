@@ -47,6 +47,7 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 // =============================================================================
 
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 /**
  * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
@@ -124,10 +125,10 @@ function createMockContext(): HandlerContext {
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: {
             info: jest.fn(),
             debug: jest.fn(),

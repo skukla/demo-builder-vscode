@@ -106,6 +106,7 @@ import {
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 
 
@@ -146,10 +147,10 @@ function createProject(): Project {
 function createContext(): HandlerContext {
     return {
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: createMockLogger() as unknown as Logger,
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),

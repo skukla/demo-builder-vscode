@@ -44,16 +44,17 @@ import { handleRefreshBlockLibrary } from '@/features/dashboard/handlers/dashboa
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return {
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: {
             info: jest.fn(),
             debug: jest.fn(),

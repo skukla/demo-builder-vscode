@@ -17,6 +17,7 @@ import {
     mockLogger,
     resetMocks,
 } from './envFileWatcherService.testUtils';
+import { createMockProject } from '../../helpers/projectFake';
 
 describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
@@ -61,9 +62,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // When: File event fires with same content
             const uri = vscode.Uri.file(filePath);
@@ -92,9 +91,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // When: File content changes
             const newContent = 'API_KEY=test456';
@@ -134,9 +131,7 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // When: File change event fires
             const newContent = 'API_KEY=test456';

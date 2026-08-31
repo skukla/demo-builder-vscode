@@ -18,6 +18,7 @@ import * as vscode from 'vscode';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { BaseWebviewCommand } from '@/core/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function makeContext() {
     return {
@@ -25,7 +26,7 @@ function makeContext() {
         debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
         sendMessage: jest.fn(),
         panel: {},
-        stateManager: { getCurrentProject: jest.fn() },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn() }),
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
     } as unknown as HandlerContext;
 }
