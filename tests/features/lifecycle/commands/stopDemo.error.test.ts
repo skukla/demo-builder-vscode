@@ -50,8 +50,7 @@ describe('StopDemoCommand - Error Handling', () => {
         mockCommandExecutor.execute.mockResolvedValue({
             code: 0,
             stdout: '12345',
-            stderr: '',
-        });
+            stderr: '', duration: 0 });
 
         // Mock extension context
         mockContext = {

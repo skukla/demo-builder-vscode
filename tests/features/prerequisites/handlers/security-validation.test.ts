@@ -4,6 +4,7 @@ import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { CommandResult } from '@/core/shell/types';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Security Test Suite - Command Injection Prevention
@@ -45,9 +46,7 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
     let validateNodeVersion: jest.Mock;
 
     beforeEach(() => {
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        };
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Import mocked function

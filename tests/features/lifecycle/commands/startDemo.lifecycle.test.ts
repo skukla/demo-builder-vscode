@@ -55,8 +55,7 @@ describe('StartDemoCommand - Lifecycle', () => {
         mockCommandExecutor.execute.mockResolvedValue({
             code: 0,
             stdout: '',
-            stderr: '',
-        });
+            stderr: '', duration: 0 });
 
         // Mock extension context
         mockContext = {

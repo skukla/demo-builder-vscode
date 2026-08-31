@@ -55,8 +55,7 @@ describe('StopDemoCommand - Process Discovery', () => {
         mockCommandExecutor.execute.mockResolvedValue({
             code: 0,
             stdout: '12345',
-            stderr: '',
-        });
+            stderr: '', duration: 0 });
 
         // Mock extension context
         mockContext = {
@@ -128,8 +127,7 @@ describe('StopDemoCommand - Process Discovery', () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: '12345',
-                stderr: '',
-            });
+                stderr: '', duration: 0 });
 
             // When: stopDemo called (which triggers findProcessByPort internally)
             await command.execute();
@@ -151,8 +149,7 @@ describe('StopDemoCommand - Process Discovery', () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: '12345\n12346\n12347',
-                stderr: '',
-            });
+                stderr: '', duration: 0 });
 
             // When: stopDemo command executes
             await command.execute();
@@ -170,6 +167,7 @@ describe('StopDemoCommand - Process Discovery', () => {
                 code: 1,
                 stdout: '',
                 stderr: 'lsof: command failed',
+                duration: 0,
             });
 
             // When: stopDemo command executes
@@ -187,8 +185,7 @@ describe('StopDemoCommand - Process Discovery', () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'not-a-pid',
-                stderr: '',
-            });
+                stderr: '', duration: 0 });
 
             // When: stopDemo command executes
             await command.execute();

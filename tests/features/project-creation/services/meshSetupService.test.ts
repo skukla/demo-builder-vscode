@@ -31,6 +31,7 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('meshSetupService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -111,9 +112,7 @@ describe('meshSetupService', () => {
 
         mockProgressTracker = jest.fn();
 
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        };
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         // CONVERTED 2026-08-28 (ADR-015): both collaborators arrive on the
         // MeshSetupContext, so this suite mocks the service registry NOT AT ALL.

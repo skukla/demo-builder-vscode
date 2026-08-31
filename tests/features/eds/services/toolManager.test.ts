@@ -46,9 +46,7 @@ jest.mock('os', () => ({
 // Mock logging
 
 // Mock ServiceLocator
-const mockCommandExecutor = {
-    execute: jest.fn(),
-};
+const mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => mockCommandExecutor),
@@ -68,6 +66,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('ToolManager', () => {
     let toolManager: ToolManager;

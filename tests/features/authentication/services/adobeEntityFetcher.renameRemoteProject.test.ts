@@ -11,7 +11,6 @@
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { StepLogger } from '@/core/logging';
@@ -20,6 +19,7 @@ jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     let fetcher: AdobeEntityFetcher;
@@ -37,7 +37,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
         fetcher = new AdobeEntityFetcher(
-            { execute: jest.fn() } as unknown as CommandExecutor,
+            createMockCommandExecutor({ execute: jest.fn() }),
             mockSDKClient,
             {} as unknown as AuthCacheManager,
             createMockLogger() as unknown as jest.Mocked<Logger>,

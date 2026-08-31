@@ -16,6 +16,7 @@ jest.mock('@/types/typeGuards');
 import { getLogger } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeContextResolver', () => {
     let resolver: AdobeContextResolver;
@@ -37,9 +38,7 @@ describe('AdobeContextResolver', () => {
         });
 
         // Create mocks
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
 
         mockCacheManager = {
             getCachedOrganization: jest.fn().mockReturnValue(undefined),

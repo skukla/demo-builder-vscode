@@ -20,6 +20,7 @@ jest.mock('@/types/typeGuards');
 import { getLogger } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — token-org SDK fallback', () => {
     let fetcher: AdobeEntityFetcher;
@@ -41,9 +42,7 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
             }
         });
 
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
 
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(false),

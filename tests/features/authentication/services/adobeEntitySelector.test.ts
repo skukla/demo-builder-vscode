@@ -15,6 +15,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 
 import { getLogger } from '@/core/logging';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntitySelector', () => {
     let selector: AdobeEntitySelector;
@@ -26,9 +27,7 @@ describe('AdobeEntitySelector', () => {
         (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Create mocks
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
 
         mockCacheManager = {
             clearConsoleWhereCache: jest.fn(),

@@ -23,7 +23,7 @@
 
 import type { Logger } from '@/types/logger';
 import { ToolManager } from '@/features/eds/services/toolManager';
-import type { CommandExecutor } from '@/core/shell';
+import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
 
 /**
  * Create a mock Logger for testing
@@ -237,7 +237,7 @@ describe('Service Logger Injection', () => {
          * A statically imported class is what makes the contract checkable.
          */
         it('requires the executor and still takes an optional logger', () => {
-            const executor = { execute: jest.fn() } as unknown as CommandExecutor;
+            const executor = createMockCommandExecutor({ execute: jest.fn() });
 
             const withoutLogger = new ToolManager(executor);
             expect(withoutLogger).toBeDefined();

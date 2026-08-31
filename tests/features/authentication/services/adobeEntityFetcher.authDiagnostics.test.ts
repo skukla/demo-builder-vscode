@@ -41,6 +41,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 let fetcher: AdobeEntityFetcher;
 let mockCommandExecutor: jest.Mocked<CommandExecutor>;
@@ -51,7 +52,7 @@ let mockLogger: jest.Mocked<Logger>;
 const UNAUTHORIZED = ' ›   Error: [CoreConsoleAPISDK] 401 - Unauthorized';
 
 function build(config: Record<string, unknown> = {}) {
-    mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
+    mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
     mockSDKClient = {
         isInitialized: jest.fn().mockReturnValue(false),
         getClient: jest.fn(),

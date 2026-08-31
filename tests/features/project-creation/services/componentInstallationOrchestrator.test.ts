@@ -17,6 +17,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import type { ComponentInstance } from '@/types';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockInstallNpmDependencies = jest.fn();
 jest.mock('@/features/components/services/componentManager', () => ({
@@ -55,7 +56,7 @@ function makeContext(
         progressTracker: jest.fn(),
         logger,
         saveProject: jest.fn(async () => undefined),
-        commandManager: { execute: jest.fn() } as unknown as InstallationContext['commandManager'],
+        commandManager: createMockCommandExecutor({ execute: jest.fn() }) as unknown as InstallationContext['commandManager'],
     };
 }
 

@@ -4,6 +4,7 @@ import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { CommandResult } from '@/core/shell/types';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Prerequisites Handlers - Per-Node-Version Status Test Suite
@@ -37,9 +38,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
     let mockCommandExecutor: jest.Mocked<Pick<CommandExecutor, 'execute'>>;
 
     beforeEach(() => {
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        };
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
     });
 

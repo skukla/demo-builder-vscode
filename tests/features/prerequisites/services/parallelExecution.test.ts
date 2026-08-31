@@ -13,6 +13,8 @@ import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/sha
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import type { ExecuteOptions } from '@/core/shell';
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -23,9 +25,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 describe('Parallel Per-Node-Version Checking', () => {
-    let mockCommandExecutor: jest.Mocked<{
-        execute: jest.Mock;
-    }>;
+    let mockCommandExecutor: ReturnType<typeof createMockCommandExecutor>;
     const pendingTimers: NodeJS.Timeout[] = [];
 
     beforeEach(() => {
@@ -33,9 +33,7 @@ describe('Parallel Per-Node-Version Checking', () => {
         jest.useFakeTimers();
         pendingTimers.length = 0; // Clear array
 
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        };
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
     });
@@ -109,7 +107,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             };
 
             // Mock fnm list
-            type ExecuteOptions = { useNodeVersion?: string };
+            // The real one, not a local shadow: the builder is typed to
+            // CommandExecutor, so a stand-in shape no longer satisfies it.
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
@@ -154,7 +153,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             };
 
             // Mock fnm list
-            type ExecuteOptions = { useNodeVersion?: string };
+            // The real one, not a local shadow: the builder is typed to
+            // CommandExecutor, so a stand-in shape no longer satisfies it.
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
@@ -200,7 +200,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             const executionOrder: string[] = [];
 
             // Mock fnm list
-            type ExecuteOptions = { useNodeVersion?: string };
+            // The real one, not a local shadow: the builder is typed to
+            // CommandExecutor, so a stand-in shape no longer satisfies it.
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
@@ -270,7 +271,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             };
 
             // Mock fnm list
-            type ExecuteOptions = { useNodeVersion?: string };
+            // The real one, not a local shadow: the builder is typed to
+            // CommandExecutor, so a stand-in shape no longer satisfies it.
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
@@ -313,7 +315,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             };
 
             // Mock fnm list - only Node 18 and 24 installed, not 20
-            type ExecuteOptions = { useNodeVersion?: string };
+            // The real one, not a local shadow: the builder is typed to
+            // CommandExecutor, so a stand-in shape no longer satisfies it.
             mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({

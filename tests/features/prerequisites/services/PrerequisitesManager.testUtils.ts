@@ -23,6 +23,7 @@ import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 export interface TestMocks {
     logger: jest.Mocked<Logger>;
@@ -81,9 +82,7 @@ export function setupMocks(): TestMocks {
 
     const mockLogger = createMockLogger() as any;
 
-    const mockExecutor = {
-        execute: jest.fn(),
-    } as any;
+    const mockExecutor = createMockCommandExecutor({ execute: jest.fn() }) as any;
 
     // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor argument
     // now — suites pass `mocks.executor` in. No registry mock at all.
