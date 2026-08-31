@@ -91,6 +91,7 @@ import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/stor
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -130,7 +131,7 @@ function createEdsConfig() {
  * is seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
 /**

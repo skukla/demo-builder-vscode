@@ -11,6 +11,7 @@ import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 export const mockOrgs: AdobeOrg[] = [
     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
@@ -60,9 +61,7 @@ export interface TestMocks {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    const mockCommandExecutor: jest.Mocked<CommandExecutor> = {
-        execute: jest.fn(),
-    } as unknown as jest.Mocked<CommandExecutor>;
+    const mockCommandExecutor: jest.Mocked<CommandExecutor> = createMockCommandExecutor();
 
     const mockSDKClient: jest.Mocked<AdobeSDKClient> = {
         isInitialized: jest.fn().mockReturnValue(false),

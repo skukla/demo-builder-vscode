@@ -6,6 +6,7 @@
 
 import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock getMeshNodeVersion to return a consistent value
 jest.mock('@/core/utils/meshConfig', () => ({
@@ -16,9 +17,7 @@ describe('checkMeshExistence', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
 
     beforeEach(() => {
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor();
     });
 
     const mockResult = (

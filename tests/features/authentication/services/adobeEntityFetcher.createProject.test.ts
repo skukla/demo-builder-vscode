@@ -42,7 +42,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
             }
         });
 
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         createFireflyProject = jest.fn();
         // The default Stage-workspace create (App Builder template parity); resolves unless overridden.

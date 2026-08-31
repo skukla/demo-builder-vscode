@@ -15,9 +15,9 @@ import {
     fetchRuntimeCredentials,
     workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
-import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 jest.mock('fs/promises', () => ({
     mkdtemp: jest.fn().mockResolvedValue('/tmp/db-ws-abc'),
@@ -26,7 +26,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 const executeMock = jest.fn();
-const commandManager = { execute: executeMock } as unknown as CommandExecutor;
+const commandManager = createMockCommandExecutor({ execute: executeMock });
 const logger = createMockLogger() as unknown as Logger;
 
 const WORKSPACE_JSON = JSON.stringify({

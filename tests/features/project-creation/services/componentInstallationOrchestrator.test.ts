@@ -56,7 +56,7 @@ function makeContext(
         progressTracker: jest.fn(),
         logger,
         saveProject: jest.fn(async () => undefined),
-        commandManager: createMockCommandExecutor({ execute: jest.fn() }) as unknown as InstallationContext['commandManager'],
+        commandManager: createMockCommandExecutor({ execute: jest.fn() }),
     };
 }
 

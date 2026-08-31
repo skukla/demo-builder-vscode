@@ -39,6 +39,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
@@ -47,7 +48,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
  */
 function seedRegistry(): void {
     ServiceLocator.setAuthenticationService({} as never);
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 }
 
 function ctx(project: unknown): HandlerContext {

@@ -20,7 +20,7 @@ jest.setTimeout(5000);
 const mockGetCachedOrganization = jest.fn().mockReturnValue(undefined);
 
 /** CONVERTED 2026-08-28 (ADR-015): the executor is handed in, not fetched. */
-const executor = createMockCommandExecutor({ execute: jest.fn() }) as never;
+const executor = createMockCommandExecutor({ execute: jest.fn() });
 /** ADR-015: the auth service is handed in too. */
 const authManagerFake = { getCachedOrganization: mockGetCachedOrganization } as never;
 

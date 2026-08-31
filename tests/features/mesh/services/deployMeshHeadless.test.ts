@@ -49,6 +49,7 @@ import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier'
 import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless';
 import type { AppBuilderComponentState, Project, ComponentInstance } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
@@ -91,7 +92,7 @@ function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: project(),
         authManager: currentAuthManager as never,
-        commandManager: { execute: jest.fn() } as never,
+        commandManager: createMockCommandExecutor(),
         secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never,
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
         logger: createMockLogger(),

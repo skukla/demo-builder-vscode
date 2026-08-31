@@ -38,7 +38,7 @@ describe('AdobeContextResolver', () => {
         });
 
         // Create mocks
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         mockCacheManager = {
             getCachedOrganization: jest.fn().mockReturnValue(undefined),

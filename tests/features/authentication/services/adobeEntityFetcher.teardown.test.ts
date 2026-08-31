@@ -17,11 +17,11 @@ import {
     getLogger,
 } from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
     let fetcher: AdobeEntityFetcher;
@@ -56,7 +56,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
         } as unknown as jest.Mocked<AuthCacheManager>;
 
         fetcher = new AdobeEntityFetcher(
-            { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
+            createMockCommandExecutor(),
             mockSDKClient,
             mockCacheManager,
             createMockLogger() as unknown as jest.Mocked<Logger>,

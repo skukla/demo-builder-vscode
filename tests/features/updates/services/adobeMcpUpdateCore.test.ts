@@ -12,6 +12,7 @@
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { generateAIContextFiles } from '@/features/project-creation/services';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const executeMock = jest.fn();
 
@@ -20,7 +21,7 @@ jest.mock('vscode', () => ({ workspace: { getConfiguration: jest.fn() } }), { vi
  * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
  * suite no longer mocks the service registry.
  */
-const executor = { execute: executeMock } as never;
+const executor = createMockCommandExecutor({ execute: executeMock });
 jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
     // The MCP packages live in a per-project ISOLATED tools dir, never the

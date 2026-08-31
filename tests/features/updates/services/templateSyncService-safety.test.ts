@@ -55,9 +55,9 @@ jest.mock('fs/promises', () => ({
 
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { createMockProject } from '../../../helpers/projectFake';
-import type { CommandExecutor } from '@/core/shell';
 import type { Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /** An EDS project with the metadata the service reads. */
 function edsProject(): Project {
@@ -84,7 +84,7 @@ function service(): TemplateSyncService {
     return new TemplateSyncService(
         { get: jest.fn().mockResolvedValue('gh-token') } as never,
         createMockLogger(),
-        { execute: (...a: unknown[]) => mockExecute(...a) } as unknown as CommandExecutor
+        createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) })
     );
 }
 

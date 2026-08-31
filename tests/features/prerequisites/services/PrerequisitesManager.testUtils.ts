@@ -9,14 +9,16 @@ jest.mock('@/core/config/ConfigurationLoader');
 
 // Mock fs module for components.json reading
 jest.mock('fs', () => ({
-    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
-        infrastructure: {
-            'adobe-cli': {
-                name: 'Adobe I/O CLI & SDK',
-                description: 'Command-line interface and SDK for Adobe I/O services'
-            }
-        }
-    }))
+    readFileSync: jest.fn().mockReturnValue(
+        JSON.stringify({
+            infrastructure: {
+                'adobe-cli': {
+                    name: 'Adobe I/O CLI & SDK',
+                    description: 'Command-line interface and SDK for Adobe I/O services',
+                },
+            },
+        })
+    ),
 }));
 
 import type { Logger } from '@/types/logger';
@@ -80,9 +82,9 @@ export const mockConfig = {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    const mockLogger = createMockLogger() as any;
+    const mockLogger = createMockLogger();
 
-    const mockExecutor = createMockCommandExecutor({ execute: jest.fn() }) as any;
+    const mockExecutor = createMockCommandExecutor();
 
     // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor argument
     // now — suites pass `mocks.executor` in. No registry mock at all.
@@ -105,7 +107,9 @@ export function setupConfigLoader(config = mockConfig) {
 /**
  * Creates a prerequisite with perNodeVersion flag
  */
-export function createPerNodePrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
+export function createPerNodePrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'aio-cli',
         name: 'Adobe I/O CLI',
@@ -122,7 +126,9 @@ export function createPerNodePrerequisite(overrides?: Partial<PrerequisiteDefini
 /**
  * Creates a standard prerequisite
  */
-export function createStandardPrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
+export function createStandardPrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'git',
         name: 'Git',
@@ -138,7 +144,9 @@ export function createStandardPrerequisite(overrides?: Partial<PrerequisiteDefin
 /**
  * Creates a prerequisite with dynamic installation
  */
-export function createDynamicInstallPrerequisite(overrides?: Partial<PrerequisiteDefinition>): PrerequisiteDefinition {
+export function createDynamicInstallPrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'node',
         name: 'Node.js',

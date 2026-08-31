@@ -27,7 +27,7 @@ describe('AdobeEntitySelector', () => {
         (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Create mocks
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         mockCacheManager = {
             clearConsoleWhereCache: jest.fn(),

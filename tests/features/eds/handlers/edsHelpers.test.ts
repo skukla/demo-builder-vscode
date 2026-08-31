@@ -20,6 +20,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -131,7 +132,7 @@ function createTestJwt(payload: Record<string, unknown>): string {
  * is seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
 describe('edsHelpers', () => {

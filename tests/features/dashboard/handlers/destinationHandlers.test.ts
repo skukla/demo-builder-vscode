@@ -56,6 +56,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const EXISTING_ADOBE = {
     organization: '285361',
@@ -108,7 +109,7 @@ beforeEach(() => {
         getCachedOrganization: jest.fn(),
         getS2SDeployCredentials: jest.fn(),
     } as never);
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
 describe('handleSetProjectDestination', () => {

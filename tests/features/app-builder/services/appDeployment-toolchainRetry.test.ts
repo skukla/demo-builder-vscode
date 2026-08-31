@@ -38,6 +38,7 @@ import {
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockFs = fs.promises as jest.Mocked<typeof fs.promises>;
 
@@ -165,7 +166,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
+            createMockCommandExecutor({ execute }),
             makeLogger(),
             {
                 confirmToolchainRefresh: consent,
@@ -191,7 +192,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
+            createMockCommandExecutor({ execute }),
             makeLogger(),
             {
                 confirmToolchainRefresh: consent,
@@ -216,7 +217,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
+            createMockCommandExecutor({ execute }),
             makeLogger(),
             {
                 confirmToolchainRefresh: async () => true,

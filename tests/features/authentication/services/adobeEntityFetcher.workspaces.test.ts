@@ -45,7 +45,7 @@ describe('AdobeEntityFetcher', () => {
         });
 
         // Create mocks
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(false),

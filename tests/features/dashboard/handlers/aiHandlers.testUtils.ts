@@ -134,6 +134,7 @@ export type { HandlerContext } from '@/types/handlers';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // ==========================================================
 // Test Helpers
@@ -257,7 +258,7 @@ export function makeScopedContext(
  * resets the registry after EVERY test, so this must run per-test.
  */
 export function seedCommandExecutor(): void {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 }

@@ -17,11 +17,12 @@ import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
 
 const logger = createMockLogger() as unknown as Logger;
 
 function executorReturning(code: number, stderr = ''): CommandExecutor {
-    return { execute: jest.fn().mockResolvedValue({ code, stderr }) } as unknown as CommandExecutor;
+    return createMockCommandExecutor({ execute: jest.fn().mockResolvedValue({ code, stderr }) });
 }
 
 describe('ensureFnmNodeVersion', () => {

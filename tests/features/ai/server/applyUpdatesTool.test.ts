@@ -45,7 +45,7 @@ const getCurrentProject = jest.fn();
 const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
-        commandManager: createMockCommandExecutor({ execute: jest.fn() }) as never,
+        commandManager: createMockCommandExecutor({ execute: jest.fn() }),
         context: { secrets: {}, extensionPath: '/ext' },
         logger: createMockLogger(),
     }) as unknown as HandlerContext;
@@ -57,9 +57,9 @@ const ctxFactory = () =>
  * is seeded per-test rather than once at module scope.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 });
 
 describe('apply_updates', () => {

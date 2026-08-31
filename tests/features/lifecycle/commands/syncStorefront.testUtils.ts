@@ -101,6 +101,7 @@ import type { Project } from '@/types';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Re-exported so specs never import the SUT directly (see the header note).
 export { PushRejectedError, SyncStorefrontCommand };
@@ -179,7 +180,7 @@ export function resetSyncStorefrontMocks(): void {
     // builder assembles the repo operations too — which need a CommandExecutor.
     // Seeded here rather than mocked away: the builder genuinely needs one, and
     // `clearAllMocks` above wipes the locator's registry between tests.
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     statMock.mockResolvedValue({} as never);
     // Default: input box returns the supplied default value; user picks "Continue".
     (vscode.window.showInputBox as jest.Mock).mockResolvedValue('Demo Builder: sync local changes');

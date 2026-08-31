@@ -21,11 +21,11 @@ import {
     getLogger,
 } from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const ORGS = [{ id: 'org-1', name: 'Acme', code: 'acme@AdobeOrg', type: 'entp' }];
 
@@ -63,7 +63,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
         fetcher = new AdobeEntityFetcher(
-            { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
+            createMockCommandExecutor(),
             sdkClient,
             cache as unknown as jest.Mocked<AuthCacheManager>,
             createMockLogger() as unknown as jest.Mocked<Logger>,

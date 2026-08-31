@@ -23,6 +23,7 @@ import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
@@ -44,7 +45,7 @@ describe('createHeadlessHandlerContext', () => {
         ServiceLocator.setAuthenticationService(fakeAuth);
         // ADR-015: the headless context builds a PrerequisitesManager, which
         // now takes the executor as a constructor argument.
-        ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+        ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     });
 
     it('builds a webview-free context (panel/comm undefined, sendMessage no-op)', async () => {

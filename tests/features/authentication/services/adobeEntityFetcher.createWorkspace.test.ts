@@ -41,7 +41,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
             }
         });
 
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         createWorkspace = jest.fn();
         createRuntimeNamespace = jest.fn().mockResolvedValue({ body: {} });

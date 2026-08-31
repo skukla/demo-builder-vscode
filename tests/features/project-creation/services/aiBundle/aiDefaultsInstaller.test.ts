@@ -25,6 +25,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
@@ -37,7 +38,7 @@ const executeMock = jest.fn();
  * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN, so this suite no
  * longer mocks the service registry — the fake is a plain object.
  */
-const executor = { execute: executeMock } as never;
+const executor = createMockCommandExecutor({ execute: executeMock });
 
 const PROJECT_PATH = '/projects/test';
 // EDS storefront project — both ai-defaults entries apply (Developer Agent

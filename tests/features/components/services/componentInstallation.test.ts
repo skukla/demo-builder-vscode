@@ -24,7 +24,7 @@ const mockExecute = jest.fn();
  * so this suite mocks the service registry NOT AT ALL. Assertions unchanged —
  * including the ones that pin the exact clone command and its options.
  */
-const executor = { execute: mockExecute } as never;
+const executor = createMockCommandExecutor({ execute: mockExecute });
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
     access: jest.fn().mockRejectedValue(new Error('ENOENT')),
@@ -46,6 +46,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { ComponentInstance, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const PROJECT = '/projects/demo';
 

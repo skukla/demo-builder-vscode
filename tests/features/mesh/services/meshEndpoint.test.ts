@@ -7,6 +7,7 @@ import { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock validation
 jest.mock('@/core/validation', () => ({
@@ -29,9 +30,7 @@ describe('meshEndpoint', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockCommandManager = {
-            execute: jest.fn(),
-        } as any;
+        mockCommandManager = createMockCommandExecutor();
 
         mockLogger = createMockLogger();
 

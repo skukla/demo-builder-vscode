@@ -52,7 +52,7 @@ let mockLogger: jest.Mocked<Logger>;
 const UNAUTHORIZED = ' ›   Error: [CoreConsoleAPISDK] 401 - Unauthorized';
 
 function build(config: Record<string, unknown> = {}) {
-    mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() }) as unknown as jest.Mocked<CommandExecutor>;
+    mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
     mockSDKClient = {
         isInitialized: jest.fn().mockReturnValue(false),
         getClient: jest.fn(),

@@ -15,6 +15,7 @@ import { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 
 
@@ -167,7 +168,7 @@ function captureSaveHandler(
  * are seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     ServiceLocator.setAuthenticationService({
         getCachedOrganization: jest.fn(),
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),

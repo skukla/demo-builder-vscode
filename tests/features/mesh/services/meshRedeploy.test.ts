@@ -19,7 +19,7 @@
 const mockDeployMeshComponent = jest.fn();
 const mockFetchMeshInfo = jest.fn();
 /** A plain fake, handed in — no module mock needed since ADR-015. */
-const executor = { execute: jest.fn() } as never;
+const executor = createMockCommandExecutor();
 
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: (...args: unknown[]) => mockDeployMeshComponent(...args),
@@ -31,6 +31,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const MESH_PATH = '/projects/demo/components/commerce-mesh';
 

@@ -16,6 +16,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 jest.mock('fs/promises');
 
@@ -25,7 +26,7 @@ const mockExecute = jest.fn();
  * mocks the service registry NOT AT ALL — the fake is a plain object and the
  * assertions are unchanged.
  */
-const executor = { execute: mockExecute } as never;
+const executor = createMockCommandExecutor({ execute: mockExecute });
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 

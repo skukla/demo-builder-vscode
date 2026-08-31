@@ -26,6 +26,7 @@ import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 import { ServiceLocator } from '@/core/di';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -168,9 +169,9 @@ function setupDefaultMocks(): {
  * is seeded per-test rather than once at module scope.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 });
 
 describe('CheckUpdatesCommand — Add-on Updates', () => {
