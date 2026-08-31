@@ -33,8 +33,10 @@ import {
     type ToolsInfo,
     type VSCodeInfo,
 } from './diagnosticsReport';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
+import type { StateManager } from '@/core/state/stateManager';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
@@ -59,6 +61,7 @@ import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
 } from '@/features/eds/services/storefront/storefrontProbe';
+import type { Logger } from '@/types/logger';
 import { getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';
@@ -126,8 +129,18 @@ function redactReportPii(report: DiagnosticsReport): DiagnosticsReport {
     } as DiagnosticsReport;
 }
 
-export class DiagnosticsCommand {
-    private logger = getLogger();
+export class DiagnosticsCommand extends BaseCommand {
+    /**
+     * The concrete debug logger, kept ALONGSIDE BaseCommand's `logger`.
+     *
+     * Not a duplicate: this command drives the output CHANNEL — `show()` to bring
+     * it forward and `clear()` for a fresh report — and neither is on the `Logger`
+     * interface BaseCommand exposes, deliberately, since nothing else needs to
+     * command the channel. `runDiagnosticsAction` takes the concrete type for the
+     * same reason.
+     */
+    private readonly debugLogger = getLogger();
+
 
     /**
      * @param context - ExtensionContext, supplied by CommandManager which owns
@@ -135,14 +148,20 @@ export class DiagnosticsCommand {
      *   context the DA.live auth service is keyed on. Taking the context rather
      *   than just `secrets` avoids holding the same thing under two names.
      */
-    constructor(private context: vscode.ExtensionContext) {}
+    constructor(
+        context: vscode.ExtensionContext,
+        stateManager: StateManager,
+        logger: Logger,
+    ) {
+        super(context, stateManager, logger);
+    }
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
-        this.logger.show(false); // Show log channel and take focus
+        this.debugLogger.show(false); // Show log channel and take focus
 
         // Clear channel for fresh diagnostics
-        this.logger.clear();
+        this.debugLogger.clear();
 
         const report: DiagnosticsReport = {
             timestamp: new Date().toISOString(),
@@ -235,7 +254,7 @@ export class DiagnosticsCommand {
                 ...DIAGNOSTICS_ACTIONS,
             );
 
-            await runDiagnosticsAction(action, summary, this.logger);
+            await runDiagnosticsAction(action, summary, this.debugLogger);
         } catch (error) {
             this.logger.error('Diagnostics failed', error as Error);
             throw error;
@@ -278,7 +297,7 @@ export class DiagnosticsCommand {
      * having, and partial output beats none.
      */
     private async checkGitHubCredential(): Promise<CredentialProbeResult> {
-        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const project = await this.stateManager.getCurrentProject();
         const repoFullName = getEdsGithubRepo(project);
         const { tokenService } = getGitHubServices({ context: this.context });
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
@@ -297,7 +316,7 @@ export class DiagnosticsCommand {
     private async checkStorefront(): Promise<
         { probe: StorefrontProbeResult; scope?: StorefrontScopeReport } | undefined
     > {
-        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const project = await this.stateManager.getCurrentProject();
         const githubRepo = getEdsGithubRepo(project);
         if (!githubRepo) return undefined;
 
@@ -351,7 +370,7 @@ export class DiagnosticsCommand {
      * the cause is a setting they have never heard of.
      */
     private async checkCredentialService(): Promise<CredentialServiceProbeResult> {
-        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const project = await this.stateManager.getCurrentProject();
         const orgId = project?.adobe?.organization;
         return probeCredentialService({
             auth: ServiceLocator.getAuthenticationService(),
@@ -360,7 +379,7 @@ export class DiagnosticsCommand {
     }
 
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
-        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const project = await this.stateManager.getCurrentProject();
         // GitHub owner/repo — NOT the DA.live org/site. The Config Service keys
         // site configs at /config/{owner}/sites/{repo}.json; `buildSiteConfigParams`
         // documents the rule and the silent publish failure that keying by the

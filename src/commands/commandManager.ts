@@ -354,7 +354,7 @@ export class CommandManager {
         }
 
         // Diagnostics
-        const diagnostics = new DiagnosticsCommand(this.context);
+        const diagnostics = new DiagnosticsCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
         // Sign in to Adobe (PL-5). Until now the only doors were the wizard's

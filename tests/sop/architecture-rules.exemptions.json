@@ -14,8 +14,7 @@
         "src/features/dashboard/commands/configure.ts": "Boundary file constructing ComponentRegistryManager directly, alongside 3 ServiceLocator fetch(es) \u2014 MIXES both styles in one file. DEFERRED 2026-08-29 while its three siblings converted: those are handlers that already RECEIVE a HandlerContext, so they just read the registry off it. This is a command that builds its context on demand, and routing a registry read through createHandlerContext drags in PrerequisitesManager, the ServiceLocator and the logger \u2014 a heavier graph than the read needs, and getInitialData's test proved it by failing on each in turn. Needs the registry handed to the command itself, not fetched through a handler context."
     },
     "commandBase": {
-        "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command \u2014 exempt by role",
-        "src/commands/diagnostics.ts:DiagnosticsCommand": "pre-ADR-015: converge to BaseCommand"
+        "src/commands/commandManager.ts:CommandManager": "the command REGISTRAR, not a command \u2014 exempt by role. RATIFIED as permanent: it builds and registers the 25 commands, so it cannot itself be one of them. Reviewed 2026-08-31 when the other row in this category was cleared; this is the only member left and it is not debt."
     },
     "typesPurity": {
         "src/types/typeGuards.ts": "Runtime type guards colocated in types/ by long-standing convention, and genuinely runtime: needs COMPONENT_IDS, getMeshAppBuilderComponent, deriveAccsAdminUrl, lookupComponentConfigValue and two endpoint constants as VALUES. The strongest RATIFY candidate of the three \u2014 a type guard is the one kind of runtime code that belongs beside the types it narrows. OWNER DECISION PENDING.",
