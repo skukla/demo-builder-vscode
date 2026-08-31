@@ -25,20 +25,20 @@ server IS — transport, lifecycle, scoping, security — is in
 | `deploy_mesh` |  | Deploy (or redeploy) the current project's API Mesh. Runs the guard |
 | `export_project_settings` |  | Export the current project's settings to a JSON file on disk (folder, saved state, |
 | `install_integration` |  | Re-run the Commerce install/associate pass for a DEPLOYED App Management |
-| `install_prerequisite` |  | Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from |
+| `install_prerequisite` | **confirm** | Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from |
 | `redeploy_integration` |  | Redeploy one App Builder integration by its id (idempotent re-run of its deploy). |
 | `refresh_block_library` | **confirm** | Rebuild the current EDS project's DA.live authoring block library from its |
-| `regenerate_ai_files` |  | Add an App Builder integration to the current project: clone it, subscribe its |
+| `regenerate_ai_files` |  | Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills) |
 | `remove_integration` | **confirm** | Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely |
 | `rename_integration` |  | Change one App Builder integration's DISPLAY NAME on the current project. The id, |
 | `rename_project` |  | Rename the current project — the folder on disk, saved state, and the |
-| `restart_demo` |  | Make a project the CURRENT one, which is what every project-scoped tool acts on |
+| `restart_demo` |  | Stop and restart the current project's demo server. Use after a config change that |
 | `save_ai_prompt` |  | Create or update a saved AI prompt |
-| `set_console_apis` |  | Set the OPTIONAL Adobe API subscriptions on this project's Developer Console |
+| `set_console_apis` | **confirm** | Set the OPTIONAL Adobe API subscriptions on this project's Developer Console |
 | `set_current_project` |  | Make a project the CURRENT one, which is what every project-scoped tool acts on |
 | `set_project_destination` |  | Point the current project at a different Adobe Console project + workspace, and MOVE |
 | `set_project_pinned` |  | Pin or unpin a project. Pinned projects sort first on the projects dashboard. |
-| `start_demo` |  | Add an App Builder integration to the current project: clone it, subscribe its |
+| `start_demo` |  | Start the current project's demo server |
 | `stop_demo` |  | Stop the current project's running demo server |
 
 ## `src/features/ai/server/adobeResourceTools.ts`
@@ -143,7 +143,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack import/reset. Poll this after |
 | `get_datapack_import_target` | read | Which Commerce instance an import would land on, derived from the current project, |
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
-| `list_datapack_import_scopes` | read | Progress of the running or most recent datapack import/reset. Poll this after |
+| `list_datapack_import_scopes` | read | The websites and store views an import can be scoped to on this project's instance. |
 | `reset_datapack` | **confirm** | Remove a datapack's data from the Commerce instance so the project can be reused. |
 | `start_datapack_export` | **confirm** | Capture data from a Commerce instance into a datapack. **Writes into the SHARED |
 | `start_datapack_import` | **confirm** | Import a datapack into a live Commerce instance. Returns an activationId as soon as |
@@ -231,7 +231,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `find_storefront_name_mismatches` |  | Projects whose DA.live site name does not match their GitHub repo name — a legacy |
 | `get_site_access` |  | Who holds the admin role on the current project's storefront configuration, and |
 | `migrate_storefront_name` | **confirm** | Rename ONE project's DA.live site to match its GitHub repo name, preserving all |
-| `repair_site_configuration` |  | Re-run the Configuration Service registration for the current project's storefront |
+| `repair_site_configuration` | **confirm** | Re-run the Configuration Service registration for the current project's storefront |
 | `set_site_admin` | **confirm** | Grant or revoke the admin role on the current project's storefront configuration. |
 
 ## `src/features/ai/server/statusDescriptors.ts`
@@ -272,7 +272,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `get_project` |  | Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json |
 | `list_blocks` |  | List all block directories in the storefront blocks/ directory |
 | `list_projects` |  | List all Demo Builder projects. The active one is marked current:true — no follow-up call needed to learn which it is. |
-| `promote_block_to_library` |  | Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushin |
+| `promote_block_to_library` | **confirm** | Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushin |
 | `remove_block_from_library` | **confirm** | Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pu |
 | `sync_storefront` |  | Git add, commit, and push changes in the storefront directory |
 | `update_project_config` |  | Low-level whole-file write to .demo-builder.json or a .env file inside the project directory (path must not escape the project root). To SET a config value, use configure_project instead — it validate |

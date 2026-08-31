@@ -571,7 +571,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 22 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 23 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 

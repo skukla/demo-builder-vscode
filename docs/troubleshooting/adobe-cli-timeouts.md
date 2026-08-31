@@ -63,7 +63,8 @@ no longer runs a CLI mutation at all.
 
 The extension deliberately stopped using the `aio` CLI's process-global org
 selection in favour of per-operation targeting through `withOrgContext`
-(`orgContextEnv.ts`, 41 files). An agent is blocked from re-introducing it: the
+(`orgContextEnv.ts`), which is now the pattern across the Adobe-touching code rather
+than an exception. An agent is blocked from re-introducing it: the
 generated `.claude/settings.json` carries a PreToolUse guard against
 `aio-configure-global`, `aio-app-use` and `aio-where`. An unwrapped path once
 deployed a mesh into a deleted project for two days.

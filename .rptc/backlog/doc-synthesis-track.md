@@ -54,9 +54,56 @@ same as judging the finished thing, and the owner has asked twice for the second
 Two questions per document: is every line that survived actually useful, and does its
 content belong in this file under the canonical structure rather than somewhere else.
 
-The second question already has two answers pending — the hooks gotchas may belong in
-a skill, since traps live in skills here, and the Rule of Three override is
-[[PL-28]] row 2.
+**DONE 2026-08-30.** Both open questions answered, every touched document judged, and
+five defects found in documents Phase A had already passed.
+
+### The two questions it was holding
+
+**Do the hooks gotchas belong in a skill?** No — but the file needed rewriting anyway,
+and finding that out is what the question was for. A trap about a hook in this
+directory IS directory context. What did not belong was everything around it: a filler
+Overview, four generic React "best practices" (one of them, rules-of-hooks, an eslint
+**error** — restating a rule the build already fails on), and a `renderHook` example any
+library doc gives you. Phase A had marked this file *"verified accurate and kept as
+written"*, which is the finding in one line: **accurate is not the same as useful, and
+Phase A's pass could not tell them apart.** 148 → 118 lines, with the one genuinely
+duplicated item — the `useVSCodeRequest` refusal trap, stated in full both here and in
+`webview-command-handler` — kept as the warning and pointed at the skill for the fix.
+
+**The Rule of Three override** is [[PL-28]] row 2 and stays the owner's. Everything else
+in `components/CLAUDE.md` passes: it is organised by job, says so, and its
+non-enforcement was already reasoned.
+
+### What the pass found in documents Phase A had passed
+
+| Document | Defect |
+|---|---|
+| `docs/systems/mcp-server.md` §10 | Named 8 confirm-gated tools; **28** are gated. Two sections above, the same document explains why the tool CATALOG stopped being hand-maintained |
+| `scripts/generate-tool-catalog.mjs` | Undercounted the gates it publishes — a fixed 600-char window dropped `confirm: true` for four tools, `set_console_apis` among them |
+| `CONTRIBUTING.md` | "63 conventions, 57 enforced" — two versions stale, and the third copy of a number pinned in only two places |
+| `docs/troubleshooting/adobe-cli-timeouts.md` | "`orgContextEnv.ts`, 41 files" — 39. Replaced with a statement that does not churn |
+| `src/core/ui/hooks/CLAUDE.md` | The generic content above |
+
+The mcp-server one is the worst, and not because of the arithmetic. An agent reads §10
+to decide what is safe to call, so a short list of destructive tools understates the
+blast radius of every tool it omits — and the generator was independently telling agents
+that `set_console_apis` needed no confirmation, a tool whose own source comment calls it
+"a delete wearing a setter's name".
+
+**One near-miss worth recording.** I first concluded §10 was wrong in both directions and
+that `set_console_apis` was NOT gated. It is — the `confirm: true` sat just past where my
+grep window ended. Reading the source is what stopped a false finding going into a
+document; a named field is a lead, not a result, and that rule earned its keep here.
+
+### Enforcement added by this phase
+
+- `tool-catalog-gating.test.ts` — the catalog may not publish a gated tool as ungated,
+  nor invent one. Derived by brace-matching rather than by the generator's own regex,
+  because checking a generator against itself passes whatever it believes.
+- The hooks inventory is pinned (24 of 24) — the moment an inventory is complete is the
+  only moment you can pin it. The components table beside it stays deliberately
+  unpinned; it is a map, not an index.
+- The convention count is now pinned across all THREE documents that quote it.
 
 ## Documents that come back for a second pass
 

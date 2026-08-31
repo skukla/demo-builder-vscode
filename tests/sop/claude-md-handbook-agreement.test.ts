@@ -132,8 +132,15 @@ describe('the counts CLAUDE.md states match the registries they count', () => {
         expect(stated('enforced')).toMatch(/^\d+$/);
     });
 
-    it('states the convention counts the generated index computed', () => {
-        expect(CLAUDE_MD).toContain(
+    // THREE documents quote this pair, not two. Phase B found CONTRIBUTING.md still
+    // saying "63 of them, 57 with an enforcer" — two versions behind, and stale before
+    // today's change rather than because of it. Pinning two copies of a number that
+    // lives in three places is how the third one rots quietly.
+    const QUOTERS = ['CLAUDE.md', 'CONTRIBUTING.md'];
+
+    it.each(QUOTERS)('%s states the convention counts the generated index computed', (f) => {
+        const body = readFileSync(join(ROOT, f), 'utf8');
+        expect(body).toContain(
             `${stated('conventions')} of them, ${stated('enforced')} with an enforcer`
         );
     });

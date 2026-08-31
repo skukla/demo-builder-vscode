@@ -340,13 +340,22 @@ directory alone and the ten file-based project tools escaped it.
 **Confirmation gating for destructive ops.** A tool requires an explicit
 `confirm: true` when its effect is hard to walk back: it deletes something, or it
 pushes/publishes to a live site. Without it the tool refuses and does nothing.
-Currently gated: `remove_integration`, `delete_ai_prompt`, `delete_mesh`,
-`delete_project`, `remove_block_from_library`, `promote_block_to_library`,
-`refresh_block_library`, `set_console_apis`.
 
-`set_console_apis` is the one whose NAME hides what it does — it says "set" and it
-removes, so the `delete_*` reading of this list would miss it. Judge against the rule,
-not the verb.
+**The list of which tools those are lives in [mcp-tools.md](mcp-tools.md), generated.**
+It used to be written out here, and on 2026-08-30 it named 8 of the 28 that are
+actually gated — in the same document that explains, two sections up, why the tool
+catalog stopped being hand-maintained. The list moved for the same reason the catalog
+did, and the reason is sharper here: an agent reads this to decide what is safe, so an
+incomplete list of destructive tools understates the blast radius of everything it
+omits.
+
+The same pass found the generator undercounting them — its metadata window was a fixed
+600 characters after a tool's name, so a long description pushed `confirm: true` out of
+range and four genuinely gated tools published as ungated. `set_console_apis` was one,
+which is the worst possible one to get wrong: it says "set" and it REMOVES, its own
+source comment calls it "a delete wearing a setter's name", and the catalog was telling
+agents it needed no confirmation. Judge against the rule, not the verb — and if you are
+checking whether something is gated, read the generated table rather than any prose.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
 `add_integration`, `deploy_integration`, `redeploy_integration`,

@@ -122,6 +122,10 @@ const META = new Set([
     'tests/sop/tooling-registry.test.ts',
     'tests/sop/mutation-config-pairing.test.ts',
     'tests/sop/every-scan-declares-a-control.test.ts',
+    // Checks that the GENERATED tool catalog matches source, not that code follows a
+    // rule. The rule it protects — which tools require `confirm` — is register row 3
+    // and is the owner's to ratify; this suite only stops the doc lying about it.
+    'tests/sop/tool-catalog-gating.test.ts',
 ]);
 
 const enforcerWithNoConvention = [...onDisk].filter((e) => !named.has(e) && !META.has(e)).sort();

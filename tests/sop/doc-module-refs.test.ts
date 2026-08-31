@@ -314,6 +314,26 @@ describe('the inventories that claim to be complete, are', () => {
             .map((f) => f.split('/').pop() as string);
         expect(files.filter((f) => !body.includes(f))).toEqual([]);
     });
+
+    // Added 2026-08-30 in the Phase B pass over `src/core/ui/hooks/CLAUDE.md`. Unlike
+    // the components table beside it, this inventory IS complete — 24 of 24 — so it
+    // can be pinned, and the moment it is complete is the only moment you can pin it.
+    // Phase A had marked this file "verified accurate and kept as written", which is
+    // how it kept a filler Overview, four generic React best practices (one of them an
+    // eslint error), and a testing example any library doc gives you.
+    const hookNames = (): string[] =>
+        readdirSync(join(ROOT, 'src/core/ui/hooks'))
+            .filter((f) => f.startsWith('use') && f.endsWith('.ts') && !f.includes('.test.'))
+            .map((f) => f.replace(/\.ts$/, ''));
+
+    it('CONTROL: the hooks directory walk finds hooks', () => {
+        expect(hookNames().length).toBeGreaterThan(10);
+    });
+
+    it('src/core/ui/hooks/CLAUDE.md names every hook in that directory', () => {
+        const body = readFileSync(join(ROOT, 'src/core/ui/hooks/CLAUDE.md'), 'utf8');
+        expect(hookNames().filter((h) => !body.includes(`\`${h}\``))).toEqual([]);
+    });
 });
 
 describe('the documentation index lists every document under docs/', () => {

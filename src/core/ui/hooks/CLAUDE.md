@@ -1,148 +1,116 @@
-# Custom React Hooks
+# Shared React hooks
 
-## Overview
+The behaviour half of the house vocabulary. `../components/CLAUDE.md` is the visual
+half, and the same rule governs both: check here before writing a new one.
 
-This directory contains custom React hooks that extract and encapsulate reusable logic from webview components. Hooks follow React naming conventions (`useCamelCase.ts`) and are exported from `index.ts`. Each hook file carries full JSDoc with examples — read the source for API details.
+Every hook carries full JSDoc with examples — read the source for its API. This file
+is the inventory plus the handful of behaviours the source will not tell you.
 
-## Hook Inventory
+## What is here
 
-| Hook | Purpose | File |
-|------|---------|------|
-| **VS Code communication** | | |
-| `useVSCodeMessage` | Subscribe to extension messages with automatic cleanup | `useVSCodeMessage.ts` |
-| `useVSCodeRequest` | Request-response calls to the extension with loading/error/data state | `useVSCodeRequest.ts` |
-| **State management** | | |
-| `useLoadingState` | Unified loading/error/data state with `hasLoadedOnce` and `isRefreshing` flags | `useLoadingState.ts` |
-| `useSelection` | Single-item selection with key extraction, `isSelected`, `clearSelection` | `useSelection.ts` |
-| `useSelectionStep` | Full wizard selection-step behavior (see below) | `useSelectionStep.ts` |
-| `useAsyncData` | Async data fetching wired to VS Code messages (auto-load, auto-select-single) | `useAsyncData.ts` |
-| `useAsyncOperation` | Execute an async operation with `isExecuting`/message/error state and unmount safety | `useAsyncOperation.ts` |
-| `useCanProceed` | Update the wizard's `canProceed` from a validation value (truthy or custom validator) | `useCanProceed.ts` |
-| `usePollingWithTimeout` | Poll a fetcher at an interval until a condition is met or a timeout elapses, with cleanup | `usePollingWithTimeout.ts` |
-| **UI interaction** | | |
-| `useAutoScroll` | Auto-scroll a container to keep items visible (smart visibility detection) | `useAutoScroll.ts` |
-| `useSearchFilter` | Search/filter arrays over configurable fields with memoized results | `useSearchFilter.ts` |
-| `useFocusTrap` | Trap keyboard focus within a container (WCAG); exports `FOCUSABLE_SELECTOR` | `useFocusTrap.ts` |
-| `useFocusOnMount` | Focus an element on mount via a 3-tier strategy (see below) | `useFocusOnMount.ts` |
-| `useActivateOnKey` | Enter/Space activation for a div-role button (with `preventDefault`) — the contract every click-to-open tile needs | `useActivateOnKey.ts` |
-| `useArrowKeyNavigation` | Arrow-key navigation for lists/grids (currently unused; retained as a primitive) | `useArrowKeyNavigation.ts` |
-| `useEnterExit` | Track items that just appeared/disappeared so lists can animate in/out (see below) | `useEnterExit.ts` |
-| **Utility** | | |
-| `useDebouncedValue` | Debounce any value with configurable delay | `useDebouncedValue.ts` |
-| `useDebouncedLoading` | Only show loading UI if the operation exceeds a delay (no flash for fast ops) | `useDebouncedLoading.ts` |
-| `useIsMounted` | Ref tracking mount state to prevent setState-after-unmount | `useIsMounted.ts` |
-| `useSetToggle` | Manage a `Set` with a memoized toggle function (multi-select UIs) | `useSetToggle.ts` |
-| `useTimerCleanup` | Manage N timer refs with set/clear helpers and automatic cleanup on unmount | `useTimerCleanup.ts` |
-| `useSelectableDefault` | Select-all-on-focus props for text fields with replaceable default values | `useSelectableDefault.ts` |
-| `useVerificationMessage` | Map a status value to a formatted verification message (`info`/`success`/`warning`/`error`) | `useVerificationMessage.ts` |
-| `useElapsedStage` | Advance a sub-message as a long wait drags on, so a slow fetch doesn't read as frozen (ships `ORG_SERVICES_LOADING_STAGES`) | `useElapsedStage.ts` |
+| Hook | Does |
+|---|---|
+| **Talking to the extension** | |
+| `useVSCodeMessage` | Subscribe to extension messages, unsubscribing on unmount |
+| `useVSCodeRequest` | Request/response with loading/error/data state — **see the gotcha below before using it** |
+| **State** | |
+| `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
+| `useSelection` | Single-item selection with key extraction |
+| `useSelectionStep` | A whole wizard selection step (see below) |
+| `useAsyncData` | Async fetch wired to VS Code messages; auto-load, auto-select-single |
+| `useAsyncOperation` | Run an async operation with `isExecuting`/message/error, safe across unmount |
+| `useCanProceed` | Drive the wizard's `canProceed` from a validation value |
+| `usePollingWithTimeout` | Poll until a condition holds or a timeout elapses |
+| **Interaction** | |
+| `useAutoScroll` | Keep items visible in a scrolling container |
+| `useSearchFilter` | Filter arrays over configurable fields, memoized |
+| `useFocusTrap` | Trap focus within a container (WCAG); exports `FOCUSABLE_SELECTOR` |
+| `useFocusOnMount` | Focus on mount, three tiers (see below) |
+| `useActivateOnKey` | Enter/Space for a div-role button — the contract every click-to-open tile needs |
+| `useArrowKeyNavigation` | Arrow-key list/grid navigation. **No callers today**; kept as a primitive |
+| `useEnterExit` | Animate items in and out of a list (see below) |
+| **Utility** | |
+| `useDebouncedValue` | Debounce any value |
+| `useDebouncedLoading` | Show loading only past a delay, so a fast op does not flash |
+| `useIsMounted` | Ref guarding setState-after-unmount |
+| `useSetToggle` | A `Set` with a memoized toggle, for multi-select |
+| `useTimerCleanup` | N timer refs, cleared on unmount |
+| `useSelectableDefault` | Select-all-on-focus for fields holding a replaceable default |
+| `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
+| `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
 
-**Choosing between the async hooks:**
-- `useAsyncData` — fetching data that arrives via VS Code messages
-- `useAsyncOperation` — executing operations that don't need message integration
-- `useSelectionStep` — a whole selection step (data + cache + search + selection)
+**Choosing between the three async ones**, which is the question this list gets asked
+most: `useAsyncData` fetches data that arrives by VS Code message · `useAsyncOperation`
+runs an operation that needs no message plumbing · `useSelectionStep` is an entire
+selection step, and is what you want if you are building one.
 
-## Hooks with Gotchas
+## `useVSCodeRequest` reports success when the handler REFUSES
 
-### useVSCodeRequest — `error` stays null when the handler REFUSES
+The most consequential thing in this directory. The hook rejects only when the request
+rejects, and a request rejects only when the handler **throws** — while this project's
+convention is that guards RETURN `{ success: false, error, code }`. A refusal therefore
+arrives resolved, `error` stays `null`, and `data` holds the envelope rather than your
+domain object.
 
-The hook rejects only when the request rejects, and a request rejects only when the handler
-**throws**. This project's handler convention is the opposite: guards *return*
-`{ success: false, error, code }`. `WebviewCommunicationManager.handleWebviewMessage` puts
-whatever the handler RETURNED into the response `payload` and sets an `error` field only in
-its `catch` — and `WebviewClient`'s message listener (`initialize`) rejects solely when that
-`error` field is present, otherwise resolving the payload. So a refusal arrives resolved and
-the hook reports success.
+So `useVSCodeRequest<SomeDomainType>` is **typed on a lie**, and reading a domain field
+off a refusal yields `undefined` — which renders as a default, not as an error. In
+August 2026 a connectivity line read `data.reachable` off a guard refusal and told
+signed-out users "Connected" for two steps.
 
-Consequence: **`useVSCodeRequest<SomeDomainType>` is typed on a lie.** `data` is the envelope,
-not your domain object, and `data.someField` on a refusal is `undefined` — which renders as a
-default, not as an error. (2026-08-12: a connectivity line read `data.reachable` off a refusal
-and showed signed-out users "Connected" for two steps.)
+Reach for this hook only against a handler that genuinely throws. Otherwise type the
+ENVELOPE and branch on `.success`. The full treatment — why the channel behaves this
+way, and the `GitHubAppCheckResult` pattern to copy — is in
+[webview-command-handler](../../../../.claude/skills/webview-command-handler/SKILL.md),
+which is where you will be when you wire one.
 
-Use `webviewClient.request<{ success: boolean; … }>` and branch on `.success` — the pattern
-already used in `features/eds`, where `GitHubAppCheckResult` declares `success` and
-`pollGitHubAppInstallation` checks it before reading anything else. Reach for this hook only
-against a handler that genuinely throws on failure.
+## Three hooks whose contract is not visible in their signature
 
-### useSelectionStep
+**`useSelectionStep`** composes a whole wizard step: cached items from a message type,
+debounced loading, search, auto-select, and selected-item sync that survives both
+hydration (an ID-only import) and an external rename.
 
-Composes the entire wizard selection-step pattern: cached items from a VS Code message type, debounced loading, search filtering, auto-select (single item or custom), and selected-item sync. The sync handles hydration (ID-only imports) and refresh (external rename) by comparing `title`/`name` against fresh data.
+Its `onSelect` is where **dependent state gets cleared** — changing the Adobe project
+must clear the workspace, or the next operation targets a resource nobody chose:
 
 ```tsx
-const { items, filteredItems, showLoading, error, searchQuery, setSearchQuery, refresh, selectItem } =
-  useSelectionStep<AdobeProject>({
-    cacheKey: 'projectsCache',
-    messageType: 'projects',
-    errorMessageType: 'project-error',
-    state, updateState,
-    selectedItem: state.adobeProject,
-    autoSelectSingle: true,
-    searchFields: ['title', 'name', 'description'],
-    onSelect: (project) => {
-      updateState({
-        adobeProject: project,
-        adobeWorkspace: undefined, // Clear dependent state
-      });
-    },
-  });
+onSelect: (project) => updateState({ adobeProject: project, adobeWorkspace: undefined }),
 ```
 
-**Gotcha:** always clear dependent state in `onSelect` (changing project must clear workspace).
+**`useEnterExit`** shares the enter/exit *orchestration* for animated lists, extracted so
+the wizard timeline and the sub-step strip agree. It returns removed items re-inserted at
+their original positions flagged `isExiting`, and suppresses animation during a
+first-mount settle window. **The CSS stays the caller's**: the timeline animates
+max-height, the strip max-width. Only the orchestration is shared.
 
-### useEnterExit
+**`useFocusOnMount`** tries immediate, then `requestAnimationFrame`, then a timeout —
+because Spectrum components render asynchronously. `MutationObserver` was considered and
+rejected: more overhead, and unreliable against React's render cycle.
 
-Shared enter/exit animation *orchestration* for lists — extracted from TimelineNav so the wizard timeline and the area sub-step strip share one approach. Returns `displayItems` (current items plus just-removed ones re-inserted at their original positions and flagged `isExiting`), an `isEntering(id)` test, and `animationsEnabled` (false during a first-mount settle window so the initial render doesn't animate everything).
-
-**Gotcha:** the CSS is the caller's responsibility — the timeline animates max-height (vertical rail), the sub-step strip max-width (horizontal tabs). Only the orchestration is shared.
-
-### useFocusOnMount
-
-3-tier focus strategy: immediate (pre-rendered content) → requestAnimationFrame (async Spectrum components) → timeout fallback (slow rendering, default 1000ms).
-
-**Why not MutationObserver?** It adds overhead and is unreliable with React's rendering cycle; RAF + timeout is simpler and covers the real cases.
-
-### useAsyncOperation
-
-Tracks `isExecuting`, `message`/`subMessage`, and `error` with `onSuccess`/`onError` callbacks. Uses `useIsMounted` internally so a resolved operation never updates an unmounted component. Non-Error throws are converted to Error objects.
-
-## Composition Pattern
-
-Hooks are designed to compose. Typical searchable, selectable list:
+## Composing them
 
 ```tsx
-const { data, loading, error } = useAsyncData<Project[]>({ messageType: 'projects', autoLoad: true });
-const { query, setQuery, filteredItems } = useSearchFilter(data || [], { searchFields: ['title', 'name'] });
+const { data, loading } = useAsyncData<Project[]>({ messageType: 'projects', autoLoad: true });
+const { query, setQuery, filteredItems } = useSearchFilter(data ?? [], { searchFields: ['title'] });
 const { selectedItem, select } = useSelection<Project>({ getKey: (p) => p.id });
 ```
 
-For a full wizard selection step, prefer `useSelectionStep` over hand-composing the above.
+For a full wizard step, prefer `useSelectionStep` over hand-composing that.
 
-**Stable references matter:** passing inline `[]` or `{}` as hook options creates new references each render and can cause infinite re-render loops with `useEffect`-based hooks. Hoist empty arrays/objects to module-level constants.
+**Passing an inline `[]` or `{}` into a hook with effect dependencies re-renders
+forever** — a fresh literal is a new reference every render. Hoist it to a module-level
+constant. This is [ADR-017](../../../../docs/architecture/adr/017-webview-architecture.md)
+§5 and it fails the build (`webview-architecture-rules.test.ts`), so it is a rule here
+rather than advice.
 
-## Best Practices
+## Writing one
 
-1. **Hooks at top level only** — never call hooks conditionally.
-2. **Memoize callbacks** passed to hooks (`useCallback`) when they land in dependency arrays.
-3. **Cleanup is automatic** — `useVSCodeMessage` unsubscribes, `useDebouncedValue`/`useTimerCleanup` clear timeouts, `useFocusTrap` removes listeners.
-4. **Debounce expensive operations** (`useDebouncedValue`, typical delay 300–500ms); avoid loading flash with `useDebouncedLoading`.
+Cleanup is already handled by the hooks that need it — `useVSCodeMessage` unsubscribes,
+`useDebouncedValue` and `useTimerCleanup` clear their timers, `useFocusTrap` removes its
+listeners. Memoize any callback you hand to a hook that lands in a dependency array.
 
-## Testing Hooks
+Tests mirror this directory under `tests/`. **The react project runs on fake timers**
+(`tests/setup/react.ts`), which changes how `userEvent` must be set up — that contract is
+in [webview-test-authoring](../../../../.claude/skills/webview-test-authoring/SKILL.md) §1.
 
-```tsx
-import { renderHook, act } from '@testing-library/react';
-import { useSelection } from './useSelection';
-
-test('useSelection selects and clears items', () => {
-  const { result } = renderHook(() => useSelection<{ id: string }>({
-    getKey: (item) => item.id,
-  }));
-
-  act(() => result.current.select({ id: '1' }));
-  expect(result.current.selectedItem).toEqual({ id: '1' });
-
-  act(() => result.current.clearSelection());
-  expect(result.current.selectedItem).toBeNull();
-});
-```
-
-Tests live under `tests/` mirroring this directory; note the test setup uses fake timers (see `tests/setup/react.ts`).
+Rules of hooks are not restated here: `react-hooks/rules-of-hooks` is an eslint **error**,
+so calling one conditionally fails the build rather than this document.

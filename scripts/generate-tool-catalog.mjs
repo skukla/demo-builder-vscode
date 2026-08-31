@@ -34,6 +34,33 @@ const SOURCES = [
 function collect() {
     const tools = new Map();
 
+    /**
+     * The metadata window for one tool: from its name to the end of the object literal
+     * that declares it, capped so a parse that loses its footing cannot swallow the file.
+     *
+     * This was a FIXED 600-character slice until 2026-08-30, and that silently
+     * undercounted the safety flag the catalog exists to publish. A tool whose
+     * `description` runs long pushes its `confirm: true` past 600 characters, so four
+     * genuinely gated tools — `set_console_apis`, `promote_block_to_library`,
+     * `install_prerequisite`, `repair_site_configuration` — were published as ungated.
+     * `set_console_apis` is the one that matters most: it is a delete wearing a setter's
+     * name, its source comment says so, and the catalog told agents it needed no
+     * confirmation.
+     *
+     * Brace-matching the whole literal was tried FIRST and captured 30 of 114 (see the
+     * comment below), because descriptor rows and registrar calls have different shapes.
+     * A depth-walk was tried SECOND and was worse than the bug it fixed: it took the
+     * count 24 -> 45 by marking `get_auth_status`, `list_blocks` and `list_content` as
+     * destructive. A `tool:` match starts INSIDE its literal, but a `registerTool(`
+     * match starts on the opening paren, so the walk began one level too deep, never
+     * closed, and ran to the cap — swallowing the next tool's gate.
+     *
+     * So the window is bounded by the thing that cannot be ambiguous: a tool's metadata
+     * ends where the NEXT tool's declaration begins. No brace parsing, no shape
+     * assumptions, and it cannot bleed across a boundary by construction.
+     */
+    const windowFor = (src, at, nextAt) => src.slice(at, Math.min(nextAt ?? src.length, at + 6000));
+
     for (const file of SOURCES) {
         const src = readFileSync(join(ROOT, file), 'utf8');
 
@@ -49,9 +76,12 @@ function collect() {
             seen.push({ name: m[1], at: m.index, kind: 'registrar' });
         }
 
-        for (const { name, at, kind } of seen) {
+        // Sorted, so each tool's window can end where the next one starts.
+        seen.sort((a, b) => a.at - b.at);
+
+        for (const [i, { name, at, kind }] of seen.entries()) {
             if (tools.has(name)) continue;
-            const window = src.slice(at, at + 600);
+            const window = windowFor(src, at, seen[i + 1]?.at);
             const desc =
                 window.match(/description:\s*\n?\s*'([^']{5,200})/) ??
                 window.match(/description:\s*\n?\s*"([^"]{5,200})/) ??
