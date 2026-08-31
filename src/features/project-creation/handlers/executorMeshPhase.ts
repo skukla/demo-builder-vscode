@@ -11,11 +11,7 @@
 
 import type { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-} from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import {
     deployNewMesh,

@@ -4,7 +4,7 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildComponent } from '@/core/shell/buildComponent';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

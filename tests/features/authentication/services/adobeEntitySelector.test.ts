@@ -8,7 +8,7 @@
  */
 
 import { AdobeEntitySelector } from '@/features/authentication/services/adobeEntitySelector';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
 // Mock external dependencies

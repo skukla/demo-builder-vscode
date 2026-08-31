@@ -14,7 +14,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import type { ExecuteOptions } from '@/core/shell';
+import type { ExecuteOptions } from '@/core/shell/types';
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({

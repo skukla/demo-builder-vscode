@@ -17,7 +17,7 @@ jest.mock('@/types/typeGuards');
 
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON, toError } from '@/types/typeGuards';

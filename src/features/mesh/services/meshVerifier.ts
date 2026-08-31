@@ -15,7 +15,7 @@ import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getMeshComponentInstance, parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 export type { MeshVerificationResult };
 

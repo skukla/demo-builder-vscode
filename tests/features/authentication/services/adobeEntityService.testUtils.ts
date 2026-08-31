@@ -3,7 +3,7 @@
  */
 
 import { createEntityServices, type EntityServices } from '@/features/authentication/services/adobeEntityService';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';

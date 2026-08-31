@@ -5,11 +5,7 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-} from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

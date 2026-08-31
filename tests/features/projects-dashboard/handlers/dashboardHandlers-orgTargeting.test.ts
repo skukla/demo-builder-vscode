@@ -58,8 +58,8 @@ const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => 
 const mockBuildOrgTarget = jest.fn((adobe?: { organization?: string }) => ({
     orgId: adobe?.organization ?? '',
 }));
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
     buildOrgTargetFromProjectAdobe: (adobe?: { organization?: string }) =>
         mockBuildOrgTarget(adobe),

@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
-import { getActiveOrgContext } from '@/core/shell';
+import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
 import {
     createProjectCreationContext,
     setupDefaultMocks,

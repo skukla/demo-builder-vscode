@@ -12,7 +12,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     ComponentInstallOptions,

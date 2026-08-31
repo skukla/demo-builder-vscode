@@ -13,7 +13,7 @@ import {
     getAdobeTarget,
     setAdobeTarget,
 } from '@/features/ai/server/adobeTargetStore';
-import { getActiveOrgContext } from '@/core/shell';
+import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';

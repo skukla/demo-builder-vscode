@@ -1,4 +1,4 @@
-import type { CommandResult } from '@/core/shell';
+import type { CommandResult } from '@/core/shell/types';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';

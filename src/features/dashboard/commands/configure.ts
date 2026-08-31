@@ -15,7 +15,7 @@ import { WebviewCommunicationManager } from '@/core/communication/webviewCommuni
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';

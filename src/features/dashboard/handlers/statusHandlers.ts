@@ -13,7 +13,7 @@ import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatu
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';

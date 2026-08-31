@@ -5,7 +5,7 @@
  */
 
 import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock getMeshNodeVersion to return a consistent value

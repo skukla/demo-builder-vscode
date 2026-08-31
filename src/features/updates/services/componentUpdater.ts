@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { isMeshComponentId } from '@/core/constants';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
 import { toAppError, isTimeout, isNetwork } from '@/core/errors';

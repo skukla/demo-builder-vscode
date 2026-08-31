@@ -22,7 +22,7 @@ jest.mock('fs', () => ({
 }));
 
 import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

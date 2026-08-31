@@ -5,7 +5,7 @@
  * Originally from checkHandler.ts, moved to services layer for proper separation.
  */
 
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 

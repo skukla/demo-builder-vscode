@@ -9,11 +9,8 @@
  */
 
 import type { EdsResetResult } from './edsResetParams';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
- CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';

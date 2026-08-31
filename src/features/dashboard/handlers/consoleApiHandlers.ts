@@ -24,7 +24,7 @@
 
 import { runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import { resolveApiRowStates } from '@/core/state/apiRowState';
 import { applyDesiredApis, resolveDesiredApis } from '@/core/state/componentApiPicks';

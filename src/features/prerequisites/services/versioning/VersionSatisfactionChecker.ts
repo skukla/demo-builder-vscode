@@ -6,7 +6,7 @@
 
 import * as semver from 'semver';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';

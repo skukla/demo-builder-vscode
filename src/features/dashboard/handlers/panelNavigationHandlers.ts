@@ -11,7 +11,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 
 /**

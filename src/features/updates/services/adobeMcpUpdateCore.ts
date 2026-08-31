@@ -23,7 +23,7 @@
  * an import cycle between the two callers.
  */
 
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { StateManager } from '@/core/state/stateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';

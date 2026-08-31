@@ -13,7 +13,8 @@
  */
 
 import * as vscode from 'vscode';
-import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';

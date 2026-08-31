@@ -17,12 +17,8 @@
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-    type CommandExecutor,
-} from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';

@@ -43,7 +43,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 export { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 

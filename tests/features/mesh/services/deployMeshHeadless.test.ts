@@ -40,7 +40,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 
-import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell';
+import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { listAppBuilderComponents } from '@/core/state/appBuilderComponentState';

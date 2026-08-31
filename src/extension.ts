@@ -8,7 +8,7 @@ import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { StateManager } from '@/core/state/stateManager';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';

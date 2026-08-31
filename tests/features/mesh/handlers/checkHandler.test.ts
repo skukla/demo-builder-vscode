@@ -13,8 +13,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 

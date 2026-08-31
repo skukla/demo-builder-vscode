@@ -13,7 +13,7 @@ import { ComponentManager } from '@/features/components/services/componentManage
 import { Project } from '@/types';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { setupComponentManager } from './componentManager.testUtils';
 
 

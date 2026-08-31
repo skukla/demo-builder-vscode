@@ -49,8 +49,8 @@ jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
 
 // Org targeting is ambient; the only way to observe it is the wrapper.
 const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
     buildOrgTargetFromProjectAdobe: (adobe?: { organization?: string }) => ({
         orgId: adobe?.organization ?? '',

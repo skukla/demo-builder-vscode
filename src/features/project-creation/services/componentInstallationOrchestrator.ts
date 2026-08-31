@@ -11,7 +11,7 @@ import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';

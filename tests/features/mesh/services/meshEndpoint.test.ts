@@ -5,7 +5,7 @@
 
 import { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

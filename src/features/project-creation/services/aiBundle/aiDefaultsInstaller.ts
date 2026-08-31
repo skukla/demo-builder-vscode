@@ -31,7 +31,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';

@@ -6,7 +6,7 @@
  */
 
 import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 

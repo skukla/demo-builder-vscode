@@ -1,5 +1,5 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import {

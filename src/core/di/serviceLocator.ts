@@ -17,7 +17,7 @@
  * @module services/serviceLocator
  */
 
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { StateManager as IStateManager } from '@/types/state';

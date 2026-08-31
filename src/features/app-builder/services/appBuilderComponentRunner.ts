@@ -35,12 +35,8 @@ import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from 
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type CachedOrgRef,
-    type CommandExecutor,
-} from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';

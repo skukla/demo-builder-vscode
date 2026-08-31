@@ -29,7 +29,7 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
-import { withOrgContext } from '@/core/shell';
+import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

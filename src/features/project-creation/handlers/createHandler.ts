@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';

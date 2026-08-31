@@ -24,7 +24,7 @@ import {
     type SubscribeProgressListener,
 } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';

@@ -11,7 +11,7 @@
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
-import { withOrgContext } from '@/core/shell';
+import { withOrgContext } from '@/core/shell/orgContextEnv';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,

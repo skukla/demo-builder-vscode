@@ -17,7 +17,7 @@ import { copySettingsFromProject, exportProjectSettings, importSettingsFromFile 
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils/browserUtils';

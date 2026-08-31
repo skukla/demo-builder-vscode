@@ -21,7 +21,7 @@
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
-import { withOrgContext } from '@/core/shell';
+import { withOrgContext } from '@/core/shell/orgContextEnv';
 import {
     isProjectOwnedBy,
     resolveCurrentImsUserId,

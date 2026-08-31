@@ -15,7 +15,7 @@
  */
 
 import { getLogger } from '@/core/logging/debugLogger';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';

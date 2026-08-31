@@ -87,7 +87,7 @@ jest.mock('@/core/vscode/envFileWatcherService', () => ({
     })),
 }));
 
-jest.mock('@/core/shell', () => ({
+jest.mock('@/core/shell/commandExecutor', () => ({
     CommandExecutor: jest.fn().mockImplementation(() => ({
         dispose: jest.fn(),
     })),

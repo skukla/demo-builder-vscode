@@ -14,7 +14,7 @@ jest.mock('@/core/shell/environmentSetup', () => ({
 let mockFnmPath: string | null = '/opt/homebrew/bin/fnm';
 
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';

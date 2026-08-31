@@ -65,7 +65,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Import after mocks
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('ToolManager', () => {

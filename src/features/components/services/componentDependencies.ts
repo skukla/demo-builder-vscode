@@ -11,7 +11,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';

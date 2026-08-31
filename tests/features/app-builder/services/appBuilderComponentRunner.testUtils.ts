@@ -89,7 +89,7 @@ import { createMockLogger as createLogger } from '../../../helpers/loggerFake';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createSuccessResult } from '../../../helpers/commandResultFake';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 export { createLogger };
 
 export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
