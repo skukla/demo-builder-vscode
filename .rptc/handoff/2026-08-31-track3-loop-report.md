@@ -230,6 +230,46 @@ put the copy back. Fixed, with tests proving it in both directions. That correct
 re-counts the debt honestly: of 408 files flagged, 107 could never have been fixed. The
 real number is 301.
 
+## Five more families of duplicated test setup
+
+**In one paragraph:** I worked through the list of test files that repeat each other's
+setup and did five more — every two-suite case on the list, plus one four-suite case.
+The consistent finding is the same one as before, and it is now hard to call a
+coincidence: **most of what looked like shared setup was doing nothing at all.** Across
+these five families I deleted sixteen mocks that no test needed, and moved perhaps a
+third of what I originally expected to move.
+
+Two examples of what that looks like:
+
+**Six lines propping each other up.** In one family, both files mocked a service locator
+and then repeated three lines wiring their fake command-runner into it. Deleting the
+wiring changed nothing — both files hand the fake directly to the thing they are testing.
+And with the wiring gone, the mock had no caller either. The only code that had ever
+needed the mock was the dead line itself. Probed one at a time it looked essential;
+probed as a set it was six lines and a mock serving each other.
+
+**A mock the config file already provides.** Four files each disabled the VS Code API by
+hand. The project's test configuration has done that globally for as long as anyone can
+tell. Four copies of a no-op.
+
+**Where it did pay off properly.** One family's fake command-runner was typed loosely
+enough that the compiler could not check it. Replacing it with the standard, properly
+typed one immediately rejected ten places where the test's canned responses were missing
+fields the real thing always has. Not one of those was a realistic stand-in, and the
+loose typing had been hiding all ten. That is the first time in this run that adopting a
+standard fixture surfaced actual defects rather than just removing lines.
+
+**A mistake I nearly published as a measurement.** My first probe of one family reported
+all three mocks as essential. It was garbage — a shell quirk meant the test runner never
+actually ran, and my check read "did not run" as "tests failed, therefore needed". A run
+that never happened looks exactly like a failing one unless you check for the summary
+line. The probe now says so out loud when there is no summary.
+
+Counts: the list of families with unshared setup is down from 74 to 68. Every two-suite
+case on the worklist is done. The remaining ones are bigger (four to seven files each)
+and share a root I have not fixed — a function signature that asks for three entire
+service classes when it uses about a dozen methods of them.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?

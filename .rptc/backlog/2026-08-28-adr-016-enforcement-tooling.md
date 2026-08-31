@@ -41,3 +41,7 @@ subsequent fix measurable and irreversible.
 - 2026-08-31  Item 7 (webview-test-authoring ADR-016 pointers) shipped — all seven artifacts now landed. Left at 'built', not 'shipped': the instruments run, but nobody has yet authored a webview test against the new sections.
 - 2026-08-31  test(eds): the daLiveAuthPrompt family, where most of the shared setup was dead (`a2637e4c2`)
 - 2026-08-31  test(ai): the mcpInspector family shares its harness — and the comment that stopped it (`5bbedff38`)
+- 2026-08-31  test(dashboard): the configure family — four suites, and most of the shared setup was nothing (`c8320f92d`)
+- 2026-08-31  test(eds): the edsPipeline family, and the casts it makes countable (`d3b602fe0`)
+- 2026-08-31  test(eds): daLiveConfigService — the whole mock preamble was dead (`c67429452`)
+- 2026-08-31  test(mesh): the meshVerifier family, where six lines existed to serve each other (`2fafe61bb`)
