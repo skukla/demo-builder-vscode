@@ -54,8 +54,10 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
    file; the facade keeps a delegation/integration test. Don't leave orphaned tests behind.
 
 ## Gotchas
-- **Premature extraction**: don't extract a helper with a single use case. Rule of Three — inline
-  until 2+ real callers.
+- **Premature extraction**: don't extract a helper with a single use case. This said "Rule
+  of Three — inline until 2+ real callers", which is two thresholds in one sentence: 2+
+  includes two, and the Rule of Three waits for the third. The rule is the handbook's, and
+  it is three.
 - **Facade accumulation**: NEW behavior goes into the appropriate specialized service, never as a
   new method bolted onto the facade — that just recreates the god file behind a thin front.
 - **Shared mutable state**: extracted units must not reach into each other's private caches. Give

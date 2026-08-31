@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # Rules stated as law that no handbook, ADR or check backs
@@ -69,22 +69,43 @@ diligence.
 
 ## Outcomes
 
-Exactly two. "Leave it as prose" is the state this register exists to end.
+This section said **exactly two**, and adjudicating all ten produced **four**. The two
+extra are not evasions of the binary — they are answers the binary could not express,
+and forcing either into "ratify" or "delete" would have recorded something false.
 
-- **Ratify** — into the handbook, with an enforcer, and a shrink-only ledger for
-  whatever predates it. Both scorecards and the generated index move together.
-- **Delete** — remove the claim and say in the file that the thing is unrestricted.
+- **Ratify** — into the handbook, with an enforcer where one is possible. Rows 1, 3, 4,
+  5, 6, 7. Note that "with an enforcer" turned out to be optional: four of these are
+  marked *Not enforced* in the handbook, because a rule about judgement has no violation
+  condition to detect. The handbook already carried such conventions; the register had
+  not allowed for them.
+- **Delete** — remove the claim. Rows 8 and 10, for opposite reasons: 8 was FALSE (it
+  forbade the ratified pattern and named an enforcer that never existed), 10 was TRUE
+  but already law (ADR-021), so keeping it would have manufactured a duplicate.
+- **Defer** — row 9. A forward-compatibility discipline for an UNBUILT feature, obeyed at
+  19 sites without a rule. Ratifying changes no behaviour today and locks in a guess about
+  a design nobody has researched; deleting discards a discipline that is working. Multisite
+  research decides it. *"Not yet"* is a real answer when the evidence to decide does not
+  exist, and pretending otherwise is how a guess becomes law.
+- **Resolved as judgement, not law** — row 2. Its base rule was ALREADY ratified and
+  enforced; only the override was open, and the override has no violation condition. So it
+  is not a handbook rule at all — it belongs where you meet it while deciding. The
+  duplicate restatement of the base rule was removed from
+  `src/core/ui/components/CLAUDE.md`; the handbook is now the only place the threshold is
+  stated.
+
+"Leave it as prose" is still the state this register exists to end — and none of the ten
+ended there.
 
 ## The register
 
 | # | Rule | Stated where | Ratified | Enforced | Obeyed | Outcome |
 |---|---|---|---|---|---|---|
 | 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | now **yes** | now **yes** | no — 7 crossings | **Ratified** 2026-08-30 · `layerDirection` ledger, shrink-only |
-| 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | **base rule YES** — "markup repeated in three or more places becomes a component", enforced by `component-extraction.test.ts`. The OVERRIDE, no | base yes / override no | unmeasured | **Open** — only the override is in question |
+| 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | **base rule YES** — "markup repeated in three or more places becomes a component", enforced by `component-extraction.test.ts`. The OVERRIDE, no | base yes / override no | override: judgement, not countable | **Resolved** 2026-08-30 · base was already law and the restatement is REMOVED; the override is judgement, kept where you meet it |
 | 3 | A destructive tool requires `confirm: true` — deletes, or pushes to a live site. Merely mutating is deliberately not the bar | `docs/systems/mcp-server.md` §10 | now **yes** | partly — `tool-catalog-gating.test.ts` stops the catalog understating a gate; nothing checks the right tools carry it | 28 tools gated | **Ratified** 2026-08-30 (owner) |
 | 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | no | **yes** — `responseEnvelope.test.ts` | yes | **RATIFY** — measured: catalogue only, no rule changes force |
 | 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | now **yes** | no | **yes** — 39 sites, 11 suites | **Ratified** 2026-08-30 (owner), unenforced |
-| 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | **Owner call** — low stakes either way |
+| 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | now **yes** | no | visibly followed | **Ratified** 2026-08-30 (owner), unenforced |
 | 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | now **yes** | no — and cannot be, see below | **yes where it applies** — 7 sites clear `adobeWorkspace` on a project change | **Ratified** 2026-08-30 (owner), unenforced |
 | 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | **no — the rule was wrong** | **DELETED** 2026-08-30 · the claim was false; row 9 now states the real split |
 | 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 19 sites do | **DEFERRED** — waits on multisite research |

@@ -93,6 +93,15 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > set may only shrink.
 > *Why:* core is a shared surface worth curating; a feature barrel mostly makes cross-feature imports easy, which is the thing to discourage.
 
+> **Convention.** Commands are `camelCase`, React components `PascalCase`, constants
+> `UPPER_SNAKE_CASE`, and a file is named for what it exports —
+> `WizardContainer.tsx`, `loadingHTML.ts`.
+> *Why:* it is what makes a symbol findable from its filename and a filename guessable
+> from its symbol. Nobody has broken it, which is the argument for writing it down
+> rather than against: an unstated convention survives on everyone having absorbed it.
+> **Not enforced** — visibly followed at every site, and a linter for it would be
+> policing something that has never gone wrong.
+
 ---
 
 ## 3. Code gets what it needs handed to it
@@ -401,6 +410,21 @@ check says so and names the file.
 > **Convention.** Markup repeated in three or more places becomes a component.
 > *Why:* three is where copies start drifting apart instead of being found.
 > Enforced by `tests/sop/component-extraction.test.ts`.
+>
+> **Two thresholds live here and they are not in conflict**, which is worth stating
+> because they look it. CREATING a component from repeated markup waits for the third
+> site — that is this rule. PROMOTING a component that already exists from a feature
+> into `core/` happens at the SECOND consumer
+> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
+> decisions: the first is "is this pattern real yet", the second is "does this belong to
+> one feature or to everyone", and the second question is already answered the moment a
+> second feature needs it.
+>
+> The **override** — extract at two when the same behaviour has already been FIXED
+> separately on two surfaces — is judgement rather than law, and is stated where you
+> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). It has no
+> violation condition, so it can have no enforcer: a bug fixed twice is evidence the
+> copies must agree, which is the thing the count of three is a proxy for.
 
 > **Convention.** Modals are hosted in one place, not mounted wherever they are opened.
 > *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
@@ -606,7 +630,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 71 conventions. 60 of them are enforced; 11 are not.**
+**This handbook states 72 conventions. 60 of them are enforced; 12 are not.**
 
 The nine that remain are not one thing, and treating them as one is what kept them open:
 
