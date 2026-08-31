@@ -25,7 +25,7 @@ import {
     getProvidedEnvVars,
     getMeshAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
-import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
+import { applyBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import componentsConfig from '@/features/components/config/components.json';
 import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {

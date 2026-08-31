@@ -9,7 +9,7 @@ import {
     applyBackendOwnedScope,
     resolveBackendOwnedScopeValue,
     stripDuplicateBackendOwnedScope,
-} from '@/features/components/config/backendOwnedScope';
+} from '@/core/config/backendOwnedScope';
 
 const BACKEND_CONFIG = {
     ACCS_WEBSITE_CODE: 'citisignal',

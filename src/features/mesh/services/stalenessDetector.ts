@@ -21,7 +21,7 @@ import { getFrontendEnvVars } from '@/core/state';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
+import { applyBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import {
     PAAS_URL,
     PAAS_GRAPHQL_ENDPOINT,

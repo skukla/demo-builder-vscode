@@ -12,7 +12,7 @@ import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigrat
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
-import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
+import { stripDuplicateBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';

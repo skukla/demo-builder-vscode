@@ -9,7 +9,7 @@ import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import { normalizeIfUrl } from '@/core/validation/Validator';
-import { resolveBackendOwnedScopeValue } from '@/features/components/config/backendOwnedScope';
+import { resolveBackendOwnedScopeValue } from '@/core/config/backendOwnedScope';
 import {
     PAAS_CATALOG_SERVICE_ENDPOINT,
     CATALOG_SERVICE_ENDPOINT,

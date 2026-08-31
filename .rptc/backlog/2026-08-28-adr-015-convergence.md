@@ -82,3 +82,5 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(components): two files stop building their own registry, including the one that was reverted (`7816fd8a3`)
 - 2026-08-31  docs(handbook): the over-wide parameter is why the duplication existed, not just why the mock did (`6c1ee94d9`)
 - 2026-08-31  refactor(eds): the GitHub services accessor asks for the secret store it actually reads (`53e66091e`)
+- 2026-08-31  refactor(core): env var keys move to core, where their 18 importers already live (`93b558ea0`)
+- 2026-08-31  fix(data-installer): the shape-drift warning fires once again, as its contract says (`9405366f4`)
