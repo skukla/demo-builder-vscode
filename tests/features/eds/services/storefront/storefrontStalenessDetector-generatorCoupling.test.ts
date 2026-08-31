@@ -22,7 +22,7 @@
 
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { getStorefrontEnvVars } from '@/features/eds/services/storefront/storefrontStalenessDetector';
-import * as ENV from '@/features/components/config/envVarKeys';
+import * as ENV from '@/core/config/envVarKeys';
 
 jest.mock('@/core/logging', () => ({
     getLogger: () => ({

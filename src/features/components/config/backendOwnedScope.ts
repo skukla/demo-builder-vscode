@@ -9,7 +9,7 @@
  * @module features/components/config/backendOwnedScope
  */
 
-import { BACKEND_OWNED_SCOPE_KEYS } from './envVarKeys';
+import { BACKEND_OWNED_SCOPE_KEYS } from '@/core/config/envVarKeys';
 
 /**
  * Resolve one key from the backend component's own config.

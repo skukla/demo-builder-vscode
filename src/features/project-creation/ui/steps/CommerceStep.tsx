@@ -59,7 +59,7 @@ import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

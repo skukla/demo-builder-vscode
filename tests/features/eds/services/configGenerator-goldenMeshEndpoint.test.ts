@@ -30,7 +30,7 @@ import {
     PAAS_WEBSITE_CODE,
     PAAS_CUSTOMER_GROUP,
     CATALOG_API_KEY,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
 

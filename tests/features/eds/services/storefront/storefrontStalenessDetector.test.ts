@@ -21,7 +21,7 @@ import {
     ACCS_CUSTOMER_GROUP,
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_WEBSITE_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { Project } from '@/types';
 
 jest.mock('@/core/logging', () => ({

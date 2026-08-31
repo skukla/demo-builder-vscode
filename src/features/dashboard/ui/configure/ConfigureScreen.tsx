@@ -39,7 +39,7 @@ import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
-import { ACCS_OAUTH_CLIENT_ID } from '@/features/components/config/envVarKeys';
+import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';

@@ -22,7 +22,7 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { Project } from '@/types';
 import { isEdsProject } from '@/types/typeGuards';
 

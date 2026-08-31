@@ -8,7 +8,7 @@
 import { Project, ComponentInstance } from './index';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
+import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import {
     deriveAccsAdminUrl,
     lookupComponentConfigValue,

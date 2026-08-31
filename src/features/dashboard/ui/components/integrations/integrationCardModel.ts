@@ -40,7 +40,7 @@ import {
     PAAS_WEBSITE_CODE,
     PAAS_STORE_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import {
     getAppBuilderComponentEntry,
     isBlankSource,

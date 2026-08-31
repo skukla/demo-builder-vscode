@@ -23,7 +23,7 @@ import { validateURL } from '@/core/validation';
 import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_URL,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import {
     resolvePaasAdminPair,
     type CommercePairDeps,

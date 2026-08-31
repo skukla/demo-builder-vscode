@@ -20,7 +20,7 @@ import {
     PAAS_ADMIN_USERNAME,
     PAAS_ADMIN_PASSWORD,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { STORE_GROUP_IDS } from '@/features/components/config/storeFieldHelpers';
 import {
     lookupComponentConfigValue,

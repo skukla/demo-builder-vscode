@@ -26,7 +26,7 @@ import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { Project, ComponentInstance } from '@/types';
 
 /**

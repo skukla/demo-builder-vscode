@@ -25,7 +25,7 @@ import {
     ACCS_OAUTH_CLIENT_ID,
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';

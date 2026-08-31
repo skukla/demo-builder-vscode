@@ -16,7 +16,7 @@
  * @module features/components/services/componentConfigWrites
  */
 
-import { BACKEND_OWNED_SCOPE_KEYS } from '@/features/components/config/envVarKeys';
+import { BACKEND_OWNED_SCOPE_KEYS } from '@/core/config/envVarKeys';
 import type { ComponentConfigs } from '@/types/webview';
 
 /** The shape both surfaces agree on: a field and the components that declare it. */

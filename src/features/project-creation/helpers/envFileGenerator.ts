@@ -14,7 +14,7 @@ import {
     PAAS_CATALOG_SERVICE_ENDPOINT,
     CATALOG_SERVICE_ENDPOINT,
     ACCS_CATALOG_SERVICE_ENDPOINT,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { hydrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import type { ConfigMap } from '@/features/components/services/envVarHelpers';
 import {

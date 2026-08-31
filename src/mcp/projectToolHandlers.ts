@@ -24,7 +24,7 @@ import {
 } from './projectSecurity';
 import { validateManifestShape } from '@/core/state/manifestValidation';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import { maskEnvFileSecrets, stripManifestSecrets } from '@/features/components/config/envVarKeys';
+import { maskEnvFileSecrets, stripManifestSecrets } from '@/core/config/envVarKeys';
 
 /**
  * Produce a token-lean view of a project manifest for `getProject`.

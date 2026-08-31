@@ -28,7 +28,7 @@ import '@testing-library/jest-dom';
 import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { ComponentConfigs, WizardState } from '@/types/webview';
 import {
     PAAS,

@@ -12,7 +12,7 @@
  */
 import { Button, Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '../../config/envVarKeys';
+import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '@/core/config/envVarKeys';
 import {
     CONNECTION_FIELDS,
     isStoreCodeField,

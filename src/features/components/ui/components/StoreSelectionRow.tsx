@@ -19,7 +19,7 @@ import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
-} from '../../config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
 import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
