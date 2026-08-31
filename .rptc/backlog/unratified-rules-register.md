@@ -63,6 +63,8 @@ Exactly two. "Leave it as prose" is the state this register exists to end.
 | 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | Pending |
 | 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | no | no | unmeasured | Pending |
 | 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | unmeasured | Pending |
+| 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 11 sites do | Pending |
+| 10 | A new function depending on `daLiveOrg`/`daLiveSite`/workspace takes them as PARAMETERS, not from project state | ADR-003 | no | no | unmeasured | Pending |
 
 ### Which of these are cheap, and which need a measurement
 
@@ -78,6 +80,15 @@ operation targets the wrong resource: change the Adobe project, keep the old
 workspace, and the next deploy goes somewhere nobody chose. That is the failure
 `withOrgContext` and the org-mismatch guard exist for. Measure how many selection
 handlers actually clear their dependents before deciding how to ratify it.
+
+**Rows 9 and 10 are forward-compatibility disciplines**, which is the kind that decays
+most quietly: nothing breaks today when one is skipped, and the cost lands years later
+as a retrofit. ADR-003 claimed both were "stated as rules in the handbook" — the
+handbook has never mentioned multisite, and the anchor pointed at a heading that does
+not exist. Claim corrected; the rules registered rather than dropped.
+
+Row 9 is the cheaper one to settle: the ADR says 11 sites already default a new field
+to `main`, so the obeyed column is nearly answered.
 
 **Row 8 is an enforcement gap, not a rule gap.** The rule is real and sits in the
 placement table every agent is pointed at — but the enforcer named beside it was

@@ -194,6 +194,86 @@ function relativeRefs(md: string): string[] {
     return [...new Set(out)];
 }
 
+describe('a link to a heading reaches a heading that exists', () => {
+    // Anchors were checked by nothing. All three in the live corpus were DEAD, and
+    // two of them pointed into the handbook — the document a reader is most likely
+    // to follow a link into. One was merely the wrong anchor for real content
+    // (ADR-012, handbook §8); the other, ADR-003, claimed its disciplines were
+    // "stated as rules in the handbook" when the handbook has never once mentioned
+    // multisite. The dead anchor was the visible half of a false claim.
+    //
+    // GitHub's slug rules, near enough: lowercase, strip punctuation, spaces to
+    // hyphens. Close enough to catch a heading that does not exist at all, which is
+    // the failure that happened.
+    const slugs = (file: string): Set<string> =>
+        new Set(
+            readFileSync(join(ROOT, file), 'utf8')
+                .split('\n')
+                .filter((l) => l.startsWith('#'))
+                .map((l) =>
+                    l
+                        .replace(/^#+\s*/, '')
+                        .trim()
+                        .toLowerCase()
+                        .replace(/[^\w\s-]/g, '')
+                        // EACH space becomes a hyphen — not runs of them. A stripped
+                        // em-dash in "Tier C — Multisite" leaves two spaces and GitHub
+                        // emits `c--multisite`. Collapsing with \s+ produced a single
+                        // hyphen and reported a CORRECT link as dead, which nearly got
+                        // that link "fixed" to match the bug.
+                        .replace(/\s/g, '-')
+                )
+        );
+
+    // Scoped WIDER than `docs()`, which excludes ADRs because a superseded one may
+    // legitimately name deleted code. A dead ANCHOR is never legitimate — and both
+    // that existed lived in ADRs, so the narrower scope found nothing at all. The
+    // control below is what caught that; without it this passed over an empty list.
+    const anchorSources = (): string[] =>
+        execSync("git ls-files '*.md'", { encoding: 'utf8', cwd: ROOT })
+            .split('\n')
+            .filter(
+                (f) =>
+                    f &&
+                    !f.startsWith('.rptc/complete/') &&
+                    !f.startsWith('.rptc/research/') &&
+                    !f.startsWith('docs/research/')
+            );
+
+    const anchorLinks = (): Array<{ from: string; target: string; anchor: string }> => {
+        const out: Array<{ from: string; target: string; anchor: string }> = [];
+        for (const f of anchorSources()) {
+            const dir = dirname(f);
+            for (const m of readFileSync(join(ROOT, f), 'utf8').matchAll(
+                /\]\(([^)#\s]+\.md)#([a-z0-9-]+)\)/g
+            )) {
+                const target = join(dir, m[1]);
+                if (existsSync(join(ROOT, target))) {
+                    out.push({ from: f, target, anchor: m[2] });
+                }
+            }
+        }
+        return out;
+    };
+
+    it('CONTROL: the corpus contains anchor links to check', () => {
+        expect(anchorLinks().length).toBeGreaterThan(0);
+    });
+
+    it('CONTROL: the slugger derives a known heading', () => {
+        expect(slugs('docs/development/handbook.md')).toContain(
+            '8-agents-are-a-second-door-never-the-only-one'
+        );
+    });
+
+    it('every anchor names a real heading', () => {
+        const dead = anchorLinks()
+            .filter(({ target, anchor }) => !slugs(target).has(anchor))
+            .map(({ from, target, anchor }) => `${from} -> ${target}#${anchor}`);
+        expect(dead).toEqual([]);
+    });
+});
+
 describe('the inventories that claim to be complete, are', () => {
     // Found in Phase B by testing my OWN rewrites in the direction I had skipped.
     // Every entry resolving proves nothing about a thing that was never listed:

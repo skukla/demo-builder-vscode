@@ -154,7 +154,12 @@ before — a whole tab for three pickers reproduces the single-control-tab probl
 
 ---
 
-> **The rules live in the handbook.** Its two disciplines are stated as rules in [the development handbook](../../development/handbook.md#multisite-readiness); this ADR keeps the reasoning and the deferral.
+> **The two disciplines below live HERE, not in the handbook.** An earlier version of
+> this line claimed they were stated as handbook rules; the handbook has never
+> mentioned multisite, and the anchor it pointed at did not exist. Corrected
+> 2026-08-30 — the claim is registered in `.rptc/backlog/unratified-rules-register.md`
+> rather than quietly dropped, because a forward-compatibility discipline nothing
+> checks is exactly the kind that decays silently.
 
 ## Decision
 
