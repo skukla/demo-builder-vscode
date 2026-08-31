@@ -45,6 +45,19 @@ export async function publishConfigAndRegisterSite(
     tokenProvider: TokenProvider,
     logger: Logger,
     report: (step: number, message: string) => void,
+    /**
+     * Service seam. Defaults to the two services this step builds from the
+     * credentials above; production never passes it.
+     *
+     * Both are STATELESS — credentials arrive at construction and are never mutated
+     * — so ADR-015 leaves the construction here. What it cost was test design: a
+     * suite that cannot hand them in has to `jest.mock` both modules, which is the
+     * wall ADR-016 lists for this file.
+     */
+    services?: {
+        helixServiceForCode?: HelixService;
+        configService?: ConfigurationService;
+    },
 ): Promise<{ configWritten: boolean }> {
     // Reported on the RESULT, not just the progress line. Steps 8-11 overwrite
     // that line within seconds, so a run that skipped this write used to end with
@@ -59,7 +72,9 @@ export async function publishConfigAndRegisterSite(
     // the CDN keeps serving a stale config.json (seen live 2026-08-15).
     report(6, 'Publishing config.json to CDN...');
     logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
-    const helixServiceForCode = new HelixService(logger, githubTokenService, tokenProvider);
+    const helixServiceForCode =
+        services?.helixServiceForCode ??
+        new HelixService(logger, githubTokenService, tokenProvider);
     try {
         await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
         logger.info('[EdsReset] config.json published to CDN');
@@ -76,7 +91,7 @@ export async function publishConfigAndRegisterSite(
     // Same telegraph as the create path: state access before the write that
     // depends on it, so a reset log explains itself.
     await logConfigAccessState(tokenProvider, { owner: repoOwner, repo: repoName }, logger);
-    const configService = new ConfigurationService(tokenProvider, logger);
+    const configService = services?.configService ?? new ConfigurationService(tokenProvider, logger);
     try {
         // The SAME protocol the wizard runs — 409→update, 401→re-auth, 403→wait
         // out admin-role propagation. This path used to have its own retry helper
