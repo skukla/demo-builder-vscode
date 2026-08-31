@@ -272,7 +272,6 @@
         "tests/features/projects-dashboard/commands/showProjectsList-sidebar.test.ts",
         "tests/features/projects-dashboard/commands/showProjectsList.test.ts",
         "tests/features/projects-dashboard/services/projectRenameService.test.ts",
-        "tests/features/sidebar/handlers/sidebarHandlers.test.ts",
         "tests/features/sidebar/integration/extensionActivation.test.ts",
         "tests/features/sidebar/providers/sidebarProvider.test.ts",
         "tests/features/updates/commands/checkUpdates-graduation.test.ts",

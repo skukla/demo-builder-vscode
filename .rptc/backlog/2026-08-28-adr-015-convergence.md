@@ -11,29 +11,43 @@ status: active
 
 The architecture ruling is live and enforced (`tests/sop/architecture-rules.test.ts`);
 this item is the cleanup queue it froze. The ledger
-(`tests/sop/architecture-rules.exemptions.json`) holds 75 reasoned entries and
-may only SHRINK — each fix deletes its row, and the test fails if a fixed row
-lingers.
+(`tests/sop/architecture-rules.exemptions.json`) may only SHRINK — each fix deletes
+its row, and the test fails if a fixed row lingers.
 
-The buckets, by effort:
+**Counts re-measured 2026-08-31 at loop pickup.** The prose below had said 75 rows
+with 23 fetch-boundary files; the disk said 30 rows and ZERO fetch-boundary files.
+Four days of stale numbers, which is exactly what the item is for.
 
-1. **23 fetch-boundary files** — logic reaching into ServiceLocator; converge
-   to handed-in deps (mesh services are the biggest cluster).
-2. **39 construction sites** — each needs ONE adjudication first:
-   constructs-its-own-subordinate (ratify: amend the test's allowed list with
-   the reason) vs converge to a `create...Deps` builder.
-3. **2 command-shape entries** — CommandManager is the registrar (ratify);
-   DiagnosticsCommand converges to BaseCommand.
-4. **6 types-purity files** — move runtime code out, or ratify (typeGuards is
-   the deliberate-colocation candidate).
-5. **5 hook flags** — adjudicate coarse-detector hits: legitimate default vs
-   unstable reference.
-6. **sendMessage ratchet at 147** — lower the pin as handlers converge to
-   returns (progress pushes stay legitimate).
+**Now at 19.** The buckets, current:
 
-Not a sweep-in-one-day item: converge on touch, plus deliberate batches when
-an area is already open. Done when the ledger is empty or every remaining row
-is a RATIFIED permanent exception recorded in ADR-015.
+1. **`constructionBoundary` — 10.** The biggest remaining bucket, and probably ONE
+   batch rather than ten decisions: six rows are the same shape, a service
+   constructing its own `GitHubTokenService` instead of asking `edsServiceCache`,
+   whose instance carries a token-validation cache.
+2. **`layerDirection` — 4.** `serviceLocator` (an owner decision, see below) plus
+   three real runtime crossings where `core/state` reaches into a feature's config.
+3. **`typesPurity` — 3.** Measured, not guessed: converting every import in all six
+   original files to type-only and reading tsc split them cleanly. Three converted
+   and cleared. The three left are RUNTIME CODE living in `src/types/` — `errors.ts`
+   (error classes, 17 value uses), `shell.ts` (`os`), `typeGuards.ts` (six values).
+   Move or ratify; both are the owner's call.
+4. **`featureBarrels` — 1.** Four retired 2026-08-31. Only `authentication` remains:
+   7 source importers, 15 export lines, and 16 test files carrying a bare automock
+   of the barrel. Those automocks want the dead-mock probe, not mechanical
+   repointing — several are likely dead.
+5. **`commandBase` — 1, and RATIFIED.** `CommandManager` builds all 25 commands so
+   it cannot be one of them. Not debt; the row says so.
+6. **`patternBSendMessageCeiling` at 142** — a numeric ceiling, not a list. Lower it
+   as handlers converge to returns; progress pushes stay legitimate.
+
+**Owner decisions parked** (full detail in `.rptc/handoff/2026-08-31-loop-report.md`):
+`serviceLocator` — ratify (recommended) or move to typed tokens; `typeGuards.ts` —
+ratify (recommended); `errors.ts` — move to `@/core/errors` (recommended);
+`shell.ts` — decide on sight.
+
+Not a sweep-in-one-day item: converge on touch, plus deliberate batches when an
+area is already open. Done when the ledger is empty or every remaining row is a
+RATIFIED permanent exception recorded in ADR-015.
 
 ## Shipped so far
 
@@ -59,3 +73,4 @@ is a RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(features): retire four feature barrels (`355c18c63`)
 - 2026-08-31  refactor(commands): two commands stop living in core/ (`1078859a1`)
 - 2026-08-31  refactor(types): core's progress engine stops naming a feature (`e0360093e`)
+- 2026-08-31  2026-08-31  Loop: ledger 30 -> 19. Cleared: ProgressUnifier (InstallStep + ProgressMilestone moved to @/types), the two misplaced Reset commands moved to src/commands/, four feature barrels retired (data-installer, sidebar, eds, ai), three types files converted to type-only imports, and DiagnosticsCommand converged to BaseCommand (removing 4 ServiceLocator fetches). commandBase's survivor RATIFIED. Item prose had claimed 75 rows / 23 fetch-boundary files against a disk of 30 / 0.

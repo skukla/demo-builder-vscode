@@ -70,7 +70,11 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         // Recorded rather than omitted, so the coverage check still runs over it.
         name: 'sidebar',
         entry: 'features/sidebar/ui/index.tsx',
-        command: 'features/sidebar/handlers/sidebarHandlers.ts',
+        // The provider IS the handler here: SidebarProvider answers its webview's
+        // messages from private methods. A parallel, never-wired sidebarHandlers.ts
+        // was deleted on 2026-08-31 — nothing imported it, and its handleGetContext
+        // did not know about the projectsList state the live one handles.
+        command: 'features/sidebar/providers/sidebarProvider.ts',
         noRequests: true,
     },
 ];
