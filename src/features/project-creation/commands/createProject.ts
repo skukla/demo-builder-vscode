@@ -2,14 +2,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';

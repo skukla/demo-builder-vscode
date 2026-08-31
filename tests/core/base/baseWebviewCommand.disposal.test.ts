@@ -69,7 +69,7 @@ jest.mock('vscode', () => ({
 }));
 
 // Mock WebviewCommunicationManager
-jest.mock('@/core/communication', () => ({
+jest.mock('@/core/communication/webviewCommunicationManager', () => ({
     createWebviewCommunication: jest.fn().mockResolvedValue({
         on: jest.fn(),
         sendMessage: jest.fn().mockResolvedValue(undefined),

@@ -10,8 +10,8 @@
  */
 
 const mockDispatchHandler = jest.fn();
-jest.mock('@/core/handlers', () => ({
-    ...jest.requireActual('@/core/handlers'),
+jest.mock('@/core/handlers/dispatchHandler', () => ({
+    ...jest.requireActual('@/core/handlers/dispatchHandler'),
     dispatchHandler: (...a: unknown[]) => mockDispatchHandler(...a),
 }));
 jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({ dashboardHandlers: {} }));

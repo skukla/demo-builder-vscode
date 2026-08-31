@@ -9,7 +9,7 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import type { HandlerContext } from '@/types/handlers';
 
 const dispatchHandler = jest.fn();
-jest.mock('@/core/handlers', () => ({
+jest.mock('@/core/handlers/dispatchHandler', () => ({
     dispatchHandler: (...a: unknown[]) => dispatchHandler(...a),
 }));
 

@@ -16,7 +16,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
+import { ApiAccessPicker } from '@/core/ui/components/selection/ApiAccessPicker';
+import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
 
 interface ApiOption {
     code: string;

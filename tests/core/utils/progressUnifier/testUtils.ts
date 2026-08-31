@@ -6,7 +6,7 @@
  */
 
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
-import { UnifiedProgress } from '@/core/utils/progressUnifier';
+import { UnifiedProgress } from '@/core/utils/progressUnifier/types';
 
 // Mock logger
 

@@ -10,7 +10,7 @@
  */
 
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -22,8 +22,11 @@ jest.mock('vscode', () => ({ workspace: { getConfiguration: jest.fn() } }), { vi
  * suite no longer mocks the service registry.
  */
 const executor = createMockCommandExecutor({ execute: executeMock });
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — this resolver is the single source of truth.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,

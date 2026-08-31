@@ -22,14 +22,9 @@ import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 import { clearMcpCache } from '@/features/ai/mcpInspector';
-import {
-    applicableMcpPackages,
-    generateAIContextFiles,
-    installAiDefaultsMcpTools,
-    readInstalledMcpPackages,
-    projectNeedsAppBuilderTooling,
-} from '@/features/project-creation/services';
-import { gatedSkillReasons } from '@/features/project-creation/services/aiBundle/aiToolingGate';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { applicableMcpPackages, installAiDefaultsMcpTools, readInstalledMcpPackages } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling , gatedSkillReasons } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

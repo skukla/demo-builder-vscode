@@ -11,10 +11,10 @@
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 
 // Import all handler maps
-import { dashboardHandlers } from '@/features/dashboard/handlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
-import { meshHandlers } from '@/features/mesh/handlers';
-import { edsHandlers } from '@/features/eds/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
 import { lifecycleHandlers } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 

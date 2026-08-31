@@ -10,9 +10,9 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { ComponentSelection, ComponentConfigs } from './components';
 import type { Logger } from './logger';
 import type { StateManager } from './state';
-import type { WebviewCommunicationManager } from '@/core/communication';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import type { ErrorLogger, StepLogger } from '@/core/logging';
-import type { ProgressUnifier } from '@/core/utils/progressUnifier';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type {

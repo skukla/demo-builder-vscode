@@ -13,7 +13,7 @@
  */
 
 const mockDiscover = jest.fn();
-jest.mock('@/features/eds/handlers', () => ({
+jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     handleDiscoverStoreStructure: (...args: unknown[]) => mockDiscover(...args),
 }));
 

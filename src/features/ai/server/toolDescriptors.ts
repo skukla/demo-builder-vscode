@@ -16,7 +16,7 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 
 export interface ToolDescriptor {

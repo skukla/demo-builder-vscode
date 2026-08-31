@@ -8,7 +8,7 @@
 import {
     projectCreationHandlers,
 } from '@/features/project-creation/handlers';
-import { hasHandler, getRegisteredTypes } from '@/core/handlers';
+import { getRegisteredTypes, hasHandler } from '@/core/handlers/dispatchHandler';
 
 describe('projectCreationHandlers', () => {
     describe('Handler Map Structure', () => {

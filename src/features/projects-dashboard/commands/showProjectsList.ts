@@ -10,9 +10,9 @@
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';

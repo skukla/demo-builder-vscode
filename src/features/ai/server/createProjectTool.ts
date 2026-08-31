@@ -37,7 +37,7 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,

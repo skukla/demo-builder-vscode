@@ -19,14 +19,9 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import {
-    cloneAllComponents,
-    installAllComponents,
-    generateEnvironmentFiles,
-    finalizeProject,
-    sendCompletionAndCleanup,
-    generateAIContextFiles,
-} from '../services';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,

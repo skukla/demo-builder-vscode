@@ -29,7 +29,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import type { HandlerContext } from '@/types/handlers';
 

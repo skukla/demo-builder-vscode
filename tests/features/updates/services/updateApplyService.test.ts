@@ -46,8 +46,11 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
 jest.mock('@/features/updates/services/componentUpdater', () => ({
     ComponentUpdater: jest.fn(() => ({ updateComponent: updateComponentMock })),
 }));
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — `aiDefaultsInstaller` calls this resolver
     // "the single source of truth" for that location.

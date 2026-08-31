@@ -113,7 +113,11 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 // Mock services to track what component definitions are used
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     cloneAllComponents: jest.fn().mockImplementation(({ componentDefinitions, project }) => {
         componentDefinitionIds = Array.from(componentDefinitions.keys());
         // Simulate component creation
@@ -132,13 +136,18 @@ jest.mock('@/features/project-creation/services', () => ({
         return Promise.resolve();
     }),
     installAllComponents: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/services/meshSetupService', () => ({
     deployNewMesh: jest.fn().mockResolvedValue(undefined),
     linkExistingMesh: jest.fn().mockResolvedValue(undefined),
     shouldConfigureExistingMesh: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
-    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {

@@ -8,7 +8,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
-import type { ProgressUnifier } from '@/core/utils/progressUnifier';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { StateManager } from '@/core/state/stateManager';
 import type { ExtensionContext } from 'vscode';

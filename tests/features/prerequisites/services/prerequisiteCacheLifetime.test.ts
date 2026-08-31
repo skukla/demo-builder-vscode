@@ -40,7 +40,7 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/core/logging/errorLogger', () => ({ ErrorLogger: class {} }));
-jest.mock('@/core/utils/progressUnifier', () => ({ ProgressUnifier: class {} }));
+jest.mock('@/core/utils/progressUnifier/ProgressUnifier', () => ({ ProgressUnifier: class {} }));
 
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';

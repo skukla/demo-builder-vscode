@@ -31,7 +31,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock communication manager
-jest.mock('@/core/communication', () => ({
+jest.mock('@/core/communication/webviewCommunicationManager', () => ({
     createWebviewCommunication: jest.fn().mockResolvedValue({
         on: jest.fn(),
         onStreaming: jest.fn(),

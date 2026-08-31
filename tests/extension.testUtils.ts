@@ -86,10 +86,13 @@ jest.mock('@/commands/commandManager', () => ({
     })),
 }));
 
-jest.mock('@/core/vscode', () => ({
+jest.mock('@/core/vscode/workspaceWatcherManager', () => ({
     WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
         dispose: jest.fn(),
     })),
+}));
+
+jest.mock('@/core/vscode/envFileWatcherService', () => ({
     EnvFileWatcherService: jest.fn().mockImplementation(() => ({
         initialize: jest.fn(),
         dispose: jest.fn(),

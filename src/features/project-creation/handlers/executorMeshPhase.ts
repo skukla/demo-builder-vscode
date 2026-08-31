@@ -9,13 +9,6 @@
  * @module features/project-creation/handlers/executorMeshPhase
  */
 
-import {
-    deployNewMesh,
-    linkExistingMesh,
-    shouldConfigureExistingMesh,
-    type ComponentDefinitionEntry,
-    type MeshApiConfig,
-} from '../services';
 import type { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di';
 import {
@@ -23,6 +16,13 @@ import {
     withOrgContext,
     type OrgContextTarget,
 } from '@/core/shell';
+import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import {
+    deployNewMesh,
+    linkExistingMesh,
+    shouldConfigureExistingMesh,
+    type MeshApiConfig,
+} from '@/features/project-creation/services/meshSetupService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import {

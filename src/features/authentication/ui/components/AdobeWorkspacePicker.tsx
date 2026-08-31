@@ -20,7 +20,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { SelectionStepContent } from '@/core/ui/components/selection';
+import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks';
 import type { WizardSessionState, Workspace, WizardState } from '@/types/webview';
 

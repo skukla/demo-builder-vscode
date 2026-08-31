@@ -9,7 +9,7 @@
  * @module features/project-creation/handlers/executorComponentLoading
  */
 
-import type { ComponentDefinitionEntry } from '../services';
+import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { TransformedComponentDefinition } from '@/types';
 import type { HandlerContext } from '@/types/handlers';

@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { WebviewCommunicationManager } from '@/core/communication';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 
 /**

@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewPanelManager } from './webviewPanelManager';
-import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
+import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import { setLoadingState, TIMEOUTS, type LoadingHeader } from '@/core/utils';
 
 /**

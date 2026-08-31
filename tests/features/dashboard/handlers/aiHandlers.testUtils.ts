@@ -53,16 +53,14 @@ jest.mock('@/features/ai/mcpInspector', () => ({
 }));
 
 // Mock AI context file generator
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // Default: success — tests can override per-case via mockResolvedValueOnce.
     installAiDefaultsMcpTools: jest.fn().mockResolvedValue({ success: true }),
     readInstalledMcpPackages: jest.fn().mockResolvedValue([]),
-    // Real predicate: pure function over the project record, so the
-    // storefront/headless fixtures keep their production meaning.
-    projectNeedsAppBuilderTooling: jest.requireActual(
-        '@/features/project-creation/services/aiBundle/aiToolingGate'
-    ).projectNeedsAppBuilderTooling,
     // Real resolver: pure function over the bundled ai-defaults.json, so the
     // "Downloading AI tool packages" prompt names the ACTUAL packages the
     // fixtures qualify for (e.g. @playwright/mcp for the storefront fixture).
@@ -70,6 +68,13 @@ jest.mock('@/features/project-creation/services', () => ({
         '@/features/project-creation/services/aiBundle/aiDefaultsInstaller'
     ).applicableMcpPackages,
 }));
+
+// aiToolingGate is NOT mocked. It was only ever in the barrel factory because
+// mocking the barrel replaced every symbol at once, and these tests wanted the
+// REAL predicate — a pure function over the project record, so the fixtures keep
+// their production meaning. Mocking per-module makes the stand-in unnecessary,
+// and a partial factory here would have silently deleted the module's other
+// exports (aiDefaultsEntryApplies, gatedSkillReasons).
 
 // Mock vscode
 jest.mock('vscode', () => ({

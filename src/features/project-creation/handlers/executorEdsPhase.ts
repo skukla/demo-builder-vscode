@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ensureEdsContent } from '../services';
+import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils';

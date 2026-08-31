@@ -20,7 +20,7 @@ import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { meshHandlers } from '@/features/mesh/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import type { HandlerResponse } from '@/types/handlers';
 
 /** Paging, shared by the Data Installer's list reads. */

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
-import { SelectionStepContent, type SelectableItem } from '@/core/ui/components/selection';
+import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
+import type { SelectableItem } from '@/core/ui/components/selection/SelectionStepContent';
 import '@testing-library/jest-dom';
 
 interface OrgItem extends SelectableItem {

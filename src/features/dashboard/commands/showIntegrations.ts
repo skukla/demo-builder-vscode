@@ -28,8 +28,8 @@
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';

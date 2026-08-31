@@ -7,12 +7,10 @@ import {
     buildStackChangeStateReset,
 } from '../helpers/stackHelpers';
 import { buildAreaWalk } from './buildAreaWalk';
-import {
-    useWizardState,
-    useWizardNavigation,
-    useMessageListeners,
-    useWizardEffects,
-} from './hooks';
+import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
+import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
+import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
+import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import {
     getCompletedStepIndices,
     getNextButtonText,

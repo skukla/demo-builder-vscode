@@ -19,18 +19,30 @@ jest.mock('@/core/shell', () => ({
 }));
 
 const mockDeployNewMesh = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/services', () => ({
-    deployNewMesh: (...args: unknown[]) => mockDeployNewMesh(...args),
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     // Other named exports referenced at module load (kept minimal).
     cloneAllComponents: jest.fn(),
     installAllComponents: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/edsContentSetup', () => ({
+    ensureEdsContent: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/meshSetupService', () => ({
+    deployNewMesh: (...args: unknown[]) => mockDeployNewMesh(...args),
     linkExistingMesh: jest.fn(),
     shouldConfigureExistingMesh: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn(),
     finalizeProject: jest.fn(),
     sendCompletionAndCleanup: jest.fn(),
-    generateAIContextFiles: jest.fn(),
-    ensureEdsContent: jest.fn(),
 }));
 
 import { deployFreshMesh } from '@/features/project-creation/handlers/executor';

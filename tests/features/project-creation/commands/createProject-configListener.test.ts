@@ -56,7 +56,7 @@ let configChangeCallback: ((e: vscode.ConfigurationChangeEvent) => void) | undef
 const mockConfigListenerDispose = jest.fn();
 
 // Mock communication manager — define mocks inside factory to avoid @swc/jest hoisting TDZ
-jest.mock('@/core/communication', () => {
+jest.mock('@/core/communication/webviewCommunicationManager', () => {
     const mockComm = {
         on: jest.fn(),
         onStreaming: jest.fn(),
@@ -71,7 +71,9 @@ jest.mock('@/core/communication', () => {
         _mockComm: mockComm,
     };
 });
-const { _mockComm } = require('@/core/communication') as { _mockComm: { sendMessage: jest.Mock } };
+const { _mockComm } = require('@/core/communication/webviewCommunicationManager') as {
+    _mockComm: { sendMessage: jest.Mock };
+};
 const mockSendMessage = _mockComm.sendMessage;
 
 // Mock loading HTML utility
