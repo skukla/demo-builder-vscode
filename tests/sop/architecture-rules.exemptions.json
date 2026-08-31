@@ -2,7 +2,6 @@
     "_what": "Enforcement ledger for the EXTENSION HOST dependency rules (webview files are enforced by webview-architecture-rules.test.ts under ADR-017). The keys map to rules that live in different records since the 2026-08-30 split: fetchBoundary and constructionBoundary -> ADR-015; compositionPointLifetime -> ADR-020; commandBase and typesPurity -> the development handbook (no ADR \u2014 neither has a rejected alternative worth recording). Every entry is a KNOWN pre-ruling violation with its reason. The test fails on (a) any violation NOT listed here, (b) any listed entry that no longer violates (the ledger only shrinks), (c) any entry without a reason. Cleaning a file = fixing it AND deleting its row.",
     "fetchBoundary": {},
     "constructionBoundary": {
-        "src/features/data-installer/handlers/dataInstallerHandlers.ts": "Boundary file constructing DataInstallerClient directly. ADR-015 gives Commands/Handlers/MCP tools 'May fetch', not may construct; fetch these too, or take them from a create...Deps bundle. Caught 2026-08-29 when mayConstruct was tightened to the ADR's own words.",
         "src/features/prerequisites/services/PrerequisitesManager.ts": "D-4 (measured 2026-08-28): constructs PrerequisitesCacheManager itself. ADR-015 allows construction only in extension.ts and create...Deps files, so this violates the rule as written \u2014 but it forces NO module mock in any suite today, so the cost is currently zero. Lowest priority; convert when the file is touched."
     },
     "commandBase": {

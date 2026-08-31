@@ -21,6 +21,7 @@ import {
     DataInstallerInputError,
     isDataInstallerAuthError,
 } from '@/features/data-installer/services/dataInstallerErrors';
+import { resetDriftReported } from '@/features/data-installer/services/dataInstallerClient';
 
 const FIXTURES = path.join(__dirname, '../../../fixtures/data-installer');
 const load = (name: string): unknown => require(path.join(FIXTURES, name));
@@ -68,6 +69,10 @@ function headerOf(init: RequestInit, name: string): string | undefined {
 }
 
 describe('DataInstallerClient', () => {
+    beforeEach(() => {
+        resetDriftReported();
+    });
+
     describe('request shape', () => {
         it('sends the bearer token on an authenticated read', async () => {
             const f = jsonFetch(load('find-datapacks.json'));
@@ -289,6 +294,11 @@ describe('DataInstallerClient', () => {
             const onDrift = jest.fn();
             const f = jsonFetch({ success: true, secret_field: TOKEN });
             await makeClient(f, { onDrift }).findDatapacks({});
+            // Guard: a not.toContain on an EMPTY call list passes for the wrong
+            // reason. The dedupe is module-scoped, so without the reset in
+            // beforeEach an earlier test silences this endpoint and this
+            // assertion proves nothing.
+            expect(onDrift).toHaveBeenCalled();
             expect(JSON.stringify(onDrift.mock.calls)).not.toContain(TOKEN);
         });
 
