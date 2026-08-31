@@ -122,12 +122,8 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-        getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
-    })),
-}));
+// GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
+// nothing this suite observes — it was silencing a construction with no side effects.
 
 // Mock configGenerator (dynamically imported for config.json generation)
 jest.mock('@/features/eds/services/configGenerator', () => ({
