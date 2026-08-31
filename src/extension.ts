@@ -434,7 +434,7 @@ export async function activate(context: vscode.ExtensionContext) {
             logger,
             // The SHARED token service: its validation cache is per-instance, so
             // building a fresh one downstream would cost a GitHub round trip.
-            githubTokenService: getGitHubServices({ context }).tokenService,
+            githubTokenService: getGitHubServices(context.secrets).tokenService,
         }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
             registerThirdPartyToolingSettingListener(
@@ -630,7 +630,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const credentials: McpCredentialProvider = {
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
             getGitHubToken: async () =>
-                (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+                (await getGitHubServices(ctxFactory().context.secrets).tokenService.getToken())
+                    ?.token ?? null,
         };
         // One socket: the projects-root path, derivable without an open
         // workspace (the window model is "homed at the projects root, project

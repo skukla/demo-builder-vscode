@@ -142,7 +142,7 @@ export function registerStorefrontTools(
             if (daLive) return asText(daLive);
             const daLiveAuthService = getDaLiveAuthService(ctx.context);
 
-            const { tokenService: githubTokenService } = getGitHubServices(ctx);
+            const { tokenService: githubTokenService } = getGitHubServices(ctx.context.secrets);
             try {
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontContent({

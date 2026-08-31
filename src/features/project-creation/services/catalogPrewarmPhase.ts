@@ -94,7 +94,7 @@ export async function executeCatalogPrewarmPhase(
                   // The SHARED token service. Its validation cache is per-instance with
                   // a five-minute TTL, so a fresh one here would send this publish
                   // through a GitHub round trip the cache had already answered.
-                  getGitHubServices(context).tokenService,
+                  getGitHubServices(context.context.secrets).tokenService,
                   daLiveTokenProvider,
               );
 

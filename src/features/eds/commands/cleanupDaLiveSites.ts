@@ -268,7 +268,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
 async function pickNamespace(
     context: vscode.ExtensionContext,
 ): Promise<string | undefined> {
-    const { tokenService } = getGitHubServices({ context });
+    const { tokenService } = getGitHubServices(context.secrets);
     const validation = await tokenService.validateToken();
     if (!validation.valid || !validation.user) {
         vscode.window.showErrorMessage(

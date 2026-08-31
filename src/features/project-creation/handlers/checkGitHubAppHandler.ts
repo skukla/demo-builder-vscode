@@ -191,7 +191,7 @@ export async function checkGitHubApp(
 
     try {
         // Get properly initialized GitHub services
-        const { tokenService } = getGitHubServices(context);
+        const { tokenService } = getGitHubServices(context.context.secrets);
 
         // Lazy-load GitHubAppService
         const { GitHubAppService } = await import('@/features/eds/services/github/githubAppService');

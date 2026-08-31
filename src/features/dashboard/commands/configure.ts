@@ -525,7 +525,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                     // The SHARED instance — a fresh one would re-validate against GitHub.
                     githubTokenService:
                         this.githubTokenService ??
-                        getGitHubServices({ context: this.context }).tokenService,
+                        getGitHubServices(this.context.secrets).tokenService,
                 });
             },
         );

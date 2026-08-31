@@ -299,7 +299,7 @@ export class DiagnosticsCommand extends BaseCommand {
     private async checkGitHubCredential(): Promise<CredentialProbeResult> {
         const project = await this.stateManager.getCurrentProject();
         const repoFullName = getEdsGithubRepo(project);
-        const { tokenService } = getGitHubServices({ context: this.context });
+        const { tokenService } = getGitHubServices(this.context.secrets);
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 

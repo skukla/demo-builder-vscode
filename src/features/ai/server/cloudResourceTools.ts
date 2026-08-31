@@ -28,7 +28,7 @@ import type { HandlerContext } from '@/types/handlers';
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
 async function githubAuthed(ctx: HandlerContext): Promise<boolean> {
     try {
-        return (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+        return (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
         return false;
     }
@@ -98,7 +98,7 @@ export function registerCloudResourceTools(
             if (!(await githubAuthed(ctx))) {
                 return asText(NEEDS_GITHUB);
             }
-            const repos = await getGitHubServices(ctx).repoOperations.listUserRepositories();
+            const repos = await getGitHubServices(ctx.context.secrets).repoOperations.listUserRepositories();
             const offset = Math.max(0, Math.trunc(args?.offset ?? 0));
             const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));
             const page = repos.slice(offset, offset + limit).map((r) => ({
@@ -149,7 +149,7 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
 
-            const { repoOperations } = getGitHubServices(ctx);
+            const { repoOperations } = getGitHubServices(ctx.context.secrets);
             let repo;
             try {
                 repo = await repoOperations.createFromTemplate(
@@ -237,7 +237,7 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
             try {
-                await getGitHubServices(ctx).repoOperations.deleteRepository(owner, repo);
+                await getGitHubServices(ctx.context.secrets).repoOperations.deleteRepository(owner, repo);
                 return asText({ deleted: true, repo: fullName });
             } catch (err) {
                 return asText({

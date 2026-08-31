@@ -61,7 +61,7 @@ interface ProviderStatus {
  * that list.
  */
 async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
-    const { tokenService } = getGitHubServices(ctx);
+    const { tokenService } = getGitHubServices(ctx.context.secrets);
     const validation = await tokenService.validateToken();
     if (!validation.valid) return githubVsCodeSessionStatus();
 

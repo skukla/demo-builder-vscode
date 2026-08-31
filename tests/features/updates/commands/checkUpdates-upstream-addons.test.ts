@@ -51,6 +51,15 @@ jest.mock('vscode', () => ({
     },
 }));
 
+// The block-library update path reaches the shared GitHub services for a token.
+// The real accessor calls getLogger(), which throws in a suite that initialises
+// none — so the cache is mocked to the one thing this path reads.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => ({
+        tokenService: { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) },
+    })),
+}));
+
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------

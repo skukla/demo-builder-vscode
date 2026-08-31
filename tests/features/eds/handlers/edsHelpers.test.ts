@@ -159,7 +159,7 @@ describe('edsHelpers', () => {
             const context = createMockHandlerContext();
 
             // When: Getting the GitHub services
-            const services = getGitHubServices(context);
+            const services = getGitHubServices(context.context.secrets);
 
             // Then: Should return an object with all GitHub services
             expect(services).toBeDefined();
@@ -172,10 +172,10 @@ describe('edsHelpers', () => {
         it('should return cached GitHub services on subsequent calls', () => {
             // Given: A context with previously created services
             const context = createMockHandlerContext();
-            const firstServices = getGitHubServices(context);
+            const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Getting the services again
-            const secondServices = getGitHubServices(context);
+            const secondServices = getGitHubServices(context.context.secrets);
 
             // Then: Should return the same cached instance
             expect(secondServices).toBe(firstServices);
@@ -186,7 +186,7 @@ describe('edsHelpers', () => {
             const context = createMockHandlerContext();
 
             // When: Getting the GitHub services
-            const services = getGitHubServices(context);
+            const services = getGitHubServices(context.context.secrets);
 
             // Then: Should pass secrets to the token service
             expect((services.tokenService as unknown as { secrets: unknown }).secrets).toBe(
@@ -236,13 +236,13 @@ describe('edsHelpers', () => {
         it('should clear cached GitHubServices', () => {
             // Given: Cached GitHub services
             const context = createMockHandlerContext();
-            const firstServices = getGitHubServices(context);
+            const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Clearing the cache
             clearServiceCache();
 
             // Then: Next call should create new instances
-            const secondServices = getGitHubServices(context);
+            const secondServices = getGitHubServices(context.context.secrets);
             expect(secondServices).not.toBe(firstServices);
         });
 

@@ -32,7 +32,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
         // getGitHubServices' parameter is narrowed to the one field it reads,
         // so a command without a full HandlerContext calls it without a cast.
-        const { tokenService, repoOperations } = getGitHubServices({ context });
+        const { tokenService, repoOperations } = getGitHubServices(context.secrets);
 
         // Check if we have a valid token
         let token = await tokenService.getToken();

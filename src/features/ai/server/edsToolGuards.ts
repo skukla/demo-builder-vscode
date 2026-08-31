@@ -61,7 +61,7 @@ export async function requireGitHub(
 ): Promise<Record<string, unknown> | undefined> {
     let githubOk = false;
     try {
-        githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+        githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
         githubOk = false;
     }

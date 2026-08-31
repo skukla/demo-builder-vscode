@@ -77,3 +77,5 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(sidebar): delete a handler module production never called (`e4f6a0cf8`)
 - 2026-08-31  refactor(commands): diagnostics joins the other 24, and stops fetching state four times (`7ee3f71ba`)
 - 2026-08-31  refactor(types): three of the six types files were only importing wrong; three are not types files at all (`29d3da47c`)
+- 2026-08-31  refactor(project-creation): catalog prewarm asks the service cache for its token service (`32b8f3e43`)
+- 2026-08-31  refactor(eds): the authoring flip receives its GitHub token service instead of building one (`035a1683a`)

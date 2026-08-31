@@ -80,7 +80,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         });
         if (!commitMessage) return; // user cancelled
 
-        const { tokenService } = getGitHubServices({ context: this.context });
+        const { tokenService } = getGitHubServices(this.context.secrets);
         const tokenEntry = await tokenService.getToken();
         const githubToken = tokenEntry?.token;
         const daLiveToken = await this.readDaLiveToken();

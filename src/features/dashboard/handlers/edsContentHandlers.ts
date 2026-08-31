@@ -120,7 +120,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 }
 
                 const daLiveAuthService = getDaLiveAuthService(context.context);
-                const { tokenService: githubTokenService } = getGitHubServices(context);
+                const { tokenService: githubTokenService } = getGitHubServices(context.context.secrets);
 
                 report('Republishing content…');
                 const { republishStorefrontContent } = await import(

@@ -207,7 +207,7 @@ async function checkGitHubAppInstallation(
     injectedAppService?: GitHubAppService,
 ): Promise<EdsResetResult | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
-    const { tokenService: preCheckTokenService } = getGitHubServices(context);
+    const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
     const { GitHubAppService } = await import('../github/githubAppService');
     // The DA.live session rides along: a site carrying any `access.admin` role
     // refuses the GitHub token outright, and storefront setup now pins one on

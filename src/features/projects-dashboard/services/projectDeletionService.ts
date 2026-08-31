@@ -565,7 +565,7 @@ async function performGitHubCleanup(
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService, repoOperations } = getGitHubServices(context);
+        const { tokenService, repoOperations } = getGitHubServices(context.context.secrets);
 
         const existingToken = await tokenService.getToken();
         if (!existingToken) {

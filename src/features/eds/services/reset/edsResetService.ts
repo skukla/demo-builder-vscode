@@ -377,7 +377,7 @@ export async function executeEdsReset(
     };
 
     const { tokenService: githubTokenService, fileOperations: githubFileOps } =
-        getGitHubServices(context);
+        getGitHubServices(context.context.secrets);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
 
     let filesReset = 0;

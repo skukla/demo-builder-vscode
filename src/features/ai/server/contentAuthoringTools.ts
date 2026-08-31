@@ -244,7 +244,7 @@ async function resolveTarget(
     if (opts.needsGitHub) {
         let githubOk = false;
         try {
-            githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+            githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
         } catch {
             githubOk = false;
         }
@@ -294,7 +294,7 @@ function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
 function helixFor(ctx: HandlerContext): HelixService {
     return new HelixService(
         ctx.logger,
-        getGitHubServices(ctx).tokenService,
+        getGitHubServices(ctx.context.secrets).tokenService,
         createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
     );
 }

@@ -147,7 +147,7 @@ async function fetchTemplateCommitSha(
 
     try {
         // Both from the cache; the two dynamic imports went with them.
-        const { fileOperations: githubFileOps } = getGitHubServices(context);
+        const { fileOperations: githubFileOps } = getGitHubServices(context.context.secrets);
         const sha =
             (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main')) ??
             undefined;

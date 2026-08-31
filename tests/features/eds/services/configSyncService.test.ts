@@ -39,6 +39,18 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     })),
 }));
 
+// The subject now asks the service cache instead of constructing its own token
+// service. This delegates to the SAME mocked class above, so the suite's
+// behaviour is unchanged — only the route to it is.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => {
+        const { GitHubTokenService } = jest.requireMock(
+            '@/features/eds/services/github/githubTokenService',
+        );
+        return { tokenService: new GitHubTokenService() };
+    }),
+}));
+
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn(),

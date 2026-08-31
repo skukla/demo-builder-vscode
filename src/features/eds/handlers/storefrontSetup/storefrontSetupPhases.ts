@@ -57,7 +57,7 @@ export type { BlockLibraryOptions } from './storefrontSetupPhase2';
 
 /** Create all service dependencies for storefront setup */
 function createSetupServices(context: HandlerContext): SetupServices {
-    const { tokenService: githubTokenService } = getGitHubServices(context);
+    const { tokenService: githubTokenService } = getGitHubServices(context.context.secrets);
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {

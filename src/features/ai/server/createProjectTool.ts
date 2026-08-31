@@ -138,7 +138,7 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
 async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unknown> | null> {
     let githubOk = false;
     try {
-        githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+        githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
         githubOk = false;
     }

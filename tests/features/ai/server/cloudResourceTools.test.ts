@@ -63,7 +63,13 @@ function fakeServer() {
     };
 }
 
-const ctxFactory = () => ({}) as unknown as HandlerContext;
+// A real HandlerContext carries the extension context and its secret store, and
+// these tools read it to reach the GitHub services. The fixture used to be `{}`
+// cast straight to HandlerContext — which typechecked, because a cast at a call
+// boundary silences exactly this, and passed only because every consumer of the
+// context was mocked.
+const ctxFactory = () =>
+    ({ context: { secrets: {} } }) as unknown as HandlerContext;
 
 /** Build a GitHub services double; override pieces per test. */
 function gh(overrides: {
