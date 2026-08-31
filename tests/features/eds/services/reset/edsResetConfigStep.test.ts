@@ -22,8 +22,7 @@
  */
 
 const mockPreviewCode = jest.fn();
-const MockHelixService = jest.fn();
-const MockConfigurationService = jest.fn();
+const mockMakeHelix = jest.fn();
 const mockRegisterSiteConfig = jest.fn();
 const mockLogConfigAccessState = jest.fn();
 const mockBuildSiteConfigParams = jest.fn((..._a: unknown[]) => ({ built: 'params' }));
@@ -38,13 +37,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
     logConfigAccessState: (...a: unknown[]) => mockLogConfigAccessState(...a),
 }));
+// `buildSiteConfigParams` is a pure function this step's assertions read the
+// output of, so it is mocked. The SERVICE is not: it arrives through the seam.
 jest.mock('@/features/eds/services/configService/configurationService', () => ({
     buildSiteConfigParams: (...a: unknown[]) => mockBuildSiteConfigParams(...a),
-    ConfigurationService: class {
-        constructor(...args: unknown[]) {
-            MockConfigurationService(...args);
-        }
-    },
 }));
 jest.mock('@/features/eds/services/configService/lostGrantsMessage', () => ({
     lostGrantsMessage: (...a: unknown[]) => mockLostGrantsMessage(...a),
@@ -52,16 +48,8 @@ jest.mock('@/features/eds/services/configService/lostGrantsMessage', () => ({
 jest.mock('@/features/eds/services/configService/siteConfigRegistrar', () => ({
     registerSiteConfig: (...a: unknown[]) => mockRegisterSiteConfig(...a),
 }));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: class {
-        previewCode = mockPreviewCode;
-        constructor(...args: unknown[]) {
-            MockHelixService(...args);
-        }
-    },
-}));
-
 import { publishConfigAndRegisterSite } from '@/features/eds/services/reset/edsResetConfigStep';
+import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 
@@ -84,13 +72,33 @@ function makeLogger(): Logger {
     } as unknown as Logger;
 }
 
+/**
+ * The two services, handed in through the seam.
+ *
+ * Typed to the module's OWN interfaces rather than cast, so `tsc` rejects a shape
+ * that drifts from what the step will call — the check a `jest.mock` factory
+ * structurally cannot perform. Helix is a FACTORY because the property pinned
+ * below is what reaches its CONSTRUCTOR.
+ */
+const services: ConfigStepServices = {
+    makeHelix: (...a) => {
+        mockMakeHelix(...a);
+        return { previewCode: mockPreviewCode };
+    },
+    configService: {
+        registerSite: jest.fn(async () => ({ success: true })),
+        updateSiteConfig: jest.fn(async () => ({ success: true })),
+    },
+};
+
 function run(overrides: Partial<typeof PARAMS> = {}, report = jest.fn()) {
     return publishConfigAndRegisterSite(
         { ...PARAMS, ...overrides },
         GITHUB_TOKENS,
         TOKEN_PROVIDER,
         makeLogger(),
-        report
+        report,
+        services
     );
 }
 
@@ -108,7 +116,7 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
     it('hands the tokenProvider to HelixService — without it the CDN serves a stale config', async () => {
         await run();
 
-        expect(MockHelixService).toHaveBeenCalledWith(
+        expect(mockMakeHelix).toHaveBeenCalledWith(
             expect.anything(),
             GITHUB_TOKENS,
             TOKEN_PROVIDER
