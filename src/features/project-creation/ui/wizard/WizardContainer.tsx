@@ -22,7 +22,8 @@ import {
 import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';

@@ -73,13 +73,16 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports), so
 // these tests use the real rail to reach each service group.
-jest.mock('@/core/ui/components/layout', () => ({
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
+    PageFooter: () => <div data-testid="page-footer" />,
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
     PageHeader: ({ title }: { title: string }) => (
         <div data-testid="page-header">
             <h1>{title}</h1>
         </div>
     ),
-    PageFooter: () => <div data-testid="page-footer" />,
 }));
 
 const renderWithProvider = (component: React.ReactElement) =>

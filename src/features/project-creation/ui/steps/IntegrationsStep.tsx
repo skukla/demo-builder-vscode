@@ -57,11 +57,8 @@ import {
 } from '../components/integration-flow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import {
-    IntegrationCard,
-    type CardAction,
-    type IntegrationCardModel,
-} from '@/core/ui/components/integrations';
+import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
+import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { webviewClient } from '@/core/ui/utils/vscode-api';

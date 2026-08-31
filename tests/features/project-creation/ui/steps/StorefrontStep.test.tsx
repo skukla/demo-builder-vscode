@@ -84,15 +84,18 @@ jest.mock('@/features/eds/ui/hooks/useDaLiveAuth', () => ({
 }));
 
 // Service cards — stub so we assert presence within the storefront modal.
-jest.mock('@/features/eds/ui/components', () => ({
-    GitHubServiceCard: (props: { isAuthenticated: boolean }) => (
-        <div data-testid="github-card" data-authed={String(props.isAuthenticated)}>
-            GitHub
-        </div>
-    ),
+jest.mock('@/features/eds/ui/components/DaLiveServiceCard', () => ({
     DaLiveServiceCard: (props: { isAuthenticated: boolean }) => (
         <div data-testid="dalive-card" data-authed={String(props.isAuthenticated)}>
             DA.live
+        </div>
+    ),
+}));
+
+jest.mock('@/features/eds/ui/components/GitHubServiceCard', () => ({
+    GitHubServiceCard: (props: { isAuthenticated: boolean }) => (
+        <div data-testid="github-card" data-authed={String(props.isAuthenticated)}>
+            GitHub
         </div>
     ),
 }));

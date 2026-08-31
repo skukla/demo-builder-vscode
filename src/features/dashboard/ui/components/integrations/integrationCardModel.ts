@@ -26,12 +26,7 @@
 
 import type { StatusDisplay, MeshStatus } from '../../hooks/useDashboardStatus';
 import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import type {
-    CardAction,
-    CardStatus,
-    CommerceScopePart,
-    IntegrationCardModel,
-} from '@/core/ui/components/integrations';
+import type { CardAction, CardStatus, CommerceScopePart, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import {
     ACCS_WEBSITE_CODE,

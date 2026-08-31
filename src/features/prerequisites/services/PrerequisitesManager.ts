@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { getInstallSteps } from './installation';
+import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type { InstallStep, ProgressMilestone } from '@/types';
 import type {
@@ -11,13 +11,9 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
-import {
-    checkVersionSatisfaction,
-    checkMultipleNodeVersions,
-    getInstalledNodeVersions,
-    getLatestInFamily,
-    resolveDependencies,
-} from './versioning';
+import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
+import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatDuration } from '@/core/utils';

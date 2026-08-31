@@ -18,7 +18,7 @@ import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
-import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
+import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { ErrorCode } from '@/types/errorCodes';
 import { isTimeout, toAppError } from '@/core/errors';
 import { HandlerContext } from '@/types/handlers';

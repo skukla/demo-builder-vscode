@@ -29,7 +29,7 @@ import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
-import { IntegrationActionsMenu } from '@/core/ui/components/integrations';
+import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';

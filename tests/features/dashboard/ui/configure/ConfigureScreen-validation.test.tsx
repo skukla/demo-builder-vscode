@@ -32,17 +32,20 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) — the
 // rail is what these tests use to reach a section, and what carries the error marker.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header" className="border-b bg-gray-75">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
 }));

@@ -174,25 +174,34 @@ jest.mock('@/core/ui/components/feedback', () => ({
     ),
 }));
 
-jest.mock('@/core/ui/components/layout', () => ({
-    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
-    PageLayout: ({ header, children }: any) => (
-        <div data-testid="page-layout">
-            <div data-testid="page-layout-header">{header}</div>
-            <div data-testid="page-layout-content">{children}</div>
+jest.mock('@/core/ui/components/layout/ControlPanelLayout', () => ({
+    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
+        <div data-testid="control-panel">
+            <div data-testid="control-panel-masthead">{masthead}</div>
+            <div data-testid="control-panel-primary">{primary}</div>
+            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
         </div>
     ),
+}));
+
+jest.mock('@/core/ui/components/layout/GridLayout', () => ({
+    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
     PageHeader: ({ title, subtitle }: any) => (
         <div data-testid="page-header">
             <h1>{title}</h1>
             {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
-    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
-        <div data-testid="control-panel">
-            <div data-testid="control-panel-masthead">{masthead}</div>
-            <div data-testid="control-panel-primary">{primary}</div>
-            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
+}));
+
+jest.mock('@/core/ui/components/layout/PageLayout', () => ({
+    PageLayout: ({ header, children }: any) => (
+        <div data-testid="page-layout">
+            <div data-testid="page-layout-header">{header}</div>
+            <div data-testid="page-layout-content">{children}</div>
         </div>
     ),
 }));

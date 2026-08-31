@@ -41,10 +41,19 @@ shrink-only and bidirectional. Every row carries its kind and its importer count
 | **PURE** — re-export only | 20 | Repoint its importers to the declaring modules, delete the file |
 | **MIXED** — also declares its own code | 23 | Move the declarations to a named module FIRST, then treat as PURE |
 
-MIXED is the harder and more interesting half. A file that both declares and
-re-exports is holding public and private code together — LedgerHQ's framing:
-"having to pick which names leave a file proves that file holds both public and
-private code."
+**THAT SPLIT WAS WRONG, corrected 2026-08-31.** The classifier that seeded it
+counted `export type { X } from './Y'` as an own declaration — it is a re-export
+like any other. Re-measured against a corrected detector, of the 23 rows
+remaining at that point **22 are PURE and exactly ONE is genuinely MIXED**:
+`src/features/project-creation/helpers/index.ts`, which declares
+`export function validateField`. `core/shell` was the clearest case: filed as
+"12 re-export lines, 3 own declarations", it is twelve re-export lines and
+nothing else.
+
+This matters because it inverted the plan. MIXED was described as "the harder and
+more interesting half" needing a two-commit treatment each; there is one of them,
+and everything else is the mechanical case the codemod already handles. The ledger
+notes were rewritten in place from the corrected detector.
 
 The largest by importers, which is the order NOT to do them in:
 
@@ -94,3 +103,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): export-star, namespace and dynamic imports — 33 to 30 (`2976547ee`)
 - 2026-08-31  refactor(barrels): core/base and the last of the small PURE rows — 30 to 26 (`606dc86e5`)
 - 2026-08-31  refactor(barrels): core/di retired across 89 importers, and it proved the rule (`49f13f1dd`)
+- 2026-08-31  refactor(barrels): core/validation and its nested validators index — 25 to 23 (`7c88295eb`)

@@ -20,7 +20,7 @@ import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { Spinner } from '@/core/ui/components/ui';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 

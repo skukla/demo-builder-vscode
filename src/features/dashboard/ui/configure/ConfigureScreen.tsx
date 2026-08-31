@@ -28,7 +28,8 @@ import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
 import { withStoredSecretsPreserved } from './storedSecretPayload';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
 // wholesale to stub PageHeader/PageFooter, and a barrel import would hand this screen an
 // undefined shell/rail. Both are plain presentational markup, so tests render the REAL

@@ -39,7 +39,8 @@ import {
     listAppBuilderComponents,
 } from '@/core/state/appBuilderComponentState';
 import { CtaEmptyState, LoadingDisplay } from '@/core/ui/components/feedback';
-import { PageHeader, PageLayout } from '@/core/ui/components/layout';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
+import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';

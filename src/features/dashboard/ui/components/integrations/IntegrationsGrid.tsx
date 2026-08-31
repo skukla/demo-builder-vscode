@@ -26,7 +26,7 @@ import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDia
 import { ManageApisModal } from '../ManageApisModal';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
-import { IntegrationCard } from '@/core/ui/components/integrations';
+import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 export interface IntegrationsGridProps {

@@ -30,8 +30,8 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     };
 });
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/prerequisites/services/versioning', () => ({
-    ...jest.requireActual('@/features/prerequisites/services/versioning'),
+jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', () => ({
+    ...jest.requireActual('@/features/prerequisites/services/versioning/MultiVersionDetector'),
     getInstalledNodeVersions: jest.fn(),
 }));
 jest.mock('vscode', () => ({
@@ -40,7 +40,7 @@ jest.mock('vscode', () => ({
 }));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
+import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { HandlerContext } from '@/types/handlers';
 import {
     mockAioCliWithPlugin,
