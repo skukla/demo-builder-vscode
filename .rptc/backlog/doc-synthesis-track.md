@@ -116,8 +116,8 @@ they are **provisional**, and this is the list so nobody assumes otherwise.
 |---|---|---|
 | `tests/README.md` | **Track 3** (test strategy) | It describes how the suite is organised and run. Track 3 canonises the strategy itself — tiers, mock policy, what a test must constrain — and the README has to follow that rather than lead it. Owner flagged this 2026-08-30 |
 | `docs/testing/test-file-splitting-playbook.md` | **Track 3** | Same reason, narrower: splitting rules are a consequence of the strategy |
-| `src/core/ui/hooks/CLAUDE.md` | **Phase B** of this track | Verified accurate and kept as written. Its gotchas may belong in a skill, since traps live in skills here |
-| `src/core/ui/components/CLAUDE.md` | **Phase B**, and [[PL-28]] row 2 | The pick-by-job table probably stays; the Rule of Three override needs adjudicating |
+| ~~`src/core/ui/hooks/CLAUDE.md`~~ | ~~Phase B~~ | **Settled 2026-08-30** — rewritten, inventory pinned. The gotchas stay; the generic React around them went |
+| `src/core/ui/components/CLAUDE.md` | [[PL-28]] row 2 only | Phase B passed it. The pick-by-job table stays; the Rule of Three override is still the owner's |
 
 The rule this implies: **a track-2 rewrite fixes what is FALSE, and does not try to
 settle what a later track owns.** The tests README lost nine dead or wrong claims and
