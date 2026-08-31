@@ -168,8 +168,6 @@
         "tests/features/eds/services/daLive/daLiveContentOperations-transform.test.ts",
         "tests/features/eds/services/daLive/daLiveContentOperations-utils.test.ts",
         "tests/features/eds/services/daLive/daLiveSourceOperations.test.ts",
-        "tests/features/eds/services/edsPipeline-integration.test.ts",
-        "tests/features/eds/services/edsPipeline-operations.test.ts",
         "tests/features/eds/services/ewSettingChangeListener.test.ts",
         "tests/features/eds/services/github/githubAppService.test.ts",
         "tests/features/eds/services/github/githubCredentialProbe.test.ts",
