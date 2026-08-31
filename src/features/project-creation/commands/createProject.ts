@@ -16,7 +16,7 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 // Handler utilities and handlers
-import { projectCreationHandlers } from '@/features/project-creation/handlers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,
 } from '@/features/project-creation/helpers';

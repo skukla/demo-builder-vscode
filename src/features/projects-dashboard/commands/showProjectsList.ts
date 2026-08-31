@@ -15,7 +15,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { HandlerContext } from '@/types/handlers';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 

@@ -327,3 +327,4 @@ never filed anywhere until now.
 - 2026-08-31  test: the 243 deferred loggers were 217 convertible and 26 real — 466 down to 30 (`d29a94838`)
 - 2026-08-31  feat(tests): the cast is the smell — nine ratcheting ceilings, target zero (`1b214a9ad`)
 - 2026-08-31  test(helpers): the StateManager fake covers the interface, and the typing caught four defects (`76190bd73`)
+- 2026-08-31  test(logging): the factory-logger group closes — 23 to zero, and the blind spot with it (`9371cc9be`)

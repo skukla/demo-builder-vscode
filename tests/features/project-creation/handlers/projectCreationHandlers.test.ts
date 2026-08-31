@@ -5,9 +5,7 @@
  * Verifies all required handlers are registered and accessible.
  */
 
-import {
-    projectCreationHandlers,
-} from '@/features/project-creation/handlers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { getRegisteredTypes, hasHandler } from '@/core/handlers/dispatchHandler';
 
 describe('projectCreationHandlers', () => {
