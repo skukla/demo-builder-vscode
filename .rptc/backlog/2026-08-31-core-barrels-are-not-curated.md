@@ -4,78 +4,86 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
-# ADR-022 says core barrels are a curated surface. They are not.
+# Retire the 43 re-export index files, module by module
 
-Filed 2026-08-31 on the owner's challenge — "but should core barrels be real?" —
-asked while five FEATURE barrels were being retired under
-[ADR-022](../../docs/architecture/adr/022-barrel-files.md) and a test-setup change
-had just pointed every logging mock AT a core barrel.
+The rule is ratified, documented and enforced as of 2026-08-31. **This item is now
+the conversion**: work the `reExportIndex` ledger down to zero, methodically, in
+loop-sized batches.
 
-The two are not in conflict, and the reason matters: **ADR-022 bans feature
-barrels, not core ones.** `src/CLAUDE.md` states it directly — "`@/core/*` and
-`@/types` are imported through their barrels; features are imported directly and
-get no barrel". Production agrees: **53 source files import `@/core/logging` and
-exactly ONE imports `@/core/logging/debugLogger`.** A barrel that 53 files import
-is the real module, whatever anyone thinks of barrels.
+## What was decided, and why it is not the obvious reason
 
-## What is wrong is the JUSTIFICATION
+A module is imported by the path that DEFINES the symbol. No re-export-only
+`index.ts`, in core or in a feature. The convention is in
+[the handbook](../../docs/development/handbook.md) §2; the decision and its sources
+are in [ADR-022](../../docs/architecture/adr/022-barrel-files.md)'s 2026-08-31
+amendment.
 
-ADR-022 defends core barrels as "a shared surface worth curating". Measured, they
-are not curated — they are accumulating exactly the way the feature barrels did.
+It is adopted for ONE reason: **a symbol reachable by two paths is a symbol whose
+home nobody can name.** The published case against barrels is mostly performance
+and it was checked and rejected as a justification here — Atlassian's -75% build
+minutes came from affected-test selection across 90,000 files, and this repo runs
+its full suite in one go over a 3.95s typecheck. Anyone reviving that argument to
+justify hurrying this work should re-measure first.
 
-**103 of 165 named exports are never imported through their barrel — 62%.**
+The cost is accepted knowingly: refactoring gets more fragile, because moving a
+file changes every importer rather than one barrel line.
 
-| Barrel | Named exports | Used | Unused |
-|---|---|---|---|
-| `@/types` | 43 | 7 | 36 |
-| `@/core/validation` | 31 | 14 | 17 |
-| `@/core/utils` | 28 | 12 | 16 |
-| `@/core/shell` | 22 | 5 | 17 |
-| `@/core/state` | 13 | 3 | 10 |
-| `@/core/logging` | 9 | 7 | 2 |
-| `@/core/handlers` | 7 | 3 | 4 |
-| `@/core/cache` | 5 | 4 | 1 |
-| `@/core/base`, `communication`, `di`, `vscode` | 7 | 7 | 0 |
+## The state, frozen 2026-08-31
 
-For scale: the `eds` FEATURE barrel was retired the same day for having 41 export
-lines with 5 in use. `@/core/shell` is 22 with 5, and `@/types` is 43 named with 7.
-Same shape, opposite verdict, and the only thing separating them is which ADR
-covers them.
+`reExportIndex` in `tests/sop/architecture-rules.exemptions.json` — **43 rows**,
+shrink-only and bidirectional. Every row carries its kind and its importer count.
 
-**Caveat on the numbers, stated so nobody over-reads them.** The count is named
-`export { … }` entries matched against `import { … } from '<exact alias>'`. Seven
-`export *` lines in `@/types` (and one in `@/core/utils`) are not counted, so both
-its surface and its usage are understated. The 62% is the direction, not a
-precise figure — re-measure before acting.
+| Kind | Count | What conversion means |
+|---|---|---|
+| **PURE** — re-export only | 20 | Repoint its importers to the declaring modules, delete the file |
+| **MIXED** — also declares its own code | 23 | Move the declarations to a named module FIRST, then treat as PURE |
 
-## What to do, and what NOT to do
+MIXED is the harder and more interesting half. A file that both declares and
+re-exports is holding public and private code together — LedgerHQ's framing:
+"having to pick which names leave a file proves that file holds both public and
+private code."
 
-**Do not delete the core barrels.** They are what production imports, and the
-churn would be hundreds of import lines for no behavioural gain. It would also
-break the rule the test setup now depends on: mock `@/core/logging`, because that
-is what the code takes.
+The largest by importers, which is the order NOT to do them in:
 
-Two things worth doing:
+    172  src/types/index.ts          MIXED-adjacent, 11 re-export lines
+    103  src/core/shell/index.ts     MIXED — 12 re-exports, 3 own declarations
+     89  src/core/logging/index.ts   MIXED — 5 re-exports, 2 own declarations
+     85  src/core/di/index.ts        PURE — 1 re-export line
+     58  src/core/state/index.ts     MIXED — 12 re-exports, 4 own declarations
 
-1. **Correct ADR-022's reasoning.** It currently justifies the split on
-   curation, and curation is not what is happening. The honest justification is
-   about DIRECTION: core is the shared floor everything is built on, so a stable
-   named surface for it is worth having; features are meant to stay replaceable,
-   and a feature barrel mostly makes cross-feature imports easy, which is the
-   thing to discourage. That argument survives the measurement. The curation one
-   does not.
+## How to work it — smallest first, and why
 
-2. **Trim the dead surface.** 103 unused re-export entries cost nothing at
-   runtime and do cost a reader: a barrel that exports 22 names when 5 are used
-   overstates what the module offers. `dead-code-scan` already reports unused
-   exports; the barrels are where its findings are least obvious, because the
-   symbol IS exported and IS re-exported — just never imported by that path.
+**Start at the bottom of the importer list, not the top.** The early conversions
+are where the codemod gets debugged, and a mistake in a 3-importer barrel is
+recoverable in a way that a mistake in `@/types`' 172 is not. `@/core/di` is the
+useful early exception: 85 importers but ONE re-export line, so it is a wide,
+shallow conversion — good for proving the mechanical approach at scale before
+anything subtle.
 
-## Why this is its own item
+**Do MIXED files in two commits**, never one: move the declarations out, gate,
+then remove the re-exports. Collapsing them makes the diff unreviewable and hides
+which half broke something.
 
-It surfaced during [[PL-16]] and belongs to neither that item nor [[PL-13]]. It is
-a documentation correction plus a cleanup, gated on nothing, and it should not
-ride along inside a test-fixture consolidation where nobody would find it later.
+**Build the codemod as a lint rule, not a script.** Atlassian's approach was an
+ESLint rule that functioned as both linter and transformer across ~90,000 files.
+Ours is ~785 importers; the same shape converts them AND prevents regression,
+which is what "enforced" means here.
+
+**Delete the ledger row in the same commit as the fix.** The check fails on a
+stale row, so this is not optional — it is how the ratchet stays honest.
+
+## Done when
+
+`reExportIndex` is empty, the eight webview bundle entries are the only
+`index.tsx` files left in `src/`, and the handbook's "43 that predate the rule"
+sentence has been updated to say the ledger is closed.
+
+## Shipped so far
+
+- 2026-08-31  Rule ratified by the owner, documented in the handbook and ADR-022,
+  and enforced by the `reExportIndex` ledger seeded at 43 with per-file conversion
+  cost. Both directions control-tested; webview bundle entries excluded by reading
+  `WEBVIEW_ENTRIES` from esbuild.config.js rather than by a hand-list (`cd13b1e09`)

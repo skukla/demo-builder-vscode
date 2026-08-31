@@ -303,7 +303,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
 | `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | active |
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | — | high | active |
-| `PL-31` | chore | [ADR-022 says core barrels are a curated surface. They are not.](2026-08-31-core-barrels-are-not-curated.md) | — | med | backlog |
+| `PL-31` | chore | [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | active |
 
 <!-- END GENERATED registry -->
 
