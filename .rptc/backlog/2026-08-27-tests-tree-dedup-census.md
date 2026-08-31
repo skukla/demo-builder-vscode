@@ -115,3 +115,4 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-30  docs(plan): lane C2 partly done — the half that needed no decision (`3cdd49557`)
 - 2026-08-31  test(sop): four test files were copies of other test files, and nothing could see it (`3e9eada9c`)
 - 2026-08-31  test(webview): one real missing helper, and two clones that are not debt (`ed2ad0176`)
+- 2026-08-31  test(sop): three more duplicate suites, and the mutation numbers were measuring the wrong test set (`6720005dd`)
