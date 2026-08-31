@@ -99,6 +99,60 @@ suites share one root: `executeEdsPipeline` takes three whole service classes wi
 methods between them. Narrowing that is a real piece of work rather than a step, and it
 should be decided rather than slipped into an overnight batch.
 
+## The mock-wall job is finished, and it was not the job I thought
+
+**In one paragraph:** all 28 test suites that faked out a shared service are done, and
+the count is now zero. But only six of them needed the change I had been building —
+a way to pass the service in. The other twenty-two just needed the fake DELETED: nothing
+was using it. I spent two working sessions designing careful plumbing for files that
+needed a one-line removal, because I kept asking "how would this test pass the service
+in?" instead of "does this fake do anything at all?". The second question takes one test
+run to answer. It is now written into the handbook so the next person asks it first.
+
+### What a fake service turned out to be, four different things
+
+The 28 were counted by one signal — a test file naming a service module. Reading them
+one at a time, that signal covers four unrelated situations:
+
+1. **The fake does nothing.** The service gets built and never used, because something
+   further along is already faked. 22 of 28. Delete it.
+2. **The test genuinely needs to control the service.** 6 of 28. These get an optional
+   parameter that defaults to the real thing, so nothing about how the app runs changes.
+3. **The test is checking the service was BUILT correctly** — with the right credentials.
+   Passing a ready-made service in would delete the very thing being checked. The fix is
+   to pass a *maker* rather than a made thing.
+4. **The test swaps the fake out mid-run.** One file did this five times, and what a test
+   got depended on whether an earlier test had run first.
+
+### Two things this turned up that were not on anyone's list
+
+**A whole step of project deletion was untested, and it looked tested.** When you delete
+a storefront, the extension is supposed to pull its pages off the public CDN and destroy
+the site's access key first. That step's fake was stale — it offered a method the code
+had stopped calling and was missing one the code needs — so the step crashed on its
+first line, the crash was swallowed as a warning, and all 23 tests passed. I proved it
+rather than assumed it: a deliberate crash placed one line further in left the suite
+green. Without that step a deleted demo keeps serving its pages publicly with nobody
+able to take them down, and a live credential outlives the site it belonged to. Both are
+now covered by four new tests.
+
+**Five function signatures were asking for far more than they use.** A function would
+declare it needs a whole service — a class with dozens of methods — and then call two of
+them. That is *why* the fake existed: there was no way to supply "two methods" so the
+test faked the entire module. Narrowing each signature to what it actually calls fixed
+the test and left a more honest signature behind. Nothing about how the app runs changed:
+the real services still satisfy the narrower descriptions.
+
+### Corrections I made along the way
+
+- I recorded one file as "leave this one alone, a fake is genuinely needed here" and was
+  wrong. It needed the fake deleted, same as twenty-one others.
+- One commit reported "21 of 28 done". That was two different counting rules subtracted
+  from each other. The honest figure at that moment was lower, and the final one is 28.
+- A bulk find-and-replace across one test file spilled into the assertions below the
+  lines it was meant to change. Three tests failed and named the wrong thing, which is
+  how it was caught. Fixed by hand and re-read.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?

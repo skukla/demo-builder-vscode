@@ -219,3 +219,4 @@ the point of Phase C existing.
 - 2026-08-30  docs(handbook): pair the three verification rules that lived only in CLAUDE.md (`b95db0807`)
 - 2026-08-30  docs: standardize the front door — one per area, and the frontend had none (`e5fe59592`)
 - 2026-08-30  docs(backlog): the second-pass table still listed Phase B as pending (`87b7456a6`)
+- 2026-08-31  docs(handbook): pair ADR-016's three unstated builder rules (`0420e2fe9`)

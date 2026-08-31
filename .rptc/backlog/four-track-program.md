@@ -114,3 +114,4 @@ the state table above is the record until there is real work to hold.
   all 13 named files still on disk. The item is live, not stale.
 - 2026-08-30  docs(backlog): tracks 3 and 4 were never "not started" — they built the handbook (`baf02741e`)
 - 2026-08-30  docs(backlog): the four-track program existed nowhere (`acc687f94`)
+- 2026-08-30  chore(backlog): pre-loop reconciliation for track 3 (`8e48d66e6`)
