@@ -4,7 +4,8 @@
  * Builds installation steps for prerequisites.
  */
 
-import type { PrerequisiteDefinition, InstallStep } from '../types';
+import type { PrerequisiteDefinition } from '../types';
+import type { InstallStep } from '@/types';
 import { TIMEOUTS } from '@/core/utils';
 
 export interface InstallStepsResult {

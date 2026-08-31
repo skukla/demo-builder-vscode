@@ -20,7 +20,7 @@ import type {
     ExecutionContext,
 } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { InstallStep } from '@/types';
 import type { Logger } from '@/types/logger';
 
 /**

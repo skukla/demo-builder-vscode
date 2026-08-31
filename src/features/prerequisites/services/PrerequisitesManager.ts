@@ -1,10 +1,9 @@
 import * as path from 'path';
 import { getInstallSteps } from './installation';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
+import type { InstallStep, ProgressMilestone } from '@/types';
 import type {
     PrerequisiteCheck,
-    ProgressMilestone,
-    InstallStep,
     PrerequisiteInstall,
     PrerequisitePlugin,
     PrerequisiteDefinition,

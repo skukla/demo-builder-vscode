@@ -27,6 +27,9 @@ export {
 // Logger types
 export * from './logger';
 
+// Prerequisites installation-step shapes (shared with core's progress engine)
+export * from './prerequisites';
+
 // State management types
 export * from './state';
 
