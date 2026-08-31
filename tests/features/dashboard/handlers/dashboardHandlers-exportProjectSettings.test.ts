@@ -32,7 +32,7 @@ jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
 }));
 
 const mockExportToFile = jest.fn();
-jest.mock('@/features/projects-dashboard/services', () => ({
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettingsToFile: (...args: unknown[]) => mockExportToFile(...args),
 }));
 

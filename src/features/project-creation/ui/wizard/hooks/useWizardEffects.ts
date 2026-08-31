@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
+import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks/useFocusTrap';
 import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

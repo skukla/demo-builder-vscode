@@ -25,7 +25,7 @@ import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';

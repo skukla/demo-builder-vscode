@@ -1,5 +1,5 @@
 import { createSelectionStepFake } from '../../../../helpers/selectionStepFake';
-import type { UseSelectionStepResult } from '@/core/ui/hooks';
+import type { UseSelectionStepResult } from '@/core/ui/hooks/useSelectionStep';
 import { WizardState, Workspace } from '@/types/webview';
 
 // Test data

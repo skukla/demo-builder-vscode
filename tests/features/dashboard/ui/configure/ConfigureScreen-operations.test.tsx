@@ -7,9 +7,12 @@ import '@testing-library/jest-dom';
 import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
 
 // Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({

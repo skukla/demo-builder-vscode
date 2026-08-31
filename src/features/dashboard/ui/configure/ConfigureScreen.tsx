@@ -36,7 +36,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // ones and drive the rail the way a user does.
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';

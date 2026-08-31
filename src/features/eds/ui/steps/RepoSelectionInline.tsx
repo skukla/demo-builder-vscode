@@ -36,7 +36,7 @@ import {
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
-import { useSelectionStep } from '@/core/ui/hooks';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import {
     isValidRepositoryName,

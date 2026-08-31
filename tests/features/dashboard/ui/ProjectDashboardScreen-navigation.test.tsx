@@ -144,8 +144,11 @@ jest.mock('@spectrum-icons/workflow/Login', () => ({
 }));
 
 // Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: () => ({ current: null }),
+}));
+
+jest.mock('@/core/ui/hooks/useTimerCleanup', () => ({
     useSingleTimer: () => ({
         ref: { current: null },
         set: jest.fn(),

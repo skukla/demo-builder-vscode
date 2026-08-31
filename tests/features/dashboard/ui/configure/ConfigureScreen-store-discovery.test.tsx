@@ -16,9 +16,12 @@ import { mockProject, mockComponentsData, selectSection } from './ConfigureScree
 
 // ── Hook mocks (declared first — jest.mock calls are hoisted) ───────────────
 
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({

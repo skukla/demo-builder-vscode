@@ -71,9 +71,15 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 
 // Mock the projects-dashboard services barrel (dynamic-imported by the edit/
 // rename/export handlers) to avoid its deep dependency chain
-jest.mock('@/features/projects-dashboard/services', () => ({
-    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsSerializer', () => ({
+    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -209,7 +215,7 @@ describe('Dashboard Action Handlers', () => {
             const { mockContext, mockProject } = setupMocks();
             const {
                 extractSettingsFromProject,
-            } = require('@/features/projects-dashboard/services');
+            } = require('@/features/projects-dashboard/services/settingsSerializer');
 
             const result = await handleEditProject(mockContext);
 

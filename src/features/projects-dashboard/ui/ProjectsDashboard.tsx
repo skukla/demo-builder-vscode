@@ -23,7 +23,7 @@ import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
 

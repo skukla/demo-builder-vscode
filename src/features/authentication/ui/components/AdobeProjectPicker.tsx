@@ -37,7 +37,7 @@ import { ActionButton, Text } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
 import React, { useCallback, useEffect, useState } from 'react';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
-import { useSelectionStep } from '@/core/ui/hooks';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { WizardSessionState, AdobeProject, WizardState } from '@/types/webview';
 

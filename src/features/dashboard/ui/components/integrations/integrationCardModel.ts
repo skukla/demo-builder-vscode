@@ -59,7 +59,7 @@ export type {
     CardStatus,
     CommerceScopePart,
     IntegrationCardModel,
-} from '@/core/ui/components/integrations';
+} from '@/core/ui/components/integrations/integrationCardModel.types';
 
 /**
  * The verb a status is ASKING for, or undefined when the card is idle.

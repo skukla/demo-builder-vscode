@@ -1,5 +1,5 @@
 import { createSelectionStepFake } from '../../../../helpers/selectionStepFake';
-import type { UseSelectionStepResult } from '@/core/ui/hooks';
+import type { UseSelectionStepResult } from '@/core/ui/hooks/useSelectionStep';
 import { AdobeProject, WizardState } from '@/types/webview';
 
 // Mock data — deletable:true because most delete-affordance tests exercise

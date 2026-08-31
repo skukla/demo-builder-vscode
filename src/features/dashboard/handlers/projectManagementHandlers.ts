@@ -29,7 +29,9 @@ export const handleEditProject: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { extractSettingsFromProject } = await import('@/features/projects-dashboard/services');
+    const { extractSettingsFromProject } = await import(
+        '@/features/projects-dashboard/services/settingsSerializer'
+    );
     // Include secrets — this is a local edit of the user's own project.
     const settings = extractSettingsFromProject(project, true);
 
@@ -172,7 +174,9 @@ export const handleExportProjectSettings: MessageHandler<{
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { exportProjectSettingsToFile } = await import('@/features/projects-dashboard/services');
+    const { exportProjectSettingsToFile } = await import(
+        '@/features/projects-dashboard/services/settingsTransferService'
+    );
     try {
         const result = await exportProjectSettingsToFile(project, {
             path: data?.path,

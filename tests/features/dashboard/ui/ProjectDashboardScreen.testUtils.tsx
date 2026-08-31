@@ -8,8 +8,11 @@ import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboard
 import '@testing-library/jest-dom';
 
 // Mock the webview-ui utilities and hooks
-jest.mock('@/core/ui/hooks', () => ({
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useTimerCleanup', () => ({
     useSingleTimer: jest.fn(() => ({
         ref: { current: null },
         set: jest.fn(),

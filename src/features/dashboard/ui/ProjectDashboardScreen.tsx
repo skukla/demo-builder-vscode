@@ -25,7 +25,8 @@ import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField'
 import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
-import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { useSingleTimer } from '@/core/ui/hooks/useTimerCleanup';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 
