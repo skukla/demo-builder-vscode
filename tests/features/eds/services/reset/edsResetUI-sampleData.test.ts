@@ -31,6 +31,7 @@ import {
     mockEnsureProjectOrgContext,
     resetEdsProjectWithUI,
     vscode,
+    fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -157,7 +158,8 @@ async function flush(): Promise<void> {
 }
 
 function run(project: Project) {
-    return resetEdsProjectWithUI({ meshDeps, project, context: createContext(), packages: testPackages });
+    return resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService, meshDeps, project, context: createContext(), packages: testPackages });
 }
 
 beforeEach(() => {

@@ -15,6 +15,7 @@
  */
 
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
+import type { GitHubAppService } from '@/features/eds/services/github/githubAppService';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: mockEnsureDaLiveAuth,
@@ -86,11 +87,6 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
         getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
     })),
 }));
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
 // Mock ensureDaLiveAuth
 const mockEnsureDaLiveAuth = jest.fn();
 // Mock ensureAdobeIOAuth
@@ -104,10 +100,24 @@ const mockAuthService = {
 // checkOrgContext (it owns the "Switch IMS Org" prompt + forced login internally).
 const mockEnsureProjectOrgContext = jest.fn();
 
+/**
+ * The GitHub App service the specs hand to `resetEdsProjectWithUI` via its options,
+ * replacing the module mock (ADR-016 wall). The App check reached the class through
+ * `await import(...)`, so interception was the only way in until the entry point
+ * offered a seam.
+ *
+ * Partial by design — `isAppInstalled` is all `resolveAppInstallation` calls — so it
+ * is cast into the real type once, here, per ADR-016 rule 2.
+ */
+const fakeGitHubAppService = {
+    isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
+} as unknown as GitHubAppService;
+
 export * as vscode from 'vscode';
 export { resetEdsProjectWithUI };
 
 export {
+    fakeGitHubAppService,
     mockAuthService,
     mockEnsureAdobeIOAuth,
     mockEnsureDaLiveAuth,

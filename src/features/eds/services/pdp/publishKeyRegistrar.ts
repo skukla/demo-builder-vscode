@@ -50,6 +50,33 @@ export interface RegisterPublishKeyResult {
 }
 
 /**
+ * The Helix calls this function makes, as a seam a caller can supply.
+ *
+ * `HelixService` is STATELESS — its credentials arrive at construction and are never
+ * mutated — so building one here costs nothing and the construction stays put
+ * (ADR-015's amendment rules on state, not location). What it did cost was TEST
+ * DESIGN: a suite that cannot hand the collaborator in has to `jest.mock` the whole
+ * module, and 25 suites do exactly that. ADR-016 records the list and calls converting
+ * them the largest test-design win available.
+ *
+ * So this is the injection seam `tests/README.md` already prescribes for config leaves,
+ * applied to a service: production callers take the default and are unchanged; a test
+ * passes a fake through the front door and asserts on the ARGUMENTS it received, which
+ * a module mock cannot see.
+ */
+export interface PublishKeyHelix {
+    forgetApiKey(owner: string, repo: string): Promise<void>;
+    createAdminApiKey(owner: string, repo: string): Promise<string | null>;
+}
+
+/** The real Helix, bound to this call's logger and token source. */
+const realHelix = (logger: Logger, tokenProvider: PublishKeyTokenProvider): PublishKeyHelix => ({
+    forgetApiKey: (owner, repo) => HelixService.forgetApiKey(owner, repo),
+    createAdminApiKey: (owner, repo) =>
+        new HelixService(logger, undefined, tokenProvider).createAdminApiKey(owner, repo),
+});
+
+/**
  * Mint a fresh site-scoped publish key and register it with the shared action.
  *
  * Always re-mints rather than reusing a cached key: the only reason to call this
@@ -58,11 +85,13 @@ export interface RegisterPublishKeyResult {
  * @param tokenProvider DA.live token source (authenticates BOTH the mint and the register)
  * @param site          `{ owner, repo }` — the Helix org/site pair
  * @param logger        pipeline logger; failures land here, never as a throw
+ * @param helix         Helix seam; defaults to the real service. Tests hand in a fake.
  */
 export async function registerPublishKey(
     tokenProvider: PublishKeyTokenProvider,
     site: { owner: string; repo: string },
     logger: Logger,
+    helix: PublishKeyHelix = realHelix(logger, tokenProvider),
 ): Promise<RegisterPublishKeyResult> {
     const target = `${site.owner}/${site.repo}`;
     try {
@@ -82,9 +111,8 @@ export async function registerPublishKey(
 
         // The previous key died with the last config write; drop our stale copy
         // so the mint below is genuinely fresh rather than a cache hit.
-        await HelixService.forgetApiKey(site.owner, site.repo);
+        await helix.forgetApiKey(site.owner, site.repo);
 
-        const helix = new HelixService(logger, undefined, tokenProvider);
         logger.debug(`[PublishKey] Minting a publish key for ${target}`);
         const publishKey = await helix.createAdminApiKey(site.owner, site.repo);
         if (!publishKey) {

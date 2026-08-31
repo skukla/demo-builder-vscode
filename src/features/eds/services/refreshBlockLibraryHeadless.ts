@@ -55,6 +55,16 @@ export interface RefreshBlockLibraryHeadlessDeps {
     logger: Logger;
     /** Progress messages (the command bridges these to a progress notification). */
     onProgress?: (message: string) => void;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and the
+     * context's GitHub/DA.live token sources — production never passes it.
+     *
+     * It exists so a test can hand one in rather than `jest.mock`-ing the module,
+     * which is the conversion ADR-016 lists for this file. Nothing here reads the
+     * service: it is forwarded to `executeEdsPipeline`, so the seam costs one
+     * optional field and removes a module wall.
+     */
+    helixService?: HelixService;
 }
 
 /**
@@ -86,7 +96,8 @@ export async function refreshBlockLibraryHeadless(
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
     const { tokenService: githubTokenService, fileOperations: githubFileOps } =
         getGitHubServices(handlerContext);
-    const helixService = new HelixService(logger, githubTokenService, tokenProvider);
+    const helixService =
+        deps.helixService ?? new HelixService(logger, githubTokenService, tokenProvider);
 
     const reportProgress = (info: { operation: string; message: string }): void => {
         onProgress?.(info.message);

@@ -42,7 +42,10 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type { StorefrontSetupProgressPayload, StorefrontSetupProgressPhase } from '@/types/webviewPayloads';
+import type {
+    StorefrontSetupProgressPayload,
+    StorefrontSetupProgressPhase,
+} from '@/types/webviewPayloads';
 
 // Public type re-exports
 export type { StorefrontSetupResult } from './storefrontSetupTypes';
@@ -58,9 +61,17 @@ function createSetupServices(context: HandlerContext): SetupServices {
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {
-        githubRepoOps: new GitHubRepoOperations(githubTokenService, ServiceLocator.getCommandExecutor(), context.logger),
+        githubRepoOps: new GitHubRepoOperations(
+            githubTokenService,
+            ServiceLocator.getCommandExecutor(),
+            context.logger,
+        ),
         githubFileOps: new GitHubFileOperations(githubTokenService, context.logger),
-        githubAppService: new GitHubAppService(githubTokenService, context.logger, daLiveTokenProvider),
+        githubAppService: new GitHubAppService(
+            githubTokenService,
+            context.logger,
+            daLiveTokenProvider,
+        ),
         daLiveContentOps: new DaLiveContentOperations(daLiveTokenProvider, context.logger),
         helixService: new HelixService(context.logger, githubTokenService, daLiveTokenProvider),
         daLiveAuthService,
@@ -107,10 +118,7 @@ function buildPipelineProgressCallback(
     context: HandlerContext,
 ): (info: PipelineProgressInfo) => void {
     return (info) => {
-        const mapping: Record<
-            string,
-            { phase: StorefrontSetupProgressPhase; progress: number }
-        > = {
+        const mapping: Record<string, { phase: StorefrontSetupProgressPhase; progress: number }> = {
             'content-clear': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_CLEAR },
             'content-copy': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_COPY_START },
             'block-library': { phase: 'block-library', progress: PIPELINE_PROGRESS.BLOCK_LIBRARY },
@@ -150,7 +158,6 @@ function buildPipelineProgressCallback(
     };
 }
 
-
 /**
  * Run Phase 2 (Helix config) and Phase 3 (code sync) with DA.live auth recovery.
  * Returns blockCollectionIds and any early-return result.
@@ -177,12 +184,7 @@ async function runConfigCodeSyncPhases(
             if (phase2Result.earlyReturn) {
                 return { blockCollectionIds: undefined, earlyReturn: phase2Result.earlyReturn };
             }
-            const phase3Result = await executePhaseCodeSync(
-                context,
-                edsConfig,
-                services,
-                repoInfo,
-            );
+            const phase3Result = await executePhaseCodeSync(context, edsConfig, services, repoInfo);
             if (phase3Result) {
                 return {
                     blockCollectionIds: phase2Result.blockCollectionIds,
@@ -202,14 +204,14 @@ async function runConfigCodeSyncPhases(
                     progress: -1,
                 } satisfies StorefrontSetupProgressPayload),
             onBeforeRetry: async () => {
-            context.logger.info(
-                '[Storefront Setup] DA.live re-authenticated, resuming configuration',
-            );
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'code-sync',
-                message: 'Resuming setup...',
-                progress: 40,
-            } satisfies StorefrontSetupProgressPayload);
+                context.logger.info(
+                    '[Storefront Setup] DA.live re-authenticated, resuming configuration',
+                );
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'code-sync',
+                    message: 'Resuming setup...',
+                    progress: 40,
+                } satisfies StorefrontSetupProgressPayload);
             },
         },
     );
@@ -311,12 +313,12 @@ async function runEdsPipelineWithRecovery(
                     progress: -1,
                 } satisfies StorefrontSetupProgressPayload),
             onBeforeRetry: async () => {
-            logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'content',
-                message: 'Resuming content copy...',
-                progress: 50,
-            } satisfies StorefrontSetupProgressPayload);
+                logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
+                await context.sendMessage('storefront-setup-progress', {
+                    phase: 'content',
+                    message: 'Resuming content copy...',
+                    progress: 50,
+                } satisfies StorefrontSetupProgressPayload);
             },
         },
     );
@@ -339,6 +341,8 @@ async function runEdsPipelineWithRecovery(
  * @param edsConfig - EDS configuration from wizard
  * @param signal - Abort signal for cancellation
  * @param options - Optional block library and feature pack parameters
+ * @param servicesOverride - Service bundle seam; defaults to `createSetupServices`.
+ *   Production never passes it.
  * @returns Setup result with repo details
  */
 export async function executeStorefrontSetupPhases(
@@ -346,9 +350,20 @@ export async function executeStorefrontSetupPhases(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
+    servicesOverride?: SetupServices,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
-    const services = createSetupServices(context);
+    /**
+     * One seam for the whole bundle, rather than one per service.
+     *
+     * `createSetupServices` builds SIX collaborators, three of which are stateless
+     * classes that suites could only supply by mocking their modules — ADR-016 counts
+     * four suites here module-mocking `ConfigurationService` and four mocking
+     * `GitHubAppService`, plus `HelixService` on top. Taking the bundle rather than
+     * each member means one optional parameter retires all three walls at once, and a
+     * suite hands in exactly the members it asserts on.
+     */
+    const services = servicesOverride ?? createSetupServices(context);
 
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent =

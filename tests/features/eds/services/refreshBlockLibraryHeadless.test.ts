@@ -48,10 +48,8 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({})),
-}));
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { refreshBlockLibraryHeadless } from '@/features/eds/services/refreshBlockLibraryHeadless';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -77,11 +75,21 @@ function makeLogger(): Logger {
 
 const PROJECT = { name: 'Demo', path: '/p' } as unknown as Project;
 
+/**
+ * Helix arrives through the deps object rather than by mocking the module. The old
+ * mock returned `() => ({})` and asserted nothing — it existed only so the real
+ * constructor would not run, which is the definition of a module wall (ADR-016).
+ * Nothing in this file reads the service; the pipeline it is forwarded to is itself
+ * faked, so an empty object typed at the seam is honest about that.
+ */
+const fakeHelix = {} as unknown as HelixService;
+
 function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: PROJECT,
         context: {} as never,
         logger: makeLogger(),
+        helixService: fakeHelix,
         ...overrides,
     };
 }

@@ -597,6 +597,45 @@ check says so and names the file.
 > *Why:* twenty-six different fakes of one object means nobody knows what the fake should be.
 > Enforced by `tests/sop/builder-uniqueness.test.ts`.
 
+> **Convention.** A fake that a SECOND feature directory needs lives in `tests/helpers/`.
+> A `*.testUtils.ts` beside a suite is for setup specific to that subject.
+> *Why:* the test is mechanical — does another feature need it? The suite already holds
+> 98 builder functions; the problem was never unwillingness to share but that 14 of those
+> NAMES are defined in more than one file, so there is no canonical one to find and
+> writing another is cheaper than searching.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — where a
+> builder belongs is a judgement about who needs it.
+
+> **Convention.** A builder returns the REAL type. Never `as never`, never `as any` on
+> the builder itself. Where the structural fake is partial, cast the object literal INTO
+> the return type at the builder's boundary — once, where it is visible.
+> *Why:* a builder typed `(): Logger` stops compiling the day `Logger` gains a method —
+> one failure, one fix, at the one place that needs changing. A fake cast to `never`
+> fails nothing and silently ceases to resemble what it stands for. This is the repo's
+> standing "a cast at a call boundary is a silenced type error", applied to test code
+> where it had been ignored.
+>
+> Watched pay off on 2026-08-31: converting `publishKeyRegistrar`'s suite off its module
+> mock let it pass a typed logger, and typing it FAILED THE BUILD on `logger.debug.mock`
+> — a real `Logger` has no `.mock`. Eleven `as never` casts had been hiding that. The
+> answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at the call, with
+> the mock still reachable.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced directly** —
+> `npm run typecheck:tests` catches it the moment a builder is honestly typed, which is
+> the point.
+
+> **Convention.** A fixture's shape is READ, not remembered. A builder's method list
+> comes from the real interface plus what callers actually use; a data fixture is copied
+> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
+> never a re-implementation of one the suite already has a builder for.
+> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
+> accessor touches it. `componentInstances` is the one that catches people — a record
+> keyed by component id, not an array, and a fixture inventing `components: [...]`
+> compiles cleanly because the field is optional.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
+> being able to state a shape without naming the file you read it from, which no check
+> can ask.
+
 > **Convention.** Do not mock a configuration leaf.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
@@ -630,20 +669,30 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 72 conventions. 60 of them are enforced; 12 are not.**
+**This handbook states 75 conventions. 60 of them are enforced; 15 are not.**
 
-The nine that remain are not one thing, and treating them as one is what kept them open:
+The fifteen that remain are not one thing, and treating them as one is what kept them
+open:
 
-- **Eight cannot have an enforcer.** Which test tier fits, whether a metric measures the
-  defect or only its shape, naming the command that would prove you wrong, diffing a
+- **Fourteen cannot have an enforcer.** Which test tier fits, whether a metric measures
+  the defect or only its shape, naming the command that would prove you wrong, diffing a
   test's assertions after restructuring it, whether a comment about another module is
   actually true, whether you aimed a check at the right question, whether a matching
-  string has been read back to its source, and whether an identifier in prose was copied
-  or remembered. Each is a judgement about intent, and a check that scored it would be
-  measuring shape — the exact mistake two of them warn about. These are written down for
-  the reader, not pending work.
+  string has been read back to its source, whether an identifier in prose was copied or
+  remembered, whether a destructive tool carries the flag its REACH deserves, whether a
+  tool hands off instead of erroring, whether a selection handler cleared its dependents,
+  whether a name follows a convention nobody has broken, where a shared fake belongs, and
+  whether a fixture's shape was read or invented. Each is a judgement about intent, and a
+  check that scored it would be measuring shape — the exact mistake two of them warn
+  about. These are written down for the reader, not pending work.
 - **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
   fail the build rather than protect anything. It waits on the CSS migration (PL-21).
+
+The count of unenforced conventions **tripled** across 2026-08-30/31, and that is the
+scorecard getting honest rather than the codebase getting worse. Every one of them was
+already a rule somewhere — in an ADR, in a directory guide, in `CLAUDE.md` — being
+followed and going unexplained. Writing them here does not weaken enforcement; it stops
+the handbook implying that "documented" and "checked" are the same word.
 
 The last three joined on 2026-08-30 and had lived only in `CLAUDE.md` until then — seen by
 every agent session, never explained to a human reader. One of them was violated the same

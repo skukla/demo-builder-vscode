@@ -22,6 +22,7 @@
  */
 
 import type { Project } from '@/types';
+import type { PdpPublisher } from '@/features/eds/services/catalogPrewarmService';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Progress reporter shared with the executor's other phases. */
@@ -33,11 +34,25 @@ export type ProgressReporter = (step: string, percent: number, message?: string)
  * @param context - Handler context (secrets, extension context, logger)
  * @param project - The project just created — real, saved, and seeded
  * @param progressTracker - Creation progress reporter
+ * @param makeHelix - Helix FACTORY seam. Defaults to constructing the real service
+ *   from this call's logger and secrets; production never passes it.
+ *
+ *   A factory rather than an instance, and that is load-bearing here: two of this
+ *   module's contracts are that NOTHING is constructed on the skip paths. An instance
+ *   parameter would be built by the caller whether or not the phase ran, so the
+ *   laziness those tests assert would become unobservable. A factory keeps "was it
+ *   built, and with what" answerable — which is exactly what the suite was written to
+ *   pin (it calls itself the witness for this conversion in its own header).
  */
 export async function executeCatalogPrewarmPhase(
     context: HandlerContext,
     project: Project,
     progressTracker: ProgressReporter,
+    makeHelix?: (
+        logger: HandlerContext['logger'],
+        secrets: HandlerContext['context']['secrets'],
+        daLiveTokenProvider: unknown,
+    ) => PdpPublisher,
 ): Promise<void> {
     const logger = context.logger;
     try {
@@ -72,11 +87,13 @@ export async function executeCatalogPrewarmPhase(
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(
             getDaLiveAuthService(context.context),
         );
-        const helixService = new HelixService(
-            logger,
-            new GitHubTokenService(context.context.secrets, logger),
-            daLiveTokenProvider,
-        );
+        const helixService = makeHelix
+            ? makeHelix(logger, context.context.secrets, daLiveTokenProvider)
+            : new HelixService(
+                  logger,
+                  new GitHubTokenService(context.context.secrets, logger),
+                  daLiveTokenProvider,
+              );
 
         progressTracker('Pre-warming Catalog', 96, 'Publishing product pages…');
 

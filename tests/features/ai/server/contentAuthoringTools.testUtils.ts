@@ -14,7 +14,7 @@
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helix/helixService';
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { isEdsProject } from '@/types/typeGuards';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -24,9 +24,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: async () => 'da-token' })),
-}));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn(),
 }));
 jest.mock('@/types/typeGuards', () => ({
     ...jest.requireActual('@/types/typeGuards'),
@@ -40,13 +37,21 @@ const getGitHubServicesMock = getGitHubServices as jest.Mock;
 const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const DaLiveContentOperationsMock = DaLiveContentOperations as unknown as jest.Mock;
-const HelixServiceMock = HelixService as unknown as jest.Mock;
+/**
+ * The Helix FACTORY the specs hand to `registerContentAuthoringTools`, replacing the
+ * module mock that existed only to intercept the constructor (ADR-016 mock wall).
+ *
+ * Kept named `HelixServiceMock` so the two specs read unchanged: they still call
+ * `.mockImplementation(() => helix)`, which now supplies the factory's return rather
+ * than the constructor's. Same expressive power, no module interception.
+ */
+const HelixServiceMock = jest.fn() as jest.Mock<HelixService, [unknown]>;
 const getCurrentProject = jest.fn();
 
 export { registerContentAuthoringTools };
 export { getDaLiveAuthService, getGitHubServices };
 export { DaLiveContentOperations };
-export { HelixService };
+export type { HelixService };
 export { isEdsProject };
 
 export {
