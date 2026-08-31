@@ -9,7 +9,7 @@
  * Step 9: Standardize DI patterns across the codebase
  */
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 
 // Mock dependencies
 jest.mock('@/core/shell', () => ({

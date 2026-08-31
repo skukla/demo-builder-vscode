@@ -15,7 +15,7 @@
 
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -28,7 +28,7 @@ jest.mock('@/core/shell', () => ({
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: () => '20',
 }));

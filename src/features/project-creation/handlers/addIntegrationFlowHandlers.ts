@@ -32,7 +32,7 @@
 // before the barrel's consoleApiHandlers re-export exists, capturing `undefined`.
 import { handleListOrgConsoleApis } from './consoleApiHandlers';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { handleAuthenticate, handleCheckAuth } from '@/features/authentication/handlers/authenticationHandlers';
 import { handleDeleteAdobeProject } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';

@@ -53,7 +53,7 @@ describe('AdobeSDKClient', () => {
             TokenManager: jest.fn(() => mockTokenManager),
         }));
 
-        jest.mock('@/core/di', () => ({
+        jest.mock('@/core/di/serviceLocator', () => ({
             ServiceLocator: {
                 getCommandExecutor: jest.fn(() => mockCommandManager),
             },

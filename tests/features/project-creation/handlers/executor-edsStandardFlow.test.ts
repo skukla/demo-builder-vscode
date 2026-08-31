@@ -24,7 +24,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),

@@ -7,7 +7,7 @@
  * - Updates UI with current status
  */
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionIdMapping, resolveRequiredMajors } from '@/features/prerequisites/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';

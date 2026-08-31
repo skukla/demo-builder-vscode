@@ -14,7 +14,7 @@ import {
     checkMeshExistence,
     fallbackMeshCheck,
 } from '../services/meshCheckHelpers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,

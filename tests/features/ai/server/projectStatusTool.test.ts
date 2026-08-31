@@ -10,7 +10,7 @@ import type { StateManager } from '@/core/state';
 import { expectWithinCeiling } from './responseCeilings';
 
 const isAuthenticated = jest.fn();
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: () => ({ isAuthenticated }) },
 }));
 

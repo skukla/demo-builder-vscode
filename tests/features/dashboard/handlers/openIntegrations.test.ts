@@ -31,7 +31,7 @@ jest.mock(
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
@@ -64,7 +64,7 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
 
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { handleOpenIntegrations } from '@/features/dashboard/handlers/dashboardHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 

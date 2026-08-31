@@ -20,7 +20,7 @@ jest.mock('@/features/authentication/services/consoleProjectTeardown', () => ({
 jest.mock('@/features/authentication/handlers/deleteAdobeProjectHandler', () => ({
     createTeardownDeps: jest.fn(() => ({})),
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
 

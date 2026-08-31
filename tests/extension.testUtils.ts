@@ -58,7 +58,7 @@ jest.mock('@/core/state', () => ({
     })),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         setSidebarProvider: jest.fn(),
         setCommandExecutor: jest.fn(),

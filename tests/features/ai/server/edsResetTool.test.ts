@@ -25,7 +25,7 @@ jest.mock('@/types/typeGuards', () => ({
 }));
 
 const mockInspectToken = jest.fn();
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: mockInspectToken }),

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
 import { ExecutionLock } from '@/core/utils';
 import type { Logger } from '@/types/logger';

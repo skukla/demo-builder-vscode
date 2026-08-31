@@ -23,7 +23,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         getNodeVersionKeys: jest.fn(),
     };
 });
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn(),

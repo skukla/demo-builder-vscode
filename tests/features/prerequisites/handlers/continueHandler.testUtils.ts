@@ -24,10 +24,10 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         // Keep handlePrerequisiteCheckError as the real implementation
     };
 });
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 
 export * as shared from '@/features/prerequisites/handlers/shared';
-export { ServiceLocator } from '@/core/di';
+export { ServiceLocator } from '@/core/di/serviceLocator';
 
 import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';

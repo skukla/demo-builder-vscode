@@ -41,7 +41,7 @@ import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { exportHandlers } from './exportHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';

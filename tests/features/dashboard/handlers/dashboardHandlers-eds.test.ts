@@ -41,7 +41,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
@@ -147,7 +147,7 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/dashboard/handlers/dashboardHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';

@@ -125,7 +125,7 @@ import {
     ensureDaLiveAuth,
     surfaceOverlayRegistrationFailure,
 } from '@/features/eds/handlers/edsHelpers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;

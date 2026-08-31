@@ -26,7 +26,7 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     AppManagementClient,

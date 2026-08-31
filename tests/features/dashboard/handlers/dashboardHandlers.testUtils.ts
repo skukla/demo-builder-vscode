@@ -9,7 +9,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         // ADR-015 (2026-08-28): handlers resolve these when assembling runner
         // deps, so the default answer has to be usable rather than undefined.
@@ -125,7 +125,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     const mockProject = createDashboardProject(projectOverrides);
 
     // Setup auth service mock (used by handleRequestStatus)
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService.mockReturnValue({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),

@@ -21,7 +21,7 @@ jest.mock('@/core/logging', () => ({
         logCommand: jest.fn(),
     })),
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: () => ({ execute: (...a: unknown[]) => mockExecute(...a) }),
     },

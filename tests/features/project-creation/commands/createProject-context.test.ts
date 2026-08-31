@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),

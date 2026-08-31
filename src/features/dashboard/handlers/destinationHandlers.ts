@@ -22,7 +22,7 @@ import {
     postRowStatus,
     runGuards,
 } from './appBuilderComponentHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import {

@@ -14,7 +14,7 @@ import {
     handleOpenDaLive,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { createProjectsDashboardProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock mesh staleness detection

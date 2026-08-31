@@ -13,7 +13,7 @@
 
 // Mock all dependencies (MUST be at top before imports)
 jest.mock('@/features/prerequisites/handlers/shared');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn(),

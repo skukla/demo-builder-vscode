@@ -21,7 +21,7 @@ jest.mock('@/features/authentication/handlers/eventLifecycleDeps', () => ({
     createEventLifecycleDeps: jest.fn(() => ({ deps: 'stub' })),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
 

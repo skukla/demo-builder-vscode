@@ -38,7 +38,7 @@ const mockCommandExecutor = {
     execute: jest.fn(),
     isPortAvailable: jest.fn(),
 };
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => mockCommandExecutor),
         reset: jest.fn(),

@@ -34,7 +34,7 @@ import {
     type VSCodeInfo,
 } from './diagnosticsReport';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type DebugLogger } from '@/core/logging';
 import type { StateManager } from '@/core/state/stateManager';
 import { maskEmail } from '@/core/utils/maskEmail';

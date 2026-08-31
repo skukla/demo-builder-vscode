@@ -15,7 +15,7 @@
  */
 
 // Mock dependencies
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs/promises');
 jest.mock('@/features/eds/handlers/edsHelpers');
 
@@ -28,7 +28,7 @@ jest.mock('@/core/validation', () => ({
 
 export * as fs from 'fs/promises';
 export { ResetAllCommand } from '@/commands/ResetAllCommand';
-export { ServiceLocator } from '@/core/di';
+export { ServiceLocator } from '@/core/di/serviceLocator';
 export * as vscode from 'vscode';
 
 export {

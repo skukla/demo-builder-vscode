@@ -33,7 +33,7 @@ import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

@@ -14,7 +14,7 @@ import {
 jest.mock('@/core/validation');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {

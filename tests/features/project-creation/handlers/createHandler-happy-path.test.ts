@@ -2,7 +2,7 @@ import { handleCreateProject } from '@/features/project-creation/handlers/create
 import * as validation from '@/core/validation';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
@@ -12,7 +12,7 @@ import { createProjectCreationContext, setupDefaultMocks, mockConfig } from './c
 jest.mock('@/core/validation');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {

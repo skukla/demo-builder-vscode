@@ -13,7 +13,7 @@
  * the sign-in itself.
  */
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 jest.mock(
@@ -50,7 +50,7 @@ function makeContext(project: unknown = { adobe: PROJECT_ADOBE }): HandlerContex
 
 function mockLogin(result: boolean): jest.Mock {
     const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(result);
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext });
     return loginAndRestoreProjectContext;
 }

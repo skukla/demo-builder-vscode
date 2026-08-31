@@ -6,7 +6,7 @@
 
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -19,7 +19,7 @@ jest.mock('@/core/shell', () => ({
 }));
 
 // Mock dependencies
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),

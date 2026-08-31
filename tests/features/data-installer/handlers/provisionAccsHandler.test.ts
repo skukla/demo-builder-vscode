@@ -36,7 +36,7 @@ jest.mock('@/features/data-installer/services/accsCredentialProvisioner', () => 
 jest.mock('@/features/data-installer/services/workspaceConfigDownload', () => ({
     downloadWorkspaceConfigJson: jest.fn(),
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })) },
 }));
 

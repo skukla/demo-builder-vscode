@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createEventLifecycleDeps } from '@/features/authentication/handlers/eventLifecycleDeps';
 import {
     deleteEventEntities,

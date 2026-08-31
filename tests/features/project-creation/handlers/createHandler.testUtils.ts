@@ -2,7 +2,7 @@ import { HandlerContext } from '@/types/handlers';
 import * as validation from '@/core/validation';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { createMockLogger } from '../../../helpers/loggerFake';

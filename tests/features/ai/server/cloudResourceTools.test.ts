@@ -13,7 +13,7 @@ const mockInspectToken = jest.fn();
 const mockListOrgSites = jest.fn();
 const mockDeleteAllSiteContent = jest.fn();
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: mockInspectToken }),

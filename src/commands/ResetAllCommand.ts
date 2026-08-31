@@ -6,7 +6,7 @@ import { resetAiOnboardingState } from './openInClaude';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';

@@ -26,7 +26,7 @@
 
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     getAppBuilderComponent,
     listAppBuilderComponents,

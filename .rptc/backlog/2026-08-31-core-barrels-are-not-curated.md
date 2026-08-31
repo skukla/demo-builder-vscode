@@ -92,3 +92,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): seven more barrels retired, and the mocks that pointed at them (`79c4d568e`)
 - 2026-08-31  refactor(barrels): the three barrels nobody imported through are gone — 43 to 40 (`8611f209f`)
 - 2026-08-31  refactor(barrels): export-star, namespace and dynamic imports — 33 to 30 (`2976547ee`)
+- 2026-08-31  refactor(barrels): core/base and the last of the small PURE rows — 30 to 26 (`606dc86e5`)

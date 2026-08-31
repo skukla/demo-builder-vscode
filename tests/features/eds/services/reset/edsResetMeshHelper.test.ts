@@ -35,7 +35,7 @@ jest.mock(
     { virtual: true }
 );
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getCachedOrganization: jest.fn().mockReturnValue(undefined),

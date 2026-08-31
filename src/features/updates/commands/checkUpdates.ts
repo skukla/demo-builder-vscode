@@ -21,7 +21,7 @@ import {
     type UpdateItem,
 } from './updateTypes';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';

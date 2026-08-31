@@ -66,7 +66,7 @@ export async function ensureWorkspaceRuntimeReady(
     }
     // Local consts hold the narrowed strings into the closure below.
     const { organization, projectId, workspace } = adobe;
-    const { ServiceLocator } = await import('@/core/di');
+    const { ServiceLocator } = await import('@/core/di/serviceLocator');
     const { ensureWorkspaceRuntime } = await import(
         '@/features/app-builder/services/runtimeCredentials'
     );
@@ -106,7 +106,7 @@ export async function executeAppBuilderIntegrationsPhase(
         return;
     }
 
-    const { ServiceLocator } = await import('@/core/di');
+    const { ServiceLocator } = await import('@/core/di/serviceLocator');
     const permission = await ServiceLocator.getAuthenticationService().testDeveloperPermissions();
     if (!permission.hasPermissions) {
         throw new Error(

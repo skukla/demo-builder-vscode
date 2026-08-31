@@ -9,7 +9,7 @@
  * lands in the wrong org again the banner persists instead of silently looping.
  */
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
         getStateManager: jest.fn(() => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) })),
@@ -65,7 +65,7 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
 
     it('delegates the forced sign-in, then refreshes status to trigger an org re-check', async () => {
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // SDK-only read (the non-interactive on-open probe).

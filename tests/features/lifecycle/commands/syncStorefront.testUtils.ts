@@ -100,7 +100,7 @@ import { GitHubTokenService } from '@/features/eds/services/github/githubTokenSe
 import type { Project } from '@/types';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Re-exported so specs never import the SUT directly (see the header note).

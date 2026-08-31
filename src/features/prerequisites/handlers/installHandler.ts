@@ -26,7 +26,7 @@ import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteInstallCompletePayload, PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 import type { InstallPrerequisiteRequestPayload } from '@/types/webviewRequests';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 
 /**
  * Get target Node versions for installation (SOP §3 compliance)
@@ -336,7 +336,7 @@ async function installPlugins(
 
             for (const cmd of pluginCommands.commands) {
                 try {
-                    const commandManager = await import('@/core/di').then(m => m.ServiceLocator.getCommandExecutor());
+                    const commandManager = await import('@/core/di/serviceLocator').then(m => m.ServiceLocator.getCommandExecutor());
                     await commandManager.execute(cmd, { timeout: TIMEOUTS.LONG, useNodeVersion: nodeVer });
                     context.logger.debug(`[Prerequisites] Plugin ${plugin.name} installed${versionLabel}`);
                 } catch (pluginError) {

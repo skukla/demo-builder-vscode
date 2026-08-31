@@ -35,7 +35,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 // ---- permission gate -------------------------------------------------------
 const mockTestDeveloperPermissions = jest.fn();
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: () => ({ testDeveloperPermissions: mockTestDeveloperPermissions }),
         // ADR-015 (2026-08-28): the handler resolves these when assembling

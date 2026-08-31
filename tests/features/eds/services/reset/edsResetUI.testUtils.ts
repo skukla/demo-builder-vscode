@@ -33,7 +33,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: mockEnsureAdobeIOAuth,
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => mockAuthService),
     },

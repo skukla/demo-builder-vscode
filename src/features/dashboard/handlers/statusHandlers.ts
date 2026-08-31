@@ -12,7 +12,7 @@ import * as path from 'path';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';

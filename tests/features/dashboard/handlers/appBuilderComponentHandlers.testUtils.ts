@@ -116,7 +116,7 @@ export const ERP_ENTRY = {
 };
 
 export function mockTestDeveloperPermissions(hasPermissions: boolean, error?: string) {
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     const svc = ServiceLocator.getAuthenticationService();
     svc.testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions, error });
     return svc;

@@ -19,7 +19,7 @@ import {
     renameProjectCore,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';

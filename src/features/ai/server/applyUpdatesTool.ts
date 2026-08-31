@@ -15,7 +15,7 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     applyUpdatesHeadless,

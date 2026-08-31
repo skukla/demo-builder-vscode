@@ -29,7 +29,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         getNodeVersionKeys: jest.fn(),
     };
 });
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('@/features/prerequisites/services/versioning', () => ({
     ...jest.requireActual('@/features/prerequisites/services/versioning'),
     getInstalledNodeVersions: jest.fn(),

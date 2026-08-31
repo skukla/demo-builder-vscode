@@ -16,12 +16,12 @@
 
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock ProcessCleanup
 jest.mock('@/core/shell/processCleanup');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => mockCommandExecutor),
         reset: jest.fn(),

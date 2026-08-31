@@ -16,7 +16,7 @@ jest.mock('@/features/prerequisites/services/PrerequisitesManager', () => ({
     })),
 }));
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import type { StateManager } from '@/core/state';

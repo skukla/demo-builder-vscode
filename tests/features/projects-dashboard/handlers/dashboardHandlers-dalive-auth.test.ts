@@ -44,16 +44,17 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     })),
 }));
 
-// Mock ServiceLocator (both import paths used in the code)
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-    },
-}));
+// Mock ServiceLocator. There used to be TWO of these — the comment here read
+// "both import paths used in the code", because the same class was reachable
+// through `@/core/di` and `@/core/di/serviceLocator`. The two factories had
+// DRIFTED: only one declared getCommandExecutor, and jest keeps the last
+// registration, so which one won depended on their order in this file. That is
+// precisely the defect ADR-022's rule names — a symbol reachable by two paths is
+// a symbol whose home nobody can name. One path now, so one mock.
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 
@@ -166,7 +167,7 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';

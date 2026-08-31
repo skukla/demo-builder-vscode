@@ -5,7 +5,7 @@
  *
  * // Mock all dependencies (must be before imports)
  * jest.mock('@/features/prerequisites/handlers/shared');
- * jest.mock('@/core/di');
+ * jest.mock('@/core/di/serviceLocator');
  * jest.mock('vscode', () => ({
  *     env: {
  *         openExternal: jest.fn(),
@@ -27,7 +27,7 @@
 
 import { HandlerContext } from '@/types/handlers';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

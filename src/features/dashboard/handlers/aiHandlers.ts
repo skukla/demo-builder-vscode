@@ -18,7 +18,7 @@ import {
     handleListAiPrompts,
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 import { clearMcpCache } from '@/features/ai/mcpInspector';

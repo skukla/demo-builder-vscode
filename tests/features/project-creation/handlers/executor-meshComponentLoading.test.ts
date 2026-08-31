@@ -24,7 +24,7 @@ let getComponentByIdCalls: string[] = [];
 // Mock dependencies
 jest.mock('@/features/mesh/services/meshDeployment');
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),

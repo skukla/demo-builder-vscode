@@ -9,14 +9,14 @@
 
 import { handleEnsureMeshApiSubscribed } from '@/features/mesh/handlers/subscribeHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),

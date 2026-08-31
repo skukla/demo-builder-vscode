@@ -20,7 +20,7 @@
 import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
 }));
 

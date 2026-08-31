@@ -17,7 +17,7 @@ import { GitHubOAuthService } from '../services/github/githubOAuthService';
 import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { HelixService } from '../services/helix/helixService';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
 
 /**

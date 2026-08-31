@@ -23,7 +23,7 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn(),
 }));
 jest.mock('@/core/logging/debugLogger');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),

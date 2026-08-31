@@ -8,7 +8,7 @@ import * as crypto from 'crypto';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 // Mock dependencies
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => ({
             execute: jest.fn(),

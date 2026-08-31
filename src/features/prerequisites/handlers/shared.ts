@@ -6,7 +6,7 @@
  */
 
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { ComponentSelection } from '@/types/components';

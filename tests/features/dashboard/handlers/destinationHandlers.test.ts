@@ -53,7 +53,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

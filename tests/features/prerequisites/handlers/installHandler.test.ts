@@ -14,7 +14,7 @@
 
 // Mock all dependencies (MUST be at top before imports)
 jest.mock('@/features/prerequisites/handlers/shared');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn(),
@@ -26,7 +26,7 @@ jest.mock('vscode', () => ({
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     mockAdobeCliPrereq,
     mockNodeResult,

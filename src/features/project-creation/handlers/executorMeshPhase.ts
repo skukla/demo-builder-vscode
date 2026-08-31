@@ -10,7 +10,7 @@
  */
 
 import type { ProgressTracker } from './shared';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,
@@ -117,7 +117,7 @@ export async function executeMeshPhase(
         '@/features/components/services/projectAppBuilderPredicate'
     );
     if (projectRequiresAppBuilder(project, setupContext.registry)) {
-        const { ServiceLocator } = await import('@/core/di');
+        const { ServiceLocator } = await import('@/core/di/serviceLocator');
         const authService = ServiceLocator.getAuthenticationService();
         const permissionCheck = await authService.testDeveloperPermissions();
         if (!permissionCheck.hasPermissions) {

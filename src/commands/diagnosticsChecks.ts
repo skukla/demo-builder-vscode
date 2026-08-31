@@ -27,7 +27,7 @@ import {
     type VSCodeInfo,
 } from './diagnosticsReport';
 import { collectUserSetKeys, contributedKeysFrom, orphanedKeys } from './orphanedSettings';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type CommandResultWithContext } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
 
