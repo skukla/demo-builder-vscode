@@ -11,6 +11,7 @@
 // under test. Assertions pin the SEQUENCE of attempts, never elapsed duration.
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import * as vscode from 'vscode';
 
 // --- Mocks (must precede imports) -------------------------------------------
@@ -65,9 +66,6 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({})),
-}));
 
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
@@ -133,6 +131,13 @@ const EDS_PROJECT = {
     },
 } as unknown as Project;
 
+/**
+ * Helix reaches the headless core through the command's own seam, not a module mock.
+ * Nothing here asserts on the service — the pipeline is what this suite checks — so an
+ * empty object cast at the boundary states exactly that (ADR-016 rule 2).
+ */
+const fakeHelix = {} as unknown as HelixService;
+
 describe('RefreshBlockLibraryCommand', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -157,6 +162,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixServiceForTests = fakeHelix;
 
         await cmd.execute();
 
@@ -178,6 +184,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixServiceForTests = fakeHelix;
 
         await cmd.execute();
 
@@ -212,6 +219,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixServiceForTests = fakeHelix;
 
         await cmd.execute();
 

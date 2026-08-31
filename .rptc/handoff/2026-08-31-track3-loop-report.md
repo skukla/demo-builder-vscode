@@ -38,6 +38,26 @@ Convert by keeping one test on the default path.
 return as unknown; the compiler named `PdpPublisher`, the narrow interface the consumer
 actually needs. Injecting that beats injecting the whole class.
 
+## Not every "wall" is the same defect (found 2026-08-31)
+
+The 28 were counted by one signal — a `jest.mock` naming a service module. Reading them
+shows at least three different things wearing that shape, and only the first is what
+ADR-016 is about:
+
+1. **An injection wall.** The suite needs the collaborator and has no way to hand it in.
+   This is the real target; a seam retires it and usually makes an assertion stronger.
+2. **A construction assertion.** The mock exists to check the service is BUILT with the
+   right credentials — `edsResetConfigStep` and the 401 case. A handed-in fake hides
+   exactly what the test is for. Convert by keeping one test on the default path.
+3. **A static side-effect silencer.** `edsDaLiveAuthHandlers-storeToken` mocks
+   `HelixService.initKeyStore` — a STATIC, called fire-and-forget as `void`, purely so a
+   handler path does not touch real secret storage. Nothing is being handed in, so there
+   is nothing to inject. Threading a seam for a static initializer through the service
+   cache would cost real complexity for no test-design gain. **Left deliberately.**
+
+The count of walls is therefore an upper bound on the work, not a target to drive to
+zero — the same lesson the coverage scan already carries about its own number.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?
