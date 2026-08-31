@@ -9,9 +9,27 @@
  * @module features/eds/handlers/blockLibraryPublish
  */
 
-import { HelixService } from '../services/helix/helixService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+
+/**
+ * The two Helix calls these two helpers make, out of a class with dozens.
+ *
+ * Declared structurally rather than as `HelixService` so a caller can hand in
+ * exactly what gets used. The real service satisfies it, so both production
+ * callers are unchanged — and a suite driving a caller no longer has to
+ * `jest.mock` the service module to stop a construction it never asserts on
+ * (ADR-016's mock wall).
+ */
+export interface LibraryPublishHelix {
+    previewAndPublishPage(org: string, site: string, path?: string, branch?: string): Promise<void>;
+    getResourceStatus(
+        org: string,
+        site: string,
+        path: string,
+        branch?: string,
+    ): Promise<{ httpStatus: number; previewStatus?: number; liveStatus?: number; error?: string }>;
+}
 
 /** Library pages published concurrently per batch — the admin API is rate-sensitive. */
 const LIBRARY_PUBLISH_BATCH = 5;
@@ -49,7 +67,7 @@ const LIBRARY_PUBLISH_BATCH = 5;
  * @returns how many published and how many failed
  */
 export async function publishLibraryPaths(
-    helixService: HelixService,
+    helixService: LibraryPublishHelix,
     owner: string,
     repo: string,
     paths: string[],
@@ -121,7 +139,7 @@ export async function verifyLibraryPreviewed(
     owner: string,
     repo: string,
     logger: Logger,
-    helixService?: HelixService,
+    helixService?: LibraryPublishHelix,
 ): Promise<boolean> {
     const path = '/.da/library/blocks.json';
     const url = `https://main--${repo}--${owner}.aem.page${path}`;
@@ -163,7 +181,7 @@ async function logAdminVerdict(
     repo: string,
     path: string,
     logger: Logger,
-    helixService?: HelixService,
+    helixService?: LibraryPublishHelix,
 ): Promise<void> {
     if (!helixService) return;
     const status = await helixService.getResourceStatus(owner, repo, path);
