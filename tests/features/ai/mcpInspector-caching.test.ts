@@ -1,102 +1,27 @@
 /**
  * mcpInspector tests - caching, env allowlist & stderr diagnostics
  *
- * Split from mcpInspector.test.ts to stay under the max-lines limit. Re-declares
- * the shared SDK/fs mock harness (jest.mock factories must live in the test file
- * due to hoisting), then covers the caching, extended-env-allowlist, and
- * stderr-diagnostic suites.
+ * Split from mcpInspector.test.ts to stay under the max-lines limit. The
+ * SDK/fs harness lives in `mcpInspector.testUtils.ts` and is imported from
+ * there — including the subject itself, which is what makes the hoisting work
+ * (the factories lift above the subject import inside testUtils, not here).
  */
 
-import * as fsPromises from 'fs/promises';
-
-jest.mock('fs/promises', () => ({
-    readFile: jest.fn(),
-}));
-
-// SDK mocks — capture constructor calls and let tests script behavior.
-const clientInstances: Array<{
-    connect: jest.Mock;
-    listTools: jest.Mock;
-    close: jest.Mock;
-}> = [];
-const transportInstances: Array<{ command: string; args: string[]; env?: Record<string, string>; cwd?: string; stderr?: string }> = [];
-
-// Per-transport stderr chunk queues, indexed by the order in which transports
-// are constructed. Tests pre-populate via queueStderr(index, [...]) before
-// invoking inspectAllServers; the mocked transport's stderr.read() drains
-// from the corresponding queue, mirroring Node's paused-Readable semantics.
-const pendingStderrQueues: Buffer[][] = [];
-
-jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-    Client: jest.fn().mockImplementation(() => {
-        const instance = {
-            connect: jest.fn().mockResolvedValue(undefined),
-            listTools: jest.fn().mockResolvedValue({ tools: [] }),
-            close: jest.fn().mockResolvedValue(undefined),
-        };
-        clientInstances.push(instance);
-        return instance;
-    }),
-}));
-
-jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-    StdioClientTransport: jest.fn().mockImplementation((opts: {
-        command: string; args: string[]; env?: Record<string, string>; cwd?: string; stderr?: string;
-    }) => {
-        const idx = transportInstances.length;
-        transportInstances.push(opts);
-        const stderrPipe = opts.stderr === 'pipe'
-            ? {
-                on: jest.fn(),
-                read: jest.fn(() => {
-                    const queue = pendingStderrQueues[idx];
-                    return queue ? (queue.shift() ?? null) : null;
-                }),
-            }
-            : undefined;
-        return { stderr: stderrPipe };
-    }),
-    // Mirror the SDK's safe-to-inherit env allowlist. Tests assert this set,
-    // not process.env's full contents.
-    getDefaultEnvironment: jest.fn(() => ({ PATH: '/usr/bin:/bin', HOME: '/home/test' })),
-}));
-
-/** Queue stderr chunks for the transport that will be constructed at `idx`. */
-function queueStderr(idx: number, chunks: string[]): void {
-    pendingStderrQueues[idx] = chunks.map(s => Buffer.from(s, 'utf-8'));
-}
-
-/** Restore a single env var to its original value (undefined → delete). */
-function restoreEnv(key: string, original: string | undefined): void {
-    if (original === undefined) {
-        delete process.env[key];
-    } else {
-        process.env[key] = original;
-    }
-}
-
-import { inspectAllServers, clearMcpCache, MCP_INSPECT_TIMEOUT_MS } from '@/features/ai/mcpInspector';
-
-const readFileMock = fsPromises.readFile as jest.Mock;
-
-const PROJECT_PATH = '/projects/demo';
-const MCP_JSON_PATH = `${PROJECT_PATH}/.claude/mcp.json`;
-
-function setMcpJson(config: unknown): void {
-    readFileMock.mockImplementation(async (filePath: string) => {
-        if (filePath === MCP_JSON_PATH) return JSON.stringify(config);
-        const err = new Error('ENOENT') as NodeJS.ErrnoException;
-        err.code = 'ENOENT';
-        throw err;
-    });
-}
+import {
+    clearMcpCache,
+    clientInstances,
+    inspectAllServers,
+    MCP_INSPECT_TIMEOUT_MS,
+    queueStderr,
+    resetMcpInspectorMocks,
+    restoreEnv,
+    setMcpJson,
+    transportInstances,
+    PROJECT_PATH,
+} from './mcpInspector.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    clientInstances.length = 0;
-    transportInstances.length = 0;
-    pendingStderrQueues.length = 0;
-    clearMcpCache();
+    resetMcpInspectorMocks();
 });
 
 describe('inspectAllServers', () => {
